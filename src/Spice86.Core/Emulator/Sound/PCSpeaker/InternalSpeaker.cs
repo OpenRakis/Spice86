@@ -43,7 +43,7 @@ public sealed class InternalSpeaker : IDisposable {
     /// Gets the current frequency in Hz.
     /// </summary>
     private double Frequency => FrequencyFactor / _frequencyRegister;
-    
+
     /// <summary>
     /// Gets the current period in samples.
     /// </summary>
@@ -62,7 +62,7 @@ public sealed class InternalSpeaker : IDisposable {
 
         throw new NotSupportedException();
     }
-    
+
     /// <summary>
     /// Writes a byte either to the control register or the frequency register
     /// </summary>

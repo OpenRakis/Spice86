@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Text Cursor End register.
+/// </summary>
 public class TextCursorEndRegister : Register8 {
     /// <summary>
     ///     This two-bit field specifies a delay, in character clocks, from the Text Cursor Location specified in CRE and

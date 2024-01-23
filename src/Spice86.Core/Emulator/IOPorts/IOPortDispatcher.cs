@@ -46,7 +46,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
         return base.ReadByte(port);
     }
-    
+
     /// <inheritdoc/>
     public override ushort ReadWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
@@ -59,7 +59,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
 
         return base.ReadWord(port);
     }
-    
+
     /// <inheritdoc/>
     public override uint ReadDWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
@@ -98,7 +98,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
             base.WriteWord(port, value);
         }
     }
-    
+
     /// <inheritdoc/>
     public override void WriteDWord(int port, uint value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {

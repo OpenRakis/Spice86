@@ -2,11 +2,18 @@
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic Logic Unit code for 16bits operations.
+/// </summary>
 public class Alu16 : Alu<ushort, short, uint, int>  {
     private const ushort BeforeMsbMask = 0x4000;
 
     private const ushort MsbMask = 0x8000;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags</param>
     public Alu16(State state) : base(state) {
     }
 
@@ -29,7 +36,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return res;
     }
-
+    
+    /// <inheritdoc/>
     public override ushort Div(uint value1, ushort value2) {
         if (value2 == 0) {
             throw new CpuDivisionErrorException($"Division by zero");
@@ -42,7 +50,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
 
         return (ushort)res;
     }
-    
+
     public override short Idiv(int value1, short value2) {
         if (value2 == 0) {
             throw new CpuDivisionErrorException($"Division by zero");
@@ -57,7 +65,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
 
         return (short)res;
     }
-    
+
     public override int Imul(short value1, short value2) {
         int res = value1 * value2;
         bool doesNotFitInWord = res != (short)res;
@@ -76,7 +84,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         SetSignFlag((ushort)res);
         return res;
     }
-    
+
     public override ushort Or(ushort value1, ushort value2) {
         ushort res = (ushort)(value1 | value2);
         UpdateFlags(res);
@@ -84,7 +92,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return res;
     }
-    
+
     public override ushort Rcl(ushort value, byte count) {
         count = (byte) ((count & ShiftCountMask) % 17);
         if (count == 0) {
@@ -104,7 +112,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
-    
+
     public override ushort Rcr(ushort value, int count) {
         count = (count & ShiftCountMask) % 17;
         if (count == 0) {
@@ -123,7 +131,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         SetOverflowForRigthRotate16(res);
         return res;
     }
-    
+
     public override ushort Rol(ushort value, byte count) {
         count = (byte) ((count & ShiftCountMask) % 16);
         if (count == 0) {
@@ -152,7 +160,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         SetOverflowForRigthRotate16(res);
         return res;
     }
-    
+
     public override ushort Sar(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -166,7 +174,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return (ushort)res;
     }
-    
+
     public override ushort Shl(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -181,7 +189,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = (msb ^ msbBefore) != 0;
         return res;
     }
-    
+
     public override ushort Shld(ushort destination, ushort source, byte count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -201,7 +209,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = msb != msbBefore;
         return res;
     }
-    
+
     public override ushort Shr(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -215,7 +223,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         UpdateFlags(res);
         return res;
     }
-    
+
     public override ushort Sub(ushort value1, ushort value2, bool useCarry) {
         int carry = useCarry && _state.CarryFlag ? 1 : 0;
         ushort res = (ushort)(value1 - value2 - carry);
@@ -227,7 +235,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = (overflowBits >> 15 & 1) == 1;
         return res;
     }
-    
+
     public override ushort Xor(ushort value1, ushort value2) {
         ushort res = (ushort)(value1 ^ value2);
         UpdateFlags(res);
@@ -235,7 +243,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return res;
     }
-    
+
     private void SetOverflowForRigthRotate16(ushort res) {
         bool msb = (res & MsbMask) != 0;
         bool beforeMsb = (res & BeforeMsbMask) != 0;
@@ -245,5 +253,5 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     protected override void SetSignFlag(ushort value) {
         _state.SignFlag = (value & MsbMask) != 0;
     }
-    
+
 }

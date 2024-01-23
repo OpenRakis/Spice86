@@ -41,6 +41,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="state">The CPU state.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code exexcution flow.</param>
     /// <param name="machineBreakpoints">The class that handles breakpoints.</param>
     public GdbServer(IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
@@ -83,12 +84,15 @@ public sealed class GdbServer : IDisposable {
         }
     }
 
-    
     /// <summary>
     /// Gets the GdbCommandHandler instance associated with the current GdbServer instance.
     /// </summary>
     public GdbCommandHandler? GdbCommandHandler { get; private set; }
 
+    /// <summary>
+    /// Returns a value indicating whether the GdbCommandHandler instance is available.<br/>
+    /// This means that we set a connection with GDB earlier, and we assume that GDB client is still connected.
+    /// </summary>
     public bool IsGdbCommandHandlerAvailable => GdbCommandHandler is not null;
 
     /// <summary>
@@ -116,7 +120,6 @@ public sealed class GdbServer : IDisposable {
         _loggerService.Verbose("Client disconnected");
     }
 
-    
     /// <summary>
     /// Runs the GDB server and handles incoming connections.
     /// </summary>
@@ -189,6 +192,9 @@ public sealed class GdbServer : IDisposable {
         _waitFirstConnectionHandle?.Set();
     }
 
+    /// <summary>
+    /// Executes a single CPU instruction.
+    /// </summary>
     public void StepInstruction() {
         GdbCommandHandler?.Step();
     }

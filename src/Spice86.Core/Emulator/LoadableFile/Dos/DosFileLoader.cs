@@ -10,8 +10,10 @@ using Spice86.Shared.Interfaces;
 public abstract class DosFileLoader : ExecutableFileLoader {
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DosFileLoader"/> class with the specified <paramref name="machine"/> and <paramref name="loggerService"/>.
+    /// Initializes a new instance of the <see cref="DosFileLoader"/> class
     /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
     protected DosFileLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
     }

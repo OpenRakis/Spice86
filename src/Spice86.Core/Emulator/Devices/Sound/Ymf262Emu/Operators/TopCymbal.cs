@@ -14,7 +14,7 @@ internal class TopCymbal : Operator {
         : base(baseAddress, opl)
     {
     }
-    
+
     /// <summary>
     /// Initializes a new instance of the TopCymbal class.
     /// </summary>
@@ -37,7 +37,7 @@ internal class TopCymbal : Operator {
         // The Top Cymbal operator uses his own phase together with the High Hat phase.
         return GetOperatorOutput(modulator, highHatOperatorPhase);
     }
-    
+
     public double GetOperatorOutput(double modulator, double externalPhase)
     {
         double envelopeInDb = EnvelopeGenerator.GetEnvelope(Egt, Am);

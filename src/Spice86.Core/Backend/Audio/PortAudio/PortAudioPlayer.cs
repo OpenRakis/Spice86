@@ -10,6 +10,13 @@ public sealed class PortAudioPlayer : AudioPlayer {
     private readonly PortAudioEngine _engine;
     private readonly PortAudioLib _portAudioLib;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="PortAudioPlayer"/> class.
+    /// </summary>
+    /// <param name="portAudioLib">The class that represents the native PortAudio library</param>
+    /// <param name="framesPerBuffer">The number of frames in the audio buffer</param>
+    /// <param name="format">The audio playback format</param>
+    /// <param name="suggestedLatency">Desired output latency</param>
     public PortAudioPlayer(PortAudioLib portAudioLib, int framesPerBuffer, AudioFormat format, double? suggestedLatency = null) : base(format) {
         _portAudioLib = portAudioLib;
         AudioEngineOptions options = new AudioEngineOptions(_portAudioLib.DefaultOutputDevice, 2, format.SampleRate);
@@ -19,6 +26,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
         _engine = new PortAudioEngine(framesPerBuffer, options);
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
@@ -29,6 +37,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
         }
     }
 
+    /// <inheritdoc/>
     protected override int WriteDataInternal(Span<byte> data) {
         Span<float> samples = data.Cast<byte, float>();
         _engine.Send(samples);

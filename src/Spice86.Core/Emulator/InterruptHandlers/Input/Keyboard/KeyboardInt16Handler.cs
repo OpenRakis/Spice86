@@ -4,9 +4,11 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+/// <summary>
+/// The keyboard controller interrupt (INT16H)
+/// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
@@ -19,53 +21,70 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        AddAction(0x00, () => GetKeystroke());
+        AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
     }
 
+    /// <inheritdoc/>
     public override byte VectorNumber => 0x16;
 
+    /// <summary>
+    /// Returns in the AX register the pending key code.
+    /// </summary>
     public void GetKeystroke() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("READ KEY STROKE");
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
         keyCode ??= 0;
 
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
-        _state.AX = keyCode.Value;
+        State.AX = keyCode.Value;
     }
 
+    /// <summary>
+    /// Gets whether the BIOS keyboard buffer has a pending key code in its queue.
+    /// </summary>
+    /// <returns><c>True</c> if the BIOS keyboard buffer is not empty, <c>False</c> otherwise.</returns>
     public bool HasKeyCodePending() => _biosKeyboardBuffer.PeekKeyCode() is not null;
 
+    /// <summary>
+    /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
+    /// </summary>
+    /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("KEY STROKE STATUS");
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("KEY STROKE STATUS");
         }
 
-        // ZF = 0 if a key pressed (even Ctrl-Break)
+        // ZF = 0 if a key pressed (even in the case of Ctrl-Break)
         // AX = 0 if no scan code is available
         // AH = scan code
         // AL = ASCII character or zero if special function key
         if (_biosKeyboardBuffer.IsEmpty) {
             SetZeroFlag(true, calledFromVm);
-            _state.AX = 0;
+            State.AX = 0;
         } else {
             ushort? keyCode = _biosKeyboardBuffer.PeekKeyCode();
             if (keyCode != null) {
                 SetZeroFlag(false, calledFromVm);
-                _state.AX = keyCode.Value;
+                State.AX = keyCode.Value;
             }
         }
     }
 
+    /// <summary>
+    /// Dequeues the next keycode from the BIOS keyboard buffer and returns it.
+    /// </summary>
+    /// <returns>The next keycode as an ushort value, <c>null</c> if nothing was in the buffer.</returns>
     public ushort? GetNextKeyCode() {
         return _biosKeyboardBuffer.DequeueKeyCode();
     }
 
+    /// <inheritdoc/>
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         Run(operation);
     }
 }

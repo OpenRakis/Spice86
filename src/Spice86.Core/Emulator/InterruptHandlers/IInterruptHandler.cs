@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 
 /// <summary>
-/// Interface for C# interrupt handlers.
+/// Interface for C# interrupt handlers. <br/>
 /// Interrupt handlers write their ASM code in emulated memory.
 /// </summary>
 public interface IInterruptHandler : IAssemblyRoutineWriter {

@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Memory.Indexer;
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
+public class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
@@ -14,7 +14,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
     public MemoryBreakpoints MemoryBreakpoints { get; } = new();
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
-    
+
     /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
@@ -71,11 +71,11 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
         set {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
-            MemoryBreakpoints.MonitorWriteAccess(address, value);
+            MemoryBreakpoints.MonitorWriteAccess(address);
             _memoryDevices[address].Write(address, value);
         }
     }
-    
+
     /// <summary>
     ///     Allows write breakpoints to access the byte being written before it actually is.
     /// </summary>
@@ -194,6 +194,7 @@ public class Memory : Indexable.Indexable, IMemory, IDebuggableComponent {
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitMainMemory(this);
     }

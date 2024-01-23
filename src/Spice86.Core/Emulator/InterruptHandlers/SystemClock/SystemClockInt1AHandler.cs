@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -34,35 +33,47 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x1A;
 
+    /// <summary>
+    /// Gets the system clock counter in AX and DX. It is used by operating systems to measure time since the system started.
+    /// <remarks>
+    /// Never overflows.
+    /// </remarks>
+    /// </summary>
     public void GetSystemClockCounter() {
         uint value = _timerHandler.TickCounterValue;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("GET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
         }
 
         // let's say it never overflows
-        _state.AL = 0;
-        _state.CX = (ushort)(value >> 16);
-        _state.DX = (ushort)value;
+        State.AL = 0;
+        State.CX = (ushort)(value >> 16);
+        State.DX = (ushort)value;
     }
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = _state.AH;
+        byte operation = State.AH;
         Run(operation);
     }
 
+    /// <summary>
+    /// Sets the system clock counter from the value in DX.
+    /// </summary>
     public void SetSystemClockCounter() {
-        uint value = (ushort)(_state.CX << 16 | _state.DX);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
+        uint value = (ushort)(State.CX << 16 | State.DX);
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET SYSTEM CLOCK COUNTER {SystemClockCounterValue}", value);
         }
         _timerHandler.TickCounterValue = value;
     }
 
-    private void TandySoundSystemUnhandled() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
+    /// <summary>
+    /// Tandy sound system is not implemented. Does nothing.
+    /// </summary>
+    public void TandySoundSystemUnhandled() {
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("TANDY SOUND SYSTEM IS NOT IMPLEMENTED");
         }
     }
 }

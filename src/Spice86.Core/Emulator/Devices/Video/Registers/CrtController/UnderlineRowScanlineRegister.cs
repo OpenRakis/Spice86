@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Underline Row Scanline register. Used to set the location of the underline in text mode.
+/// </summary>
 public class UnderlineRowScanlineRegister : Register8 {
     /// <summary>
     ///     When this bit is set to true, doubleWord addresses are forced. The CRTC Memory Address Counter is rotated
@@ -21,6 +24,9 @@ public class UnderlineRowScanlineRegister : Register8 {
         set => SetBit(5, value);
     }
 
+    /// <summary>
+    /// These bits specify the horizontal scan line of a character row on which an underline occurs. The value programmed is the scan line desired minus 1.
+    /// </summary>
     public byte UnderlineScanline {
         get => GetBits(4, 0);
         set => SetBits(4, 0, value);

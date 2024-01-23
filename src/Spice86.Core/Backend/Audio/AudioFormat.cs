@@ -13,6 +13,7 @@ public sealed record AudioFormat(int SampleRate, int Channels, SampleFormat Samp
         SampleFormat.IeeeFloat32 => 4,
         _ => 0
     };
+
     /// <summary>
     /// Gets the number of bytes per frame of the format.
     /// </summary>

@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
-using Spice86.Core.Emulator.Debugger;
-
 using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
@@ -10,42 +8,42 @@ public class Flags {
     /// The carry flag bitmask
     /// </summary>
     public const ushort Carry = 0b00000000_00000001; //0
-    
+
     /// <summary>
     /// The parity flag bitmask
     /// </summary>
     public const ushort Parity = 0b00000000_00000100; //2
-    
+
     /// <summary>
     /// The auxiliary flag bitmask
     /// </summary>
     public const ushort Auxiliary = 0b00000000_00010000; //4
-    
+
     /// <summary>
     /// The zero flag bitmask
     /// </summary>
     public const ushort Zero = 0b00000000_01000000; //6
-    
+
     /// <summary>
     /// The sign flag bitmask
     /// </summary>
     public const ushort Sign = 0b00000000_10000000; //7
-    
+
     /// <summary>
     /// The trap flag bitmask
     /// </summary>
     public const ushort Trap = 0b00000001_00000000; //8
-    
+
     /// <summary>
     /// The interrupt flag bitmask
     /// </summary>
     public const ushort Interrupt = 0b00000010_00000000; //9
-    
+
     /// <summary>
     /// The direction flag bitmask
     /// </summary>
     public const ushort Direction = 0b00000100_00000000; //10
-    
+
     /// <summary>
     /// The overflow flag bitmask
     /// </summary>
@@ -55,7 +53,7 @@ public class Flags {
     /// rflag mask to OR with flags, useful to compare with values emulated by DOSBox.
     /// </summary>
     private ushort _additionalFlagMask;
-    
+
     private uint _flagRegister;
 
     /// <summary>
@@ -101,12 +99,12 @@ public class Flags {
             if (value) { _additionalFlagMask = 0b111000000000000; } else { _additionalFlagMask = 0; }
         }
     }
-    
+
     /// <summary>
     /// Gets the 16-bit value of the flags register.
     /// </summary>
     public ushort FlagRegister16 { get => (ushort)FlagRegister; }
-    
+
     /// <summary>
     /// Gets the 32-bit value of the flags register.
     /// </summary>

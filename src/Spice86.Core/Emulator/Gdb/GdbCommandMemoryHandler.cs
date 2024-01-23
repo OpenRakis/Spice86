@@ -28,7 +28,7 @@ public class GdbCommandMemoryHandler {
         _memory = memory;
         _gdbIo = gdbIo;
     }
-    
+
     /// <summary>
     /// Reads memory from the machine being debugged.
     /// </summary>
@@ -96,7 +96,7 @@ public class GdbCommandMemoryHandler {
 
         return _gdbIo.GenerateResponse($"1,{_gdbFormatter.FormatValueAsHex32(address.Value)}");
     }
-    
+
     /// <summary>
     /// Writes data to the specified memory address.
     /// </summary>

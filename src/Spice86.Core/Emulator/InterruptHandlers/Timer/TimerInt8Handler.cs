@@ -26,7 +26,7 @@ public class TimerInt8Handler : InterruptHandler {
     /// <param name="timer">The programmable Interval Timer chip.</param>
     public TimerInt8Handler(IMemory memory, Cpu cpu, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _timer = timer;
-        _memory = memory;
+        Memory = memory;
         _dualPic = dualPic;
         _biosDataArea = biosDataArea;
     }

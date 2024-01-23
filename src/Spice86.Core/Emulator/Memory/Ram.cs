@@ -5,7 +5,7 @@ namespace Spice86.Core.Emulator.Memory;
 /// </summary>
 public class Ram : IMemoryDevice {
     private readonly byte[] _memory;
-    
+
     /// <summary>
     /// Initializes a new instance of the Ram class with the specified size.
     /// </summary>

@@ -226,13 +226,13 @@ public class Instructions16 : Instructions16Or32 {
         int result = _alu16.Imul(value, (short)ModRM.GetRm16());
         ModRM.R16 = (ushort)result;
     }
-    
+
     public override void ImulRmReg16Or32() {
         // IMUL16 r16 rm16
         ModRM.Read();
         ImulRmVal((short)ModRM.R16);
     }
-    
+
     protected override void AdvanceSI() {
         AdvanceSI(State.Direction16);
     }
@@ -347,14 +347,14 @@ public class Instructions16 : Instructions16Or32 {
     protected override void Grp3NotRm() {
         ModRM.SetRm16((ushort)~ModRM.GetRm16());
     }
-    
+
     protected override void Grp3NegRm() {
         ushort value = ModRM.GetRm16();
         value = _alu16.Sub(0, value);
         ModRM.SetRm16(value);
         State.CarryFlag = value != 0;
     }
-    
+
     protected override void Grp3MulRmAcc() {
         uint result = _alu16.Mul(State.AX, ModRM.GetRm16());
         // Upper part of the result goes in DX
@@ -440,7 +440,7 @@ public class Instructions16 : Instructions16Or32 {
         // MOV moffs16 AX
         Memory.UInt16[DsNextUint16Address] = State.AX;
     }
-    
+
     public override void MovRmImm() {
         // MOV rmw iw
         ModRM.Read();
@@ -503,7 +503,7 @@ public class Instructions16 : Instructions16Or32 {
         (ushort segment, ModRM.R16) = Memory.SegmentedAddress[memoryAddress];
         return segment;
     }
-    
+
     public override void InImm8() {
         // IN AX Imm8
         byte port = Cpu.NextUint8();

@@ -6,17 +6,17 @@
 /// </summary>
 public class JumpDispatcher {
     private static int _instanceCounter;
-    
+
     /// <summary>
     /// Caller needs to return this when the Jump method returns false
     /// </summary>
     public Action? JumpAsmReturn { get; set; }
-    
+
     /// <summary>
     /// Caller needs to jump to its entry point with gotoAddress = NextEntryAddress when Jump returns true
     /// </summary>
     public int NextEntryAddress { get; private set; }
-    
+
     private readonly int _instanceId = _instanceCounter++;
     private readonly Stack<Func<int, Action>> _jumpStack = new();
     private Func<int, Action>? _returnTo;

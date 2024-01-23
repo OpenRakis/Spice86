@@ -15,18 +15,19 @@ public abstract class ExecutableFileLoader {
     /// The emulator CPU.
     /// </summary>
     protected State _state;
-    
+
     /// <summary>
     /// The memory bus.
     /// </summary>
     protected IMemory _memory;
-    
+
     private readonly ILoggerService _loggerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutableFileLoader"/> class.
     /// </summary>
-    /// <param name="machine">The <see cref="Machine"/> instance.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU Registers and Flags.</param>
     /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
     protected ExecutableFileLoader(IMemory memory, State state, ILoggerService loggerService) {
         _loggerService = loggerService;

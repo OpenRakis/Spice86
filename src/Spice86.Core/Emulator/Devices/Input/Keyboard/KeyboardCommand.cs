@@ -11,17 +11,17 @@ public enum KeyboardCommand : byte {
     /// No command set.
     /// </summary>
     None = 0x0,
-    
+
     /// <summary>
     /// Enable A20 Address Line
     /// </summary>
     EnableA20Gate = 0xDD,
-    
+
     /// <summary>
     /// Disable A20 Address Line
     /// </summary>
     DisableA20Gate = 0xDF,
-    
+
     /// <summary>
     /// Write to the output port
     /// </summary>

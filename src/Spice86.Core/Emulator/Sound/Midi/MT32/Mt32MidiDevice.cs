@@ -11,7 +11,7 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     /// The MT-32 player instance associated with this device.
     /// </summary>
     private readonly Mt32Player _player;
-    
+
     /// <summary>
     /// Indicates whether this object has been disposed.
     /// </summary>
@@ -30,10 +30,10 @@ internal sealed class Mt32MidiDevice : MidiDevice {
         }
         _player = new Mt32Player(audioPlayerFactory, romsPath, loggerService);
     }
-    
+
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) => _player.PlayShortMessage(message);
-    
+
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) => _player.PlaySysex(data);
 

@@ -18,31 +18,27 @@ public class ExecutionFlowRecorder {
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
     public bool RecordData { get; set; }
-    
+
     /// <summary>
     /// Gets a dictionary of calls from one address to another.
     /// </summary>
     public IDictionary<uint, HashSet<SegmentedAddress>> CallsFromTo { get; set; }
     private readonly HashSet<ulong> _callsEncountered = new(200000);
-    
     /// <summary>
     /// Gets a dictionary of jumps from one address to another.
     /// </summary>
     public IDictionary<uint, HashSet<SegmentedAddress>> JumpsFromTo { get; set; }
     private readonly HashSet<ulong> _jumpsEncountered = new(200000);
-    
     /// <summary>
     /// Gets a dictionary of returns from one address to another.
     /// </summary>
     public IDictionary<uint, HashSet<SegmentedAddress>> RetsFromTo { get; set; }
     private readonly HashSet<ulong> _retsEncountered = new(200000);
-    
     /// <summary>
     /// Gets a dictionary of unaligned returns from one address to another.
     /// </summary>
     public IDictionary<uint, HashSet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
     private readonly HashSet<ulong> _unalignedRetsEncountered = new(200000);
-    
     /// <summary>
     /// Gets the set of executed instructions.
     /// </summary>
@@ -119,7 +115,7 @@ public class ExecutionFlowRecorder {
     public void RegisterUnalignedReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         RegisterAddressJump(UnalignedRetsFromTo, _unalignedRetsEncountered, fromCS, fromIP, toCS, toIP);
     }
-    
+
     /// <summary>
     /// Registers executed CPU instruction.
     /// </summary>
@@ -129,7 +125,7 @@ public class ExecutionFlowRecorder {
         if (!AddSegmentedAddressInCache(_instructionsEncountered, cs, ip)) {
             return;
         }
-        
+
         ExecutedInstructions.Add(new SegmentedAddress(cs, ip));
     }
 
@@ -152,7 +148,7 @@ public class ExecutionFlowRecorder {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="machineBreakpoints"></param>
+    /// <param name="machineBreakpoints">The class used to store breakpoints.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
     public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
@@ -180,7 +176,7 @@ public class ExecutionFlowRecorder {
 
         AddressBreakPoint? breakPoint;
         breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
-        
+
         machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 

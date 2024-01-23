@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 
 using System.Diagnostics;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly IVideoMemory _memory;
@@ -16,6 +16,8 @@ public class Renderer : IVgaRenderer {
     /// <summary>
     ///     Create a new VGA renderer.
     /// </summary>
+    /// <param name="memory">The video memory implementation.</param>
+    /// <param name="state">The video state implementation.</param>
     public Renderer(IVideoState state, IVideoMemory memory) {
         _state = state;
         _memory = memory;
@@ -320,6 +322,7 @@ public class Renderer : IVgaRenderer {
         }
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitVgaRenderer(this);
     }

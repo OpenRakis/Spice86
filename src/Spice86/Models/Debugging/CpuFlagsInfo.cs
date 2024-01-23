@@ -15,5 +15,5 @@ public partial class CpuFlagsInfo : ObservableObject {
     [ObservableProperty, Category("Flags")] private bool _signFlag;
     [ObservableProperty, Category("Flags")] private bool _trapFlag;
     [ObservableProperty, Category("Flags")] private bool _zeroFlag;
-    
+
 }

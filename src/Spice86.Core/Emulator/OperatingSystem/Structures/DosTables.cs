@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem.Structures; 
+namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 /// <summary>
 /// Centralizes global DOS memory structures

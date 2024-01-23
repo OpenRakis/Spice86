@@ -5,7 +5,7 @@ using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Writes data to emulated memory bus sequentially.
-/// Keeps track of where to write next via CurrentAddress field that is automatically incremented each write. 
+/// Keeps track of where to write next via CurrentAddress field that is automatically incremented each write.
 /// </summary>
 public class MemoryWriter {
     private readonly IIndexable _memory;

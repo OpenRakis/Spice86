@@ -58,7 +58,7 @@ public class EmulationLoop {
         _gdbCommandHandler = gdbCommandHandler;
         _stopwatch = new();
     }
-    
+
     /// <summary>
     /// Starts and waits for the end of the emulation loop.
     /// </summary>
@@ -95,7 +95,7 @@ public class EmulationLoop {
         _dmaController.StartDmaThread();
         RunLoop();
     }
-    
+
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
@@ -121,7 +121,7 @@ public class EmulationLoop {
             _loggerService.Warning("Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
         }
     }
-    
+
     private bool GenerateUnconditionalGdbBreakpoint() {
         if (_gdbCommandHandler is null) {
             return false;
@@ -130,7 +130,7 @@ public class EmulationLoop {
         _gdbCommandHandler.Step();
         return true;
     }
-    
+
     private void PauseIfAskedTo() {
         if (!IsPaused) {
             return;

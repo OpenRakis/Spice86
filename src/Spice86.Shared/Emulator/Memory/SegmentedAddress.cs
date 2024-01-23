@@ -85,7 +85,7 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     public override int GetHashCode() {
         return (int)ToPhysical();
     }
-    
+
     /// <summary>
     /// Gets or sets the offset value of the address.
     /// </summary>
@@ -95,7 +95,7 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     /// Gets or sets the segment value of the address.
     /// </summary>
     public ushort Segment { get; init; }
-    
+
     /// <summary>
     /// Converts the SegmentedAddress object to a 32-bit physical address.
     /// </summary>

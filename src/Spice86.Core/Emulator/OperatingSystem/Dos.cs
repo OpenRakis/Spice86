@@ -32,7 +32,7 @@ public class Dos {
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
-    
+
     /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
@@ -82,12 +82,12 @@ public class Dos {
     /// Gets the global DOS memory structures.
     /// </summary>
     public DosTables DosTables { get; } = new();
-    
+
     /// <summary>
     /// Gets the current DOS master environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
-    
+
     /// <summary>
     /// The EMS device driver.
     /// </summary>
@@ -122,7 +122,7 @@ public class Dos {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
-        
+
         OpenDefaultFileHandles();
         SetEnvironmentVariables(blasterEnvVarProvider);
 
@@ -158,11 +158,11 @@ public class Dos {
     }
 
     /// <summary>
-    /// Add a device to memory so that the information can be read by both DOS and programs. 
+    /// Add a device to memory so that the information can be read by both DOS and programs.
     /// </summary>
     /// <param name="device">The character or block device to add</param>
-    /// <param name="segment">The segment at which the </param>
-    /// <param name="offset"></param>
+    /// <param name="segment">The segment part of the segmented address for the DOS device header.</param>
+    /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         // Store the location of the header
         device.Segment = segment ?? MemoryMap.DeviceDriverSegment;

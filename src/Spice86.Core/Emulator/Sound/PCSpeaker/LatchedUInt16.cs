@@ -34,7 +34,7 @@ public sealed class LatchedUInt16 {
     /// <param name="value">The LatchedUInt16 object to convert.</param>
     /// <returns>The underlying ushort value of the LatchedUInt16 object, or 0 if the object is null.</returns>
     public static implicit operator ushort(LatchedUInt16 value) => value._value;
-    
+
     /// <summary>
     /// Implicitly converts a ushort to a LatchedUInt16 object by wrapping it in a new LatchedUInt16 instance.
     /// </summary>

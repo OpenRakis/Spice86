@@ -25,19 +25,16 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Logging;
 using System.Net.NetworkInformation;
 
-/// <summary>
-/// Loads and executes a program following the given configuration in the emulator.<br/>
-/// Currently only supports DOS EXE and COM files.
-/// </summary>
+/// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
     private readonly ILoggerService _loggerService;
     private bool _disposed;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    
+
     private bool ListensToBreakpoints => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
-    
+
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
@@ -57,9 +54,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// </summary>
     public Machine Machine { get; private set; }
 
-    /// <summary>
-    /// Begins the emulation process.
-    /// </summary>
+    /// <inheritdoc/>
     public void Run() {
         _gdbServer?.StartServerAndWait();
         _emulationLoop.Run();
@@ -68,6 +63,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
     }
 
+    /// <inheritdoc/>
     public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
 
     /// <summary>
@@ -79,6 +75,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         IsPaused = false;
     }
 
+    /// <inheritdoc/>
     public void DumpEmulatorStateToDirectory(string path) {
         new RecorderDataWriter(Machine.Memory,
                 Machine.Cpu.State, Machine.CallbackHandler, _configuration,
@@ -87,6 +84,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
     }
 
+    /// <inheritdoc/>
     public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     /// <inheritdoc />
@@ -246,6 +244,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         functionHandler.UseCodeOverride = useCodeOverride;
     }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         Machine.Accept(emulatorDebugger);
     }

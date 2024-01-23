@@ -27,7 +27,7 @@ internal sealed class AdsrCalculator
     /// Gets or sets the current ADSR state.
     /// </summary>
     public AdsrState State { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the current sustain level.
     /// </summary>
@@ -50,7 +50,7 @@ internal sealed class AdsrCalculator
             }
         }
     }
-    
+
     /// <summary>
     /// Gets or sets the total output level.
     /// </summary>
@@ -83,7 +83,7 @@ internal sealed class AdsrCalculator
                 break;
         }
     }
-    
+
     public void SetActualAttackRate(int attackRate, int ksr, int keyScaleNumber)
     {
         // According to the YMF278B manual's OPL3 section, the attack curve is exponential,
@@ -127,14 +127,14 @@ internal sealed class AdsrCalculator
         // The dB increment is dictated by the period between 10% and 90%:
         _dBdecayIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
-    
+
     public void SetActualReleaseRate(int releaseRate, int ksr, int keyScaleNumber)
     {
         int actualReleaseRate = CalculateActualRate(releaseRate, ksr, keyScaleNumber);
         double period10To90InSeconds = DecayAndReleaseTimeValuesTable[actualReleaseRate];
         _dBreleaseIncrement = _opl.CalculateIncrement(PercentageToDb(0.1), PercentageToDb(0.9), period10To90InSeconds);
     }
-    
+
     public double GetEnvelope(int egt, int am)
     {
         // The datasheets attenuation values
@@ -174,7 +174,7 @@ internal sealed class AdsrCalculator
                 goto case AdsrState.Decay;
 
             case AdsrState.Decay:
-                // The decay and release are linear.                
+                // The decay and release are linear.
                 if (_envelope > envelopeSustainLevel)
                 {
                     _envelope -= _dBdecayIncrement;
@@ -235,14 +235,14 @@ internal sealed class AdsrCalculator
         // The envelope has a resolution of 0.1875 dB:
         return ((int)(outputEnvelope / envelopeResolution)) * envelopeResolution;
     }
-    
+
     public void KeyOn()
     {
         double xCurrent = Intrinsics.Log2(-_envelope);
         _x = Math.Min(xCurrent, _xMinimumInAttack);
         State = AdsrState.Attack;
     }
-    
+
     public void KeyOff()
     {
         if (State != AdsrState.Off) {
@@ -274,7 +274,7 @@ internal sealed class AdsrCalculator
 
     private static ReadOnlySpan<double> GetAttackTimeValues(int i) => new(AttackTimeValuesTable, i * 2, 2);
 
-    // These attack periods in miliseconds were taken from the YMF278B manual. 
+    // These attack periods in milliseconds were taken from the YMF278B manual. 
     // The attack actual rates range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
     private static readonly double[] AttackTimeValuesTable =
@@ -348,7 +348,7 @@ internal sealed class AdsrCalculator
         0.00, 0.00
     };
 
-    // These decay and release periods in miliseconds were taken from the YMF278B manual. 
+    // These decay and release periods in milliseconds were taken from the YMF278B manual. 
     // The rate index range from 0 to 63, with different data for 
     // 0%-100% and for 10%-90%: 
     private static readonly double[] DecayAndReleaseTimeValuesTable =

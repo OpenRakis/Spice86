@@ -14,7 +14,7 @@ public class ConsoleDevice : CharacterDevice {
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
-    
+
     /// <summary>
     /// Create a new console device.
     /// </summary>

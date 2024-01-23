@@ -4,12 +4,21 @@ using Spice86.Core.Emulator.Debugger;
 
 using System.Diagnostics;
 
+/// <summary>
+/// Represents the registers of the video DAC.
+/// </summary>
 public class DacRegisters : IDebuggableComponent {
+    /// <summary>
+    /// The DAC Palette, represented as a 256 * 3 array. Stores the current set of colors.
+    /// </summary>
     public readonly byte[,] Palette = new byte[256, 3];
     private int _indexRegister;
     private byte _internalIndex;
     private int _tripletCounter;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
     public DacRegisters() {
         ArgbPalette = new ArgbPalette(Palette);
     }
@@ -80,6 +89,9 @@ public class DacRegisters : IDebuggableComponent {
         }
     }
 
+    /// <summary>
+    /// Gets the byte from the <see cref="Palette"/>, pointed at by the _internalIndex and _tripletCounter
+    /// </summary>
     public byte DataPeek => Palette[_internalIndex, _tripletCounter];
 
     /// <summary>
@@ -87,6 +99,7 @@ public class DacRegisters : IDebuggableComponent {
     /// </summary>
     public ArgbPalette ArgbPalette { get; }
 
+    /// <inheritdoc />
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitDacRegisters(this);
         ArgbPalette.Accept(emulatorDebugger);

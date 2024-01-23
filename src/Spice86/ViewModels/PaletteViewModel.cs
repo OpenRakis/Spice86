@@ -26,7 +26,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
-    
+
     public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor) {
         programExecutor?.Accept(this);
         for (int i = 0; i < 256; i++) {
@@ -75,7 +75,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     public void VisitDacPalette(ArgbPalette argbPalette) => _argbPalette = argbPalette;
-    
+
     public void VisitDacRegisters(DacRegisters dacRegisters) {
     }
 

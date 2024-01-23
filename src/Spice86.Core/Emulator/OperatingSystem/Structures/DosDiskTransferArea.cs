@@ -48,7 +48,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// The offset in bytes where the file name field is located.
     /// </summary>
     private const int FileNameOffset = 0x1E;
-    
+
     /// <summary>
     /// The size in bytes of the zero-terminated ASCII file name string field.
     /// </summary>
@@ -59,7 +59,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
     internal byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
-    
+
     /// <summary>
     /// The file attributes used by the file search.
     /// <remarks>No one should touch this, except DOS.</remarks>
@@ -71,28 +71,28 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
     internal byte SearchId { get => UInt8[SearchIdOffset]; set => UInt8[SearchIdOffset] = value; }
-    
+
     /// <summary>
     /// Gets or sets where we are in the enumeration of the search results.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
     internal ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }
-    
+
     /// <summary>
     /// Gets or sets the file attributes field.
     /// </summary>
     public byte FileAttributes { get => UInt8[AttributeOffset]; set => UInt8[AttributeOffset] = value; }
-    
+
     /// <summary>
     /// Gets or sets the file time field.
     /// </summary>
     public ushort FileTime { get => UInt16[FileTimeOffset]; set => UInt16[FileTimeOffset] = value; }
-    
+
     /// <summary>
     /// Gets or sets the file date field.
     /// </summary>
     public ushort FileDate { get => UInt16[FileDateOffset]; set => UInt16[FileDateOffset] = value; }
-    
+
     /// <summary>
     /// Gets or sets the file size field.
     /// </summary>

@@ -1,5 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-enum ImplementationSpecs {
+internal enum ImplementationSpecs {
     // Fixed point specs
     FixedBits = sizeof(short) * 8,
     FixedMask = (1 << FixedBits) - 1,

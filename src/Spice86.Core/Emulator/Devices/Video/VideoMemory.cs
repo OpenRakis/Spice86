@@ -15,7 +15,7 @@ public class VideoMemory : IVideoMemory {
     /// <summary>
     ///     Create a new instance of the video memory.
     /// </summary>
-    /// <param name="state"></param>
+    /// <param name="state">The interface that represents the state of the video card.</param>
     public VideoMemory(IVideoState state) {
         _state = state;
         Planes = new byte[4, 0x20000];

@@ -18,7 +18,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
-    
+
     private ProgramExecutor CreateDummyProgramExecutor() {
         ProgramExecutor res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
         Machine machine = res.Machine;
@@ -27,7 +27,7 @@ public class CSharpOverrideHelperTest {
         machine.Cpu.State.SP = 100;
         return res;
     }
-    
+
     [Fact]
     void TestJumpReturns() {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
@@ -42,7 +42,7 @@ public class CSharpOverrideHelperTest {
     [Fact]
     void TestSimpleCallsJumps() {
         using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
-        
+
         SimpleCallsJumps callsJumps = new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
             programExecutor.Machine, _loggerServiceMock);
         callsJumps.Entry_1000_0000_10000();

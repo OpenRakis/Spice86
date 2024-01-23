@@ -15,7 +15,6 @@ using System.ComponentModel;
 
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
-/// As a shortcut also triggers screen refreshes 60 times per second.<br/>
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
@@ -33,7 +32,10 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
 
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic,CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Timer"/> class.
+    /// </summary>
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
@@ -42,7 +44,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         }
     }
 
-    /// <inheritdoc cref="ITimeMultiplier" /> 
+    /// <inheritdoc cref="ITimeMultiplier" />
     public void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));

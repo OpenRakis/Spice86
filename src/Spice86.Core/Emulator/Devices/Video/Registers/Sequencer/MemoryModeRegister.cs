@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.Sequencer;
 
+/// <inheritdoc cref="Register8"/>
 public class MemoryModeRegister : Register8 {
     /// <summary>
     ///     When set to 1, the Extended Memory field (bit 1) enables the video memory from 64KB to 256KB. This

@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Infrastructure;
 
-using Avalonia.Controls;
-
 using Spice86.Core.Emulator;
 using Spice86.Interfaces;
 using Spice86.ViewModels;
@@ -13,7 +11,9 @@ public interface IWindowActivator {
     /// <summary>
     /// Activates the Window corresponding to the <see cref="DebugViewModel"/>
     /// </summary>
-    /// <param name="parameters">The parameters to pass to the <see cref="DebugViewModel"/> constructor</param>
+    /// <param name="uiDispatcherTimer">The UI dispatcher timer, in order to execute code after a set amount of time has passed repeatedly.</param>
+    /// <param name="programExecutor">The class than can start, pause, and stop the emulation process.</param>
+    /// <param name="pauseStatus">The UI class that get or sets whether the emulator is paused.</param>
     void ActivateDebugWindow(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus);
 
     /// <summary>

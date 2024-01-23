@@ -23,7 +23,7 @@ public class ExecutionFlowDumper {
     public ExecutionFlowDumper(ILoggerService loggerService) {
         _loggerService = loggerService;
     }
-    
+
     /// <summary>
     /// Dumps the execution flow recorded by the provided executionFlowRecorder to a JSON file at the specified <paramref name="destinationFilePath"/>
     /// </summary>

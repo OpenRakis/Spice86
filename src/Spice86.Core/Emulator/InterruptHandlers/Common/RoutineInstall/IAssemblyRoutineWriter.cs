@@ -10,6 +10,6 @@ public interface IAssemblyRoutineWriter {
     /// <summary>
     /// Writes the ASM implementation of the Interrupt handler in emulated RAM.
     /// </summary>
-    /// <param name="memoryAsmWriter"></param>
+    /// <param name="memoryAsmWriter">The class that writes ASM to the Memory Bus.</param>
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter);
 }

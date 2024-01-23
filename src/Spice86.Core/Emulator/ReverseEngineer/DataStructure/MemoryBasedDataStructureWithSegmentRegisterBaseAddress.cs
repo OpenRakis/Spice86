@@ -11,7 +11,7 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : AbstractMe
     private readonly uint _segmentRegisterIndex;
 
     private readonly SegmentRegisters _segmentRegisters;
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

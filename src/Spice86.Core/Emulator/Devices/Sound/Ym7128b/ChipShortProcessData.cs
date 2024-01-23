@@ -1,5 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-public struct ChipShortProcessData {
+internal struct ChipShortProcessData {
     public ChipShortProcessData() {
         Inputs = new short[(int)InputChannel.Count];
         Outputs = new short[(int)OutputChannel.Count];

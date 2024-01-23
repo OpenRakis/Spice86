@@ -24,7 +24,7 @@ internal static partial class NativeMethods {
         outputParameters, sampleRate, framesPerBuffer, streamFlags, streamCallback, userData);
 
     public static int PortAudioWriteStream(IntPtr stream, IntPtr buffer, long frames) => _bindings.WriteStream(stream, buffer, frames);
-    
+
     public static int PortAudioCloseStream(IntPtr stream) => _bindings.CloseStream(stream);
 
     public static IntPtr PortAudioGetErrorText(int code) => _bindings.GetErrorText(code);
@@ -47,9 +47,9 @@ internal static partial class NativeMethods {
         int AbortStream(IntPtr stream);
         int CloseStream(IntPtr stream);
     }
-    
+
     private static readonly INativeBindings _bindings;
-    
+
     static NativeMethods() {
         if (OperatingSystem.IsWindows()) {
             _bindings = new Windows();
@@ -73,7 +73,7 @@ internal static partial class NativeMethods {
             throw new PlatformNotSupportedException();
         }
     }
-    
+
     /// <summary>
     /// A callback function that is used by a stream to provide or consume audio data in real time.
     /// </summary>
@@ -166,7 +166,7 @@ internal static partial class NativeMethods {
 
         public int CloseStream(IntPtr stream) => Pa_CloseStream(stream);
     }
-    
+
     [SupportedOSPlatform("Linux")]
     private partial class Linux : INativeBindings {
         [LibraryImport("libportaudio.so.2")]
@@ -212,7 +212,7 @@ internal static partial class NativeMethods {
 
         [LibraryImport("libportaudio.so.2")]
         private static partial int Pa_CloseStream(IntPtr stream);
-        
+
         public int Initialize() => Pa_Initialize();
 
         public int Terminate() => Pa_Terminate();
@@ -240,7 +240,7 @@ internal static partial class NativeMethods {
 
         public int CloseStream(IntPtr stream) => Pa_CloseStream(stream);
     }
-    
+
     [SupportedOSPlatform("OSX")]
     private partial class MacOS : INativeBindings {
         [LibraryImport("libportaudio.2.dylib")]
@@ -286,7 +286,7 @@ internal static partial class NativeMethods {
 
         [LibraryImport("libportaudio.2.dylib")]
         private static partial int Pa_CloseStream(IntPtr stream);
-        
+
         public int Initialize() => Pa_Initialize();
 
         public int Terminate() => Pa_Terminate();

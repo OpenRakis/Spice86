@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.VM;
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
 public abstract class Instructions16Or32 : Instructions {
-    protected Instructions16Or32(Cpu cpu, Memory.IMemory memory, ModRM modRm) 
+    protected Instructions16Or32(Cpu cpu, Memory.IMemory memory, ModRM modRm)
         : base(cpu, memory, modRm) {
     }
 
@@ -86,7 +86,7 @@ public abstract class Instructions16Or32 : Instructions {
             case 4:
                 Grp5RmJumpNear();
                 break;
-            case 5: 
+            case 5:
                 Grp5RmJumpFar();
                 break;
             case 6:
@@ -129,7 +129,7 @@ public abstract class Instructions16Or32 : Instructions {
     }
 
     protected abstract void Grp5RmPush();
-    
+
     protected abstract ushort DoLxsAndReturnSegmentValue();
 
     protected uint ReadLxsMemoryAddress() {
@@ -167,10 +167,10 @@ public abstract class Instructions16Or32 : Instructions {
     public abstract void Enter();
 
     public abstract void Leave();
-    
+
     public abstract void Shld(Grp2CountSource countSource);
-    
+
     public abstract void MovzxByte();
-    
+
     public abstract void MovsxByte();
 }

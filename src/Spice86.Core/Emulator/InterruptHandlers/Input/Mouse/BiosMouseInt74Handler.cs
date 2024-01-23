@@ -17,7 +17,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="hardwareInterruptHandler">The too programmable interrupt controllers.</param>
+    /// <param name="hardwareInterruptHandler">The two programmable interrupt controllers.</param>
     /// <param name="memory">The memory bus.</param>
     public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory) {
         _hardwareInterruptHandler = hardwareInterruptHandler;
@@ -27,6 +27,10 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <inheritdoc />
     public byte VectorNumber => 0x74;
 
+    /// <summary>
+    /// Sets the mouse driver address.
+    /// </summary>
+    /// <param name="driverAddress">The Segmented Address to use</param>
     public void SetMouseDriverAddress(SegmentedAddress driverAddress) => _driverAddressSwitcher.SetAddress(driverAddress.Segment, driverAddress.Offset);
 
     /// <inheritdoc />
@@ -41,7 +45,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
         // Default mouse driver: nothing, just a far ret
         _driverAddressSwitcher.DefaultAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.WriteFarRet();
-        
+
         // Entry point to the interrupt handler
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.GetCurrentAddressCopy();
         // Far call to default driver, can be changed via _inMemoryAddressSwitcher
@@ -50,7 +54,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, AfterMouseDriverExecution);
         // Write IRET
         memoryAsmWriter.WriteIret();
-        
+
         return interruptHandlerAddress;
     }
 

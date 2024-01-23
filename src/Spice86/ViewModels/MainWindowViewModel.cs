@@ -50,7 +50,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
-    
+
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
@@ -70,9 +70,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-    
+
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
-    
+
     public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
@@ -99,7 +99,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _avaloniaKeyScanCodeConverter.GetAsciiCode(
                     _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
     }
-    
+
     [RelayCommand]
     public async Task SaveBitmap() {
         if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
@@ -176,7 +176,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public int Width { get; private set; }
 
     public int Height { get; private set; }
-    
+
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
 
     public void ShowMouseCursor() => _uiDispatcher.Post(() => ShowCursor = true);
@@ -561,10 +561,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
     }
-    
+
     [ObservableProperty]
     private PerformanceViewModel? _performanceViewModel;
-    
+
     [ObservableProperty]
     private bool _isPerformanceVisible;
 

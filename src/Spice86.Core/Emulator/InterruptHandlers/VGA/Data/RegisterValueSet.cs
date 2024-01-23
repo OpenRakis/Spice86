@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 
-internal struct RegisterValueSet {
+internal readonly struct RegisterValueSet {
     private static readonly byte[] SequencerRegisterValueSet1 = {0x03, 0x08, 0x03, 0x00, 0x02};
     private static readonly byte[] SequencerRegisterValueSet2 = {0x03, 0x00, 0x03, 0x00, 0x02};
     private static readonly byte[] SequencerRegisterValueSet3 = {0x03, 0x09, 0x03, 0x00, 0x02};

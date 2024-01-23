@@ -7,6 +7,9 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     INT 12h handler. Reports how many kb of base memory is installed.
 /// </summary>
+/// <summary>
+///     INT 12h handler. Reports how many kb of base memory is installed.
+/// </summary>
 public class SystemBiosInt12Handler : InterruptHandler {
     private readonly BiosDataArea _biosDataArea;
 
@@ -26,6 +29,6 @@ public class SystemBiosInt12Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _state.AX = _biosDataArea.ConventionalMemorySizeKb;
+        State.AX = _biosDataArea.ConventionalMemorySizeKb;
     }
 }

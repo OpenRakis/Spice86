@@ -1,5 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-public struct ChipFloat {
+internal struct ChipFloat {
     public ChipFloat() {
         Regs = new byte[(int)Reg.Count];
         Gains = new double[(int)DatasheetSpecs.TapCount];

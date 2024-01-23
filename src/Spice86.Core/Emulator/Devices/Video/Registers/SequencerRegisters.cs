@@ -90,7 +90,7 @@ public class SequencerRegisters {
     /// <summary>
     ///     Writes to the sequencer register indicated by the Address field.
     /// </summary>
-    /// <param name="value"></param>
+    /// <param name="value">The byte value being written.</param>
     public void WriteRegister(byte value) {
         WriteRegister(Address, value);
     }

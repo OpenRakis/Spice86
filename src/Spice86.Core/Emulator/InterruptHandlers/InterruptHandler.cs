@@ -16,14 +16,17 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>
     /// The emulator CPU.
     /// </summary>
-    protected readonly Cpu _cpu;
+    protected readonly Cpu Cpu;
 
     /// <summary>
     /// The memory bus.
     /// </summary>
-    protected IMemory _memory;
+    protected IMemory Memory;
 
-    protected Stack _stack;
+    /// <summary>
+    /// The CPU stack.
+    /// </summary>
+    protected Stack Stack;
 
     /// <summary>
     /// Indicates whether the interrupt stack is present.
@@ -37,14 +40,17 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     protected InterruptHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(cpu.State, loggerService) {
-        _memory = memory;
-        _cpu = cpu;
-        _stack = cpu.Stack;
+        Memory = memory;
+        Cpu = cpu;
+        Stack = cpu.Stack;
     }
 
     /// <inheritdoc />
     public abstract byte VectorNumber { get; }
 
+    /// <summary>
+    /// Runs the runnables at the given index.
+    /// </summary>
     public abstract void Run();
 
     /// <inheritdoc />
@@ -52,7 +58,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         // Default implementation for most Interrupts:
         //  - Create a callback That will call the Run method
         //  - Write that in ram with an IRET
-        
+
         // Write ASM
         SegmentedAddress interruptHandlerAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
@@ -64,8 +70,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <summary>
     /// Stores the Action at the given index
     /// </summary>
-    /// <param name="index"></param>
-    /// <param name="action"></param>
+    /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
+    /// <param name="action">The C# method that implements the function called via the interrupt.</param>
     public void AddAction(int index, Action action) {
         AddRunnable(index, new RunnableAction(action));
     }
@@ -73,25 +79,25 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <inheritdoc />
     public override void Run(int index) {
         // By default Log the CS:IP of the caller which is more useful in most situations
-        SegmentedAddress? csIp = _cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
-        _loggerService.LoggerPropertyBag.CsIp = csIp ?? _loggerService.LoggerPropertyBag.CsIp;
+        SegmentedAddress? csIp = Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
+        LoggerService.LoggerPropertyBag.CsIp = csIp ?? LoggerService.LoggerPropertyBag.CsIp;
         base.Run(index);
     }
 
     /// <inheritdoc />
     protected override UnhandledOperationException GenerateUnhandledOperationException(int index) {
-        return new UnhandledInterruptException(_state, VectorNumber, index);
+        return new UnhandledInterruptException(State, VectorNumber, index);
     }
-    
+
     /// <summary>
     /// Sets the Carry Flag in the CPU state and optionally on the interrupt stack.
     /// </summary>
     /// <param name="value">The value to set for the Carry Flag.</param>
     /// <param name="setOnStack">If set to true, the Carry Flag will also be set on the interrupt stack.</param>
     protected void SetCarryFlag(bool value, bool setOnStack) {
-        _state.CarryFlag = value;
+        State.CarryFlag = value;
         if (_interruptStackPresent && setOnStack) {
-            _stack.SetFlagOnInterruptStack(Flags.Carry, value);
+            Stack.SetFlagOnInterruptStack(Flags.Carry, value);
         }
     }
 
@@ -101,12 +107,12 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="value">The value to set for the Zero Flag.</param>
     /// <param name="setOnStack">If set to true, the Zero Flag will also be set on the interrupt stack.</param>
     protected void SetZeroFlag(bool value, bool setOnStack) {
-        _state.ZeroFlag = value;
+        State.ZeroFlag = value;
         if (_interruptStackPresent && setOnStack) {
-            _stack.SetFlagOnInterruptStack(Flags.Zero, value);
+            Stack.SetFlagOnInterruptStack(Flags.Zero, value);
         }
     }
-    
+
     /// <summary>
     /// Runs the C# code that replaces the machine code. <br/>
     /// While the C# code is run, the interrupt stack is disabled.

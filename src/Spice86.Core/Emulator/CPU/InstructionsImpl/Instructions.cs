@@ -5,6 +5,9 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Utils;
 
+/// <summary>
+/// Instruction set of the CPU
+/// </summary>
 public abstract class Instructions {
     protected readonly Cpu Cpu;
     protected readonly State State;
@@ -12,12 +15,21 @@ public abstract class Instructions {
     protected readonly Memory.IMemory Memory;
     protected readonly ModRM ModRM;
 
+    /// <summary>
+    /// Gets the memory address of ES:DI.
+    /// </summary>
     protected uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
     protected uint MemoryAddressOverridableDsSi => ModRM.GetAddress(SegmentRegisters.DsIndex, State.SI);
 
     protected uint DsNextUint16Address => ModRM.GetAddress(SegmentRegisters.DsIndex, Cpu.NextUint16());
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Instructions"/> class.
+    /// </summary>
+    /// <param name="cpu">The emulated CPU</param>
+    /// <param name="memory">The memory bus</param>
+    /// <param name="modRm">The class that parses the ModRM byte of some instructions.</param>
     public Instructions(Cpu cpu, Memory.IMemory memory, ModRM modRm) {
         Cpu = cpu;
         State = cpu.State;
@@ -44,7 +56,7 @@ public abstract class Instructions {
     public abstract void SbbRmReg();
     public abstract void SbbRegRm();
     public abstract void SbbAccImm();
-    
+
     // And
     public abstract void AndRmReg();
     public abstract void AndRegRm();
@@ -65,10 +77,33 @@ public abstract class Instructions {
     public abstract void CmpRegRm();
     public abstract void CmpAccImm();
 
-    // MOVS
+    /// <summary>
+    /// MOVS (Move String) moves the string element pointed to by ESI to the
+    /// location pointed to by EDI. MOVSB operates on byte elements, MOVSW operates
+    /// on word elements, and MOVSD operates on doublewords. The destination segment
+    /// register cannot be overridden by a segment override prefix, but the source
+    /// segment register can be overridden. <br/>
+    /// The MOVS instruction, when accompanied by the REP prefix, operates as a
+    /// memory-to-memory block transfer. To set up for this operation, the program
+    /// must initialize ECX and the register pairs ESI and EDI. ECX specifies the
+    /// number of bytes, words, or doublewords in the block.<br/>
+    /// If DF=0, the program must point ESI to the first element of the source
+    /// string and point EDI to the destination address for the first element. If
+    /// DF=1, the program must point these two registers to the last element of the
+    /// source string and to the destination address for the last element,
+    /// respectively.
+    /// </summary>
     public abstract void Movs();
 
-    // CMPS
+    /// <summary>
+    /// CMPS (Compare Strings) subtracts the destination string element (at ES:EDI)
+    /// from the source string element (at ESI) and updates the flags AF, SF, PF, CF
+    /// and OF. If the string elements are equal, ZF=1; otherwise, ZF=0. If DF=0,
+    /// the processor increments the memory pointers (ESI and EDI) for the two
+    /// strings. CMPSB compares bytes, CMPSW compares words, and CMPSD compares
+    /// doublewords. The segment register used for the source address can be changed
+    /// with a segment override prefix while the destination segment register cannot be overridden
+    /// </summary>
     public abstract void Cmps();
 
     protected void AdvanceSI(short diff) {

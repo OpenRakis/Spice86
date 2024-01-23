@@ -59,7 +59,7 @@ public record FunctionInformation : IComparable<FunctionInformation> {
             return _unalignedReturns;
         }
     }
-    
+
     /// <summary>
     /// Adds the specified function return and target to the <see cref="Returns"/> dictionary property.
     /// </summary>

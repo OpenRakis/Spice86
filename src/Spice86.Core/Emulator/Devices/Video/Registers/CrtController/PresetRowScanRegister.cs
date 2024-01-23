@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Preset Row Scan register.
+/// </summary>
 public class PresetRowScanRegister : Register8 {
     /// <summary>
     ///     This field specifies the scanline where the first character row begins. This provides scrolling on a scanline

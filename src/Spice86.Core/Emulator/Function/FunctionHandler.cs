@@ -55,7 +55,7 @@ public class FunctionHandler {
     public void Call(CallType callType, ushort entrySegment, ushort entryOffset, ushort expectedReturnSegment, ushort expectedReturnOffset) {
         Call(callType, entrySegment, entryOffset, expectedReturnSegment, expectedReturnOffset, null, true);
     }
-    
+
     /// <summary>
     /// Calls a function.
     /// </summary>

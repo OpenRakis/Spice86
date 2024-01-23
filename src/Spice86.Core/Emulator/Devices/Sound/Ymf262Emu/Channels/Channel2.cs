@@ -78,7 +78,7 @@ internal class Channel2 : Channel
         Feedback1 = (op1Output * FeedbackTable[Fb]) % 1;
         GetFourChannelOutput(channelOutput, output);
     }
-    
+
     /// <summary>
     /// Activates channel output.
     /// </summary>
@@ -89,7 +89,7 @@ internal class Channel2 : Channel
         Feedback0 = 0;
         Feedback1 = 0;
     }
-    
+
     /// <summary>
     /// Disables channel output.
     /// </summary>
@@ -98,7 +98,7 @@ internal class Channel2 : Channel
         Op1?.KeyOff();
         Op2?.KeyOff();
     }
-    
+
     /// <summary>
     /// Updates the state of all of the operators in the channel.
     /// </summary>

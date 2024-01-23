@@ -56,8 +56,8 @@ public abstract class Indexable : IIndexable {
     public abstract SegmentedAddressIndexer SegmentedAddress {
         get;
     }
-
-    public static (UInt8Indexer, UInt16Indexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(
+    
+    internal static (UInt8Indexer, UInt16Indexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddressIndexer) InstantiateIndexersFromByteReaderWriter(
             IByteReaderWriter byteReaderWriter) {
         UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter);
         UInt16Indexer uInt16 = new UInt16Indexer(byteReaderWriter);
@@ -74,7 +74,7 @@ public abstract class Indexable : IIndexable {
     /// </summary>
     /// <param name="address">The address in memory from where to read</param>
     /// <param name="maxLength">The maximum string length</param>
-    /// <returns></returns>
+    /// <returns>The zero-terminated string retrieved from memory.</returns>
     public virtual string GetZeroTerminatedString(uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {

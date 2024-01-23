@@ -13,7 +13,7 @@ public interface IPerformanceMeasurer {
     /// Gets the performance measurement value per second.
     /// </summary>
     long ValuePerSecond { get; }
-    
+
     /// <summary>
     /// Gets the performance measurement value per second (average).
     /// </summary>

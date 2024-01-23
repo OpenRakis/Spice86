@@ -27,7 +27,7 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     /// Gets a copy of the current memory state.
     /// </summary>
     byte[] RamCopy { get; }
-    
+
     /// <summary>
     /// Returns a <see cref="Span{T}"/> that represents the specified range of memory.
     /// </summary>
@@ -45,7 +45,7 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     /// <param name="value">The sequence of bytes to search for</param>
     /// <returns>The address of the first occurence of the specified sequence of bytes, or null if not found.</returns>
     uint? SearchValue(uint address, int len, IList<byte> value);
-    
+
     /// <summary>
     ///     Allows write breakpoints to access the byte being written before it actually is.
     /// </summary>

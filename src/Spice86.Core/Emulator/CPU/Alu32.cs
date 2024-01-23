@@ -2,10 +2,13 @@
 
 using Spice86.Core.Emulator.CPU.Exceptions;
 
+/// <summary>
+/// Arithmetic Logic Unit code for 32bits operations.
+/// </summary>
 public class Alu32 : Alu<uint, int, ulong, long>  {
-    
+
     private const uint BeforeMsbMask = 0x40000000;
-    
+
     private const uint MsbMask = 0x80000000;
 
     public Alu32(State state) : base(state) {
@@ -43,7 +46,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
 
         return (uint)res;
     }
-    
+
     public override int Idiv(long value1, int value2) {
         if (value2 == 0) {
             throw new CpuDivisionErrorException($"Division by zero");
@@ -58,7 +61,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
 
         return (int)res;
     }
-    
+
     public override long Imul(int value1, int value2) {
         long res = (long)value1 * value2;
         bool doesNotFitInDWord = res != (int)res;
@@ -77,7 +80,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         SetSignFlag((uint)res);
         return res;
     }
-    
+
     public override uint Or(uint value1, uint value2) {
         uint res = value1 | value2;
         UpdateFlags(res);
@@ -85,7 +88,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = false;
         return res;
     }
-    
+
     public override uint Rcl(uint value, byte count) {
         count = (byte) ((count & ShiftCountMask) % 33);
         if (count == 0) {
@@ -105,7 +108,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
-    
+
     public override uint Rcr(uint value, int count) {
         count = (count & ShiftCountMask) % 33;
         if (count == 0) {
@@ -124,7 +127,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         SetOverflowForRigthRotate32(res);
         return res;
     }
-    
+
     public override uint Rol(uint value, byte count) {
         count = (byte) ((count & ShiftCountMask) % 32);
         if (count == 0) {
@@ -139,7 +142,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = msb ^ _state.CarryFlag;
         return res;
     }
-    
+
     public override uint Ror(uint value, int count) {
         count = (count & ShiftCountMask) % 16;
         if (count == 0) {
@@ -154,7 +157,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         SetOverflowForRigthRotate32(res);
         return res;
     }
-    
+
     public override uint Sar(uint value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -183,7 +186,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = (msb ^ msbBefore) != 0;
         return res;
     }
-    
+
     public override uint Shld(uint destination, uint source, byte count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -198,7 +201,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = msb != msbBefore;
         return res;
     }
-    
+
     public override uint Shr(uint value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {
@@ -224,7 +227,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = ((overflowBits >> 31) & 1) == 1;
         return res;
     }
-    
+
     
     public override uint Xor(uint value1, uint value2) {
         uint res = value1 ^ value2;
@@ -233,7 +236,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         _state.OverflowFlag = false;
         return res;
     }
-    
+
     private void SetOverflowForRigthRotate32(uint res) {
         bool msb = (res & MsbMask) != 0;
         bool beforeMsb = (res & BeforeMsbMask) != 0;

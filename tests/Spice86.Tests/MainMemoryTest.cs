@@ -17,7 +17,7 @@ public class MainMemoryTest {
         // Act & Assert
         Assert.Throws<IndexOutOfRangeException>(() =>_memory.UInt8[0xF800, 0x8000]);
     }
-    
+
     [Fact]
     public void DisabledA20Gate_Should_RolloverAddress() {
         // Arrange
@@ -41,7 +41,7 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x12, actual);
     }
-    
+
     [Fact]
     public void TestGetInt8() {
         // Arrange
@@ -66,7 +66,7 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x1234, actual);
     }
-    
+
     [Fact]
     public void TestGetUnt16() {
         // Arrange
@@ -94,7 +94,7 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x56781234u, actual);
     }
-    
+
     [Fact]
     public void TestGetInt32() {
         // Arrange
@@ -121,12 +121,12 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x12, _memory.UInt8[0x1234]);
     }
-    
+
     [Fact]
     public void TestSetInt8() {
         // Arrange
         _memory.UInt8[0x1234] = 0x00;
-        
+
         // Act
         _memory.Int8[0x1234] = -1;
 
@@ -147,13 +147,13 @@ public class MainMemoryTest {
         Assert.Equal(0x34, _memory.UInt8[0x1234]);
         Assert.Equal(0x12, _memory.UInt8[0x1235]);
     }
-    
+
     [Fact]
     public void TestSetInt16() {
         // Arrange
         _memory.UInt8[0x1234] = 0x00;
         _memory.UInt8[0x1235] = 0x00;
-        
+
         // Act
         _memory.Int16[0x1234] = -1;
 
@@ -179,7 +179,7 @@ public class MainMemoryTest {
         Assert.Equal(0x78, _memory.UInt8[0x1236]);
         Assert.Equal(0x56, _memory.UInt8[0x1237]);
     }
-    
+
     [Fact]
     public void TestSetInt32() {
         // Arrange
@@ -187,7 +187,7 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x00;
         _memory.UInt8[0x1236] = 0x00;
         _memory.UInt8[0x1237] = 0x00;
-        
+
         // Act
         _memory.Int32[0x1234] = -1;
 
@@ -327,7 +327,7 @@ public class MainMemoryTest {
         Assert.Equal(expected1, newMem.Read(0x1234));
         Assert.Equal(expected2, newMem.Read(0x1235));
     }
-    
+
     
     [Fact]
     public void TestMappedSetUint32() {
@@ -336,17 +336,17 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x23;
         _memory.UInt8[0x1236] = 0x34;
         _memory.UInt8[0x1237] = 0x45;
-    
+
         var newMem = new Ram(16 * 1024);
         newMem.Write(0x1234, 0xDE);
         newMem.Write(0x1235, 0xAD);
         newMem.Write(0x1236, 0xBE);
         newMem.Write(0x1237, 0xEF);
         _memory.RegisterMapping(0x1234, 4, newMem);
-    
+
         // Act
         _memory.UInt32[0x1234] = 0x12345678;
-    
+
         // Assert
         Assert.Equal(0x78, newMem.Read(0x1234));
         Assert.Equal(0x56, newMem.Read(0x1235));
@@ -357,7 +357,7 @@ public class MainMemoryTest {
         Assert.Equal(0x34, _memory.UInt8[0x1236]);
         Assert.Equal(0x12, _memory.UInt8[0x1237]);
     }
-    
+
     [Fact]
     public void TestMappedSetUnalignedUint32() {
         // Arrange
@@ -366,17 +366,17 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x34;
         _memory.UInt8[0x1236] = 0x45;
         _memory.UInt8[0x1237] = 0x56;
-    
+
         var newMem = new Ram(16 * 1024);
         newMem.Write(0x1234, 0xDE);
         newMem.Write(0x1235, 0xAD);
         newMem.Write(0x1236, 0xBE);
         newMem.Write(0x1237, 0xEF);
         _memory.RegisterMapping(0x1234, 4, newMem);
-    
+
         // Act
         _memory.UInt32[0x1233] = 0x12345678;
-    
+
         // Assert
         Assert.Equal(0x00, newMem.Read(0x1233));
         Assert.Equal(0x56, newMem.Read(0x1234));
@@ -389,7 +389,7 @@ public class MainMemoryTest {
         Assert.Equal(0x12, _memory.UInt8[0x1236]);
         Assert.Equal(0xEF, _memory.UInt8[0x1237]);
     }
-    
+
     [Fact]
     public void TestMappedSetUint32Overlapping() {
         // Arrange
@@ -397,17 +397,17 @@ public class MainMemoryTest {
         _memory.UInt8[0x1235] = 0x23;
         _memory.UInt8[0x1236] = 0x34;
         _memory.UInt8[0x1237] = 0x45;
-    
+
         var newMem = new Ram(16 * 1024);
         newMem.Write(0x1234, 0xDE);
         newMem.Write(0x1235, 0xAD);
         newMem.Write(0x1236, 0xBE);
         newMem.Write(0x1237, 0xEF);
         _memory.RegisterMapping(0x1234, 4, newMem);
-    
+
         // Act
         _memory.UInt32[0x1235] = 0x12345678;
-    
+
         // Assert
         Assert.Equal(0xDE, newMem.Read(0x1234));
         Assert.Equal(0x78, newMem.Read(0x1235));

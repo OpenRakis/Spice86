@@ -52,7 +52,7 @@ internal abstract class MidiDevice : IDisposable {
             }
         }
     }
-    
+
     /// <inheritdoc/>
     public void Dispose() {
         Dispose(true);
@@ -64,7 +64,7 @@ internal abstract class MidiDevice : IDisposable {
     /// </summary>
     /// <param name="message">The message to play.</param>
     protected abstract void PlayShortMessage(uint message);
-    
+
     
     /// <summary>
     /// Plays a SysEx MIDI message.

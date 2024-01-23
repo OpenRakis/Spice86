@@ -12,7 +12,7 @@ public class Configuration {
     /// </summary>
     [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
     public bool A20Gate { get; init; }
-    
+
     /// <summary> Path to C drive, default is exe parent. </summary>
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]
     public string? CDrive { get; set; }
@@ -77,7 +77,7 @@ public class Configuration {
     /// </summary>
     [Option('v', nameof(InitializeDOS), Default = null, Required = false, HelpText = "Install DOS interrupt vectors or not")]
     public bool? InitializeDOS { get; set; }
-    
+
     /// <summary>
     /// Only for <see cref="Emulator.Devices.Timer.Timer"/>
     /// </summary>
@@ -131,7 +131,7 @@ public class Configuration {
     /// </summary>
     [Option(nameof(Ems), Default = false, Required = false, HelpText = "Enable EMS")]
     public bool Ems { get; init; }
-    
+
     /// <summary>
     /// Specify the type of mouse to use.
     /// </summary>

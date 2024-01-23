@@ -5,17 +5,18 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 using System.Threading;
-using System.Timers;
 
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
 public sealed class Dsp : IDisposable {
     private readonly IRequestInterrupt _soundCard;
-    
+
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
+    /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
+    /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
     /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
     public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard) {
         dmaChannel8 = eightBitDmaChannel;
@@ -23,7 +24,6 @@ public sealed class Dsp : IDisposable {
         SampleRate = 22050;
         BlockTransferSize = 65536;
         _soundCard = soundCard;
-        
     }
 
     /// <summary>
@@ -320,13 +320,7 @@ public sealed class Dsp : IDisposable {
         }
     }
 
-    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-    // ~Dsp()
-    // {
-    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-    //     Dispose(disposing: false);
-    // }
-
+    /// <inheritdoc/>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

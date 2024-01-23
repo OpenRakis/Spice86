@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 public partial class ViewModelBase : ObservableObject {
-    
+
     [RelayCommand]
     public void ClearDialog() => IsDialogVisible = false;
 

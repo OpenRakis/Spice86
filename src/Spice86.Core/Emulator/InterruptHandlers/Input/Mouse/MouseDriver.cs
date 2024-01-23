@@ -246,7 +246,7 @@ public class MouseDriver : IMouseDriver {
     private void SaveRegisters() {
         _savedRegisters = new MouseRegisters(_state.ES, _state.DS, _state.DI, _state.SI, _state.BP, _state.SP, _state.BX, _state.DX, _state.CX, _state.AX);
     }
-    
+
     private void RestoreRegisters() {
         if (_savedRegisters == null) {
             return;
@@ -267,7 +267,7 @@ public class MouseDriver : IMouseDriver {
     }
 
     private record MouseRegisters(ushort Es, ushort Ds, ushort Di, ushort Si, ushort Bp, ushort Sp, ushort Bx, ushort Dx, ushort Cx, ushort Ax);
-    
+
     /// <inheritdoc />
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         // Mouse driver implementation:
@@ -276,12 +276,12 @@ public class MouseDriver : IMouseDriver {
         //  - Create a modifiable Far call instruction that is calling the default handler
         //  - Create a callback (0xFF) that does the cleanup with AfterUserHandlerExecution
         //  - Create a FAR ret
-        
+
         // Write ASM
         // Default user handler: nothing, just a far ret. 
         _userHandlerAddressSwitcher.DefaultAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.WriteFarRet();
-        
+
         SegmentedAddress driverAddress = memoryAsmWriter.GetCurrentAddressCopy();
         memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecutionCallbackNumber, BeforeUserHandlerExecution);
         // Far call to default handler, can be changed via _inMemoryAddressSwitcher

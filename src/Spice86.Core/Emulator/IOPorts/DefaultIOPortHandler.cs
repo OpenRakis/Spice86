@@ -5,9 +5,7 @@ using System.Runtime.CompilerServices;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -18,12 +16,12 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// Contains the argument of the last <see cref="ReadByte"/> operation.
     /// </summary>
     public int LastPortRead { get; protected set; }
-    
+
     /// <summary>
     /// Contains the first argument of the last <see cref="WriteByte"/> operation.
     /// </summary>
     public int LastPortWritten { get; protected set; }
-    
+
     /// <summary>
     /// Contains the second argument of the last <see cref="WriteByte"/> operation.
     /// </summary>
@@ -47,7 +45,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
     /// Constructor for DefaultIOPortHandler
     /// </summary>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU Registers and Flags.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">Logger service implementation.</param>
     protected DefaultIOPortHandler(State state, bool failOnUnhandledPort, ILoggerService loggerService) {

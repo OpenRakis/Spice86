@@ -1,5 +1,5 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Ym7128b;
-public struct ChipShort {
+internal struct ChipShort {
     public ChipShort() {
         Regs = new byte[(int)Reg.Count];
         Gains = new short[(int)DatasheetSpecs.TapCount];

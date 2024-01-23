@@ -66,7 +66,7 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <summary>
     ///     Get the user-defined mouse callback.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A mutable struct with value based equality representing the mouse user callback function.</returns>
     MouseUserCallback GetRegisteredCallback();
 
     /// <summary>
@@ -105,7 +105,6 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <summary>
     ///     Get the number of mickeys of vertical movement.
     /// </summary>
-    /// <returns></returns>
     short GetDeltaYMickeys();
 
     /// <summary>

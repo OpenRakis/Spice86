@@ -29,6 +29,6 @@ public interface IVgaRenderer : IDebuggableComponent {
     /// <summary>
     ///     Render the current video memory to a buffer.
     /// </summary>
-    /// <param name="buffer"></param>
+    /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>
     void Render(Span<uint> buffer);
 }

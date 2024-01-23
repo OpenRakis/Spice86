@@ -12,12 +12,12 @@ public interface ILoggerService : ILogger {
     /// Dynamic global minimum log level, from Verbose to Fatal.
     /// </summary>
     LoggingLevelSwitch LogLevelSwitch { get; set; }
-    
+
     /// <summary>
     /// A set of properties that will be inlined with every log statement.
     /// </summary>
     ILoggerPropertyBag LoggerPropertyBag { get; }
-    
+
     /// <summary>
     /// Whether logs are ignored.
     /// </summary>
@@ -36,6 +36,6 @@ public interface ILoggerService : ILogger {
 
     /// <summary>
     /// Returns a new <see cref="ILoggerService"/> with the specified minimum log level.
-    /// </summary> 
+    /// </summary>
     ILoggerService WithLogLevel(LogEventLevel minimumLevel);
 }

@@ -9,9 +9,9 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Emulates a PIC8259 Programmable Interrupt Controller.<br/>
 /// Some resources:
-/// <ul>
-/// <li>https://wiki.osdev.org/PIC</li>
-/// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li>
+/// <ul><br/>
+/// <li>https://wiki.osdev.org/PIC</li><br/>
+/// <li>https://k.lse.epita.fr/internals/8259a_controller.html</li><br/>
 /// </ul>
 /// </summary>
 public class Pic : IHardwareInterruptController {
@@ -148,7 +148,7 @@ public class Pic : IHardwareInterruptController {
                 ClearHighestInServiceIrq();
             }
         }
-        
+
         if (rotatePriorities) {
             _lowestPriorityIrq = interruptLevel;
         }

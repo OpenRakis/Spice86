@@ -1,5 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 
+/// <summary>
+/// Represents the 8 bit Horizontal Blanking End register.
+/// </summary>
 public class HorizontalBlankingEndRegister : Register8 {
     /// <summary>
     ///     If this bit is programmed to ‘0’, registers CR10 and CR11 are write-only registers. If this bit is programmed

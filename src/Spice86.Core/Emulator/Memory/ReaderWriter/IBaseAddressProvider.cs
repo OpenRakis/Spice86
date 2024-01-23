@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.Memory.ReaderWriter; 
+﻿namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Interface for classes that provide a BaseAddress uint field.

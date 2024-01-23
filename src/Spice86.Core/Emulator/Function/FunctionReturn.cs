@@ -13,7 +13,7 @@ public readonly record struct FunctionReturn(CallType ReturnCallType, SegmentedA
     public int CompareTo(FunctionReturn other) {
         return Address.CompareTo(other.Address);
     }
-    
+
     /// <inheritdoc/>
     public override string ToString() {
         return $"{ReturnCallType} at {Address}";

@@ -26,13 +26,22 @@ public class GdbCommandHandler {
     private readonly State _state;
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    
+
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
     /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
+    /// <param name="machineBreakpoints">The class used to store and retrieve breakpoints.</param>
+    /// <param name="callbackHandler">The class that stores callbacks as machine code instructions and is responsible for calling our C# handlers.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="functionHandler">The class that handles function calls at the machine code level.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
+    /// <param name="gui">The emulator's UI.</param>
     public GdbCommandHandler(IMemory memory, Cpu cpu, State state, PauseHandler pauseHandler,
         MachineBreakpoints machineBreakpoints, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
         FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration, IGui? gui) {

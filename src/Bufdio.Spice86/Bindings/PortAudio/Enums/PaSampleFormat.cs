@@ -1,4 +1,4 @@
-namespace Bufdio.Spice86.Bindings.PortAudio.Enums; 
+namespace Bufdio.Spice86.Bindings.PortAudio.Enums;
 
 internal enum PaSampleFormat : long {
     paFloat32 = 0x00000001,

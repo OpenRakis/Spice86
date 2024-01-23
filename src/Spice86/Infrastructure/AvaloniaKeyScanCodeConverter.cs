@@ -11,7 +11,7 @@ public class AvaloniaKeyScanCodeConverter : IAvaloniaKeyScanCodeConverter {
     /// A dictionary that maps <see cref="Key"/> values to their corresponding keyboard scan codes.
     /// </summary>
     private static readonly FrozenDictionary<Key, byte> _keyPressedScanCode;
-    
+
     /// <summary>
     /// A dictionary that maps keyboard scan codes to their corresponding ASCII codes.
     /// </summary>

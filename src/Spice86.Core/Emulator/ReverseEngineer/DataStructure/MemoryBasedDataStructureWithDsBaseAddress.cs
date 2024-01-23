@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.VM;
 /// That segmented address is stored in the DS register.
 /// </summary>
 public class MemoryBasedDataStructureWithDsBaseAddress : MemoryBasedDataStructureWithSegmentRegisterBaseAddress {
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

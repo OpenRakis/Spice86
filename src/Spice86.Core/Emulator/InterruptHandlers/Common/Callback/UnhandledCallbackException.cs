@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.Errors;
 /// Exception signaling that the callback number that was meant to be executed was not mapped to any
 /// csharp code. <br /> Could happen for unhandled exceptions.
 /// </summary>
-[Serializable]
 public class UnhandledCallbackException : UnhandledOperationException {
     /// <summary>
     /// Initializes a new instance of the <see cref="UnhandledCallbackException"/> class with a specified machine and callback number.

@@ -19,7 +19,7 @@ public class A20Gate {
     /// This value equals to 1 MB + 65 519 bytes.
     /// </summary>
     public const uint EndOfHighMemoryArea = 0x10FFEF;
-    
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -27,7 +27,7 @@ public class A20Gate {
     public A20Gate(bool enabled) {
         IsEnabled = enabled;
     }
-    
+
     /// <summary>
     /// Calculates the new memory address with the 20th address line silenced. <br/>
     /// If it isn't silenced, the same address is returned.
@@ -60,7 +60,7 @@ public class A20Gate {
     /// The address mask used over memory accesses.
     /// </summary>
     public uint AddressMask { get; private set; } = DisabledAddressMask;
-    
+
     /// <summary>
     /// Gets and sets whether the 20th address line is enabled.
     /// When <c>false</c>, the address 'rollover' beyond the first megabyte of main memory is active.

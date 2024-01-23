@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Errors;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
 
 using System;
 
@@ -10,7 +9,6 @@ using System;
 /// message. Named <see cref="InvalidVMOperationException" /> because
 /// <see cref="InvalidOperationException" /> already exists in the BCL.
 /// </summary>
-[Serializable]
 public class InvalidVMOperationException : Exception {
     /// <summary>
     /// Constructs a new instance of <see cref="InvalidVMOperationException"/> with the specified error message
@@ -31,7 +29,7 @@ public class InvalidVMOperationException : Exception {
     }
 
     /// <summary>
-    /// Generates a status message that includes the current state of the <paramref name="machine"/>
+    /// Generates a status message that includes the current state of the CPU.
     /// and an optional error message.
     /// </summary>
     /// <param name="state">The CPU state.</param>

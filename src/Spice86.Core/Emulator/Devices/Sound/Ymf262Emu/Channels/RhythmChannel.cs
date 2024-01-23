@@ -37,13 +37,13 @@ internal sealed class RhythmChannel : Channel2 {
 
         GetFourChannelOutput(channelOutput, output);
     }
-    
+
     /// <summary>
     /// Activates channel output.
     /// </summary>
     public override void KeyOn() {
     }
-    
+
     /// <summary>
     /// Disables channel output.
     /// </summary>

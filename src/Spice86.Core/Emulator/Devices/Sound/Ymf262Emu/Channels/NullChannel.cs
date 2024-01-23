@@ -20,21 +20,21 @@ internal sealed class NullChannel : Channel
     /// </summary>
     /// <returns>Array containing the channel's output values.</returns>
     public override void GetChannelOutput(Span<double> output) => output.Clear();
-    
+
     /// <summary>
     /// Activates channel output.
     /// </summary>
     public override void KeyOn()
     {
     }
-    
+
     /// <summary>
     /// Disables channel output.
     /// </summary>
     public override void KeyOff()
     {
     }
-    
+
     /// <summary>
     /// Updates the state of all of the operators in the channel.
     /// </summary>

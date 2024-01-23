@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IVideoState" />
 public class VideoState : IVideoState {
     /// <summary>
     ///     Creates a new instance of the <see cref="VideoState" /> class.
@@ -35,6 +35,7 @@ public class VideoState : IVideoState {
     /// <inheritdoc />
     public AttributeControllerRegisters AttributeControllerRegisters { get; }
 
+    /// <inheritdoc/>
     public void Accept(IEmulatorDebugger emulatorDebugger) {
         emulatorDebugger.VisitVideoState(this);
         DacRegisters.Accept(emulatorDebugger);

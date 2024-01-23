@@ -59,7 +59,7 @@ public class GdbCommandBreakpointHandler {
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
     }
-    
+
     /// <summary>
     /// Gets or sets a value indicating whether the emulator should be resumed when GDB command has ended.
     /// </summary>
@@ -90,7 +90,7 @@ public class GdbCommandBreakpointHandler {
             }
         }
     }
-    
+
     /// <summary>
     /// Parses a breakpoint command string and returns a <see cref="BreakPoint"/> object.
     /// </summary>
@@ -135,7 +135,7 @@ public class GdbCommandBreakpointHandler {
     /// Removes a breakpoint
     /// </summary>
     /// <param name="commandContent">The breakpoint command string.</param>
-    /// <returns></returns>
+    /// <returns>Either an empty string if the breakpoint string could not be parsed, or "OK"</returns>
     public string RemoveBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         if (breakPoint == null) {

@@ -18,7 +18,7 @@ public class MemoryBasedDataStructureTest {
     private const string ExpectedString = "0123456789";
     private static readonly int ExpectedStringLength = ExpectedString.Length + 1;
     private static readonly SegmentedAddress ExpectedSegmentedAddress = new (0x0708, 0x0900);
-    
+
     private static readonly byte[] ExpectedUInt8Array = { 0x01, 0x02 };
     private static readonly ushort[] ExpectedUInt16Array = { 0x0101, 0x0202 };
     private static readonly uint[] ExpectedUInt32Array = { 0x01010101, 0x02020202 };

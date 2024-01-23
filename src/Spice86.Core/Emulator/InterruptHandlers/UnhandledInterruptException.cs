@@ -2,10 +2,8 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.VM;
 
 /// <summary> Signals that the operation for the given callback is not handled. </summary>
-[Serializable]
 public class UnhandledInterruptException : UnhandledOperationException {
     /// <summary>
     /// Initializes a new instance of <see cref="UnhandledOperationException"/>

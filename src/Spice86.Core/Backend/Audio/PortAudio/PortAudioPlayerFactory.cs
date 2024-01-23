@@ -32,7 +32,7 @@ public class PortAudioPlayerFactory {
             throw new PlatformNotSupportedException();
         }
     }
-    
+
     /// <summary>
     /// Creates an instance of PortAudioPlayer eventually loading the libportaudio native library if needed.
     /// </summary>

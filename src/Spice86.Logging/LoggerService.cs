@@ -6,16 +6,16 @@ using Serilog.Events;
 using Serilog.Exceptions;
 using Spice86.Shared.Interfaces;
 
-/// <inheritdoc/>
+/// <inheritdoc cref="ILoggerService"/>
 public class LoggerService : ILoggerService {
     /// <summary>
     /// The format for the log message that will be output.
     /// </summary>
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
-    
+
     /// <inheritdoc/>
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
-    
+
     /// <inheritdoc/>
     public bool AreLogsSilenced { get; set; }
 
@@ -36,7 +36,7 @@ public class LoggerService : ILoggerService {
         _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch);
     }
-    
+
     /// <summary>
     /// Creates the ILogger at the last possible time, since it can be created only once.
     /// </summary>
@@ -45,11 +45,11 @@ public class LoggerService : ILoggerService {
         _logger ??= _loggerConfiguration.CreateLogger();
         return AddProperties(_logger);
     }
-    
+
     private ILogger AddProperties(Serilog.Core.Logger logger) {
         return logger.ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false);
     }
-    
+
     /// <inheritdoc/>
     public LoggerConfiguration CreateLoggerConfiguration() {
         return new LoggerConfiguration()
@@ -67,7 +67,7 @@ public class LoggerService : ILoggerService {
     }
 
 #pragma warning disable Serilog004
-    
+
     /// <inheritdoc/>
     public void Information(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -83,7 +83,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Warning(message);
     }
-    
+
     /// <inheritdoc/>
     public void Warning(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -91,7 +91,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Warning(e, messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Error(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -99,7 +99,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Error(e, messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Fatal(Exception? e, string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -107,7 +107,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Fatal(e, messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Warning(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -115,7 +115,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Warning(messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Error(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -123,7 +123,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Error(messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Fatal(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -131,7 +131,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Fatal(messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Debug(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {
@@ -139,7 +139,7 @@ public class LoggerService : ILoggerService {
         }
         GetLogger().Debug(messageTemplate, properties);
     }
-    
+
     /// <inheritdoc/>
     public void Verbose(string messageTemplate, params object?[]? properties) {
         if (AreLogsSilenced) {

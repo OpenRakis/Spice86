@@ -236,9 +236,9 @@ public class DosMemoryManager {
     /// <li>If size is less the block size => splits the block by creating a new free mcb at the end of the block</li>
     /// </ul>
     /// </summary>
-    /// <param name="block"></param>
-    /// <param name="size"></param>
-    /// <returns></returns>
+    /// <param name="block">The block to split up.</param>
+    /// <param name="size">The new size for the block.</param>
+    /// <returns>Whether the operation was successful.</returns>
     private bool SplitBlock(DosMemoryControlBlock block, ushort size) {
         ushort blockSize = block.Size;
         if (blockSize == size) {
