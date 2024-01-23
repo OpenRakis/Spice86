@@ -261,7 +261,7 @@ The emulated Timer hardware of the PC (Intel 8259) supports measuring time from 
 - The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
 
 ### Screen refresh
-Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see IVideoCard::TickRetrace).
+Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see Renderer.cs).
 
 ### Emulator features
 CPU:
