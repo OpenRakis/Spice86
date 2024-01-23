@@ -1,7 +1,10 @@
 name: .NET Build
 
-# Trigger the workflow on push or pull request
-on: [push]
+# Trigger the workflow on push to master
+on:
+  push:
+    branches:
+      - "master"
 
 jobs:
   build:
