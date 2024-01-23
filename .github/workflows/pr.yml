@@ -1,0 +1,27 @@
+name: Test and Publish NuGet
+
+# Trigger the workflow on PRs
+on:
+    pull_request
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+      fail-fast: false
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v1
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Test with dotnet
+      working-directory: ./src
+      run: dotnet test --configuration Release
