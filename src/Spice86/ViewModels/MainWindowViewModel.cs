@@ -346,10 +346,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
-        if (_drawingSemaphoreSlimDisposed) {
-            return;
+        if (!_drawingSemaphoreSlimDisposed) {
+            _drawingSemaphoreSlim?.Wait();
         }
-        _drawingSemaphoreSlim?.Wait();
         try {
             using ILockedFramebuffer pixels = Bitmap.Lock();
             var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
