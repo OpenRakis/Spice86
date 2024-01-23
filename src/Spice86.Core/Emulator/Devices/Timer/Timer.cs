@@ -32,7 +32,10 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private readonly Counter[] _counters = new Counter[3];
     private readonly DualPic _dualPic;
 
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic,CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Timer"/> class.
+    /// </summary>
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,

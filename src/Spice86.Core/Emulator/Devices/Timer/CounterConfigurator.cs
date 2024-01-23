@@ -3,8 +3,6 @@ using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
-using Serilog;
-
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 
