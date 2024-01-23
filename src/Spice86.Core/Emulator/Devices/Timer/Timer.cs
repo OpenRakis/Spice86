@@ -15,7 +15,6 @@ using System.ComponentModel;
 
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
-/// As a shortcut also triggers screen refreshes 60 times per second.<br/>
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
