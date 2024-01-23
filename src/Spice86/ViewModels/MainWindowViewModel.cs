@@ -36,8 +36,11 @@ using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Video;
 
+using Timer = System.Timers.Timer;
+
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
+    private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IUIDispatcherTimer _uiDispatcherTimer;
     private readonly IHostStorageProvider _hostStorageProvider;
@@ -58,10 +61,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isAppClosing;
 
     private static Action? _uiUpdateMethod;
-    private bool _exitDrawThread;
     private Action? _drawAction;
-    private Thread? _drawThread;
-    private SemaphoreSlim? _drawingSemaphoreSlim;
+    private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
+    private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -137,12 +139,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     private bool _isDrawThreadInitialized;
-
-    private void DrawThreadMethod() {
-        while (!_exitDrawThread) {
-            _drawAction?.Invoke();
-        }
-    }
 
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
@@ -339,31 +335,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
     private void InitializeRenderingThread() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+        if (_isDrawThreadInitialized || _disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
-        if (!_isDrawThreadInitialized) {
-            _drawThread = new Thread(DrawThreadMethod) {
-                Name = "UIRenderThread"
-            };
-            _drawingSemaphoreSlim = new(1, 1);
-            _drawThread.Start();
-            _isDrawThreadInitialized = true;
-        }
-
-        _drawAction ??= () => {
-            unsafe {
-                _drawingSemaphoreSlim?.Wait();
-                try {
-                    using ILockedFramebuffer pixels = Bitmap.Lock();
-                    var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                    RenderScreen.Invoke(this, uiRenderEventArgs);
-                } finally {
-                    _drawingSemaphoreSlim?.Release();
-                }
-                _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
+        _drawAction = () => {
+            _drawingSemaphoreSlim?.Wait();
+            try {
+                using ILockedFramebuffer pixels = Bitmap.Lock();
+                var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+                RenderScreen.Invoke(this, uiRenderEventArgs);
+            } finally {
+                _drawingSemaphoreSlim?.Release();
             }
+            _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
         };
+
+        _drawTimer.Elapsed += (_, _) => _drawAction.Invoke();
+        _drawTimer.Start();
+        _isDrawThreadInitialized = true;
     }
 
     public double MouseX { get; set; }
@@ -487,10 +476,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void DisposeDrawThread() {
         _drawAction = null;
-        _exitDrawThread = true;
-        if (_drawThread?.IsAlive == true) {
-            _drawThread.Join();
-        }
+        _drawTimer.Stop();
+        _drawTimer.Dispose();
         _isDrawThreadInitialized = false;
     }
 
