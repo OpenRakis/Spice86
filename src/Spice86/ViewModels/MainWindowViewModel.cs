@@ -54,6 +54,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
+    private bool _renderingTimerInitialized;
     private bool _drawingSemaphoreSlimDisposed;
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
