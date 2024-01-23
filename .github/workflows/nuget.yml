@@ -1,4 +1,4 @@
-name: .NET Build
+name: Test and Publish NuGet
 
 # Trigger the workflow on push to master
 on:
