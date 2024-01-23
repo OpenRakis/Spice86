@@ -54,6 +54,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
+    private bool _renderingTimerInitialized;
     private bool _drawingSemaphoreSlimDisposed;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
@@ -332,7 +333,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    private void InitializeRenderingThread() {
+    private void InitializeRenderingTimer() {
+        if (_renderingTimerInitialized) {
+            return;
+        }
+        _renderingTimerInitialized = true;
         _drawTimer.Elapsed += (_, _) => DrawScreen();
         _drawTimer.Start();
     }
@@ -448,7 +453,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             }
         }
         _isSettingResolution = false;
-        InitializeRenderingThread();
+        InitializeRenderingTimer();
     }, DispatcherPriority.MaxValue);
 
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
