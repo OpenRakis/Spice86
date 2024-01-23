@@ -1,4 +1,4 @@
-name: Test and Publish NuGet
+name: Run tests
 
 # Trigger the workflow on PRs
 on:
