@@ -15,6 +15,51 @@ public static partial class ConvertUtils {
     private const uint SegmentSize = 0x10000;
 
     /// <summary>
+    /// Returns the lower 16 bits of the given ushort value.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 16 bits of the given ushort value.</returns>
+    public static ushort Uint16(ushort value) {
+        return (ushort)(value & 0xFFFF);
+    }
+
+    /// <summary>
+    /// Returns the lower 32 bits of the given long value.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 32 bits of the given long value.</returns>
+    public static uint Uint32(long value) {
+        return (uint)(value & 4294967295L);
+    }
+
+    /// <summary>
+    /// Returns the lower 32 bits of the given long value as an int.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 32 bits of the given long value as an int.</returns>
+    public static int Uint32i(long value) {
+        return (int)Uint32(value);
+    }
+
+    /// <summary>
+    /// Returns the lower 8 bits of the given byte value.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 8 bits of the given byte value.</returns>
+    public static byte Uint8(byte value) {
+        return (byte)(value & 0xFF);
+    }
+
+    /// <summary>
+    /// Returns the lower 8 bits of the given byte value as a signed byte.
+    /// </summary>
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The lower 8 bits of the given byte value as a signed byte.</returns>
+    public static sbyte Uint8b(byte value) {
+        return (sbyte)Uint8(value);
+    }
+
+    /// <summary>
     /// Converts a byte array to a hexadecimal string.
     /// </summary>
     /// <param name="value">The byte array to convert.</param>
