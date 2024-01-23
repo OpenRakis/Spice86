@@ -54,6 +54,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
+    private bool _drawingSemaphoreSlimDisposed;
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
@@ -345,13 +346,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
+        if (_drawingSemaphoreSlimDisposed) {
+            return;
+        }
         _drawingSemaphoreSlim?.Wait();
         try {
             using ILockedFramebuffer pixels = Bitmap.Lock();
             var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
             RenderScreen.Invoke(this, uiRenderEventArgs);
         } finally {
-            if (!_disposed) {
+            if (!_drawingSemaphoreSlimDisposed) {
                 _drawingSemaphoreSlim?.Release();
             }
         }
@@ -439,12 +443,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             if (_disposed) {
                 return;
             }
+            if (_drawingSemaphoreSlimDisposed) {
+                return;
+            }
             _drawingSemaphoreSlim?.Wait();
             try {
                 Bitmap?.Dispose();
                 Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
             } finally {
-                if (!_disposed) {
+                if (!_drawingSemaphoreSlimDisposed) {
                     _drawingSemaphoreSlim?.Release();
                 }
             }
@@ -468,10 +475,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 _windowActivator.CloseDebugWindow();
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
+                _drawTimer.Stop();
+                _drawTimer.Dispose();
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
+                _drawingSemaphoreSlimDisposed = true;
                 _drawingSemaphoreSlim?.Dispose();
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
