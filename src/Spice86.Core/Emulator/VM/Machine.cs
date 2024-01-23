@@ -206,7 +206,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         }
         IoPortDispatcher = ioPortDispatcher;
         BiosDataArea = new BiosDataArea(Memory) {
-            MemSizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, 1024) // max 1mb.
+            ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, 640) // max 640k conventional memory
         };
         CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);

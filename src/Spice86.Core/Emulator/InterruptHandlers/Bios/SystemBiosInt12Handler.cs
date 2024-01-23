@@ -26,6 +26,6 @@ public class SystemBiosInt12Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        _state.AX = _biosDataArea.MemSizeKb;
+        _state.AX = _biosDataArea.ConventionalMemorySizeKb;
     }
 }
