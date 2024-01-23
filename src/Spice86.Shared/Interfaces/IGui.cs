@@ -43,10 +43,9 @@ public interface IGui {
     /// </summary>
     double MouseY { get; set; }
 
-    /// <summary>
-    /// Refresh the display with the content of the video ram.
-    /// </summary>
-    void UpdateScreen();
+    public int Width { get; }
+
+    public int Height { get; }
 
     /// <summary>
     /// On video mode change: Set Resolution of the video source for the GUI to display
