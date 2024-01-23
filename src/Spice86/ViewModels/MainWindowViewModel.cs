@@ -62,7 +62,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isAppClosing;
 
     private static Action? _uiUpdateMethod;
-    private Action? _drawAction;
     private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
@@ -138,8 +137,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         get => _scale;
         set => SetProperty(ref _scale, Math.Max(value, 1));
     }
-
-    private bool _isDrawThreadInitialized;
 
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
@@ -336,29 +333,27 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
     private void InitializeRenderingThread() {
-        if (_isDrawThreadInitialized || _disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+        _drawTimer.Elapsed += (_, _) => DrawScreen();
+        _drawTimer.Start();
+    }
+
+    private void DrawScreen() {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
             return;
         }
-        _drawAction = () => {
-            if (_drawingSemaphoreSlimDisposed) {
-                return;
-            }
+        if (!_drawingSemaphoreSlimDisposed) {
             _drawingSemaphoreSlim?.Wait();
-            try {
-                using ILockedFramebuffer pixels = Bitmap.Lock();
-                var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                RenderScreen.Invoke(this, uiRenderEventArgs);
-            } finally {
-                if (!_drawingSemaphoreSlimDisposed) {
-                    _drawingSemaphoreSlim?.Release();
-                }
+        }
+        try {
+            using ILockedFramebuffer pixels = Bitmap.Lock();
+            var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+            RenderScreen.Invoke(this, uiRenderEventArgs);
+        } finally {
+            if (!_drawingSemaphoreSlimDisposed) {
+                _drawingSemaphoreSlim?.Release();
             }
-            _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
-        };
-
-        _drawTimer.Elapsed += (_, _) => _drawAction.Invoke();
-        _drawTimer.Start();
-        _isDrawThreadInitialized = true;
+        }
+        _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
     }
 
     public double MouseX { get; set; }
@@ -468,10 +463,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (!_disposed) {
             if (disposing) {
                 _windowActivator.CloseDebugWindow();
-                _drawAction = null;
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
-                _isDrawThreadInitialized = false;
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
