@@ -54,6 +54,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private Configuration _configuration;
     private bool _disposed;
+    private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
     private string _lastExecutableDirectory = string.Empty;
@@ -61,7 +62,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isAppClosing;
 
     private static Action? _uiUpdateMethod;
-    private Action? _drawAction;
     private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
@@ -137,8 +137,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         get => _scale;
         set => SetProperty(ref _scale, Math.Max(value, 1));
     }
-
-    private bool _isDrawThreadInitialized;
 
     [ObservableProperty]
     private Cursor? _cursor = Cursor.Default;
@@ -262,7 +260,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             File.Exists(filePath)) {
             await RestartEmulatorWithNewProgram(filePath);
         }
-        else if (_hostStorageProvider.CanOpen == true) {
+        else if (_hostStorageProvider.CanOpen) {
             FilePickerOpenOptions options = new() {
                 Title = "Start Executable...",
                 AllowMultiple = false,
@@ -334,25 +332,30 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    private void InitializeRenderingThread() {
-        if (_isDrawThreadInitialized || _disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+    private void InitializeRenderingTimer() {
+        if (_renderingTimerInitialized) {
             return;
         }
-        _drawAction = () => {
-            _drawingSemaphoreSlim?.Wait();
-            try {
-                using ILockedFramebuffer pixels = Bitmap.Lock();
-                var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
-                RenderScreen.Invoke(this, uiRenderEventArgs);
-            } finally {
+        _renderingTimerInitialized = true;
+        _drawTimer.Elapsed += (_, _) => DrawScreen();
+        _drawTimer.Start();
+    }
+
+    private void DrawScreen() {
+        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+            return;
+        }
+        _drawingSemaphoreSlim?.Wait();
+        try {
+            using ILockedFramebuffer pixels = Bitmap.Lock();
+            var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
+            RenderScreen.Invoke(this, uiRenderEventArgs);
+        } finally {
+            if (!_disposed) {
                 _drawingSemaphoreSlim?.Release();
             }
-            _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
-        };
-
-        _drawTimer.Elapsed += (_, _) => _drawAction.Invoke();
-        _drawTimer.Start();
-        _isDrawThreadInitialized = true;
+        }
+        _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
     }
 
     public double MouseX { get; set; }
@@ -433,16 +436,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (Width != width || Height != height) {
             Width = width;
             Height = height;
+            if (_disposed) {
+                return;
+            }
             _drawingSemaphoreSlim?.Wait();
             try {
                 Bitmap?.Dispose();
                 Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
             } finally {
-                _drawingSemaphoreSlim?.Release();
+                if (!_disposed) {
+                    _drawingSemaphoreSlim?.Release();
+                }
             }
         }
         _isSettingResolution = false;
-        InitializeRenderingThread();
+        InitializeRenderingTimer();
     }, DispatcherPriority.MaxValue);
 
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
@@ -455,8 +463,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void Dispose(bool disposing) {
         if (!_disposed) {
+            _disposed = true;
             if (disposing) {
-                DisposeDrawThread();
+                _windowActivator.CloseDebugWindow();
+                _drawTimer.Stop();
+                _drawTimer.Dispose();
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
@@ -465,20 +476,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
                 PlayCommand.Execute(null);
                 IsMachineRunning = false;
                 DisposeEmulator();
-                _windowActivator.CloseDebugWindow();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
             }
-            _disposed = true;
         }
-    }
-
-    private void DisposeDrawThread() {
-        _drawAction = null;
-        _drawTimer.Stop();
-        _drawTimer.Dispose();
-        _isDrawThreadInitialized = false;
     }
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
