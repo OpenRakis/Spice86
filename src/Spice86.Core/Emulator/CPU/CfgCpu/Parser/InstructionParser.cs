@@ -15,11 +15,13 @@ public class InstructionParser {
 
     private readonly InstructionReader _instructionReader;
     private readonly InstructionPrefixParser _instructionPrefixParser;
+    private readonly ModRmParser _modRmParser;
     private readonly State _state;
 
     public InstructionParser(IIndexable memory, State state) {
         _instructionReader = new(memory);
         _instructionPrefixParser = new(_instructionReader);
+        _modRmParser = new(_instructionReader, state);
         _state = state;
     }
 
@@ -42,7 +44,17 @@ public class InstructionParser {
 
     private CfgInstruction ParseCfgInstruction(SegmentedAddress address, InstructionField<byte> opcodeField,
         List<InstructionPrefix> prefixes) {
+        int addressSizeFromPrefixes = ComputeAddressSize(prefixes);
+        uint? segmentOverrideFromPrefixes = ComputeSegmentOverrideIndex(prefixes);
+        bool hasOperandSize32 = HasOperandSize32(prefixes);
         switch (opcodeField.Value) {
+            case 0x00:
+                return new AddRmReg8(address, opcodeField, prefixes, _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
+            case 0x01:
+                if (hasOperandSize32) {
+                    return new AddRmReg32(address, opcodeField, prefixes, _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
+                }
+                return new AddRmReg16(address, opcodeField, prefixes, _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0xB0:
             case 0xB1:
             case 0xB2:
@@ -59,7 +71,7 @@ public class InstructionParser {
             case 0xBD:
             case 0xBE:
             case 0xBF:
-                return MovRegImm(address, opcodeField, prefixes);
+                return MovRegImm(address, opcodeField, prefixes, hasOperandSize32);
             case 0xE9: return new JmpNearImm16(address, opcodeField, _instructionReader.Int16.NextField(true));
             case 0xEB: return new JmpNearImm8(address, opcodeField, _instructionReader.Int8.NextField(true));
             case 0xF4: return new HltInstruction(address, opcodeField);
@@ -69,14 +81,14 @@ public class InstructionParser {
     }
 
     private CfgInstruction MovRegImm(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes) {
+        List<InstructionPrefix> prefixes, bool hasOperandSize32) {
         int regIndex = opcodeField.Value & RegIndexMask;
         if ((opcodeField.Value & WordMask) == 0) {
             return new MovRegImm8(address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false),
                 regIndex);
         }
 
-        if (HasOperandSize32(prefixes)) {
+        if (hasOperandSize32) {
             return new MovRegImm32(address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false),
                 regIndex);
         }
@@ -93,6 +105,16 @@ public class InstructionParser {
         }
 
         return res;
+    }
+
+    private uint? ComputeSegmentOverrideIndex(List<InstructionPrefix> prefixes) {
+        SegmentOverrideInstructionPrefix? overridePrefix = prefixes.OfType<SegmentOverrideInstructionPrefix>().FirstOrDefault();
+        return overridePrefix?.SegmentRegisterIndexValue;
+    }
+    
+    private int ComputeAddressSize(List<InstructionPrefix> prefixes) {
+        AddressSize32Prefix? addressSize32Prefix = prefixes.OfType<AddressSize32Prefix>().FirstOrDefault();
+        return addressSize32Prefix == null ? 16 : 32;
     }
 
     private CfgInstruction HandleInvalidOpcode(ushort opcode) =>

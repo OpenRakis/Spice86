@@ -21,14 +21,21 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
     private readonly IOPortDispatcher? _ioPortDispatcher;
     private readonly CallbackHandler _callbackHandler;
     private readonly InstructionFieldValueRetriever _instructionFieldValueRetriever;
-
+    private readonly ModRmExecutor _modRm;
+    private readonly Alu8 _alu8;
+    private readonly Alu16 _alu16;
+    private readonly Alu32 _alu32;
     public ExecutorCfgNodeVisitor(State state, IMemory memory, IOPortDispatcher? ioPortDispatcher,
         CallbackHandler callbackHandler) {
         _state = state;
         _memory = memory;
+        _alu8 = new(state);
+        _alu16 = new(state);
+        _alu32 = new(state);
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
         _instructionFieldValueRetriever = new(_memory);
+        _modRm = new(state, memory, _instructionFieldValueRetriever);
     }
     
     public ICfgNode? NextNode { get; private set; }
@@ -63,6 +70,23 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
     public void Accept(MovRegImm32 instruction) {
         uint value = _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField);
         _state.GeneralRegisters.UInt32[instruction.RegIndex] = value;
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AddRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Add(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AddRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Add(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+    public void Accept(AddRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Add(_modRm.RM32, _modRm.R32);
         MoveIpAndSetNextNode(instruction);
     }
 

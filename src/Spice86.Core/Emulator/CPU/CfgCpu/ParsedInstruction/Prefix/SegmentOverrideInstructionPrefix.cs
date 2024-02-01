@@ -17,5 +17,5 @@ public class SegmentOverrideInstructionPrefix : InstructionPrefix {
     /// <summary>
     /// value of the SegmentRegisterIndex
     /// </summary>
-    public int SegmentRegisterIndexValue { get => (int)SegmentRegisterIndex; }
+    public uint SegmentRegisterIndexValue { get => (uint)SegmentRegisterIndex; }
 }
