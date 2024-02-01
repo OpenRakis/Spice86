@@ -12,5 +12,8 @@ public interface ICfgNodeVisitor {
     public void Accept(MovRegImm8 instruction);
     public void Accept(MovRegImm16 instruction);
     public void Accept(MovRegImm32 instruction);
+    public void Accept(AddRmReg8 instruction);
+    public void Accept(AddRmReg16 instruction);
+    public void Accept(AddRmReg32 instruction);
     public void Accept(DiscriminatedNode discriminatedNode);
 }
