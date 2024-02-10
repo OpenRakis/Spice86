@@ -8,6 +8,10 @@ using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
+using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -25,7 +29,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.Sound;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
