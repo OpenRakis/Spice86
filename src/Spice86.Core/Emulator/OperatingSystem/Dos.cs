@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
