@@ -1,43 +1,57 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Core.Backend.Audio;
+
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Basic software mixer for sound channels.
 /// </summary>
 internal class SoftwareMixer {
-    private readonly IDictionary<string, int> _channels = new Dictionary<string, int>();
+    private readonly List<SoundChannel> _channels = new();
 
-    public SoftwareMixer() {
-        _channels.Add("Master", 100);
+    private readonly AudioPlayer _audioPlayer;
+
+    public SoftwareMixer(AudioPlayerFactory audioPlayerFactory) {
+        _audioPlayer = audioPlayerFactory.CreatePlayer();
     }
 
-    public void AddChannel(string name, int volume) {
-        _channels.Add(name, volume);
+    public IReadOnlyCollection<SoundChannel> Channels => new ReadOnlyCollection<SoundChannel>(_channels);
+
+    public void AddChannel(SoundChannel soundChannel) {
+        _channels.Add(soundChannel);
     }
 
-    public void RemoveChannel(string name) {
-        _channels.Remove(name);
+    public void RemoveChannel(SoundChannel soundChannel) {
+        _channels.Remove(soundChannel);
     }
 
-    public float[] Mix(params SoundChannel[] channels) {
-        var result = new float[channels[0].AudioData.Length];
-        foreach (SoundChannel channel in channels) {
-            var volume = _channels[channel.Name];
-            for (var i = 0; i < channel.AudioData.Length; i++) {
-                result[i] += channel.AudioData[i] * volume / 100f;
-            }
+    public void Render(SoundChannel channel) {
+        ApplyVolume(channel);
+        ApplyStereoSeparation(channel);
+        
+        float[] buffer = new float[channel.AudioData.Length * 2];
+        for (int i = 0; i < channel.AudioData.Length; i++) {
+            buffer[i * 2] = channel.AudioData[i].Left;
+            buffer[i * 2 + 1] = channel.AudioData[i].Right;
         }
-        return result;
+        _audioPlayer.WriteFullBuffer(buffer);
     }
 
-    public void AdjustStereoSeparation(float separation, params SoundChannel[] channels) {
-        foreach (SoundChannel channel in channels) {
-            var volume = _channels[channel.Name];
-            for (var i = 0; i < channel.AudioData.Length; i += 2) {
-                channel.AudioData[i] = channel.AudioData[i] * (1 - separation);
-                channel.AudioData[i + 1] = channel.AudioData[i + 1] * separation;
-            }
+    private static void ApplyVolume(SoundChannel channel) {
+        float volumeFactor = channel.Volume / 100f;
+        for (int i = 0; i < channel.AudioData.Length; i++) {
+            channel.AudioData[i].Left *= volumeFactor;
+            channel.AudioData[i].Right *= volumeFactor;
+        }
+    }
+
+    private static void ApplyStereoSeparation(SoundChannel channel) {
+        float separation = channel.StereoSeparation / 100f;
+        for (int i = 0; i < channel.AudioData.Length; i++) {
+            channel.AudioData[i].Left *= (1 - separation);
+            channel.AudioData[i].Right *= (1 + separation);
         }
     }
 }
