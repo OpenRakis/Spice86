@@ -343,7 +343,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
     private void AudioPlayback() {
-        using AudioPlayer player = _audioPlayerFactory.CreatePlayer(48000, 2048);
+        using AudioPlayer player = _audioPlayerFactory.CreatePlayer();
 
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
