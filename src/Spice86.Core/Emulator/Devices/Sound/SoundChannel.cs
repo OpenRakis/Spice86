@@ -1,15 +1,28 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-internal class SoundChannel {
-    public SoundChannel(string name, SoundChannelDirection direction, bool isMuted, AudioFrame[] audioData) {
-        Name = name;
-        Direction = direction;
-        IsMuted = isMuted;
-        AudioData = audioData;
+using System.Numerics;
+
+public class SoundChannel {
+    private readonly SoftwareMixer _mixer;
+
+    public SoundChannel(SoftwareMixer mixer) {
+        _mixer = mixer;
+    }
+
+    public StereoAudioFrame Data { get; private set; } = new();
+    
+    public void Render(StereoAudioFrame audioFrame) {
+        if (IsMuted || Volume == 0) {
+            return;
+        }
+
+        Data = audioFrame;
+        
+        _mixer.Render(this);
     }
 
     private float _stereoSeparation = 100;
-
+    
     /// <summary>
     /// Gets or sets the stereo separation, as a percentage.
     /// </summary>
@@ -17,15 +30,8 @@ internal class SoundChannel {
         get => _stereoSeparation;
         set => _stereoSeparation = Math.Max(100, Math.Abs(value));
     }
-    
-    public AudioFrame[] AudioData { get; }
-    
-    /// <summary>
-    /// Gets or sets if it's an output (like the SoundBlaster PCM channel) or input channel (like the SoundBlaster microphone channel)
-    /// </summary>
-    public SoundChannelDirection Direction { get; }
-    
-    public string Name { get; set; }
+
+    public string Name { get; set; } = "";
     
     public bool IsMuted { get; set; }
     

@@ -125,7 +125,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly int _dma16;
     private readonly DmaChannel _eightByteDmaChannel;
     private readonly Dsp _dsp;
-    private readonly Mixer _mixer;
+    private readonly HardwareMixer _mixer;
     private readonly Queue<byte> _outputData = new();
     private readonly Thread _playbackThread;
     private bool _blockTransferSizeSet;
@@ -159,7 +159,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dmaController = dmaController;
         _gui = gui;
         _dualPic = dualPic;
-        _mixer = new Mixer(this);
+        _mixer = new HardwareMixer(this);
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
         _playbackThread = new Thread(AudioPlayback) {
@@ -343,7 +343,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
     private void AudioPlayback() {
-        using AudioPlayer player = _audioPlayerFactory.CreatePlayer();
+        using AudioPlayer player = _audioPlayerFactory.CreatePlayer(48000, 2048);
 
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];

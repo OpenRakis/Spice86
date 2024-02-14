@@ -5,14 +5,14 @@ using Spice86.Core.Emulator.Devices.Sound;
 /// <summary>
 /// Represents the SoundBlaster mixer.
 /// </summary>
-public sealed class Mixer {
+public sealed class HardwareMixer {
     private readonly SoundBlaster _blaster;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Mixer"/> class with the specified SoundBlaster instance.
+    /// Initializes a new instance of the <see cref="HardwareMixer"/> class with the specified SoundBlaster instance.
     /// </summary>
     /// <param name="blaster">The SoundBlaster instance to use for the mixer.</param>
-    public Mixer(SoundBlaster blaster) => _blaster = blaster;
+    public HardwareMixer(SoundBlaster blaster) => _blaster = blaster;
 
     /// <summary>
     /// Gets or sets the current mixer register in use.

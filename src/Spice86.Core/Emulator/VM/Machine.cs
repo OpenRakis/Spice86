@@ -196,6 +196,8 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The OPL3 FM Synth chip.
     /// </summary>
     public OPL3FM OPL3FM { get; }
+    
+    public SoftwareMixer SoftwareMixer { get; }
 
     /// <summary>
     /// Initializes a new instance
@@ -247,7 +249,10 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         RegisterIoPortHandler(MouseDevice);
         Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
+        
         AudioPlayerFactory audioPlayerFactory = new AudioPlayerFactory(loggerService);
+        SoftwareMixer = new(new AudioPlayerFactory(loggerService));
+        
         PcSpeaker = new PcSpeaker(audioPlayerFactory, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(audioPlayerFactory, CpuState, configuration.FailOnUnhandledPort, loggerService);
@@ -355,6 +360,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
                 DmaController.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
+                SoftwareMixer.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;
