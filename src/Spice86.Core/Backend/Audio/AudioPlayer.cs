@@ -41,6 +41,7 @@ public abstract class AudioPlayer : IDisposable
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
     public int WriteData(Span<float> data) => _writer.WriteData(data);
+    
     /// <summary>
     /// Writes 16-bit PCM data to the output buffer.
     /// </summary>

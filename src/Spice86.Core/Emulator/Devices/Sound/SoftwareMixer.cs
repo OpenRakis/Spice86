@@ -4,14 +4,18 @@ using Spice86.Core.Backend.Audio;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Numerics;
 
 /// <summary>
 /// Basic software mixer for sound channels.
 /// </summary>
-internal class SoftwareMixer {
+public sealed class SoftwareMixer : IDisposable {
+    
     private readonly List<SoundChannel> _channels = new();
 
     private readonly AudioPlayer _audioPlayer;
+
+    private bool _disposed;
 
     public SoftwareMixer(AudioPlayerFactory audioPlayerFactory) {
         _audioPlayer = audioPlayerFactory.CreatePlayer();
@@ -19,39 +23,48 @@ internal class SoftwareMixer {
 
     public IReadOnlyCollection<SoundChannel> Channels => new ReadOnlyCollection<SoundChannel>(_channels);
 
-    public void AddChannel(SoundChannel soundChannel) {
+    internal SoundChannel CreateSoundChannel(string name) {
+        SoundChannel soundChannel = new(this)
+        {
+            Name = name
+        };
         _channels.Add(soundChannel);
+        return soundChannel;
     }
 
-    public void RemoveChannel(SoundChannel soundChannel) {
-        _channels.Remove(soundChannel);
-    }
-
-    public void Render(SoundChannel channel) {
+    internal void Render(SoundChannel channel) {
         ApplyVolume(channel);
         ApplyStereoSeparation(channel);
-        
-        float[] buffer = new float[channel.AudioData.Length * 2];
-        for (int i = 0; i < channel.AudioData.Length; i++) {
-            buffer[i * 2] = channel.AudioData[i].Left;
-            buffer[i * 2 + 1] = channel.AudioData[i].Right;
-        }
-        _audioPlayer.WriteFullBuffer(buffer);
+        _audioPlayer.WriteFullBuffer(channel.Data.Frame);
     }
 
     private static void ApplyVolume(SoundChannel channel) {
         float volumeFactor = channel.Volume / 100f;
-        for (int i = 0; i < channel.AudioData.Length; i++) {
-            channel.AudioData[i].Left *= volumeFactor;
-            channel.AudioData[i].Right *= volumeFactor;
+        for (int i = 0; i < channel.Data.Frame.Length; i++) {
+            StereoAudioFrame stereoAudioFrame = channel.Data;
+            stereoAudioFrame.Left *= volumeFactor;
+            stereoAudioFrame.Right *= volumeFactor;
         }
     }
 
     private static void ApplyStereoSeparation(SoundChannel channel) {
         float separation = channel.StereoSeparation / 100f;
-        for (int i = 0; i < channel.AudioData.Length; i++) {
-            channel.AudioData[i].Left *= (1 - separation);
-            channel.AudioData[i].Right *= (1 + separation);
+        for (int i = 0; i < channel.Data.Frame.Length; i++) {
+            StereoAudioFrame stereoAudioFrame = channel.Data;
+            stereoAudioFrame.Left *= (1 - separation);
+            stereoAudioFrame.Right *= (1 + separation);
         }
+    }
+
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _audioPlayer.Dispose();
+            }
+            _disposed = true;
+        }
+    }
+    public void Dispose() {
+        Dispose(true);
     }
 }
