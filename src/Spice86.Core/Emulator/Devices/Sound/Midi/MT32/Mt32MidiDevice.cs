@@ -20,15 +20,15 @@ internal sealed class Mt32MidiDevice : MidiDevice {
     /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(AudioPlayerFactory audioPlayerFactory, string romsPath, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService) {
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
-        _player = new Mt32Player(audioPlayerFactory, romsPath, loggerService);
+        _player = new Mt32Player(softwareMixer, romsPath, loggerService);
     }
 
     /// <inheritdoc/>

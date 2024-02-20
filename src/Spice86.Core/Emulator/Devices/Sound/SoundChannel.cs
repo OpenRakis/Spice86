@@ -1,24 +1,36 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using System.Numerics;
+using Spice86.Core.Backend.Audio;
 
 public class SoundChannel {
     private readonly SoftwareMixer _mixer;
 
-    public SoundChannel(SoftwareMixer mixer) {
+    public SoundChannel(SoftwareMixer mixer, string name) {
         _mixer = mixer;
+        Name = name;
+        mixer.Register(this);
     }
 
-    public StereoAudioFrame Data { get; private set; } = new();
+    public void Render(Span<byte> buffer) {
+        Span<float> dest = new float[buffer.Length];
+        SampleConverter.InternalConvert(buffer, dest);
+        _mixer.Render(dest, this);
+    }
     
-    public void Render(StereoAudioFrame audioFrame) {
-        if (IsMuted || Volume == 0) {
-            return;
-        }
+    public void Render(Span<short> buffer) {
+        Span<float> dest = new float[buffer.Length];
+        SampleConverter.InternalConvert(buffer, dest);
+        _mixer.Render(dest, this);
+    }
+    
+    public void Render(Span<int> buffer) {
+        Span<float> dest = new float[buffer.Length];
+        SampleConverter.InternalConvert(buffer, dest);
+        _mixer.Render(dest, this);
+    }
 
-        Data = audioFrame;
-        
-        _mixer.Render(this);
+    public void Render(Span<float> buffer)  {
+        _mixer.Render(buffer, this);
     }
 
     private float _stereoSeparation = 100;
@@ -31,17 +43,12 @@ public class SoundChannel {
         set => _stereoSeparation = Math.Max(100, Math.Abs(value));
     }
 
-    public string Name { get; set; } = "";
+    public string Name { get; private set; }
     
     public bool IsMuted { get; set; }
-    
-    private float _volume = 100;
 
     /// <summary>
     /// Gets or sets the volume, as a percentage.
     /// </summary>
-    public float Volume {
-        get => _volume;
-        set => _volume = Math.Max(100, Math.Abs(value));
-    }
+    public int Volume { get; set; } = 100;
 }

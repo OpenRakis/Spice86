@@ -19,7 +19,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// Value into which the input frequency is divided to get the frequency in Hz.
     /// </summary>
     private const double FrequencyFactor = 1193180;
-    private readonly AudioPlayerFactory _audioPlayerFactory;
+    private readonly SoundChannel _soundChannel;
 
     private readonly int _outputSampleRate = 48000;
     private readonly int _ticksPerSample;
@@ -33,6 +33,19 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private int _currentPeriod;
 
     private bool _disposed;
+
+        /// <summary>
+    /// Initializes a new instance of <see cref="PcSpeaker"/>
+    /// </summary>
+    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
+    public PcSpeaker(SoftwareMixer softwareMixer, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        _soundChannel = new SoundChannel(softwareMixer, nameof(PcSpeaker));
+        _frequencyRegister.ValueChanged += FrequencyChanged;
+        _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
+    }
 
     /// <summary>
     /// Gets the current frequency in Hz.
@@ -113,16 +126,13 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// Generates the PC speaker waveform.
     /// </summary>
     private async Task GenerateWaveformAsync() {
-        using AudioPlayer player = _audioPlayerFactory.CreatePlayer();
-        FillWithSilence(player);
+        FillWithSilence();
 
         byte[] buffer = new byte[4096];
         byte[] writeBuffer = buffer;
-        bool expandToStereo = false;
-        if (player.Format.Channels == 2) {
-            writeBuffer = new byte[buffer.Length * 2];
-            expandToStereo = true;
-        }
+        const bool expandToStereo = true;
+
+        writeBuffer = new byte[buffer.Length * 2];
 
         int idleCount = 0;
 
@@ -137,7 +147,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                 }
 
                 while (periods > 0) {
-                    player.WriteFullBuffer(writeBuffer.AsSpan(0, samples));
+                    _soundChannel.Render(writeBuffer.AsSpan(0, samples));
                     periods--;
                 }
 
@@ -151,8 +161,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                 }
 
 
-                while (player.WriteData(floatArray.AsSpan()) > 0) {
-                }
+                _soundChannel.Render(floatArray.AsSpan());
 
                 await Task.Delay(5, _cancelGenerateWaveform.Token);
                 idleCount++;
@@ -162,26 +171,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    private static void FillWithSilence(AudioPlayer player) {
+    private void FillWithSilence() {
         float[] buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
-
-        while (player.WriteData(span) > 0) {
-        }
-    }
-
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="PcSpeaker"/>
-    /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
-    /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(AudioPlayerFactory audioPlayerFactory, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
-        _audioPlayerFactory = audioPlayerFactory;
-        _frequencyRegister.ValueChanged += FrequencyChanged;
-        _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
+        _soundChannel.Render(span);
     }
 
     /// <inheritdoc />

@@ -12,7 +12,7 @@ using System.Linq;
 
 internal sealed class Mt32Player : IDisposable {
     private readonly Mt32Context _context = new();
-    private readonly AudioPlayer _audioPlayer;
+    private readonly SoundChannel _soundChannel;
     private bool _disposed;
     private bool _threadStarted;
 
@@ -24,13 +24,13 @@ internal sealed class Mt32Player : IDisposable {
 
     private readonly ILoggerService _loggerService;
 
-    public Mt32Player(AudioPlayerFactory audioPlayerFactory, string romsPath, ILoggerService loggerService) {
+    public Mt32Player(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService) {
         _loggerService = loggerService;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        _audioPlayer = audioPlayerFactory.CreatePlayer();
+        _soundChannel = new SoundChannel(softwareMixer,nameof(Mt32Player));
         if(!LoadRoms(romsPath)) {
             if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));
@@ -38,13 +38,13 @@ internal sealed class Mt32Player : IDisposable {
             return;
         }
 
-        _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(_audioPlayer.Format.SampleRate);
-        _context.SetSampleRate(_audioPlayer.Format.SampleRate);
+        _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
+        _context.SetSampleRate(48000);
 
         _context.OpenSynth();
 
         _renderThread = new Thread(RenderThreadMethod) {
-            Name = "MT32Audio"
+            Name = nameof(Mt32Player)
         };
     }
 
@@ -63,7 +63,7 @@ internal sealed class Mt32Player : IDisposable {
             }
             buffer.Clear();
             _context.Render(buffer);
-            _audioPlayer.WriteData(buffer);
+            _soundChannel.Render(buffer);
         }
     }
 
@@ -106,7 +106,6 @@ internal sealed class Mt32Player : IDisposable {
                 }
                 _context.Dispose();
                 _fillBufferEvent.Dispose();
-                _audioPlayer.Dispose();
             }
             _disposed = true;
         }

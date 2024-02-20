@@ -14,7 +14,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
-    private readonly AudioPlayer _audioPlayer;
+    private readonly SoundChannel _soundChannel;
     private readonly FmSynthesizer? _synth;
     private int _currentAddress;
     private volatile bool _endThread;
@@ -30,15 +30,15 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public OPL3FM(AudioPlayerFactory audioPlayerFactory, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _audioPlayer = audioPlayerFactory.CreatePlayer();
-        _synth = new FmSynthesizer(_audioPlayer.Format.SampleRate);
+    public OPL3FM(SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        _soundChannel = new SoundChannel(softwareMixer, nameof(OPL3FM));
+        _synth = new FmSynthesizer(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
-            Name = "OPL3FMAudio"
+            Name = nameof(OPL3FM)
         };
     }
 
@@ -62,7 +62,6 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();
                 }
-                _audioPlayer.Dispose();
                 _initialized = false;
             }
             _disposed = true;
@@ -131,23 +130,19 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private void GenerateWaveforms() {
         int length = 1024;
         Span<float> buffer = stackalloc float[length];
-        bool expandToStereo = _audioPlayer.Format.Channels == 2;
-        if (expandToStereo) {
-            length *= 2;
-        }
+        //expand to stereo
+        length *= 2;
         Span<float> playBuffer = stackalloc float[length];
-        FillBuffer(buffer, playBuffer, expandToStereo);
+        FillBuffer(buffer, playBuffer);
         while (!_endThread) {
-            _audioPlayer.WriteFullBuffer(playBuffer);
-            FillBuffer(buffer, playBuffer, expandToStereo);
+            _soundChannel.Render(playBuffer);
+            FillBuffer(buffer, playBuffer);
         }
     }
 
-    private void FillBuffer(Span<float> buffer, Span<float> playBuffer, bool expandToStereo) {
+    private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
         _synth?.GetData(buffer);
-        if (expandToStereo) {
-            ChannelAdapter.MonoToStereo(buffer, playBuffer);
-        }
+        ChannelAdapter.MonoToStereo(buffer, playBuffer);
     }
 
     private void StartPlaybackThread() {

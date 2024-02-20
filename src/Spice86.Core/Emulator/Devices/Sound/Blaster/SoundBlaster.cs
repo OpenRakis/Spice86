@@ -2,7 +2,6 @@
 
 using Serilog.Events;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -138,12 +137,12 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly DualPic _dualPic;
     private readonly IGui? _gui;
     private readonly DmaController _dmaController;
-    private readonly AudioPlayerFactory _audioPlayerFactory;
+    private readonly SoundChannel _soundChannel;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
@@ -151,8 +150,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(AudioPlayerFactory audioPlayerFactory, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
-        _audioPlayerFactory = audioPlayerFactory;
+    public SoundBlaster(SoftwareMixer softwareMixer, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+        _soundChannel = new SoundChannel(softwareMixer, nameof(SoundBlaster));
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
@@ -163,7 +162,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
         _playbackThread = new Thread(AudioPlayback) {
-            Name = "PCMAudio",
+            Name = nameof(SoundBlaster),
         };
         _dmaController.SetupDmaDeviceChannel(this);
     }
@@ -343,22 +342,20 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
     private void AudioPlayback() {
-        using AudioPlayer player = _audioPlayerFactory.CreatePlayer(48000, 2048);
-
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
-        int sampleRate = player.Format.SampleRate;
+        const int sampleRate =  48000;
 
         while (!_endPlayback) {
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
-            player.WriteFullBuffer(writeBuffer.AsSpan(0, length));
+            _soundChannel.Render(writeBuffer.AsSpan(0, length));
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
                 for (int i = 0; i < count; i++) {
-                    player.WriteFullBuffer(writeBuffer.AsSpan(0, 1024));
+                    _soundChannel.Render(writeBuffer.AsSpan(0, 1024));
                 }
 
                 _pauseDuration = 0;

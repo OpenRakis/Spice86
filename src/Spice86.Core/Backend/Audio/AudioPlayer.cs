@@ -51,7 +51,7 @@ public abstract class AudioPlayer : IDisposable
 
     
     /// <summary>
-    /// Writes the full buffer of audio data to the player/>.
+    /// Writes the full buffer of audio data to the player.
     /// </summary>
     /// <param name="buffer">The buffer of audio data to write.</param>
     /// <remarks>
