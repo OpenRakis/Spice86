@@ -13,19 +13,6 @@ internal static class ChannelAdapter {
     /// </summary>
     /// <param name="source">The source sample.</param>
     /// <param name="target">The target sample.</param>
-    public static void MonoToStereo(ReadOnlySpan<MonoAudioFrame> source, Span<StereoAudioFrame> target) {
-        for (int i = 0; i < target.Length; i++) {
-            StereoAudioFrame element = target[i];
-            element.Left = source[i].Frame[0];
-            element.Right = source[i].Frame[0];
-        }
-    }
-
-    /// <summary>
-    /// Transforms mono audio data to stereo audio data.
-    /// </summary>
-    /// <param name="source">The source sample.</param>
-    /// <param name="target">The target sample.</param>
     /// <typeparam name="TSample">The type of sample.</typeparam>
     /// <exception cref="ArgumentException">If the target length is lesser than double the source length</exception>
     public static void MonoToStereo<TSample>(ReadOnlySpan<TSample> source, Span<TSample> target) {

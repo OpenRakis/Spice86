@@ -2,7 +2,6 @@
 
 using MeltySynth;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Devices.Sound;
 
 using Windows;
@@ -15,7 +14,7 @@ using OperatingSystem = System.OperatingSystem;
 /// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
 internal sealed class GeneralMidiDevice : MidiDevice {
-    private readonly AudioPlayer _audioPlayer;
+    private readonly SoundChannel _soundChannel;
 
     private bool _disposed;
     private bool _threadStarted;
@@ -32,10 +31,10 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice(AudioPlayerFactory audioPlayerFactory) {
-        _audioPlayer = audioPlayerFactory.CreatePlayer(48000, 2048);
+    public GeneralMidiDevice(SoftwareMixer softwareMixer) {
+        _soundChannel = new SoundChannel(softwareMixer, nameof(GeneralMidiDevice));
         _playbackThread = new Thread(RenderThreadMethod) {
-            Name = "GeneralMIDIAudio"
+            Name = nameof(GeneralMidiDevice)
         };
         if (OperatingSystem.IsWindows()) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
@@ -59,13 +58,13 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
         Span<float> data = stackalloc float[16384];
-        Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
+        Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
         while (!_endThread) {
             if(!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
-            _audioPlayer.WriteFullBuffer(data);
+            _soundChannel.Render(data);
             data.Clear();
         }
     }
@@ -139,7 +138,6 @@ internal sealed class GeneralMidiDevice : MidiDevice {
                     _playbackThread.Join();
                 }
                 _fillBufferEvent.Dispose();
-                _audioPlayer.Dispose();
             }
             _disposed = true;
         }

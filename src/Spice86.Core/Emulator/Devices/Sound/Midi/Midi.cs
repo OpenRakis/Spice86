@@ -10,7 +10,6 @@ using Spice86.Shared.Interfaces;
 /// MPU401 MIDI interface implementation.
 /// </summary>
 public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
-    private readonly AudioPlayerFactory _audioPlayerFactory;
     private MidiDevice? _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
@@ -44,14 +43,18 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
-    /// <param name="audioPlayerFactory">The AudioPlayer factory.</param>
+    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(AudioPlayerFactory audioPlayerFactory, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _audioPlayerFactory = audioPlayerFactory;
+    public Midi(SoftwareMixer softwareMixer, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
+        if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
+            _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, _loggerService);
+        } else {
+            _midiMapper = new GeneralMidiDevice(softwareMixer);
+        }
     }
 
     /// <summary>
@@ -149,14 +152,6 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         UpdateLastPortWrite(port, value);
         switch (port) {
             case DataPort:
-                if (_midiMapper is null) {
-                    if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-                        _midiMapper = new Mt32MidiDevice(_audioPlayerFactory, Mt32RomsPath, _loggerService);
-                    } else {
-                        _midiMapper = new GeneralMidiDevice(_audioPlayerFactory);
-                    }
-                }
-
                 _midiMapper?.SendByte(value);
                 break;
 
