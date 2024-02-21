@@ -73,7 +73,7 @@
 		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.9" />
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.9" />
-		<PackageReference Include="Roslynator.Analyzers" Version="4.10.0">
+		<PackageReference Include="Roslynator.Analyzers" Version="4.11.0">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
