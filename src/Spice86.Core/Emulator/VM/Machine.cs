@@ -384,5 +384,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);
         MidiDevice.Accept(emulatorDebugger);
+        SoftwareMixer.Accept(emulatorDebugger);
     }
 }

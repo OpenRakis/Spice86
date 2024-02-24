@@ -532,6 +532,9 @@
                         </WrapPanel>
                     </ScrollViewer>
                 </TabItem>
+                <TabItem Header="Software Mixer">
+                    <views:MixerView DataContext="{Binding SoftwareMixerViewModel}" />
+                </TabItem>
             </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
                 <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
