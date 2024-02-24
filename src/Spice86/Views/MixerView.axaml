@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.MixerView"
+             x:CompileBindings="True"
+             x:DataType="viewModels:MixerViewModel">
+	<Design.DataContext>
+		<viewModels:PerformanceViewModel />
+	</Design.DataContext>
+    <ItemsControl ItemsSource="{Binding Channels}">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Grid Margin="5">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding Name}" HorizontalAlignment="Center" />
+                    <Slider Margin="5" MinHeight="400" Grid.Row="1" Value="{Binding Volume, Mode=TwoWay}"
+                            Minimum="0" Maximum="100" Orientation="Vertical" />
+                    <Slider Margin="5" MinWidth="100" Grid.Row="2" Value="{Binding StereoSeparation, Mode=TwoWay}"
+                            Minimum="0" Maximum="100" Orientation="Horizontal" />
+                    <CheckBox Grid.Row="3" IsChecked="{Binding IsMuted, Mode=TwoWay}"
+                              Content="Mute" HorizontalAlignment="Center" />
+                </Grid>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

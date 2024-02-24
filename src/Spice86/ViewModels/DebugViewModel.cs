@@ -47,6 +47,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
 
+    [ObservableProperty]
+    private MixerViewModel? _softwareMixerViewModel;
+
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
@@ -96,6 +99,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         IsPaused = _pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         _uiDispatcherTimer = uiDispatcherTimer;
+        SoftwareMixerViewModel = new(uiDispatcherTimer);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -521,5 +525,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public void ShowColorPalette() {
         SelectedTab = 4;
+    }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        SoftwareMixerViewModel?.VisitSoundMixer(mixer);
     }
 }

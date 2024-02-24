@@ -88,4 +88,8 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
 
     public void VisitExternalMidiDevice(Midi midi) {
     }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        
+    }
 }

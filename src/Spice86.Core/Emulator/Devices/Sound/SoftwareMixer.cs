@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Core.Emulator.Debugger;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,11 +9,15 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Basic software mixer for sound channels.
 /// </summary>
-public sealed class SoftwareMixer : IDisposable {
+public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SoftwareMixer"/> class.
+    /// </summary>
+    /// <param name="audioPlayerFactory">The factory for creating an audio player for each new sound channel.</param>
     public SoftwareMixer(AudioPlayerFactory audioPlayerFactory) {
         _audioPlayerFactory = audioPlayerFactory;
     }
@@ -21,6 +26,9 @@ public sealed class SoftwareMixer : IDisposable {
         _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer());
     }
 
+    /// <summary>
+    /// Gets the sound channels in a read-only dictionary.
+    /// </summary>
     public IDictionary<SoundChannel, AudioPlayer> Channels => new ReadOnlyDictionary<SoundChannel, AudioPlayer>(_channels);
     
     internal void Render(Span<float> buffer, SoundChannel channel) {
@@ -62,7 +70,12 @@ public sealed class SoftwareMixer : IDisposable {
         }
     }
 
+    /// <inheritdoc />
     public void Dispose() {
         Dispose(true);
+    }
+
+    public void Accept(IEmulatorDebugger emulatorDebugger) {
+        emulatorDebugger.VisitSoundMixer(this);
     }
 }

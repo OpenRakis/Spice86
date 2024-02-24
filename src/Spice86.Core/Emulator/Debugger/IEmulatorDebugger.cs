@@ -65,4 +65,9 @@ public interface IEmulatorDebugger
     /// </summary>
     /// <param name="midi">The MIDI device to visit.</param>
     void VisitExternalMidiDevice(Midi midi);
+
+    /// <summary>
+    /// Visits the software mixer to get or set the state of the internal sound channels
+    /// </summary>
+    void VisitSoundMixer(SoftwareMixer mixer);
 }

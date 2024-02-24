@@ -74,4 +74,8 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
 
     public void VisitExternalMidiDevice(Midi midi) {
     }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        
+    }
 }
