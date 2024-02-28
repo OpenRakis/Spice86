@@ -33,15 +33,10 @@ public class SoundChannel {
         _mixer.Render(buffer, this);
     }
 
-    private float _stereoSeparation = 100;
-    
     /// <summary>
     /// Gets or sets the stereo separation, as a percentage.
     /// </summary>
-    public float StereoSeparation {
-        get => _stereoSeparation;
-        set => _stereoSeparation = Math.Max(100, Math.Abs(value));
-    }
+    public float StereoSeparation { get; set; } = 50;
 
     public string Name { get; private set; }
     

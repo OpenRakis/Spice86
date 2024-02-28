@@ -30,7 +30,7 @@ internal sealed class Mt32Player : IDisposable {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
-        _soundChannel = new SoundChannel(softwareMixer,nameof(Mt32Player));
+        _soundChannel = new SoundChannel(softwareMixer,"MT-32");
         if(!LoadRoms(romsPath)) {
             if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created", nameof(LoadRoms), romsPath, nameof(Mt32Player));

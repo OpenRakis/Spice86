@@ -22,7 +22,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     public SoftwareMixer(AudioPlayerFactory audioPlayerFactory) {
         _audioPlayerFactory = audioPlayerFactory;
     }
-    
+
     internal void Register(SoundChannel soundChannel) {
         _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer());
     }
@@ -31,7 +31,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     /// Gets the sound channels in a read-only dictionary.
     /// </summary>
     public IDictionary<SoundChannel, AudioPlayer> Channels => new ReadOnlyDictionary<SoundChannel, AudioPlayer>(_channels);
-    
+
     internal void Render(Span<float> buffer, SoundChannel channel) {
         if (channel.Volume == 0 || channel.IsMuted) {
             return;
@@ -52,10 +52,17 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
 
     private static void ApplyStereoSeparation(Span<float> buffer, SoundChannel channel) {
         float separation = channel.StereoSeparation / 100f;
-        for (int i = 0; i < buffer.Length; i++) {
-            float sample = buffer[i];
-            sample *= (1 + separation);
-            buffer[i] = sample;
+        for (int i = 0; i < buffer.Length; i += 2) {
+            // Assuming that even-indexed samples are for the left channel and odd-indexed samples are for the right channel
+            float leftSample = buffer[i];
+            float rightSample = buffer[i + 1];
+
+            // Apply stereo separation by reducing the volume of one channel and increasing the volume of the other
+            leftSample *= (1 - separation);
+            rightSample *= (1 + separation);
+
+            buffer[i] = leftSample;
+            buffer[i + 1] = rightSample;
         }
     }
 

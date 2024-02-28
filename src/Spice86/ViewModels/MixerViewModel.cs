@@ -1,7 +1,6 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,12 +10,10 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
+
+using System.ComponentModel;
 
 public partial class MixerViewModel : ViewModelBase {
 
@@ -24,6 +21,13 @@ public partial class MixerViewModel : ViewModelBase {
     private AvaloniaList<SoundChannelInfo> _channels = new();
 
     private Dictionary<SoundChannel, SoundChannelInfo> _channelInfos = new();
+
+    [RelayCommand]
+    private void ResetStereoSeparation(object? parameter) {
+        if(parameter is SoundChannelInfo info && _channelInfos.FirstOrDefault(x => x.Value == info).Key is SoundChannel channel) {
+            channel.StereoSeparation = info.StereoSeparation = 50;
+        }
+    }
 
     private SoftwareMixer? _mixer;
 
@@ -42,17 +46,23 @@ public partial class MixerViewModel : ViewModelBase {
                 };
                 _channelInfos.Add(channel, info);
                 Channels.Add(info);
-                info.PropertyChanged += (_, _) => {
-                    channel.IsMuted = info.IsMuted;
-                    channel.Volume = info.Volume;
-                    channel.StereoSeparation = info.StereoSeparation;
-                };
+                info.PropertyChanged += OnChannelPropertyChanged;
             } else {
+                info.PropertyChanged -= OnChannelPropertyChanged;
                 info.IsMuted = channel.IsMuted;
                 info.Volume = channel.Volume;
                 info.StereoSeparation = channel.StereoSeparation;
+                info.PropertyChanged += OnChannelPropertyChanged;
             }
-            
+
+        }
+    }
+
+    private void OnChannelPropertyChanged(object? sender, PropertyChangedEventArgs e) {
+        if(sender is SoundChannelInfo info && _channelInfos.FirstOrDefault(x => x.Value == info).Key is SoundChannel channel) {
+            channel.IsMuted = info.IsMuted;
+            channel.Volume = info.Volume;
+            channel.StereoSeparation = info.StereoSeparation;
         }
     }
 
