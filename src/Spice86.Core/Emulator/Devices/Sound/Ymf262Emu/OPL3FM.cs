@@ -35,7 +35,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public OPL3FM(SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = new SoundChannel(softwareMixer, nameof(OPL3FM));
+        _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
         _synth = new FmSynthesizer(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
             Name = nameof(OPL3FM)

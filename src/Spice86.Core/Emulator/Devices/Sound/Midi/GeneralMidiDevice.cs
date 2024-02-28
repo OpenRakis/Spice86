@@ -32,7 +32,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private IntPtr _midiOutHandle;
 
     public GeneralMidiDevice(SoftwareMixer softwareMixer) {
-        _soundChannel = new SoundChannel(softwareMixer, nameof(GeneralMidiDevice));
+        _soundChannel = new SoundChannel(softwareMixer, "General MIDI");
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = nameof(GeneralMidiDevice)
         };

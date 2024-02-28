@@ -23,16 +23,21 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Text="{Binding Name}" HorizontalAlignment="Center" />
-                    <Slider Margin="5" MinHeight="400" Grid.Row="1" Value="{Binding Volume, Mode=TwoWay}"
-                            Minimum="0" Maximum="100" Orientation="Vertical" />
-                    <Slider Margin="5" MinWidth="100" Grid.Row="2" Value="{Binding StereoSeparation, Mode=TwoWay}"
-                            Minimum="0" Maximum="100" Orientation="Horizontal" />
-                    <CheckBox Grid.Row="3" IsChecked="{Binding IsMuted, Mode=TwoWay}"
-                              Content="Mute" HorizontalAlignment="Center" />
+					<StackPanel Orientation="Vertical" Grid.Row="1">
+						<Label Content="Volume" />
+						<Slider Margin="5" MinHeight="400" Grid.Row="1" Value="{Binding Volume, Mode=TwoWay}"
+								Minimum="0" Maximum="100" Orientation="Vertical" />
+						<Label Content="Stereo Separation" />
+						<StackPanel Orientation="Horizontal">
+							<Slider Margin="5" MinWidth="100" Grid.Row="2" Value="{Binding StereoSeparation, Mode=TwoWay}"
+								Minimum="0" Maximum="100" Orientation="Horizontal"/>
+							<Button Command="{ReflectionBinding $parent[ItemsControl].DataContext.ResetStereoSeparationCommand}" CommandParameter="{Binding}" Content="Reset" />
+						</StackPanel>
+						<CheckBox Grid.Row="3" IsChecked="{Binding IsMuted, Mode=TwoWay}"
+								  Content="Mute" HorizontalAlignment="Center" />
+					</StackPanel>
                 </Grid>
             </DataTemplate>
         </ItemsControl.ItemTemplate>
