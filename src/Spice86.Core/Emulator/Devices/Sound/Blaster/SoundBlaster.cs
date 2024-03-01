@@ -124,7 +124,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly int _dma16;
     private readonly DmaChannel _eightByteDmaChannel;
     private readonly Dsp _dsp;
-    private readonly HardwareMixer _mixer;
+    private readonly HardwareMixer _ctMixer;
     private readonly Queue<byte> _outputData = new();
     private readonly Thread _playbackThread;
     private bool _blockTransferSizeSet;
@@ -143,6 +143,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
     /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="opl3SoundChannel">The sound channel registered by the SoundBlaster's OPL3 FM Chip.</param>
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
@@ -150,7 +151,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(SoftwareMixer softwareMixer, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
@@ -158,7 +159,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dmaController = dmaController;
         _gui = gui;
         _dualPic = dualPic;
-        _mixer = new HardwareMixer(this);
+        _ctMixer = new HardwareMixer(this, loggerService, _soundChannel, opl3SoundChannel);
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
         _playbackThread = new Thread(AudioPlayback) {
@@ -192,17 +193,17 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 return 0x00;
 
             case DspPorts.DspReadBufferStatus:
-                if (_mixer.InterruptStatusRegister == InterruptStatus.Dma8) {
+                if (_ctMixer.InterruptStatusRegister == InterruptStatus.Dma8) {
                 }
 
-                _mixer.InterruptStatusRegister = InterruptStatus.None;
+                _ctMixer.InterruptStatusRegister = InterruptStatus.None;
                 return _outputData.Count > 0 ? (byte)0x80 : (byte)0u;
 
             case DspPorts.MixerAddress:
-                return (byte)_mixer.CurrentAddress;
+                return (byte)_ctMixer.CurrentAddress;
 
             case DspPorts.MixerData:
-                return _mixer.ReadData();
+                return _ctMixer.ReadData();
         }
         return 0;
     }
@@ -251,8 +252,12 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
                 }
                 break;
 
+            case DspPorts.MixerData:
+                _ctMixer.Write(value);
+                break;
+
             case DspPorts.MixerAddress:
-                _mixer.CurrentAddress = value;
+                _ctMixer.CurrentAddress = value;
                 break;
         }
     }
@@ -531,7 +536,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
     /// <inheritdoc/>
     public void RaiseInterruptRequest() {
-        _mixer.InterruptStatusRegister = InterruptStatus.Dma8;
+        _ctMixer.InterruptStatusRegister = InterruptStatus.Dma8;
         _dualPic.ProcessInterruptRequest(IRQ);
     }
 
