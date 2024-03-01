@@ -27,6 +27,8 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private bool _disposed;
 
+    public SoundChannel SoundChannel => _soundChannel;
+
     /// <summary>
     /// Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>

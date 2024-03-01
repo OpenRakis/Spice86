@@ -1,18 +1,30 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Represents the SoundBlaster mixer.
 /// </summary>
 public sealed class HardwareMixer {
     private readonly SoundBlaster _blaster;
+    private readonly ILoggerService _logger;
+    private readonly SoundChannel _pcmSoundChannel;
+    private readonly SoundChannel _opl3fmSoundChannel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class with the specified SoundBlaster instance.
     /// </summary>
     /// <param name="blaster">The SoundBlaster instance to use for the mixer.</param>
-    public HardwareMixer(SoundBlaster blaster) => _blaster = blaster;
+    /// <param name="loggerService">The service used for logging.</param>
+    /// <param name="pcmSoundChannel">The Sound Blaster's PCM channel.</param>
+    /// <param name="opl3fmSoundChannel">The Sound Blaster's FM Synth channel.</param>
+    public HardwareMixer(SoundBlaster blaster, ILoggerService loggerService, SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel) {
+        _blaster = blaster;
+        _logger = loggerService;
+        _pcmSoundChannel = pcmSoundChannel;
+        _opl3fmSoundChannel = opl3fmSoundChannel;
+    }
 
     /// <summary>
     /// Gets or sets the current mixer register in use.
@@ -42,6 +54,17 @@ public sealed class HardwareMixer {
             default:
                 System.Diagnostics.Debug.WriteLine($"Unsupported mixer register {CurrentAddress:X2}h");
                 return 0;
+        }
+    }
+
+    public void Write(byte value) {
+        switch(CurrentAddress) {
+            case 0x26:		/* FM Volume (SBPRO) */
+                _opl3fmSoundChannel.Volume = value;
+                break;
+            default:
+                _logger.Warning("Unsupported mixer register write {CurrentAddress:X2}h", CurrentAddress);
+                break;
         }
     }
 
