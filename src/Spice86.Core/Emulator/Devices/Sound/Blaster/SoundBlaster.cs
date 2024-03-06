@@ -137,7 +137,21 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly DualPic _dualPic;
     private readonly IGui? _gui;
     private readonly DmaController _dmaController;
-    private readonly SoundChannel _soundChannel;
+
+    /// <summary>
+    /// The SoundBlaster's PCM sound channel.
+    /// </summary>
+    public SoundChannel PCMSoundChannel { get; }
+
+    /// <summary>
+    /// The SoundBlaster's OPL3 FM sound channel.
+    /// </summary>
+    public SoundChannel FMSynthSoundChannel { get; }
+
+    /// <summary>
+    /// The type of SoundBlaster card currently emulated.
+    /// </summary>
+    public SbType SbType { get; set; } = SbType.Sb16;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -152,14 +166,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
+        SbType = soundBlasterHardwareConfig.SbType;
+        PCMSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _dmaController = dmaController;
         _gui = gui;
         _dualPic = dualPic;
-        _ctMixer = new HardwareMixer(this, loggerService, _soundChannel, opl3SoundChannel);
+        FMSynthSoundChannel = opl3SoundChannel;
+        _ctMixer = new HardwareMixer(this, loggerService);
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
         _playbackThread = new Thread(AudioPlayback) {
@@ -354,13 +370,13 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         while (!_endPlayback) {
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
-            _soundChannel.Render(writeBuffer.AsSpan(0, length));
+            PCMSoundChannel.Render(writeBuffer.AsSpan(0, length));
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
                 for (int i = 0; i < count; i++) {
-                    _soundChannel.Render(writeBuffer.AsSpan(0, 1024));
+                    PCMSoundChannel.Render(writeBuffer.AsSpan(0, 1024));
                 }
 
                 _pauseDuration = 0;

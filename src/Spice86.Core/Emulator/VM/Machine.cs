@@ -259,7 +259,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);

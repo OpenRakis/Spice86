@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Represents the SoundBlaster mixer.
+/// Represents the SoundBlaster hardware mixer, also known as 'CTMixer'.
 /// </summary>
 public sealed class HardwareMixer {
     private readonly SoundBlaster _blaster;
@@ -17,13 +17,11 @@ public sealed class HardwareMixer {
     /// </summary>
     /// <param name="blaster">The SoundBlaster instance to use for the mixer.</param>
     /// <param name="loggerService">The service used for logging.</param>
-    /// <param name="pcmSoundChannel">The Sound Blaster's PCM channel.</param>
-    /// <param name="opl3fmSoundChannel">The Sound Blaster's FM Synth channel.</param>
-    public HardwareMixer(SoundBlaster blaster, ILoggerService loggerService, SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel) {
+    public HardwareMixer(SoundBlaster blaster, ILoggerService loggerService) {
         _blaster = blaster;
         _logger = loggerService;
-        _pcmSoundChannel = pcmSoundChannel;
-        _opl3fmSoundChannel = opl3fmSoundChannel;
+        _pcmSoundChannel = blaster.PCMSoundChannel;
+        _opl3fmSoundChannel = blaster.FMSynthSoundChannel;
     }
 
     /// <summary>
@@ -57,9 +55,18 @@ public sealed class HardwareMixer {
         }
     }
 
+    /// <summary>
+    /// Write data to the <see cref="CurrentAddress"/> of the hardware mixer. <br/>
+    /// For example, the FM volume register is written to when the address is 0x26.
+    /// </summary>
+    /// <param name="value">The value to apply.</param>
     public void Write(byte value) {
         switch(CurrentAddress) {
-            case 0x26:		/* FM Volume (SBPRO) */
+            case 0x04:		/* DAC Volume (SBPRO) */
+                //TODO: Separate / Clarify DAC and PCM... Kinda confusing
+                _pcmSoundChannel.Volume = value;
+                break;
+            case 0x26:  /* FM Volume (SBPRO) */
                 _opl3fmSoundChannel.Volume = value;
                 break;
             default:
