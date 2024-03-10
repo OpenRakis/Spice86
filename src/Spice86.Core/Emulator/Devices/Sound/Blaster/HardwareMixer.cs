@@ -63,7 +63,6 @@ public sealed class HardwareMixer {
     public void Write(byte value) {
         switch(CurrentAddress) {
             case 0x04:		/* DAC Volume (SBPRO) */
-                //TODO: Separate / Clarify DAC and PCM... Kinda confusing
                 _pcmSoundChannel.Volume = value;
                 break;
             case 0x26:  /* FM Volume (SBPRO) */
