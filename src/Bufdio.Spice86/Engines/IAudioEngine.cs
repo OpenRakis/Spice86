@@ -1,6 +1,9 @@
-﻿namespace Bufdio.Spice86.Engines;
+﻿using System;
 
-using System;
+using Spice86.Shared.Emulator.Audio;
+
+
+namespace Bufdio.Spice86.Engines;
 
 /// <summary>
 /// An interface to interact with the output audio device.
@@ -11,6 +14,6 @@ public interface IAudioEngine : IDisposable
     /// <summary>
     /// Sends audio samples to the output device.
     /// </summary>
-    /// <param name="samples">Audio samples in <c>Float32</c> format.</param>
-    void Send(Span<float> samples);
+    /// <param name="frames">Audio samples in <c>Float32</c> format.</param>
+    void Send(AudioFrame<float> frames);
 }

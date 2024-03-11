@@ -4,6 +4,7 @@ using Mt32emu;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -63,7 +64,9 @@ internal sealed class Mt32Player : IDisposable {
             }
             buffer.Clear();
             _context.Render(buffer);
-            _soundChannel.Render(buffer);
+            foreach(AudioFrame<float> frame in buffer.ToAudioFrames()) {
+                _soundChannel.Render(frame);
+            }
         }
     }
 

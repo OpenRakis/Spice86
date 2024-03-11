@@ -3,6 +3,7 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -137,7 +138,9 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         Span<float> playBuffer = stackalloc float[length];
         FillBuffer(buffer, playBuffer);
         while (!_endThread) {
-            _soundChannel.Render(playBuffer);
+            foreach (AudioFrame<float> frame in playBuffer.ToAudioFrames()) {
+                _soundChannel.Render(frame);
+            }
             FillBuffer(buffer, playBuffer);
         }
     }

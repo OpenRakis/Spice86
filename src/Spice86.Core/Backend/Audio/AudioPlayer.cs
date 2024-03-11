@@ -1,5 +1,7 @@
 namespace Spice86.Core.Backend.Audio;
 
+using Spice86.Shared.Emulator.Audio;
+
 using System;
 using System.Runtime.CompilerServices;
 
@@ -22,12 +24,7 @@ public abstract class AudioPlayer : IDisposable
     protected AudioPlayer(AudioFormat format) {
         Format = format ?? throw new ArgumentNullException(nameof(format));
 
-        _writer = format.SampleFormat switch {
-            SampleFormat.UnsignedPcm8 => new InternalBufferWriter<byte>(this),
-            SampleFormat.SignedPcm16 => new InternalBufferWriter<short>(this),
-            SampleFormat.IeeeFloat32 => new InternalBufferWriter<float>(this),
-            _ => throw new ArgumentException("Invalid sample format.")
-        };
+        _writer = new InternalBufferWriter(this);
     }
 
     /// <summary>
@@ -36,84 +33,12 @@ public abstract class AudioPlayer : IDisposable
     public AudioFormat Format { get; }
 
     /// <summary>
-    /// Writes 32-bit IEEE floating point data to the output buffer.
+    /// Writes audio data to the output buffer.
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(Span<float> data) => _writer.WriteData(data);
-    
-    /// <summary>
-    /// Writes 16-bit PCM data to the output buffer.
-    /// </summary>
-    /// <param name="data">Buffer containing data to write.</param>
-    /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData(Span<short> data) => _writer.WriteData(data);
-
-    
-    /// <summary>
-    /// Writes the full buffer of audio data to the player.
-    /// </summary>
-    /// <param name="buffer">The buffer of audio data to write.</param>
-    /// <remarks>
-    /// The method will block until the entire buffer has been written to the player/>.
-    /// </remarks>
-    public void WriteFullBuffer(Span<float> buffer) {
-        Span<float> writeBuffer = buffer;
-
-        while (true) {
-            int count = WriteData(writeBuffer);
-            writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty) {
-                return;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Writes the full buffer of audio data to the player/>.
-    /// </summary>
-    /// <param name="buffer">The buffer of audio data to write.</param>
-    /// <remarks>
-    /// The buffer must contain 16-bit signed integer data. The method will block until the entire buffer has been written to the player/>.
-    /// </remarks>
-    public void WriteFullBuffer(Span<short> buffer) {
-        Span<short> writeBuffer = buffer;
-
-        while (true) {
-            int count = WriteData(writeBuffer);
-            writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty) {
-                return;
-            }
-        }
-    }
-
-    
-    /// <summary>
-    /// Writes the full buffer of audio data to the player/>.
-    /// </summary>
-    /// <param name="buffer">The buffer of audio data to write.</param>
-    /// <remarks>
-    /// The buffer must contain 8-bit unsigned integer data, which will be converted to floats in the range [-1.0, 1.0]. The method will block until the entire buffer has been written to the player/>.
-    /// </remarks>
-    public void WriteFullBuffer(Span<byte> buffer) {
-        Span<byte> writeBuffer = buffer;
-
-        float[] floatArray = new float[writeBuffer.Length];
-
-        for (int i = 0; i < writeBuffer.Length; i++) {
-            floatArray[i] = writeBuffer[i];
-        }
-
-        Span<float> span = new Span<float>(floatArray);
-
-        while (true) {
-            int count = WriteData(span);
-            writeBuffer = writeBuffer[count..];
-            if (writeBuffer.IsEmpty) {
-                return;
-            }
-        }
+    public int WriteData<T>(AudioFrame<T> data) where T : unmanaged {
+        return _writer.WriteData(data);
     }
 
     /// <inheritdoc />
@@ -135,33 +60,24 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="data">The data to write</param>
     /// <returns>The length of data written. Might not be equal to the input data length.</returns>
-    protected abstract int WriteDataInternal(Span<byte> data);
+    protected abstract int WriteDataInternal(AudioFrame<float> data);
 
-    private sealed class InternalBufferWriter<TOutput> : InternalBufferWriter
-        where TOutput : unmanaged {
+    private sealed class InternalBufferWriter {
         private readonly AudioPlayer _player;
-        private TOutput[]? _conversionBuffer;
+        private float[]? _conversionBuffer;
 
         public InternalBufferWriter(AudioPlayer player) => _player = player;
 
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public override int WriteData<TInput>(Span<TInput> data) {
-            // if formats are the same no sample conversion is needed
-            if (typeof(TInput) == typeof(TOutput)) {
-                return _player.WriteDataInternal(data.AsBytes()) / Unsafe.SizeOf<TOutput>();
-            }
-
+        public int WriteData<TInput>(AudioFrame<TInput> input) where TInput : unmanaged {
+            Span<TInput> data = new TInput[] { input.Left, input.Right };
             int minBufferSize = data.Length;
             if (_conversionBuffer == null || _conversionBuffer.Length < minBufferSize) {
                 Array.Resize(ref _conversionBuffer, minBufferSize);
             }
 
-            SampleConverter.InternalConvert<TInput, TOutput>(data, _conversionBuffer);
-            return _player.WriteDataInternal(_conversionBuffer.AsSpan(0, data.Length).AsBytes()) / Unsafe.SizeOf<TOutput>();
+            SampleConverter.InternalConvert<TInput, float>(data, _conversionBuffer);
+            return _player.WriteDataInternal(new AudioFrame<float>() { Left = _conversionBuffer[0], Right = _conversionBuffer[1] });
         }
-    }
-
-    private abstract class InternalBufferWriter {
-        public abstract int WriteData<TInput>(Span<TInput> data) where TInput : unmanaged;
     }
 }

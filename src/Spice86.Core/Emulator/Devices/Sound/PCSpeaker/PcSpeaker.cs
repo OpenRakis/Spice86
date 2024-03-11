@@ -3,6 +3,7 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -147,7 +148,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                 }
 
                 while (periods > 0) {
-                    _soundChannel.Render(writeBuffer.AsSpan(0, samples));
+                    foreach (AudioFrame<byte> frame in writeBuffer.AsSpan().ToAudioFrames()) {
+                        _soundChannel.Render(frame);
+                    }
                     periods--;
                 }
 
@@ -160,8 +163,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                     floatArray[i] = buffer[i];
                 }
 
-
-                _soundChannel.Render(floatArray.AsSpan());
+                foreach (AudioFrame<float> frame in floatArray.AsSpan().ToAudioFrames()) {
+                    _soundChannel.Render(frame);
+                }
 
                 await Task.Delay(5, _cancelGenerateWaveform.Token);
                 idleCount++;
@@ -174,7 +178,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private void FillWithSilence() {
         float[] buffer = new float[4096];
         Span<float> span = buffer.AsSpan();
-        _soundChannel.Render(span);
+        foreach(AudioFrame<float> frame in span.ToAudioFrames()) {
+            _soundChannel.Render(frame);
+        }
     }
 
     /// <inheritdoc />

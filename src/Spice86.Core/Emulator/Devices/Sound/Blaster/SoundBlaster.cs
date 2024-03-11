@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Frozen;
@@ -370,13 +371,17 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         while (!_endPlayback) {
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
-            PCMSoundChannel.Render(writeBuffer.AsSpan(0, length));
+            foreach(AudioFrame<short> frame in writeBuffer.AsSpan(0, length).ToAudioFrames()) {
+                PCMSoundChannel.Render(frame);
+            }
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
                 for (int i = 0; i < count; i++) {
-                    PCMSoundChannel.Render(writeBuffer.AsSpan(0, 1024));
+                    foreach (AudioFrame<short> frame in writeBuffer.AsSpan(0, 1024).ToAudioFrames()) {
+                        PCMSoundChannel.Render(frame);
+                    }
                 }
 
                 _pauseDuration = 0;

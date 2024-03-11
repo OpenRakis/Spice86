@@ -3,6 +3,10 @@ namespace Spice86.Core.Backend.Audio.PortAudio;
 using Bufdio.Spice86;
 using Bufdio.Spice86.Engines;
 
+using Spice86.Shared.Emulator.Audio;
+
+using System.Runtime.InteropServices;
+
 /// <summary>
 /// The audio rendering backend
 /// </summary>
@@ -38,9 +42,9 @@ public sealed class PortAudioPlayer : AudioPlayer {
     }
 
     /// <inheritdoc/>
-    protected override int WriteDataInternal(Span<byte> data) {
-        Span<float> samples = data.Cast<byte, float>();
-        _engine.Send(samples);
-        return data.Length;
+    protected override int WriteDataInternal(AudioFrame<float> frames)
+    {
+        _engine.Send(frames);
+        return 2;
     }
 }
