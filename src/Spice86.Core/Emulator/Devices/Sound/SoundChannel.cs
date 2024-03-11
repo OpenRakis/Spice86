@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Shared.Emulator.Audio;
+
+using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents a sound channel, which is used to render audio samples.
@@ -19,42 +22,8 @@ public class SoundChannel {
         mixer.Register(this);
     }
 
-    /// <summary>
-    /// Renders the audio samples from the specified byte buffer.
-    /// </summary>
-    /// <param name="buffer">The byte buffer containing the audio samples.</param>
-    public void Render(Span<byte> buffer) {
-        Span<float> dest = new float[buffer.Length];
-        SampleConverter.InternalConvert(buffer, dest);
-        _mixer.Render(dest, this);
-    }
-    
-    /// <summary>
-    /// Renders the audio samples from the specified short buffer.
-    /// </summary>
-    /// <param name="buffer">The short buffer containing the audio samples.</param>
-    public void Render(Span<short> buffer) {
-        Span<float> dest = new float[buffer.Length];
-        SampleConverter.InternalConvert(buffer, dest);
-        _mixer.Render(dest, this);
-    }
-    
-    /// <summary>
-    /// Renders the audio samples from the specified int buffer.
-    /// </summary>
-    /// <param name="buffer">The int buffer containing the audio samples.</param>
-    public void Render(Span<int> buffer) {
-        Span<float> dest = new float[buffer.Length];
-        SampleConverter.InternalConvert(buffer, dest);
-        _mixer.Render(dest, this);
-    }
-
-    /// <summary>
-    /// Renders the audio samples from the specified float buffer.
-    /// </summary>
-    /// <param name="buffer">The float buffer containing the audio samples.</param>
-    public void Render(Span<float> buffer)  {
-        _mixer.Render(buffer, this);
+    public void Render<T>(AudioFrame<T> frame) where T : unmanaged {
+        _mixer.Render(ref frame, this);
     }
 
     /// <summary>

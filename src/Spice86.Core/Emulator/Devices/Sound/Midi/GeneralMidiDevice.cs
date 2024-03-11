@@ -3,6 +3,7 @@
 using MeltySynth;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Shared.Emulator.Audio;
 
 using Windows;
 
@@ -64,7 +65,9 @@ internal sealed class GeneralMidiDevice : MidiDevice {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
-            _soundChannel.Render(data);
+            foreach(AudioFrame<float> frame in data.ToAudioFrames()) {
+                _soundChannel.Render(frame);
+            }
             data.Clear();
         }
     }
