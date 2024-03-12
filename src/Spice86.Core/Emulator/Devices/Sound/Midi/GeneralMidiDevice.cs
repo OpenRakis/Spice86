@@ -51,30 +51,42 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         }
     }
 
-    private void RenderThreadMethod() {
-        if (!File.Exists(SoundFont)) {
+    private void RenderThreadMethod()
+    {
+        if (!File.Exists(SoundFont))
+        {
             return;
         }
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
-        Span<float> data = stackalloc float[16384];
+        Span<AudioFrame<float>> data = new AudioFrame<float>[8192]; // half the size because each frame now contains two samples
         Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
-        while (!_endThread) {
-            if(!_endThread) {
+        while (!_endThread)
+        {
+            if (!_endThread)
+            {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
-            foreach(AudioFrame<float> frame in data.ToAudioFrames()) {
+            foreach (AudioFrame<float> frame in data)
+            {
                 _soundChannel.Render(frame);
             }
             data.Clear();
         }
     }
 
-    private void FillBuffer(Synthesizer synthesizer, Span<float> data) {
+    private void FillBuffer(Synthesizer synthesizer, Span<AudioFrame<float>> data)
+    {
         ExtractAndProcessMidiMessage(_message, synthesizer);
-        synthesizer.RenderInterleaved(data);
+        Span<float> monoBuffer = stackalloc float[data.Length];
+        synthesizer.RenderInterleaved(monoBuffer);
+        for (int i = 0; i < monoBuffer.Length; i++)
+        {
+            float sample = monoBuffer[i];
+            data[i] = new AudioFrame<float>(sample, sample);
+        }
     }
 
     protected override void PlayShortMessage(uint message) {
