@@ -132,22 +132,22 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void GenerateWaveforms() {
         int length = 1024;
-        Span<float> buffer = stackalloc float[length];
-        //expand to stereo
-        length *= 2;
-        Span<float> playBuffer = stackalloc float[length];
-        FillBuffer(buffer, playBuffer);
+        Span<AudioFrame<float>> buffer = new AudioFrame<float>[length];
         while (!_endThread) {
-            foreach (AudioFrame<float> frame in playBuffer.ToAudioFrames()) {
+            FillBuffer(buffer);
+            foreach (AudioFrame<float> frame in buffer) {
                 _soundChannel.Render(frame);
             }
-            FillBuffer(buffer, playBuffer);
         }
     }
 
-    private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
-        _synth?.GetData(buffer);
-        ChannelAdapter.MonoToStereo(buffer, playBuffer);
+    private void FillBuffer(Span<AudioFrame<float>> buffer) {
+        Span<float> monoBuffer = stackalloc float[buffer.Length];
+        _synth?.GetData(monoBuffer);
+        for (int i = 0; i < monoBuffer.Length; i++) {
+            float sample = monoBuffer[i];
+            buffer[i] = new AudioFrame<float>(sample, sample);
+        }
     }
 
     private void StartPlaybackThread() {
