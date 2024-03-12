@@ -221,8 +221,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
             case DspPorts.MixerData:
                 return _ctMixer.ReadData();
+            default:
+                return base.ReadByte(port);
         }
-        return 0;
     }
 
     /// <inheritdoc />
@@ -275,6 +276,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
             case DspPorts.MixerAddress:
                 _ctMixer.CurrentAddress = value;
+                break;
+            default:
+                base.WriteByte(port, value);
                 break;
         }
     }
