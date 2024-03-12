@@ -61,13 +61,13 @@ public sealed class HardwareMixer {
     /// </summary>
     /// <param name="value">The value to apply.</param>
     public void Write(byte value) {
-        int scaledValue = (int)(value / 255.0 * 100);
+        int percentScaledValue = (int)(value / 255.0 * 100);
         switch (CurrentAddress) {
             case 0x04:  /* DAC Volume (SBPRO) */
-                _pcmSoundChannel.Volume = scaledValue;
+                _pcmSoundChannel.Volume = percentScaledValue;
                 break;
             case 0x26:  /* FM Volume (SBPRO) */
-                _opl3fmSoundChannel.Volume = scaledValue;
+                _opl3fmSoundChannel.Volume = percentScaledValue;
                 break;
             default:
                 _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
