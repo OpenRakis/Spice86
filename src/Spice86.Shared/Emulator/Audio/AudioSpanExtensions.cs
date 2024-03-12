@@ -20,11 +20,7 @@ public static class AudioSpanExtensions
         {
             int left = index;
             int right = index + 1 < span.Length ? index + 1 : index;
-            frames.Add(new AudioFrame<T>
-            {
-                Left = span[left],
-                Right = span[right]
-            });
+            frames.Add(new AudioFrame<T>(span[left], span[right]));
         }
         return frames;
     }

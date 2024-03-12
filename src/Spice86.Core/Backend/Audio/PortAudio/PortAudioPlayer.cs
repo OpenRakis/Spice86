@@ -5,8 +5,6 @@ using Bufdio.Spice86.Engines;
 
 using Spice86.Shared.Emulator.Audio;
 
-using System.Runtime.InteropServices;
-
 /// <summary>
 /// The audio rendering backend
 /// </summary>
@@ -45,6 +43,6 @@ public sealed class PortAudioPlayer : AudioPlayer {
     protected override int WriteDataInternal(AudioFrame<float> frames)
     {
         _engine.Send(frames);
-        return 2;
+        return frames.Length;
     }
 }

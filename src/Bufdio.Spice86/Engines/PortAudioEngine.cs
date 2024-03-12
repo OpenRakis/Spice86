@@ -57,16 +57,9 @@ public sealed class PortAudioEngine : IAudioEngine {
     }
 
     /// <inheritdoc />
-    public void Send(AudioFrame<float> frames)
-    {
-        Span<float> samples = new float[] {frames.Left, frames.Right};
-        Send(samples);
-    }
-
-    private unsafe void Send(Span<float> samples) {
-        fixed (float* buffer = samples) {
-            int frames = samples.Length / _options.Channels;
-            NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames);
+    public unsafe void Send(AudioFrame<float> frames) {
+        fixed (float* buffer = frames.AsSpan()) {
+            NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames.Length / _options.Channels);
         }
     }
 

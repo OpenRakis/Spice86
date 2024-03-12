@@ -22,6 +22,11 @@ public class SoundChannel {
         mixer.Register(this);
     }
 
+    /// <summary>
+    /// Renders the audio frame to the sound channel.
+    /// </summary>
+    /// <typeparam name="T">short, int, or float.</typeparam>
+    /// <param name="frame">The audio frame to mix and eventually render.</param>
     public void Render<T>(AudioFrame<T> frame) where T : unmanaged {
         _mixer.Render(ref frame, this);
     }
