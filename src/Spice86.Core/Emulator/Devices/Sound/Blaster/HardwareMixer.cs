@@ -50,7 +50,7 @@ public sealed class HardwareMixer {
                 return GetDMAByte();
 
             default:
-                System.Diagnostics.Debug.WriteLine($"Unsupported mixer register {CurrentAddress:X2}h");
+                _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
                 return 0;
         }
     }
@@ -61,15 +61,16 @@ public sealed class HardwareMixer {
     /// </summary>
     /// <param name="value">The value to apply.</param>
     public void Write(byte value) {
-        switch(CurrentAddress) {
-            case 0x04:		/* DAC Volume (SBPRO) */
-                _pcmSoundChannel.Volume = value;
+        int scaledValue = (int)(value / 255.0 * 100);
+        switch (CurrentAddress) {
+            case 0x04:  /* DAC Volume (SBPRO) */
+                _pcmSoundChannel.Volume = scaledValue;
                 break;
             case 0x26:  /* FM Volume (SBPRO) */
-                _opl3fmSoundChannel.Volume = value;
+                _opl3fmSoundChannel.Volume = scaledValue;
                 break;
             default:
-                _logger.Warning("Unsupported mixer register write {CurrentAddress:X2}h", CurrentAddress);
+                _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
                 break;
         }
     }

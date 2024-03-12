@@ -53,9 +53,6 @@ public class SoundChannel {
     /// </summary>
     public int Volume {
         get => _volume;
-        set {
-            int scaledValue = (int)(value / 255.0 * 100);
-            _volume = Math.Clamp(scaledValue, 0, 100);
-        }
+        set => _volume = Math.Clamp(value, 0, 100);
     }
 }
