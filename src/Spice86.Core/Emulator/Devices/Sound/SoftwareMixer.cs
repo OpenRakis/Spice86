@@ -37,6 +37,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     {
         if (channel.Volume == 0 || channel.IsMuted)
         {
+            _channels[channel].WriteSilence();
             return;
         }
         if (typeof(T) == typeof(float))

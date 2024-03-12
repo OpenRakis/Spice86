@@ -62,6 +62,10 @@ public abstract class AudioPlayer : IDisposable
     /// <returns>The length of data written. Might not be equal to the input data length.</returns>
     protected abstract int WriteDataInternal(AudioFrame<float> data);
 
+    internal void WriteSilence() {
+        WriteDataInternal(new AudioFrame<float>(0,0));
+    }
+
     private sealed class InternalBufferWriter {
         private readonly AudioPlayer _player;
         private float[]? _conversionBuffer;
@@ -77,7 +81,11 @@ public abstract class AudioPlayer : IDisposable
             }
 
             SampleConverter.InternalConvert<TInput, float>(data, _conversionBuffer);
-            return _player.WriteDataInternal(new AudioFrame<float>() { Left = _conversionBuffer[0], Right = _conversionBuffer[1] });
+            return _player.WriteDataInternal(new AudioFrame<float>(_conversionBuffer[0], _conversionBuffer[1]));
+        }
+
+        internal void WriteSilence() {
+            
         }
     }
 }

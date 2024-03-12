@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Backend.Audio;
 
-using Spice86.Shared.Emulator.Audio;
-
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
