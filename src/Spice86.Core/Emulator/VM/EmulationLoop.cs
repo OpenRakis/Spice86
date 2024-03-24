@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Function;
 
 namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
@@ -18,6 +19,7 @@ using System.Diagnostics;
 public class EmulationLoop {
     private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
+    private readonly CfgCpu _cfgCpu;
     private readonly State _cpuState;
     private readonly Devices.Timer.Timer _timer;
     private readonly MachineBreakpoints _machineBreakpoints;
@@ -46,10 +48,11 @@ public class EmulationLoop {
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(ILoggerService loggerService, Cpu cpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
+        _cfgCpu = cfgCpu;
         _cpuState = cpuState;
         _timer = timer;
         _listensToBreakpoints = listensToBreakpoints;
@@ -103,8 +106,12 @@ public class EmulationLoop {
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();
             }
-            _cpu.ExecuteNextInstruction();
+            //_cpu.ExecuteNextInstruction();
+            _cfgCpu.ExecuteNext();
             _timer.Tick();
+            if (_cpuState.Cycles > 100000000) {
+                _cpuState.IsRunning = false;
+            }
         }
         _stopwatch.Stop();
         OutputPerfStats();
