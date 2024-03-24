@@ -1,8 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using System.Collections.Frozen;
-using System.Threading;
-
 using Serilog.Events;
 
 using Spice86.Core.Backend.Audio;
@@ -13,13 +10,17 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Blaster;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
+
+using System.Collections.Frozen;
+using System.Threading;
 
 /// <summary>
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IPauseable, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -137,6 +138,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private int _pauseDuration;
     private BlasterState _blasterState;
     private bool _playbackStarted;
+    private bool _isPaused;
     private readonly DualPic _dualPic;
     private readonly IGui? _gui;
     private readonly DmaController _dmaController;
@@ -291,6 +293,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// </summary>
     public FrozenSet<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress }.ToFrozenSet();
 
+    /// <inheritdoc/>
+    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
+
     /// <inheritdoc />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -352,6 +357,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         int sampleRate = player.Format.SampleRate;
 
         while (!_endPlayback) {
+            ThreadPause.SleepWhilePaused(this);
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
             player.WriteFullBuffer(writeBuffer.AsSpan(0, length));

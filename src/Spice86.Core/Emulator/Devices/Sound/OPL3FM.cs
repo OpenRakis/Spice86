@@ -2,9 +2,11 @@
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -12,7 +14,7 @@ using System;
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.
 /// </summary>
-public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
+public sealed class OPL3FM : DefaultIOPortHandler, IPauseable, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
 
@@ -28,6 +30,10 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     private byte _timerControlByte;
 
     private bool _disposed;
+    private bool _isPaused;
+
+    /// <inheritdoc/>
+    public bool IsPaused { get => _isPaused; set => _isPaused = value; }
 
     /// <summary>
     /// Initializes a new instance of the OPL3 FM synth chip.
@@ -140,6 +146,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         Span<float> playBuffer = stackalloc float[length];
         FillBuffer(buffer, playBuffer, expandToStereo);
         while (!_endThread) {
+            ThreadPause.SleepWhilePaused(this);
             _audioPlayer.WriteFullBuffer(playBuffer);
             FillBuffer(buffer, playBuffer, expandToStereo);
         }

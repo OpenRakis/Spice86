@@ -5,12 +5,13 @@ using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Midi;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// MPU401 MIDI interface implementation.
 /// </summary>
-public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
+public sealed class Midi : DefaultIOPortHandler, IPauseable, IDisposable, IDebuggableComponent {
     /// <summary>
     /// The port number used for MIDI commands.
     /// </summary>
@@ -22,7 +23,13 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     public const int Data = 0x330;
 
     private readonly GeneralMidi _generalMidi;
+
     private bool _disposed;
+
+    /// <summary>
+    /// Gets or sets whether MIDI rendering is paused
+    /// </summary>
+    public bool IsPaused { get => _generalMidi.IsPaused; set => _generalMidi.IsPaused = value; }
 
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.

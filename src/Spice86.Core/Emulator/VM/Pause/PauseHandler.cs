@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM.Pause;
 
 using System.Diagnostics;
 using System.Threading;
@@ -38,7 +38,7 @@ public sealed class PauseHandler : IDisposable {
     public void RequestPauseAndWait() {
         LogStatus($"{nameof(RequestPauseAndWait)} started");
         _pauseRequested = true;
-        if(!_disposed) {
+        if (!_disposed) {
             _manualResetEvent.WaitOne(Timeout.Infinite);
         }
         LogStatus($"{nameof(RequestPauseAndWait)} finished");
@@ -50,7 +50,7 @@ public sealed class PauseHandler : IDisposable {
     public void RequestResume() {
         LogStatus($"{nameof(RequestResume)} started");
         _pauseRequested = false;
-        if(!_disposed) {
+        if (!_disposed) {
             _manualResetEvent.Set();
         }
         LogStatus($"{nameof(RequestResume)} finished");
@@ -73,7 +73,7 @@ public sealed class PauseHandler : IDisposable {
 
     private void Await() {
         try {
-            if(!_disposed) {
+            if (!_disposed) {
                 _manualResetEvent.WaitOne(Timeout.Infinite);
             }
         } catch (AbandonedMutexException exception) {

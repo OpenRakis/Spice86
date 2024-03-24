@@ -5,6 +5,7 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -29,14 +30,17 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
+    private readonly IProgramExecutor? _programExecutor;
+
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPerformanceMeasurer performanceMeasurer) {
+        _programExecutor = programExecutor;
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _performanceMeasurer is null) {
+        if (_state is null || _performanceMeasurer is null || _programExecutor?.IsPaused is true) {
             return;
         }
 

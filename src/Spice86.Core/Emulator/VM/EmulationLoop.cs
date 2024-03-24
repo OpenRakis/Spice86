@@ -1,11 +1,13 @@
+namespace Spice86.Core.Emulator.VM;
+
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-
-namespace Spice86.Core.Emulator.VM;
-
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -15,7 +17,7 @@ using System.Diagnostics;
 /// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
-public class EmulationLoop {
+public class EmulationLoop : IPauseable {
     private readonly ILoggerService _loggerService;
     private readonly Cpu _cpu;
     private readonly State _cpuState;
@@ -26,12 +28,7 @@ public class EmulationLoop {
     private readonly Stopwatch _stopwatch;
 
     /// <summary>
-    /// Whether the emulation is paused.
-    /// </summary>
-    public bool IsPaused { get; set; }
-
-    /// <summary>
-    /// Gets if we check for breakpoints in the emulation loop.
+    /// Whether we check for breakpoints in the emulation loop.
     /// </summary>
     private readonly bool _listensToBreakpoints;
 
@@ -58,6 +55,11 @@ public class EmulationLoop {
         _gdbCommandHandler = gdbCommandHandler;
         _stopwatch = new();
     }
+
+    /// <summary>
+    /// Gets or sets whether the emulation loop thread is paused.
+    /// </summary>
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Starts and waits for the end of the emulation loop.
@@ -111,7 +113,7 @@ public class EmulationLoop {
     }
 
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             long elapsedTimeMilliSeconds = _stopwatch.ElapsedMilliseconds;
             long cycles = _cpuState.Cycles;
             long cyclesPerSeconds = 0;
@@ -137,9 +139,7 @@ public class EmulationLoop {
         }
 
         if (!GenerateUnconditionalGdbBreakpoint()) {
-            while (IsPaused) {
-                Thread.Sleep(1);
-            }
+            ThreadPause.SleepWhilePaused(this);
         }
     }
 }

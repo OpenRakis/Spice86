@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Pause;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Frozen;
@@ -11,7 +12,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : DefaultIOPortHandler, IDisposable {
+public sealed class DmaController : DefaultIOPortHandler, IPauseable, IDisposable {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
@@ -66,10 +67,16 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     }
 
     /// <summary>
+    /// Gets or sets whether the DMA Thread is paused.
+    /// </summary>
+    public bool IsPaused { get; set; }
+
+    /// <summary>
     /// https://techgenix.com/direct-memory-access/
     /// </summary>
     private void DmaLoop() {
         while (!_exitDmaLoop) {
+            ThreadPause.SleepWhilePaused(this);
             for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
                 DmaChannel dmaChannel = _dmaDeviceChannels[i];
                 bool transferred = dmaChannel.Transfer(_memory);

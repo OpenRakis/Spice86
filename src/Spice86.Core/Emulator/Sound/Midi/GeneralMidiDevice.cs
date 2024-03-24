@@ -4,8 +4,9 @@ using MeltySynth;
 
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Sound.Midi.Windows;
+using Spice86.Core.Emulator.VM.Pause;
 
-using OperatingSystem = System.OperatingSystem;
+using System;
 
 /// <summary>
 /// Represents an external General MIDI device. <br/>
@@ -59,7 +60,8 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), _audioPlayer.Format.SampleRate);
         while (!_endThread) {
-            if(!_endThread) {
+            ThreadPause.SleepWhilePaused(this);
+            if (!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
