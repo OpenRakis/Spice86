@@ -12,6 +12,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -86,5 +87,9 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
     }
 
     public void VisitExternalMidiDevice(Midi midi) {
+    }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        
     }
 }

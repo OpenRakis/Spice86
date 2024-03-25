@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Debugger;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -64,4 +65,9 @@ public interface IEmulatorDebugger
     /// </summary>
     /// <param name="midi">The MIDI device to visit.</param>
     void VisitExternalMidiDevice(Midi midi);
+
+    /// <summary>
+    /// Visits the software mixer to get or set the state of the internal sound channels
+    /// </summary>
+    void VisitSoundMixer(SoftwareMixer mixer);
 }

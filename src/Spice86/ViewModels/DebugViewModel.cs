@@ -13,6 +13,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Memory;
@@ -45,6 +46,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     private IMemory? _memory;
 
     public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
+
+    [ObservableProperty]
+    private MixerViewModel? _softwareMixerViewModel;
 
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
@@ -95,6 +99,7 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         IsPaused = _pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         _uiDispatcherTimer = uiDispatcherTimer;
+        SoftwareMixerViewModel = new(uiDispatcherTimer);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -520,5 +525,9 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     public void ShowColorPalette() {
         SelectedTab = 4;
+    }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        SoftwareMixerViewModel?.VisitSoundMixer(mixer);
     }
 }

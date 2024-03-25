@@ -49,4 +49,8 @@
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
 </Project>
