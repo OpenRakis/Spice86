@@ -131,7 +131,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// Generates and plays back output waveform data.
     /// </summary>
     private void GenerateWaveforms() {
-        int length = 1024;
+        const int length = 1024;
         Span<AudioFrame<float>> buffer = new AudioFrame<float>[length];
         while (!_endThread) {
             FillBuffer(buffer);
