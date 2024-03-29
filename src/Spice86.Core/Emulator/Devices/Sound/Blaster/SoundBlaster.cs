@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
+using System;
 using System.Collections.Frozen;
 using System.Threading;
 
@@ -375,19 +376,25 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         while (!_endPlayback) {
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
-            foreach(AudioFrame<short> frame in writeBuffer.AsSpan(0, length).ToAudioFrames()) {
+            AudioFrame<short> frame = new(0, 0);
+            for (int i = 0; i < length; i += 2) {
+                frame.Left = writeBuffer[i];
+                frame.Right = writeBuffer[i + 1 < length ? i + 1 : i];
                 PCMSoundChannel.Render(frame);
             }
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
+                const int pauseLength = 1024;
                 for (int i = 0; i < count; i++) {
-                    foreach (AudioFrame<short> frame in writeBuffer.AsSpan(0, 1024).ToAudioFrames()) {
-                        PCMSoundChannel.Render(frame);
+                    AudioFrame<short> pauseFrame = new(0, 0);
+                    for(int j = 0; j < pauseLength; j += 2) {
+                        pauseFrame.Left = writeBuffer[j];
+                        pauseFrame.Right = writeBuffer[j + 1 < pauseLength ? j + 1 : j];
+                        PCMSoundChannel.Render(pauseFrame);
                     }
                 }
-
                 _pauseDuration = 0;
                 RaiseInterruptRequest();
             }
