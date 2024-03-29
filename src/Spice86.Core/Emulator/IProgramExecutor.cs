@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 
 /// <summary>
 /// The program executor is responsible for starting and controlling the emulated program. <br/>

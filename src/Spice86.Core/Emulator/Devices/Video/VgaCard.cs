@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
@@ -62,7 +62,7 @@ public class VgaCard : IDebuggableComponent {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitVgaCard(this);
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
     }
 }

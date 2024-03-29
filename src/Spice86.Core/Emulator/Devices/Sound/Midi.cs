@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Sound;
 using Spice86.Core.Emulator.Sound.Midi;
@@ -71,7 +71,8 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         GC.SuppressFinalize(this);
     }
 
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitExternalMidiDevice(this);
+    /// <inheritdoc/>
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
     }
 }
