@@ -2,28 +2,25 @@
 
 using Function.Dump;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
+using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
-using Spice86.Shared.Interfaces;
-
-using System.Security.Cryptography;
-using System.Diagnostics;
-
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.IOPorts;
-using Spice86.Logging;
-using System.Net.NetworkInformation;
+
+using System.Diagnostics;
+using System.Security.Cryptography;
 
 /// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
@@ -245,7 +242,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         Machine.Accept(emulatorDebugger);
     }
 }

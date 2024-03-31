@@ -1,11 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
-using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.CPU.Registers;
 
 using System.Text;
 
 using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.InternalDebugger;
 
 /// <summary>
 /// Represents the state of the CPU Registers and Flags.
@@ -385,7 +385,7 @@ public class State : IDebuggableComponent {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitCpuState(this);
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
     }
 }

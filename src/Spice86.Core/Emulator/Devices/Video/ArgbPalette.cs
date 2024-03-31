@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 
 /// <summary>
 ///   A 32 bit representation of an 18-bit color palette.
@@ -47,7 +47,7 @@ public class ArgbPalette : IDebuggableComponent {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitDacPalette(this);
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
     }
 }

@@ -6,17 +6,13 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Debugger;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
+public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
 
@@ -45,32 +41,13 @@ public partial class PerformanceViewModel : ViewModelBase, IEmulatorDebugger {
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
     }
 
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        if(_state is null) {
+            _state = component as State;
+        }
+    }
+
     [ObservableProperty]
     private double _instructionsExecuted;
 
-    public void VisitMainMemory(IMemory memory) {
-    }
-
-    public void VisitCpuState(State state) => _state = state;
-
-    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
-    }
-
-    public void VisitVideoState(IVideoState videoState) {
-    }
-
-    public void VisitDacPalette(ArgbPalette argbPalette) {
-    }
-
-    public void VisitDacRegisters(DacRegisters dacRegisters) {
-    }
-
-    public void VisitVgaCard(VgaCard vgaCard) {
-    }
-
-    public void VisitCpu(Cpu cpu) {
-    }
-
-    public void VisitExternalMidiDevice(Midi midi) {
-    }
 }

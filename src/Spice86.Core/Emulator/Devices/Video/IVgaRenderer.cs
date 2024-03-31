@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 
 /// <summary>
 ///     Represents a VGA renderer.

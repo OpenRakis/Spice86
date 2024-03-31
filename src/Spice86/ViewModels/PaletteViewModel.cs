@@ -9,16 +9,12 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Debugger;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
-public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
+public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     private ArgbPalette? _argbPalette;
 
     public PaletteViewModel() {
@@ -62,29 +58,9 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorDebugger {
         }
     }
 
-    public void VisitMainMemory(IMemory memory) {
-    }
-
-    public void VisitCpuState(State state) {
-    }
-
-    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
-    }
-
-    public void VisitVideoState(IVideoState videoState) {
-    }
-
-    public void VisitDacPalette(ArgbPalette argbPalette) => _argbPalette = argbPalette;
-
-    public void VisitDacRegisters(DacRegisters dacRegisters) {
-    }
-
-    public void VisitVgaCard(VgaCard vgaCard) {
-    }
-
-    public void VisitCpu(Cpu cpu) {
-    }
-
-    public void VisitExternalMidiDevice(Midi midi) {
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        if(_argbPalette is null) {
+            _argbPalette = component as ArgbPalette;
+        }
     }
 }

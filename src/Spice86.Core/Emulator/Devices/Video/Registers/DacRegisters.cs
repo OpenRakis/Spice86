@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 
 using System.Diagnostics;
 
@@ -100,8 +100,8 @@ public class DacRegisters : IDebuggableComponent {
     public ArgbPalette ArgbPalette { get; }
 
     /// <inheritdoc />
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitDacRegisters(this);
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
         ArgbPalette.Accept(emulatorDebugger);
     }
 }

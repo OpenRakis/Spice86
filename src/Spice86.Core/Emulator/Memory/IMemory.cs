@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Debugger;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 

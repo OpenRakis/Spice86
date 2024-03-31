@@ -1,9 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Core.Emulator.InternalDebugger;
 
 using System.Diagnostics;
 
@@ -323,8 +323,9 @@ public class Renderer : IVgaRenderer {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
-        emulatorDebugger.VisitVgaRenderer(this);
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger
+    {
+        emulatorDebugger.Visit(this);
     }
 }
 

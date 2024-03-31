@@ -11,10 +11,9 @@ using Iced.Intel;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
@@ -26,9 +25,8 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
 
-public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugViewModel {
+public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
     [ObservableProperty]
     private MachineInfo _machine = new();
 
@@ -189,12 +187,33 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
     /// </summary>
     private bool _mustRefreshMainMemory = true;
 
-    public void VisitMainMemory(IMemory memory) {
-        if (_mustRefreshMainMemory) {
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        if (_mustRefreshMainMemory && component is IMemory memory) {
             _memory = memory;
             RefreshMemoryStream();
             _mustRefreshMainMemory = false;
         }
+        if(component is Midi externalMidiDevice) {
+            VisitExternalMidiDevice(externalMidiDevice);
+        }
+        if(component is Cpu cpu) {
+            VisitCpu(cpu);
+        }
+        if(component is State state) {
+            VisitCpuState(state);
+        }
+        if(component is IVideoState videoState) {
+            VisitVideoState(videoState);
+        }
+        if(component is IVgaRenderer vgaRenderer) {
+            VisitVgaRenderer(vgaRenderer);
+        }
+    }
+
+    private void VisitExternalMidiDevice(Midi externalMidiDevice) {
+        Midi.LastPortRead = externalMidiDevice.LastPortRead;
+        Midi.LastPortWritten = externalMidiDevice.LastPortWritten;
+        Midi.LastPortWrittenValue = externalMidiDevice.LastPortWrittenValue;
     }
 
     [ObservableProperty]
@@ -422,15 +441,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
         VideoCard.SequencerChain4Mode = videoState.SequencerRegisters.MemoryModeRegister.Chain4Mode;
     }
 
-    public void VisitDacPalette(ArgbPalette argbPalette) {
-    }
-
-    public void VisitDacRegisters(DacRegisters dacRegisters) {
-    }
-
-    public void VisitVgaCard(VgaCard vgaCard) {
-    }
-
     private bool _needToUpdateDisassembly;
 
     public void VisitCpu(Cpu cpu) {
@@ -445,12 +455,6 @@ public partial class DebugViewModel : ViewModelBase, IEmulatorDebugger, IDebugVi
 
     [ObservableProperty]
     private MidiInfo _midi = new();
-
-    public void VisitExternalMidiDevice(Midi midi) {
-        Midi.LastPortRead = midi.LastPortRead;
-        Midi.LastPortWritten = midi.LastPortWritten;
-        Midi.LastPortWrittenValue = midi.LastPortWrittenValue;
-    }
 
     [RelayCommand]
     public void Pause() {

@@ -2,7 +2,6 @@
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -12,6 +11,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -366,7 +366,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     }
 
     /// <inheritdoc/>
-    public void Accept(IEmulatorDebugger emulatorDebugger) {
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         Memory.Accept(emulatorDebugger);
         Cpu.Accept(emulatorDebugger);
         VgaCard.Accept(emulatorDebugger);
