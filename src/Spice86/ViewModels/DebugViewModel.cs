@@ -213,6 +213,10 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         if(component is IVgaRenderer vgaRenderer) {
             VisitVgaRenderer(vgaRenderer);
         }
+
+        if (component is SoftwareMixer softwareMixer) {
+            VisitSoundMixer(softwareMixer);
+        }
     }
 
     private void VisitExternalMidiDevice(Midi externalMidiDevice) {
