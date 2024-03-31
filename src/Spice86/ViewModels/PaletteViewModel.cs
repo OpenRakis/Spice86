@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
@@ -62,5 +63,9 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
         if(_argbPalette is null) {
             _argbPalette = component as ArgbPalette;
         }
+    }
+
+    public void VisitSoundMixer(SoftwareMixer mixer) {
+        
     }
 }

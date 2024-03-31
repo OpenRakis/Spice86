@@ -1,5 +1,4 @@
-﻿namespace Bufdio.Spice86.Engines;
-
+﻿
 using System;
 using System.Runtime.InteropServices;
 
@@ -8,6 +7,10 @@ using Bufdio.Spice86.Bindings.PortAudio.Enums;
 using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
+
+using Spice86.Shared.Emulator.Audio;
+
+namespace Bufdio.Spice86.Engines;
 
 /// <summary>
 /// Interact with output audio device by using the PortAudio library.
@@ -54,12 +57,9 @@ public sealed class PortAudioEngine : IAudioEngine {
     }
 
     /// <inheritdoc />
-    public void Send(Span<float> samples) {
-        unsafe {
-            fixed (float* buffer = samples) {
-                int frames = samples.Length / _options.Channels;
-                NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames);
-            }
+    public unsafe void Send(AudioFrame<float> frames) {
+        fixed (float* buffer = frames.AsSpan()) {
+            NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames.Length / _options.Channels);
         }
     }
 

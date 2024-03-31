@@ -136,7 +136,10 @@ internal static class SampleConverter {
     internal static void InternalConvert<TFrom, TTo>(Span<TFrom> source, Span<TTo> target)
         where TFrom : unmanaged
         where TTo : unmanaged {
-        if (typeof(TFrom) == typeof(short) && typeof(TTo) == typeof(float)) {
+        if(typeof(TFrom) == typeof(TTo)) {
+            source.Cast<TFrom, TTo>().CopyTo(target);
+        }
+        else if (typeof(TFrom) == typeof(short) && typeof(TTo) == typeof(float)) {
             Pcm16ToFloat(source.Cast<TFrom, short>(), target.Cast<TTo, float>());
         } else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(short)) {
             Pcm8ToPcm16(source.Cast<TFrom, byte>(), target.Cast<TTo, short>());

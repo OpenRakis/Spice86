@@ -8,6 +8,10 @@ using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
+using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -25,7 +29,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.Sound;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -193,6 +196,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The OPL3 FM Synth chip.
     /// </summary>
     public OPL3FM OPL3FM { get; }
+    
+    /// <summary>
+    /// The internal software mixer for all sound channels.
+    /// </summary>
+    public SoftwareMixer SoftwareMixer { get; }
 
     /// <summary>
     /// Initializes a new instance
@@ -244,17 +252,19 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         RegisterIoPortHandler(MouseDevice);
         Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
-        AudioPlayerFactory audioPlayerFactory = new AudioPlayerFactory(loggerService);
-        PcSpeaker = new PcSpeaker(audioPlayerFactory, CpuState, loggerService, configuration.FailOnUnhandledPort);
+        
+        SoftwareMixer = new(new AudioPlayerFactory(loggerService));
+        
+        PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(audioPlayerFactory, CpuState, configuration.FailOnUnhandledPort, loggerService);
+        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5);
-        SoundBlaster = new SoundBlaster(audioPlayerFactory, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
+        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(audioPlayerFactory, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services
@@ -352,6 +362,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
                 DmaController.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
+                SoftwareMixer.Dispose();
                 MachineBreakpoints.Dispose();
             }
             _disposed = true;
@@ -373,5 +384,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);
         MidiDevice.Accept(emulatorDebugger);
+        SoftwareMixer.Accept(emulatorDebugger);
     }
 }
