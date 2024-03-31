@@ -83,9 +83,5 @@ public abstract class AudioPlayer : IDisposable
             SampleConverter.InternalConvert<TInput, float>(data, _conversionBuffer);
             return _player.WriteDataInternal(new AudioFrame<float>(_conversionBuffer[0], _conversionBuffer[1]));
         }
-
-        internal void WriteSilence() {
-            
-        }
     }
 }

@@ -20,6 +20,6 @@ sealed class DummyAudioPlayer : AudioPlayer {
     /// <returns>The data paramater length</returns>
     protected override int WriteDataInternal(AudioFrame<float> data) {
         // Tell we wrote it all, it's all fake anyway
-        return 2;
+        return data.Length;
     }
 }
