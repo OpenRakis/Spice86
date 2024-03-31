@@ -148,9 +148,15 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                 }
 
                 while (periods > 0) {
-                    foreach (AudioFrame<byte> frame in writeBuffer.AsSpan().ToAudioFrames()) {
+                    AudioFrame<byte> frame = new(0, 0);
+                    for (int index = 0; index < writeBuffer.Length; index += 2) {
+                        byte frameLeft = writeBuffer[index];
+                        byte frameRight = writeBuffer[index < writeBuffer.Length ? index + 1 : index];
+                        frame.Left = frameLeft;
+                        frame.Right = frameRight;
                         _soundChannel.Render(frame);
                     }
+
                     periods--;
                 }
 
@@ -163,7 +169,12 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                     floatArray[i] = buffer[i];
                 }
 
-                foreach (AudioFrame<float> frame in floatArray.AsSpan().ToAudioFrames()) {
+                AudioFrame<float> frame = new(0, 0);
+                for (int index = 0; index < floatArray.Length; index += 2) {
+                    float frameLeft = floatArray[index];
+                    float frameRight = floatArray[index < floatArray.Length ? index + 1 : index];
+                    frame.Left = frameLeft;
+                    frame.Right = frameRight;
                     _soundChannel.Render(frame);
                 }
 
@@ -177,8 +188,12 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
 
     private void FillWithSilence() {
         float[] buffer = new float[4096];
-        Span<float> span = buffer.AsSpan();
-        foreach(AudioFrame<float> frame in span.ToAudioFrames()) {
+        AudioFrame<float> frame = new(0, 0);
+        for (int index = 0; index < buffer.Length; index += 2) {
+            float frameLeft = buffer[index];
+            float frameRight = buffer[index < buffer.Length ? index + 1 : index];
+            frame.Left = frameLeft;
+            frame.Right = frameRight;
             _soundChannel.Render(frame);
         }
     }

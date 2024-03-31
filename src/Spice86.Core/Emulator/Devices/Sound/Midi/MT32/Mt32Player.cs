@@ -64,7 +64,12 @@ internal sealed class Mt32Player : IDisposable {
             }
             buffer.Clear();
             _context.Render(buffer);
-            foreach(AudioFrame<float> frame in buffer.ToAudioFrames()) {
+            AudioFrame<float> frame = new(0, 0);
+            for (int index = 0; index < buffer.Length; index += 2) {
+                float frameLeft = buffer[index];
+                float frameRight = buffer[index < buffer.Length ? index + 1 : index];
+                frame.Left = frameLeft;
+                frame.Right = frameRight;
                 _soundChannel.Render(frame);
             }
         }
