@@ -33,25 +33,20 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     /// </summary>
     public IDictionary<SoundChannel, AudioPlayer> Channels => new ReadOnlyDictionary<SoundChannel, AudioPlayer>(_channels);
 
-    internal void Render<T>(ref AudioFrame<T> frame, SoundChannel channel) where T : unmanaged
-    {
-        if (channel.Volume == 0 || channel.IsMuted)
-        {
+    internal void Render<T>(ref AudioFrame<T> frame, SoundChannel channel) where T : unmanaged {
+        if (channel.Volume == 0 || channel.IsMuted) {
             _channels[channel].WriteSilence();
             return;
         }
-        if (typeof(T) == typeof(float))
-        {
+        if (typeof(T) == typeof(float)) {
             ApplyStereoSeparation(ref Unsafe.As<AudioFrame<T>, AudioFrame<float>>(ref frame), channel);
             ApplyVolume(ref Unsafe.As<AudioFrame<T>, AudioFrame<float>>(ref frame), channel);
         }
-        else if (typeof(T) == typeof(int))
-        {
+        else if (typeof(T) == typeof(int)) {
             ApplyStereoSeparation(ref Unsafe.As<AudioFrame<T>, AudioFrame<int>>(ref frame), channel);
             ApplyVolume(ref Unsafe.As<AudioFrame<T>, AudioFrame<int>>(ref frame), channel);
         }
-        else if (typeof(T) == typeof(short))
-        {
+        else if (typeof(T) == typeof(short)) {
             ApplyStereoSeparation(ref Unsafe.As<AudioFrame<T>, AudioFrame<short>>(ref frame), channel);
             ApplyVolume(ref Unsafe.As<AudioFrame<T>, AudioFrame<short>>(ref frame), channel);
         }
@@ -79,43 +74,38 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         emulatorDebugger.Visit(this);
     }
-    private static void ApplyVolume(ref AudioFrame<float> frame, SoundChannel channel)
-    {
+    
+    private static void ApplyVolume(ref AudioFrame<float> frame, SoundChannel channel) {
         float volumeFactor = channel.Volume / 100f;
         frame.Left *= volumeFactor;
         frame.Right *= volumeFactor;
     }
 
-    private static void ApplyVolume(ref AudioFrame<int> frame, SoundChannel channel)
-    {
+    private static void ApplyVolume(ref AudioFrame<int> frame, SoundChannel channel) {
         float volumeFactor = channel.Volume / 100f;
         frame.Left = (int)(frame.Left * volumeFactor);
         frame.Right = (int)(frame.Right * volumeFactor);
     }
 
-    private static void ApplyVolume(ref AudioFrame<short> frame, SoundChannel channel)
-    {
+    private static void ApplyVolume(ref AudioFrame<short> frame, SoundChannel channel) {
         float volumeFactor = channel.Volume / 100f;
         frame.Left = (short)(frame.Left * volumeFactor);
         frame.Right = (short)(frame.Right * volumeFactor);
     }
 
-    private static void ApplyStereoSeparation(ref AudioFrame<float> frame, SoundChannel channel)
-    {
+    private static void ApplyStereoSeparation(ref AudioFrame<float> frame, SoundChannel channel) {
         float separation = channel.StereoSeparation / 100f;
         frame.Left *= (1 - separation);
         frame.Right *= (1 + separation);
     }
 
-    private static void ApplyStereoSeparation(ref AudioFrame<int> frame, SoundChannel channel)
-    {
+    private static void ApplyStereoSeparation(ref AudioFrame<int> frame, SoundChannel channel) {
         float separation = channel.StereoSeparation / 100f;
         frame.Left = (int)(frame.Left * (1 - separation));
         frame.Right = (int)(frame.Right * (1 + separation));
     }
 
-    private static void ApplyStereoSeparation(ref AudioFrame<short> frame, SoundChannel channel)
-    {
+    private static void ApplyStereoSeparation(ref AudioFrame<short> frame, SoundChannel channel) {
         float separation = channel.StereoSeparation / 100f;
         frame.Left = (short)(frame.Left * (1 - separation));
         frame.Right = (short)(frame.Right * (1 + separation));
