@@ -33,7 +33,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     /// </summary>
     public IDictionary<SoundChannel, AudioPlayer> Channels => new ReadOnlyDictionary<SoundChannel, AudioPlayer>(_channels);
 
-    internal void Render<T>(ref AudioFrame<T> frame, SoundChannel channel) where T : unmanaged {
+    internal void Render<T>(AudioFrame<T> frame, SoundChannel channel) where T : unmanaged {
         if (channel.Volume == 0 || channel.IsMuted) {
             _channels[channel].WriteSilence();
             return;

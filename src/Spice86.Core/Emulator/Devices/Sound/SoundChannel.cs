@@ -1,9 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Shared.Emulator.Audio;
-
-using System.Runtime.InteropServices;
 
 /// <summary>
 /// Represents a sound channel, which is used to render audio samples.
@@ -28,7 +25,7 @@ public class SoundChannel {
     /// <typeparam name="T">short, int, or float.</typeparam>
     /// <param name="frame">The audio frame to mix and eventually render.</param>
     public void Render<T>(AudioFrame<T> frame) where T : unmanaged {
-        _mixer.Render(ref frame, this);
+        _mixer.Render(frame, this);
     }
 
     /// <summary>
