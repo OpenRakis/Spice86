@@ -3,10 +3,9 @@ namespace Spice86.Core.Backend.Audio;
 using Spice86.Shared.Emulator.Audio;
 
 using System;
-using System.Runtime.CompilerServices;
 
 /// <summary>
-/// The base class for the <see cref="PortAudio.PortAudioPlayer" />
+/// The base class for all implementations of Audio Players
 /// </summary>
 public abstract class AudioPlayer : IDisposable
 {
@@ -60,28 +59,9 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="data">The data to write</param>
     /// <returns>The length of data written. Might not be equal to the input data length.</returns>
-    protected abstract int WriteDataInternal(AudioFrame<float> data);
+    internal abstract int WriteDataInternal(AudioFrame<float> data);
 
     internal void WriteSilence() {
         WriteDataInternal(new AudioFrame<float>(0,0));
-    }
-
-    private sealed class InternalBufferWriter {
-        private readonly AudioPlayer _player;
-        private float[]? _conversionBuffer;
-
-        public InternalBufferWriter(AudioPlayer player) => _player = player;
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public int WriteData<TInput>(AudioFrame<TInput> input) where TInput : unmanaged {
-            Span<TInput> data = new TInput[] { input.Left, input.Right };
-            int minBufferSize = data.Length;
-            if (_conversionBuffer == null || _conversionBuffer.Length < minBufferSize) {
-                Array.Resize(ref _conversionBuffer, minBufferSize);
-            }
-
-            SampleConverter.InternalConvert<TInput, float>(data, _conversionBuffer);
-            return _player.WriteDataInternal(new AudioFrame<float>(_conversionBuffer[0], _conversionBuffer[1]));
-        }
     }
 }

@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Backend.Audio;
 
+using Spice86.Shared.Emulator.Audio;
+
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -133,20 +135,20 @@ internal static class SampleConverter {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void InternalConvert<TFrom, TTo>(Span<TFrom> source, Span<TTo> target)
+    internal static void InternalConvert<TFrom, TTo>(AudioFrame<TFrom> source, AudioFrame<TTo> target)
         where TFrom : unmanaged
         where TTo : unmanaged {
         if(typeof(TFrom) == typeof(TTo)) {
-            source.Cast<TFrom, TTo>().CopyTo(target);
+            source.AsSpan().Cast<TFrom, TTo>().CopyTo(target.AsSpan());
         }
         else if (typeof(TFrom) == typeof(short) && typeof(TTo) == typeof(float)) {
-            Pcm16ToFloat(source.Cast<TFrom, short>(), target.Cast<TTo, float>());
+            Pcm16ToFloat(source.AsSpan().Cast<TFrom, short>(), target.AsSpan().Cast<TTo, float>());
         } else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(short)) {
-            Pcm8ToPcm16(source.Cast<TFrom, byte>(), target.Cast<TTo, short>());
+            Pcm8ToPcm16(source.AsSpan().Cast<TFrom, byte>(), target.AsSpan().Cast<TTo, short>());
         } else if (typeof(TFrom) == typeof(float) && typeof(TTo) == typeof(short)) {
-            FloatToPcm16(source.Cast<TFrom, float>(), target.Cast<TTo, short>());
+            FloatToPcm16(source.AsSpan().Cast<TFrom, float>(), target.AsSpan().Cast<TTo, short>());
         } else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(float)) {
-            Pcm8ToFloat(source.Cast<TFrom, byte>(), target.Cast<TTo, float>());
+            Pcm8ToFloat(source.AsSpan().Cast<TFrom, byte>(), target.AsSpan().Cast<TTo, float>());
         } else {
             throw new NotImplementedException();
         }

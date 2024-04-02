@@ -40,7 +40,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
     }
 
     /// <inheritdoc/>
-    protected override int WriteDataInternal(AudioFrame<float> frames)
+    internal override int WriteDataInternal(AudioFrame<float> frames)
     {
         _engine.Send(frames);
         return frames.Length;
