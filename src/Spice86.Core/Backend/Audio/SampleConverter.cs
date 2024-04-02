@@ -150,7 +150,7 @@ internal static class SampleConverter {
         } else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(float)) {
             Pcm8ToFloat(source.AsSpan().Cast<TFrom, byte>(), target.AsSpan().Cast<TTo, float>());
         } else {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }
