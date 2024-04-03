@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 public class ModRmContext {
     
     public InstructionField<byte> ModRmField { get; }
-    public int Mode { get; }
+    public uint Mode { get; }
     public uint RegisterIndex { get; }
     public uint RegisterMemoryIndex { get; }
     public MemoryOffsetType MemoryOffsetType { get; }
@@ -19,7 +19,7 @@ public class ModRmContext {
 
     public ModRmContext(
         InstructionField<byte> modRmField,
-        int mode,
+        uint mode,
         uint registerIndex,
         uint registerMemoryIndex,
         MemoryOffsetType memoryOffsetType,
