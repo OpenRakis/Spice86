@@ -4,7 +4,7 @@ namespace Spice86.Shared.Emulator.Audio;
 /// Represents a single audio frame.
 /// </summary>
 public struct AudioFrame<T> where T : struct {
-    private readonly T[] _data;
+    private T[] _data;
 
     /// <summary>
     /// Initializes a new instance of <see cref="AudioFrame{T}"/>.
@@ -20,17 +20,17 @@ public struct AudioFrame<T> where T : struct {
     /// <summary>
     /// Represents the left audio channel.
     /// </summary>
-    public readonly T Left { get => _data[0]; set => _data[0] = value; }
+    public T Left { get => _data[0]; set => _data[0] = value; }
 
     /// <summary>
     /// Represents the right audio channel.
     /// </summary>
-    public readonly T Right { get => _data[1]; set => _data[1] = value; }
+    public T Right { get => _data[1]; set => _data[1] = value; }
 
     /// <summary>
     /// Returns the underlying array as a span.
     /// </summary>
-    public readonly Span<T> AsSpan() => _data.AsSpan();
+    public Span<T> AsSpan() => _data.AsSpan();
 
     /// <inheritdoc/>
     public override string ToString() => $"Left: {Left}, Right: {Right}";
@@ -38,5 +38,5 @@ public struct AudioFrame<T> where T : struct {
     /// <summary>
     /// The length of the audio frame.
     /// </summary>
-    public readonly int Length => _data.Length;
+    public int Length => _data.Length;
 }
