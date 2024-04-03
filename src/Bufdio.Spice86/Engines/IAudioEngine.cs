@@ -15,5 +15,5 @@ public interface IAudioEngine : IDisposable
     /// Sends audio samples to the output device.
     /// </summary>
     /// <param name="frames">Audio samples in <c>Float32</c> format.</param>
-    void Send(AudioFrame<float> frames);
+    void Send(Span<float> frames);
 }

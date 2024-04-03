@@ -16,6 +16,14 @@ public struct AudioFrame<T> where T : struct {
     }
 
     /// <summary>
+    /// Initializes a new instance of <see cref="AudioFrame{T}"/>.
+    /// </summary>
+    /// <param name="data">The data for both channels.</param>
+    public AudioFrame(Span<T> data) {
+        _data = new Memory<T>(data.ToArray());
+    }
+
+    /// <summary>
     /// Represents the left audio channel.
     /// </summary>
     public T Left { get => _data.Span[0]; set => _data.Span[0] = value; }
@@ -44,4 +52,12 @@ public struct AudioFrame<T> where T : struct {
     /// <param name="frame">The AudioFrame to convert.</param>
     /// <returns>The AudioFrame as a Span.</returns>
     public static implicit operator Span<T>(AudioFrame<T> frame) => frame.AsSpan();
+    
+    /// <summary>
+    /// Implicitly converts a span of T to an audio frame.
+    /// </summary>
+    /// <param name="span"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static implicit operator AudioFrame<T>(Span<T> span) => new(span);
 }

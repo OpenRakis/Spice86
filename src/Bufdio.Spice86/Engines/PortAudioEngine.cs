@@ -57,8 +57,8 @@ public sealed class PortAudioEngine : IAudioEngine {
     }
 
     /// <inheritdoc />
-    public unsafe void Send(AudioFrame<float> frames) {
-        fixed (float* buffer = frames.AsSpan()) {
+    public unsafe void Send(Span<float> frames) {
+        fixed (float* buffer = frames) {
             NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames.Length / _options.Channels);
         }
     }
