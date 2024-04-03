@@ -74,9 +74,9 @@ public class ModRmComputer {
             throw CreateInvalidOperationExceptionForNullFieldButModeNot3(nameof(ModRmContext.DisplacementField));
         }
         return ModRmContext.DisplacementType switch {
-            DisplacementType.INT8 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<byte>)ModRmContext.DisplacementField),
-            DisplacementType.INT16 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<ushort>)ModRmContext.DisplacementField),
-            DisplacementType.INT32 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<uint>)ModRmContext.DisplacementField),
+            DisplacementType.UINT8 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<byte>)ModRmContext.DisplacementField),
+            DisplacementType.UINT16 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<ushort>)ModRmContext.DisplacementField),
+            DisplacementType.UINT32 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<uint>)ModRmContext.DisplacementField),
             _ => throw new ArgumentOutOfRangeException(nameof(ModRmContext.DisplacementType), ModRmContext.DisplacementType, "value not handled")
         };
     }

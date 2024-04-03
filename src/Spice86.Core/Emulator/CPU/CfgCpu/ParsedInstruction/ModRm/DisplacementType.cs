@@ -2,7 +2,7 @@
 
 public enum DisplacementType {
     ZERO,
-    INT8,
-    INT16,
-    INT32
+    UINT8,
+    UINT16,
+    UINT32
 }
