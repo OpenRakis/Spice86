@@ -12,6 +12,7 @@ using System.Collections.ObjectModel;
 public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly AudioPlayerFactory _audioPlayerFactory;
+    private ReadOnlyDictionary<SoundChannel, AudioPlayer> _channelsReadOnlyDictionary = new(new Dictionary<SoundChannel, AudioPlayer>());
     private bool _disposed;
 
     /// <summary>
@@ -24,12 +25,14 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
 
     internal void Register(SoundChannel soundChannel) {
         _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer());
+        _channelsReadOnlyDictionary = new(_channels);
     }
+
 
     /// <summary>
     /// Gets the sound channels in a read-only dictionary.
     /// </summary>
-    public IDictionary<SoundChannel, AudioPlayer> Channels => new ReadOnlyDictionary<SoundChannel, AudioPlayer>(_channels);
+    public IDictionary<SoundChannel, AudioPlayer> Channels => _channelsReadOnlyDictionary;
 
     internal int Render(Span<float> data, SoundChannel channel) {
         if (channel.Volume == 0 || channel.IsMuted) {
