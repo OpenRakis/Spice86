@@ -24,7 +24,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     }
 
     internal void Register(SoundChannel soundChannel) {
-        _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer());
+        _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(48000, 2048));
         _channelsReadOnlyDictionary = new(_channels);
     }
 
