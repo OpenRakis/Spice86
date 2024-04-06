@@ -2,9 +2,7 @@
 
 using Mt32emu;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -64,14 +62,7 @@ internal sealed class Mt32Player : IDisposable {
             }
             buffer.Clear();
             _context.Render(buffer);
-            AudioFrame<float> frame = new(0, 0);
-            for (int index = 0; index < buffer.Length; index += 2) {
-                float frameLeft = buffer[index];
-                float frameRight = buffer[index < buffer.Length ? index + 1 : index];
-                frame.Left = frameLeft;
-                frame.Right = frameRight;
-                _soundChannel.Render(frame);
-            }
+            _soundChannel.Render(buffer);
         }
     }
 

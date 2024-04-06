@@ -8,8 +8,6 @@ using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
 
-using Spice86.Shared.Emulator.Audio;
-
 namespace Bufdio.Spice86.Engines;
 
 /// <summary>

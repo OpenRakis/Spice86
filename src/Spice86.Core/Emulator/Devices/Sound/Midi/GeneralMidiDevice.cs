@@ -3,7 +3,6 @@
 using MeltySynth;
 
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Shared.Emulator.Audio;
 
 using Windows;
 
@@ -60,7 +59,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
-        Span<AudioFrame<float>> data = new AudioFrame<float>[8192]; // half the size because each frame now contains two samples
+        Span<float> data = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
         while (!_endThread)
         {
@@ -69,24 +68,15 @@ internal sealed class GeneralMidiDevice : MidiDevice {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
             FillBuffer(synthesizer, data);
-            foreach (AudioFrame<float> frame in data)
-            {
-                _soundChannel.Render(frame);
-            }
+            _soundChannel.Render(data);
             data.Clear();
         }
     }
 
-    private void FillBuffer(Synthesizer synthesizer, Span<AudioFrame<float>> data)
+    private void FillBuffer(Synthesizer synthesizer, Span<float> data)
     {
         ExtractAndProcessMidiMessage(_message, synthesizer);
-        Span<float> monoBuffer = stackalloc float[data.Length];
-        synthesizer.RenderInterleaved(monoBuffer);
-        for (int i = 0; i < monoBuffer.Length; i++)
-        {
-            float sample = monoBuffer[i];
-            data[i] = new AudioFrame<float>(sample, sample);
-        }
+        synthesizer.RenderInterleaved(data);
     }
 
     protected override void PlayShortMessage(uint message) {

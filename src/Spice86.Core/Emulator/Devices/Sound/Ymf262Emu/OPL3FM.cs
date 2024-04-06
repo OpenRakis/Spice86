@@ -3,7 +3,6 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -126,28 +125,23 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
             WriteByte(0x389, (byte)(value >> 8));
         }
     }
-
     /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
     private void GenerateWaveforms() {
         const int length = 1024;
-        Span<AudioFrame<float>> buffer = new AudioFrame<float>[length];
+        Span<float> buffer = stackalloc float[length];
+        Span<float> playBuffer = stackalloc float[length * 2];
+        FillBuffer(buffer, playBuffer);
         while (!_endThread) {
-            FillBuffer(buffer);
-            foreach (AudioFrame<float> frame in buffer) {
-                _soundChannel.Render(frame);
-            }
+            _soundChannel.Render(playBuffer);
+            FillBuffer(buffer, playBuffer);
         }
     }
 
-    private void FillBuffer(Span<AudioFrame<float>> buffer) {
-        Span<float> monoBuffer = stackalloc float[buffer.Length];
-        _synth?.GetData(monoBuffer);
-        for (int i = 0; i < monoBuffer.Length; i++) {
-            float sample = monoBuffer[i];
-            buffer[i] = new AudioFrame<float>(sample, sample);
-        }
+    private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
+        _synth?.GetData(buffer);
+        ChannelAdapter.MonoToStereo(buffer, playBuffer);
     }
 
     private void StartPlaybackThread() {

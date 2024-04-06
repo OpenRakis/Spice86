@@ -1,7 +1,5 @@
 namespace Spice86.Core.Backend.Audio;
 
-using Spice86.Shared.Emulator.Audio;
-
 using System;
 
 /// <summary>
@@ -36,7 +34,7 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="data">Buffer containing data to write.</param>
     /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData<T>(AudioFrame<T> data) where T : unmanaged {
+    public int WriteData<T>(Span<T> data) where T : unmanaged {
         return _writer.WriteData(data);
     }
 
@@ -59,9 +57,9 @@ public abstract class AudioPlayer : IDisposable
     /// </summary>
     /// <param name="data">The data to write</param>
     /// <returns>The length of data written. Might not be equal to the input data length.</returns>
-    internal abstract int WriteDataInternal(AudioFrame<float> data);
+    internal abstract int WriteDataInternal(Span<float> data);
 
     internal void WriteSilence() {
-        WriteDataInternal(new AudioFrame<float>(0,0));
+        WriteDataInternal(new Span<float>([0]));
     }
 }

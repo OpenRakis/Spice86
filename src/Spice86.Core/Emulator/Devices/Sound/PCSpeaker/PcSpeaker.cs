@@ -3,7 +3,6 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -130,10 +129,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         FillWithSilence();
 
         byte[] buffer = new byte[4096];
-        byte[] writeBuffer = buffer;
         const bool expandToStereo = true;
-
-        writeBuffer = new byte[buffer.Length * 2];
+        byte[] writeBuffer = new byte[buffer.Length * 2];
 
         int idleCount = 0;
 
@@ -148,15 +145,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                 }
 
                 while (periods > 0) {
-                    AudioFrame<byte> frame = new(0, 0);
-                    for (int index = 0; index < writeBuffer.Length; index += 2) {
-                        byte frameLeft = writeBuffer[index];
-                        byte frameRight = writeBuffer[index < writeBuffer.Length ? index + 1 : index];
-                        frame.Left = frameLeft;
-                        frame.Right = frameRight;
-                        _soundChannel.Render(frame);
-                    }
-
+                    _soundChannel.Render(writeBuffer.AsSpan(0, samples));
                     periods--;
                 }
 
@@ -169,13 +158,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
                     floatArray[i] = buffer[i];
                 }
 
-                AudioFrame<float> frame = new(0, 0);
-                for (int index = 0; index < floatArray.Length; index += 2) {
-                    float frameLeft = floatArray[index];
-                    float frameRight = floatArray[index < floatArray.Length ? index + 1 : index];
-                    frame.Left = frameLeft;
-                    frame.Right = frameRight;
-                    _soundChannel.Render(frame);
+
+                while (_soundChannel.Render(floatArray.AsSpan()) > 0) {
+                    await Task.Yield();
                 }
 
                 await Task.Delay(5, _cancelGenerateWaveform.Token);
@@ -187,15 +172,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     private void FillWithSilence() {
-        float[] buffer = new float[4096];
-        AudioFrame<float> frame = new(0, 0);
-        for (int index = 0; index < buffer.Length; index += 2) {
-            float frameLeft = buffer[index];
-            float frameRight = buffer[index < buffer.Length ? index + 1 : index];
-            frame.Left = frameLeft;
-            frame.Right = frameRight;
-            _soundChannel.Render(frame);
-        }
+        Span<float> buffer = stackalloc float[4096];
+        _soundChannel.Render(buffer);
     }
 
     /// <inheritdoc />
