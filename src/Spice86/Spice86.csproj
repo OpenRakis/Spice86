@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.4.0</version>
-		<PackageReleaseNotes>Added Sound Software Mixer, a very simple SB Hardware Mixer, and the AdditionalWindow API.</PackageReleaseNotes>
+		<version>6.4.1</version>
+		<PackageReleaseNotes>Fixed audio performance.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
