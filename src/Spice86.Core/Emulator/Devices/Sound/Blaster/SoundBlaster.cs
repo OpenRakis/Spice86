@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Audio;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -367,34 +366,24 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => _dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
-
+    
     private void AudioPlayback() {
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
-        const int sampleRate =  48000;
+        const int sampleRate = 48000;
 
         while (!_endPlayback) {
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
-            AudioFrame<short> frame = new(0, 0);
-            for (int i = 0; i < length; i += 2) {
-                frame.Left = writeBuffer[i];
-                frame.Right = writeBuffer[i + 1 < length ? i + 1 : i];
-                PCMSoundChannel.Render(frame);
-            }
+            PCMSoundChannel.Render(writeBuffer.AsSpan(0, length));
 
             if (_pauseDuration > 0) {
                 Array.Clear(writeBuffer, 0, writeBuffer.Length);
                 int count = (_pauseDuration / (1024 / 2)) + 1;
-                const int pauseLength = 1024;
                 for (int i = 0; i < count; i++) {
-                    AudioFrame<short> pauseFrame = new(0, 0);
-                    for(int j = 0; j < pauseLength; j += 2) {
-                        pauseFrame.Left = writeBuffer[j];
-                        pauseFrame.Right = writeBuffer[j + 1 < pauseLength ? j + 1 : j];
-                        PCMSoundChannel.Render(pauseFrame);
-                    }
+                    PCMSoundChannel.Render(writeBuffer.AsSpan(0, 1024));
                 }
+
                 _pauseDuration = 0;
                 RaiseInterruptRequest();
             }
@@ -404,11 +393,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Resamples the data in sourceBuffer to destinationBuffer with the given sampleRate. Returns the destinationBuffer length.
     /// </summary>
-    /// <param name="sourceBuffer">The source of the audio data.</param>
-    /// <param name="sampleRate">The audio sample rate to apply.</param>
-    /// <param name="destinationBuffer">The output buffer.</param>
+    /// <param name="sourceBuffer"></param>
+    /// <param name="sampleRate"></param>
+    /// <param name="destinationBuffer"></param>
     /// <returns>Length of the data written in destinationBuffer</returns>
-    private int Resample(ReadOnlySpan<byte> sourceBuffer, int sampleRate, short[] destinationBuffer) {
+    private int Resample(Span<byte> sourceBuffer, int sampleRate, short[] destinationBuffer) {
         if (_dsp.Is16Bit && _dsp.IsStereo) {
             return LinearUpsampler.Resample16Stereo(_dsp.SampleRate, sampleRate, sourceBuffer.Cast<byte, short>(),
                 destinationBuffer);

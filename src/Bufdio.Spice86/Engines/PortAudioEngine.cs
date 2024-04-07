@@ -8,8 +8,6 @@ using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
 using Bufdio.Spice86.Utilities.Extensions;
 
-using Spice86.Shared.Emulator.Audio;
-
 namespace Bufdio.Spice86.Engines;
 
 /// <summary>
@@ -57,8 +55,8 @@ public sealed class PortAudioEngine : IAudioEngine {
     }
 
     /// <inheritdoc />
-    public unsafe void Send(AudioFrame<float> frames) {
-        fixed (float* buffer = frames.AsSpan()) {
+    public unsafe void Send(Span<float> frames) {
+        fixed (float* buffer = frames) {
             NativeMethods.PortAudioWriteStream(_stream, (IntPtr)buffer, frames.Length / _options.Channels);
         }
     }

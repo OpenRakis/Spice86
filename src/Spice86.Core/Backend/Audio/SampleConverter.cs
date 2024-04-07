@@ -133,7 +133,7 @@ internal static class SampleConverter {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void InternalConvert<TFrom, TTo>(Span<TFrom> source, Span<TTo> target)
+    internal static void InternalConvert<TFrom, TTo>(Span<TFrom> source, Span<TTo >target)
         where TFrom : unmanaged
         where TTo : unmanaged {
         if(typeof(TFrom) == typeof(TTo)) {
@@ -148,7 +148,7 @@ internal static class SampleConverter {
         } else if (typeof(TFrom) == typeof(byte) && typeof(TTo) == typeof(float)) {
             Pcm8ToFloat(source.Cast<TFrom, byte>(), target.Cast<TTo, float>());
         } else {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }

@@ -1,5 +1,3 @@
-using Spice86.Shared.Emulator.Audio;
-
 namespace Spice86.Core.Backend.Audio.DummyAudio;
 
 /// <summary>
@@ -17,8 +15,8 @@ sealed class DummyAudioPlayer : AudioPlayer {
     /// Fakes writing data to the audio device
     /// </summary>
     /// <param name="data">The input audio data</param>
-    /// <returns>The data paramater length</returns>
-    protected override int WriteDataInternal(AudioFrame<float> data) {
+    /// <returns>The data parameter length</returns>
+    internal override int WriteDataInternal(Span<float> data) {
         // Tell we wrote it all, it's all fake anyway
         return data.Length;
     }
