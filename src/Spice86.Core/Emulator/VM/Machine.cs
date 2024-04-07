@@ -386,7 +386,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <inheritdoc/>
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         Memory.Accept(emulatorDebugger);
-        Cpu.Accept(emulatorDebugger);
+        CfgCpu.Accept(emulatorDebugger);
         VgaCard.Accept(emulatorDebugger);
         VgaRenderer.Accept(emulatorDebugger);
         VgaRegisters.Accept(emulatorDebugger);

@@ -1,132 +1,116 @@
-<Window xmlns="https://github.com/avaloniaui"
-		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:vm="using:Spice86.ViewModels"
-		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:converters="clr-namespace:Spice86.Converters"
-		xmlns:views="clr-namespace:Spice86.Views"
-		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-		x:Class="Spice86.Views.MainWindow"
-		Icon="/Assets/Spice86.ico"
-		Title="{Binding MainTitle}"
-		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
-		Width="1024"
-		Height="768"
-		WindowStartupLocation="CenterScreen"
-		CanResize="True">
-	<Window.Resources>
-		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
-		<converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
-		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
-	</Window.Resources>
-	<Design.DataContext>
-		<vm:MainWindowViewModel />
-	</Design.DataContext>
-	<Grid RowDefinitions="Auto,*,Auto">
-		<Menu Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
-			<MenuItem Name="Menu" Header="Program">
-				<MenuItem Header="Start Executable..." Command="{Binding StartExecutableCommand}"></MenuItem>
-				<MenuItem Header="Debug Executable..." Command="{Binding DebugExecutableCommand}" ToolTip.Tip="Starts the executable paused, to be used with GDB"></MenuItem>
-				<Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
-				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding FirstProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" CommandParameter="0" />
-				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding SecondProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=1}" CommandParameter="1" />
-				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" CommandParameter="2" />
-			</MenuItem>
-			<MenuItem Header="Debug">
-				<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
-				<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
-				<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
-				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
-					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
-					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
-					<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
-					<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
-					<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
-					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
-					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
-				</MenuItem>
-				<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
-			</MenuItem>
-			<MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
-				<MenuItem>
-					<MenuItem.Header>
-						<Grid ColumnDefinitions="Auto,Auto">
-							<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
-							<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
-						</Grid>
-					</MenuItem.Header>
-				</MenuItem>
-				<MenuItem>
-					<MenuItem.Header>
-						<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
-					</MenuItem.Header>
-				</MenuItem>
-				<MenuItem Command="{Binding SaveBitmapCommand}">
-					<MenuItem.Header>
-						<Label Content="Save Bitmap" />
-					</MenuItem.Header>
-				</MenuItem>
-			</MenuItem>
-		</Menu>
-		<WrapPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-			<Button Focusable="False" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-			<Button Focusable="False" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
-			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
-			<NumericUpDown Focusable="False" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
-			<Button Focusable="False" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
-		</WrapPanel>
-		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" IsVisible="{Binding IsPerformanceVisible}">
-			<views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
-		</WrapPanel>
-		<Viewbox Grid.Row="1">
-			<LayoutTransformControl>
-				<LayoutTransformControl.RenderTransform>
-					<ScaleTransform
-						ScaleX="{Binding Scale}"
-						ScaleY="{Binding Scale}">
-					</ScaleTransform>
-				</LayoutTransformControl.RenderTransform>
-				<Viewbox>
-					<Image x:Name="Image"
-					       RenderOptions.BitmapInterpolationMode="None"
-					       Cursor="{Binding Cursor}"
-					       Source="{Binding Bitmap}" />
-				</Viewbox>
-			</LayoutTransformControl>
-		</Viewbox>
-		<Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
-			<WrapPanel Orientation="Horizontal">
-				<TextBlock Text="{Binding StatusMessage}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
-			</WrapPanel>
-		</Border>
-		<Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
-			<Border Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5" />
-			<WrapPanel Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
-					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
-					<WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
-						<Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
-							<Button Grid.Row="0" Grid.Column="0" Content="Copy To Clipboard" Command="{Binding CopyToClipboardCommand}" />
-							<Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
-								<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
-								<TextBlock TextWrapping="Wrap" Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />
-								<Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Target Site</Label>
-								<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
-								<Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">Exception Type</Label>
-								<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
-							</Grid>
-						</Grid>
-						<Expander Header="Stack Trace" IsExpanded="False">
-							<StackPanel Orientation="Vertical">
-								<TextBlock TextWrapping="Wrap" Text="{Binding Exception.StackTrace, Converter={StaticResource ClassToTypeStringConverter}}" />
-							</StackPanel>
-						</Expander>
-					</WrapPanel>
-					<Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
-				</Grid>
-			</WrapPanel>
-		</Grid>
-	</Grid>
+<Window x:Class="Spice86.Views.MainWindow" xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:converters="clr-namespace:Spice86.Converters" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:views="clr-namespace:Spice86.Views" xmlns:vm="using:Spice86.ViewModels" Title="{Binding MainTitle}" Width="1024" Height="768" d:DesignHeight="450" d:DesignWidth="800" x:CompileBindings="True" x:DataType="vm:MainWindowViewModel" CanResize="True" Icon="/Assets/Spice86.ico" WindowStartupLocation="CenterScreen" mc:Ignorable="d">
+    <Window.Resources>
+        <converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
+        <converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
+        <converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
+    </Window.Resources>
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Menu Grid.Row="0" Focusable="False" IsVisible="{Binding !IsDialogVisible}">
+            <MenuItem Name="Menu" Header="Program">
+                <MenuItem Command="{Binding StartExecutableCommand}" Header="Start Executable..." />
+                <MenuItem Command="{Binding DebugExecutableCommand}" Header="Debug Executable..." ToolTip.Tip="Starts the executable paused, to be used with GDB" />
+                <Separator IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+                <MenuItem Command="{Binding StartMostRecentlyUsed}" CommandParameter="0" Header="{Binding FirstProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+                <MenuItem Command="{Binding StartMostRecentlyUsed}" CommandParameter="1" Header="{Binding SecondProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=1}" />
+                <MenuItem Command="{Binding StartMostRecentlyUsed}" CommandParameter="2" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" />
+            </MenuItem>
+            <MenuItem Header="Debug">
+                <MenuItem Command="{Binding ShowDebugWindowCommand}" Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" />
+                <MenuItem Command="{Binding ShowColorPaletteCommand}" Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" />
+                <MenuItem Command="{Binding ShowPerformanceCommand}" Header="Performance" IsEnabled="{Binding IsMachineRunning}" />
+                <MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
+                    <MenuItem Command="{Binding SetLogLevelToSilent}" Header="Silent" />
+                    <MenuItem Command="{Binding SetLogLevelToVerbose}" Header="Verbose" />
+                    <MenuItem Command="{Binding SetLogLevelToDebug}" Header="Debug" />
+                    <MenuItem Command="{Binding SetLogLevelToInformation}" Header="Information" />
+                    <MenuItem Command="{Binding SetLogLevelToWarning}" Header="Warning" />
+                    <MenuItem Command="{Binding SetLogLevelToError}" Header="Error" />
+                    <MenuItem Command="{Binding SetLogLevelToFatal}" Header="Fatal" />
+                </MenuItem>
+                <MenuItem Command="{Binding DumpEmulatorStateToFileCommand}" Header="Dump emulator state to directory..." IsEnabled="{Binding IsMachineRunning}" />
+            </MenuItem>
+            <MenuItem Header="Video" IsEnabled="{Binding IsMachineRunning}">
+                <MenuItem>
+                    <MenuItem.Header>
+                        <Grid ColumnDefinitions="Auto,Auto">
+                            <Label Grid.Column="0" HorizontalContentAlignment="Center" Content="Scale" />
+                            <NumericUpDown Grid.Column="1" Margin="5,0,0,0" Text="{Binding Scale}" />
+                        </Grid>
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem>
+                    <MenuItem.Header>
+                        <CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem Command="{Binding SaveBitmapCommand}">
+                    <MenuItem.Header>
+                        <Label Content="Save Bitmap" />
+                    </MenuItem.Header>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+        <WrapPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+            <Button Command="{Binding PauseCommand}" Content="Pause︎" Focusable="False" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
+            <Button Command="{Binding PlayCommand}" Content="Continue" Focusable="False" HotKey="F5" IsVisible="{Binding IsPaused}" />
+            <Label VerticalAlignment="Center" Content="Time Modifier" Focusable="False" />
+            <NumericUpDown Margin="5,0,0,0" Focusable="False" Minimum="1" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" />
+            <Button Margin="5,0,0,0" Command="{Binding ResetTimeMultiplierCommand}" Content="Reset" Focusable="False" HotKey="F4" />
+        </WrapPanel>
+        <WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding IsPerformanceVisible}" Orientation="Horizontal">
+            <views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
+        </WrapPanel>
+        <Viewbox Grid.Row="1">
+            <LayoutTransformControl>
+                <LayoutTransformControl.RenderTransform>
+                    <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
+                </LayoutTransformControl.RenderTransform>
+                <Viewbox>
+                    <Image x:Name="Image" Cursor="{Binding Cursor}" RenderOptions.BitmapInterpolationMode="None" Source="{Binding Bitmap}" />
+                </Viewbox>
+            </LayoutTransformControl>
+        </Viewbox>
+        <Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
+            <WrapPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding StatusMessage}" />
+                <TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
+                <TextBlock Margin="5,0,0,0" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" />
+            </WrapPanel>
+        </Border>
+        <Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+            <Border Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5" />
+            <WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Background="{Binding $parent[Window].Background}" Orientation="Vertical">
+                <DockPanel>
+                    <Grid ColumnDefinitions="Auto,*" DockPanel.Dock="Top" RowDefinitions="Auto,*">
+                        <Label Grid.Row="0" Grid.ColumnSpan="2" HorizontalAlignment="Center" Content="An unhandled exception occured" FontWeight="Bold" />
+                        <WrapPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Vertical">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,*">
+                                <Button Grid.Row="0" Grid.Column="0" Command="{Binding CopyToClipboardCommand}" Content="Copy To Clipboard" />
+                                <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                                    <Label Grid.Row="0" Grid.Column="0" FontWeight="Bold">Message</Label>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" TextWrapping="Wrap" />
+                                    <Label Grid.Row="1" Grid.Column="0" FontWeight="Bold">Target Site</Label>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
+                                    <Label Grid.Row="2" Grid.Column="0" FontWeight="Bold">Exception Type</Label>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
+                                </Grid>
+                            </Grid>
+                            <Expander Header="Stack Trace" IsExpanded="False">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="{Binding Exception.StackTrace, Converter={StaticResource ClassToTypeStringConverter}}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Expander>
+                        </WrapPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,Auto" DockPanel.Dock="Bottom">
+                        <Button Grid.Column="0" MaxWidth="100" Margin="5" Command="{Binding EndProgramCommand}" Content="OK" />
+                        <Button Grid.Column="1" MaxWidth="100" Margin="5" Command="{Binding ShowDebugWindowCommand}" Content="Debug" />
+                    </Grid>
+                </DockPanel>
+            </WrapPanel>
+        </Grid>
+    </Grid>
 </Window>

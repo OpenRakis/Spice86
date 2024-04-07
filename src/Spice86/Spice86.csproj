@@ -43,6 +43,7 @@
 		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="AvaloniaGraphControl" Version="0.6.1" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
@@ -89,5 +90,10 @@
 		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
 		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
 		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Update="Views\CfgCpuView.axaml.cs">
+	    <DependentUpon>CfgCpuView.axaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 </Project>
