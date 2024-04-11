@@ -98,6 +98,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     }
 
     [RelayCommand]
+    public void EndProgram() {
+        ClearDialogCommand.Execute(null);
+    }
+
+    [RelayCommand]
     public async Task SaveBitmap() {
         if (Bitmap is not null) {
             await _hostStorageProvider.SaveBitmapFile(Bitmap);
@@ -497,18 +502,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void MachineThread() {
         try {
-            if (Debugger.IsAttached) {
+            try {
                 StartProgramExecutor();
-            } else {
-                try {
-                    StartProgramExecutor();
-                } catch (Exception e) {
-                    e.Demystify();
-                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                        _loggerService.Error(e, "An error occurred during execution");
-                    }
-                    OnEmulatorErrorOccured(e);
+            } catch (Exception e) {
+                e.Demystify();
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "An error occurred during execution");
                 }
+                OnEmulatorErrorOccured(e);
             }
         }  finally {
             _uiDispatcher.Post(() => IsMachineRunning = false);
