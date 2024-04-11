@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.JmpNearImm;
 
 using Spice86.Shared.Emulator.Memory;
 

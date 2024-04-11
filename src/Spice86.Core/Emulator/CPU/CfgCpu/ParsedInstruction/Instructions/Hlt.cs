@@ -2,8 +2,8 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Shared.Emulator.Memory;
 
-public class HltInstruction : CfgInstruction {
-    public HltInstruction(SegmentedAddress address, InstructionField<byte> opcodeField) :
+public class Hlt : CfgInstruction {
+    public Hlt(SegmentedAddress address, InstructionField<byte> opcodeField) :
         base(address, opcodeField) {
     }
 

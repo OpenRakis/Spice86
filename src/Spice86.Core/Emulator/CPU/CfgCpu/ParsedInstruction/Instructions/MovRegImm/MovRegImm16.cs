@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -8,7 +8,7 @@ public class MovRegImm16 : MovRegImm<ushort> {
         InstructionField<byte> opcodeField,
         List<InstructionPrefix> prefixes,
         InstructionField<ushort> valueField,
-        int regIndex) : base(address, opcodeField, prefixes, valueField, regIndex) {
+        int registerIndex) : base(address, opcodeField, prefixes, valueField, registerIndex) {
     }
 
     public override void Visit(ICfgNodeVisitor visitor) {

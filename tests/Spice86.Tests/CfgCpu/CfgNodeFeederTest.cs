@@ -20,6 +20,8 @@ using ExecutionContext = Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContex
 
 namespace Spice86.Tests.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
+
 public class CfgNodeFeederTest {
     private const int AxIndex = 0;
     private const int BxIndex = 3;
@@ -263,7 +265,7 @@ public class CfgNodeFeederTest {
     [AssertionMethod]
     private static MovRegImm16 AssertIsMovRegImm16(ICfgNode node, int expectedRegIndex) {
         Assert.Equal(typeof(MovRegImm16), node.GetType());
-        Assert.Equal(expectedRegIndex, ((MovRegImm16)node).RegIndex);
+        Assert.Equal(expectedRegIndex, ((MovRegImm16)node).RegisterIndex);
         return (MovRegImm16)node;
     }
 }
