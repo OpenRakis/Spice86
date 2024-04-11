@@ -48,6 +48,9 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     [ObservableProperty]
     private MixerViewModel? _softwareMixerViewModel;
 
+    [ObservableProperty]
+    private CfgCpuViewModel? _cfgCpuViewModel;
+
     public DebugViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
@@ -98,6 +101,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         _uiDispatcherTimer = uiDispatcherTimer;
         SoftwareMixerViewModel = new(uiDispatcherTimer);
+        CfgCpuViewModel = new(uiDispatcherTimer);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -216,6 +220,9 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
 
         if (component is SoftwareMixer softwareMixer) {
             VisitSoundMixer(softwareMixer);
+        }
+        if(component is Core.Emulator.CPU.CfgCpu.Linker.ExecutionContext executionContext && CfgCpuViewModel is not null) {
+            CfgCpuViewModel.Visit(executionContext);
         }
     }
 

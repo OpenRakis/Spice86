@@ -5,12 +5,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
-public class CfgCpu {
+public class CfgCpu : IDebuggableComponent {
     private readonly ExecutorCfgNodeVisitor _executorCfgNodeVisitor;
     private readonly State _state;
     private readonly DualPic _dualPic;
@@ -26,6 +27,11 @@ public class CfgCpu {
     }
 
     private ExecutionContext CurrentExecutionContext { get; } = new();
+
+    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
+        CurrentExecutionContext.Accept(emulatorDebugger);
+    }
 
     public void ExecuteNext() {
         ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);

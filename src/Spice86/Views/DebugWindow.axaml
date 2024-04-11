@@ -1,21 +1,29 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="Spice86.Views.DebugWindow"
-        Title="Debug"
-        xmlns:vm="using:Spice86.ViewModels"
-        xmlns:converters="clr-namespace:Spice86.Converters"
-        xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
-        xmlns:userControls="clr-namespace:Spice86.UserControls"
-        xmlns:views="clr-namespace:Spice86.Views"
-        x:CompileBindings="True" x:DataType="vm:DebugViewModel"
-        Icon="/Assets/Spice86.ico"
-        CanResize="True"
-        WindowStartupLocation="CenterOwner"
-        MinWidth="640" MinHeight="400" Width="800" Height="600" FontFamily="Inconsolata,Consolas,Monospace,Courier">
+<Window
+    x:Class="Spice86.Views.DebugWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Spice86.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+    xmlns:userControls="clr-namespace:Spice86.UserControls"
+    xmlns:views="clr-namespace:Spice86.Views"
+    xmlns:vm="using:Spice86.ViewModels"
+    Title="Debug"
+    Width="800"
+    Height="600"
+    MinWidth="640"
+    MinHeight="400"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:CompileBindings="True"
+    x:DataType="vm:DebugViewModel"
+    CanResize="True"
+    FontFamily="Inconsolata,Consolas,Monospace,Courier"
+    Icon="/Assets/Spice86.ico"
+    WindowStartupLocation="CenterOwner"
+    mc:Ignorable="d">
     <Design.DataContext>
         <vm:DebugViewModel />
     </Design.DataContext>
@@ -25,57 +33,102 @@
     <Grid RowDefinitions="Auto,*">
         <Menu Grid.Row="0">
             <MenuItem Header="Edit">
-                <MenuItem Header="Edit memory.." Command="{Binding EditMemoryCommand}" />
+                <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory.." />
             </MenuItem>
         </Menu>
-        <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
+        <Grid
+            Grid.Row="1"
+            IsVisible="{Binding !IsLoading}"
+            RowDefinitions="*,Auto">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU">
                     <ScrollViewer>
                         <WrapPanel>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
-                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding State}" />
+                                <pgc:PropertyGrid
+                                    Grid.Row="1"
+                                    SelectedObject="{CompiledBinding State}"
+                                    ShowStyle="Alphabetic"
+                                    ShowTitle="False" />
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
-                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Flags}" />
+                                <pgc:PropertyGrid
+                                    Grid.Row="1"
+                                    SelectedObject="{CompiledBinding Flags}"
+                                    ShowStyle="Alphabetic"
+                                    ShowTitle="False" />
                             </Grid>
                         </WrapPanel>
                     </ScrollViewer>
                 </TabItem>
                 <TabItem Header="Disassembly">
                     <Grid RowDefinitions="Auto,Auto,*">
-                        <TextBlock IsVisible="{Binding !IsPaused}" Grid.Row="0" TextWrapping="Wrap" Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive." />
-                        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto"  HorizontalAlignment="Center" VerticalAlignment="Top">
-                            <Button Grid.Column="1" Margin="5" IsVisible="{Binding IsGdbServerAvailable}" Content="Step instruction" Command="{Binding StepInstructionCommand}" />
-                            <Button Grid.Column="2" Margin="5" Content="Pause" Command="{Binding PauseCommand}" IsVisible="{Binding !IsPaused}" />
-                            <Button Grid.Column="2" Margin="5" Content="Continue" Command="{Binding ContinueCommand}" IsVisible="{Binding IsPaused}" />
+                        <TextBlock
+                            Grid.Row="0"
+                            IsVisible="{Binding !IsPaused}"
+                            Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
+                            TextWrapping="Wrap" />
+                        <Grid
+                            Grid.Row="1"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            ColumnDefinitions="Auto,Auto,Auto">
+                            <Button
+                                Grid.Column="1"
+                                Margin="5"
+                                Command="{Binding StepInstructionCommand}"
+                                Content="Step instruction"
+                                IsVisible="{Binding IsGdbServerAvailable}" />
+                            <Button
+                                Grid.Column="2"
+                                Margin="5"
+                                Command="{Binding PauseCommand}"
+                                Content="Pause"
+                                IsVisible="{Binding !IsPaused}" />
+                            <Button
+                                Grid.Column="2"
+                                Margin="5"
+                                Command="{Binding ContinueCommand}"
+                                Content="Continue"
+                                IsVisible="{Binding IsPaused}" />
                         </Grid>
-                        <DataGrid IsReadOnly="True" IsVisible="{Binding IsPaused}" Grid.Row="2" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="False" ItemsSource="{Binding Instructions}" AutoGenerateColumns="False">
+                        <DataGrid
+                            Grid.Row="2"
+                            AutoGenerateColumns="False"
+                            CanUserReorderColumns="True"
+                            CanUserResizeColumns="True"
+                            CanUserSortColumns="False"
+                            IsReadOnly="True"
+                            IsVisible="{Binding IsPaused}"
+                            ItemsSource="{Binding Instructions}">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
-                                <DataGridTextColumn Header="Based on CS:IP" Binding="{Binding SegmentedAddress}" />
-                                <DataGridCheckBoxColumn Header="Is at CS:IP?" Binding="{Binding IsCsIp}" />
-                                <DataGridTextColumn Header="Disassembly (MASM)" Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" />
-                                <DataGridTextColumn Header="16-bit IP"  Binding="{Binding IP16}"/>
-                                <DataGridTextColumn Header="32-bit IP" Binding="{Binding IP32}" />
-                                <DataGridTextColumn Header="Segment Prefix" Binding="{Binding SegmentPrefix}" />
-                                <DataGridTextColumn Header="Memory Segment" Binding="{Binding MemorySegment}" />
-                                <DataGridCheckBoxColumn Header="Stack Instruction?" Binding="{Binding IsStackInstruction}" />
-                                <DataGridCheckBoxColumn Header="Is IP relative?" Binding="{Binding IsIPRelativeMemoryOperand}" />
-                                <DataGridTextColumn Header="IP relative memory address" Binding="{Binding IPRelativeMemoryAddress}" />
-                                <DataGridTextColumn Header="Bytes" Binding="{Binding Bytes}" />
-                                <DataGridTextColumn Header="Length" Binding="{Binding Length}" />
-                                <DataGridTextColumn Header="FlowControl" Binding="{Binding FlowControl}" />
+                                <DataGridTextColumn Binding="{Binding Address}" Header="Address" />
+                                <DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
+                                <DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
+                                <DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="Disassembly (MASM)" />
+                                <DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
+                                <DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
+                                <DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
+                                <DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
+                                <DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
+                                <DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
+                                <DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
+                                <DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
+                                <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
+                                <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
                             </DataGrid.Columns>
                             <TextElement.FontFamily>
                                 <OnPlatform Default="{StaticResource RobotoMonoFont}">
-                                    <On Options="Windows" Content="{StaticResource ConsolasFont}" />
+                                    <On Content="{StaticResource ConsolasFont}" Options="Windows" />
                                 </OnPlatform>
                             </TextElement.FontFamily>
                         </DataGrid>
                     </Grid>
+                </TabItem>
+                <TabItem Header="Control Flow">
+                    <views:CfgCpuView DataContext="{Binding CfgCpuViewModel}" />
                 </TabItem>
                 <TabItem Header="Memory">
                     <ScrollViewer>
@@ -85,435 +138,171 @@
                 <TabItem Header="Video Card">
                     <ScrollViewer>
                         <WrapPanel>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">General registers</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralMiscellaneousOutputRegister, StringFormat='MiscellaneousOutputRegister: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralClockSelect, StringFormat='ClockSelect: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralEnableRam, StringFormat='EnableRam: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralVerticalSize, StringFormat='VerticalSize: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralHorizontalSyncPolarity, StringFormat='HorizontalSyncPolarity: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralVerticalSyncPolarity, StringFormat='VerticalSyncPolarity: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralIoAddressSelect, StringFormat='IoAddressSelect: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralOddPageSelect, StringFormat='OddPageSelect: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralInputStatusRegister0, StringFormat='InputStatusRegister0: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralCrtInterrupt, StringFormat='CrtInterrupt: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralSwitchSense, StringFormat='SwitchSense: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralInputStatusRegister1, StringFormat='InputStatusRegister1: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralDisplayDisabled, StringFormat='DisplayDisabled: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GeneralVerticalRetrace, StringFormat='VerticalRetrace: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.GeneralMiscellaneousOutputRegister, StringFormat='MiscellaneousOutputRegister: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralClockSelect, StringFormat='ClockSelect: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralEnableRam, StringFormat='EnableRam: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralVerticalSize, StringFormat='VerticalSize: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralHorizontalSyncPolarity, StringFormat='HorizontalSyncPolarity: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralVerticalSyncPolarity, StringFormat='VerticalSyncPolarity: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralIoAddressSelect, StringFormat='IoAddressSelect: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralOddPageSelect, StringFormat='OddPageSelect: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralInputStatusRegister0, StringFormat='InputStatusRegister0: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralCrtInterrupt, StringFormat='CrtInterrupt: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralSwitchSense, StringFormat='SwitchSense: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralInputStatusRegister1, StringFormat='InputStatusRegister1: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralDisplayDisabled, StringFormat='DisplayDisabled: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GeneralVerticalRetrace, StringFormat='VerticalRetrace: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Dac</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.DacReadIndex, StringFormat='ReadIndex: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.DacWriteIndex, StringFormat='WriteIndex: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.DacPixelMask, StringFormat='PixelMask: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.DacData, StringFormat='Data: {0:X2}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.DacReadIndex, StringFormat='ReadIndex: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.DacWriteIndex, StringFormat='WriteIndex: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.DacPixelMask, StringFormat='PixelMask: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.DacData, StringFormat='Data: {0:X2}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Graphics</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsSetReset, StringFormat='SetResetExpanded: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsEnableSetReset, StringFormat='EnableSetReset: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsColorCompare, StringFormat='ColorCompare: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsDataRotate, StringFormat='DataRotate: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsReadMapSelect, StringFormat='ReadMapSelect: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsModeRegister, StringFormat='GraphicsMode: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsMiscellaneousGraphics, StringFormat='MiscellaneousGraphics: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsColorDontCare, StringFormat='ColorDontCare: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsBitMask, StringFormat='BitMask: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsRotateCount, StringFormat='RotateCount:  {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsFunctionSelect, StringFormat='Function: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsReadMode, StringFormat='ReadMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsWriteMode, StringFormat='WriteMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsOddEven, StringFormat='OddEven: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsShiftRegisterMode, StringFormat='ShiftRegisterMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsIn256ColorMode, StringFormat='In256ColorMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat='GraphicsMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.GraphicsChainOddMapsToEven, StringFormat='ChainOddMapsToEven: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.GraphicsSetReset, StringFormat='SetResetExpanded: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsEnableSetReset, StringFormat='EnableSetReset: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsColorCompare, StringFormat='ColorCompare: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsDataRotate, StringFormat='DataRotate: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsReadMapSelect, StringFormat='ReadMapSelect: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsModeRegister, StringFormat='GraphicsMode: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsMiscellaneousGraphics, StringFormat='MiscellaneousGraphics: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsColorDontCare, StringFormat='ColorDontCare: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsBitMask, StringFormat='BitMask: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsRotateCount, StringFormat='RotateCount:  {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsFunctionSelect, StringFormat='Function: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsReadMode, StringFormat='ReadMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsWriteMode, StringFormat='WriteMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsOddEven, StringFormat='OddEven: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsShiftRegisterMode, StringFormat='ShiftRegisterMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsIn256ColorMode, StringFormat='In256ColorMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsGraphicsMode, StringFormat='GraphicsMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.GraphicsChainOddMapsToEven, StringFormat='ChainOddMapsToEven: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Sequencer</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerResetRegister, StringFormat='Reset: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerClockingModeRegister, StringFormat='ClockingMode: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerPlaneMask, StringFormat='PlaneMask: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerCharacterMapSelect, StringFormat='CharacterMapSelect: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerSequencerMemoryMode, StringFormat='SequencerMemoryMode: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerSynchronousReset, StringFormat='SynchronousReset: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerAsynchronousReset, StringFormat='AsynchronousReset: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerDotsPerClock, StringFormat='DotsPerClock: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerShiftLoad, StringFormat='ShiftLoad: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerDotClock, StringFormat='DotClock: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerShift4, StringFormat='Shift4: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerScreenOff, StringFormat='ScreenOff: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerCharacterMapA, StringFormat='CharacterMapA: {0:X4}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerCharacterMapB, StringFormat='CharacterMapB: {0:X4}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerExtendedMemory, StringFormat='ExtendedMemory: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerOddEvenMode, StringFormat='OddEvenMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.SequencerChain4Mode, StringFormat='Chain4Mode: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.SequencerResetRegister, StringFormat='Reset: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerClockingModeRegister, StringFormat='ClockingMode: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerPlaneMask, StringFormat='PlaneMask: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerCharacterMapSelect, StringFormat='CharacterMapSelect: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerSequencerMemoryMode, StringFormat='SequencerMemoryMode: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerSynchronousReset, StringFormat='SynchronousReset: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerAsynchronousReset, StringFormat='AsynchronousReset: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerDotsPerClock, StringFormat='DotsPerClock: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerShiftLoad, StringFormat='ShiftLoad: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerDotClock, StringFormat='DotClock: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerShift4, StringFormat='Shift4: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerScreenOff, StringFormat='ScreenOff: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerCharacterMapA, StringFormat='CharacterMapA: {0:X4}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerCharacterMapB, StringFormat='CharacterMapB: {0:X4}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerExtendedMemory, StringFormat='ExtendedMemory: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerOddEvenMode, StringFormat='OddEvenMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.SequencerChain4Mode, StringFormat='Chain4Mode: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">AttributeController</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerColorSelect, StringFormat='ColorSelect: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerOverscanColor, StringFormat='OverscanColor: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerAttributeModeControl, StringFormat='AttributeModeControl: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerColorPlaneEnable, StringFormat='ColorPlaneEnable: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerHorizontalPixelPanning, StringFormat='HorizontalPixelPanning: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerVideoOutput45Select, StringFormat='VideoOutput45Select: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerPixelWidth8, StringFormat='PixelWidth8: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerPixelPanningCompatibility, StringFormat='PixelPanningCompatibility: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerBlinkingEnabled, StringFormat='BlinkingEnabled: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerLineGraphicsEnabled, StringFormat='LineGraphicsEnabled: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerMonochromeEmulation, StringFormat='MonochromeEmulation: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.AttributeControllerGraphicsMode, StringFormat='GraphicsMode: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerColorSelect, StringFormat='ColorSelect: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerOverscanColor, StringFormat='OverscanColor: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerAttributeModeControl, StringFormat='AttributeModeControl: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerColorPlaneEnable, StringFormat='ColorPlaneEnable: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerHorizontalPixelPanning, StringFormat='HorizontalPixelPanning: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerVideoOutput45Select, StringFormat='VideoOutput45Select: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerPixelWidth8, StringFormat='PixelWidth8: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerPixelPanningCompatibility, StringFormat='PixelPanningCompatibility: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerBlinkingEnabled, StringFormat='BlinkingEnabled: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerLineGraphicsEnabled, StringFormat='LineGraphicsEnabled: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerMonochromeEmulation, StringFormat='MonochromeEmulation: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.AttributeControllerGraphicsMode, StringFormat='GraphicsMode: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">CRT Controller</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCharacterCellHeightRegister, StringFormat='CharacterCellHeight: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCrtModeControl, StringFormat='CrtModeControl: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCursorEnd, StringFormat='CursorEnd: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCursorLocationHigh, StringFormat='CursorLocationHigh: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCursorLocationLow, StringFormat='CursorLocationLow: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCursorStart, StringFormat='CursorStart: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerEndHorizontalBlanking, StringFormat='EndHorizontalBlanking: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat='EndHorizontalDisplay: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerEndHorizontalRetrace, StringFormat='EndHorizontalRetrace: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerEndVerticalBlanking, StringFormat='EndVerticalBlanking: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat='HorizontalTotal: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerLineCompareRegister, StringFormat='LineCompare: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerOffset, StringFormat='Offset: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerOverflow, StringFormat='Overflow: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerPresetRowScanRegister, StringFormat='PresetRowScan: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartAddressHigh, StringFormat='StartHigh: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartAddressLow, StringFormat='StartLow: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat='StartHorizontalBlanking: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat='StartHorizontalRetrace: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartVerticalBlanking, StringFormat='StartVerticalBlanking: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerUnderlineLocation, StringFormat='UnderlineLocation: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalDisplayEndRegister, StringFormat='VerticalDisplayEnd: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalRetraceEnd, StringFormat='VerticalRetraceEnd: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalRetraceStart, StringFormat='VerticalRetraceStart: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalTotalRegister, StringFormat='VerticalTotalReg: {0:X2}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerAddressWrap, StringFormat='AddressWrap: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerBytePanning, StringFormat='BytePanning: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerByteWordMode, StringFormat='ByteWordMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCharacterCellHeight, StringFormat='CharacterCellHeight: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerClearVerticalInterrupt, StringFormat='ClearVerticalInterrupt: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCompatibilityModeSupport, StringFormat='CompatibilityModeSupport: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCompatibleRead, StringFormat='CompatibleRead: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCountByFour, StringFormat='CountByFour: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCountByTwo, StringFormat='CountByTwo: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerCrtcScanDouble, StringFormat='CrtcScanDouble: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerDisableTextCursor, StringFormat='DisableTextCursor: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerDisableVerticalInterrupt, StringFormat='DisableVerticalInterrupt: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerDisplayEnableSkew, StringFormat='DisplayEnableSkew: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerDoubleWordMode, StringFormat='DoubleWordMode: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerHorizontalBlankingEnd, StringFormat='HorizontalBlankingEnd: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerHorizontalSyncDelay, StringFormat='HorizontalSyncDelay: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerHorizontalSyncEnd, StringFormat='HorizontalSyncEnd: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerLineCompare, StringFormat='LineCompareLine: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerPresetRowScan, StringFormat='PresetRowScan: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerRefreshCyclesPerScanline, StringFormat='RefreshCyclesPerScanline: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerSelectRowScanCounter, StringFormat='SelectRowScanCounter: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerTextCursorEnd, StringFormat='TextCursorEnd: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerTextCursorLocation, StringFormat='TextCursorLocation: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerTextCursorSkew, StringFormat='TextCursorSkew: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerTextCursorStart, StringFormat='TextCursorStart: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerTimingEnable, StringFormat='TimingEnable: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerUnderlineScanline, StringFormat='UnderlineScanline: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalTimingHalved, StringFormat='VerticalTimingHalved: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerWriteProtect, StringFormat='WriteProtect: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartAddress, StringFormat='StartAddress: {0:X6}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat='HorizontalDisplayEnd: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat='HorizontalBlankingStart: {0}'}">
-                                    </TextBlock> 
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat='HorizontalSyncStart: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat='HorizontalTotal: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalDisplayEnd, StringFormat='VerticalDisplayEnd: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalBlankingStart, StringFormat='VerticalBlankingStart: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalSyncStart, StringFormat='VerticalSyncStart: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCharacterCellHeightRegister, StringFormat='CharacterCellHeight: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCrtModeControl, StringFormat='CrtModeControl: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCursorEnd, StringFormat='CursorEnd: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCursorLocationHigh, StringFormat='CursorLocationHigh: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCursorLocationLow, StringFormat='CursorLocationLow: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCursorStart, StringFormat='CursorStart: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalBlanking, StringFormat='EndHorizontalBlanking: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat='EndHorizontalDisplay: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalRetrace, StringFormat='EndHorizontalRetrace: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerEndVerticalBlanking, StringFormat='EndVerticalBlanking: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat='HorizontalTotal: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerLineCompareRegister, StringFormat='LineCompare: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerOffset, StringFormat='Offset: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerOverflow, StringFormat='Overflow: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerPresetRowScanRegister, StringFormat='PresetRowScan: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartAddressHigh, StringFormat='StartHigh: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartAddressLow, StringFormat='StartLow: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat='StartHorizontalBlanking: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat='StartHorizontalRetrace: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartVerticalBlanking, StringFormat='StartVerticalBlanking: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerUnderlineLocation, StringFormat='UnderlineLocation: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalDisplayEndRegister, StringFormat='VerticalDisplayEnd: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalRetraceEnd, StringFormat='VerticalRetraceEnd: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalRetraceStart, StringFormat='VerticalRetraceStart: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalTotalRegister, StringFormat='VerticalTotalReg: {0:X2}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerAddressWrap, StringFormat='AddressWrap: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerBytePanning, StringFormat='BytePanning: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerByteWordMode, StringFormat='ByteWordMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCharacterCellHeight, StringFormat='CharacterCellHeight: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerClearVerticalInterrupt, StringFormat='ClearVerticalInterrupt: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCompatibilityModeSupport, StringFormat='CompatibilityModeSupport: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCompatibleRead, StringFormat='CompatibleRead: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCountByFour, StringFormat='CountByFour: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCountByTwo, StringFormat='CountByTwo: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerCrtcScanDouble, StringFormat='CrtcScanDouble: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerDisableTextCursor, StringFormat='DisableTextCursor: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerDisableVerticalInterrupt, StringFormat='DisableVerticalInterrupt: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerDisplayEnableSkew, StringFormat='DisplayEnableSkew: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerDoubleWordMode, StringFormat='DoubleWordMode: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalBlankingEnd, StringFormat='HorizontalBlankingEnd: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalSyncDelay, StringFormat='HorizontalSyncDelay: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalSyncEnd, StringFormat='HorizontalSyncEnd: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerLineCompare, StringFormat='LineCompareLine: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerPresetRowScan, StringFormat='PresetRowScan: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerRefreshCyclesPerScanline, StringFormat='RefreshCyclesPerScanline: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerSelectRowScanCounter, StringFormat='SelectRowScanCounter: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerTextCursorEnd, StringFormat='TextCursorEnd: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerTextCursorLocation, StringFormat='TextCursorLocation: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerTextCursorSkew, StringFormat='TextCursorSkew: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerTextCursorStart, StringFormat='TextCursorStart: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerTimingEnable, StringFormat='TimingEnable: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerUnderlineScanline, StringFormat='UnderlineScanline: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalTimingHalved, StringFormat='VerticalTimingHalved: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerWriteProtect, StringFormat='WriteProtect: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartAddress, StringFormat='StartAddress: {0:X6}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerEndHorizontalDisplay, StringFormat='HorizontalDisplayEnd: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalBlanking, StringFormat='HorizontalBlankingStart: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerStartHorizontalRetrace, StringFormat='HorizontalSyncStart: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerHorizontalTotal, StringFormat='HorizontalTotal: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalDisplayEnd, StringFormat='VerticalDisplayEnd: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalBlankingStart, StringFormat='VerticalBlankingStart: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalSyncStart, StringFormat='VerticalSyncStart: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.CrtControllerVerticalTotal, StringFormat='VerticalTotal: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Renderer</Label>
                                 <WrapPanel Grid.Row="1" Orientation="Vertical">
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.RendererWidth, StringFormat='Width: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.RendererHeight, StringFormat='Height: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.RendererBufferSize, StringFormat='BufferSize: {0}'}">
-                                    </TextBlock>
-                                    <TextBlock TextAlignment="Right"
-                                               Text="{Binding VideoCard.LastFrameRenderTime, StringFormat='FrameRenderTime: {0}'}">
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding VideoCard.RendererWidth, StringFormat='Width: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.RendererHeight, StringFormat='Height: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.RendererBufferSize, StringFormat='BufferSize: {0}'}" TextAlignment="Right" />
+                                    <TextBlock Text="{Binding VideoCard.LastFrameRenderTime, StringFormat='FrameRenderTime: {0}'}" TextAlignment="Right" />
                                 </WrapPanel>
                             </Grid>
                         </WrapPanel>
@@ -525,9 +314,13 @@
                 <TabItem Header="General MIDI / MT-32">
                     <ScrollViewer>
                         <WrapPanel>
-                            <Grid RowDefinitions="Auto,*" Margin="5">
+                            <Grid Margin="5" RowDefinitions="Auto,*">
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
-                                <pgc:PropertyGrid Grid.Row="1" ShowTitle="False" ShowStyle="Alphabetic" SelectedObject="{CompiledBinding Midi}" />
+                                <pgc:PropertyGrid
+                                    Grid.Row="1"
+                                    SelectedObject="{CompiledBinding Midi}"
+                                    ShowStyle="Alphabetic"
+                                    ShowTitle="False" />
                             </Grid>
                         </WrapPanel>
                     </ScrollViewer>
@@ -537,42 +330,95 @@
                 </TabItem>
             </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
-                <WrapPanel TextBlock.TextAlignment="Left" Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Bottom" Margin="0,0,5,0"
-                               Text="{Binding LastUpdate, StringFormat='Last update: {0}'}">
-                    </TextBlock>
-                    <Button Margin="5,0,0,0" VerticalAlignment="Bottom" Content="Force Update"
-                            Command="{Binding UpdateDataCommand}">
-                    </Button>
+                <WrapPanel Orientation="Horizontal" TextBlock.TextAlignment="Left">
+                    <TextBlock
+                        Margin="0,0,5,0"
+                        VerticalAlignment="Bottom"
+                        Text="{Binding LastUpdate, StringFormat='Last update: {0}'}" />
+                    <Button
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Bottom"
+                        Command="{Binding UpdateDataCommand}"
+                        Content="Force Update" />
                 </WrapPanel>
             </Border>
         </Grid>
-        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsEditingMemory}" CloseOnClickAway="False">
+        <dialogHost:DialogHost
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            CloseOnClickAway="False"
+            IsOpen="{Binding IsEditingMemory}">
             <dialogHost:DialogHost.DialogContent>
                 <Grid RowDefinitions="Auto,*,Auto">
-                    <Label Grid.Row="0" Content="Edit memory..." FontWeight="Bold" HorizontalAlignment="Center" />
-                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" Grid.Row="1">
-                        <Label Grid.Row="0" Grid.Column="0" Content="Memory Address:"></Label>
-                        <TextBox Grid.Row="0" Grid.Column="1" Watermark="linear or segmented address" Text="{Binding MemoryEditAddress}" />
-                        <Label Grid.Row="1" Grid.Column="0" Content="Bytes:"></Label>
-                        <TextBox Grid.Row="1" Grid.Column="1" Watermark="hexadecimal format" Text="{Binding MemoryEditValue}" />
+                    <Label
+                        Grid.Row="0"
+                        HorizontalAlignment="Center"
+                        Content="Edit memory..."
+                        FontWeight="Bold" />
+                    <Grid
+                        Grid.Row="1"
+                        ColumnDefinitions="Auto,*"
+                        RowDefinitions="Auto,Auto">
+                        <Label
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Content="Memory Address:" />
+                        <TextBox
+                            Grid.Row="0"
+                            Grid.Column="1"
+                            Text="{Binding MemoryEditAddress}"
+                            Watermark="linear or segmented address" />
+                        <Label
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Content="Bytes:" />
+                        <TextBox
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Text="{Binding MemoryEditValue}"
+                            Watermark="hexadecimal format" />
                     </Grid>
-                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Grid.Row="2">
-                        <Button Content="OK" IsDefault="True" Command="{Binding ApplyMemoryEditCommand}" />
-                        <Button Content="Cancel" IsCancel="True" Command="{Binding CancelMemoryEditCommand}" />
+                    <StackPanel
+                        Grid.Row="2"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal">
+                        <Button
+                            Command="{Binding ApplyMemoryEditCommand}"
+                            Content="OK"
+                            IsDefault="True" />
+                        <Button
+                            Command="{Binding CancelMemoryEditCommand}"
+                            Content="Cancel"
+                            IsCancel="True" />
                     </StackPanel>
                 </Grid>
             </dialogHost:DialogHost.DialogContent>
         </dialogHost:DialogHost>
-        <dialogHost:DialogHost Grid.Row="0" Grid.RowSpan="2" IsOpen="{Binding IsDialogVisible}" CloseOnClickAway="False">
+        <dialogHost:DialogHost
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            CloseOnClickAway="False"
+            IsOpen="{Binding IsDialogVisible}">
             <dialogHost:DialogHost.DialogContent>
                 <Grid RowDefinitions="Auto,Auto,Auto">
-                    <Label Grid.Row="0" Content="Validation Error" FontWeight="Bold" HorizontalAlignment="Center" />
+                    <Label
+                        Grid.Row="0"
+                        HorizontalAlignment="Center"
+                        Content="Validation Error"
+                        FontWeight="Bold" />
                     <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
-                    <Button Grid.Row="2" Content="OK" IsDefault="True" Command="{Binding ClearDialogCommand}" />
+                    <Button
+                        Grid.Row="2"
+                        Command="{Binding ClearDialogCommand}"
+                        Content="OK"
+                        IsDefault="True" />
                 </Grid>
             </dialogHost:DialogHost.DialogContent>
         </dialogHost:DialogHost>
-        <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Loading..." IsVisible="{Binding IsLoading}"/>
+        <TextBlock
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            IsVisible="{Binding IsLoading}"
+            Text="Loading..." />
     </Grid>
 </Window>
