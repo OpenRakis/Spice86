@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 
 public class InstructionPrefixParser {
     private readonly InstructionReader _instructionReader;
