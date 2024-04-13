@@ -107,7 +107,7 @@
                     </Grid>
                     <Grid ColumnDefinitions="Auto,Auto" DockPanel.Dock="Bottom">
                         <Button Grid.Column="0" MaxWidth="100" Margin="5" Command="{Binding EndProgramCommand}" Content="OK" />
-                        <Button Grid.Column="1" MaxWidth="100" Margin="5" Command="{Binding ShowDebugWindowCommand}" Content="Debug" />
+                        <Button Grid.Column="1" MaxWidth="100" Margin="5" Command="{Binding ShowDebugWindowOnErrorCommand}" Content="Debug" />
                     </Grid>
                 </DockPanel>
             </WrapPanel>

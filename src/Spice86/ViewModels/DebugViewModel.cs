@@ -11,6 +11,7 @@ using Iced.Intel;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
@@ -101,7 +102,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         _uiDispatcherTimer = uiDispatcherTimer;
         SoftwareMixerViewModel = new(uiDispatcherTimer);
-        CfgCpuViewModel = new(uiDispatcherTimer);
+        CfgCpuViewModel = new(uiDispatcherTimer, _pauseStatus);
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -205,7 +206,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         if(component is Midi externalMidiDevice) {
             VisitExternalMidiDevice(externalMidiDevice);
         }
-        if(component is Cpu cpu) {
+        if(component is CfgCpu cpu) {
             VisitCpu(cpu);
         }
         if(component is State state) {
@@ -459,7 +460,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
 
     private bool _needToUpdateDisassembly;
 
-    public void VisitCpu(Cpu cpu) {
+    public void VisitCpu(CfgCpu cpu) {
         if (!IsPaused) {
             _needToUpdateDisassembly = true;
         }
@@ -488,14 +489,14 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         _pauseStatus.IsPaused = _programExecutor.IsPaused = false;
     }
 
-    private Cpu? _cpu;
+    private CfgCpu? _cpu;
 
-    private void UpdateDisassembly(Cpu cpu) {
+    private void UpdateDisassembly(CfgCpu cpu) {
         if (_memory is null) {
             return;
         }
         _cpu = cpu;
-        uint currentIp = cpu.State.IpPhysicalAddress;
+        uint currentIp = State.IpPhysicalAddress;
         CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
 
         _decoder ??= Decoder.Create(16, codeReader, currentIp,
@@ -505,7 +506,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         int byteOffset = 0;
         emulatedMemoryStream.Position = currentIp - 10;
         while (Instructions.Count < 50) {
-            var instructionAddress = emulatedMemoryStream.Position;
+            long instructionAddress = emulatedMemoryStream.Position;
             _decoder.Decode(out Instruction instruction);
             CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {
                 Instruction = instruction,
@@ -519,7 +520,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 SegmentedAddress =
-                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + byteOffset - 10)),
+                    ConvertUtils.ToSegmentedAddressRepresentation(State.CS, (ushort)(State.IP + byteOffset - 10)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             };
