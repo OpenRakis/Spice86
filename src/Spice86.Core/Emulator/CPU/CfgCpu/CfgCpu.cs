@@ -30,6 +30,7 @@ public class CfgCpu : IDebuggableComponent {
 
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         emulatorDebugger.Visit(this);
+        _state.Accept(emulatorDebugger);
         CurrentExecutionContext.Accept(emulatorDebugger);
     }
 

@@ -280,6 +280,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _debugWindowActivator.ActivateDebugWindow(_debugViewModel);
         }
     }
+    
+    [RelayCommand]
+    public void ShowDebugWindowOnError() {
+        if(_programExecutor is not null) {
+            IsPaused = true;
+            ShowDebugWindow();
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
