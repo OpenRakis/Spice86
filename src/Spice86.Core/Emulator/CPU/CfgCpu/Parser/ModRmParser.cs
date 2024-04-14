@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class ModRmParser {

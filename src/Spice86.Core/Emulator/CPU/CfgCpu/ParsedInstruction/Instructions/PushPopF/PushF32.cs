@@ -1,10 +1,10 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPop;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPopF;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
-public class Pushf16 : CfgInstruction {
-    public Pushf16(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes) :
+public class PushF32 : CfgInstruction {
+    public PushF32(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes) :
         base(address, opcodeField, prefixes) {
     }
 

@@ -3,17 +3,46 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AdcAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AdcRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AdcRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AddAccImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AddRegRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AddRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AndAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AndRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AndRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CmpAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CmpRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CmpRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.DecReg;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Grp1;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Grp45;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.IncReg;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.JmpNearImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovMoffsAcc;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmReg;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPop;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.OrAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.OrRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.OrRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PopReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPopF;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SbbAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SbbRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SbbRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SubAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SubRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.SubRmReg;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.XorAccImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.XorRegRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.XorRmReg;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -38,7 +67,12 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
     private readonly Alu16 _alu16;
     private readonly Alu32 _alu32;
 
-    public ExecutorCfgNodeVisitor(State state, IMemory memory, IOPortDispatcher? ioPortDispatcher,
+    private UInt16RegistersIndexer UInt16Registers => _state.GeneralRegisters.UInt16;
+    private UInt32RegistersIndexer UInt32Registers => _state.GeneralRegisters.UInt32;
+
+    public ExecutorCfgNodeVisitor(State state,
+        IMemory memory,
+        IOPortDispatcher? ioPortDispatcher,
         CallbackHandler callbackHandler) {
         _state = state;
         _memory = memory;
@@ -105,6 +139,401 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
         MoveIpAndSetNextNode(instruction);
     }
 
+    public void Accept(OrRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Or(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Or(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Or(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.Or(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.Or(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.Or(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrAccImm8 instruction) {
+        _state.AL = _alu8.Or(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrAccImm16 instruction) {
+        _state.AX = _alu16.Or(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(OrAccImm32 instruction) {
+        _state.EAX = _alu32.Or(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Adc(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Adc(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Adc(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.Adc(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.Adc(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.Adc(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcAccImm8 instruction) {
+        _state.AL = _alu8.Adc(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcAccImm16 instruction) {
+        _state.AX = _alu16.Adc(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AdcAccImm32 instruction) {
+        _state.EAX = _alu32.Adc(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Sbb(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Sbb(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Sbb(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.Sbb(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.Sbb(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.Sbb(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbAccImm8 instruction) {
+        _state.AL = _alu8.Sbb(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbAccImm16 instruction) {
+        _state.AX = _alu16.Sbb(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SbbAccImm32 instruction) {
+        _state.EAX = _alu32.Sbb(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+    public void Accept(AndRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.And(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.And(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.And(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.And(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.And(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.And(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndAccImm8 instruction) {
+        _state.AL = _alu8.And(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndAccImm16 instruction) {
+        _state.AX = _alu16.And(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(AndAccImm32 instruction) {
+        _state.EAX = _alu32.And(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+    public void Accept(SubRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Sub(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Sub(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Sub(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.Sub(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.Sub(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.Sub(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubAccImm8 instruction) {
+        _state.AL = _alu8.Sub(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubAccImm16 instruction) {
+        _state.AX = _alu16.Sub(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(SubAccImm32 instruction) {
+        _state.EAX = _alu32.Sub(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+    
+    public void Accept(XorRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Xor(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Xor(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Xor(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R8 = _alu8.Xor(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R16 = _alu16.Xor(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.R32 = _alu32.Xor(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorAccImm8 instruction) {
+        _state.AL = _alu8.Xor(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorAccImm16 instruction) {
+        _state.AX = _alu16.Xor(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(XorAccImm32 instruction) {
+        _state.EAX = _alu32.Xor(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+    
+    public void Accept(CmpRmReg8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu8.Sub(_modRm.RM8, _modRm.R8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpRmReg16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu16.Sub(_modRm.RM16, _modRm.R16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpRmReg32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu32.Sub(_modRm.RM32, _modRm.R32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpRegRm8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu8.Sub(_modRm.R8, _modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpRegRm16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu16.Sub(_modRm.R16, _modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpRegRm32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _alu32.Sub(_modRm.R32, _modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpAccImm8 instruction) {
+        _alu8.Sub(_state.AL, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpAccImm16 instruction) {
+        _alu16.Sub(_state.AX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(CmpAccImm32 instruction) {
+        _alu32.Sub(_state.EAX, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(IncReg16 instruction) {
+        UInt16Registers[instruction.RegisterIndex] = _alu16.Inc(UInt16Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(IncReg32 instruction) {
+        UInt32Registers[instruction.RegisterIndex] = _alu32.Inc(UInt32Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(DecReg16 instruction) {
+        UInt16Registers[instruction.RegisterIndex] = _alu16.Dec(UInt16Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(DecReg32 instruction) {
+        UInt32Registers[instruction.RegisterIndex] = _alu32.Dec(UInt32Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(PushReg16 instruction) {
+        _stack.Push16(UInt16Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(PushReg32 instruction) {
+        _stack.Push32(UInt32Registers[instruction.RegisterIndex]);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(PopReg16 instruction) {
+        UInt16Registers[instruction.RegisterIndex] = _stack.Pop16();
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(PopReg32 instruction) {
+        UInt32Registers[instruction.RegisterIndex] = _stack.Pop32();
+        MoveIpAndSetNextNode(instruction);
+    }
+
     public void Accept(Grp1Adc8 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
         _modRm.RM8 = _alu8.Adc(_modRm.RM8, _instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
@@ -113,13 +542,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1AdcSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Adc(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Adc(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1AdcSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Adc(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Adc(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -143,13 +574,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1AddSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Add(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Add(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1AddSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Add(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Add(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -173,13 +606,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1AndSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.And(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.And(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1AndSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.And(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.And(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -233,13 +668,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1OrSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Or(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Or(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1OrSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Or(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Or(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -263,13 +700,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1SbbSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Sbb(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Sbb(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1SbbSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Sbb(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Sbb(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -293,13 +732,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1SubSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Sub(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Sub(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1SubSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Sub(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Sub(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -323,13 +764,15 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(Grp1XorSigned16 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM16 = _alu16.Xor(_modRm.RM16, (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM16 = _alu16.Xor(_modRm.RM16,
+            (ushort)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(Grp1XorSigned32 instruction) {
         _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
-        _modRm.RM32 = _alu32.Xor(_modRm.RM32, (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
+        _modRm.RM32 = _alu32.Xor(_modRm.RM32,
+            (uint)_instructionFieldValueRetriever.GetFieldValue(instruction.ValueField));
         MoveIpAndSetNextNode(instruction);
     }
 
@@ -363,22 +806,22 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
         MoveIpAndSetNextNode(instruction);
     }
 
-    public void Accept(Pushf16 instruction) {
+    public void Accept(PushF16 instruction) {
         _stack.Push16((ushort)_state.Flags.FlagRegister);
         MoveIpAndSetNextNode(instruction);
     }
 
-    public void Accept(Pushf32 instruction) {
+    public void Accept(PushF32 instruction) {
         _stack.Push32(_state.Flags.FlagRegister & 0x00FCFFFF);
         MoveIpAndSetNextNode(instruction);
     }
 
-    public void Accept(Popf16 instruction) {
+    public void Accept(PopF16 instruction) {
         _state.Flags.FlagRegister = _stack.Pop16();
         MoveIpAndSetNextNode(instruction);
     }
 
-    public void Accept(Popf32 instruction) {
+    public void Accept(PopF32 instruction) {
         _state.Flags.FlagRegister = _stack.Pop32();
     }
 
@@ -435,19 +878,104 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
 
     public void Accept(JmpNearImm16 instruction) {
         short offset = _instructionFieldValueRetriever.GetFieldValue(instruction.OffsetField);
-        JumpNear(instruction, offset);
-        SetNextNodeToSuccessorAtCsIp(instruction);
+        JumpNearOffset(instruction, offset);
     }
 
     public void Accept(JmpNearImm8 instruction) {
         sbyte offset = _instructionFieldValueRetriever.GetFieldValue(instruction.OffsetField);
-        JumpNear(instruction, offset);
-        SetNextNodeToSuccessorAtCsIp(instruction);
+        JumpNearOffset(instruction, offset);
     }
 
     public void Accept(Hlt instruction) {
         _state.IsRunning = false;
+        MoveIpToEndOfInstruction(instruction);
         NextNode = null;
+    }
+
+    public void Accept(Grp45RmInc8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Inc(_modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp45RmDec8 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM8 = _alu8.Dec(_modRm.RM8);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp4Callback instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _callbackHandler.Run(_instructionFieldValueRetriever.GetFieldValue(instruction.CallbackNumber));
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp45RmInc16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Inc(_modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp45RmInc32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Inc(_modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp45RmDec16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM16 = _alu16.Dec(_modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp45RmDec32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _modRm.RM32 = _alu32.Dec(_modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp5RmCallNear instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        ushort callAddress = _modRm.RM16;
+        NearCallWithReturnIpNextInstruction(instruction, callAddress);
+    }
+
+    public void Accept(Grp5RmCallFar instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        uint? ipAddress = _modRm.MemoryAddress;
+        if (ipAddress is null) {
+            return;
+        }
+        (ushort cs, ushort ip) = _memory.SegmentedAddress[ipAddress.Value];
+        FarCallWithReturnIpNextInstruction(instruction, cs, ip);
+    }
+
+    public void Accept(Grp5RmJumpNear instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        ushort ip = _modRm.RM16;
+        JumpNear(instruction, ip);
+    }
+
+    public void Accept(Grp5RmJumpFar instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        uint? ipAddress = _modRm.MemoryAddress;
+        if (ipAddress is null) {
+            return;
+        }
+        (ushort cs, ushort ip) = _memory.SegmentedAddress[ipAddress.Value];
+        JumpFar(instruction, cs, ip);
+    }
+
+    public void Accept(Grp5RmPush16 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _stack.Push16(_modRm.RM16);
+        MoveIpAndSetNextNode(instruction);
+    }
+
+    public void Accept(Grp5RmPush32 instruction) {
+        _modRm.RefreshWithNewModRmContext(instruction.ModRmContext);
+        _stack.Push32(_modRm.RM32);
+        MoveIpAndSetNextNode(instruction);
     }
 
     public void Accept(DiscriminatedNode discriminatedNode) {
@@ -478,9 +1006,59 @@ public class ExecutorCfgNodeVisitor : ICfgNodeVisitor {
         return new SegmentedAddress(segment, offset);
     }
 
-    private void JumpNear(CfgInstruction instruction, int offset) {
+    private void JumpNearOffset(CfgInstruction instruction, int offset) {
         MoveIpToEndOfInstruction(instruction);
         _state.IP = (ushort)(_state.IP + offset);
+        SetNextNodeToSuccessorAtCsIp(instruction);
+    }
+
+    public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
+        _state.CS = cs;
+        _state.IP = ip;
+        SetNextNodeToSuccessorAtCsIp(instruction);
+    }
+
+    public void JumpNear(CfgInstruction instruction, ushort ip) {
+        _state.IP = ip;
+        SetNextNodeToSuccessorAtCsIp(instruction);
+
+    }
+
+    public void NearCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort callIP) {
+        MoveIpToEndOfInstruction(instruction);
+        NearCall(instruction, _state.IP, callIP);
+    }
+
+    private void NearCall(CfgInstruction instruction, ushort returnIP, ushort callIP) {
+        _stack.Push16(returnIP);
+        HandleCall(instruction, CallType.NEAR, _state.CS, returnIP, _state.CS, callIP);
+    }
+
+    public void FarCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort targetCS, ushort targetIP) {
+        MoveIpToEndOfInstruction(instruction);
+        FarCall(instruction, _state.CS, _state.IP, targetCS, targetIP);
+    }
+
+    private void FarCall(CfgInstruction instruction,
+        ushort returnCS,
+        ushort returnIP,
+        ushort targetCS,
+        ushort targetIP) {
+        _stack.Push16(returnCS);
+        _stack.Push16(returnIP);
+        HandleCall(instruction, CallType.FAR, returnCS, returnIP, targetCS, targetIP);
+    }
+
+    private void HandleCall(CfgInstruction instruction,
+        CallType callType,
+        ushort returnCS,
+        ushort returnIP,
+        ushort targetCS,
+        ushort targetIP) {
+        _state.CS = targetCS;
+        // Setting it here as well for eventual overrides
+        _state.IP = targetIP;
+        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     private void MoveIpToEndOfInstruction(CfgInstruction instruction) {
