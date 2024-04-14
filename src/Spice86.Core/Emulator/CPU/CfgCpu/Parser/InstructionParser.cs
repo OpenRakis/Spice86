@@ -2,38 +2,53 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AddRegRm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.AddRmReg;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Grp1;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.JmpNearImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovMoffsAcc;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmImm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmReg;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPop;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPopF;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 
-public class InstructionParser {
-    private const int RegIndexMask = 0b111;
-    private const int WordMask = 0b1000;
+public class InstructionParser  : BaseInstructionParser {
+    private readonly Grp1Parser _grp1Parser;
+    private readonly MovRegImmParser _movRegImmParser;
+    private readonly OperationOnRegIndexParser _incRegParser;
+    private readonly OperationOnRegIndexParser _decRegParser;
+    private readonly OperationOnRegIndexParser _pushRegParser;
+    private readonly OperationOnRegIndexParser _popRegParser;
+    private readonly Grp45Parser _grp45Parser;
+    private readonly AluOperationParser _addAluOperationParser;
+    private readonly AluOperationParser _orAluOperationParser;
+    private readonly AluOperationParser _adcAluOperationParser;
+    private readonly AluOperationParser _sbbAluOperationParser;
+    private readonly AluOperationParser _andAluOperationParser;
+    private readonly AluOperationParser _subAluOperationParser;
+    private readonly AluOperationParser _xorAluOperationParser;
+    private readonly AluOperationParser _cmpAluOperationParser;
 
-
-    private readonly InstructionReader _instructionReader;
-    private readonly InstructionPrefixParser _instructionPrefixParser;
-    private readonly ModRmParser _modRmParser;
-    private readonly State _state;
-
-    public InstructionParser(IIndexable memory, State state) {
-        _instructionReader = new(memory);
-        _instructionPrefixParser = new(_instructionReader);
-        _modRmParser = new(_instructionReader, state);
-        _state = state;
+    
+    public InstructionParser(IIndexable memory, State state) : base(new(memory), state) {
+        _grp1Parser = new(this);
+        _movRegImmParser = new(this);
+        _incRegParser = new(this, "IncReg");
+        _decRegParser = new(this, "DecReg");
+        _pushRegParser = new(this, "PushReg");
+        _popRegParser = new(this, "PopReg");
+        _grp45Parser = new(this);
+        _addAluOperationParser = new(this, "Add");
+        _orAluOperationParser = new(this, "Or");
+        _adcAluOperationParser = new(this, "Adc");
+        _sbbAluOperationParser = new(this, "Sbb");
+        _andAluOperationParser = new(this, "And");
+        _subAluOperationParser = new(this, "Sub");
+        _xorAluOperationParser = new(this, "Xor");
+        _cmpAluOperationParser = new(this, "Cmp");
     }
 
     public CfgInstruction ParseInstructionAt(SegmentedAddress address) {
@@ -60,40 +75,132 @@ public class InstructionParser {
         bool hasOperandSize32 = HasOperandSize32(prefixes);
         switch (opcodeField.Value) {
             case 0x00:
-                return new AddRmReg8(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0x01:
-                if (hasOperandSize32) {
-                    return new AddRmReg32(address, opcodeField, prefixes,
-                        _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
-                }
-
-                return new AddRmReg16(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0x02:
-                return new AddRegRm8(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0x03:
-                if (hasOperandSize32) {
-                    return new AddRegRm32(address, opcodeField, prefixes,
-                        _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
-                }
-
-                return new AddRegRm16(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0x04:
-                return new AddAccImm8(address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false));
             case 0x05:
-                if (hasOperandSize32) {
-                    return new AddAccImm32(address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false));
-                }
-
-                return new AddAccImm16(address, opcodeField, prefixes, _instructionReader.UInt16.NextField(false));
+                return _addAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x08:
+            case 0x09:
+            case 0x0A:
+            case 0x0B:
+            case 0x0C:
+            case 0x0D:
+                return _orAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x10:
+            case 0x11:
+            case 0x12:
+            case 0x13:
+            case 0x14:
+            case 0x15:
+                return _adcAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x18:
+            case 0x19:
+            case 0x1A:
+            case 0x1B:
+            case 0x1C:
+            case 0x1D:
+                return _sbbAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x20:
+            case 0x21:
+            case 0x22:
+            case 0x23:
+            case 0x24:
+            case 0x25:
+                return _andAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x26:
+                HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
+                break;
+            case 0x28:
+            case 0x29:
+            case 0x2A:
+            case 0x2B:
+            case 0x2C:
+            case 0x2D:
+                return _subAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x2E:
+                HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
+                break;
+            case 0x30:
+            case 0x31:
+            case 0x32:
+            case 0x33:
+            case 0x34:
+            case 0x35:
+                return _xorAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x36:
+                HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
+                break;
+            case 0x38:
+            case 0x39:
+            case 0x3A:
+            case 0x3B:
+            case 0x3C:
+            case 0x3D:
+                return _cmpAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
+            case 0x3E:
+                HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
+                break;
+            case 0x40:
+            case 0x41:
+            case 0x42:
+            case 0x43:
+            case 0x44:
+            case 0x45:
+            case 0x46:
+            case 0x47:
+                return _incRegParser.Parse(address, opcodeField, prefixes, hasOperandSize32);
+            case 0x48:
+            case 0x49:
+            case 0x4A:
+            case 0x4B:
+            case 0x4C:
+            case 0x4D:
+            case 0x4E:
+            case 0x4F:
+                return _decRegParser.Parse(address, opcodeField, prefixes, hasOperandSize32);
+            case 0x50:
+            case 0x51:
+            case 0x52:
+            case 0x53:
+            case 0x54:
+            case 0x55:
+            case 0x56:
+            case 0x57:
+                return _pushRegParser.Parse(address, opcodeField, prefixes, hasOperandSize32);
+            case 0x58:
+            case 0x59:
+            case 0x5A:
+            case 0x5B:
+            case 0x5C:
+            case 0x5D:
+            case 0x5E:
+            case 0x5F:
+                return _popRegParser.Parse(address, opcodeField, prefixes, hasOperandSize32);
+            case 0x62:// BOUND
+            case 0x63:// ARPL
+                HandleInvalidOpcode(opcodeField.Value);
+                break;
+            case 0x64:
+            case 0x65:
+            case 0x66:
+            case 0x67:
+                HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
+                break;
             case 0x80:
             case 0x81:
             case 0x82:
             case 0x83:
-                return Grp1(address, opcodeField, prefixes, hasOperandSize32, addressSizeFromPrefixes,
+                return _grp1Parser.Parse(address, opcodeField, prefixes, hasOperandSize32, addressSizeFromPrefixes,
                     segmentOverrideFromPrefixes);
             case 0x88:
                 return new MovRmReg8(address, opcodeField, prefixes,
@@ -107,14 +214,14 @@ public class InstructionParser {
                     _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
             case 0x9C:
                 if (hasOperandSize32) {
-                    return new Pushf32(address, opcodeField, prefixes);
+                    return new PushF32(address, opcodeField, prefixes);
                 }
-                return new Pushf16(address, opcodeField, prefixes);
+                return new PushF16(address, opcodeField, prefixes);
             case 0x9D:
                 if (hasOperandSize32) {
-                    return new Popf32(address, opcodeField, prefixes);
+                    return new PopF32(address, opcodeField, prefixes);
                 }
-                return new Popf16(address, opcodeField, prefixes);
+                return new PopF16(address, opcodeField, prefixes);
             case 0xA2:
                 return new MovMoffsAcc8(address, opcodeField, prefixes,
                     segmentOverrideFromPrefixes ?? SegmentRegisters.DsIndex,
@@ -144,7 +251,7 @@ public class InstructionParser {
             case 0xBD:
             case 0xBE:
             case 0xBF:
-                return MovRegImm(address, opcodeField, prefixes, hasOperandSize32);
+                return _movRegImmParser.ParseMovRegImm(address, opcodeField, prefixes, hasOperandSize32);
             case 0xC6:
                 return new MovRmImm8(address, opcodeField, prefixes,
                     _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes),
@@ -162,104 +269,15 @@ public class InstructionParser {
                 return new JmpNearImm16(address, opcodeField, _instructionReader.Int16.NextField(true));
             case 0xEB: 
                 return new JmpNearImm8(address, opcodeField, _instructionReader.Int8.NextField(true));
-            case 0xF4: 
+            case 0xF4:
                 return new Hlt(address, opcodeField);
+            case 0xFE:
+            case 0xFF:
+                return _grp45Parser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                    segmentOverrideFromPrefixes, hasOperandSize32);
         }
 
         return HandleInvalidOpcode(opcodeField.Value);
-    }
-
-    private CfgInstruction MovRegImm(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, bool hasOperandSize32) {
-        int regIndex = opcodeField.Value & RegIndexMask;
-        if ((opcodeField.Value & WordMask) == 0) {
-            return new MovRegImm8(address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false),
-                regIndex);
-        }
-
-        if (hasOperandSize32) {
-            return new MovRegImm32(address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false),
-                regIndex);
-        }
-
-        return new MovRegImm16(address, opcodeField, prefixes, _instructionReader.UInt16.NextField(false), regIndex);
-    }
-
-    private CfgInstruction Grp1(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, bool hasOperandSize32, int addressSizeFromPrefixes, uint? segmentOverrideFromPrefixes) {
-        ModRmContext modRmContext = _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes);
-        byte opCode = opcodeField.Value;
-        bool hasOperandSize8 = opCode is 0x80 or 0x82;
-        bool signExtendOp2 = opCode is 0x83;
-        uint groupIndex = modRmContext.RegisterIndex;
-        if (groupIndex > 7) {
-            throw new InvalidGroupIndexException(_state, groupIndex);
-        }
-        if (hasOperandSize8) {
-            InstructionField<byte> valueField = _instructionReader.UInt8.NextField(false);
-            return groupIndex switch {
-                0 => new Grp1Add8(address, opcodeField, prefixes, modRmContext, valueField),
-                1 => new Grp1Or8(address, opcodeField, prefixes, modRmContext, valueField),
-                2 => new Grp1Adc8(address, opcodeField, prefixes, modRmContext, valueField),
-                3 => new Grp1Sbb8(address, opcodeField, prefixes, modRmContext, valueField),
-                4 => new Grp1And8(address, opcodeField, prefixes, modRmContext, valueField),
-                5 => new Grp1Sub8(address, opcodeField, prefixes, modRmContext, valueField),
-                6 => new Grp1Xor8(address, opcodeField, prefixes, modRmContext, valueField),
-                7 => new Grp1Cmp8(address, opcodeField, prefixes, modRmContext, valueField)
-            };
-        }
-        if (hasOperandSize32) {
-            if (signExtendOp2) {
-                InstructionField<sbyte> valueField = _instructionReader.Int8.NextField(false);
-                return groupIndex switch {
-                    0 => new Grp1AddSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    1 => new Grp1OrSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    2 => new Grp1AdcSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    3 => new Grp1SbbSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    4 => new Grp1AndSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    5 => new Grp1SubSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    6 => new Grp1XorSigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    7 => new Grp1CmpSigned32(address, opcodeField, prefixes, modRmContext, valueField)
-                };
-            } else {
-                InstructionField<uint> valueField = _instructionReader.UInt32.NextField(false);
-                return groupIndex switch {
-                    0 => new Grp1AddUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    1 => new Grp1OrUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    2 => new Grp1AdcUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    3 => new Grp1SbbUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    4 => new Grp1AndUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    5 => new Grp1SubUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    6 => new Grp1XorUnsigned32(address, opcodeField, prefixes, modRmContext, valueField),
-                    7 => new Grp1CmpUnsigned32(address, opcodeField, prefixes, modRmContext, valueField)
-                };
-            }
-        }
-        if (signExtendOp2) {
-            InstructionField<sbyte> valueField = _instructionReader.Int8.NextField(false);
-            return groupIndex switch {
-                0 => new Grp1AddSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                1 => new Grp1OrSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                2 => new Grp1AdcSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                3 => new Grp1SbbSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                4 => new Grp1AndSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                5 => new Grp1SubSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                6 => new Grp1XorSigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                7 => new Grp1CmpSigned16(address, opcodeField, prefixes, modRmContext, valueField)
-            };
-        } else {
-            InstructionField<ushort> valueField = _instructionReader.UInt16.NextField(false);
-            return groupIndex switch {
-                0 => new Grp1AddUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                1 => new Grp1OrUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                2 => new Grp1AdcUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                3 => new Grp1SbbUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                4 => new Grp1AndUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                5 => new Grp1SubUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                6 => new Grp1XorUnsigned16(address, opcodeField, prefixes, modRmContext, valueField),
-                7 => new Grp1CmpUnsigned16(address, opcodeField, prefixes, modRmContext, valueField)
-            };
-        }
     }
 
     private List<InstructionPrefix> ParsePrefixes() {
@@ -285,4 +303,7 @@ public class InstructionParser {
 
     private CfgInstruction HandleInvalidOpcode(ushort opcode) =>
         throw new InvalidOpCodeException(_state, opcode, false);
+
+    private void HandleInvalidOpcodeBecausePrefix(byte opcode) =>
+        throw new InvalidOpCodeException(_state, opcode, true);
 }

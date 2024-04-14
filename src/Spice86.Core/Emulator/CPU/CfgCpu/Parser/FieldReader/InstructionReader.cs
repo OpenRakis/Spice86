@@ -1,6 +1,5 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.Memory.Indexable;
 
 public class InstructionReader {
