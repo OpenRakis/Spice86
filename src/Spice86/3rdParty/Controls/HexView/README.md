@@ -1,1 +1,0 @@
-This is temporary until there is a Nuget package for the source: https://github.com/wieslawsoltes/HexView

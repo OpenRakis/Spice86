@@ -1,45 +1,72 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-             xmlns:converters="clr-namespace:Spice86.Converters"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Spice86.Views.MixerView"
-             x:CompileBindings="True"
-             x:DataType="viewModels:MixerViewModel">
-	<Design.DataContext>
-		<viewModels:PerformanceViewModel />
-	</Design.DataContext>
-    <ItemsControl ItemsSource="{Binding Channels}">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" />
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Grid Margin="5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="{Binding Name}" HorizontalAlignment="Center" />
-					<StackPanel Orientation="Vertical" Grid.Row="1">
-						<Label Content="Volume" />
-						<Slider Margin="5" MinHeight="400" Grid.Row="1" Value="{Binding Volume, Mode=TwoWay}"
-								Minimum="0" Maximum="100" Orientation="Vertical" />
-						<Label Content="Stereo Separation" />
-						<StackPanel Orientation="Horizontal">
-							<Slider Margin="5" MinWidth="100" Grid.Row="2" Value="{Binding StereoSeparation, Mode=TwoWay}"
-								Minimum="0" Maximum="100" Orientation="Horizontal"/>
-							<Button Command="{ReflectionBinding $parent[ItemsControl].DataContext.ResetStereoSeparationCommand}" CommandParameter="{Binding}" Content="Reset" />
-						</StackPanel>
-						<CheckBox Grid.Row="3" IsChecked="{Binding IsMuted, Mode=TwoWay}"
-								  Content="Mute" HorizontalAlignment="Center" />
-					</StackPanel>
-                </Grid>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+<UserControl
+    x:Class="Spice86.Views.MixerView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:Spice86.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:CompileBindings="True"
+    x:DataType="viewModels:MixerViewModel"
+    mc:Ignorable="d">
+    <Design.DataContext>
+        <viewModels:PerformanceViewModel />
+    </Design.DataContext>
+    <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Channels}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock
+                            Grid.Row="0"
+                            HorizontalAlignment="Center"
+                            Text="{Binding Name}" />
+                        <StackPanel Grid.Row="1" Orientation="Vertical">
+                            <Label Content="Volume" />
+                            <Slider
+                                Grid.Row="1"
+                                MinHeight="400"
+                                Margin="5"
+                                Maximum="100"
+                                Minimum="0"
+                                Orientation="Vertical"
+                                Value="{Binding Volume, Mode=TwoWay}" />
+                            <Label Content="Stereo Separation" />
+                            <StackPanel Orientation="Horizontal">
+                                <Slider
+                                    Grid.Row="2"
+                                    MinWidth="100"
+                                    Margin="5"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    Orientation="Horizontal"
+                                    Value="{Binding StereoSeparation, Mode=TwoWay}" />
+                                <Button
+                                    Command="{ReflectionBinding $parent[ItemsControl].DataContext.ResetStereoSeparationCommand}"
+                                    CommandParameter="{Binding}"
+                                    Content="Reset" />
+                            </StackPanel>
+                            <CheckBox
+                                Grid.Row="3"
+                                HorizontalAlignment="Center"
+                                Content="Mute"
+                                IsChecked="{Binding IsMuted, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+
 </UserControl>

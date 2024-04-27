@@ -1,0 +1,115 @@
+<UserControl
+    x:Class="Spice86.Views.MemoryView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    xmlns:views="clr-namespace:Spice86.Views"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:CompileBindings="True"
+    x:DataType="viewModels:MemoryViewModel"
+    mc:Ignorable="d">
+    <ScrollViewer>
+        <Grid RowDefinitions="Auto,*">
+            <Menu Grid.Row="0" IsVisible="{Binding IsPaused}">
+                <MenuItem Header="Edit">
+                    <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
+                </MenuItem>
+            </Menu>
+            <Grid Grid.Row="1">
+                <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
+                <avaloniaHex:HexEditor
+                    Width="800"
+                    Document="{ReflectionBinding $parent[UserControl].DataContext.MemoryBinaryDocument}"
+                    IsVisible="{Binding IsPaused}">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                    <avaloniaHex:HexEditor.Columns>
+                        <rendering:OffsetColumn />
+                        <rendering:HexColumn />
+                        <rendering:AsciiColumn />
+                    </avaloniaHex:HexEditor.Columns>
+                </avaloniaHex:HexEditor>
+            </Grid>
+            <dialogHost:DialogHost
+                Grid.Row="0"
+                Grid.RowSpan="2"
+                CloseOnClickAway="False"
+                IsOpen="{Binding IsEditingMemory}">
+                <dialogHost:DialogHost.DialogContent>
+                    <Grid RowDefinitions="Auto,*,Auto">
+                        <Label
+                            Grid.Row="0"
+                            HorizontalAlignment="Center"
+                            Content="Edit memory..."
+                            FontWeight="Bold" />
+                        <Grid
+                            Grid.Row="1"
+                            ColumnDefinitions="Auto,*"
+                            RowDefinitions="Auto,Auto">
+                            <Label
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Content="Memory Address:" />
+                            <TextBox
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Text="{Binding MemoryEditAddress}"
+                                Watermark="linear or segmented address" />
+                            <Label
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Content="Bytes:" />
+                            <TextBox
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                FontFamily="Cascadia Code,JetBrains Mono,Monospace,monospace"
+                                Text="{Binding MemoryEditValue}"
+                                Watermark="hexadecimal format" />
+                        </Grid>
+                        <StackPanel
+                            Grid.Row="2"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                            <Button
+                                Command="{Binding ApplyMemoryEditCommand}"
+                                Content="OK"
+                                IsDefault="True" />
+                            <Button
+                                Command="{Binding CancelMemoryEditCommand}"
+                                Content="Cancel"
+                                IsCancel="True" />
+                        </StackPanel>
+                    </Grid>
+                </dialogHost:DialogHost.DialogContent>
+            </dialogHost:DialogHost>
+            <dialogHost:DialogHost
+                Grid.Row="0"
+                Grid.RowSpan="2"
+                CloseOnClickAway="False"
+                IsOpen="{Binding IsDialogVisible}">
+                <dialogHost:DialogHost.DialogContent>
+                    <Grid RowDefinitions="Auto,Auto,Auto">
+                        <Label
+                            Grid.Row="0"
+                            HorizontalAlignment="Center"
+                            Content="Validation Error"
+                            FontWeight="Bold" />
+                        <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
+                        <Button
+                            Grid.Row="2"
+                            Command="{Binding ClearDialogCommand}"
+                            Content="OK"
+                            IsDefault="True" />
+                    </Grid>
+                </dialogHost:DialogHost.DialogContent>
+            </dialogHost:DialogHost>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

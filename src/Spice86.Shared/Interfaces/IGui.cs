@@ -4,8 +4,6 @@ using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 
-using System.ComponentModel;
-
 /// <summary>
 /// GUI of the emulator.<br/>
 /// Displays the content of the video ram (when the emulator requests it) <br/>
@@ -43,8 +41,14 @@ public interface IGui {
     /// </summary>
     double MouseY { get; set; }
 
+    /// <summary>
+    /// Width of the video source for the GUI to display.
+    /// </summary>
     public int Width { get; }
 
+    /// <summary>
+    /// Height of the video source for the GUI to display.
+    /// </summary>
     public int Height { get; }
 
     /// <summary>

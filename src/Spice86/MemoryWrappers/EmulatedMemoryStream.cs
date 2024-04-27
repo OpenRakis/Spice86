@@ -1,4 +1,4 @@
-namespace Spice86.Wrappers;
+namespace Spice86.MemoryWrappers;
 
 using Spice86.Core.Emulator.Memory;
 
@@ -17,7 +17,7 @@ public class EmulatedMemoryStream : Stream {
     }
 
     public override void Flush() {
-        throw new NotSupportedException();
+        //nothing to do
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
@@ -53,7 +53,13 @@ public class EmulatedMemoryStream : Stream {
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
-        throw new NotSupportedException();
+        for (int i = 0; i < count; i++) {
+            if (i + offset > buffer.Length || Position > _memory.Length) {
+                break;
+            }
+            _memory[(uint)Position] = buffer[i + offset];
+            Position++;
+        }
     }
 
     public override bool CanRead => _canRead;
