@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
+using Spice86.Interfaces;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -15,6 +16,7 @@ using System;
 public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     private State? _state;
     private readonly IPerformanceMeasurer? _performanceMeasurer;
+    private readonly IPauseStatus? _pauseStatus;
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
@@ -25,14 +27,15 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
+    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
+        _pauseStatus = pauseStatus;
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _performanceMeasurer is null) {
+        if (_state is null || _performanceMeasurer is null || _pauseStatus is { IsPaused: true }) {
             return;
         }
 

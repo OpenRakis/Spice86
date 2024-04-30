@@ -12,11 +12,12 @@
     <Application.DataTemplates>
         <spice86:ViewLocator />
     </Application.DataTemplates>
-    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!--  "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options.  -->
     <Application.Styles>
         <FluentTheme DensityStyle="Compact" />
         <dialogHostAvalonia:DialogHostStyles />
-        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
         <StyleInclude Source="avares://Semi.Avalonia/Themes/Index.axaml" />
+        <StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
     </Application.Styles>
 </Application>

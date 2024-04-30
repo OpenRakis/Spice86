@@ -18,13 +18,11 @@ using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
+using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
-using Spice86.Wrappers;
 
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Reflection;
 
 public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
@@ -58,15 +56,17 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     public void StepInstruction() {
         _programExecutor?.StepInstruction();
         IsLoading = true;
-        UpdateData();
+        ForceUpdate();
     }
 
     [RelayCommand]
-    public void UpdateData() => UpdateValues(this, EventArgs.Empty);
+    public void ForceUpdate() {
+        UpdateValues(this, EventArgs.Empty);
+        MemoryViewModel?.UpdateBinaryDocument();
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
-    [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
     private IProgramExecutor? _programExecutor;
@@ -92,6 +92,9 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
 
+    [ObservableProperty]
+    private MemoryViewModel? _memoryViewModel;
+
     public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
@@ -103,73 +106,13 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
         IsPaused = _pauseStatus?.IsPaused is true;
         if (IsPaused) {
-            _mustRefreshMainMemory = true;
+            MemoryViewModel?.UpdateBinaryDocument();
         }
     }
 
     [RelayCommand]
     public void StartObserverTimer() {
         _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-    }
-
-    [ObservableProperty] private bool _isEditingMemory;
-
-    [ObservableProperty]
-    private string? _memoryEditAddress;
-
-    [ObservableProperty]
-    private string? _memoryEditValue = "";
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void EditMemory() {
-        if (_memory is null) {
-            return;
-        }
-        IsEditingMemory = true;
-        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
-            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
-        }
-    }
-
-    private bool TryParseMemoryAddress(string? memoryAddress,  [NotNullWhen(true)] out uint? address) {
-        if (string.IsNullOrWhiteSpace(memoryAddress)) {
-            address = null;
-            return false;
-        }
-
-        try {
-            if (memoryAddress.Contains(':')) {
-                string[] split = memoryAddress.Split(":");
-                if (split.Length > 1 &&
-                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
-                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
-                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
-                    return true;
-                }
-            } else if(uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
-                address = value;
-                return true;
-            }
-        } catch(Exception e) {
-            ShowError(e);
-        }
-        address = null;
-        return false;
-    }
-
-    [RelayCommand]
-    public void CancelMemoryEdit() {
-        IsEditingMemory = false;
-    }
-
-    [RelayCommand]
-    public void ApplyMemoryEdit() {
-        if (_memory is null || !TryParseMemoryAddress(MemoryEditAddress, out uint? address) || MemoryEditValue is null || !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture,  out long value)) {
-            return;
-        }
-        _memory.LoadData(address.Value, BitConverter.GetBytes(value));
-        RefreshMemoryStream();
-        IsEditingMemory = false;
     }
 
     private Decoder? _decoder;
@@ -186,18 +129,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    /// <summary>
-    /// Refreshing the Memory UI is taxing, and resets the Scroll Viewer.
-    /// So it's done only on each Pause.
-    /// </summary>
-    private bool _mustRefreshMainMemory = true;
-
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if (_mustRefreshMainMemory && component is IMemory memory) {
-            _memory = memory;
-            RefreshMemoryStream();
-            _mustRefreshMainMemory = false;
-        }
         if(component is Midi externalMidiDevice) {
             VisitExternalMidiDevice(externalMidiDevice);
         }
@@ -217,24 +149,23 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         if (component is SoftwareMixer softwareMixer) {
             VisitSoundMixer(softwareMixer);
         }
+        if(component is IMemory memory) {
+            VisitMemory(memory);
+        }
+    }
+
+    private void VisitMemory(IMemory memory) {
+        if(_pauseStatus is null) {
+            return;
+        }
+        _memory ??= memory;
+        MemoryViewModel ??= new(memory, _pauseStatus);
     }
 
     private void VisitExternalMidiDevice(Midi externalMidiDevice) {
         Midi.LastPortRead = externalMidiDevice.LastPortRead;
         Midi.LastPortWritten = externalMidiDevice.LastPortWritten;
         Midi.LastPortWrittenValue = externalMidiDevice.LastPortWrittenValue;
-    }
-
-    [ObservableProperty]
-    private EmulatedMemoryStream? _memoryStream;
-
-    private void RefreshMemoryStream() {
-        if(_memory is not null) {
-            EmulatedMemoryStream memoryStream = new EmulatedMemoryStream(_memory);
-            MemoryStream?.Dispose();
-            MemoryStream = null;
-            MemoryStream = memoryStream;
-        }
     }
 
     public void VisitCpuState(State state) {
