@@ -58,7 +58,7 @@
 		<PackageReference Include="Iced" Version="1.21.0" />
 		<PackageReference Include="Semi.Avalonia" Version="11.0.7.2" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.6.3" />
-		<PackageReference Include="Pure.DI" Version="2.1.10">
+		<PackageReference Include="Pure.DI" Version="2.1.14">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
