@@ -38,8 +38,7 @@ public sealed class PortAudioPlayer : AudioPlayer {
     }
 
     /// <inheritdoc/>
-    internal override int WriteDataInternal(Span<float> data)
-    {
+    internal override int WriteDataInternal(Span<float> data) {
         _engine.Send(data);
         return data.Length;
     }
