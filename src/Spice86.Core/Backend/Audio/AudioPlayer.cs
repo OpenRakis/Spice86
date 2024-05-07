@@ -7,8 +7,6 @@ using System;
 /// </summary>
 public abstract class AudioPlayer : IDisposable
 {
-    private readonly InternalBufferWriter _writer;
-
     /// <summary>
     /// Whether the native resources were disposed.
     /// </summary>
@@ -20,23 +18,12 @@ public abstract class AudioPlayer : IDisposable
     /// <param name="format">Format of the audio stream.</param>
     protected AudioPlayer(AudioFormat format) {
         Format = format ?? throw new ArgumentNullException(nameof(format));
-
-        _writer = new InternalBufferWriter(this);
     }
 
     /// <summary>
     /// Gets the playback audio format.
     /// </summary>
     public AudioFormat Format { get; }
-
-    /// <summary>
-    /// Writes audio data to the output buffer.
-    /// </summary>
-    /// <param name="data">Buffer containing data to write.</param>
-    /// <returns>Number of samples actually written to the buffer.</returns>
-    public int WriteData<T>(Span<T> data) where T : unmanaged {
-        return _writer.WriteData(data);
-    }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -56,10 +43,10 @@ public abstract class AudioPlayer : IDisposable
     /// Writes the audio data to the rendering backend
     /// </summary>
     /// <param name="data">The data to write</param>
-    /// <returns>The length of data written. Might not be equal to the input data length.</returns>
-    internal abstract int WriteDataInternal(Span<float> data);
+    /// <returns>The length of data written. Equals to the input data length.</returns>
+    internal abstract int WriteData(Span<float> data);
 
     internal void WriteSilence() {
-        WriteDataInternal(new Span<float>([0]));
+        WriteData(new Span<float>([0]));
     }
 }

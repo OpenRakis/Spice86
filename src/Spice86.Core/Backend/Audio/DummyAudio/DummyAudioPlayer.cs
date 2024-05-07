@@ -16,7 +16,7 @@ sealed class DummyAudioPlayer : AudioPlayer {
     /// </summary>
     /// <param name="data">The input audio data</param>
     /// <returns>The data parameter length</returns>
-    internal override int WriteDataInternal(Span<float> data) {
+    internal override int WriteData(Span<float> data) {
         // Tell we wrote it all, it's all fake anyway
         return data.Length;
     }
