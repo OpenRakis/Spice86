@@ -1,11 +1,9 @@
-﻿namespace Spice86.Core.Backend.Audio;
-
-using Spice86.Core.Emulator.Devices.Sound;
+﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using System;
 
 /// <summary>
-/// Adapts channels of input audio data
+/// Adapts channels of input audio data from mono to stereo
 /// </summary>
 internal static class ChannelAdapter {
     /// <summary>

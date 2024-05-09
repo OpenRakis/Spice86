@@ -42,7 +42,15 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         
         Span<float> target = stackalloc float[data.Length];
         for (int i = 0; i < data.Length; i++) {
-            target[i] = data[i]  * volumeFactor * (1 - separation);
+            // Apply volume and separation to left channel
+            target[i] = data[i] * volumeFactor * (1 + separation);
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to right channel
+            target[i + 1] = data[i] * volumeFactor * (1 + separation);
+
         }
         return _channels[channel].WriteData(target);
     }
@@ -56,8 +64,15 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         float separation = channel.StereoSeparation / 100f;
 
         Span<float> target = stackalloc float[data.Length];
-        for (int i = 0; i < data.Length; i++) {
-            target[i] = (data[i] / 32768f)  * volumeFactor * (1 - separation);
+        for (int i = 0; i < data.Length; i += 2) {
+            // Apply volume and separation to left channel
+            target[i] = (data[i] / 32768f) * volumeFactor * (1 + separation);
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to right channel
+            target[i + 1] = (data[i] / 32768f) * volumeFactor * (1 + separation);
         }
 
         return _channels[channel].WriteData(target);
@@ -72,8 +87,15 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         float separation = channel.StereoSeparation / 100f;
         
         Span<float> target = stackalloc float[data.Length];
-        for (int i = 0; i < data.Length; i++) {
-            target[i] = ((data[i] - 127) / 128f)  * volumeFactor * (1 - separation);
+        for (int i = 0; i < data.Length; i += 2) {
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to left channel
+            target[i] = ((data[i] - 127) / 128f) * volumeFactor * (1 + separation);
+            // Apply volume and separation to right channel
+            target[i + 1] = ((data[i + 1] - 127) / 128f) * volumeFactor * (1 - separation);
         }
         return _channels[channel].WriteData(target);
     }
