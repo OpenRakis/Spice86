@@ -43,7 +43,7 @@ public abstract class AudioPlayer : IDisposable
     /// Writes the audio data to the rendering backend
     /// </summary>
     /// <param name="data">The data to write</param>
-    /// <returns>The length of data written. Equals to the input data length.</returns>
+    /// <returns>The length of data written. Equal to the input data length.</returns>
     internal abstract int WriteData(Span<float> data);
 
     internal void WriteSilence() {
