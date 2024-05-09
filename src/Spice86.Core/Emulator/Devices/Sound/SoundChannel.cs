@@ -37,14 +37,6 @@ public class SoundChannel {
     /// Renders the audio frame to the sound channel.
     /// </summary>
     /// <param name="data">The audio frame to mix and eventually render.</param>
-    public int Render(Span<int> data) {
-        return _mixer.Render(data, this);
-    }
-    
-    /// <summary>
-    /// Renders the audio frame to the sound channel.
-    /// </summary>
-    /// <param name="data">The audio frame to mix and eventually render.</param>
     public int Render(Span<byte> data) {
         return _mixer.Render(data, this);
     }

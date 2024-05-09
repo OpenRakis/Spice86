@@ -3,8 +3,8 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.InternalDebugger;
 
+using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 /// <summary>
 /// Basic software mixer for sound channels.
@@ -12,7 +12,6 @@ using System.Collections.ObjectModel;
 public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly AudioPlayerFactory _audioPlayerFactory;
-    private ReadOnlyDictionary<SoundChannel, AudioPlayer> _channelsReadOnlyDictionary = new(new Dictionary<SoundChannel, AudioPlayer>());
     private bool _disposed;
 
     /// <summary>
@@ -24,44 +23,61 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     }
 
     internal void Register(SoundChannel soundChannel) {
-        _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(48000, 2048));
-        _channelsReadOnlyDictionary = new(_channels);
+        _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(sampleRate: 48000, framesPerBuffer: 2048));
+        Channels = _channels.ToFrozenDictionary();
     }
-
-
+    
     /// <summary>
     /// Gets the sound channels in a read-only dictionary.
     /// </summary>
-    public IDictionary<SoundChannel, AudioPlayer> Channels => _channelsReadOnlyDictionary;
+    public FrozenDictionary<SoundChannel, AudioPlayer> Channels { get; private set; } = new Dictionary<SoundChannel, AudioPlayer>().ToFrozenDictionary();
 
     internal int Render(Span<float> data, SoundChannel channel) {
         if (channel.Volume == 0 || channel.IsMuted) {
             _channels[channel].WriteSilence();
             return data.Length;
         }
-        ApplyStereoSeparation(data, channel);
-        ApplyVolume(data, channel);
-        return _channels[channel].WriteData(data);
-    }
+        float volumeFactor = channel.Volume / 100f;
+        float separation = channel.StereoSeparation / 100f;
+        float finalVolumeFactor = volumeFactor * (1 + separation);
+        
+        Span<float> target = stackalloc float[data.Length];
+        for (int i = 0; i < data.Length; i++) {
+            // Apply volume and separation to left channel
+            target[i] = data[i] * finalVolumeFactor;
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to right channel
+            target[i + 1] = data[i] * finalVolumeFactor;
 
-    internal int Render(Span<int> data, SoundChannel channel) {
-        if (channel.Volume == 0 || channel.IsMuted) {
-            _channels[channel].WriteSilence();
-            return data.Length;
         }
-        ApplyStereoSeparation(data, channel);
-        ApplyVolume(data, channel);
-        return _channels[channel].WriteData(data);
+        return _channels[channel].WriteData(target);
     }
-
+    
     internal int Render(Span<short> data, SoundChannel channel) {
         if (channel.Volume == 0 || channel.IsMuted) {
             _channels[channel].WriteSilence();
             return data.Length;
         }
-        ApplyStereoSeparation(data, channel);
-        ApplyVolume(data, channel);
-        return _channels[channel].WriteData(data);
+        float volumeFactor = channel.Volume / 100f;
+        float separation = channel.StereoSeparation / 100f;
+        float finalVolumeFactor = volumeFactor * (1 + separation);
+
+        Span<float> target = stackalloc float[data.Length];
+        for (int i = 0; i < data.Length; i += 2) {
+            // Apply volume and separation to left channel
+            target[i] = (data[i] / 32768f) * finalVolumeFactor;
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to right channel
+            target[i + 1] = (data[i] / 32768f) * finalVolumeFactor;
+        }
+
+        return _channels[channel].WriteData(target);
     }
     
     internal int Render(Span<byte> data, SoundChannel channel) {
@@ -69,9 +85,22 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
             _channels[channel].WriteSilence();
             return data.Length;
         }
-        ApplyStereoSeparation(data, channel);
-        ApplyVolume(data, channel);
-        return _channels[channel].WriteData(data);
+        float volumeFactor = channel.Volume / 100f;
+        float separation = channel.StereoSeparation / 100f;
+        float finalVolumeFactor = volumeFactor * (1 + separation);
+        
+        Span<float> target = stackalloc float[data.Length];
+        for (int i = 0; i < data.Length; i += 2) {
+            // Apply volume and separation to left channel
+            target[i] = ((data[i] - 127) / 128f) * finalVolumeFactor;
+            // Ensure we don't go out of range
+            if (i + 1 >= data.Length) {
+                break;
+            }
+            // Apply volume and separation to right channel
+            target[i + 1] = ((data[i + 1] - 127) / 128f) * finalVolumeFactor;
+        }
+        return _channels[channel].WriteData(target);
     }
     
     private void Dispose(bool disposing) {
@@ -94,61 +123,5 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     /// <inheritdoc/>
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         emulatorDebugger.Visit(this);
-    }
-    
-    private static void ApplyVolume(Span<float> data, SoundChannel channel) {
-        float volumeFactor = channel.Volume / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] *= volumeFactor;
-        }
-    }
-
-    private static void ApplyVolume(Span<int> data, SoundChannel channel) {
-        float volumeFactor = channel.Volume / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (int)(data[i] * volumeFactor);
-        }
-    }
-
-    private static void ApplyVolume(Span<short> data, SoundChannel channel) {
-        float volumeFactor = channel.Volume / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (short)(data[i] * volumeFactor);
-        }
-    }
-    
-    private static void ApplyVolume(Span<byte> data, SoundChannel channel) {
-        float volumeFactor = channel.Volume / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (byte)(data[i] * volumeFactor);
-        }
-    }
-
-    private static void ApplyStereoSeparation(Span<float> data, SoundChannel channel) {
-        float separation = channel.StereoSeparation / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] *= (1 - separation);
-        }
-    }
-
-    private static void ApplyStereoSeparation(Span<int> data, SoundChannel channel) {
-        float separation = channel.StereoSeparation / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (int)(data[i] * (1 - separation));
-        }
-    }
-
-    private static void ApplyStereoSeparation(Span<short> data, SoundChannel channel) {
-        float separation = channel.StereoSeparation / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (short)(data[i] * (1 - separation));
-        }
-    }
-    
-    private static void ApplyStereoSeparation(Span<byte> data, SoundChannel channel) {
-        float separation = channel.StereoSeparation / 100f;
-        for(int i = 0; i < data.Length; i++) {
-            data[i] = (byte)(data[i] * (1 - separation));
-        }
     }
 }
