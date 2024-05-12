@@ -29,6 +29,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
+    private readonly RecordedDataReader _recordedDataReader;
 
     private bool ListensToBreakpoints => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
 
@@ -41,7 +42,9 @@ public sealed class ProgramExecutor : IProgramExecutor {
     public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
         _configuration = configuration;
         _loggerService = loggerService;
-        Machine = CreateMachine(gui);
+        (RecordedDataReader Reader, Machine Machine) fileReaderAndMachine = CreateExecutableFileReaderAndMachine(gui);
+        _recordedDataReader = fileReaderAndMachine.Reader;
+        Machine = fileReaderAndMachine.Machine;
         _gdbServer = CreateGdbServer(gui);
         _emulationLoop = new(loggerService, Machine.Cpu, Machine.CpuState, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
@@ -63,10 +66,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <inheritdoc/>
     public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
 
-    /// <summary>
-    /// Steps a single instruction for the internal UI debugger
-    /// </summary>
-    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
+    /// <inheritdoc/>
     public void StepInstruction() {
         _gdbServer?.StepInstruction();
         IsPaused = false;
@@ -147,13 +147,23 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
     }
 
-    private Machine CreateMachine(IGui? gui) {
+    private (RecordedDataReader Reader, Machine machine) CreateExecutableFileReaderAndMachine(IGui? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
         State cpuState = new();
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
+        Machine machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
+        return (reader, machine);
+    }
+    
+    /// <inheritdoc/>
+    public void LoadFileToRun() {
+        ExecutableFileLoader loader = InitializeExecution(_recordedDataReader);
+        LoadFileToRun(_configuration, loader);
+    }
+
+    private ExecutableFileLoader InitializeExecution(RecordedDataReader reader) {
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -162,8 +172,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             }
         }
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
-        LoadFileToRun(_configuration, loader);
-        return Machine;
+        return loader;
     }
 
     private GdbServer? CreateGdbServer(IGui? gui) {

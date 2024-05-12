@@ -9,6 +9,11 @@ using Spice86.Core.Emulator.InternalDebugger;
 /// </summary>
 public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     /// <summary>
+    /// Parses the input executable file, and initializes the internal emulator service container.
+    /// </summary>
+    void LoadFileToRun();
+    
+    /// <summary>
     /// Starts the emulated program.
     /// </summary>
     void Run();
@@ -25,12 +30,13 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     bool IsPaused { get; set; }
 
     /// <summary>
-    /// Gets whether can generate an unconditional GDB breakpoint.
+    /// Gets whether we can generate an unconditional GDB breakpoint.
     /// </summary>
     bool IsGdbCommandHandlerAvailable { get; }
 
     /// <summary>
-    /// Steps the current instruction.
+    /// Steps a single instruction for the internal UI debugger
     /// </summary>
+    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
     void StepInstruction();
 }

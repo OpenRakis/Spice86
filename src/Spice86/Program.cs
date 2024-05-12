@@ -60,6 +60,7 @@ public class Program {
 
     private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
         ProgramExecutor programExecutor = new(configuration, loggerService, null);
+        programExecutor.LoadFileToRun();
         programExecutor.Run();
     }
 

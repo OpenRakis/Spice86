@@ -14,6 +14,8 @@ public class ProgramExecutorFactory : IProgramExecutorFactory {
     }
 
     public IProgramExecutor Create(IGui? gui = null) {
-        return new ProgramExecutor(_configuration, _loggerService, gui);
+        IProgramExecutor programExecutor = new ProgramExecutor(_configuration, _loggerService, gui);
+        programExecutor.LoadFileToRun();
+        return programExecutor;
     }
 }
