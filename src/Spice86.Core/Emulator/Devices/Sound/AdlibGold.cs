@@ -26,17 +26,17 @@ public sealed class AdlibGold  {
 
     public void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
 
-    private void Process(short[] input, uint framesRemaining, ref AudioFrame output) {
+    private void Process(short[] input, uint framesRemaining, AudioFrame output) {
         for (var index = 0; framesRemaining-- > 0; index++) {
-            AudioFrame frame = new(input[0], input[1]);
-            AudioFrame wet = _surroundProcessor.Process(ref frame);
+            AudioFrame frame = new(output.AsSpan());
+            AudioFrame wet = _surroundProcessor.Process(frame);
 
             // Additional wet signal level boost to make the emulated
             // sound more closely resemble real hardware recordings.
             const float wetBoost = 1.8f;
             frame.Left = wet.Left * wetBoost;
             frame.Right = wet.Right * wetBoost;
-            frame = _surroundProcessor.Process(ref frame);
+            frame = _surroundProcessor.Process(frame);
 
             output[index] = frame.Left;
             output[index + 1] = frame.Right;
@@ -82,7 +82,8 @@ public sealed class AdlibGold  {
     /// </summary>
     private class StereoProcessor {
         private readonly ushort _sampleRate = 0;
-        private AudioFrame _gain = new();
+        //Left and Right channel gain values.
+        private float[] _gain = new float[2];
         private StereoProcessorSourceSelector _sourceSelector = new();
         private StereoProcessorStereoMode _stereoMode = new();
 
@@ -153,18 +154,18 @@ public sealed class AdlibGold  {
             switch (reg) {
                 case StereoProcessorControlReg.VolumeLeft: {
                         var value = data & volumeControlMask;
-                        _gain.Left = CalcVolumeGain(value);
+                        _gain[0] = CalcVolumeGain(value);
                         _loggerService.Debug("ADLIBGOLD: Stereo: Final left volume set to {Left}.2fdB {Value}",
-                            _gain.Left,
+                            _gain[0],
                             value);
                     }
                     break;
 
                 case StereoProcessorControlReg.VolumeRight: {
                         var value = data & volumeControlMask;
-                        _gain.Right = CalcVolumeGain(value);
+                        _gain[1] = CalcVolumeGain(value);
                         _loggerService.Debug("ADLIBGOLD: Stereo: Final right volume set to {Right}.2fdB {Value}",
-                            _gain.Right,
+                            _gain[1],
                             value);
                     }
                     break;
@@ -224,8 +225,8 @@ public sealed class AdlibGold  {
 
         public AudioFrame ProcessSourceSelection(AudioFrame frame) {
             return _sourceSelector switch {
-                StereoProcessorSourceSelector.SoundA1 or StereoProcessorSourceSelector.SoundA2 => new(frame.Left, frame.Left),
-                StereoProcessorSourceSelector.SoundB1 or StereoProcessorSourceSelector.SoundB2 => new(frame.Right, frame.Right),
+                StereoProcessorSourceSelector.SoundA1 or StereoProcessorSourceSelector.SoundA2 => new(frame.AsSpan()[0..0]),
+                StereoProcessorSourceSelector.SoundB1 or StereoProcessorSourceSelector.SoundB2 => new(frame.AsSpan()[1..1]),
                 _ => frame,// Dune sends an invalid source selector value of 0 during the
                            // intro; we'll just revert to stereo operation
             };
@@ -311,11 +312,11 @@ public sealed class AdlibGold  {
             Ym7128B.ChipIdealStart(ref _chip);
         }
 
-        public AudioFrame Process(ref AudioFrame frame) {
+        public AudioFrame Process(AudioFrame frame) {
             ChipIdealProcessData data = new();
             data.Inputs[0] = frame.Left + frame.Right;
             Ym7128B.ChipIdealProcess(ref _chip, ref data);
-            return new(data.Outputs[0], data.Outputs[1]);
+            return new(data.Outputs);
         }
 
         public void ControlWrite(byte val) {

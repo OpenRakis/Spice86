@@ -189,7 +189,7 @@ public class Opl {
     /// </summary>
     public byte[] Cache { get; private set; } = new byte[512];
 
-    private Queue<AudioFrame> _fifo = new();
+    private Queue<Memory<float>> _fifo = new();
 
     private Mode _mode;
 
