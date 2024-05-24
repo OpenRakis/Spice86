@@ -7,7 +7,6 @@
     xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
-    xmlns:userControls="clr-namespace:Spice86.UserControls"
     xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
     Title="Debug"
@@ -17,13 +16,13 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"
-    x:DataType="vm:DebugViewModel"
+    x:DataType="vm:DebugWindowViewModel"
     CanResize="True"
     Icon="/Assets/Spice86.ico"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
     <Design.DataContext>
-        <vm:DebugViewModel />
+        <vm:DebugWindowViewModel />
     </Design.DataContext>
     <Window.Resources>
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />

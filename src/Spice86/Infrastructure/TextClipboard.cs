@@ -3,7 +3,7 @@
 using Avalonia.Input.Platform;
 
 /// <inheritdoc cref="ITextClipboard" />
-internal class TextClipboard : ITextClipboard {
+public class TextClipboard : ITextClipboard {
     private readonly IClipboard? _clipboard;
 
     public TextClipboard(IClipboard? clipboard) => _clipboard = clipboard;

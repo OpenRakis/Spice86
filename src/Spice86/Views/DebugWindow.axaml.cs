@@ -11,6 +11,6 @@ public sealed partial class DebugWindow : Window {
 
     protected override void OnDataContextChanged(EventArgs e) {
         base.OnDataContextChanged(e);
-        ((DebugViewModel?)DataContext)?.StartObserverTimer();
+        ((DebugWindowViewModel?)DataContext)?.StartObserverTimer();
     }
 }

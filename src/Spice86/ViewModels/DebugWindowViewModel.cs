@@ -25,7 +25,7 @@ using Spice86.Shared.Utils;
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
+public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
     [ObservableProperty]
     private MachineInfo _machine = new();
 
@@ -37,7 +37,8 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
 
     private readonly IPauseStatus? _pauseStatus;
 
-    [ObservableProperty] private bool _isLoading = true;
+    [ObservableProperty]
+    private bool _isLoading = true;
 
     private IMemory? _memory;
 
@@ -46,7 +47,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     [ObservableProperty]
     private MixerViewModel? _softwareMixerViewModel;
 
-    public DebugViewModel() {
+    public DebugWindowViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
@@ -95,7 +96,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
     [ObservableProperty]
     private MemoryViewModel? _memoryViewModel;
 
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
+    public DebugWindowViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;

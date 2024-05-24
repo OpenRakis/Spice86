@@ -9,7 +9,7 @@ using Spice86.ViewModels;
 /// </summary>
 public interface IWindowActivator {
     /// <summary>
-    /// Activates the Window corresponding to the <see cref="DebugViewModel"/>
+    /// Activates the Window corresponding to the <see cref="DebugWindowViewModel"/>
     /// </summary>
     /// <param name="uiDispatcherTimer">The UI dispatcher timer, in order to execute code after a set amount of time has passed repeatedly.</param>
     /// <param name="programExecutor">The class than can start, pause, and stop the emulation process.</param>

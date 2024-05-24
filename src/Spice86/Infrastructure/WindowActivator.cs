@@ -1,14 +1,9 @@
 ﻿namespace Spice86.Infrastructure;
 
-using Avalonia.Controls;
-
 using Spice86.Core.Emulator;
 using Spice86.Interfaces;
 using Spice86.ViewModels;
 using Spice86.Views;
-
-using System;
-using System.Collections.Generic;
 
 /// <inheritdoc cref="IWindowActivator" />
 internal class WindowActivator : IWindowActivator {
@@ -20,7 +15,7 @@ internal class WindowActivator : IWindowActivator {
             _debugWindow.Activate();
             return;
         }
-        var viewModel = new DebugViewModel(uiDispatcherTimer, pauseStatus) {
+        var viewModel = new DebugWindowViewModel(uiDispatcherTimer, pauseStatus) {
             ProgramExecutor = programExecutor
         };
         _debugWindow = new DebugWindow {
