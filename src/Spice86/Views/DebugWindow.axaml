@@ -40,7 +40,7 @@
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
                                 <pgc:PropertyGrid
                                     Grid.Row="1"
-                                    SelectedObject="{CompiledBinding State}"
+                                    DataContext="{CompiledBinding State}"
                                     ShowStyle="Alphabetic"
                                     ShowTitle="False">
                                     <TextElement.FontFamily>
@@ -52,7 +52,7 @@
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
                                 <pgc:PropertyGrid
                                     Grid.Row="1"
-                                    SelectedObject="{CompiledBinding Flags}"
+                                    DataContext="{CompiledBinding Flags}"
                                     ShowStyle="Alphabetic"
                                     ShowTitle="False">
                                     <TextElement.FontFamily>
@@ -316,7 +316,7 @@
                                 <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
                                 <pgc:PropertyGrid
                                     Grid.Row="1"
-                                    SelectedObject="{CompiledBinding Midi}"
+                                    DataContext="{CompiledBinding Midi}"
                                     ShowStyle="Alphabetic"
                                     ShowTitle="False">
                                     <TextElement.FontFamily>
