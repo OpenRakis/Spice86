@@ -64,8 +64,4 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
             _argbPalette = component as ArgbPalette;
         }
     }
-
-    public void VisitSoundMixer(SoftwareMixer mixer) {
-        
-    }
 }
