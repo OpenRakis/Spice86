@@ -42,7 +42,7 @@ using Timer = System.Timers.Timer;
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
-    private readonly IUIDispatcherTimer _uiDispatcherTimer;
+    private readonly IUIDispatcherTimerFactory _iuiDispatcherTimerFactory;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
@@ -73,15 +73,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory iuiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
-        _uiDispatcherTimer = uiDispatcherTimer;
+        _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
         _hostStorageProvider = hostStorageProvider;
         _textClipboard = textClipboard;
-        _uiDispatcherTimer = uiDispatcherTimer;
+        _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
         _uiDispatcher = uiDispatcher;
         _windowActivator = windowActivator;
     }
@@ -319,7 +319,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [RelayCommand]
     public void ShowDebugWindow() {
         if(_programExecutor is not null) {
-            _windowActivator.ActivateDebugWindow(_uiDispatcherTimer, _programExecutor, this);
+            _windowActivator.ActivateDebugWindow(_iuiDispatcherTimerFactory, _programExecutor, this);
         }
     }
 
@@ -572,8 +572,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
-        PerformanceViewModel = new(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer(), this);
-        DebugViewModel = new DebugWindowViewModel(_uiDispatcherTimer, this);
+        PerformanceViewModel = new(_iuiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
+        DebugViewModel = new DebugWindowViewModel(_iuiDispatcherTimerFactory, this);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

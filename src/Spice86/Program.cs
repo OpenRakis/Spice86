@@ -74,7 +74,7 @@ public class Program {
         using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
             new ProgramExecutorFactory(configuration, loggerService), new WindowActivator(),
             new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
-            new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimer(), configuration, loggerService);
+            new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
         desktop.Start(args);

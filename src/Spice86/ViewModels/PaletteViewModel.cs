@@ -24,12 +24,12 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public PaletteViewModel(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor) {
+    public PaletteViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IProgramExecutor programExecutor) {
         programExecutor?.Accept(this);
         for (int i = 0; i < 256; i++) {
             _palette.Add(new (){Fill = new SolidColorBrush()});
         }
-        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
+        iuiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
     }
 
     [ObservableProperty]

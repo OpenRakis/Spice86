@@ -28,8 +28,8 @@ public partial class MixerViewModel : ViewModelBase {
 
     private SoftwareMixer? _mixer;
 
-    public MixerViewModel(IUIDispatcherTimer dispatcherTimer) {
-        dispatcherTimer.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateChannels);
+    public MixerViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateChannels);
     }
 
     private void UpdateChannels(object? sender, EventArgs e) {

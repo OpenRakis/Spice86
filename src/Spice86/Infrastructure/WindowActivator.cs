@@ -10,12 +10,12 @@ internal class WindowActivator : IWindowActivator {
     private DebugWindow? _debugWindow;
 
     /// <inheritdoc />
-    public void ActivateDebugWindow(IUIDispatcherTimer uiDispatcherTimer, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
+    public void ActivateDebugWindow(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
         if (_debugWindow is not null) {
             _debugWindow.Activate();
             return;
         }
-        var viewModel = new DebugWindowViewModel(uiDispatcherTimer, pauseStatus) {
+        var viewModel = new DebugWindowViewModel(iuiDispatcherTimerFactory, pauseStatus) {
             ProgramExecutor = programExecutor
         };
         _debugWindow = new DebugWindow {

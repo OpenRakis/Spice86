@@ -71,10 +71,12 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     public IProgramExecutor? ProgramExecutor {
         get => _programExecutor;
         set {
-            if (value is not null && _uiDispatcherTimer is not null) {
-                _programExecutor = value;
-                PaletteViewModel = new(_uiDispatcherTimer, value);
+            if (value is null || _iuiDispatcherTimerFactory is null) {
+                return;
             }
+
+            _programExecutor = value;
+            PaletteViewModel = new(_iuiDispatcherTimerFactory, value);
         }
     }
 
@@ -84,7 +86,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     [ObservableProperty]
     private int _selectedTab;
 
-    private readonly IUIDispatcherTimer? _uiDispatcherTimer;
+    private readonly IUIDispatcherTimerFactory? _iuiDispatcherTimerFactory;
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
@@ -95,12 +97,13 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     [ObservableProperty]
     private VideoCardViewModel? _videoCardViewModel;
 
-    public DebugWindowViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
+    public DebugWindowViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
-        _uiDispatcherTimer = uiDispatcherTimer;
-        SoftwareMixerViewModel = new(uiDispatcherTimer);
+        iuiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
+        _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
+        SoftwareMixerViewModel = new(iuiDispatcherTimerFactory);
         VideoCardViewModel = new();
     }
 
@@ -109,11 +112,6 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
         if (IsPaused) {
             MemoryViewModel?.UpdateBinaryDocument();
         }
-    }
-
-    [RelayCommand]
-    public void StartObserverTimer() {
-        _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
     }
 
     private Decoder? _decoder;
