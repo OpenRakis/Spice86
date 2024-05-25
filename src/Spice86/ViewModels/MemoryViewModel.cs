@@ -34,10 +34,13 @@ public partial class MemoryViewModel : ViewModelBase {
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
         if(e.PropertyName == nameof(IPauseStatus.IsPaused)) {
             IsPaused = _pauseStatus.IsPaused;
+            if(IsPaused) {
+                UpdateBinaryDocument();
+            }
         }
     }
 
-    public void UpdateBinaryDocument() {
+    private void UpdateBinaryDocument() {
         MemoryBinaryDocument = new MemoryBinaryDocument(_memory);
     }
 
@@ -46,7 +49,8 @@ public partial class MemoryViewModel : ViewModelBase {
     }
 
 
-    [ObservableProperty] private bool _isEditingMemory;
+    [ObservableProperty]
+    private bool _isEditingMemory;
 
     [ObservableProperty]
     private string? _memoryEditAddress;

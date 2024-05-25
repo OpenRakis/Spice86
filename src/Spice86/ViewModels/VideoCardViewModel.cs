@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Models.Debugging;
 
 public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
@@ -20,16 +21,15 @@ public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
                 break;
         }
     }
-    
-    
-    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+
+    private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
         VideoCard.RendererHeight = vgaRenderer.Height;
         VideoCard.RendererBufferSize = vgaRenderer.BufferSize;
         VideoCard.LastFrameRenderTime = vgaRenderer.LastFrameRenderTime;
     }
 
-    public void VisitVideoState(IVideoState videoState) {
+    private void VisitVideoState(IVideoState videoState) {
         VideoCard.GeneralMiscellaneousOutputRegister = videoState.GeneralRegisters.MiscellaneousOutput.Value;
         VideoCard.GeneralClockSelect = videoState.GeneralRegisters.MiscellaneousOutput.ClockSelect;
         VideoCard.GeneralEnableRam = videoState.GeneralRegisters.MiscellaneousOutput.EnableRam;

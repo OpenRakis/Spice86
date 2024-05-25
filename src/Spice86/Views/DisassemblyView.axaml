@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.DisassemblyView"
+             x:DataType="viewModels:DisassemblyViewModel">
+    <UserControl.Resources>
+        <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
+    </UserControl.Resources>
+    <Grid RowDefinitions="Auto,Auto,*">
+        <TextBlock
+            Grid.Row="0"
+            IsVisible="{Binding !IsPaused}"
+            Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
+            TextWrapping="Wrap" />
+        <Grid
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            ColumnDefinitions="Auto,Auto,Auto">
+            <Button
+                Grid.Column="1"
+                Margin="5"
+                Command="{Binding StepInstructionCommand}"
+                Content="Step instruction"
+                IsVisible="{Binding IsGdbServerAvailable}" />
+            <Button
+                Grid.Column="2"
+                Margin="5"
+                Command="{Binding PauseCommand}"
+                Content="Pause"
+                IsVisible="{Binding !IsPaused}" />
+            <Button
+                Grid.Column="2"
+                Margin="5"
+                Command="{Binding ContinueCommand}"
+                Content="Continue"
+                IsVisible="{Binding IsPaused}" />
+        </Grid>
+        <DataGrid
+            Grid.Row="2"
+            AutoGenerateColumns="False"
+            CanUserReorderColumns="True"
+            CanUserResizeColumns="True"
+            CanUserSortColumns="False"
+            IsReadOnly="True"
+            IsVisible="{Binding IsPaused}"
+            ItemsSource="{Binding Instructions}">
+            <TextElement.FontFamily>
+                <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+            </TextElement.FontFamily>
+            <DataGrid.Columns>
+                <DataGridTextColumn Binding="{Binding Address}" Header="Address" />
+                <DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
+                <DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
+                <DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="Disassembly (MASM)" />
+                <DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
+                <DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
+                <DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
+                <DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
+                <DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
+                <DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
+                <DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
+                <DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
+                <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
+                <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
