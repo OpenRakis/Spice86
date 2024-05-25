@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.MidiView"
+             x:DataType="viewModels:MidiViewModel">
+    <ScrollViewer>
+        <WrapPanel>
+            <Grid Margin="5" RowDefinitions="Auto,*">
+                <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
+                <pgc:PropertyGrid
+                    Grid.Row="1"
+                    DataContext="{CompiledBinding Midi}"
+                    ShowStyle="Alphabetic"
+                    ShowTitle="False">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                </pgc:PropertyGrid>
+            </Grid>
+        </WrapPanel>
+    </ScrollViewer>
+</UserControl>

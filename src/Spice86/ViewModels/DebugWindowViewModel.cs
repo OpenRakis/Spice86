@@ -12,7 +12,6 @@ using Iced.Intel;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
@@ -20,6 +19,7 @@ using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
+using Spice86.Views;
 
 using System.ComponentModel;
 using System.Reflection;
@@ -100,6 +100,9 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     [ObservableProperty]
     private CpuViewModel? _cpuViewModel;
 
+    [ObservableProperty]
+    private MidiViewModel? _midiViewModel;
+
     public DebugWindowViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
@@ -109,6 +112,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
         SoftwareMixerViewModel = new(iuiDispatcherTimerFactory);
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
+        MidiViewModel = new();
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -127,17 +131,14 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(component is Midi externalMidiDevice) {
-            VisitExternalMidiDevice(externalMidiDevice);
-        }
         if(component is Cpu cpu) {
             VisitCpu(cpu);
         }
         
         CpuViewModel?.Visit(component);
-        
         VideoCardViewModel?.Visit(component);
-
+        MidiViewModel?.Visit((component));
+        
         if (component is SoftwareMixer softwareMixer) {
             VisitSoundMixer(softwareMixer);
         }
@@ -154,12 +155,6 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
         MemoryViewModel ??= new(memory, _pauseStatus);
     }
 
-    private void VisitExternalMidiDevice(Midi externalMidiDevice) {
-        Midi.LastPortRead = externalMidiDevice.LastPortRead;
-        Midi.LastPortWritten = externalMidiDevice.LastPortWritten;
-        Midi.LastPortWrittenValue = externalMidiDevice.LastPortWrittenValue;
-    }
-
     private bool _needToUpdateDisassembly;
 
     public void VisitCpu(Cpu cpu) {
@@ -171,9 +166,6 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
             _needToUpdateDisassembly = false;
         }
     }
-
-    [ObservableProperty]
-    private MidiInfo _midi = new();
 
     [RelayCommand]
     public void Pause() {

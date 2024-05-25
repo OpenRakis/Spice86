@@ -110,22 +110,7 @@
                     <views:PaletteView DataContext="{Binding PaletteViewModel}" />
                 </TabItem>
                 <TabItem Header="General MIDI / MT-32">
-                    <ScrollViewer>
-                        <WrapPanel>
-                            <Grid Margin="5" RowDefinitions="Auto,*">
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">Ports</Label>
-                                <pgc:PropertyGrid
-                                    Grid.Row="1"
-                                    DataContext="{CompiledBinding Midi}"
-                                    ShowStyle="Alphabetic"
-                                    ShowTitle="False">
-                                    <TextElement.FontFamily>
-                                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                                    </TextElement.FontFamily>
-                                </pgc:PropertyGrid>
-                            </Grid>
-                        </WrapPanel>
-                    </ScrollViewer>
+                    <views:MidiView DataContext="{Binding MidiViewModel}" />
                 </TabItem>
                 <TabItem Header="Software Mixer">
                     <views:MixerView DataContext="{Binding SoftwareMixerViewModel}" />
