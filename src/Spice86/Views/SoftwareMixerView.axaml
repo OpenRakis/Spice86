@@ -1,18 +1,17 @@
 <UserControl
-    x:Class="Spice86.Views.MixerView"
+    x:Class="Spice86.Views.SoftwareMixerView"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:converters="clr-namespace:Spice86.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"
-    x:DataType="viewModels:MixerViewModel"
+    x:DataType="viewModels:SoftwareMixerViewModel"
     mc:Ignorable="d">
     <Design.DataContext>
-        <viewModels:PerformanceViewModel />
+        <viewModels:SoftwareMixerViewModel />
     </Design.DataContext>
     <ScrollViewer>
         <ItemsControl ItemsSource="{Binding Channels}">

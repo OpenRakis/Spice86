@@ -60,8 +60,6 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(_argbPalette is null) {
-            _argbPalette = component as ArgbPalette;
-        }
+        _argbPalette ??= component as ArgbPalette;
     }
 }

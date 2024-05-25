@@ -48,7 +48,7 @@
                     <views:MidiView DataContext="{Binding MidiViewModel}" />
                 </TabItem>
                 <TabItem Header="Software Mixer">
-                    <views:MixerView DataContext="{Binding SoftwareMixerViewModel}" />
+                    <views:SoftwareMixerView DataContext="{Binding SoftwareMixerViewModel}" />
                 </TabItem>
             </TabControl>
             <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">

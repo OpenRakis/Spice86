@@ -3,6 +3,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
@@ -13,41 +14,37 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBase {
-    private readonly IMemory _memory;
+public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
+    private IMemory? _memory;
     [ObservableProperty]
-    private MemoryBinaryDocument _memoryBinaryDocument;
+    private MemoryBinaryDocument? _memoryBinaryDocument;
 
     [ObservableProperty]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
 
-    public MemoryViewModel(IMemory memory, IPauseStatus pauseStatus) {
-        _memory = memory;
-        _memoryBinaryDocument = new MemoryBinaryDocument(memory);
+    public MemoryViewModel( IPauseStatus pauseStatus) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
     }
 
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        if(e.PropertyName == nameof(IPauseStatus.IsPaused)) {
-            IsPaused = _pauseStatus.IsPaused;
-            if(IsPaused) {
-                UpdateBinaryDocument();
-            }
+        if (e.PropertyName != nameof(IPauseStatus.IsPaused)) {
+            return;
+        }
+        IsPaused = _pauseStatus.IsPaused;
+        if(IsPaused) {
+            UpdateBinaryDocument();
         }
     }
 
     private void UpdateBinaryDocument() {
-        MemoryBinaryDocument = new MemoryBinaryDocument(_memory);
+        if (_memory is not null) {
+            MemoryBinaryDocument = new MemoryBinaryDocument(_memory);
+        }
     }
-
-    public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
-        MemoryBinaryDocument.WriteBytes(offset, buffer);
-    }
-
 
     [ObservableProperty]
     private bool _isEditingMemory;
@@ -61,7 +58,7 @@ public partial class MemoryViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void EditMemory() {
         IsEditingMemory = true;
-        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
+        if (_memory is not null && MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
             MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
         }
     }
@@ -104,8 +101,16 @@ public partial class MemoryViewModel : ViewModelBase {
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
-        MemoryBinaryDocument.WriteBytes(address.Value, BitConverter.GetBytes(value));
+        MemoryBinaryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
         UpdateBinaryDocument();
         IsEditingMemory = false;
+    }
+
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        if (component is not IMemory memory) {
+            return;
+        }
+        _memory ??= memory;
+        MemoryBinaryDocument ??= new MemoryBinaryDocument(memory);
     }
 }

@@ -32,7 +32,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     private bool _isPaused;
 
-
     public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
 
     public DisassemblyViewModel() {
@@ -110,7 +109,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         while (Instructions.Count < 50) {
             var instructionAddress = emulatedMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
-            CpuInstructionInfo instructionInfo = new CpuInstructionInfo {
+            CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
                 Length = instruction.Length,
