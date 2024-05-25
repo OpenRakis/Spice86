@@ -94,7 +94,7 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Grid.Row="2" Background="{StaticResource SystemChromeBlackHighColor}">
+		<Border Grid.Row="2">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
