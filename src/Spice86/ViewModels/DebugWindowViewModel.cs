@@ -11,9 +11,7 @@ using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 
-public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
-    private readonly IPauseStatus? _pauseStatus;
-
+public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private DateTime? _lastUpdate;
     
@@ -21,6 +19,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     private int _selectedTab;
 
     private readonly IUIDispatcherTimerFactory? _uiDispatcherTimerFactory;
+    private readonly IDebuggableComponent? _rootComponent;
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
@@ -53,46 +52,34 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, ID
     public void ForceUpdate() {
         UpdateValues(this, EventArgs.Empty);
     }
-
-    private IProgramExecutor? _programExecutor;
-
-    public IProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set {
-            if (value is null || _uiDispatcherTimerFactory is null) {
-                return;
-            }
-            _programExecutor = value;
-            PaletteViewModel = new(_uiDispatcherTimerFactory, value);
-            if (_pauseStatus is not null) {
-                DisassemblyViewModel = new(value, _pauseStatus);
-            }
-        }
-    }
-
-    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
+    
+    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IDebuggableComponent rootComponent) {
+        _rootComponent = rootComponent;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
-        SoftwareMixerViewModel = new(uiDispatcherTimerFactory);
+        DisassemblyViewModel = new(pauseStatus);
+        PaletteViewModel = new();
+        SoftwareMixerViewModel = new();
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
         MemoryViewModel = new(pauseStatus);
+        Dispatcher.UIThread.Post(() => rootComponent.Accept(this), DispatcherPriority.Background);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        ProgramExecutor?.Accept(this);
-        LastUpdate = DateTime.Now;
+        _rootComponent?.Accept(this);
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
+        PaletteViewModel?.Visit(component);
         DisassemblyViewModel?.Visit(component);
         CpuViewModel?.Visit(component);
         VideoCardViewModel?.Visit(component);
         MidiViewModel?.Visit((component));
         SoftwareMixerViewModel?.Visit(component);
         MemoryViewModel?.Visit(component);
+        LastUpdate = DateTime.Now;
     }
 
     public void ShowColorPalette() {

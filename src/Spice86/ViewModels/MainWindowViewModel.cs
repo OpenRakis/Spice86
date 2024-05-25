@@ -30,6 +30,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
@@ -46,10 +47,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IWindowActivator _windowActivator;
+    private readonly IDebugWindowActivator _debugWindowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
+    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -73,7 +75,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory iuiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory iuiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
@@ -83,7 +85,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _textClipboard = textClipboard;
         _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
         _uiDispatcher = uiDispatcher;
-        _windowActivator = windowActivator;
+        _debugWindowActivator = debugWindowActivator;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -169,7 +171,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
-    public IDebugViewModel? DebugViewModel { get; set; }
 
     public int Width { get; private set; }
 
@@ -297,7 +298,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _windowActivator.CloseDebugWindow();
+        _debugWindowActivator.CloseDebugWindow();
         RunEmulator();
     }
 
@@ -318,15 +319,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public void ShowDebugWindow() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateDebugWindow(_iuiDispatcherTimerFactory, _programExecutor, this);
+        if(_debugViewModel is not null) {
+            _debugWindowActivator.ActivateDebugWindow(_debugViewModel);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
         ShowDebugWindow();
-        DebugViewModel?.ShowColorPalette();
+        _debugViewModel?.ShowColorPalette();
     }
 
     [RelayCommand]
@@ -465,7 +466,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (!_disposed) {
             _disposed = true;
             if (disposing) {
-                _windowActivator.CloseDebugWindow();
+                _debugWindowActivator.CloseDebugWindow();
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
                 _uiDispatcher.Post(() => {
@@ -573,7 +574,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
         PerformanceViewModel = new(_iuiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        DebugViewModel = new DebugWindowViewModel(_iuiDispatcherTimerFactory, this);
+        _debugViewModel = new DebugWindowViewModel(_iuiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

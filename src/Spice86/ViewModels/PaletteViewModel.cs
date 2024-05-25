@@ -1,53 +1,34 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     private ArgbPalette? _argbPalette;
-
     public PaletteViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
-    public PaletteViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IProgramExecutor programExecutor) {
-        programExecutor?.Accept(this);
-        for (int i = 0; i < 256; i++) {
-            _palette.Add(new (){Fill = new SolidColorBrush()});
-        }
-        iuiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateColors);
+        Dispatcher.UIThread.Post(() => {
+            for (int i = 0; i < 256; i++) {
+                _palette.Add(new (){Fill = new SolidColorBrush()});
+            }
+        });
     }
 
     [ObservableProperty]
     private AvaloniaList<Rectangle> _palette = new();
 
-    /// <summary>
-    /// Invoked by the timer to update the displayed colors.
-    /// </summary>
-    /// <param name="sender">Source of the event.</param>
-    /// <param name="e">Unused EventArgs instance.</param>
-    private void UpdateColors(object? sender, EventArgs e) {
+    private void UpdateColors(ArgbPalette palette) {
         try {
-            if(_argbPalette is null) {
-                return;
-            }
             for(int i = 0; i < Palette.Count; i++) {
                 Rectangle rectangle = Palette[i];
-                uint source = _argbPalette[i];
+                uint source = palette[i];
                 Rgb rgb = Rgb.FromUint(source);
                 if (rectangle.Fill is SolidColorBrush fill) {
                     fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
@@ -61,5 +42,8 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
         _argbPalette ??= component as ArgbPalette;
+        if (_argbPalette is not null) {
+            UpdateColors(_argbPalette);
+        }
     }
 }

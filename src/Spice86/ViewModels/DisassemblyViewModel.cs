@@ -20,19 +20,21 @@ using Spice86.Shared.Utils;
 using System.ComponentModel;
 
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IProgramExecutor? _programExecutor;
     private readonly IPauseStatus? _pauseStatus;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
+    private IProgramExecutor? _programExecutor;
 
     [ObservableProperty]
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
     
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     private bool _isPaused;
 
-    public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
+    [ObservableProperty]
+    private bool _isGdbServerAvailable;
 
     public DisassemblyViewModel() {
         if (!Design.IsDesignMode) {
@@ -40,9 +42,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel(IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
+    public DisassemblyViewModel(IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
-        _programExecutor = programExecutor;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
     }
@@ -57,7 +58,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     public void Visit<T>(T component) where T : IDebuggableComponent {
         switch (component) {
             case IMemory mem:
-                _memory = mem;
+                _memory ??= mem;
                 break;
             case Cpu cpu: {
                 if (_memory is not null && _needToUpdateDisassembly && IsPaused) {
@@ -65,6 +66,10 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
                 }
                 break;
             }
+            case IProgramExecutor programExecutor:
+                _programExecutor ??= programExecutor;
+                IsGdbServerAvailable = programExecutor.IsGdbCommandHandlerAvailable;
+                break;
         }
     }
 
@@ -81,7 +86,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsPaused))]
     public void Continue() {
         if (_programExecutor is null || _pauseStatus is null) {
             return;
@@ -107,7 +112,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         int byteOffset = 0;
         emulatedMemoryStream.Position = currentIp - 10;
         while (Instructions.Count < 50) {
-            var instructionAddress = emulatedMemoryStream.Position;
+            long instructionAddress = emulatedMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
@@ -133,8 +138,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    private Decoder InitializeDecoder(CodeReader codeReader, uint currentIp)
-    {
+    private Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
         Decoder decoder = Decoder.Create(16, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
         Instructions.Clear();

@@ -22,36 +22,45 @@
     <Design.DataContext>
         <vm:DebugWindowViewModel />
     </Design.DataContext>
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type vm:CpuViewModel}">
+            <views:CpuView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+            <views:DisassemblyView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+            <ScrollViewer>
+                <views:MemoryView />
+            </ScrollViewer>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
+            <views:VideoCardView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PaletteViewModel}">
+            <views:PaletteView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MidiViewModel}">
+            <views:MidiView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
+            <views:SoftwareMixerView />
+        </DataTemplate>
+    </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid
             Grid.Row="1"
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
-                <TabItem Header="CPU">
-                    <views:CpuView DataContext="{Binding CpuViewModel}" />
-                </TabItem>
-                <TabItem Header="Disassembly">
-                    <views:DisassemblyView DataContext="{Binding DisassemblyViewModel}" />
-                </TabItem>
-                <TabItem Header="Memory">
-                    <ScrollViewer>
-                        <views:MemoryView Name="MemoryView" DataContext="{CompiledBinding MemoryViewModel}" />
-                    </ScrollViewer>
-                </TabItem>
-                <TabItem Header="Video Card">
-                    <views:VideoCardView DataContext="{Binding VideoCardViewModel}" />
-                </TabItem>
-                <TabItem Header="Color Palette">
-                    <views:PaletteView DataContext="{Binding PaletteViewModel}" />
-                </TabItem>
-                <TabItem Header="General MIDI / MT-32">
-                    <views:MidiView DataContext="{Binding MidiViewModel}" />
-                </TabItem>
-                <TabItem Header="Software Mixer">
-                    <views:SoftwareMixerView DataContext="{Binding SoftwareMixerViewModel}" />
-                </TabItem>
+                <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
+                <TabItem Header="Disassembly" Content="{Binding DisassemblyViewModel}" />
+                <TabItem Header="Memory" Content="{Binding MemoryViewModel}" />
+                <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
+                <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
+                <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
+                <TabItem Header="Software Mixer" Content="{Binding SoftwareMixerViewModel}" />
             </TabControl>
-            <Border Grid.Row="1" Background="{StaticResource SystemChromeBlackHighColor}">
+            <Border Grid.Row="1">
                 <WrapPanel Orientation="Horizontal" TextBlock.TextAlignment="Left">
                     <TextBlock
                         Margin="0,0,5,0"

@@ -1,23 +1,18 @@
 ﻿namespace Spice86.Infrastructure;
 
-using Spice86.Core.Emulator;
-using Spice86.Interfaces;
 using Spice86.ViewModels;
 using Spice86.Views;
 
-/// <inheritdoc cref="IWindowActivator" />
-internal class WindowActivator : IWindowActivator {
+/// <inheritdoc cref="IDebugWindowActivator" />
+internal class DebugWindowActivator : IDebugWindowActivator {
     private DebugWindow? _debugWindow;
 
     /// <inheritdoc />
-    public void ActivateDebugWindow(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IProgramExecutor programExecutor, IPauseStatus pauseStatus) {
+    public void ActivateDebugWindow(DebugWindowViewModel viewModel) {
         if (_debugWindow is not null) {
             _debugWindow.Activate();
             return;
         }
-        var viewModel = new DebugWindowViewModel(iuiDispatcherTimerFactory, pauseStatus) {
-            ProgramExecutor = programExecutor
-        };
         _debugWindow = new DebugWindow {
             DataContext = viewModel
         };

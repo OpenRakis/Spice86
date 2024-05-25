@@ -243,6 +243,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     /// <inheritdoc/>
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
+        emulatorDebugger.Visit(this);
         Machine.Accept(emulatorDebugger);
     }
 }
