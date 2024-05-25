@@ -6,7 +6,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
@@ -18,7 +17,6 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private int _selectedTab;
 
-    private readonly IUIDispatcherTimerFactory? _uiDispatcherTimerFactory;
     private readonly IDebuggableComponent? _rootComponent;
 
     [ObservableProperty]
@@ -56,7 +54,6 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IDebuggableComponent rootComponent) {
         _rootComponent = rootComponent;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
         DisassemblyViewModel = new(pauseStatus);
         PaletteViewModel = new();
         SoftwareMixerViewModel = new();

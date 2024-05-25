@@ -104,16 +104,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
-            FilePickerSaveOptions options = new() {
-                Title = "Save bitmap image...",
-                DefaultExtension = "bmp",
-                SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
-            };
-            string? file = (await _hostStorageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(file)) {
-                Bitmap?.Save(file);
-            }
+        await SaveBitmapFile();
+    }
+
+    private async Task SaveBitmapFile() {
+        if (Bitmap is not null) {
+            await _hostStorageProvider.SaveBitmapFile(Bitmap);
         }
     }
 
@@ -190,24 +186,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public async Task DumpEmulatorStateToFile() {
-        if (_programExecutor is null) {
-            return;
-        }
-
-        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
-            FolderPickerOpenOptions options = new() {
-                Title = "Dump emulator state to directory...",
-                AllowMultiple = false,
-                SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(Configuration.RecordedDataDirectory)
-            };
-            if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
-                options.SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            }
-
-            Uri? dir = (await _hostStorageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
-            if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                _programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
-            }
+        if (_programExecutor is not null) {
+            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, _programExecutor);
         }
     }
 
@@ -262,28 +242,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             await RestartEmulatorWithNewProgram(filePath);
         }
         else if (_hostStorageProvider.CanOpen) {
-            FilePickerOpenOptions options = new() {
-                Title = "Start Executable...",
-                AllowMultiple = false,
-                FileTypeFilter = new[] {
-                    new FilePickerFileType("DOS Executables") {
-                        Patterns = new[] {"*.com", "*.exe", "*.EXE", "*.COM"}
-                    },
-                    new FilePickerFileType("All files") {
-                        Patterns = new[] {"*"}
-                    }
-                }
-            };
-            IStorageFolder? folder = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            options.SuggestedStartLocation = folder;
-            if (Directory.Exists(_lastExecutableDirectory)) {
-                options.SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(_lastExecutableDirectory);
-            }
-
-            IReadOnlyList<IStorageFile> files = await _hostStorageProvider.OpenFilePickerAsync(options);
-
-            if (files.Any()) {
-                filePath = files[0].Path.LocalPath;
+            IStorageFile? file = await _hostStorageProvider.PickExecutableFile(_lastExecutableDirectory);
+            if (file is not null) {
+                filePath = file.Path.LocalPath;
                 await RestartEmulatorWithNewProgram(filePath);
             }
         }
