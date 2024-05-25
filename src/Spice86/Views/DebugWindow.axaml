@@ -34,34 +34,7 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU">
-                    <ScrollViewer>
-                        <WrapPanel>
-                            <Grid Margin="5" RowDefinitions="Auto,*">
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
-                                <pgc:PropertyGrid
-                                    Grid.Row="1"
-                                    DataContext="{CompiledBinding State}"
-                                    ShowStyle="Alphabetic"
-                                    ShowTitle="False">
-                                    <TextElement.FontFamily>
-                                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                                    </TextElement.FontFamily>
-                                </pgc:PropertyGrid>
-                            </Grid>
-                            <Grid Margin="5" RowDefinitions="Auto,*">
-                                <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
-                                <pgc:PropertyGrid
-                                    Grid.Row="1"
-                                    DataContext="{CompiledBinding Flags}"
-                                    ShowStyle="Alphabetic"
-                                    ShowTitle="False">
-                                    <TextElement.FontFamily>
-                                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                                    </TextElement.FontFamily>
-                                </pgc:PropertyGrid>
-                            </Grid>
-                        </WrapPanel>
-                    </ScrollViewer>
+                    <views:CpuView DataContext="{Binding CpuViewModel}" />
                 </TabItem>
                 <TabItem Header="Disassembly">
                     <Grid RowDefinitions="Auto,Auto,*">
