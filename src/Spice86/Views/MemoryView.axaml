@@ -8,7 +8,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-    xmlns:views="clr-namespace:Spice86.Views"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"

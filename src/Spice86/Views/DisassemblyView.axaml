@@ -20,25 +20,36 @@
             Grid.Row="1"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
-            ColumnDefinitions="Auto,Auto,Auto">
-            <Button
-                Grid.Column="1"
-                Margin="5"
-                Command="{Binding StepInstructionCommand}"
-                Content="Step instruction"
-                IsVisible="{Binding IsGdbServerAvailable}" />
-            <Button
-                Grid.Column="2"
-                Margin="5"
-                Command="{Binding PauseCommand}"
-                Content="Pause"
-                IsVisible="{Binding !IsPaused}" />
-            <Button
-                Grid.Column="2"
-                Margin="5"
-                Command="{Binding ContinueCommand}"
-                Content="Continue"
-                IsVisible="{Binding IsPaused}" />
+            ColumnDefinitions="*,Auto,Auto">
+            <WrapPanel Grid.Column="0" Orientation="Horizontal">
+                <Button
+                    Margin="5"
+                    Command="{Binding StepInstructionCommand}"
+                    Content="Step instruction"
+                    IsVisible="{Binding IsGdbServerAvailable}" />
+                <Button
+                    Margin="5"
+                    Command="{Binding PauseCommand}"
+                    Content="Pause"
+                    IsVisible="{Binding !IsPaused}" />
+                <Button
+                    Margin="5"
+                    Command="{Binding ContinueCommand}"
+                    Content="Continue"
+                    IsVisible="{Binding IsPaused}" />
+            </WrapPanel>
+            <Grid Grid.Column="1" IsVisible="{Binding IsPaused}" ColumnDefinitions="Auto,Auto,Auto">
+                <StackPanel Grid.Column="0" Orientation="Vertical">
+                    <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
+                    <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Vertical">
+                    <Label HorizontalAlignment="Center" Content="Start Address" />
+                    <TextBox Text="{Binding StartAddress}" />
+                    <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="Update" Command="{Binding UpdateDisassemblyCommand}" />
+            </Grid>
         </Grid>
         <DataGrid
             Grid.Row="2"
