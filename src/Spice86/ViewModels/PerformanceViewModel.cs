@@ -27,7 +27,7 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
+    public PerformanceViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;

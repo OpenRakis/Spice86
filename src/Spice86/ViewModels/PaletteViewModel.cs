@@ -9,11 +9,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
 
 public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     private ArgbPalette? _argbPalette;
-    public PaletteViewModel() {
+    public PaletteViewModel() : base() {
         Dispatcher.UIThread.Post(() => {
             for (int i = 0; i < 256; i++) {
                 _palette.Add(new (){Fill = new SolidColorBrush()});

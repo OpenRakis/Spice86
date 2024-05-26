@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.UserControls.ErrorModalDialogUserControl"
+             x:DataType="viewModels:ViewModelBase">
+    <UserControl.Resources>
+        <converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
+    </UserControl.Resources>
+    <dialogHostAvalonia:DialogHost
+        CloseOnClickAway="False"
+        IsOpen="{Binding IsDialogVisible}">
+        <dialogHostAvalonia:DialogHost.DialogContent>
+            <Grid>
+                <Border Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5" />
+                <WrapPanel Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
+                        <Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
+                        <WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
+                            <Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
+                                <Button Grid.Row="0" Grid.Column="0" Content="Copy To Clipboard" Command="{Binding CopyToClipboardCommand}" />
+                                <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+                                    <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
+                                    <TextBlock TextWrapping="Wrap" Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />
+                                    <Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Target Site</Label>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
+                                    <Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">Exception Type</Label>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
+                                </Grid>
+                            </Grid>
+                            <Expander Header="Stack Trace" IsExpanded="False">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock TextWrapping="Wrap" Text="{Binding Exception.StackTrace, Converter={StaticResource ClassToTypeStringConverter}}" />
+                                </StackPanel>
+                            </Expander>
+                        </WrapPanel>
+                        <Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
+                    </Grid>
+                </WrapPanel>
+            </Grid>
+        </dialogHostAvalonia:DialogHost.DialogContent>
+    </dialogHostAvalonia:DialogHost>
+</UserControl>

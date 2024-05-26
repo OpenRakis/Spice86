@@ -3,7 +3,6 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
@@ -85,26 +84,5 @@
                 </WrapPanel>
             </Border>
         </Grid>
-        <dialogHost:DialogHost
-            Grid.Row="0"
-            Grid.RowSpan="2"
-            CloseOnClickAway="False"
-            IsOpen="{Binding IsDialogVisible}">
-            <dialogHost:DialogHost.DialogContent>
-                <Grid RowDefinitions="Auto,Auto,Auto">
-                    <Label
-                        Grid.Row="0"
-                        HorizontalAlignment="Center"
-                        Content="Validation Error"
-                        FontWeight="Bold" />
-                    <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
-                    <Button
-                        Grid.Row="2"
-                        Command="{Binding ClearDialogCommand}"
-                        Content="OK"
-                        IsDefault="True" />
-                </Grid>
-            </dialogHost:DialogHost.DialogContent>
-        </dialogHost:DialogHost>
     </Grid>
 </Window>

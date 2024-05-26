@@ -48,13 +48,13 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel? _softwareMixerViewModel;
 
-    public DebugWindowViewModel() {
+    public DebugWindowViewModel(ITextClipboard textClipboard) : base(textClipboard) {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
     
-    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
+    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
         _programExecutor = programExecutor;
         _pauseStatus = pauseStatus;
         IsPaused = _programExecutor.IsPaused;
@@ -66,7 +66,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
-        MemoryViewModel = new(pauseStatus);
+        MemoryViewModel = new(pauseStatus, textClipboard);
         Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
     }
     

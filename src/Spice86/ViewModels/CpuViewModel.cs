@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
@@ -27,7 +28,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public CpuViewModel(IPauseStatus pauseStatus) {
+    public CpuViewModel(IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
     }
     

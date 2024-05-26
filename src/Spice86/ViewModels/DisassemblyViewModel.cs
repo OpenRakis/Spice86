@@ -12,6 +12,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
@@ -32,6 +33,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -49,7 +51,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel(IPauseStatus pauseStatus) {
+    public DisassemblyViewModel(IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;

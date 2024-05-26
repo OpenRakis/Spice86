@@ -5,6 +5,7 @@
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
 		xmlns:views="clr-namespace:Spice86.Views"
+		xmlns:userControls="clr-namespace:Spice86.UserControls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Assets/Spice86.ico"
@@ -16,7 +17,6 @@
 		CanResize="True">
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
-		<converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
 		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
 	</Window.Resources>
 	<Design.DataContext>
@@ -101,32 +101,8 @@
 				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			</WrapPanel>
 		</Border>
-		<Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
-			<Border Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5" />
-			<WrapPanel Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-				<Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
-					<Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
-					<WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
-						<Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
-							<Button Grid.Row="0" Grid.Column="0" Content="Copy To Clipboard" Command="{Binding CopyToClipboardCommand}" />
-							<Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
-								<Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
-								<TextBlock TextWrapping="Wrap" Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />
-								<Label FontWeight="Bold" Grid.Row="1" Grid.Column="0">Target Site</Label>
-								<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Exception.TargetSite.Name}" />
-								<Label FontWeight="Bold" Grid.Row="2" Grid.Column="0">Exception Type</Label>
-								<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Exception, Converter={StaticResource ClassToTypeStringConverter}}" />
-							</Grid>
-						</Grid>
-						<Expander Header="Stack Trace" IsExpanded="False">
-							<StackPanel Orientation="Vertical">
-								<TextBlock TextWrapping="Wrap" Text="{Binding Exception.StackTrace, Converter={StaticResource ClassToTypeStringConverter}}" />
-							</StackPanel>
-						</Expander>
-					</WrapPanel>
-					<Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
-				</Grid>
-			</WrapPanel>
-		</Grid>
+		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+			
+		</userControls:ErrorModalDialogUserControl>
 	</Grid>
 </Window>

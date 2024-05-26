@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
@@ -23,7 +24,7 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
 
     private readonly IPauseStatus _pauseStatus;
 
-    public MemoryViewModel( IPauseStatus pauseStatus) {
+    public MemoryViewModel(IPauseStatus pauseStatus, ITextClipboard? textClipboard) : base(textClipboard) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;

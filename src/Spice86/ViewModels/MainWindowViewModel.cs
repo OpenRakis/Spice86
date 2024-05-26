@@ -30,7 +30,6 @@ using Avalonia.Platform;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Video;
 
 using Timer = System.Timers.Timer;
@@ -40,7 +39,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IDebugWindowActivator _debugWindowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
@@ -71,13 +69,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
-        _textClipboard = textClipboard;
         _uiDispatcher = uiDispatcher;
         _debugWindowActivator = debugWindowActivator;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
@@ -438,15 +435,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void DisposeEmulator() => _programExecutor?.Dispose();
 
-    [RelayCommand]
-    public async Task CopyToClipboard() {
-        if(Exception is not null) {
-            await _textClipboard.SetTextAsync(
-                Newtonsoft.Json.JsonConvert.SerializeObject(
-                    new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
-        }
-    }
-
     private bool _isInitLogLevelSet;
 
     private string _currentLogLevel = "";
@@ -526,7 +514,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor);
+        _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

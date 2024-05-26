@@ -4,11 +4,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
 public partial class MidiViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private MidiInfo _midi = new();
+
+    public MidiViewModel() : base() { }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
         if(component is Midi midi) {
