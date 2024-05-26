@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.CpuView"
+             x:DataType="viewModels:CpuViewModel">
+    <ScrollViewer>
+        <WrapPanel>
+            <Grid Margin="5" RowDefinitions="Auto,*">
+                <Label HorizontalAlignment="Center" FontWeight="Bold">Registers and misc</Label>
+                <pgc:PropertyGrid
+                    Grid.Row="1"
+                    DataContext="{CompiledBinding State}"
+                    ShowStyle="Alphabetic"
+                    ShowTitle="False">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                </pgc:PropertyGrid>
+            </Grid>
+            <Grid Margin="5" RowDefinitions="Auto,*">
+                <Label HorizontalAlignment="Center" FontWeight="Bold">Flag Registers</Label>
+                <pgc:PropertyGrid
+                    Grid.Row="1"
+                    DataContext="{CompiledBinding Flags}"
+                    ShowStyle="Alphabetic"
+                    ShowTitle="False">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                </pgc:PropertyGrid>
+            </Grid>
+        </WrapPanel>
+    </ScrollViewer>
+</UserControl>

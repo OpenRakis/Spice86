@@ -11,7 +11,7 @@ public class EmulatedMemoryStream : Stream {
     public EmulatedMemoryStream(IMemory memory) {
         _memory = memory;
         _length = memory.Length;
-        _canWrite = false;
+        _canWrite = true;
         _canSeek = true;
         _canRead = true;
     }

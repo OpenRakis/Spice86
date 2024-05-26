@@ -1,255 +1,34 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Collections;
-using Avalonia.Controls;
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
-using Iced.Intel;
-
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Infrastructure;
-using Spice86.Interfaces;
-using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Utils;
 
-using System.ComponentModel;
-using System.Reflection;
-
-public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugViewModel {
-    [ObservableProperty]
-    private MachineInfo _machine = new();
-
+public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
-
-    [ObservableProperty]
-    private DateTime? _lastUpdate;
-
-    private readonly IPauseStatus? _pauseStatus;
-
-    [ObservableProperty] private bool _isLoading = true;
-
-    private IMemory? _memory;
-
-    public bool IsGdbServerAvailable => _programExecutor?.IsGdbCommandHandlerAvailable is true;
-
-    [ObservableProperty]
-    private MixerViewModel? _softwareMixerViewModel;
-
-    public DebugViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void StepInstruction() {
-        _programExecutor?.StepInstruction();
-        IsLoading = true;
-        ForceUpdate();
-    }
-
-    [RelayCommand]
-    public void ForceUpdate() {
-        UpdateValues(this, EventArgs.Empty);
-        MemoryViewModel?.UpdateBinaryDocument();
-    }
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
-    private bool _isPaused;
-
-    private IProgramExecutor? _programExecutor;
-
-    public IProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set {
-            if (value is not null && _uiDispatcherTimer is not null) {
-                _programExecutor = value;
-                PaletteViewModel = new(_uiDispatcherTimer, value);
-            }
-        }
-    }
-
-    [ObservableProperty]
-    private AvaloniaList<CpuInstructionInfo> _instructions = new();
-
-    [ObservableProperty]
-    private int _selectedTab;
-
-    private readonly IUIDispatcherTimer? _uiDispatcherTimer;
-
-    [ObservableProperty]
-    private PaletteViewModel? _paletteViewModel;
-
-    [ObservableProperty]
-    private MemoryViewModel? _memoryViewModel;
-
-    public DebugViewModel(IUIDispatcherTimer uiDispatcherTimer, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
-        IsPaused = _pauseStatus.IsPaused;
-        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
-        _uiDispatcherTimer = uiDispatcherTimer;
-        SoftwareMixerViewModel = new(uiDispatcherTimer);
-    }
-
-    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
-        IsPaused = _pauseStatus?.IsPaused is true;
-        if (IsPaused) {
-            MemoryViewModel?.UpdateBinaryDocument();
-        }
-    }
-
-    [RelayCommand]
-    public void StartObserverTimer() {
-        _uiDispatcherTimer?.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-    }
-
-    private Decoder? _decoder;
-
-    private void UpdateValues(object? sender, EventArgs e) {
-        ProgramExecutor?.Accept(this);
-        LastUpdate = DateTime.Now;
-        IsLoading = false;
-    }
-
-    [ObservableProperty]
-    private StateInfo _state = new();
-
-    [ObservableProperty]
-    private CpuFlagsInfo _flags = new();
-
+    
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(component is Midi externalMidiDevice) {
-            VisitExternalMidiDevice(externalMidiDevice);
-        }
-        if(component is Cpu cpu) {
-            VisitCpu(cpu);
-        }
-        if(component is State state) {
-            VisitCpuState(state);
-        }
-        if(component is IVideoState videoState) {
-            VisitVideoState(videoState);
-        }
-        if(component is IVgaRenderer vgaRenderer) {
-            VisitVgaRenderer(vgaRenderer);
-        }
-
-        if (component is SoftwareMixer softwareMixer) {
-            VisitSoundMixer(softwareMixer);
-        }
-        if(component is IMemory memory) {
-            VisitMemory(memory);
+        switch (component) {
+            case IVgaRenderer vgaRenderer:
+                VisitVgaRenderer(vgaRenderer);
+                break;
+            case IVideoState videoState:
+                VisitVideoState(videoState);
+                break;
         }
     }
 
-    private void VisitMemory(IMemory memory) {
-        if(_pauseStatus is null) {
-            return;
-        }
-        _memory ??= memory;
-        MemoryViewModel ??= new(memory, _pauseStatus);
-    }
-
-    private void VisitExternalMidiDevice(Midi externalMidiDevice) {
-        Midi.LastPortRead = externalMidiDevice.LastPortRead;
-        Midi.LastPortWritten = externalMidiDevice.LastPortWritten;
-        Midi.LastPortWrittenValue = externalMidiDevice.LastPortWrittenValue;
-    }
-
-    public void VisitCpuState(State state) {
-        if (IsLoading || !IsPaused) {
-            UpdateCpuState(state);
-        }
-
-        if (IsPaused) {
-            State.PropertyChanged -= OnStatePropertyChanged;
-            State.PropertyChanged += OnStatePropertyChanged;
-            Flags.PropertyChanged -= OnStatePropertyChanged;
-            Flags.PropertyChanged += OnStatePropertyChanged;
-        } else {
-            State.PropertyChanged -= OnStatePropertyChanged;
-            Flags.PropertyChanged -= OnStatePropertyChanged;
-        }
-
-        return;
-
-        void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !IsPaused || IsLoading) {
-                return;
-            }
-            PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
-            PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
-            if (propertyInfo is not null && originalPropertyInfo is not null) {
-                originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
-            }
-        }
-    }
-
-    private void UpdateCpuState(State state) {
-        State.AH = state.AH;
-        State.AL = state.AL;
-        State.AX = state.AX;
-        State.EAX = state.EAX;
-        State.BH = state.BH;
-        State.BL = state.BL;
-        State.BX = state.BX;
-        State.EBX = state.EBX;
-        State.CH = state.CH;
-        State.CL = state.CL;
-        State.CX = state.CX;
-        State.ECX = state.ECX;
-        State.DH = state.DH;
-        State.DL = state.DL;
-        State.DX = state.DX;
-        State.EDX = state.EDX;
-        State.DI = state.DI;
-        State.EDI = state.EDI;
-        State.SI = state.SI;
-        State.ES = state.ES;
-        State.BP = state.BP;
-        State.EBP = state.EBP;
-        State.SP = state.SP;
-        State.ESP = state.ESP;
-        State.CS = state.CS;
-        State.DS = state.DS;
-        State.ES = state.ES;
-        State.FS = state.FS;
-        State.GS = state.GS;
-        State.SS = state.SS;
-        State.IP = state.IP;
-        State.IpPhysicalAddress = state.IpPhysicalAddress;
-        State.StackPhysicalAddress = state.StackPhysicalAddress;
-        State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-        Flags.AuxiliaryFlag = state.AuxiliaryFlag;
-        Flags.CarryFlag = state.CarryFlag;
-        Flags.DirectionFlag = state.DirectionFlag;
-        Flags.InterruptFlag = state.InterruptFlag;
-        Flags.OverflowFlag = state.OverflowFlag;
-        Flags.ParityFlag = state.ParityFlag;
-        Flags.ZeroFlag = state.ZeroFlag;
-        Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
-    }
-
-    public void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
         VideoCard.RendererWidth = vgaRenderer.Width;
         VideoCard.RendererHeight = vgaRenderer.Height;
         VideoCard.RendererBufferSize = vgaRenderer.BufferSize;
         VideoCard.LastFrameRenderTime = vgaRenderer.LastFrameRenderTime;
     }
 
-    public void VisitVideoState(IVideoState videoState) {
+    private void VisitVideoState(IVideoState videoState) {
         VideoCard.GeneralMiscellaneousOutputRegister = videoState.GeneralRegisters.MiscellaneousOutput.Value;
         VideoCard.GeneralClockSelect = videoState.GeneralRegisters.MiscellaneousOutput.ClockSelect;
         VideoCard.GeneralEnableRam = videoState.GeneralRegisters.MiscellaneousOutput.EnableRam;
@@ -379,94 +158,5 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger, IDebugVi
         VideoCard.SequencerExtendedMemory = videoState.SequencerRegisters.MemoryModeRegister.ExtendedMemory;
         VideoCard.SequencerOddEvenMode = videoState.SequencerRegisters.MemoryModeRegister.OddEvenMode;
         VideoCard.SequencerChain4Mode = videoState.SequencerRegisters.MemoryModeRegister.Chain4Mode;
-    }
-
-    private bool _needToUpdateDisassembly;
-
-    public void VisitCpu(Cpu cpu) {
-        if (!IsPaused) {
-            _needToUpdateDisassembly = true;
-        }
-        if (IsLoading || _needToUpdateDisassembly) {
-            UpdateDisassembly(cpu);
-            _needToUpdateDisassembly = false;
-        }
-    }
-
-    [ObservableProperty]
-    private MidiInfo _midi = new();
-
-    [RelayCommand]
-    public void Pause() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
-        }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = true;
-    }
-
-    [RelayCommand]
-    public void Continue() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
-        }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = false;
-    }
-
-    private Cpu? _cpu;
-
-    private void UpdateDisassembly(Cpu cpu) {
-        if (_memory is null) {
-            return;
-        }
-        _cpu = cpu;
-        uint currentIp = cpu.State.IpPhysicalAddress;
-        CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
-
-        _decoder ??= Decoder.Create(16, codeReader, currentIp,
-            DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
-        Instructions.Clear();
-
-        int byteOffset = 0;
-        emulatedMemoryStream.Position = currentIp - 10;
-        while (Instructions.Count < 50) {
-            var instructionAddress = emulatedMemoryStream.Position;
-            _decoder.Decode(out Instruction instruction);
-            CpuInstructionInfo cpuInstrunction = new CpuInstructionInfo {
-                Instruction = instruction,
-                Address = (uint)instructionAddress,
-                Length = instruction.Length,
-                IP16 = instruction.IP16,
-                IP32 = instruction.IP32,
-                MemorySegment = instruction.MemorySegment,
-                SegmentPrefix = instruction.SegmentPrefix,
-                IsStackInstruction = instruction.IsStackInstruction,
-                IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
-                IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                SegmentedAddress =
-                    ConvertUtils.ToSegmentedAddressRepresentation(_cpu.State.CS, (ushort)(_cpu.State.IP + byteOffset - 10)),
-                FlowControl = instruction.FlowControl,
-                Bytes = $"{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
-            };
-            if (instructionAddress == currentIp) {
-                cpuInstrunction.IsCsIp = true;
-            }
-            Instructions.Add(cpuInstrunction);
-            byteOffset += instruction.Length;
-        }
-        emulatedMemoryStream.Dispose();
-    }
-
-    private CodeReader CreateCodeReader(IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
-        emulatedMemoryStream = new EmulatedMemoryStream(memory);
-        CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
-        return codeReader;
-    }
-
-    public void ShowColorPalette() {
-        SelectedTab = 4;
-    }
-
-    public void VisitSoundMixer(SoftwareMixer mixer) {
-        SoftwareMixerViewModel?.VisitSoundMixer(mixer);
     }
 }

@@ -1,8 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 
@@ -42,14 +39,15 @@ using Timer = System.Timers.Timer;
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
-    private readonly IUIDispatcherTimer _uiDispatcherTimer;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IWindowActivator _windowActivator;
+    private readonly IDebugWindowActivator _debugWindowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
+    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
+    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -73,17 +71,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IWindowActivator windowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimer uiDispatcherTimer, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
-        _uiDispatcherTimer = uiDispatcherTimer;
         _hostStorageProvider = hostStorageProvider;
         _textClipboard = textClipboard;
-        _uiDispatcherTimer = uiDispatcherTimer;
         _uiDispatcher = uiDispatcher;
-        _windowActivator = windowActivator;
+        _debugWindowActivator = debugWindowActivator;
+        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -102,19 +99,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
-            FilePickerSaveOptions options = new() {
-                Title = "Save bitmap image...",
-                DefaultExtension = "bmp",
-                SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
-            };
-            string? file = (await _hostStorageProvider.SaveFilePickerAsync(options))?.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(file)) {
-                Bitmap?.Save(file);
-            }
+        if (Bitmap is not null) {
+            await _hostStorageProvider.SaveBitmapFile(Bitmap);
         }
     }
-
+    
     private bool _showCursor = false;
 
     public bool ShowCursor {
@@ -169,7 +158,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
     private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
 
-    public IDebugViewModel? DebugViewModel { get; set; }
 
     public int Width { get; private set; }
 
@@ -189,24 +177,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public async Task DumpEmulatorStateToFile() {
-        if (_programExecutor is null) {
-            return;
-        }
-
-        if (_hostStorageProvider is { CanSave: true, CanPickFolder: true }) {
-            FolderPickerOpenOptions options = new() {
-                Title = "Dump emulator state to directory...",
-                AllowMultiple = false,
-                SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(Configuration.RecordedDataDirectory)
-            };
-            if (!Directory.Exists(Configuration.RecordedDataDirectory)) {
-                options.SuggestedStartLocation = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            }
-
-            Uri? dir = (await _hostStorageProvider.OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
-            if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                _programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
-            }
+        if (_programExecutor is not null) {
+            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, _programExecutor);
         }
     }
 
@@ -261,28 +233,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             await RestartEmulatorWithNewProgram(filePath);
         }
         else if (_hostStorageProvider.CanOpen) {
-            FilePickerOpenOptions options = new() {
-                Title = "Start Executable...",
-                AllowMultiple = false,
-                FileTypeFilter = new[] {
-                    new FilePickerFileType("DOS Executables") {
-                        Patterns = new[] {"*.com", "*.exe", "*.EXE", "*.COM"}
-                    },
-                    new FilePickerFileType("All files") {
-                        Patterns = new[] {"*"}
-                    }
-                }
-            };
-            IStorageFolder? folder = await _hostStorageProvider.TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            options.SuggestedStartLocation = folder;
-            if (Directory.Exists(_lastExecutableDirectory)) {
-                options.SuggestedStartLocation = await _hostStorageProvider.TryGetFolderFromPathAsync(_lastExecutableDirectory);
-            }
-
-            IReadOnlyList<IStorageFile> files = await _hostStorageProvider.OpenFilePickerAsync(options);
-
-            if (files.Any()) {
-                filePath = files[0].Path.LocalPath;
+            IStorageFile? file = await _hostStorageProvider.PickExecutableFile(_lastExecutableDirectory);
+            if (file is not null) {
+                filePath = file.Path.LocalPath;
                 await RestartEmulatorWithNewProgram(filePath);
             }
         }
@@ -297,7 +250,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _windowActivator.CloseDebugWindow();
+        _debugWindowActivator.CloseDebugWindow();
         RunEmulator();
     }
 
@@ -318,15 +271,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public void ShowDebugWindow() {
-        if(_programExecutor is not null) {
-            _windowActivator.ActivateDebugWindow(_uiDispatcherTimer, _programExecutor, this);
+        if(_debugViewModel is not null) {
+            _debugWindowActivator.ActivateDebugWindow(_debugViewModel);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowColorPalette() {
         ShowDebugWindow();
-        DebugViewModel?.ShowColorPalette();
+        _debugViewModel?.ShowColorPalette();
     }
 
     [RelayCommand]
@@ -465,7 +418,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (!_disposed) {
             _disposed = true;
             if (disposing) {
-                _windowActivator.CloseDebugWindow();
+                _debugWindowActivator.CloseDebugWindow();
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
                 _uiDispatcher.Post(() => {
@@ -507,7 +460,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _isInitLogLevelSet = true;
             return _currentLogLevel;
         }
-        set => SetProperty(ref _currentLogLevel, value, nameof(CurrentLogLevel));
+        set => SetProperty(ref _currentLogLevel, value);
     }
 
     [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
@@ -572,8 +525,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
-        PerformanceViewModel = new(_uiDispatcherTimer, _programExecutor, new PerformanceMeasurer(), this);
-        DebugViewModel = new DebugViewModel(_uiDispatcherTimer, this);
+        PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
+        _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

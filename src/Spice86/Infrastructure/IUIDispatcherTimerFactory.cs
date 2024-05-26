@@ -5,7 +5,7 @@ using Avalonia.Threading;
 /// <summary>
 /// A dispatcher timer runs a callback on the UI thread after a set amount of time has passed, repeatedly.
 /// </summary>
-public interface IUIDispatcherTimer {
+public interface IUIDispatcherTimerFactory {
     /// <summary>
     /// Starts a new instance of a DispatcherTimer.
     /// </summary>

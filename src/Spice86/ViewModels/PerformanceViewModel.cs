@@ -27,11 +27,11 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public PerformanceViewModel(IUIDispatcherTimer uiDispatcherTimer, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
+    public PerformanceViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
-        uiDispatcherTimer.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+        iuiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
@@ -45,9 +45,7 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(_state is null) {
-            _state = component as State;
-        }
+        _state ??= component as State;
     }
 
     [ObservableProperty]
