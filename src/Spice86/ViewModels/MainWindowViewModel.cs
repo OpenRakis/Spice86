@@ -1,8 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Diagnostics;
 
@@ -30,7 +27,6 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
