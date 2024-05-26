@@ -103,15 +103,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand]
     public async Task SaveBitmap() {
-        await SaveBitmapFile();
-    }
-
-    private async Task SaveBitmapFile() {
         if (Bitmap is not null) {
             await _hostStorageProvider.SaveBitmapFile(Bitmap);
         }
     }
-
+    
     private bool _showCursor = false;
 
     public bool ShowCursor {
