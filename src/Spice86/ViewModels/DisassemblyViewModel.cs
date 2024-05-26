@@ -31,7 +31,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     private bool _isPaused;
 
@@ -93,23 +92,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         _needToUpdateDisassembly = true;
         UpdateDisassemblyCommand.Execute(null);
     }
-
-    [RelayCommand]
-    public void Pause() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
-        }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void Continue() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
-        }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
-    }
-
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
         if(_state is null || _memory is null || StartAddress is null) {

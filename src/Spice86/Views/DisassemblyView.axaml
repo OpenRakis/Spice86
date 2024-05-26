@@ -27,16 +27,6 @@
                     Command="{Binding StepInstructionCommand}"
                     Content="Step instruction"
                     IsVisible="{Binding IsGdbServerAvailable}" />
-                <Button
-                    Margin="5"
-                    Command="{Binding PauseCommand}"
-                    Content="Pause"
-                    IsVisible="{Binding !IsPaused}" />
-                <Button
-                    Margin="5"
-                    Command="{Binding ContinueCommand}"
-                    Content="Continue"
-                    IsVisible="{Binding IsPaused}" />
             </WrapPanel>
             <Grid Grid.Column="1" IsVisible="{Binding IsPaused}" ColumnDefinitions="Auto,Auto,Auto">
                 <StackPanel Grid.Column="0" Orientation="Vertical">

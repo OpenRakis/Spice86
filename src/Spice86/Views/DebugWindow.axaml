@@ -72,6 +72,16 @@
                         VerticalAlignment="Bottom"
                         Command="{Binding ForceUpdateCommand}"
                         Content="Force Update" />
+                    <Button
+                        Margin="5,0,0,0"
+                        Command="{Binding PauseCommand}"
+                        Content="Pause"
+                        IsVisible="{Binding !IsPaused}" />
+                    <Button
+                        Margin="5,0,0,0"
+                        Command="{Binding ContinueCommand}"
+                        Content="Continue"
+                        IsVisible="{Binding IsPaused}" />
                 </WrapPanel>
             </Border>
         </Grid>

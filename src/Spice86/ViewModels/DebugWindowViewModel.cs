@@ -6,18 +6,26 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 
+using System.ComponentModel;
+
 public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
+    private readonly IPauseStatus? _pauseStatus;
+    private readonly IProgramExecutor? _programExecutor;
+
     [ObservableProperty]
     private DateTime? _lastUpdate;
     
     [ObservableProperty]
     private int _selectedTab;
 
-    private readonly IDebuggableComponent? _rootComponent;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
+    private bool _isPaused;
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
@@ -45,14 +53,12 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
-
-    [RelayCommand]
-    public void ForceUpdate() {
-        UpdateValues(this, EventArgs.Empty);
-    }
     
-    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IDebuggableComponent rootComponent) {
-        _rootComponent = rootComponent;
+    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
+        _programExecutor = programExecutor;
+        _pauseStatus = pauseStatus;
+        IsPaused = _programExecutor.IsPaused;
+        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
         DisassemblyViewModel = new(pauseStatus);
         PaletteViewModel = new();
@@ -61,11 +67,34 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
         MemoryViewModel = new(pauseStatus);
-        Dispatcher.UIThread.Post(() => rootComponent.Accept(this), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
+    }
+    
+    [RelayCommand]
+    public void Pause() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void Continue() {
+        if (_programExecutor is null || _pauseStatus is null) {
+            return;
+        }
+        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
+    }
+    
+    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) => IsPaused = _pauseStatus?.IsPaused is true;
+
+    [RelayCommand]
+    public void ForceUpdate() {
+        UpdateValues(this, EventArgs.Empty);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        _rootComponent?.Accept(this);
+        _programExecutor?.Accept(this);
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
