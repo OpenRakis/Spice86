@@ -70,10 +70,10 @@ public interface IHostStorageProvider {
     Task SaveBitmapFile(WriteableBitmap bitmap);
 
     /// <summary>
-    /// Spanws the file pciker to save the emulator state to a file.
+    /// Spanws the file picker to save the emulator state to a file.
     /// </summary>
     /// <param name="configuration">The emulator configuration, used for RecordedDataDirectory path property.</param>
-    /// <param name="programExecutor">The emulated program's executor, to save the</param>
+    /// <param name="programExecutor">The emulated program's executor, to save the emulator dump and other reverse-engineering information.</param>
     Task DumpEmulatorStateToFile(Configuration configuration, IProgramExecutor programExecutor);
 
     /// <summary>

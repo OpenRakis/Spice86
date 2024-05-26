@@ -45,9 +45,7 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(_state is null) {
-            _state = component as State;
-        }
+        _state ??= component as State;
     }
 
     [ObservableProperty]

@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Models.Debugging;
 
 public partial class MidiViewModel : ViewModelBase, IInternalDebugger {
-    
     [ObservableProperty]
     private MidiInfo _midi = new();
 

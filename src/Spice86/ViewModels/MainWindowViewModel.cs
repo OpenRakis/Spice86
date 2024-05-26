@@ -43,12 +43,12 @@ using Timer = System.Timers.Timer;
 public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
-    private readonly IUIDispatcherTimerFactory _iuiDispatcherTimerFactory;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IDebugWindowActivator _debugWindowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
+    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
     private DebugWindowViewModel? _debugViewModel;
@@ -75,17 +75,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory iuiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
-        _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
         _hostStorageProvider = hostStorageProvider;
         _textClipboard = textClipboard;
-        _iuiDispatcherTimerFactory = iuiDispatcherTimerFactory;
         _uiDispatcher = uiDispatcher;
         _debugWindowActivator = debugWindowActivator;
+        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -469,7 +468,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _isInitLogLevelSet = true;
             return _currentLogLevel;
         }
-        set => SetProperty(ref _currentLogLevel, value, nameof(CurrentLogLevel));
+        set => SetProperty(ref _currentLogLevel, value);
     }
 
     [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
@@ -534,8 +533,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     private void StartProgramExecutor() {
         _programExecutor = _programExecutorFactory.Create(this);
-        PerformanceViewModel = new(_iuiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugWindowViewModel(_iuiDispatcherTimerFactory, this, _programExecutor);
+        PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
+        _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

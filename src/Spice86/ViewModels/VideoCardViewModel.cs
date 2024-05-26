@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.VM;
 using Spice86.Models.Debugging;
 
 public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {

@@ -9,7 +9,6 @@ using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
 
-using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -59,7 +58,7 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     public void EditMemory() {
         IsEditingMemory = true;
         if (_memory is not null && MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
-            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue is null ? sizeof(ushort) : MemoryEditValue.Length)));
+            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue?.Length ?? sizeof(ushort))));
         }
     }
 
