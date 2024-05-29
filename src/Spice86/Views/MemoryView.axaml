@@ -16,21 +16,25 @@
     mc:Ignorable="d">
     <ScrollViewer>
         <Grid RowDefinitions="Auto,Auto,*">
-            <Menu Grid.Row="0" IsVisible="{Binding IsPaused}">
-                <MenuItem Header="Edit">
-                    <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
-                </MenuItem>
-            </Menu>
-            <WrapPanel Orientation="Horizontal" Grid.Row="1">
-                <NumericUpDown Text="{Binding StartAddress}"></NumericUpDown>
-                <NumericUpDown Text="{Binding EndAddress}"></NumericUpDown>
-                <Button Command="{Binding UpdateBinaryDocumentCommand}" Content="Update" />
-            </WrapPanel>
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto">
+                <Menu Grid.Column="0" IsVisible="{Binding IsPaused}">
+                    <MenuItem Header="Edit">
+                        <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
+                    </MenuItem>
+                </Menu>
+                <Button Grid.Column="1" IsVisible="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" Content="Update" />
+            </Grid>
+            <Grid Grid.Row="1" RowDefinitions="Auto, Auto" ColumnDefinitions="Auto,Auto"  IsVisible="{Binding IsPaused}">
+                <Label Grid.Row="0" Grid.Column="0" Content="Start Address" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding StartAddress}" />
+                <Label Grid.Row="0" Grid.Column="1" Content="End Address" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EndAddress}" />
+            </Grid>
+            <Grid Grid.Row="2">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor
                     Width="800"
-                    Document="{ReflectionBinding $parent[UserControl].DataContext.MemoryBinaryDocument}"
+                    Document="{Binding MemoryBinaryDocument}"
                     IsVisible="{Binding IsPaused}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />

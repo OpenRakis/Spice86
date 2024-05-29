@@ -19,11 +19,13 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private MemoryBinaryDocument? _memoryBinaryDocument;
 
-    [ObservableProperty]
-    private uint _startAddress;
+    public uint StartAddress { get; }
 
     [ObservableProperty]
     private uint _endAddress;
+
+    [ObservableProperty]
+    private string _header = "Memory Range";
 
     [ObservableProperty]
     private bool _isPaused;
@@ -119,7 +121,14 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
         if (component is not IMemory memory) {
             return;
         }
-        _memory ??= memory;
+
+        if (_memory is null) {
+            _memory = memory;
+            if (EndAddress is 0) {
+                EndAddress = _memory.Length;
+                Header = $"{StartAddress:X} - {EndAddress:X}";
+            }
+        }
         MemoryBinaryDocument ??= new MemoryBinaryDocument(memory, StartAddress, EndAddress == 0 ? memory.Length : EndAddress);
     }
 }

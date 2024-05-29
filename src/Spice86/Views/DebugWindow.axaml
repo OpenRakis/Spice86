@@ -28,9 +28,6 @@
         <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
             <views:DisassemblyView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-            <views:MemoryView />
-        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
             <views:VideoCardView />
         </DataTemplate>
@@ -51,7 +48,17 @@
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
                 <TabItem Header="Disassembly" Content="{Binding DisassemblyViewModel}" />
-                <TabItem Header="Memory" Content="{Binding MemoryViewModel}" />
+                <TabItem Header="Memory">
+                    <TabControl ItemsSource="{Binding MemoryViewModels}">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+                                <TabItem Header="{Binding Header}">
+                                    <views:MemoryView />
+                                </TabItem>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                    </TabControl>
+                </TabItem>
                 <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
                 <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
                 <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
@@ -79,6 +86,10 @@
                         Command="{Binding ContinueCommand}"
                         Content="Continue"
                         IsVisible="{Binding IsPaused}" />
+                    <Button Margin="5, 0, 0, 0"
+                            Command="{Binding NewMemoryViewCommand}"
+                            Content="New Memory View"
+                            IsVisible="{Binding IsPaused}" />
                 </WrapPanel>
             </Border>
         </Grid>

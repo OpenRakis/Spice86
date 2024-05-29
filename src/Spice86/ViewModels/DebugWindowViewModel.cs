@@ -1,5 +1,6 @@
 namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
@@ -25,13 +26,14 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
     private PaletteViewModel? _paletteViewModel;
 
     [ObservableProperty]
-    private MemoryViewModel? _memoryViewModel;
+    private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
     
     [ObservableProperty]
     private VideoCardViewModel? _videoCardViewModel;
@@ -66,8 +68,15 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
-        MemoryViewModel = new(pauseStatus, textClipboard, 0);
+        MemoryViewModels.Add( new(pauseStatus, textClipboard, 0));
         Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewMemoryView() {
+        if (_pauseStatus is not null) {
+            MemoryViewModels.Add(new MemoryViewModel(_pauseStatus, _textClipboard, 0));
+        }
     }
     
     [RelayCommand]
@@ -104,7 +113,9 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel?.Visit(component);
         MidiViewModel?.Visit((component));
         SoftwareMixerViewModel?.Visit(component);
-        MemoryViewModel?.Visit(component);
+        foreach (MemoryViewModel memViewModel in MemoryViewModels) {
+            memViewModel.Visit(component);
+        }
         LastUpdate = DateTime.Now;
     }
 
