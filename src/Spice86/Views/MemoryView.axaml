@@ -15,12 +15,17 @@
     x:DataType="viewModels:MemoryViewModel"
     mc:Ignorable="d">
     <ScrollViewer>
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,Auto,*">
             <Menu Grid.Row="0" IsVisible="{Binding IsPaused}">
                 <MenuItem Header="Edit">
                     <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
                 </MenuItem>
             </Menu>
+            <WrapPanel Orientation="Horizontal" Grid.Row="1">
+                <NumericUpDown Text="{Binding StartAddress}"></NumericUpDown>
+                <NumericUpDown Text="{Binding EndAddress}"></NumericUpDown>
+                <Button Command="{Binding UpdateBinaryDocumentCommand}" Content="Update" />
+            </WrapPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor

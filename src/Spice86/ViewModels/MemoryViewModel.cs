@@ -20,14 +20,22 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private MemoryBinaryDocument? _memoryBinaryDocument;
 
     [ObservableProperty]
+    private uint _startAddress;
+
+    [ObservableProperty]
+    private uint _endAddress;
+
+    [ObservableProperty]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
 
-    public MemoryViewModel(IPauseStatus pauseStatus, ITextClipboard? textClipboard) : base(textClipboard) {
+    public MemoryViewModel(IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         IsPaused = _pauseStatus.IsPaused;
+        StartAddress = startAddress;
+        EndAddress = endAddress;
     }
 
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
@@ -40,9 +48,10 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
+    [RelayCommand]
     private void UpdateBinaryDocument() {
         if (_memory is not null) {
-            MemoryBinaryDocument = new MemoryBinaryDocument(_memory);
+            MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress, EndAddress);
         }
     }
 
@@ -111,6 +120,6 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
             return;
         }
         _memory ??= memory;
-        MemoryBinaryDocument ??= new MemoryBinaryDocument(memory);
+        MemoryBinaryDocument ??= new MemoryBinaryDocument(memory, StartAddress, EndAddress == 0 ? memory.Length : EndAddress);
     }
 }

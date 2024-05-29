@@ -66,7 +66,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
-        MemoryViewModel = new(pauseStatus, textClipboard);
+        MemoryViewModel = new(pauseStatus, textClipboard, 0);
         Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
     }
     

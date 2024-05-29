@@ -29,9 +29,7 @@
             <views:DisassemblyView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-            <ScrollViewer>
-                <views:MemoryView />
-            </ScrollViewer>
+            <views:MemoryView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
             <views:VideoCardView />

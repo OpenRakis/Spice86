@@ -7,15 +7,20 @@ using System;
 
 public class MemoryBinaryDocument : IBinaryDocument {
     private readonly IMemory _memory;
-    public MemoryBinaryDocument(IMemory memory) {
+    private readonly uint _startAddress;
+    private readonly uint _endAddress;
+    
+    public MemoryBinaryDocument(IMemory memory, uint startAddress, uint endAddress) {
         _memory = memory;
+        _startAddress = startAddress;
+        _endAddress = endAddress;
         IsReadOnly = false;
         CanInsert = false;
         CanRemove = false;
-        ValidRanges = new MemoryReadOnlyBitRangeUnion(memory);
+        ValidRanges = new MemoryReadOnlyBitRangeUnion(memory, startAddress, endAddress);
     }
 
-    public ulong Length => _memory.Length;
+    public ulong Length => _endAddress - _startAddress;
     public bool IsReadOnly { get; }
     public bool CanInsert { get; }
     public bool CanRemove { get; }
