@@ -43,15 +43,7 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         
         Span<float> target = stackalloc float[data.Length];
         for (int i = 0; i < data.Length; i++) {
-            // Apply volume and separation to left channel
             target[i] = data[i] * finalVolumeFactor;
-            // Ensure we don't go out of range
-            if (i + 1 >= data.Length) {
-                break;
-            }
-            // Apply volume and separation to right channel
-            target[i + 1] = data[i] * finalVolumeFactor;
-
         }
         return _channels[channel].WriteData(target);
     }
@@ -66,15 +58,8 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         float finalVolumeFactor = volumeFactor * (1 + separation);
 
         Span<float> target = stackalloc float[data.Length];
-        for (int i = 0; i < data.Length; i += 2) {
-            // Apply volume and separation to left channel
+        for (int i = 0; i < data.Length; i++) {
             target[i] = (data[i] / 32768f) * finalVolumeFactor;
-            // Ensure we don't go out of range
-            if (i + 1 >= data.Length) {
-                break;
-            }
-            // Apply volume and separation to right channel
-            target[i + 1] = (data[i] / 32768f) * finalVolumeFactor;
         }
 
         return _channels[channel].WriteData(target);
@@ -90,15 +75,8 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
         float finalVolumeFactor = volumeFactor * (1 + separation);
         
         Span<float> target = stackalloc float[data.Length];
-        for (int i = 0; i < data.Length; i += 2) {
-            // Apply volume and separation to left channel
+        for (int i = 0; i < data.Length; i++) {
             target[i] = ((data[i] - 127) / 128f) * finalVolumeFactor;
-            // Ensure we don't go out of range
-            if (i + 1 >= data.Length) {
-                break;
-            }
-            // Apply volume and separation to right channel
-            target[i + 1] = ((data[i + 1] - 127) / 128f) * finalVolumeFactor;
         }
         return _channels[channel].WriteData(target);
     }
