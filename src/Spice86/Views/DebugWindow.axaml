@@ -46,6 +46,9 @@
         <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
             <views:SoftwareMixerView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CfgCpuViewModel}">
+            <views:CfgCpuView />
+        </DataTemplate>
     </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid
@@ -53,6 +56,7 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
+                <TabItem Header="Code flow" Content="{Binding CfgCpuViewModel}"/>
                 <TabItem Header="Disassembly" Content="{Binding DisassemblyViewModel}" />
                 <TabItem Header="Memory" Content="{Binding MemoryViewModel}" />
                 <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />

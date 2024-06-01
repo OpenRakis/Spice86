@@ -124,7 +124,10 @@
 							</StackPanel>
 						</Expander>
 					</WrapPanel>
-					<Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
+					<DockPanel Grid.Row="2" Grid.Column="2">
+						<Button Content="OK" DockPanel.Dock="Left" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Command="{Binding ClearDialogCommand}" />
+						<Button Content="Debug..." DockPanel.Dock="Right" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Command="{Binding ShowDebugWindowOnErrorCommand}" />
+					</DockPanel>
 				</Grid>
 			</WrapPanel>
 		</Grid>

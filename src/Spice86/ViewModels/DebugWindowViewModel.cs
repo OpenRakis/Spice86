@@ -10,6 +10,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
+using Spice86.Shared.Diagnostics;
 
 using System.ComponentModel;
 
@@ -48,6 +49,9 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel? _softwareMixerViewModel;
 
+    [ObservableProperty]
+    private CfgCpuViewModel? _cfgCpuViewModel;
+
     public DebugWindowViewModel() {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
@@ -67,6 +71,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
         MemoryViewModel = new(pauseStatus);
+        CfgCpuViewModel = new(uiDispatcherTimerFactory, new PerformanceMeasurer(), pauseStatus);
         Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
     }
     
@@ -105,6 +110,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         MidiViewModel?.Visit((component));
         SoftwareMixerViewModel?.Visit(component);
         MemoryViewModel?.Visit(component);
+        CfgCpuViewModel?.Visit(component);
         LastUpdate = DateTime.Now;
     }
 
