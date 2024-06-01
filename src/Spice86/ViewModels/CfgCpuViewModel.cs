@@ -44,15 +44,12 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
 
-    private void UpdateCurrentGraph(object? sender, EventArgs e)
-    {
-        if (_pauseStatus?.IsPaused is false or null)
-        {
+    private void UpdateCurrentGraph(object? sender, EventArgs e) {
+        if (_pauseStatus?.IsPaused is false or null) {
             return;
         }
         ICfgNode? nodeRoot = ExecutionContext?.LastExecuted;
-        if (nodeRoot is null)
-        {
+        if (nodeRoot is null) {
             return;
         }
 
@@ -62,32 +59,26 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
         queue.Enqueue(nodeRoot);
         HashSet<ICfgNode> visitedNodes = new();
         var stopwatch = Stopwatch.StartNew();
-        while (queue.Count > 0)
-        {
+        while (queue.Count > 0) {
             ICfgNode node = queue.Dequeue();
-            if (visitedNodes.Contains(node))
-            {
+            if (visitedNodes.Contains(node)) {
                 continue;
             }
             visitedNodes.Add(node);
             stopwatch.Restart();
-            foreach (ICfgNode successor in node.Successors)
-            {
+            foreach (ICfgNode successor in node.Successors) {
                 currentGraph.Edges.Add(new Edge(
                     $"{node.Address} {Environment.NewLine} {node.GetType().Name}",
                     $"{successor.Address} {Environment.NewLine} {successor.GetType().Name}"));
-                if (!visitedNodes.Contains(successor))
-                {
+                if (!visitedNodes.Contains(successor)) {
                     queue.Enqueue(successor);
                 }
             }
-            foreach (ICfgNode predecessor in node.Predecessors)
-            {
+            foreach (ICfgNode predecessor in node.Predecessors) {
                 currentGraph.Edges.Add(new Edge(
                     $"{predecessor.Address} {Environment.NewLine} {predecessor.GetType().Name}",
                     $"{node.Address} {Environment.NewLine} {node.GetType().Name}"));
-                if (!visitedNodes.Contains(predecessor))
-                {
+                if (!visitedNodes.Contains(predecessor)) {
                     queue.Enqueue(predecessor);
                 }
             }

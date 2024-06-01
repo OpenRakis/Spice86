@@ -40,6 +40,9 @@
         <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
             <views:SoftwareMixerView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CfgCpuViewModel}">
+            <views:CfgCpuView />
+        </DataTemplate>
     </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid
@@ -47,6 +50,7 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
+                <TabItem Header="Code flow" Content="{Binding CfgCpuViewModel}"/>
                 <TabItem Header="Disassembly">
                     <TabControl ItemsSource="{Binding DisassemblyViewModels}">
                         <TabControl.ItemTemplate>
