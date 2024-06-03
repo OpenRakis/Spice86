@@ -16,8 +16,7 @@ using Xunit;
 
 namespace Spice86.Tests.CfgCpu;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.JmpNearImm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 public class InstructionsFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);

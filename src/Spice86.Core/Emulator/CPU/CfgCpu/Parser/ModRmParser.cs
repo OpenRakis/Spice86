@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 public class ModRmParser {
     private readonly InstructionReader _instructionReader;
@@ -15,7 +16,7 @@ public class ModRmParser {
         _state = state;
     }
 
-    public ModRmContext ParseNext(int addressSize, uint? segmentOverrideIndex) {
+    public ModRmContext ParseNext(BitWidth addressWidth, uint? segmentOverrideIndex) {
         InstructionField<byte> modRmByteField = _instructionReader.UInt8.NextField(true);
         byte modRmByte = modRmByteField.Value;
         uint mode = (uint)(modRmByte >> 6 & 0b11);
@@ -37,7 +38,7 @@ public class ModRmParser {
         ModRmOffsetType modRmOffsetType;
         InstructionField<ushort>? modRmOffsetField = null;
 
-        if (addressSize == 16) {
+        if (addressWidth == BitWidth.WORD_16) {
             // No SIB in 16bit addressing mode
             sibContext = null;
             // Parse displacement

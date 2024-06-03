@@ -1,0 +1,25 @@
+@moxy
+@attribute required string RegisterIndexer
+@attribute required string Type
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : MovRegImm<{{Type}}> {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes,
+        InstructionField<{{Type}}> valueField,
+        int registerIndex) : base(address, opcodeField, prefixes, valueField, registerIndex) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        {{Type}} value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
+        helper.State.GeneralRegisters.UInt{{RegisterIndexer}}[RegisterIndex] = value;
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

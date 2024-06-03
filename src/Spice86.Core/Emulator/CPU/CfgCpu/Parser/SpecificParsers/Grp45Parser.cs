@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Grp45;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -11,10 +11,10 @@ public class Grp45Parser : BaseInstructionParser {
     }
 
     public CfgInstruction Parse(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, int addressSizeFromPrefixes, uint? segmentOverrideFromPrefixes,
+        List<InstructionPrefix> prefixes, BitWidth addressWidthFromPrefixes, uint? segmentOverrideFromPrefixes,
         bool hasOperandSize32) {
         bool grp4 = opcodeField.Value is 0xFE;
-        ModRmContext modRmContext = _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes);
+        ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);
         uint groupIndex = modRmContext.RegisterIndex;
         if (grp4) {
             return groupIndex switch {

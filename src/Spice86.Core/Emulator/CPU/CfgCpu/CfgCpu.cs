@@ -12,7 +12,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 
 public class CfgCpu : IDebuggableComponent {
-    private readonly ExecutorCfgNodeVisitor _executorCfgNodeVisitor;
+    private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
 
@@ -20,7 +20,7 @@ public class CfgCpu : IDebuggableComponent {
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher? ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, MachineBreakpoints machineBreakpoints) {
-        _executorCfgNodeVisitor = new ExecutorCfgNodeVisitor(state, memory, ioPortDispatcher, callbackHandler);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler);
         _state = state;
         _dualPic = dualPic;
         _cfgNodeFeeder = new(memory, state, machineBreakpoints);
@@ -38,8 +38,8 @@ public class CfgCpu : IDebuggableComponent {
         ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
         // Execute the node
-        toExecute.Visit(_executorCfgNodeVisitor);
-        ICfgNode? nextToExecute = _executorCfgNodeVisitor.NextNode;
+        toExecute.Execute(_instructionExecutionHelper);
+        ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
         _state.IncCycles();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass

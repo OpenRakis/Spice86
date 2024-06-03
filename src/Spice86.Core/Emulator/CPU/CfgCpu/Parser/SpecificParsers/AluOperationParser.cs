@@ -18,46 +18,61 @@ using Spice86.Shared.Emulator.Memory;
 /// xxxxx011 reg rm 16/32
 /// xxxxx100 acc imm 8
 /// xxxxx101 acc imm 16/32
-/// This class Builds the instruction class instance via reflection.
 /// </summary>
-public class AluOperationParser : BaseInstructionParser {
+
+public abstract class AluOperationParser : BaseInstructionParser {
     private const byte ModRmMask = 0b100;
     private const byte SizeMask = 0b1;
     private const byte RmRegDirectionMask = 0b10;
-    private readonly string _aluOperation;
-    private readonly ReflectionHelper _reflectionHelper;
 
-    public AluOperationParser(BaseInstructionParser other, string aluOperation) : base(other) {
-        _aluOperation = aluOperation;
-        _reflectionHelper = new ReflectionHelper();
+    public AluOperationParser(BaseInstructionParser other) : base(other) {
     }
-
+    
     public CfgInstruction Parse(SegmentedAddress address,
         InstructionField<byte> opcodeField,
         List<InstructionPrefix> prefixes,
-        int addressSizeFromPrefixes,
+        BitWidth addressWidthFromPrefixes,
         uint? segmentOverrideFromPrefixes,
         bool hasOperandSize32) {
         byte opcode = opcodeField.Value;
         bool hasModRm = (opcode & ModRmMask) == 0;
         bool hasOperandSize8 = (opcode & SizeMask) == 0;
-        int size = _reflectionHelper.GetOperandSize(hasOperandSize8, hasOperandSize32);
-
+        BitWidth bitWidth = GetBitWidth(hasOperandSize8, hasOperandSize32);
 
         if (hasModRm) {
-            ModRmContext modRmContext = _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes);
+            ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);
             bool rmReg = (opcode & RmRegDirectionMask) == 0;
-            string memoryOperation = rmReg ? "RmReg" : "RegRm";
-            return _reflectionHelper.BuildInstruction($"{_aluOperation}{memoryOperation}", size, address, opcodeField, prefixes, modRmContext);
+            if (rmReg) {
+                return BuildRmReg(address, opcodeField, prefixes, bitWidth, modRmContext);
+            }
+            return BuildRegRm(address, opcodeField, prefixes, bitWidth, modRmContext);
         }
-        string operation = $"{_aluOperation}AccImm";
-        if (hasOperandSize8) {
-            return _reflectionHelper.BuildInstruction(operation, size, address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false));
-        }
-        if (hasOperandSize32) {
-            return _reflectionHelper.BuildInstruction(operation, size, address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false));
-        }
-        return _reflectionHelper.BuildInstruction(operation, size, address, opcodeField, prefixes, _instructionReader.UInt16.NextField(false));
+        return BuildAccImm(address, opcodeField, prefixes, bitWidth);
     }
 
+    protected abstract CfgInstruction BuildAccImm(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, BitWidth bitWidth);
+
+    protected abstract CfgInstruction BuildRegRm(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext);
+
+    protected abstract CfgInstruction BuildRmReg(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext);
 }
+
+[AluOperationParser("Add")]
+public partial class AddAluOperationParser;
+[AluOperationParser("Or")]
+public partial class OrAluOperationParser;
+[AluOperationParser("Adc")]
+public partial class AdcAluOperationParser;
+[AluOperationParser("Sbb")]
+public partial class SbbAluOperationParser;
+[AluOperationParser("And")]
+public partial class AndAluOperationParser;
+[AluOperationParser("Sub")]
+public partial class SubAluOperationParser;
+[AluOperationParser("Xor")]
+public partial class XorAluOperationParser;
+[AluOperationParser("Cmp")]
+public partial class CmpAluOperationParser;

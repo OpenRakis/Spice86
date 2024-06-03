@@ -1,0 +1,46 @@
+﻿@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : Grp1OperationParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+    
+    protected override CfgInstruction BuildOperandSize8(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+        InstructionField<byte> valueField) {
+        return new Grp1{{Operation}}8(address, opcodeField, prefixes, modRmContext, valueField);
+    }
+    
+    protected override CfgInstruction BuildOperandSizeSigned16(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+        InstructionField<sbyte> valueField) {
+        return new Grp1{{Operation}}Signed16(address, opcodeField, prefixes, modRmContext, valueField);
+    }
+    
+    protected override CfgInstruction BuildOperandSizeUnsigned16(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+        InstructionField<ushort> valueField) {
+        return new Grp1{{Operation}}Unsigned16(address, opcodeField, prefixes, modRmContext, valueField);
+    }
+
+    protected override CfgInstruction BuildOperandSizeSigned32(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+        InstructionField<sbyte> valueField) {
+        return new Grp1{{Operation}}Signed32(address, opcodeField, prefixes, modRmContext, valueField);
+    }
+    
+    protected override CfgInstruction BuildOperandSizeUnsigned32(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+        InstructionField<uint> valueField) {
+        return new Grp1{{Operation}}Unsigned32(address, opcodeField, prefixes, modRmContext, valueField);
+    }
+}

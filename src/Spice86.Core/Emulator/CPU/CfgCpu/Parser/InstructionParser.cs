@@ -2,11 +2,6 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.JmpNearImm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovMoffsAcc;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmImm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRmReg;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.PushPopF;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -18,37 +13,36 @@ using System.Linq;
 public class InstructionParser  : BaseInstructionParser {
     private readonly Grp1Parser _grp1Parser;
     private readonly MovRegImmParser _movRegImmParser;
-    private readonly OperationOnRegIndexParser _incRegParser;
-    private readonly OperationOnRegIndexParser _decRegParser;
-    private readonly OperationOnRegIndexParser _pushRegParser;
-    private readonly OperationOnRegIndexParser _popRegParser;
+    private readonly IncRegIndexParser _incRegParser;
+    private readonly DecRegIndexParser _decRegParser;
+    private readonly PushRegIndexParser _pushRegParser;
+    private readonly PopRegIndexParser _popRegParser;
     private readonly Grp45Parser _grp45Parser;
-    private readonly AluOperationParser _addAluOperationParser;
-    private readonly AluOperationParser _orAluOperationParser;
-    private readonly AluOperationParser _adcAluOperationParser;
-    private readonly AluOperationParser _sbbAluOperationParser;
-    private readonly AluOperationParser _andAluOperationParser;
-    private readonly AluOperationParser _subAluOperationParser;
-    private readonly AluOperationParser _xorAluOperationParser;
-    private readonly AluOperationParser _cmpAluOperationParser;
-
+    private readonly AddAluOperationParser _addAluOperationParser;
+    private readonly OrAluOperationParser _orAluOperationParser;
+    private readonly AdcAluOperationParser _adcAluOperationParser;
+    private readonly SbbAluOperationParser _sbbAluOperationParser;
+    private readonly AndAluOperationParser _andAluOperationParser;
+    private readonly SubAluOperationParser _subAluOperationParser;
+    private readonly XorAluOperationParser _xorAluOperationParser;
+    private readonly CmpAluOperationParser _cmpAluOperationParser;
     
     public InstructionParser(IIndexable memory, State state) : base(new(memory), state) {
         _grp1Parser = new(this);
         _movRegImmParser = new(this);
-        _incRegParser = new(this, "IncReg");
-        _decRegParser = new(this, "DecReg");
-        _pushRegParser = new(this, "PushReg");
-        _popRegParser = new(this, "PopReg");
+        _incRegParser = new(this);
+        _decRegParser = new(this);
+        _pushRegParser = new(this);
+        _popRegParser = new(this);
         _grp45Parser = new(this);
-        _addAluOperationParser = new(this, "Add");
-        _orAluOperationParser = new(this, "Or");
-        _adcAluOperationParser = new(this, "Adc");
-        _sbbAluOperationParser = new(this, "Sbb");
-        _andAluOperationParser = new(this, "And");
-        _subAluOperationParser = new(this, "Sub");
-        _xorAluOperationParser = new(this, "Xor");
-        _cmpAluOperationParser = new(this, "Cmp");
+        _addAluOperationParser = new(this);
+        _orAluOperationParser = new(this);
+        _adcAluOperationParser = new(this);
+        _sbbAluOperationParser = new(this);
+        _andAluOperationParser = new(this);
+        _subAluOperationParser = new(this);
+        _xorAluOperationParser = new(this);
+        _cmpAluOperationParser = new(this);
     }
 
     public CfgInstruction ParseInstructionAt(SegmentedAddress address) {
@@ -70,7 +64,7 @@ public class InstructionParser  : BaseInstructionParser {
  
     private CfgInstruction ParseCfgInstruction(SegmentedAddress address, InstructionField<byte> opcodeField,
         List<InstructionPrefix> prefixes) {
-        int addressSizeFromPrefixes = ComputeAddressSize(prefixes);
+        BitWidth addressWidthFromPrefixes = ComputeAddressSize(prefixes);
         uint? segmentOverrideFromPrefixes = ComputeSegmentOverrideIndex(prefixes);
         bool hasOperandSize32 = HasOperandSize32(prefixes);
         switch (opcodeField.Value) {
@@ -80,7 +74,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x03:
             case 0x04:
             case 0x05:
-                return _addAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _addAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x08:
             case 0x09:
@@ -88,7 +82,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x0B:
             case 0x0C:
             case 0x0D:
-                return _orAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _orAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x10:
             case 0x11:
@@ -96,7 +90,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x13:
             case 0x14:
             case 0x15:
-                return _adcAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _adcAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x18:
             case 0x19:
@@ -104,7 +98,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x1B:
             case 0x1C:
             case 0x1D:
-                return _sbbAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _sbbAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x20:
             case 0x21:
@@ -112,7 +106,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x23:
             case 0x24:
             case 0x25:
-                return _andAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _andAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x26:
                 HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
@@ -123,7 +117,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x2B:
             case 0x2C:
             case 0x2D:
-                return _subAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _subAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x2E:
                 HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
@@ -134,7 +128,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x33:
             case 0x34:
             case 0x35:
-                return _xorAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _xorAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x36:
                 HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
@@ -145,7 +139,7 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x3B:
             case 0x3C:
             case 0x3D:
-                return _cmpAluOperationParser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _cmpAluOperationParser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
             case 0x3E:
                 HandleInvalidOpcodeBecausePrefix(opcodeField.Value);
@@ -200,18 +194,18 @@ public class InstructionParser  : BaseInstructionParser {
             case 0x81:
             case 0x82:
             case 0x83:
-                return _grp1Parser.Parse(address, opcodeField, prefixes, hasOperandSize32, addressSizeFromPrefixes,
+                return _grp1Parser.Parse(address, opcodeField, prefixes, hasOperandSize32, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes);
             case 0x88:
                 return new MovRmReg8(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
+                    _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes));
             case 0x89:
                 if (hasOperandSize32) {
                     return new MovRmReg32(address, opcodeField, prefixes,
-                        _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
+                        _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes));
                 }
                 return new MovRmReg16(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes));
+                    _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes));
             case 0x9C:
                 if (hasOperandSize32) {
                     return new PushF32(address, opcodeField, prefixes);
@@ -254,26 +248,28 @@ public class InstructionParser  : BaseInstructionParser {
                 return _movRegImmParser.ParseMovRegImm(address, opcodeField, prefixes, hasOperandSize32);
             case 0xC6:
                 return new MovRmImm8(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes),
+                    _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes),
                     _instructionReader.UInt8.NextField(false));
             case 0xC7:
                 if (hasOperandSize32) {
                     return new MovRmImm32(address, opcodeField, prefixes,
-                        _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes),
+                        _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes),
                         _instructionReader.UInt32.NextField(false));
                 }
                 return new MovRmImm16(address, opcodeField, prefixes,
-                    _modRmParser.ParseNext(addressSizeFromPrefixes, segmentOverrideFromPrefixes),
+                    _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes),
                     _instructionReader.UInt16.NextField(false));
             case 0xE9: 
                 return new JmpNearImm16(address, opcodeField, _instructionReader.Int16.NextField(true));
+            case 0xEA: 
+                return new JmpFarImm(address, opcodeField, _instructionReader.UInt16.NextField(true), _instructionReader.UInt16.NextField(true));
             case 0xEB: 
                 return new JmpNearImm8(address, opcodeField, _instructionReader.Int8.NextField(true));
             case 0xF4:
                 return new Hlt(address, opcodeField);
             case 0xFE:
             case 0xFF:
-                return _grp45Parser.Parse(address, opcodeField, prefixes, addressSizeFromPrefixes,
+                return _grp45Parser.Parse(address, opcodeField, prefixes, addressWidthFromPrefixes,
                     segmentOverrideFromPrefixes, hasOperandSize32);
         }
 
@@ -296,9 +292,9 @@ public class InstructionParser  : BaseInstructionParser {
         return overridePrefix?.SegmentRegisterIndexValue;
     }
     
-    private int ComputeAddressSize(List<InstructionPrefix> prefixes) {
+    private BitWidth ComputeAddressSize(List<InstructionPrefix> prefixes) {
         AddressSize32Prefix? addressSize32Prefix = prefixes.OfType<AddressSize32Prefix>().FirstOrDefault();
-        return addressSize32Prefix == null ? 16 : 32;
+        return addressSize32Prefix == null ? BitWidth.WORD_16 : BitWidth.DWORD_32;
     }
 
     private CfgInstruction HandleInvalidOpcode(ushort opcode) =>

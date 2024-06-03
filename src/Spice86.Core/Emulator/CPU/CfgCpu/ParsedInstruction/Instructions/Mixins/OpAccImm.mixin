@@ -1,0 +1,26 @@
+@moxy
+@attribute required string Operation
+@attribute required string Accumulator
+@attribute required int Size
+@attribute required string Type
+@attribute required bool Assign=true
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}> {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes,
+        InstructionField<{{Type}}> valueField) : base(address, opcodeField, prefixes, valueField) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        {{if Assign}}helper.State.{{Accumulator}} = {{end}}helper.Alu{{Size}}.{{Operation}}(helper.State.{{Accumulator}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

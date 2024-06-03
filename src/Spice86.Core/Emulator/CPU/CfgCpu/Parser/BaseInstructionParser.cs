@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
+using Spice86.Shared.Emulator.Memory;
 
 public class BaseInstructionParser {
     protected const int RegIndexMask = 0b111;
@@ -27,5 +28,9 @@ public class BaseInstructionParser {
 
     protected int ComputeRegIndex(InstructionField<byte> opcodeField) {
         return opcodeField.Value & RegIndexMask;
+    }
+    
+    protected BitWidth GetBitWidth(bool is8, bool is32) {
+        return is8 ? BitWidth.BYTE_8 : is32 ? BitWidth.DWORD_32 : BitWidth.WORD_16;
     }
 }
