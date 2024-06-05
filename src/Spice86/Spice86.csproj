@@ -52,7 +52,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="bodong.PropertyModels" Version="11.0.6.2" />
+		<PackageReference Include="bodong.PropertyModels" Version="11.0.10.1" />
 		<PackageReference Include="DialogHost.Avalonia" Version="0.7.7" />
 		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.10" />
 		<PackageReference Include="Iced" Version="1.21.0" />
