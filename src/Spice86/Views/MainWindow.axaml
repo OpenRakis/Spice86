@@ -101,8 +101,6 @@
 				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			</WrapPanel>
 		</Border>
-		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
-			
-		</userControls:ErrorModalDialogUserControl>
+		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}" />
 	</Grid>
 </Window>

@@ -35,7 +35,7 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
                     fill.Color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
                 }
             }
-        } catch {
+        } catch(IndexOutOfRangeException) {
             //A read during emulation provoked an OutOfRangeException (for example, in the DAC).
             // Ignore it.
         }
