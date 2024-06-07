@@ -16,14 +16,21 @@
     mc:Ignorable="d">
     <ScrollViewer>
         <Grid RowDefinitions="Auto,*">
-            <Grid Grid.Row="0" ColumnDefinitions="*, Auto">
-                <Menu Grid.Column="0" IsVisible="{Binding IsPaused}">
-                    <MenuItem Header="Edit">
-                        <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
-                    </MenuItem>
-                </Menu>
-                <Button Grid.Column="1" IsVisible="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" Content="Update" />
-            </Grid>
+            <WrapPanel Orientation="Horizontal" Grid.Row="0">
+                <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
+                <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
+                <Button
+                        Command="{ReflectionBinding $parent[Window].DataContext.NewMemoryViewCommand}"
+                        Content="New Memory View"
+                        IsVisible="{Binding IsPaused}" />
+                <UniformGrid>
+                    <Label Content="Start" />
+                    <NumericUpDown Value="{Binding StartAddress}"></NumericUpDown>
+                    <Label Content="End" />
+                    <NumericUpDown Value="{Binding EndAddress}"></NumericUpDown>
+                </UniformGrid>
+                <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+            </WrapPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor

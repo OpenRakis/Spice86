@@ -47,7 +47,17 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-                <TabItem Header="Disassembly" Content="{Binding DisassemblyViewModel}" />
+                <TabItem Header="Disassembly">
+                    <TabControl ItemsSource="{Binding DisassemblyViewModels}">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+                                <TabItem Header="{Binding Header}">
+                                    <views:DisassemblyView />
+                                </TabItem>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                    </TabControl>
+                </TabItem>
                 <TabItem Header="Memory">
                     <TabControl ItemsSource="{Binding MemoryViewModels}">
                         <TabControl.ItemTemplate>
@@ -75,7 +85,7 @@
                         Margin="5,0,0,0"
                         VerticalAlignment="Bottom"
                         Command="{Binding ForceUpdateCommand}"
-                        Content="Force Update" />
+                        Content="Force Refresh" />
                     <Button
                         Margin="5,0,0,0"
                         Command="{Binding PauseCommand}"
@@ -86,10 +96,6 @@
                         Command="{Binding ContinueCommand}"
                         Content="Continue"
                         IsVisible="{Binding IsPaused}" />
-                    <Button Margin="5, 0, 0, 0"
-                            Command="{Binding NewMemoryViewCommand}"
-                            Content="New Memory View"
-                            IsVisible="{Binding IsPaused}" />
                 </WrapPanel>
             </Border>
         </Grid>

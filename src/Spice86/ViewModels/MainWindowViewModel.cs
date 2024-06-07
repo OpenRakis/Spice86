@@ -530,7 +530,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
+        _debugViewModel = new DebugWindowViewModel(_hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

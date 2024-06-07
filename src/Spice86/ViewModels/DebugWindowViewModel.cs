@@ -17,6 +17,7 @@ using System.ComponentModel;
 public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus? _pauseStatus;
     private readonly IProgramExecutor? _programExecutor;
+    private readonly IHostStorageProvider? _storageProvider;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
@@ -45,7 +46,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private MidiViewModel? _midiViewModel;
 
     [ObservableProperty]
-    private DisassemblyViewModel? _disassemblyViewModel;
+    private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
     
     [ObservableProperty]
     private SoftwareMixerViewModel? _softwareMixerViewModel;
@@ -56,26 +57,35 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         }
     }
     
-    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
+    public DebugWindowViewModel(IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
         _programExecutor = programExecutor;
+        _storageProvider = storageProvider;
         _pauseStatus = pauseStatus;
         IsPaused = _programExecutor.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        DisassemblyViewModel = new(pauseStatus);
+        var disassemblyVm = new DisassemblyViewModel(pauseStatus);
+        DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new();
         SoftwareMixerViewModel = new();
         VideoCardViewModel = new();
         CpuViewModel = new(pauseStatus);
         MidiViewModel = new();
-        MemoryViewModels.Add( new(pauseStatus, textClipboard, 0));
+        MemoryViewModels.Add( new(storageProvider, pauseStatus, textClipboard, 0));
         Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
+        if (_pauseStatus is not null && _storageProvider is not null) {
+            MemoryViewModels.Add(new MemoryViewModel(_storageProvider, _pauseStatus, _textClipboard, 0));
+        }
+    }
+    
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewDisassemblyView() {
         if (_pauseStatus is not null) {
-            MemoryViewModels.Add(new MemoryViewModel(_pauseStatus, _textClipboard, 0));
+            DisassemblyViewModels.Add(new DisassemblyViewModel(_pauseStatus));
         }
     }
     
@@ -108,13 +118,19 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
         PaletteViewModel?.Visit(component);
-        DisassemblyViewModel?.Visit(component);
+        if (IsPaused) {
+            foreach (DisassemblyViewModel disassemblyViewModel in DisassemblyViewModels) {
+                disassemblyViewModel.Visit(component);
+            }
+        }
         CpuViewModel?.Visit(component);
         VideoCardViewModel?.Visit(component);
         MidiViewModel?.Visit((component));
         SoftwareMixerViewModel?.Visit(component);
-        foreach (MemoryViewModel memViewModel in MemoryViewModels) {
-            memViewModel.Visit(component);
+        if (IsPaused) {
+            foreach (MemoryViewModel memViewModel in MemoryViewModels) {
+                memViewModel.Visit(component);
+            }
         }
         LastUpdate = DateTime.Now;
     }

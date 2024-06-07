@@ -19,10 +19,25 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private MemoryBinaryDocument? _memoryBinaryDocument;
 
-    public uint StartAddress { get; }
+    private uint _startAddress;
+    
+    public uint StartAddress {
+        get => _startAddress;
+        set {
+            SetProperty(ref _startAddress, value);
+            Header = $"{StartAddress:X} - {EndAddress:X}";
+        }
+    }
 
-    [ObservableProperty]
     private uint _endAddress;
+    
+    public uint EndAddress {
+        get => _endAddress;
+        set {
+            SetProperty(ref _endAddress, value);
+            Header = $"{StartAddress:X} - {EndAddress:X}";
+        }
+    }
 
     [ObservableProperty]
     private string _header = "Memory Range";
@@ -31,10 +46,12 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
+    private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(IHostStorageProvider storageProvider, IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
+        _storageProvider = storageProvider;
         IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
         EndAddress = endAddress;
@@ -54,6 +71,13 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private void UpdateBinaryDocument() {
         if (_memory is not null) {
             MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress, EndAddress);
+        }
+    }
+    
+    [RelayCommand]
+    private async Task DumpMemory() {
+        if (_memory is not null) {
+            await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress, EndAddress - StartAddress));
         }
     }
 
@@ -126,7 +150,6 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
             _memory = memory;
             if (EndAddress is 0) {
                 EndAddress = _memory.Length;
-                Header = $"{StartAddress:X} - {EndAddress:X}";
             }
         }
         MemoryBinaryDocument ??= new MemoryBinaryDocument(memory, StartAddress, EndAddress == 0 ? memory.Length : EndAddress);

@@ -2,6 +2,7 @@ namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,6 +29,9 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private IProgramExecutor? _programExecutor;
 
     [ObservableProperty]
+    private string _header = "";
+
+    [ObservableProperty]
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
     
     [ObservableProperty]
@@ -42,8 +46,15 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
 
-    [ObservableProperty]
     private uint? _startAddress;
+    
+    public uint? StartAddress {
+        get => _startAddress;
+        set {
+            Header = value is null ? "" : $"0x{value:X}";
+            SetProperty(ref _startAddress, value);
+        }
+    }
 
     public DisassemblyViewModel() {
         if (!Design.IsDesignMode) {
@@ -94,6 +105,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         _needToUpdateDisassembly = true;
         UpdateDisassemblyCommand.Execute(null);
     }
+    
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
         if(_state is null || _memory is null || StartAddress is null) {
@@ -113,6 +125,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         Decoder decoder, uint startAddress) {
         int byteOffset = 0;
         emulatedMemoryStream.Position = startAddress;
+        var instructions = new List<CpuInstructionInfo>();
         while (Instructions.Count < NumberOfInstructionsShown) {
             long instructionAddress = emulatedMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
@@ -135,9 +148,11 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
             if (instructionAddress == state.IpPhysicalAddress) {
                 instructionInfo.IsCsIp = true;
             }
-            Instructions.Add(instructionInfo);
+            instructions.Add(instructionInfo);
             byteOffset += instruction.Length;
         }
+        Instructions.Clear();
+        Instructions.AddRange(instructions);
     }
 
     private Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
