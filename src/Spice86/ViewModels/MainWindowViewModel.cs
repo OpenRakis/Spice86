@@ -27,6 +27,10 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InternalDebugger;
+
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Infrastructure;
@@ -46,6 +50,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
     private DebugWindowViewModel? _debugViewModel;
+    private SoftwareMixer? _softwareMixer;
+    private ITimeMultiplier? _pit;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -66,8 +72,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-
-    public ITimeMultiplier? ProgrammableIntervalTimer { private get; set; }
 
     public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
@@ -148,8 +152,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     [ObservableProperty]
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
-    [ObservableProperty]
     private bool _isPaused;
+    
+    public bool IsPaused {
+        get => _isPaused;
+        set {
+            SetProperty(ref _isPaused, value);
+            if (_softwareMixer is not null) {
+                _softwareMixer.IsPaused = value;
+            }
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
@@ -258,7 +271,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         set {
             if (value is not null) {
                 SetProperty(ref _timeMultiplier, value.Value);
-                ProgrammableIntervalTimer?.SetTimeMultiplier(value.Value);
+                _pit?.SetTimeMultiplier(value.Value);
             }
         }
     }
@@ -512,7 +525,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private bool _isPerformanceVisible;
 
     private void StartProgramExecutor() {
-        _programExecutor = _programExecutorFactory.Create(this);
+        (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) viewModelEmulatorDependencies = CreateEmulator();
+        _programExecutor = viewModelEmulatorDependencies.ProgramExecutor;
+        _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
+        _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
         _debugViewModel = new DebugWindowViewModel(_uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
         TimeMultiplier = Configuration.TimeMultiplier;
@@ -523,6 +539,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }
     }
+    
+    private sealed class ViewModelEmulatorDependenciesVisitor : IInternalDebugger {
+        public SoftwareMixer? SoftwareMixer { get; private set; }
+        public ITimeMultiplier? Pit { get; private set; }
 
+        public void Visit<T>(T component) where T : IDebuggableComponent {
+            SoftwareMixer ??= component as SoftwareMixer;
+            Pit ??= component as ITimeMultiplier;
+        }
+    }
+
+    private (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) CreateEmulator() {
+        IProgramExecutor programExecutor = _programExecutorFactory.Create(this);
+        ViewModelEmulatorDependenciesVisitor visitor = new();
+        programExecutor.Accept(visitor);
+        return (programExecutor, visitor.SoftwareMixer, visitor.Pit);
+    }
     public event EventHandler? CloseMainWindow;
 }

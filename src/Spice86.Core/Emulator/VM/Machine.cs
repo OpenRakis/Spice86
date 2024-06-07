@@ -242,9 +242,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
 
         Timer = new Timer(CpuState, loggerService, DualPic, counterConfigurator, configuration.FailOnUnhandledPort);
-        if (gui is not null) {
-            gui.ProgrammableIntervalTimer = Timer;
-        }
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
@@ -385,5 +382,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         VgaRegisters.Accept(emulatorDebugger);
         MidiDevice.Accept(emulatorDebugger);
         SoftwareMixer.Accept(emulatorDebugger);
+        Timer.Accept(emulatorDebugger);
     }
 }
