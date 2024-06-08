@@ -24,13 +24,17 @@ public class PortAudioPlayerFactory {
     private PortAudioLib LoadPortAudioLibrary() {
         if (OperatingSystem.IsWindows() && Environment.Is64BitOperatingSystem) {
             const string path = "libportaudio.dll";
-            return new PortAudioLib(path);
-        } else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) {
+            if (File.Exists(path)) {
+                return new PortAudioLib(path);
+            }
+        }
+
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) {
             //rely on system-provided libportaudio.
             return new PortAudioLib();
-        } else {
-            throw new PlatformNotSupportedException();
         }
+
+        throw new PlatformNotSupportedException();
     }
 
     /// <summary>
@@ -49,10 +53,13 @@ public class PortAudioPlayerFactory {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(e, "The native PortAudio library could not be loaded");
                 }
-            }
-            catch (BufdioException e) {
+            } catch (BufdioException e) {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(e, "No audio output device could be found");
+                }
+            } catch (PlatformNotSupportedException e) {
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error(e, "A compatible PortAudio library could not be found for the current platform");
                 }
             }
         }
