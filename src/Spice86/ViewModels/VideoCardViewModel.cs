@@ -1,24 +1,44 @@
 namespace Spice86.ViewModels;
 
+using Avalonia.Controls;
+using Avalonia.Threading;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
 public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
+    private IVgaRenderer? _vgaRenderer;
+    private IVideoState? _videoState;
     
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        switch (component) {
-            case IVgaRenderer vgaRenderer:
-                VisitVgaRenderer(vgaRenderer);
-                break;
-            case IVideoState videoState:
-                VisitVideoState(videoState);
-                break;
+    public bool NeedsToVisitEmulator => _vgaRenderer is null || _videoState is null;
+    
+    public VideoCardViewModel() {
+        if (!Design.IsDesignMode) {
+            throw new InvalidOperationException("This constructor is not for runtime usage");
         }
+    }
+    
+    public VideoCardViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if(_vgaRenderer is null || _videoState is null) {
+            return;
+        }
+        VisitVgaRenderer(_vgaRenderer);
+        VisitVideoState(_videoState);
+    }
+
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        _vgaRenderer ??= component as IVgaRenderer;
+        _videoState ??= component as IVideoState;
     }
 
     private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {

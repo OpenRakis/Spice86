@@ -1,5 +1,7 @@
 namespace Spice86.ViewModels;
 
+using Avalonia.Threading;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -11,17 +13,24 @@ public partial class MidiViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private MidiInfo _midi = new();
 
-    public MidiViewModel() : base() { }
+    private Midi? _externalMidiDevice;
+
+    public MidiViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (_externalMidiDevice is null) {
+            return;
+        }
+        Midi.LastPortRead = _externalMidiDevice.LastPortRead;
+        Midi.LastPortWritten = _externalMidiDevice.LastPortWritten;
+        Midi.LastPortWrittenValue = _externalMidiDevice.LastPortWrittenValue;
+    }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if(component is Midi midi) {
-            VisitExternalMidiDevice(midi);
-        }
+        _externalMidiDevice ??= component as Midi;
     }
     
-    private void VisitExternalMidiDevice(Midi externalMidiDevice) {
-        Midi.LastPortRead = externalMidiDevice.LastPortRead;
-        Midi.LastPortWritten = externalMidiDevice.LastPortWritten;
-        Midi.LastPortWrittenValue = externalMidiDevice.LastPortWrittenValue;
-    }
+    public bool NeedsToVisitEmulator => _externalMidiDevice is null;
 }

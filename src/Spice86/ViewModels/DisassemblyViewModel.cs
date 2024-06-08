@@ -62,10 +62,17 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel(IPauseStatus pauseStatus) : base() {
+    public DisassemblyViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (_needToUpdateDisassembly && IsPaused) {
+            UpdateDisassembly();
+        }
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
@@ -76,6 +83,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         _needToUpdateDisassembly = true;
         StartAddress ??= _state?.IpPhysicalAddress;
     }
+    
+    public bool NeedsToVisitEmulator => _memory is null || _state is null || _programExecutor is null;
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
         switch (component) {
@@ -126,7 +135,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         int byteOffset = 0;
         emulatedMemoryStream.Position = startAddress;
         var instructions = new List<CpuInstructionInfo>();
-        while (Instructions.Count < NumberOfInstructionsShown) {
+        while (instructions.Count < NumberOfInstructionsShown) {
             long instructionAddress = emulatedMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {

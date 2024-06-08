@@ -548,6 +548,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
             SoftwareMixer ??= component as SoftwareMixer;
             Pit ??= component as ITimeMultiplier;
         }
+        public bool NeedsToVisitEmulator => SoftwareMixer is null || Pit is null;
     }
 
     private (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) CreateEmulator() {

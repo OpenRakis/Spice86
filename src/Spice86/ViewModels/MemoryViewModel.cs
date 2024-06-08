@@ -1,5 +1,7 @@
 ﻿namespace Spice86.ViewModels;
 
+using Avalonia.Threading;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -18,6 +20,8 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private IMemory? _memory;
     [ObservableProperty]
     private MemoryBinaryDocument? _memoryBinaryDocument;
+    
+    public bool NeedsToVisitEmulator => _memory is null;
 
     private uint _startAddress;
     
@@ -48,13 +52,20 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IHostStorageProvider storageProvider, IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;
         IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
         EndAddress = endAddress;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(100), DispatcherPriority.Background, UpdateValues);
+    }
+    
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (IsPaused) {
+            UpdateBinaryDocument();
+        }
     }
 
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {

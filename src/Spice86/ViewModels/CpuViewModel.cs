@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -15,6 +16,7 @@ using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus? _pauseStatus;
+    private State? _cpuState;
     
     [ObservableProperty]
     private StateInfo _state = new();
@@ -28,14 +30,21 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public CpuViewModel(IPauseStatus pauseStatus) : base() {
+    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (_cpuState is not null) {
+            VisitCpuState(_cpuState);
+        }
     }
     
+    public bool NeedsToVisitEmulator => _cpuState is null;
+
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        if (component is State state) {
-            VisitCpuState(state);
-        }
+        _cpuState ??= component as State;
     }
     
     private bool IsPaused => _pauseStatus?.IsPaused is true;
