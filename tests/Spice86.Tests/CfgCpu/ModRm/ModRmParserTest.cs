@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -17,7 +18,7 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(16, null);
+        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -44,7 +45,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(16, null);
+        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -71,7 +72,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(16, null);
+        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -99,7 +100,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(16, null);
+        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -124,7 +125,7 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(3, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(16, null);
+        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -149,7 +150,7 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(32, null);
+        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -176,7 +177,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(32, null);
+        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -210,7 +211,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(32, null);
+        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -245,7 +246,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(32, null);
+        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
@@ -280,7 +281,7 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(32, null);
+        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));

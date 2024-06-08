@@ -20,7 +20,7 @@ using ExecutionContext = Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContex
 
 namespace Spice86.Tests.CfgCpu;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.MovRegImm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 public class CfgNodeFeederTest {
     private const int AxIndex = 0;

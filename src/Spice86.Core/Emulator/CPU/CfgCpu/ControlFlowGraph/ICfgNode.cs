@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -30,10 +31,11 @@ public interface ICfgNode {
     /// Needs to be called each time a successor is added
     /// </summary>
     public void UpdateSuccessorCache();
-
+    
     /// <summary>
-    /// Visit this node
+    /// Execute this node
     /// </summary>
-    /// <param name="visitor">Visitor for this node</param>
-    public void Visit(ICfgNodeVisitor visitor);
+    /// <param name="context">InstructionExecutionContext instance providing access to the outside</param>
+    public void Execute(InstructionExecutionHelper helper);
+
 }

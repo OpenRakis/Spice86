@@ -1,0 +1,40 @@
+﻿@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : AluOperationParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+    
+    protected override CfgInstruction BuildAccImm(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth) {
+        return bitWidth switch {
+            BitWidth.BYTE_8 => new {{Operation}}AccImm8(address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false)),
+            BitWidth.WORD_16 => new {{Operation}}AccImm16(address, opcodeField, prefixes, _instructionReader.UInt16.NextField(false)),
+            BitWidth.DWORD_32 => new {{Operation}}AccImm32(address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false))
+        };
+    }
+
+    protected override CfgInstruction BuildRegRm(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext) {
+        return bitWidth switch {
+            BitWidth.BYTE_8 => new {{Operation}}RegRm8(address, opcodeField, prefixes, modRmContext),
+            BitWidth.WORD_16 => new {{Operation}}RegRm16(address, opcodeField, prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}RegRm32(address, opcodeField, prefixes, modRmContext)
+        };
+    }
+
+    protected override CfgInstruction BuildRmReg(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext) {
+        return bitWidth switch {
+            BitWidth.BYTE_8 => new {{Operation}}RmReg8(address, opcodeField, prefixes, modRmContext),
+            BitWidth.WORD_16 => new {{Operation}}RmReg16(address, opcodeField, prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}RmReg32(address, opcodeField, prefixes, modRmContext)
+        };
+    }
+}

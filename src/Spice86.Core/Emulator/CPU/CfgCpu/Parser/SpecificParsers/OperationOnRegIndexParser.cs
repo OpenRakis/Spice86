@@ -9,13 +9,8 @@ using Spice86.Shared.Emulator.Memory;
 /// The opcode has a reg index to indicate on which register to perform the operation.
 /// Operation is performed on 16 or 32 bits operands depending on the operand size prefix.
 /// </summary>
-public class OperationOnRegIndexParser : BaseInstructionParser {
-    private readonly string _operation;
-    private readonly ReflectionHelper _reflectionHelper;
-
-    public OperationOnRegIndexParser(BaseInstructionParser other, string operation) : base(other) {
-        _operation = operation;
-        _reflectionHelper = new();
+public abstract class OperationOnRegIndexParser : BaseInstructionParser {
+    public OperationOnRegIndexParser(BaseInstructionParser other) : base(other) {
     }
 
     public CfgInstruction Parse(SegmentedAddress address,
@@ -23,7 +18,18 @@ public class OperationOnRegIndexParser : BaseInstructionParser {
         List<InstructionPrefix> prefixes,
         bool hasOperandSize32) {
         int regIndex = ComputeRegIndex(opcodeField);
-        int operandSize = _reflectionHelper.GetOperandSize(false, hasOperandSize32);
-        return _reflectionHelper.BuildInstruction(_operation, operandSize, address, opcodeField, prefixes, regIndex);
+        BitWidth bitWidth = GetBitWidth(false, hasOperandSize32);
+        return Build(address, opcodeField, prefixes, regIndex, bitWidth);
     }
+    protected abstract CfgInstruction Build(SegmentedAddress address, InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes, int regIndex, BitWidth bitWidth);
 }
+
+[OperationOnRegIndexParser("IncReg")]
+public partial class IncRegIndexParser;
+[OperationOnRegIndexParser("DecReg")]
+public partial class DecRegIndexParser;
+[OperationOnRegIndexParser("PushReg")]
+public partial class PushRegIndexParser;
+[OperationOnRegIndexParser("PopReg")]
+public partial class PopRegIndexParser;

@@ -97,6 +97,7 @@ public class EmulationLoop {
         functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
         _dmaController.StartDmaThread();
         RunLoop();
+        _dmaController.StopDmaThread();
     }
 
     private void RunLoop() {

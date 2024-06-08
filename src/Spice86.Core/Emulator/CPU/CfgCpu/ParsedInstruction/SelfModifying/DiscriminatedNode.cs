@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -24,7 +25,17 @@ public class DiscriminatedNode : CfgNode {
             .ToDictionary(node => node.Discriminator);
     }
 
-    public override void Visit(ICfgNodeVisitor visitor) {
-        visitor.Accept(this);
+    public override void Execute(InstructionExecutionHelper helper) {
+        int address = (int)Address.ToPhysical();
+        foreach (Discriminator discriminator in SuccessorsPerDiscriminator.Keys) {
+            int length = discriminator.DiscriminatorValue.Count;
+            Span<byte> bytes = helper.Memory.GetSpan(address, length);
+            if (discriminator.SpanEquivalent(bytes)) {
+                helper.NextNode = SuccessorsPerDiscriminator[discriminator];
+                return;
+            }
+        }
+
+        helper.NextNode = null;
     }
 }

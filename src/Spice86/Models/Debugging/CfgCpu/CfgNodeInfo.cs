@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 using System;
@@ -38,7 +39,7 @@ internal partial class CfgNodeInfo : ObservableObject, ICfgNode {
         throw new NotSupportedException();
     }
 
-    public void Visit(ICfgNodeVisitor visitor) {
+    public void Execute(InstructionExecutionHelper helper) {
         throw new NotSupportedException();
     }
 }

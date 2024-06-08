@@ -1,0 +1,19 @@
+﻿@moxy
+@attribute required string FlagName
+@attribute required string FlagValue
+@moxy
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : CfgInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField) :
+        base(address, opcodeField) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.State.{{FlagName}} = {{FlagValue}};
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

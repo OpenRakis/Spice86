@@ -3,6 +3,7 @@ namespace Spice86.Tests.CfgCpu.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -35,7 +36,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -54,7 +55,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -73,7 +74,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -94,7 +95,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -111,7 +112,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(3, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
 
         // Assert
         Assert.Null(executor.MemoryOffset);
@@ -126,7 +127,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -145,7 +146,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -167,7 +168,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -190,7 +191,7 @@ public class ModRmExecutorTest {
 
         // Act
         try {
-            executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+            executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
         } catch (CpuGeneralProtectionFaultException e) {
             // Success!
             return;
@@ -211,7 +212,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -233,7 +234,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -256,7 +257,7 @@ public class ModRmExecutorTest {
 
         // Act
         try {
-            executor.RefreshWithNewModRmContext(parser.ParseNext(32, null));
+            executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
         } catch (CpuGeneralProtectionFaultException e) {
             // Success!
             return;

@@ -64,6 +64,10 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
             _dmaThreadStarted = true;
         }
     }
+    
+    public void StopDmaThread() {
+        _exitDmaLoop = true;
+    }
 
     /// <summary>
     /// https://techgenix.com/direct-memory-access/
