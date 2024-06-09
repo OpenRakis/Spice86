@@ -9,19 +9,17 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 
 public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
-    private readonly IMemory _memory;
     private readonly uint _startAddress;
     private readonly uint _endAddress;
 
-    public MemoryReadOnlyBitRangeUnion(IMemory memory, uint startAddress, uint endAddress) {
-        _memory = memory;
+    public MemoryReadOnlyBitRangeUnion(uint startAddress, uint endAddress) {
         _startAddress = startAddress;
         _endAddress = endAddress;
         EnclosingRange = new BitRange(startAddress, endAddress);
     }
 
     public BitRange EnclosingRange { get; }
-    public int Count => (int)_memory.Length;
+    public int Count => (int)(_endAddress - _startAddress);
 
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 

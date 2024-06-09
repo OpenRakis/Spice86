@@ -18,28 +18,44 @@ using System.Globalization;
 
 public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private IMemory? _memory;
+    private bool _needToUpdateBinaryDocument;
+    
     [ObservableProperty]
     private MemoryBinaryDocument? _memoryBinaryDocument;
     
     public bool NeedsToVisitEmulator => _memory is null;
 
-    private uint _startAddress;
+    private uint? _startAddress = 0;
     
-    public uint StartAddress {
+    public uint? StartAddress {
         get => _startAddress;
         set {
+            if(_memory is not null && value > _memory.Length) {
+                value = _memory.Length;
+            }
+            if(value is null || value > EndAddress) {
+                value = EndAddress;
+            }
             SetProperty(ref _startAddress, value);
             Header = $"{StartAddress:X} - {EndAddress:X}";
+            UpdateBinaryDocument();
         }
     }
 
-    private uint _endAddress;
+    private uint? _endAddress = 0;
     
-    public uint EndAddress {
+    public uint? EndAddress {
         get => _endAddress;
         set {
+            if(value is null || value < StartAddress) {
+                value = StartAddress;
+            }
+            if(_memory is not null && value > _memory.Length) {
+                value = _memory.Length;
+            }
             SetProperty(ref _endAddress, value);
             Header = $"{StartAddress:X} - {EndAddress:X}";
+            UpdateBinaryDocument();
         }
     }
 
@@ -59,13 +75,15 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
         IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
         EndAddress = endAddress;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(100), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
     
     private void UpdateValues(object? sender, EventArgs e) {
-        if (IsPaused) {
-            UpdateBinaryDocument();
+        if (!_needToUpdateBinaryDocument) {
+            return;
         }
+        UpdateBinaryDocument();
+        _needToUpdateBinaryDocument = false;
     }
 
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
@@ -74,21 +92,21 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
         }
         IsPaused = _pauseStatus.IsPaused;
         if(IsPaused) {
-            UpdateBinaryDocument();
+            _needToUpdateBinaryDocument = true;
         }
     }
 
     [RelayCommand]
     private void UpdateBinaryDocument() {
-        if (_memory is not null) {
-            MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress, EndAddress);
+        if (_memory is not null && StartAddress is not null && EndAddress is not null) {
+            MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
         }
     }
     
     [RelayCommand]
     private async Task DumpMemory() {
-        if (_memory is not null) {
-            await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress, EndAddress - StartAddress));
+        if (_memory is not null && StartAddress is not null && EndAddress is not null) {
+            await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress.Value, EndAddress.Value - StartAddress.Value));
         }
     }
 
@@ -144,11 +162,11 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     public void ApplyMemoryEdit() {
         if (!TryParseMemoryAddress(MemoryEditAddress, out uint? address) ||
             MemoryEditValue is null ||
+            _memory is null ||
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
         MemoryBinaryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
-        UpdateBinaryDocument();
         IsEditingMemory = false;
     }
 
@@ -163,6 +181,8 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
                 EndAddress = _memory.Length;
             }
         }
-        MemoryBinaryDocument ??= new MemoryBinaryDocument(memory, StartAddress, EndAddress == 0 ? memory.Length : EndAddress);
+        if(StartAddress is not null && EndAddress is not null) {
+            MemoryBinaryDocument ??= new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        }
     }
 }

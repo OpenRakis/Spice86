@@ -11,13 +11,13 @@ public class MemoryBinaryDocument : IBinaryDocument {
     private readonly uint _endAddress;
     
     public MemoryBinaryDocument(IMemory memory, uint startAddress, uint endAddress) {
-        _memory = memory;
-        _startAddress = startAddress;
-        _endAddress = endAddress;
         IsReadOnly = false;
         CanInsert = false;
         CanRemove = false;
-        ValidRanges = new MemoryReadOnlyBitRangeUnion(memory, startAddress, endAddress);
+        _startAddress = startAddress;
+        _endAddress = endAddress;
+        _memory = memory;
+        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress - _startAddress);
     }
 
     public ulong Length => _endAddress - _startAddress;
@@ -34,7 +34,7 @@ public class MemoryBinaryDocument : IBinaryDocument {
 
     public void ReadBytes(ulong offset, Span<byte> buffer) {
         for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = _memory[(uint)(offset + (uint)i)];
+            buffer[i] = _memory.UInt8[(int) _startAddress + (int)offset + i];
         }
     }
 
@@ -44,7 +44,7 @@ public class MemoryBinaryDocument : IBinaryDocument {
 
     public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
         for (int i = 0; i < buffer.Length; i++) {
-            _memory[(uint)(offset + (uint)i)] = buffer[i];
+            _memory.UInt8[(uint)(_startAddress + offset + (uint)i)] = buffer[i];
         }
     }
 }
