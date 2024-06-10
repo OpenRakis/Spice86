@@ -6,11 +6,12 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
-public partial class {{ moxy.Class.Name }} : MovRmImm<{{Type}}> {
+public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{{Type}}> {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
         ModRmContext modRmContext, InstructionField<{{Type}}> valueField) : base(address, opcodeField, prefixes,
         modRmContext, valueField) {

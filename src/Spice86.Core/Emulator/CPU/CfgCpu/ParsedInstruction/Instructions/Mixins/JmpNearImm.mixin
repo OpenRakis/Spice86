@@ -5,9 +5,10 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Shared.Emulator.Memory;
 
-public partial class {{ moxy.Class.Name }} : JmpNearImm<{{SignedType}}> {
+public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{SignedType}}> {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, InstructionField<{{SignedType}}> offsetField) :
         base(address, opcodeField, offsetField) {
     }
@@ -17,5 +18,3 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm<{{SignedType}}> {
         helper.JumpNearOffset(this, offset);
     }
 }
-
-        

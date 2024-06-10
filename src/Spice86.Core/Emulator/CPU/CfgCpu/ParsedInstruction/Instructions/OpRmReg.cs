@@ -30,16 +30,6 @@ public partial class AndRmReg16;
 [OpRmReg("And", 32)]
 public partial class AndRmReg32;
 
-// CMP (Sub without assigment)
-[OpRmReg("Sub", 8, false)]
-public partial class CmpRmReg8;
-
-[OpRmReg("Sub", 16, false)]
-public partial class CmpRmReg16;
-
-[OpRmReg("Sub", 32, false)]
-public partial class CmpRmReg32;
-
 // OR
 [OpRmReg("Or", 8)]
 public partial class OrRmReg8;
@@ -79,3 +69,24 @@ public partial class XorRmReg16;
 
 [OpRmReg("Xor", 32)]
 public partial class XorRmReg32;
+
+
+// CMP (Sub without assigment)
+[OpRmReg("Sub", 8, false)]
+public partial class CmpRmReg8;
+
+[OpRmReg("Sub", 16, false)]
+public partial class CmpRmReg16;
+
+[OpRmReg("Sub", 32, false)]
+public partial class CmpRmReg32;
+
+// TEST (And without assigment)
+[OpRmReg("And", 8, false)]
+public partial class TestRmReg8;
+
+[OpRmReg("And", 16, false)]
+public partial class TestRmReg16;
+
+[OpRmReg("And", 32, false)]
+public partial class TestRmReg32;

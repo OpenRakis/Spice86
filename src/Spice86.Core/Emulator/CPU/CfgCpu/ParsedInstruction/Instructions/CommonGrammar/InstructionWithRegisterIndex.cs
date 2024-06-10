@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;

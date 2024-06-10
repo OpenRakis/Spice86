@@ -18,8 +18,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        {{if Assign}}helper.ModRm.RM{{Size}} = {{end}}
-        helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}});
+        {{if Assign}}helper.ModRm.RM{{Size}} = {{end}}helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}});
         helper.MoveIpAndSetNextNode(this);
     }
 }

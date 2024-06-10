@@ -22,7 +22,6 @@ using Spice86.Shared.Emulator.Memory;
 
 public abstract class AluOperationParser : BaseInstructionParser {
     private const byte ModRmMask = 0b100;
-    private const byte SizeMask = 0b1;
     private const byte RmRegDirectionMask = 0b10;
 
     public AluOperationParser(BaseInstructionParser other) : base(other) {
@@ -36,8 +35,7 @@ public abstract class AluOperationParser : BaseInstructionParser {
         bool hasOperandSize32) {
         byte opcode = opcodeField.Value;
         bool hasModRm = (opcode & ModRmMask) == 0;
-        bool hasOperandSize8 = (opcode & SizeMask) == 0;
-        BitWidth bitWidth = GetBitWidth(hasOperandSize8, hasOperandSize32);
+        BitWidth bitWidth = GetBitWidth(opcodeField, hasOperandSize32);
 
         if (hasModRm) {
             ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);

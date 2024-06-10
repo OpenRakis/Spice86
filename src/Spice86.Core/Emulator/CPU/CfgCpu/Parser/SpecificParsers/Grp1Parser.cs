@@ -17,14 +17,13 @@ public class Grp1Parser : BaseInstructionParser {
         uint? segmentOverrideFromPrefixes) {
         ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);
         byte opCode = opcodeField.Value;
-        bool hasOperandSize8 = opCode is 0x80 or 0x82;
         bool signExtendOp2 = opCode is 0x83;
         uint groupIndex = modRmContext.RegisterIndex;
         if (groupIndex > 7) {
             throw new InvalidGroupIndexException(_state, groupIndex);
         }
 
-        BitWidth bitWidth = GetBitWidth(hasOperandSize8, hasOperandSize32);
+        BitWidth bitWidth = GetBitWidth(opcodeField, hasOperandSize32);
         Grp1OperationParser operationParser = GetOperationParser(groupIndex);
         return operationParser.Parse(address, opcodeField, prefixes, modRmContext, bitWidth, signExtendOp2);
     }

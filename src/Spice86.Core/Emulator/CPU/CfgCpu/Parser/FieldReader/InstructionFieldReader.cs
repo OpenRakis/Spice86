@@ -27,15 +27,25 @@ public abstract class InstructionFieldReader<T> {
         AddressSource.IndexInInstruction += FieldSize();
     }
 
-    public InstructionField<T> PeekField(bool nonNullDiscriminator) {
+    /// <summary>
+    /// Reads field at current address.
+    /// </summary>
+    /// <param name="finalValue">If true, a change in value in memory will lead to the feeder to create a new instruction with the new value</param>
+    /// <returns></returns>
+    public InstructionField<T> PeekField(bool finalValue) {
         T value = PeekValue();
-        ImmutableList<byte?> bytes = PeekDataOrNullList(FieldSize(), nonNullDiscriminator);
+        ImmutableList<byte?> bytes = PeekDataOrNullList(FieldSize(), finalValue);
         return new InstructionField<T>(AddressSource.IndexInInstruction, FieldSize(),
             CurrentAddress.ToPhysical(), value, bytes);
     }
 
-    public InstructionField<T> NextField(bool nonNullDiscriminator) {
-        InstructionField<T> res = PeekField(nonNullDiscriminator);
+    /// <summary>
+    /// Reads field at current address and advance read address to next.
+    /// </summary>
+    /// <param name="finalValue">If true, a change in value in memory will lead to the feeder to create a new instruction with the new value</param>
+    /// <returns></returns>
+    public InstructionField<T> NextField(bool finalValue) {
+        InstructionField<T> res = PeekField(finalValue);
         Advance();
         return res;
     }

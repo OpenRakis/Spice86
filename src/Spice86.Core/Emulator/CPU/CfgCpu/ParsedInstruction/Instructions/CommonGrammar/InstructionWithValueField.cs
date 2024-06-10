@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -6,7 +6,7 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Numerics;
 
-public abstract class InstructionWithValueField<T> : CfgInstruction, IInstructionWithValueField<T> where T : IUnsignedNumber<T> {
+public abstract class InstructionWithValueField<T> : CfgInstruction, IInstructionWithValueField<T> where T : INumberBase<T> {
     public InstructionWithValueField(SegmentedAddress address,
         InstructionField<byte> opcodeField,
         List<InstructionPrefix> prefixes,

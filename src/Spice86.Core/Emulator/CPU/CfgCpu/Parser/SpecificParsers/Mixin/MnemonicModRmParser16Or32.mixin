@@ -1,0 +1,28 @@
+@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : MnemonicModRmParser16Or32 {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+
+    protected override CfgInstruction Parse(
+        SegmentedAddress address,
+        InstructionField<byte> opcodeField,
+        List<InstructionPrefix> prefixes,
+        BitWidth bitWidth,
+        ModRmContext modRmContext) {
+        return bitWidth switch {
+            BitWidth.WORD_16 => new {{Operation}}16(address, opcodeField, prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}32(address, opcodeField, prefixes, modRmContext)
+        };
+    }
+}

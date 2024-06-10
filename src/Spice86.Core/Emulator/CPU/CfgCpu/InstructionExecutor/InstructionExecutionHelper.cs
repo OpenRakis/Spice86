@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Function;
@@ -44,17 +45,13 @@ public class InstructionExecutionHelper {
         return State.SegmentRegisters.UInt16[instruction.SegmentRegisterIndex];
     }
 
-    public ushort SegmentValue(IInstructionWithSegmentField instruction) {
-        return InstructionFieldValueRetriever.GetFieldValue(instruction.SegmentField);
-    }
-    
-    public ushort OffsetValue(IInstructionWithOffsetField instruction) {
+    public ushort UShortOffsetValue(IInstructionWithOffsetField<ushort> instruction) {
         return InstructionFieldValueRetriever.GetFieldValue(instruction.OffsetField);
     }
 
-    public SegmentedAddress GetSegmentedAddress(IInstructionWithSegmentRegisterIndexAndOffsetField instruction) {
+    public SegmentedAddress GetSegmentedAddress(InstructionWithSegmentRegisterIndexAndOffsetField<ushort> instruction) {
         ushort segment = SegmentValue(instruction);
-        ushort offset = OffsetValue(instruction);
+        ushort offset = UShortOffsetValue(instruction);
         return new SegmentedAddress(segment, offset);
     }
 

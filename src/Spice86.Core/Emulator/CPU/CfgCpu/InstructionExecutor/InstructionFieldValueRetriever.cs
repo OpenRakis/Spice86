@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Shared.Emulator.Memory;
 
 public class InstructionFieldValueRetriever {
     private IIndexable Memory { get; }
@@ -56,5 +57,13 @@ public class InstructionFieldValueRetriever {
         }
 
         return Memory.Int32[field.PhysicalAddress];
+    }
+    
+    public SegmentedAddress GetFieldValue(InstructionField<SegmentedAddress> field) {
+        if (field.UseValue) {
+            return field.Value;
+        }
+
+        return Memory.SegmentedAddress[field.PhysicalAddress];
     }
 }
