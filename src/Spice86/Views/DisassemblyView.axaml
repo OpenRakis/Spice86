@@ -30,9 +30,9 @@
             </WrapPanel>
             <Grid Grid.Column="1" IsVisible="{Binding IsPaused}" ColumnDefinitions="Auto,Auto,Auto,Auto">
                 <Button
-                    Command="{ReflectionBinding $parent[Window].DataContext.NewDisassemblyViewCommand}"
+                    Command="{Binding NewDisassemblyViewCommand}"
                     Content="New Disassembly View"
-                    IsVisible="{Binding IsPaused}" />
+                    IsEnabled="{Binding IsPaused}" />
                 <StackPanel Grid.Column="1" Orientation="Vertical">
                     <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
                     <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />

@@ -25,7 +25,7 @@ public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
     }
     
     public VideoCardViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

@@ -32,7 +32,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
 
     public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

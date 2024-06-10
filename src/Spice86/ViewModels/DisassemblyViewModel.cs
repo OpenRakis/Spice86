@@ -23,6 +23,7 @@ using System.ComponentModel;
 
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus? _pauseStatus;
+    private readonly DebugViewModel? _debugViewModel;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
@@ -38,6 +39,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -62,11 +64,12 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
+    public DisassemblyViewModel(DebugViewModel debugViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
+        _debugViewModel = debugViewModel;
         _pauseStatus = pauseStatus;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
@@ -103,6 +106,11 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
                 IsGdbServerAvailable = programExecutor.IsGdbCommandHandlerAvailable;
                 break;
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewDisassemblyView() {
+        _debugViewModel?.NewDisassemblyViewCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]

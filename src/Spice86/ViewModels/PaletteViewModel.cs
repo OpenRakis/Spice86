@@ -23,7 +23,7 @@ public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     }
     
     public PaletteViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         Dispatcher.UIThread.Post(() => {
             for (int i = 0; i < 256; i++) {
                 _palette.Add(new (){Fill = new SolidColorBrush()});

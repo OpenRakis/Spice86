@@ -29,6 +29,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -66,28 +67,28 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
         IsPaused = _programExecutor.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        var disassemblyVm = new DisassemblyViewModel(uiDispatcherTimerFactory, pauseStatus);
+        var disassemblyVm = new DisassemblyViewModel(this, uiDispatcherTimerFactory, pauseStatus);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(uiDispatcherTimerFactory);
         SoftwareMixerViewModel = new(uiDispatcherTimerFactory);
         VideoCardViewModel = new(uiDispatcherTimerFactory);
         CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
         MidiViewModel = new(uiDispatcherTimerFactory);
-        MemoryViewModels.Add( new(uiDispatcherTimerFactory, storageProvider, pauseStatus, textClipboard, 0));
-        Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
+        MemoryViewModels.Add( new(this, uiDispatcherTimerFactory, storageProvider, pauseStatus, textClipboard, 0));
+        Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Normal);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
         if (_pauseStatus is not null && _storageProvider is not null && _uiDispatcherTimerFactory is not null) {
-            MemoryViewModels.Add(new MemoryViewModel(_uiDispatcherTimerFactory, _storageProvider, _pauseStatus, _textClipboard, 0));
+            MemoryViewModels.Add(new MemoryViewModel(this, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, _textClipboard, 0));
         }
     }
     
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewDisassemblyView() {
         if (_pauseStatus is not null && _uiDispatcherTimerFactory is not null) {
-            DisassemblyViewModels.Add(new DisassemblyViewModel(_uiDispatcherTimerFactory, _pauseStatus));
+            DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
         }
     }
     

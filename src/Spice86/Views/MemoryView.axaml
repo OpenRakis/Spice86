@@ -20,9 +20,9 @@
                 <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
                 <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
                 <Button
-                        Command="{ReflectionBinding $parent[Window].DataContext.NewMemoryViewCommand}"
+                        Command="{Binding NewMemoryViewCommand}"
                         Content="New Memory View"
-                        IsVisible="{Binding IsPaused}" />
+                        IsEnabled="{Binding IsPaused}" />
                 <UniformGrid>
                     <Label Content="Start" />
                     <NumericUpDown Value="{Binding StartAddress}"></NumericUpDown>

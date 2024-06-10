@@ -16,7 +16,7 @@ public partial class MidiViewModel : ViewModelBase, IInternalDebugger {
     private Midi? _externalMidiDevice;
 
     public MidiViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

@@ -30,7 +30,7 @@ public partial class SoftwareMixerViewModel : ViewModelBase, IInternalDebugger {
     }
     
     public SoftwareMixerViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
-        uiDispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        uiDispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
