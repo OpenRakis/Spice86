@@ -27,7 +27,6 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InternalDebugger;
 
@@ -106,7 +105,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         }
     }
     
-    private bool _showCursor = false;
+    private bool _showCursor;
 
     public bool ShowCursor {
         get => _showCursor;
@@ -347,13 +346,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         AddOrReplaceMostRecentlyUsed(Configuration.Exe);
         _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
-        if (Configuration is {UseCodeOverrideOption: true, OverrideSupplier: not null}) {
-            AsmOverrideStatus = "ASM code overrides: enabled.";
-        } else if(Configuration is {UseCodeOverride: false, OverrideSupplier: not null}) {
-            AsmOverrideStatus = "ASM code overrides: only functions names will be referenced.";
-        } else {
-            AsmOverrideStatus = "ASM code overrides: none.";
-        }
+        AsmOverrideStatus = Configuration switch {
+            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
+            { UseCodeOverride: false, OverrideSupplier: not null } =>
+                "ASM code overrides: only functions names will be referenced.",
+            _ => "ASM code overrides: none."
+        };
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
         RunMachine();
