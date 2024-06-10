@@ -16,9 +16,6 @@
         <DataTemplate DataType="{x:Type vm:CpuViewModel}">
             <views:CpuView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-            <views:DisassemblyView />
-        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
             <views:VideoCardView />
         </DataTemplate>
