@@ -44,17 +44,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IDebugWindowActivator _debugWindowActivator;
     private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
-    private DebugWindowViewModel? _debugViewModel;
     private SoftwareMixer? _softwareMixer;
     private ITimeMultiplier? _pit;
 
     [ObservableProperty]
     private Configuration _configuration;
+    
+    [ObservableProperty]
+    private DebugViewModel? _debugViewModel;
+    
     private bool _disposed;
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
@@ -73,14 +75,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IDebugWindowActivator debugWindowActivator, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
-        _debugWindowActivator = debugWindowActivator;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
     }
 
@@ -179,7 +180,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ShowColorPaletteCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
@@ -260,7 +260,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
         IsMachineRunning = false;
         _closeAppOnEmulatorExit = false;
-        _debugWindowActivator.CloseDebugWindow();
         RunEmulator();
     }
 
@@ -278,20 +277,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
-
-    [RelayCommand]
-    public void ShowDebugWindow() {
-        if(_debugViewModel is not null) {
-            _debugWindowActivator.ActivateDebugWindow(_debugViewModel);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
-    public void ShowColorPalette() {
-        ShowDebugWindow();
-        _debugViewModel?.ShowColorPalette();
-    }
-
+    
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
@@ -428,7 +414,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         if (!_disposed) {
             _disposed = true;
             if (disposing) {
-                _debugWindowActivator.CloseDebugWindow();
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
                 _uiDispatcher.Post(() => {
@@ -530,7 +515,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugWindowViewModel(_hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
+        DebugViewModel = new DebugViewModel(_hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

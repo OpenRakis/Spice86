@@ -72,7 +72,7 @@ public class Program {
         }
         MainWindow mainWindow = new();
         using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
-            new ProgramExecutorFactory(configuration, loggerService), new DebugWindowActivator(),
+            new ProgramExecutorFactory(configuration, loggerService),
             new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
             new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);
         mainWindow.DataContext = mainWindowViewModel;

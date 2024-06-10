@@ -14,7 +14,7 @@ using Spice86.Interfaces;
 
 using System.ComponentModel;
 
-public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
+public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus? _pauseStatus;
     private readonly IProgramExecutor? _programExecutor;
     private readonly IHostStorageProvider? _storageProvider;
@@ -52,13 +52,13 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel? _softwareMixerViewModel;
 
-    public DebugWindowViewModel(ITextClipboard textClipboard) : base(textClipboard) {
+    public DebugViewModel(ITextClipboard textClipboard) : base(textClipboard) {
         if (!Design.IsDesignMode) {
             throw new InvalidOperationException("This constructor is not for runtime usage");
         }
     }
     
-    public DebugWindowViewModel(IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
+    public DebugViewModel(IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
         _programExecutor = programExecutor;
         _storageProvider = storageProvider;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;

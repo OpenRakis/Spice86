@@ -33,8 +33,6 @@
 				<MenuItem Command="{Binding StartMostRecentlyUsed}" Header="{Binding ThirdProgramName}" IsVisible="{Binding MostRecentlyUsed.Count, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=2}" CommandParameter="2" />
 			</MenuItem>
 			<MenuItem Header="Debug">
-				<MenuItem Header="Debug Window" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowDebugWindowCommand}" />
-				<MenuItem Header="Color Palette" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowColorPaletteCommand}" />
 				<MenuItem Header="Performance" IsEnabled="{Binding IsMachineRunning}" Command="{Binding ShowPerformanceCommand}" />
 				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
 					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
@@ -78,22 +76,29 @@
 		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" IsVisible="{Binding IsPerformanceVisible}">
 			<views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
 		</WrapPanel>
-		<Viewbox Grid.Row="1">
-			<LayoutTransformControl>
-				<LayoutTransformControl.RenderTransform>
-					<ScaleTransform
-						ScaleX="{Binding Scale}"
-						ScaleY="{Binding Scale}">
-					</ScaleTransform>
-				</LayoutTransformControl.RenderTransform>
+		<TabControl Grid.Row="1">
+			<TabItem Header="Emulator">
 				<Viewbox>
-					<Image x:Name="Image"
-					       RenderOptions.BitmapInterpolationMode="None"
-					       Cursor="{Binding Cursor}"
-					       Source="{Binding Bitmap}" />
+					<LayoutTransformControl>
+						<LayoutTransformControl.RenderTransform>
+							<ScaleTransform
+								ScaleX="{Binding Scale}"
+								ScaleY="{Binding Scale}">
+							</ScaleTransform>
+						</LayoutTransformControl.RenderTransform>
+						<Viewbox>
+							<Image x:Name="Image"
+							       RenderOptions.BitmapInterpolationMode="None"
+							       Cursor="{Binding Cursor}"
+							       Source="{Binding Bitmap}" />
+						</Viewbox>
+					</LayoutTransformControl>
 				</Viewbox>
-			</LayoutTransformControl>
-		</Viewbox>
+			</TabItem>
+			<TabItem Header="Debugger" IsEnabled="{Binding IsMachineRunning}">
+				<views:DebugView DataContext="{Binding DebugViewModel}" />
+			</TabItem>
+		</TabControl>
 		<Border Grid.Row="2">
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
