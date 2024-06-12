@@ -44,6 +44,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="AvaloniaHex" Version="0.1.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
@@ -58,10 +59,6 @@
 		<PackageReference Include="Iced" Version="1.21.0" />
 		<PackageReference Include="Semi.Avalonia" Version="11.0.7.3" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.10.1" />
-		<PackageReference Include="Pure.DI" Version="2.1.23">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">

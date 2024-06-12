@@ -6,11 +6,13 @@ using Avalonia.Controls;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.DependencyInjection;
 using Spice86.Shared.Interfaces;
 using Spice86.Infrastructure;
 using Avalonia.Threading;
 
+using Microsoft.Extensions.DependencyInjection;
+
+using Spice86.Logging;
 using Spice86.Views;
 using Spice86.ViewModels;
 
@@ -18,9 +20,6 @@ using Spice86.ViewModels;
 /// Entry point for Spice86 application.
 /// </summary>
 public class Program {
-    private readonly ILoggerService _loggerService;
-    internal Program(ILoggerService loggerService) => _loggerService = loggerService;
-
     /// <summary>
     /// Alternate entry point to use when injecting a class that defines C# overrides of the x86 assembly code found in the target DOS program.
     /// </summary>
@@ -44,42 +43,41 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        Program program = new Composition().Resolve<Program>();
-        program.StartApp(configuration, args);
-    }
-
-    private void StartApp(Configuration configuration, string[] args) {
-        Startup.SetLoggingLevel(_loggerService, configuration);
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
+        serviceCollection.AddSingleton<ILoggerService, LoggerService>();
+        
         if (!configuration.HeadlessMode) {
-            StartMainWindow(configuration, _loggerService, args);
+            ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+            Startup.SetLoggingLevel(loggerService, configuration);
+            
+            AppBuilder appBuilder = BuildAvaloniaApp();
+            ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
+            App? app = (App?)appBuilder.Instance;
+            
+            if (app is null) {
+                return;
+            }
+            
+            MainWindow mainWindow = new();
+            using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
+                new ProgramExecutorFactory(configuration, loggerService),
+                new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
+                new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);
+            mainWindow.DataContext = mainWindowViewModel;
+            desktop.MainWindow = mainWindow;
+            desktop.Start(args);
         }
         else {
-            StartConsole(configuration, _loggerService);
+            ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+            Startup.SetLoggingLevel(loggerService, configuration);
+            ProgramExecutor programExecutor = new(configuration, loggerService, null);
+            programExecutor.Run();
         }
     }
-
-    private static void StartConsole(Configuration configuration, ILoggerService loggerService) {
-        ProgramExecutor programExecutor = new(configuration, loggerService, null);
-        programExecutor.Run();
-    }
-
-    private static void StartMainWindow(Configuration configuration, ILoggerService loggerService, string[] args) {
-        AppBuilder appBuilder = BuildAvaloniaApp();
-        ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-        App? app = (App?)appBuilder.Instance;
-        if (app is null) {
-            return;
-        }
-        MainWindow mainWindow = new();
-        using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
-            new ProgramExecutorFactory(configuration, loggerService),
-            new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
-            new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);
-        mainWindow.DataContext = mainWindowViewModel;
-        desktop.MainWindow = mainWindow;
-        desktop.Start(args);
-    }
-
+    
     /// <summary>
     /// Configures and builds an Avalonia application instance.
     /// </summary>

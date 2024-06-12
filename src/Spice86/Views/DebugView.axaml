@@ -16,6 +16,12 @@
         <DataTemplate DataType="{x:Type vm:CpuViewModel}">
             <views:CpuView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+            <views:MemoryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+            <views:DisassemblyView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
             <views:VideoCardView />
         </DataTemplate>
@@ -40,7 +46,7 @@
                         <TabControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
                                 <TabItem Header="{Binding Header}">
-                                    <views:DisassemblyView />
+                                    <ContentPresenter Content="{Binding}"/>
                                 </TabItem>
                             </DataTemplate>
                         </TabControl.ItemTemplate>
@@ -51,7 +57,7 @@
                         <TabControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
                                 <TabItem Header="{Binding Header}">
-                                    <views:MemoryView />
+                                    <ContentPresenter Content="{Binding}"/>
                                 </TabItem>
                             </DataTemplate>
                         </TabControl.ItemTemplate>
