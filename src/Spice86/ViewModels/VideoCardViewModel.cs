@@ -18,12 +18,6 @@ public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
     
     public bool NeedsToVisitEmulator => _vgaRenderer is null || _videoState is null;
     
-    public VideoCardViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-    
     public VideoCardViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }

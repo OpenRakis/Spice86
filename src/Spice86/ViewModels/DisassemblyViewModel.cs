@@ -30,7 +30,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private IProgramExecutor? _programExecutor;
 
     [ObservableProperty]
-    private string _header = "";
+    private string _header = "Disassembly View";
 
     [ObservableProperty]
     private AvaloniaList<CpuInstructionInfo> _instructions = new();

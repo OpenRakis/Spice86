@@ -23,12 +23,6 @@ public partial class SoftwareMixerViewModel : ViewModelBase, IInternalDebugger {
     
     public bool NeedsToVisitEmulator => _softwareMixer is null;
     
-    public SoftwareMixerViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-    
     public SoftwareMixerViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }

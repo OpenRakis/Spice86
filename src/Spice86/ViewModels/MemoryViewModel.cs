@@ -16,9 +16,9 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
+public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private IMemory? _memory;
-    private readonly DebugViewModel? _debugViewModel;
+    private readonly DebugViewModel _debugViewModel;
     private bool _needToUpdateBinaryDocument;
     
     [ObservableProperty]
@@ -61,7 +61,7 @@ public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
     }
 
     [ObservableProperty]
-    private string _header = "Memory Range";
+    private string _header = "Memory View";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
@@ -70,7 +70,8 @@ public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public Memory(ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(DebugViewModel debugViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+        _debugViewModel = debugViewModel;
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;
@@ -100,7 +101,7 @@ public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
     
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
-        _debugViewModel?.NewMemoryViewCommand.Execute(null);
+        _debugViewModel.NewMemoryViewCommand.Execute(null);
     }
 
     [RelayCommand]
@@ -161,9 +162,7 @@ public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
     }
 
     [RelayCommand]
-    public void CancelMemoryEdit() {
-        IsEditingMemory = false;
-    }
+    public void CancelMemoryEdit() => IsEditingMemory = false;
 
     [RelayCommand]
     public void ApplyMemoryEdit() {

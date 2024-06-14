@@ -38,14 +38,14 @@ using Spice86.Shared.Emulator.Video;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseStatus, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
-    private readonly IAvaloniaKeyScanCodeConverter? _avaloniaKeyScanCodeConverter;
+    private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private IProgramExecutor? _programExecutor;
     private SoftwareMixer? _softwareMixer;
     private ITimeMultiplier? _pit;
@@ -74,7 +74,7 @@ public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseSta
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindow(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
+    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
@@ -87,9 +87,6 @@ public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseSta
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
-        if (_avaloniaKeyScanCodeConverter is null) {
-            return;
-        }
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
@@ -135,9 +132,6 @@ public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseSta
     private WriteableBitmap? _bitmap;
 
     internal void OnKeyDown(KeyEventArgs e) {
-        if (_avaloniaKeyScanCodeConverter is null) {
-            return;
-        }
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,
@@ -513,7 +507,7 @@ public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseSta
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
+        DebugViewModel = new DebugViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

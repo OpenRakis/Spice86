@@ -15,18 +15,12 @@ using System;
 
 public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     private State? _state;
-    private readonly IPerformanceMeasurer? _performanceMeasurer;
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IPerformanceMeasurer _performanceMeasurer;
+    private readonly IPauseStatus _pauseStatus;
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
-
-    public PerformanceViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
+    
     public PerformanceViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
         programExecutor.Accept(this);
@@ -35,7 +29,7 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _performanceMeasurer is null || _pauseStatus is { IsPaused: true }) {
+        if (_state is null || _pauseStatus.IsPaused) {
             return;
         }
 

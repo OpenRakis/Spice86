@@ -10,7 +10,7 @@
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
-		x:CompileBindings="True" x:DataType="vm:MainWindow"
+		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
 		Width="1024"
 		Height="768"
 		WindowStartupLocation="CenterScreen"
@@ -20,7 +20,7 @@
 		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
 	</Window.Resources>
 	<Design.DataContext>
-		<vm:MainWindow />
+		<vm:MainWindowViewModel />
 	</Design.DataContext>
 	<Grid RowDefinitions="Auto,*,Auto">
 		<Menu Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
@@ -96,7 +96,7 @@
 				</Viewbox>
 			</TabItem>
 			<TabItem Header="Debugger" IsEnabled="{Binding IsMachineRunning}">
-				<views:DebugView DataContext="{Binding DebugViewModel}" />
+				<views:DebugView IsVisible="{CompiledBinding $parent[TabItem].IsSelected}" DataContext="{Binding DebugViewModel}" />
 			</TabItem>
 		</TabControl>
 		<Border Grid.Row="2">

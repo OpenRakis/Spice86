@@ -16,12 +16,6 @@ using Spice86.Shared.Emulator.Video;
 public partial class PaletteViewModel : ViewModelBase, IInternalDebugger {
     private ArgbPalette? _argbPalette;
     
-    public PaletteViewModel() {
-        if(!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-    
     public PaletteViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         Dispatcher.UIThread.Post(() => {

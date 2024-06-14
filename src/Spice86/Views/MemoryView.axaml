@@ -12,7 +12,7 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"
-    x:DataType="viewModels:Memory"
+    x:DataType="viewModels:MemoryViewModel"
     mc:Ignorable="d">
     <ScrollViewer>
         <Grid RowDefinitions="Auto,*">

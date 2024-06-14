@@ -13,10 +13,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 
 using Spice86.Logging;
-using Spice86.Views;
 using Spice86.ViewModels;
-
-using MainWindow = Spice86.ViewModels.MainWindow;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -63,7 +60,7 @@ public class Program {
             }
             
             Views.MainWindow mainWindow = new();
-            using var mainWindowViewModel = new MainWindow(new AvaloniaKeyScanCodeConverter(),
+            using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
                 new ProgramExecutorFactory(configuration, loggerService),
                 new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
                 new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);

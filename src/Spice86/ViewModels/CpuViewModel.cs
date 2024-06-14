@@ -1,6 +1,5 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,7 +14,7 @@ using System.ComponentModel;
 using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IPauseStatus _pauseStatus;
     private State? _cpuState;
     
     [ObservableProperty]
@@ -23,12 +22,6 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
-    
-    public CpuViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
 
     public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
@@ -47,7 +40,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         _cpuState ??= component as State;
     }
     
-    private bool IsPaused => _pauseStatus?.IsPaused is true;
+    private bool IsPaused => _pauseStatus.IsPaused;
     
     private void VisitCpuState(State state) {
         if (!IsPaused) {
