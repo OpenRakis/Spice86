@@ -16,7 +16,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
+public partial class Memory : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private IMemory? _memory;
     private readonly DebugViewModel? _debugViewModel;
     private bool _needToUpdateBinaryDocument;
@@ -70,8 +70,7 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(DebugViewModel debugViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, ITextClipboard? textClipboard, uint startAddress, uint endAddress = 0) : base(textClipboard) {
-        _debugViewModel = debugViewModel;
+    public Memory(ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;

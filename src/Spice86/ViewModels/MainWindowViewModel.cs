@@ -38,7 +38,7 @@ using Spice86.Shared.Emulator.Video;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, IGui, IDisposable {
+public sealed partial class MainWindow : ViewModelBaseWithErrorDialog, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
@@ -74,7 +74,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
+    public MainWindow(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
@@ -513,7 +513,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase, IPauseStatus, I
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        DebugViewModel = new DebugViewModel(_hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor, _textClipboard);
+        _debugViewModel = new DebugViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

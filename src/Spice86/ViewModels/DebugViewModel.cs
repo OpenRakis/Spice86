@@ -1,7 +1,6 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -19,6 +18,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     private readonly IProgramExecutor? _programExecutor;
     private readonly IHostStorageProvider? _storageProvider;
     private readonly IUIDispatcherTimerFactory? _uiDispatcherTimerFactory;
+    private readonly ITextClipboard _textClipboard;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
@@ -36,7 +36,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     private PaletteViewModel? _paletteViewModel;
 
     [ObservableProperty]
-    private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
+    private AvaloniaList<Memory> _memoryViewModels = new();
     
     [ObservableProperty]
     private VideoCardViewModel? _videoCardViewModel;
@@ -53,15 +53,10 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel? _softwareMixerViewModel;
 
-    public DebugViewModel(ITextClipboard textClipboard) : base(textClipboard) {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-    
-    public DebugViewModel(IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, ITextClipboard? textClipboard) : base() {
+    public DebugViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) : base() {
         _programExecutor = programExecutor;
         _storageProvider = storageProvider;
+        _textClipboard = textClipboard;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
         _pauseStatus = pauseStatus;
         IsPaused = _programExecutor.IsPaused;
@@ -74,14 +69,14 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel = new(uiDispatcherTimerFactory);
         CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
         MidiViewModel = new(uiDispatcherTimerFactory);
-        MemoryViewModels.Add( new(this, uiDispatcherTimerFactory, storageProvider, pauseStatus, textClipboard, 0));
-        Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Normal);
+        MemoryViewModels.Add( new(textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0));
+        Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
         if (_pauseStatus is not null && _storageProvider is not null && _uiDispatcherTimerFactory is not null) {
-            MemoryViewModels.Add(new MemoryViewModel(this, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, _textClipboard, 0));
+            MemoryViewModels.Add(new Memory(_textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0));
         }
     }
     

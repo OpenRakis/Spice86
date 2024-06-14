@@ -7,7 +7,7 @@
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.UserControls.ErrorModalDialogUserControl"
-             x:DataType="viewModels:ViewModelBase">
+             x:DataType="viewModels:ViewModelBaseWithErrorDialog">
     <UserControl.Resources>
         <converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
     </UserControl.Resources>
@@ -22,7 +22,7 @@
                         <Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
                         <WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
                             <Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
-                                <Button Grid.Row="0" Grid.Column="0" Content="Copy To Clipboard" Command="{Binding CopyToClipboardCommand}" />
+                                <Button Grid.Row="0" Grid.Column="0" Content="Copy To Clipboard" Command="{Binding CopyExceptionToClipboardCommand}" />
                                 <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
                                     <Label FontWeight="Bold" Grid.Row="0" Grid.Column="0">Message</Label>
                                     <TextBlock TextWrapping="Wrap" Grid.Row="0" Grid.Column="1" Text="{Binding Exception.Message}" />

@@ -16,7 +16,7 @@
         <DataTemplate DataType="{x:Type vm:CpuViewModel}">
             <views:CpuView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+        <DataTemplate DataType="{x:Type vm:Memory}">
             <views:MemoryView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -55,7 +55,7 @@
                 <TabItem Header="Memory">
                     <TabControl ItemsSource="{Binding MemoryViewModels}">
                         <TabControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+                            <DataTemplate DataType="{x:Type vm:Memory}">
                                 <TabItem Header="{Binding Header}">
                                     <ContentPresenter Content="{Binding}"/>
                                 </TabItem>

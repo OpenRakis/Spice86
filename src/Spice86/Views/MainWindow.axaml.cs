@@ -25,12 +25,12 @@ internal partial class MainWindow : Window {
     }
 
     private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
-          (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+          (DataContext as ViewModels.MainWindow)?.OnKeyUp(e);
           e.Handled = true;
     }
 
     private void OnMenuKeyDown(object? sender, KeyEventArgs e) {
-        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        (DataContext as ViewModels.MainWindow)?.OnKeyDown(e);
         e.Handled = true;
     }
 
@@ -40,7 +40,7 @@ internal partial class MainWindow : Window {
 
     protected override void OnOpened(EventArgs e) {
         base.OnOpened(e);
-        if (DataContext is not MainWindowViewModel mainVm) {
+        if (DataContext is not ViewModels.MainWindow mainVm) {
             return;
         }
         mainVm.CloseMainWindow += (_, _) => Close();
@@ -53,18 +53,18 @@ internal partial class MainWindow : Window {
 
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnVideoBuffer();
-        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        (DataContext as ViewModels.MainWindow)?.OnKeyUp(e);
         e.Handled = true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         FocusOnVideoBuffer();
-        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        (DataContext as ViewModels.MainWindow)?.OnKeyDown(e);
         e.Handled = true;
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
-        (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
+        (DataContext as ViewModels.MainWindow)?.OnMainWindowClosing();
         base.OnClosing(e);
     }
 }
