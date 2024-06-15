@@ -20,6 +20,8 @@ public class MemoryBinaryDocument : IBinaryDocument {
         ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress - _startAddress);
     }
 
+    public event Action<Exception>? MemoryReadInvalidOperation;
+
     public ulong Length => _endAddress - _startAddress;
     public bool IsReadOnly { get; }
     public bool CanInsert { get; }
@@ -33,8 +35,11 @@ public class MemoryBinaryDocument : IBinaryDocument {
     }
 
     public void ReadBytes(ulong offset, Span<byte> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = _memory.UInt8[(int) _startAddress + (int)offset + i];
+        try {
+            Span<byte> memRange = _memory.GetSpan((int)(_startAddress + offset), buffer.Length, false);
+            memRange.CopyTo(buffer);
+        } catch (InvalidOperationException e) {
+            MemoryReadInvalidOperation?.Invoke(e);
         }
     }
 

@@ -33,9 +33,10 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     /// </summary>
     /// <param name="address">The starting address of the memory range.</param>
     /// <param name="length">The length of the memory range.</param>
+    /// <param name="triggerReadBreakpoints">Whether the operation should trigger memory read breakpoints.</param>
     /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
     /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
-    public Span<byte> GetSpan(int address, int length);
+    public Span<byte> GetSpan(int address, int length, bool triggerReadBreakpoints = true);
 
     /// <summary>
     ///     Find the address of a value in memory.

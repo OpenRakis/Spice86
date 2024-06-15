@@ -25,9 +25,9 @@
                         IsEnabled="{Binding IsPaused}" />
                 <UniformGrid>
                     <Label Content="Start" />
-                    <NumericUpDown Value="{Binding StartAddress}"></NumericUpDown>
+                    <NumericUpDown Value="{Binding StartAddress}"/>
                     <Label Content="End" />
-                    <NumericUpDown Value="{Binding EndAddress}"></NumericUpDown>
+                    <NumericUpDown Value="{Binding EndAddress}"/>
                 </UniformGrid>
                 <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
             </WrapPanel>

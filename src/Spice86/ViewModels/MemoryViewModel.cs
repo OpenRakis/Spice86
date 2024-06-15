@@ -27,20 +27,36 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     public bool NeedsToVisitEmulator => _memory is null;
 
     private uint? _startAddress = 0;
+
+    [NotifyCanExecuteChangedFor(nameof(UpdateBinaryDocumentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DumpMemoryCommand))]
+    [ObservableProperty]
+    private bool _isMemoryRangeValid;
+    
+    private bool GetIsMemoryRangeValid() {
+        if (_memory is null) {
+            return false;
+        }
+
+        return StartAddress <= (EndAddress ?? _memory.Length)
+            && EndAddress >= (StartAddress ?? 0);
+    }
     
     public uint? StartAddress {
         get => _startAddress;
         set {
-            if(_memory is not null && value > _memory.Length) {
-                value = _memory.Length;
-            }
-            if(value is null || value > EndAddress) {
-                value = EndAddress;
-            }
             SetProperty(ref _startAddress, value);
-            Header = $"{StartAddress:X} - {EndAddress:X}";
-            UpdateBinaryDocument();
+            IsMemoryRangeValid = GetIsMemoryRangeValid();
+            TryUpdateHeaderAndMemoryDocument();
         }
+    }
+
+    private void TryUpdateHeaderAndMemoryDocument() {
+        if (!UpdateBinaryDocumentCommand.CanExecute(null)) {
+            return;
+        }
+        Header = $"{StartAddress:X} - {EndAddress:X}";
+        UpdateBinaryDocumentCommand.Execute(null);
     }
 
     private uint? _endAddress = 0;
@@ -48,15 +64,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     public uint? EndAddress {
         get => _endAddress;
         set {
-            if(value is null || value < StartAddress) {
-                value = StartAddress;
-            }
-            if(_memory is not null && value > _memory.Length) {
-                value = _memory.Length;
-            }
             SetProperty(ref _endAddress, value);
-            Header = $"{StartAddress:X} - {EndAddress:X}";
-            UpdateBinaryDocument();
+            IsMemoryRangeValid = GetIsMemoryRangeValid();
+            TryUpdateHeaderAndMemoryDocument();
         }
     }
 
@@ -104,14 +114,19 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         _debugViewModel.NewMemoryViewCommand.Execute(null);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private void UpdateBinaryDocument() {
-        if (_memory is not null && StartAddress is not null && EndAddress is not null) {
-            MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        if (_memory is null || StartAddress is null || EndAddress is null) {
+            return;
         }
+        MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        MemoryBinaryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
+        MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
-    
-    [RelayCommand]
+
+    private void OnMemoryReadInvalidOperation(Exception exception) => ShowError(exception);
+
+    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {
         if (_memory is not null && StartAddress is not null && EndAddress is not null) {
             await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress.Value, EndAddress.Value - StartAddress.Value));
@@ -187,8 +202,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
                 EndAddress = _memory.Length;
             }
         }
-        if(StartAddress is not null && EndAddress is not null) {
-            MemoryBinaryDocument ??= new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
-        }
+        TryUpdateHeaderAndMemoryDocument();
     }
 }
