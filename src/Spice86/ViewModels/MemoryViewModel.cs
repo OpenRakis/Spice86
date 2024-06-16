@@ -75,6 +75,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
