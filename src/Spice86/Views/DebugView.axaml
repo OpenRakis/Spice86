@@ -39,7 +39,7 @@
         <Grid
             Grid.Row="1"
             RowDefinitions="*,Auto">
-            <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
+            <TabControl Grid.Row="0">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
                 <TabItem Header="Disassembly">
                     <TabControl ItemsSource="{Binding DisassemblyViewModels}">

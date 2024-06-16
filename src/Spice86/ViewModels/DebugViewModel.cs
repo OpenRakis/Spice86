@@ -22,9 +22,6 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
-    
-    [ObservableProperty]
-    private int _selectedTab;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
