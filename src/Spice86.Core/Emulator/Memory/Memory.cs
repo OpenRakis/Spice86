@@ -77,7 +77,7 @@ public class Memory : Indexable.Indexable, IMemory {
     }
 
     /// <summary>
-    ///     Allows write breakpoints to access the byte being written before it actually is.
+    ///     Allows memory write breakpoints to access the byte being written before it actually is.
     /// </summary>
     public byte CurrentlyWritingByte {
         get;
