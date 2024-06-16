@@ -98,12 +98,14 @@ public class Memory : Indexable.Indexable, IMemory {
     public Span<byte> GetSpan(int address, int length, bool triggerReadBreakpoints = true) {
         address = A20Gate.TransformAddress(address);
         foreach (DeviceRegistration device in _devices) {
-            if (address >= device.StartAddress && address + length <= device.EndAddress) {
-                if (triggerReadBreakpoints) {
-                    MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
-                }
-                return device.Device.GetSpan(address, length);
+            if (address < device.StartAddress || address + length > device.EndAddress) {
+                continue;
             }
+
+            if (triggerReadBreakpoints) {
+                MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
+            }
+            return device.Device.GetSpan(address, length);
         }
 
         throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");

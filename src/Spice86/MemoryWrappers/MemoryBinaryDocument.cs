@@ -48,8 +48,6 @@ public class MemoryBinaryDocument : IBinaryDocument {
     }
 
     public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            _memory.UInt8[(uint)(_startAddress + offset + (uint)i)] = buffer[i];
-        }
+        _memory.LoadData((uint)(_startAddress + offset), buffer.ToArray());
     }
 }
