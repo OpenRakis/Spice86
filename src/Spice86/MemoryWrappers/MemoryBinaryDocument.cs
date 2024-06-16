@@ -36,7 +36,7 @@ public class MemoryBinaryDocument : IBinaryDocument {
 
     public void ReadBytes(ulong offset, Span<byte> buffer) {
         try {
-            Span<byte> memRange = _memory.GetSpan((int)(_startAddress + offset), buffer.Length, false);
+            Span<byte> memRange = _memory.ReadRam((uint)buffer.Length, (uint)(_startAddress + offset));
             memRange.CopyTo(buffer);
         } catch (InvalidOperationException e) {
             MemoryReadInvalidOperation?.Invoke(e);
@@ -48,6 +48,6 @@ public class MemoryBinaryDocument : IBinaryDocument {
     }
 
     public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
-        _memory.LoadData((uint)(_startAddress + offset), buffer.ToArray());
+        _memory.WriteRam(buffer.ToArray(), (uint)(_startAddress + offset));
     }
 }

@@ -46,6 +46,6 @@ public class MemoryDataExporter : RecordedDataIoHandler {
             return _callbackHandler.ReplaceAllCallbacksInRamImage(_memory);
         }
 
-        return _memory.RamCopy;
+        return _memory.ReadRam();
     }
 }
