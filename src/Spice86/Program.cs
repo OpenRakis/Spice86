@@ -42,15 +42,16 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
         serviceCollection.AddSingleton<ILoggerService, LoggerService>();
-        
+
+        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+        Startup.SetLoggingLevel(loggerService, configuration);
+
         if (!configuration.HeadlessMode) {
-            ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
-            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-            Startup.SetLoggingLevel(loggerService, configuration);
-            
             AppBuilder appBuilder = BuildAvaloniaApp();
             ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
             App? app = (App?)appBuilder.Instance;
@@ -69,9 +70,6 @@ public class Program {
             desktop.Start(args);
         }
         else {
-            ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
-            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-            Startup.SetLoggingLevel(loggerService, configuration);
             ProgramExecutor programExecutor = new(configuration, loggerService, null);
             programExecutor.Run();
         }
