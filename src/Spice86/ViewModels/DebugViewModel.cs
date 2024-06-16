@@ -53,7 +53,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
-    public DebugViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) : base() {
+    public DebugViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
         _programExecutor = programExecutor;
         _storageProvider = storageProvider;
         _textClipboard = textClipboard;

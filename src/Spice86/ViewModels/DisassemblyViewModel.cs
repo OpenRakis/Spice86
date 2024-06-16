@@ -58,12 +58,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
     public DisassemblyViewModel(DebugViewModel debugViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
         _debugViewModel = debugViewModel;
         _pauseStatus = pauseStatus;

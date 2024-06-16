@@ -125,7 +125,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
 
-    private void OnMemoryReadInvalidOperation(Exception exception) => ShowError(exception);
+    private void OnMemoryReadInvalidOperation(Exception exception) {
+        Dispatcher.UIThread.Post(() => ShowError(exception));
+    }
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {

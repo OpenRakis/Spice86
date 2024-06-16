@@ -23,7 +23,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
+    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
