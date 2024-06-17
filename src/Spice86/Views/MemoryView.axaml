@@ -8,6 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    xmlns:userControls="clr-namespace:Spice86.UserControls"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:CompileBindings="True"
@@ -15,16 +16,30 @@
     mc:Ignorable="d">
     <ScrollViewer>
         <Grid RowDefinitions="Auto,*">
-            <Menu Grid.Row="0" IsVisible="{Binding IsPaused}">
-                <MenuItem Header="Edit">
-                    <MenuItem Command="{Binding EditMemoryCommand}" Header="Edit memory..." />
-                </MenuItem>
-            </Menu>
+            <WrapPanel Orientation="Horizontal" Grid.Row="0">
+                <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
+                <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
+                <Button
+                        Command="{Binding NewMemoryViewCommand}"
+                        Content="New Memory View"
+                        IsEnabled="{Binding IsPaused}" />
+                <Button
+                        Command="{Binding CloseTabCommand}"
+                        Content="Close View"
+                        IsEnabled="{Binding CanCloseTab}"/>
+                <UniformGrid>
+                    <Label Content="Start" />
+                    <NumericUpDown Value="{Binding StartAddress}"/>
+                    <Label Content="End" />
+                    <NumericUpDown Value="{Binding EndAddress}"/>
+                </UniformGrid>
+                <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+            </WrapPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor
                     Width="800"
-                    Document="{ReflectionBinding $parent[UserControl].DataContext.MemoryBinaryDocument}"
+                    Document="{Binding MemoryBinaryDocument}"
                     IsVisible="{Binding IsPaused}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
@@ -88,27 +103,7 @@
                     </Grid>
                 </dialogHost:DialogHost.DialogContent>
             </dialogHost:DialogHost>
-            <dialogHost:DialogHost
-                Grid.Row="0"
-                Grid.RowSpan="2"
-                CloseOnClickAway="False"
-                IsOpen="{Binding IsDialogVisible}">
-                <dialogHost:DialogHost.DialogContent>
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <Label
-                            Grid.Row="0"
-                            HorizontalAlignment="Center"
-                            Content="Validation Error"
-                            FontWeight="Bold" />
-                        <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
-                        <Button
-                            Grid.Row="2"
-                            Command="{Binding ClearDialogCommand}"
-                            Content="OK"
-                            IsDefault="True" />
-                    </Grid>
-                </dialogHost:DialogHost.DialogContent>
-            </dialogHost:DialogHost>
+            <userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
         </Grid>
     </ScrollViewer>
 </UserControl>

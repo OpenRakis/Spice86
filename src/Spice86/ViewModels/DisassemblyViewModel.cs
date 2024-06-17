@@ -1,7 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,19 +12,25 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IPauseStatus _pauseStatus;
+    private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
     private IProgramExecutor? _programExecutor;
+
+    [ObservableProperty]
+    private string _header = "Disassembly View";
 
     [ObservableProperty]
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
@@ -32,6 +38,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -40,29 +48,61 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
 
-    [ObservableProperty]
     private uint? _startAddress;
-
-    public DisassemblyViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
+    
+    public uint? StartAddress {
+        get => _startAddress;
+        set {
+            Header = value is null ? "" : $"0x{value:X}";
+            SetProperty(ref _startAddress, value);
         }
     }
 
-    public DisassemblyViewModel(IPauseStatus pauseStatus) {
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
+    private bool _canCloseTab;
+
+    public DisassemblyViewModel(DebugWindowViewModel debugWindowViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
+        _debugWindowViewModel = debugWindowViewModel;
         _pauseStatus = pauseStatus;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        UpdateCanCloseTabProperty();
+        debugWindowViewModel.DisassemblyViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
+    }
+
+    private void UpdateCanCloseTabProperty() {
+        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
+    }
+    
+    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+        UpdateCanCloseTabProperty();
+    }
+    
+    [RelayCommand(CanExecute = nameof(CanCloseTab))]
+    private void CloseTab() {
+        _debugWindowViewModel.CloseTab(this);
+        UpdateCanCloseTabProperty();
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (_needToUpdateDisassembly && IsPaused) {
+            UpdateDisassembly();
+        }
     }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
-        IsPaused = _pauseStatus?.IsPaused is true;
+        IsPaused = _pauseStatus.IsPaused;
+        UpdateCanCloseTabProperty();
         if (!IsPaused) {
             return;
         }
         _needToUpdateDisassembly = true;
         StartAddress ??= _state?.IpPhysicalAddress;
     }
+    
+    public bool NeedsToVisitEmulator => _memory is null || _state is null || _programExecutor is null;
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
         switch (component) {
@@ -84,6 +124,11 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewDisassemblyView() {
+        _debugWindowViewModel.NewDisassemblyViewCommand.Execute(null);
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
     public void StepInstruction() => _programExecutor?.StepInstruction();
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -92,6 +137,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         _needToUpdateDisassembly = true;
         UpdateDisassemblyCommand.Execute(null);
     }
+    
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
         if(_state is null || _memory is null || StartAddress is null) {
@@ -111,7 +157,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         Decoder decoder, uint startAddress) {
         int byteOffset = 0;
         emulatedMemoryStream.Position = startAddress;
-        while (Instructions.Count < NumberOfInstructionsShown) {
+        var instructions = new List<CpuInstructionInfo>();
+        while (instructions.Count < NumberOfInstructionsShown) {
             long instructionAddress = emulatedMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
@@ -133,9 +180,11 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
             if (instructionAddress == state.IpPhysicalAddress) {
                 instructionInfo.IsCsIp = true;
             }
-            Instructions.Add(instructionInfo);
+            instructions.Add(instructionInfo);
             byteOffset += instruction.Length;
         }
+        Instructions.Clear();
+        Instructions.AddRange(instructions);
     }
 
     private Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {

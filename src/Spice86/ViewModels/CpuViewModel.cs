@@ -1,11 +1,12 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
@@ -13,31 +14,33 @@ using System.ComponentModel;
 using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IPauseStatus _pauseStatus;
+    private State? _cpuState;
     
     [ObservableProperty]
     private StateInfo _state = new();
 
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
-    
-    public CpuViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
+
+    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
+        _pauseStatus = pauseStatus;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
-    public CpuViewModel(IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
-    }
-    
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        if (component is State state) {
-            VisitCpuState(state);
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (_cpuState is not null) {
+            VisitCpuState(_cpuState);
         }
     }
     
-    private bool IsPaused => _pauseStatus?.IsPaused is true;
+    public bool NeedsToVisitEmulator => _cpuState is null;
+
+    public void Visit<T>(T component) where T : IDebuggableComponent {
+        _cpuState ??= component as State;
+    }
+    
+    private bool IsPaused => _pauseStatus.IsPaused;
     
     private void VisitCpuState(State state) {
         if (!IsPaused) {

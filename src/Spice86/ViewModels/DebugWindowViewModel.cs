@@ -1,6 +1,6 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
+using Avalonia.Collections;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,101 +14,108 @@ using Spice86.Interfaces;
 using System.ComponentModel;
 
 public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus? _pauseStatus;
-    private readonly IProgramExecutor? _programExecutor;
+    private readonly IPauseStatus _pauseStatus;
+    private readonly IProgramExecutor _programExecutor;
+    private readonly IHostStorageProvider _storageProvider;
+    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
+    private readonly ITextClipboard _textClipboard;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
-    
-    [ObservableProperty]
-    private int _selectedTab;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
-    private PaletteViewModel? _paletteViewModel;
+    private PaletteViewModel _paletteViewModel;
 
     [ObservableProperty]
-    private MemoryViewModel? _memoryViewModel;
+    private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
     
     [ObservableProperty]
-    private VideoCardViewModel? _videoCardViewModel;
+    private VideoCardViewModel _videoCardViewModel;
 
     [ObservableProperty]
-    private CpuViewModel? _cpuViewModel;
+    private CpuViewModel _cpuViewModel;
 
     [ObservableProperty]
-    private MidiViewModel? _midiViewModel;
+    private MidiViewModel _midiViewModel;
 
     [ObservableProperty]
-    private DisassemblyViewModel? _disassemblyViewModel;
+    private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
     
     [ObservableProperty]
-    private SoftwareMixerViewModel? _softwareMixerViewModel;
+    private SoftwareMixerViewModel _softwareMixerViewModel;
 
-    public DebugWindowViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-    
-    public DebugWindowViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
+    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
         _programExecutor = programExecutor;
+        _storageProvider = storageProvider;
+        _textClipboard = textClipboard;
+        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
         _pauseStatus = pauseStatus;
         IsPaused = _programExecutor.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        DisassemblyViewModel = new(pauseStatus);
-        PaletteViewModel = new();
-        SoftwareMixerViewModel = new();
-        VideoCardViewModel = new();
-        CpuViewModel = new(pauseStatus);
-        MidiViewModel = new();
-        MemoryViewModel = new(pauseStatus);
-        Dispatcher.UIThread.Post(() => programExecutor.Accept(this), DispatcherPriority.Background);
+        var disassemblyVm = new DisassemblyViewModel(this, uiDispatcherTimerFactory, pauseStatus);
+        DisassemblyViewModels.Add(disassemblyVm);
+        PaletteViewModel = new(uiDispatcherTimerFactory);
+        SoftwareMixerViewModel = new(uiDispatcherTimerFactory);
+        VideoCardViewModel = new(uiDispatcherTimerFactory);
+        CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
+        MidiViewModel = new(uiDispatcherTimerFactory);
+        MemoryViewModels.Add( new(this, textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0));
+        Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
     }
-    
-    [RelayCommand]
-    public void Pause() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
+
+    internal void CloseTab(IInternalDebugger internalDebuggerViewModel) {
+        switch (internalDebuggerViewModel) {
+            case MemoryViewModel memoryViewModel:
+                MemoryViewModels.Remove(memoryViewModel);
+                break;
+            case DisassemblyViewModel disassemblyViewModel:
+                DisassemblyViewModels.Remove(disassemblyViewModel);
+                break;
         }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void Continue() {
-        if (_programExecutor is null || _pauseStatus is null) {
-            return;
-        }
-        _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
+    public void NewMemoryView() {
+        MemoryViewModels.Add(new MemoryViewModel(this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0));
     }
     
-    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) => IsPaused = _pauseStatus?.IsPaused is true;
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewDisassemblyView() => DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
 
     [RelayCommand]
-    public void ForceUpdate() {
-        UpdateValues(this, EventArgs.Empty);
-    }
+    public void Pause() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
 
-    private void UpdateValues(object? sender, EventArgs e) {
-        _programExecutor?.Accept(this);
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void Continue() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
+
+    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) => IsPaused = _pauseStatus.IsPaused;
+
+    [RelayCommand]
+    public void ForceUpdate() => UpdateValues(this, EventArgs.Empty);
+
+    private void UpdateValues(object? sender, EventArgs e) => _programExecutor.Accept(this);
+
+    private IEnumerable<IInternalDebugger> InternalDebuggers => new IInternalDebugger[] {
+        PaletteViewModel, CpuViewModel, VideoCardViewModel, MidiViewModel, SoftwareMixerViewModel
     }
+        .Concat(DisassemblyViewModels)
+        .Concat(MemoryViewModels);
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        PaletteViewModel?.Visit(component);
-        DisassemblyViewModel?.Visit(component);
-        CpuViewModel?.Visit(component);
-        VideoCardViewModel?.Visit(component);
-        MidiViewModel?.Visit((component));
-        SoftwareMixerViewModel?.Visit(component);
-        MemoryViewModel?.Visit(component);
+        if (NeedsToVisitEmulator) {
+            foreach (IInternalDebugger debugger in InternalDebuggers.Where(x => x.NeedsToVisitEmulator)) {
+                debugger.Visit(component);
+            }
+        }
         LastUpdate = DateTime.Now;
     }
 
-    public void ShowColorPalette() {
-        SelectedTab = 4;
-    }
+    public bool NeedsToVisitEmulator => InternalDebuggers.Any(x => x.NeedsToVisitEmulator);
 }

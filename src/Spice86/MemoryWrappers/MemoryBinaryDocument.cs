@@ -7,15 +7,22 @@ using System;
 
 public class MemoryBinaryDocument : IBinaryDocument {
     private readonly IMemory _memory;
-    public MemoryBinaryDocument(IMemory memory) {
-        _memory = memory;
+    private readonly uint _startAddress;
+    private readonly uint _endAddress;
+    
+    public MemoryBinaryDocument(IMemory memory, uint startAddress, uint endAddress) {
         IsReadOnly = false;
         CanInsert = false;
         CanRemove = false;
-        ValidRanges = new MemoryReadOnlyBitRangeUnion(memory);
+        _startAddress = startAddress;
+        _endAddress = endAddress;
+        _memory = memory;
+        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress - _startAddress);
     }
 
-    public ulong Length => _memory.Length;
+    public event Action<Exception>? MemoryReadInvalidOperation;
+
+    public ulong Length => _endAddress - _startAddress;
     public bool IsReadOnly { get; }
     public bool CanInsert { get; }
     public bool CanRemove { get; }
@@ -28,8 +35,11 @@ public class MemoryBinaryDocument : IBinaryDocument {
     }
 
     public void ReadBytes(ulong offset, Span<byte> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = _memory[(uint)(offset + (uint)i)];
+        try {
+            Span<byte> memRange = _memory.ReadRam((uint)buffer.Length, (uint)(_startAddress + offset));
+            memRange.CopyTo(buffer);
+        } catch (InvalidOperationException e) {
+            MemoryReadInvalidOperation?.Invoke(e);
         }
     }
 
@@ -38,8 +48,6 @@ public class MemoryBinaryDocument : IBinaryDocument {
     }
 
     public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            _memory[(uint)(offset + (uint)i)] = buffer[i];
-        }
+        _memory.WriteRam(buffer.ToArray(), (uint)(_startAddress + offset));
     }
 }

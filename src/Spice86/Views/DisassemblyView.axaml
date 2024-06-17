@@ -10,39 +10,45 @@
     <UserControl.Resources>
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
     </UserControl.Resources>
-    <Grid RowDefinitions="Auto,Auto,*">
+    <DockPanel>
         <TextBlock
-            Grid.Row="0"
+            DockPanel.Dock="Top"
             IsVisible="{Binding !IsPaused}"
             Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
             TextWrapping="Wrap" />
         <Grid
-            Grid.Row="1"
+            DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
-            ColumnDefinitions="*,Auto,Auto">
-            <WrapPanel Grid.Column="0" Orientation="Horizontal">
-                <Button
-                    Margin="5"
-                    Command="{Binding StepInstructionCommand}"
-                    Content="Step instruction"
-                    IsVisible="{Binding IsGdbServerAvailable}" />
-            </WrapPanel>
-            <Grid Grid.Column="1" IsVisible="{Binding IsPaused}" ColumnDefinitions="Auto,Auto,Auto">
-                <StackPanel Grid.Column="0" Orientation="Vertical">
+            ColumnDefinitions="Auto,Auto">
+            <Button Grid.Column="0"
+                Margin="5"
+                Command="{Binding StepInstructionCommand}"
+                Content="Step instruction"
+                IsVisible="{Binding IsGdbServerAvailable}" />
+            <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <Button Grid.Column="0"
+                    Command="{Binding NewDisassemblyViewCommand}"
+                    Content="New Disassembly View"
+                    IsEnabled="{Binding IsPaused}" />
+                <Button Grid.Column="1"
+                    Command="{Binding CloseTabCommand}"
+                    Content="Close View"
+                    IsEnabled="{Binding CanCloseTab}"/>
+                <StackPanel Grid.Column="2" Orientation="Vertical">
                     <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
                     <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Vertical">
+                <StackPanel Grid.Column="3" Orientation="Vertical">
                     <Label HorizontalAlignment="Center" Content="Start Address" />
                     <TextBox Text="{Binding StartAddress}" />
                     <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
                 </StackPanel>
-                <Button Grid.Column="2" Content="Update" Command="{Binding UpdateDisassemblyCommand}" />
+                <Button Grid.Column="4" Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
             </Grid>
         </Grid>
         <DataGrid
-            Grid.Row="2"
+            DockPanel.Dock="Bottom"
             AutoGenerateColumns="False"
             CanUserReorderColumns="True"
             CanUserResizeColumns="True"
@@ -70,5 +76,5 @@
                 <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
             </DataGrid.Columns>
         </DataGrid>
-    </Grid>
+    </DockPanel>
 </UserControl>

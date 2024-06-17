@@ -82,4 +82,11 @@ public interface IHostStorageProvider {
     /// <param name="lastExecutableDirectory">The directory of the last file picked, if any.</param>
     /// <returns>The operation as an awaitable Task, containing the first picked file, or <c>null</c>.</returns>
     Task<IStorageFile?> PickExecutableFile(string lastExecutableDirectory);
+
+    /// <summary>
+    /// Spanws the file picker to save a binary file.
+    /// </summary>
+    /// <param name="bytes">The binary content of the file.</param>
+    /// <returns>The operation as an awaitable Task.</returns>
+    Task SaveBinaryFile(byte[] bytes);
 }

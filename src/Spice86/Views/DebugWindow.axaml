@@ -3,21 +3,17 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
-    Title="Debug"
-    Width="800"
-    Height="600"
-    MinWidth="800"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
-    CanResize="True"
-    Icon="/Assets/Spice86.ico"
     WindowStartupLocation="CenterOwner"
+    ShowInTaskbar="True"
+    Title="Spice86 Debug Window"
+    Width="800"
+    Height="600"
+    Icon="/Assets/Debug.ico"
     mc:Ignorable="d">
     <Design.DataContext>
         <vm:DebugWindowViewModel />
@@ -26,13 +22,11 @@
         <DataTemplate DataType="{x:Type vm:CpuViewModel}">
             <views:CpuView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+            <views:MemoryView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
             <views:DisassemblyView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-            <ScrollViewer>
-                <views:MemoryView />
-            </ScrollViewer>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
             <views:VideoCardView />
@@ -51,10 +45,30 @@
         <Grid
             Grid.Row="1"
             RowDefinitions="*,Auto">
-            <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTab, Mode=TwoWay}">
+            <TabControl Grid.Row="0">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-                <TabItem Header="Disassembly" Content="{Binding DisassemblyViewModel}" />
-                <TabItem Header="Memory" Content="{Binding MemoryViewModel}" />
+                <TabItem Header="Disassembly">
+                    <TabControl ItemsSource="{Binding DisassemblyViewModels}">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+                                <TabItem Header="{Binding Header}">
+                                    <ContentPresenter Content="{Binding}"/>
+                                </TabItem>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                    </TabControl>
+                </TabItem>
+                <TabItem Header="Memory">
+                    <TabControl ItemsSource="{Binding MemoryViewModels}">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+                                <TabItem Header="{Binding Header}">
+                                    <ContentPresenter Content="{Binding}"/>
+                                </TabItem>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                    </TabControl>
+                </TabItem>
                 <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
                 <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
                 <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
@@ -71,7 +85,7 @@
                         Margin="5,0,0,0"
                         VerticalAlignment="Bottom"
                         Command="{Binding ForceUpdateCommand}"
-                        Content="Force Update" />
+                        Content="Force Refresh" />
                     <Button
                         Margin="5,0,0,0"
                         Command="{Binding PauseCommand}"
@@ -85,26 +99,5 @@
                 </WrapPanel>
             </Border>
         </Grid>
-        <dialogHost:DialogHost
-            Grid.Row="0"
-            Grid.RowSpan="2"
-            CloseOnClickAway="False"
-            IsOpen="{Binding IsDialogVisible}">
-            <dialogHost:DialogHost.DialogContent>
-                <Grid RowDefinitions="Auto,Auto,Auto">
-                    <Label
-                        Grid.Row="0"
-                        HorizontalAlignment="Center"
-                        Content="Validation Error"
-                        FontWeight="Bold" />
-                    <TextBlock Grid.Row="1" Text="{Binding Exception.Message}" />
-                    <Button
-                        Grid.Row="2"
-                        Command="{Binding ClearDialogCommand}"
-                        Content="OK"
-                        IsDefault="True" />
-                </Grid>
-            </dialogHost:DialogHost.DialogContent>
-        </dialogHost:DialogHost>
     </Grid>
 </Window>

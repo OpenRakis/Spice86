@@ -9,15 +9,23 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 
 public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
-    private readonly IMemory _memory;
+    private readonly uint _startAddress;
+    private readonly uint _endAddress;
 
-    public MemoryReadOnlyBitRangeUnion(IMemory memory) {
-        _memory = memory;
-        EnclosingRange = new BitRange(0, _memory.Length * 8);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MemoryReadOnlyBitRangeUnion"/> class.
+    /// </summary>
+    /// <param name="startAddress">The start address of tha range of memory.</param>
+    /// <param name="endAddress">The end address of the range of memory. This end address is not included in the range.</param>
+    public MemoryReadOnlyBitRangeUnion(uint startAddress, uint endAddress) {
+        _startAddress = startAddress;
+        _endAddress = endAddress;
+        // The endAddress is excluded from the range
+        EnclosingRange = new BitRange(startAddress, endAddress);
     }
 
     public BitRange EnclosingRange { get; }
-    public int Count => (int)_memory.Length;
+    public int Count => (int)(_endAddress - _startAddress);
 
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 
@@ -27,8 +35,7 @@ public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
 
     public BitRangeUnion.Enumerator GetEnumerator() {
         var bitRangeUnion = new BitRangeUnion();
-        // Multiply by 8 to convert from bytes to bits
-        bitRangeUnion.Add(new BitRange(0, _memory.Length * 8));
+        bitRangeUnion.Add(new BitRange(_startAddress, _endAddress));
         return bitRangeUnion.GetEnumerator();
     }
 
@@ -41,7 +48,7 @@ public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     }
 
     IEnumerator<BitRange> IEnumerable<BitRange>.GetEnumerator() {
-        for (uint i = 0; i < _memory.Length; i++) {
+        for (uint i = _startAddress; i < _endAddress; i++) {
             yield return EnclosingRange;
         }
     }

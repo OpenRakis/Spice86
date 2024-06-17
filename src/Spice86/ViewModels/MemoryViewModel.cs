@@ -1,47 +1,160 @@
 ﻿namespace Spice86.ViewModels;
 
+using Avalonia.Threading;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
 
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
+public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private IMemory? _memory;
+    private readonly DebugWindowViewModel _debugWindowViewModel;
+    private bool _needToUpdateBinaryDocument;
+    
     [ObservableProperty]
     private MemoryBinaryDocument? _memoryBinaryDocument;
+    
+    public bool NeedsToVisitEmulator => _memory is null;
+
+    private uint? _startAddress = 0;
+
+    [NotifyCanExecuteChangedFor(nameof(UpdateBinaryDocumentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DumpMemoryCommand))]
+    [ObservableProperty]
+    private bool _isMemoryRangeValid;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
+    private bool _canCloseTab;
+
+    [RelayCommand(CanExecute = nameof(CanCloseTab))]
+    private void CloseTab() {
+        _debugWindowViewModel.CloseTab(this);
+        UpdateCanCloseTabProperty();
+    }
+    
+    private bool GetIsMemoryRangeValid() {
+        if (_memory is null) {
+            return false;
+        }
+
+        return StartAddress <= (EndAddress ?? _memory.Length)
+            && EndAddress >= (StartAddress ?? 0);
+    }
+    
+    public uint? StartAddress {
+        get => _startAddress;
+        set {
+            SetProperty(ref _startAddress, value);
+            IsMemoryRangeValid = GetIsMemoryRangeValid();
+            TryUpdateHeaderAndMemoryDocument();
+        }
+    }
+
+    private void TryUpdateHeaderAndMemoryDocument() {
+        if (!UpdateBinaryDocumentCommand.CanExecute(null)) {
+            return;
+        }
+        Header = $"{StartAddress:X} - {EndAddress:X}";
+        UpdateBinaryDocumentCommand.Execute(null);
+    }
+
+    private uint? _endAddress = 0;
+    
+    public uint? EndAddress {
+        get => _endAddress;
+        set {
+            SetProperty(ref _endAddress, value);
+            IsMemoryRangeValid = GetIsMemoryRangeValid();
+            TryUpdateHeaderAndMemoryDocument();
+        }
+    }
+
+    [ObservableProperty]
+    private string _header = "Memory View";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
+    private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel( IPauseStatus pauseStatus) {
+    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+        _debugWindowViewModel = debugWindowViewModel;
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
+        _storageProvider = storageProvider;
         IsPaused = _pauseStatus.IsPaused;
+        StartAddress = startAddress;
+        EndAddress = endAddress;
+        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        UpdateCanCloseTabProperty();
+        debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
+    }
+    
+    private void UpdateCanCloseTabProperty() {
+        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+    }
+
+    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+        UpdateCanCloseTabProperty();
+    }
+
+    private void UpdateValues(object? sender, EventArgs e) {
+        if (!_needToUpdateBinaryDocument) {
+            return;
+        }
+        UpdateBinaryDocument();
+        _needToUpdateBinaryDocument = false;
     }
 
     private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
         if (e.PropertyName != nameof(IPauseStatus.IsPaused)) {
             return;
         }
+        UpdateCanCloseTabProperty();
         IsPaused = _pauseStatus.IsPaused;
         if(IsPaused) {
-            UpdateBinaryDocument();
+            _needToUpdateBinaryDocument = true;
         }
     }
+    
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public void NewMemoryView() {
+        _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
+    }
 
+    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private void UpdateBinaryDocument() {
-        if (_memory is not null) {
-            MemoryBinaryDocument = new MemoryBinaryDocument(_memory);
+        if (_memory is null || StartAddress is null || EndAddress is null) {
+            return;
+        }
+        MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        MemoryBinaryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
+        MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
+    }
+
+    private void OnMemoryReadInvalidOperation(Exception exception) {
+        Dispatcher.UIThread.Post(() => ShowError(exception));
+    }
+
+    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
+    private async Task DumpMemory() {
+        if (_memory is not null && StartAddress is not null && EndAddress is not null) {
+            await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress.Value, EndAddress.Value - StartAddress.Value));
         }
     }
 
@@ -82,26 +195,24 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
                 return true;
             }
         } catch (Exception e) {
-            ShowError(e);
+            Dispatcher.UIThread.Post(() => ShowError(e));
         }
         address = null;
         return false;
     }
 
     [RelayCommand]
-    public void CancelMemoryEdit() {
-        IsEditingMemory = false;
-    }
+    public void CancelMemoryEdit() => IsEditingMemory = false;
 
     [RelayCommand]
     public void ApplyMemoryEdit() {
         if (!TryParseMemoryAddress(MemoryEditAddress, out uint? address) ||
             MemoryEditValue is null ||
+            _memory is null ||
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
         MemoryBinaryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
-        UpdateBinaryDocument();
         IsEditingMemory = false;
     }
 
@@ -109,7 +220,13 @@ public partial class MemoryViewModel : ViewModelBase, IInternalDebugger {
         if (component is not IMemory memory) {
             return;
         }
-        _memory ??= memory;
-        MemoryBinaryDocument ??= new MemoryBinaryDocument(memory);
+
+        if (_memory is null) {
+            _memory = memory;
+            if (EndAddress is 0) {
+                EndAddress = _memory.Length;
+            }
+        }
+        TryUpdateHeaderAndMemoryDocument();
     }
 }

@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
-public class Configuration {
+public sealed class Configuration {
     /// <summary>
     /// Gets or sets whether the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.
     /// </summary>

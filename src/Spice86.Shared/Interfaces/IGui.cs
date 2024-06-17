@@ -77,9 +77,4 @@ public interface IGui {
     /// Indicate that a mouse button has been released.
     /// </summary>
     event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-
-    /// <summary>
-    /// Used by the UI to set or reset the time multiplier.
-    /// </summary>
-    ITimeMultiplier? ProgrammableIntervalTimer { set; }
 }

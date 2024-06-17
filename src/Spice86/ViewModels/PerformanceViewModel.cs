@@ -15,27 +15,21 @@ using System;
 
 public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     private State? _state;
-    private readonly IPerformanceMeasurer? _performanceMeasurer;
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IPerformanceMeasurer _performanceMeasurer;
+    private readonly IPauseStatus _pauseStatus;
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
-
-    public PerformanceViewModel() {
-        if (!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
-    public PerformanceViewModel(IUIDispatcherTimerFactory iuiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
+    
+    public PerformanceViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) : base() {
         _pauseStatus = pauseStatus;
         programExecutor.Accept(this);
         _performanceMeasurer = performanceMeasurer;
-        iuiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+        uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _performanceMeasurer is null || _pauseStatus is { IsPaused: true }) {
+        if (_state is null || _pauseStatus.IsPaused) {
             return;
         }
 
@@ -47,6 +41,8 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     public void Visit<T>(T component) where T : IDebuggableComponent {
         _state ??= component as State;
     }
+
+    public bool NeedsToVisitEmulator => _state is null;
 
     [ObservableProperty]
     private double _instructionsExecuted;

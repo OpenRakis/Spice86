@@ -24,12 +24,22 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     A20Gate A20Gate { get; }
 
     /// <summary>
-    /// Gets a copy of the current memory state.
+    /// Gets a copy of the current memory state, not triggering any breakpoints.
     /// </summary>
-    byte[] RamCopy { get; }
+    /// <param name="length">The length of the byte array. Default is equal to the memory length.</param>
+    /// <param name="offset">Where to start in the memory. Default is <c>0</c>.</param>
+    /// <returns>A copy of the current memory state.</returns>
+    public byte[] ReadRam(uint length = 0, uint offset = 0);
 
     /// <summary>
-    /// Returns a <see cref="Span{T}"/> that represents the specified range of memory.
+    /// Writes an array of bytes to memory, not triggering any breakpoints.
+    /// </summary>
+    /// <param name="array">The array to copy data from.</param>
+    /// <param name="offset">Where to start in the memory. Default is <c>0</c>.</param>
+    public void WriteRam(byte[] array, uint offset = 0);
+
+    /// <summary>
+    /// Returns a <see cref="Span{T}"/> that represents the specified range of memory. Will trigger memory read breakpoints.
     /// </summary>
     /// <param name="address">The starting address of the memory range.</param>
     /// <param name="length">The length of the memory range.</param>
@@ -47,12 +57,12 @@ public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
     uint? SearchValue(uint address, int len, IList<byte> value);
 
     /// <summary>
-    ///     Allows write breakpoints to access the byte being written before it actually is.
+    ///     Allows memory write breakpoints to access the byte being written before it actually is.
     /// </summary>
     byte CurrentlyWritingByte { get; }
 
     /// <summary>
-    ///     Allow a class to register for a certain memory range.
+    ///     Allow a memory mapped device to register for a certain memory range.
     /// </summary>
     /// <param name="baseAddress">The start of the frame</param>B
     /// <param name="size">The size of the window</param>

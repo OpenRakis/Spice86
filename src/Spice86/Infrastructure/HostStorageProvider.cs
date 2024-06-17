@@ -59,6 +59,21 @@ public class HostStorageProvider : IHostStorageProvider {
             }
         }
     }
+    
+    public async Task SaveBinaryFile(byte[] bytes) {
+        if (CanSave && CanPickFolder) {
+            FilePickerSaveOptions options = new() {
+                Title = "Save binary file",
+                SuggestedFileName = "dump.bin",
+                DefaultExtension = "bin",
+                SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
+            };
+            string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(file)) {
+                await File.WriteAllBytesAsync(file, bytes);
+            }
+        }
+    }
 
     public async Task DumpEmulatorStateToFile(Configuration configuration, IProgramExecutor programExecutor) {
         if (CanSave && CanPickFolder) {

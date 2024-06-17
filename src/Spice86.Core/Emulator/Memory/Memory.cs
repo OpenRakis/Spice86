@@ -47,17 +47,22 @@ public class Memory : Indexable.Indexable, IMemory {
     /// </summary>
     public const uint EndOfHighMemoryArea = 0x10FFEF;
 
-    /// <summary>
-    /// Gets a copy of the current memory state, not triggering any breakpoints.
-    /// </summary>
-    public byte[] RamCopy {
-        get {
-            byte[] copy = new byte[_memoryDevices.Length];
-            for (uint address = 0; address < copy.Length; address++) {
-                copy[address] = _memoryDevices[address].Read(address);
-            }
-
-            return copy;
+    /// <inheritdoc />
+    public byte[] ReadRam(uint length = 0, uint offset = 0) {
+        if (length == 0) {
+            length = (uint)_memoryDevices.Length;
+        }
+        byte[] copy = new byte[length];
+        for (uint address = 0; address < copy.Length; address++) {
+            copy[address] = _memoryDevices[address + offset].Read(address + offset);
+        }
+        return copy;
+    }
+    
+    /// <inheritdoc />
+    public void WriteRam(byte[] array, uint offset = 0) {
+        for (uint address = 0; address < array.Length; address++) {
+            _memoryDevices[address + offset].Write(address + offset, array[address]);
         }
     }
 
@@ -77,7 +82,7 @@ public class Memory : Indexable.Indexable, IMemory {
     }
 
     /// <summary>
-    ///     Allows write breakpoints to access the byte being written before it actually is.
+    ///     Allows memory write breakpoints to access the byte being written before it actually is.
     /// </summary>
     public byte CurrentlyWritingByte {
         get;
@@ -97,10 +102,11 @@ public class Memory : Indexable.Indexable, IMemory {
     public Span<byte> GetSpan(int address, int length) {
         address = A20Gate.TransformAddress(address);
         foreach (DeviceRegistration device in _devices) {
-            if (address >= device.StartAddress && address + length <= device.EndAddress) {
-                MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
-                return device.Device.GetSpan(address, length);
+            if (address < device.StartAddress || address + length > device.EndAddress) {
+                continue;
             }
+            MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
+            return device.Device.GetSpan(address, length);
         }
 
         throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");
@@ -173,12 +179,7 @@ public class Memory : Indexable.Indexable, IMemory {
         get;
     }
 
-    /// <summary>
-    ///     Allow a class to register for a certain memory range.
-    /// </summary>
-    /// <param name="baseAddress">The start of the frame</param>
-    /// <param name="size">The size of the window</param>
-    /// <param name="memoryDevice">The memory device to use</param>
+    /// <inheritdoc/>
     public void RegisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice) {
         uint endAddress = baseAddress + size;
         if (endAddress >= _memoryDevices.Length) {
