@@ -61,7 +61,7 @@ public class Program {
             }
             
             Views.MainWindow mainWindow = new();
-            using var mainWindowViewModel = new MainWindowViewModel(new AvaloniaKeyScanCodeConverter(),
+            using var mainWindowViewModel = new MainWindowViewModel(new WindowService(), new AvaloniaKeyScanCodeConverter(),
                 new ProgramExecutorFactory(configuration, loggerService),
                 new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
                 new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);

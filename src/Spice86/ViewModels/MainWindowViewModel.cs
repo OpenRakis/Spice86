@@ -46,15 +46,14 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
+    private readonly IWindowService _windowService;
     private IProgramExecutor? _programExecutor;
     private SoftwareMixer? _softwareMixer;
     private ITimeMultiplier? _pit;
+    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     private Configuration _configuration;
-    
-    [ObservableProperty]
-    private DebugViewModel? _debugViewModel;
     
     private bool _disposed;
     private bool _renderingTimerInitialized;
@@ -74,8 +73,9 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
+    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
+        _windowService = windowService;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
@@ -501,13 +501,20 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private bool _isPerformanceVisible;
 
+    [RelayCommand]
+    public async Task ShowInternalDebugger() {
+        if (_debugViewModel is not null) {
+            await _windowService.ShowDebugWindow(_debugViewModel);
+        }
+    }
+
     private void StartProgramExecutor() {
         (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) viewModelEmulatorDependencies = CreateEmulator();
         _programExecutor = viewModelEmulatorDependencies.ProgramExecutor;
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        DebugViewModel = new DebugViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
+        _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

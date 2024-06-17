@@ -18,7 +18,7 @@ using System.Globalization;
 
 public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private IMemory? _memory;
-    private readonly DebugViewModel _debugViewModel;
+    private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateBinaryDocument;
     
     [ObservableProperty]
@@ -81,8 +81,8 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(DebugViewModel debugViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
-        _debugViewModel = debugViewModel;
+    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+        _debugWindowViewModel = debugWindowViewModel;
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;
@@ -112,7 +112,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
-        _debugViewModel.NewMemoryViewCommand.Execute(null);
+        _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]

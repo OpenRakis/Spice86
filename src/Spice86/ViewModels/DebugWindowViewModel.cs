@@ -13,7 +13,7 @@ using Spice86.Interfaces;
 
 using System.ComponentModel;
 
-public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
+public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus _pauseStatus;
     private readonly IProgramExecutor _programExecutor;
     private readonly IHostStorageProvider _storageProvider;
@@ -50,7 +50,7 @@ public partial class DebugViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
-    public DebugViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
+    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
         _programExecutor = programExecutor;
         _storageProvider = storageProvider;
         _textClipboard = textClipboard;

@@ -1,5 +1,5 @@
-<UserControl
-    x:Class="Spice86.Views.DebugView"
+<Window
+    x:Class="Spice86.Views.DebugWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,12 +7,13 @@
     xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
     x:CompileBindings="True"
-    x:DataType="vm:DebugViewModel"
+    x:DataType="vm:DebugWindowViewModel"
+    WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
     <Design.DataContext>
-        <vm:DebugViewModel />
+        <vm:DebugWindowViewModel />
     </Design.DataContext>
-    <UserControl.DataTemplates>
+    <Window.DataTemplates>
         <DataTemplate DataType="{x:Type vm:CpuViewModel}">
             <views:CpuView />
         </DataTemplate>
@@ -34,7 +35,7 @@
         <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
             <views:SoftwareMixerView />
         </DataTemplate>
-    </UserControl.DataTemplates>
+    </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid
             Grid.Row="1"
@@ -94,4 +95,4 @@
             </Border>
         </Grid>
     </Grid>
-</UserControl>
+</Window>

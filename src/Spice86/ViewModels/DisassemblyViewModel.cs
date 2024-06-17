@@ -23,7 +23,7 @@ using System.ComponentModel;
 
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPauseStatus? _pauseStatus;
-    private readonly DebugViewModel? _debugViewModel;
+    private readonly DebugWindowViewModel? _debugWindowViewModel;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
@@ -58,8 +58,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public DisassemblyViewModel(DebugViewModel debugViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
-        _debugViewModel = debugViewModel;
+    public DisassemblyViewModel(DebugWindowViewModel debugWindowViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) : base() {
+        _debugWindowViewModel = debugWindowViewModel;
         _pauseStatus = pauseStatus;
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
@@ -104,7 +104,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewDisassemblyView() {
-        _debugViewModel?.NewDisassemblyViewCommand.Execute(null);
+        _debugWindowViewModel?.NewDisassemblyViewCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
