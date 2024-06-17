@@ -173,7 +173,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
                 return true;
             }
         } catch (Exception e) {
-            ShowError(e);
+            Dispatcher.UIThread.Post(() => ShowError(e));
         }
         address = null;
         return false;
