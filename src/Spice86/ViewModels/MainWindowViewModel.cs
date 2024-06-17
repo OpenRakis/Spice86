@@ -503,7 +503,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand]
     public async Task ShowInternalDebugger() {
-        if (_debugViewModel is not null) {
+        if (_programExecutor is not null) {
+            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
             await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }
@@ -514,7 +515,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
         PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
-        _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
+        _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");

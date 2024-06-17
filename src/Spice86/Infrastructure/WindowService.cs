@@ -10,6 +10,16 @@ using Spice86.Views;
 
 /// <inheritdoc cref="IWindowService"/>
 public class WindowService : IWindowService {
+    public void CloseDebugWindow() {
+        Dispatcher.UIThread.Post(() => {
+            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
+                return;
+            }
+            DebugWindow? debugWindow = lifetime.Windows.FirstOrDefault(x => x is DebugWindow) as DebugWindow;
+            debugWindow?.Close();
+        });
+    }
+    
     public async Task ShowDebugWindow(DebugWindowViewModel viewModel) {
         await Dispatcher.UIThread.InvokeAsync(() => {
             if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
