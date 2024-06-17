@@ -12,9 +12,15 @@ public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     private readonly uint _startAddress;
     private readonly uint _endAddress;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MemoryReadOnlyBitRangeUnion"/> class.
+    /// </summary>
+    /// <param name="startAddress">The start address of tha range of memory.</param>
+    /// <param name="endAddress">The end address of the range of memory. This end address is not included in the range.</param>
     public MemoryReadOnlyBitRangeUnion(uint startAddress, uint endAddress) {
         _startAddress = startAddress;
         _endAddress = endAddress;
+        // The endAddress is excluded from the range
         EnclosingRange = new BitRange(startAddress, endAddress);
     }
 
