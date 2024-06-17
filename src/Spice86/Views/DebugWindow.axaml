@@ -10,7 +10,7 @@
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
     ShowInTaskbar="True"
-    Title="Debug Window"
+    Title="Spice86 Debug Window"
     Width="800"
     Height="600"
     Icon="/Assets/Debug.ico"
