@@ -41,7 +41,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
         _debugWindowViewModel.CloseTab(this);
-        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+        UpdateCanCloseTabProperty();
     }
     
     private bool GetIsMemoryRangeValid() {
@@ -87,7 +87,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
-    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
@@ -102,11 +101,16 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         StartAddress = startAddress;
         EndAddress = endAddress;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        UpdateCanCloseTabProperty();
         debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
+    }
+    
+    private void UpdateCanCloseTabProperty() {
+        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
     }
 
     private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+        UpdateCanCloseTabProperty();
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
@@ -121,6 +125,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         if (e.PropertyName != nameof(IPauseStatus.IsPaused)) {
             return;
         }
+        UpdateCanCloseTabProperty();
         IsPaused = _pauseStatus.IsPaused;
         if(IsPaused) {
             _needToUpdateBinaryDocument = true;

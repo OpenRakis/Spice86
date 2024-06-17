@@ -40,7 +40,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
-    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -69,18 +68,22 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         IsPaused = pauseStatus.IsPaused;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
+        UpdateCanCloseTabProperty();
         debugWindowViewModel.DisassemblyViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
+    }
+
+    private void UpdateCanCloseTabProperty() {
+        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
     }
     
     private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+        UpdateCanCloseTabProperty();
     }
     
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
         _debugWindowViewModel.CloseTab(this);
-        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
+        UpdateCanCloseTabProperty();
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
@@ -91,6 +94,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
         IsPaused = _pauseStatus.IsPaused;
+        UpdateCanCloseTabProperty();
         if (!IsPaused) {
             return;
         }
