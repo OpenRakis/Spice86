@@ -70,6 +70,17 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
     }
 
+    internal void CloseTab(IInternalDebugger internalDebuggerViewModel) {
+        switch (internalDebuggerViewModel) {
+            case MemoryViewModel memoryViewModel:
+                MemoryViewModels.Remove(memoryViewModel);
+                break;
+            case DisassemblyViewModel disassemblyViewModel:
+                DisassemblyViewModels.Remove(disassemblyViewModel);
+                break;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
         MemoryViewModels.Add(new MemoryViewModel(this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0));

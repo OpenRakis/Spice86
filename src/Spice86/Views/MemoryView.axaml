@@ -23,6 +23,10 @@
                         Command="{Binding NewMemoryViewCommand}"
                         Content="New Memory View"
                         IsEnabled="{Binding IsPaused}" />
+                <Button
+                        Command="{Binding CloseTabCommand}"
+                        Content="Close View"
+                        IsEnabled="{Binding CanCloseTab}"/>
                 <UniformGrid>
                     <Label Content="Start" />
                     <NumericUpDown Value="{Binding StartAddress}"/>

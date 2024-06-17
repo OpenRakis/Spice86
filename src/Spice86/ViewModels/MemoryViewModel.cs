@@ -12,6 +12,7 @@ using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
 
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -32,6 +33,16 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [NotifyCanExecuteChangedFor(nameof(DumpMemoryCommand))]
     [ObservableProperty]
     private bool _isMemoryRangeValid;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
+    private bool _canCloseTab;
+
+    [RelayCommand(CanExecute = nameof(CanCloseTab))]
+    private void CloseTab() {
+        _debugWindowViewModel.CloseTab(this);
+        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+    }
     
     private bool GetIsMemoryRangeValid() {
         if (_memory is null) {
@@ -76,6 +87,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _isPaused;
 
     private readonly IPauseStatus _pauseStatus;
@@ -90,8 +102,13 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         StartAddress = startAddress;
         EndAddress = endAddress;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
     }
-    
+
+    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
+    }
+
     private void UpdateValues(object? sender, EventArgs e) {
         if (!_needToUpdateBinaryDocument) {
             return;
