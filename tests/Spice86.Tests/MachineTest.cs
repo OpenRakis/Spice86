@@ -184,7 +184,7 @@ public class MachineTest {
         expected[0x1] = 0x78;
         TestOneBin("control", expected);
     }
-#if false
+
     [Fact]
     public void TestDatatrnf() {
         TestOneBin("datatrnf");
@@ -260,7 +260,6 @@ public class MachineTest {
     public void TestStrings() {
         TestOneBin("strings");
     }
-#endif
 
     [Fact]
     public void TestSub() {

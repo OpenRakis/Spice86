@@ -107,12 +107,9 @@ public class EmulationLoop {
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();
             }
-            //_cpu.ExecuteNextInstruction();
-            _cfgCpu.ExecuteNext();
+            _cpu.ExecuteNextInstruction();
+            //_cfgCpu.ExecuteNext();
             _timer.Tick();
-            if (_cpuState.Cycles > 100000000) {
-                _cpuState.IsRunning = false;
-            }
         }
         _stopwatch.Stop();
         OutputPerfStats();
