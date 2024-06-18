@@ -5,7 +5,6 @@ using Spice86.Shared.Interfaces;
 
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>

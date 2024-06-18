@@ -162,6 +162,7 @@ public class MachineTest {
     public void TestBcdcnv() {
         TestOneBin("bcdcnv");
     }
+
     [Fact]
     public void TestBitwise() {
         byte[] expected = GetExpected("bitwise");
@@ -172,11 +173,12 @@ public class MachineTest {
         expected[0x99] = 0x12;
         TestOneBin("bitwise", expected);
     }
-    
+
     [Fact]
     public void TestCmpneg() {
         TestOneBin("cmpneg");
     }
+
     [Fact]
     public void TestControl() {
         byte[] expected = GetExpected("control");

@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU;
+namespace Spice86.Core.Emulator.CPU.Registers;
 
 public enum SegmentRegisterIndex {
     /// <summary>
@@ -20,7 +20,6 @@ public enum SegmentRegisterIndex {
     /// The index of the DS (data segment) register.
     /// </summary>
     DsIndex = 3,
-
 
     /// <summary>
     /// The index of the FS register.

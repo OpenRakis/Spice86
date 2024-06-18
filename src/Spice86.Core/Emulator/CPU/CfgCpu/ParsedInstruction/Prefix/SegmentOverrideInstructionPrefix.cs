@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 
+using Spice86.Core.Emulator.CPU.Registers;
+
 /// <summary>
 /// Prefix representing that the instruction segmented address register will be overridden by segmentRegisterIndex
 /// </summary>

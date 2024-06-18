@@ -9,48 +9,18 @@ using System.Collections.Generic;
 /// </summary>
 public class SegmentRegisters : RegistersHolder {
     /// <summary>
-    /// The index of the CS (code segment) register.
-    /// </summary>
-    public const uint CsIndex = 1;
-
-    /// <summary>
-    /// The index of the DS (data segment) register.
-    /// </summary>
-    public const uint DsIndex = 3;
-
-    /// <summary>
-    /// The index of the ES (extra segment) register.
-    /// </summary>
-    public const uint EsIndex = 0;
-
-    /// <summary>
-    /// The index of the FS register.
-    /// </summary>
-    public const uint FsIndex = 4;
-
-    /// <summary>
-    /// The index of the GS register.
-    /// </summary>
-    public const uint GsIndex = 5;
-
-    /// <summary>
-    /// The index of the SS (stack segment) register.
-    /// </summary>
-    public const uint SsIndex = 2;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="SegmentRegisters"/> class with the segment register names.
     /// </summary>
     public SegmentRegisters() : base(GetRegistersNames()) {
     }
 
     private static readonly FrozenDictionary<uint, string> _registersNames = new Dictionary<uint, string>() {
-            { EsIndex, "ES" },
-            { CsIndex, "CS" },
-            { SsIndex, "SS" },
-            { DsIndex, "DS" },
-            { FsIndex, "FS" },
-            { GsIndex, "GS" }
+            { (uint)SegmentRegisterIndex.EsIndex, "ES" },
+            { (uint)SegmentRegisterIndex.CsIndex, "CS" },
+            { (uint)SegmentRegisterIndex.SsIndex, "SS" },
+            { (uint)SegmentRegisterIndex.DsIndex, "DS" },
+            { (uint)SegmentRegisterIndex.FsIndex, "FS" },
+            { (uint)SegmentRegisterIndex.GsIndex, "GS" }
         }.ToFrozenDictionary();
 
     /// <summary>

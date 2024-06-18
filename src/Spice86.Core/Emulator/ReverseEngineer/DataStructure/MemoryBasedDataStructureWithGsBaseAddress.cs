@@ -12,6 +12,6 @@ public class MemoryBasedDataStructureWithGsBaseAddress : MemoryBasedDataStructur
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    public MemoryBasedDataStructureWithGsBaseAddress(Machine machine) : base(machine, SegmentRegisters.GsIndex) {
+    public MemoryBasedDataStructureWithGsBaseAddress(Machine machine) : base(machine, (uint)SegmentRegisterIndex.GsIndex) {
     }
 }

@@ -253,16 +253,16 @@ public class InstructionParser  : BaseInstructionParser {
                return _popFParser.Parse(address, opcodeField, prefixes, hasOperandSize32);
             case 0xA2:
                 return new MovMoffsAcc8(address, opcodeField, prefixes,
-                    segmentOverrideFromPrefixes ?? SegmentRegisters.DsIndex,
+                    segmentOverrideFromPrefixes ?? (uint)SegmentRegisterIndex.DsIndex,
                     _instructionReader.UInt16.NextField(false));
             case 0xA3:
                 if (hasOperandSize32) {
                     return new MovMoffsAcc32(address, opcodeField, prefixes,
-                        segmentOverrideFromPrefixes ?? SegmentRegisters.DsIndex,
+                        segmentOverrideFromPrefixes ?? (uint)SegmentRegisterIndex.DsIndex,
                         _instructionReader.UInt16.NextField(false));
                 }
                 return new MovMoffsAcc16(address, opcodeField, prefixes,
-                    segmentOverrideFromPrefixes ?? SegmentRegisters.DsIndex,
+                    segmentOverrideFromPrefixes ?? (uint)SegmentRegisterIndex.DsIndex,
                     _instructionReader.UInt16.NextField(false));
             case 0xA8:
             case 0xA9:

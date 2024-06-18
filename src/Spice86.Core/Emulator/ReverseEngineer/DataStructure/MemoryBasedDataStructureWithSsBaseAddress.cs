@@ -12,6 +12,6 @@ public class MemoryBasedDataStructureWithSsBaseAddress : MemoryBasedDataStructur
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    public MemoryBasedDataStructureWithSsBaseAddress(Machine machine) : base(machine, SegmentRegisters.SsIndex) {
+    public MemoryBasedDataStructureWithSsBaseAddress(Machine machine) : base(machine, (uint)SegmentRegisterIndex.SsIndex) {
     }
 }
