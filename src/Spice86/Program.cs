@@ -3,17 +3,19 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
+using Avalonia.Threading;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Shared.Interfaces;
-using Spice86.Infrastructure;
-using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Spice86.DependencyInjection;
+using Spice86.Infrastructure;
 using Spice86.Logging;
 using Spice86.ViewModels;
+using Spice86.Views;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -42,43 +44,56 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         Configuration configuration = CommandLineParser.ParseCommandLine(args);
-        
-        var serviceCollection = new ServiceCollection();
-        serviceCollection.AddSingleton<ILoggerPropertyBag, LoggerPropertyBag>();
-        serviceCollection.AddSingleton<ILoggerService, LoggerService>();
 
+        if (configuration.HeadlessMode) {
+            ProgramExecutor programExecutor = new(configuration, new LoggerService(new LoggerPropertyBag()), null);
+            programExecutor.Run();
+        }
+        else {
+            StartGraphicalUserInterface(args, configuration);
+        }
+    }
+
+    private static void StartGraphicalUserInterface(string[] args, Configuration configuration) {
+        ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp(args);
+
+        MainWindow mainWindow = new();
+        ServiceProvider serviceProvider = InjectServices(configuration, mainWindow);
+
+        using var mainWindowViewModel = new MainWindowViewModel(
+            serviceProvider.GetRequiredService<IWindowService>(),
+            serviceProvider.GetRequiredService<IAvaloniaKeyScanCodeConverter>(),
+            new ProgramExecutorFactory(configuration, serviceProvider.GetRequiredService<ILoggerService>()),
+            serviceProvider.GetRequiredService<IUIDispatcher>(),
+            serviceProvider.GetRequiredService<IHostStorageProvider>(),
+            serviceProvider.GetRequiredService<ITextClipboard>(),
+            serviceProvider.GetRequiredService<IUIDispatcherTimerFactory>(),
+            configuration,
+            serviceProvider.GetRequiredService<ILoggerService>());
+        
+        mainWindow.DataContext = mainWindowViewModel;
+        desktop.MainWindow = mainWindow;
+        desktop.Start(args);
+    }
+    
+    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp(string[] args) {
+        AppBuilder appBuilder = BuildAvaloniaApp();
+        ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
+        App app = (App?)appBuilder.Instance!;
+        return desktop;
+    }
+
+    private static ServiceProvider InjectServices(Configuration configuration, MainWindow mainWindow) {
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddLogging();
+        serviceCollection.AddUserInterfaceInfrastructure(mainWindow);
+        
         ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
         Startup.SetLoggingLevel(loggerService, configuration);
-
-        if (!configuration.HeadlessMode) {
-            AppBuilder appBuilder = BuildAvaloniaApp();
-            ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-            App? app = (App?)appBuilder.Instance;
-            
-            if (app is null) {
-                return;
-            }
-            
-            Views.MainWindow mainWindow = new();
-            using var mainWindowViewModel = new MainWindowViewModel(new WindowService(), new AvaloniaKeyScanCodeConverter(),
-                new ProgramExecutorFactory(configuration, loggerService),
-                new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider),
-                new TextClipboard(mainWindow.Clipboard), new UIDispatcherTimerFactory(), configuration, loggerService);
-            mainWindow.DataContext = mainWindowViewModel;
-            desktop.MainWindow = mainWindow;
-            desktop.Start(args);
-        }
-        else {
-            ProgramExecutor programExecutor = new(configuration, loggerService, null);
-            programExecutor.Run();
-        }
+        return serviceProvider;
     }
-    
-    /// <summary>
-    /// Configures and builds an Avalonia application instance.
-    /// </summary>
-    /// <returns>The built <see cref="AppBuilder"/> instance.</returns>
+
     private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace()
