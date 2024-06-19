@@ -23,7 +23,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private bool _needToUpdateBinaryDocument;
     
     [ObservableProperty]
-    private MemoryBinaryDocument? _memoryBinaryDocument;
+    private DataMemoryDocument? _memoryBinaryDocument;
     
     public bool NeedsToVisitEmulator => _memory is null;
 
@@ -142,7 +142,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         if (_memory is null || StartAddress is null || EndAddress is null) {
             return;
         }
-        MemoryBinaryDocument = new MemoryBinaryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        MemoryBinaryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
         MemoryBinaryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
         MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
