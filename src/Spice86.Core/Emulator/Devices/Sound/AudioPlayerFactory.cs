@@ -29,12 +29,13 @@ public class AudioPlayerFactory {
     /// <returns>An instance of an <see cref="AudioPlayer"/>.</returns>
     public AudioPlayer CreatePlayer(int sampleRate = 48000, int framesPerBuffer = 0,
         double? suggestedLatency = null) {
-        AudioPlayer? res = _portAudioPlayerFactory.Create(sampleRate, framesPerBuffer, suggestedLatency);
-        if (res != null) {
-            return res;
+        if (Environment.GetEnvironmentVariables().Contains("GITHUB_ACTIONS")) {
+            return new DummyAudioPlayer(new AudioFormat(SampleRate: sampleRate, Channels: 2,
+                SampleFormat: SampleFormat.IeeeFloat32));
         }
-
-        return new DummyAudioPlayer(new AudioFormat(SampleRate: sampleRate, Channels: 2,
+        
+        AudioPlayer? portAudioPlayer = _portAudioPlayerFactory.Create(sampleRate, framesPerBuffer, suggestedLatency);
+        return portAudioPlayer ?? new DummyAudioPlayer(new AudioFormat(SampleRate: sampleRate, Channels: 2,
             SampleFormat: SampleFormat.IeeeFloat32));
     }
 }
