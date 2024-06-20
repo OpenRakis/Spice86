@@ -208,14 +208,14 @@ public class ModRM {
         // The default segment register is SS for the effective addresses containing a
         // BP index, DS for other effective addresses
         return _registerMemoryIndex switch {
-            0 => SegmentRegisters.DsIndex,
-            1 => SegmentRegisters.DsIndex,
-            2 => SegmentRegisters.SsIndex,
-            3 => SegmentRegisters.SsIndex,
-            4 => SegmentRegisters.DsIndex,
-            5 => SegmentRegisters.DsIndex,
-            6 => mode == 0 ? SegmentRegisters.DsIndex : SegmentRegisters.SsIndex,
-            7 => SegmentRegisters.DsIndex,
+            0 => (uint)SegmentRegisterIndex.DsIndex,
+            1 => (uint)SegmentRegisterIndex.DsIndex,
+            2 => (uint)SegmentRegisterIndex.SsIndex,
+            3 => (uint)SegmentRegisterIndex.SsIndex,
+            4 => (uint)SegmentRegisterIndex.DsIndex,
+            5 => (uint)SegmentRegisterIndex.DsIndex,
+            6 => mode == 0 ? (uint)SegmentRegisterIndex.DsIndex : (uint)SegmentRegisterIndex.SsIndex,
+            7 => (uint)SegmentRegisterIndex.DsIndex,
             _ => throw new InvalidModeException(_state, _registerMemoryIndex)
         };
     }

@@ -20,9 +20,9 @@ public abstract class Instructions {
     /// </summary>
     protected uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
-    protected uint MemoryAddressOverridableDsSi => ModRM.GetAddress(SegmentRegisters.DsIndex, State.SI);
+    protected uint MemoryAddressOverridableDsSi => ModRM.GetAddress((uint)SegmentRegisterIndex.DsIndex, State.SI);
 
-    protected uint DsNextUint16Address => ModRM.GetAddress(SegmentRegisters.DsIndex, Cpu.NextUint16());
+    protected uint DsNextUint16Address => ModRM.GetAddress((uint)SegmentRegisterIndex.DsIndex, Cpu.NextUint16());
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Instructions"/> class.

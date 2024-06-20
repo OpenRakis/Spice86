@@ -10,6 +10,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
+using Spice86.Shared.Diagnostics;
 
 using System.ComponentModel;
 
@@ -50,6 +51,9 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
+    [ObservableProperty]
+    private CfgCpuViewModel? _cfgCpuViewModel;
+
     public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
         _programExecutor = programExecutor;
         _storageProvider = storageProvider;
@@ -67,6 +71,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
         MidiViewModel = new(uiDispatcherTimerFactory);
         MemoryViewModels.Add( new(this, textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0));
+        CfgCpuViewModel = new(uiDispatcherTimerFactory, new PerformanceMeasurer(), pauseStatus);
         Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
     }
 

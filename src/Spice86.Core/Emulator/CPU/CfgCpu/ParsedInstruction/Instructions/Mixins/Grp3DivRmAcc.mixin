@@ -1,0 +1,35 @@
+@moxy
+@attribute required int Size
+@attribute required string Type
+@attribute required string TypeSigned
+@attribute required string TypeUpped
+@attribute required string TypeUppedSigned
+@attribute required bool SourceIsAx
+@attribute required string RegisterLow
+@attribute required string RegisterHigh
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
+         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
+     }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        {{TypeUppedSigned}} v1 = ({{TypeUppedSigned}}){{if SourceIsAx}}helper.State.AX{{else}}((({{TypeUpped}})helper.State.{{RegisterHigh}} << {{Size}}) | helper.State.{{RegisterLow}}){{end}};
+        {{TypeSigned}} v2 = ({{TypeSigned}})helper.ModRm.RM{{Size}};
+        {{TypeSigned}} result = helper.Alu{{Size}}.{{Operation}}(v1, v2);
+        helper.State.{{RegisterLow}} = ({{Type}})result;
+        helper.State.{{RegisterHigh}} = ({{Type}})(v1 % v2);
+        helper.MoveIpAndSetNextNode(this);
+    }
+}
+

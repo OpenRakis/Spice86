@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Text;
 
@@ -40,7 +41,7 @@ public class State : IDebuggableComponent {
     /// The EAX register is often used as an accumulator register in arithmetic operations, or to store the result of a function.
     /// </para>
     /// </summary>
-    public byte AH { get => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.AxIndex] = value; }
+    public byte AH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.AxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.AxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the first byte (low byte) in the general purpose EAX register
@@ -48,7 +49,7 @@ public class State : IDebuggableComponent {
     /// The EAX register is often used as an accumulator register in arithmetic operations, or to store the result of a function.
     /// </para>
     /// </summary>
-    public byte AL { get => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.AxIndex] = value; }
+    public byte AL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.AxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.AxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the first word (16 bits) in the general purpose EAX register
@@ -56,7 +57,7 @@ public class State : IDebuggableComponent {
     /// The EAX register is often used as an accumulator register in arithmetic operations, or to store the result of a function.
     /// </para>
     /// </summary>
-    public ushort AX { get => GeneralRegisters.UInt16[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.AxIndex] = value; }
+    public ushort AX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.AxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.AxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the full range of the general purpose EAX register
@@ -64,41 +65,42 @@ public class State : IDebuggableComponent {
     /// The "Extended Accumulator" register is often used as an accumulator register in arithmetic operations, or to store the result of a function.
     /// </para>
     /// </summary>
-    public uint EAX { get => GeneralRegisters.UInt32[GeneralRegisters.AxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.AxIndex] = value; }
+    public uint EAX { get => GeneralRegisters.UInt32[(uint)RegisterIndex.AxIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.AxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Base Register High Byte
     /// </summary>
-    public byte BH { get => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.BxIndex] = value; }
+    public byte BH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex] = value; }
     
     /// <summary>
     /// Gets or sets the Base Register Low Byte
     /// </summary>
-    public byte BL { get => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.BxIndex] = value; }
+    public byte BL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex] = value; }
     
     /// <summary>
     /// Gets or sets the Base Register First Word
     /// </summary>
-    public ushort BX { get => GeneralRegisters.UInt16[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BxIndex] = value; }
+    public ushort BX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex] = value; }
     
     /// <summary>
     /// Gets or sets the Extended Base general purpose register
     /// </summary>
-    public uint EBX { get => GeneralRegisters.UInt32[GeneralRegisters.BxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BxIndex] = value; }
+    public uint EBX { get => GeneralRegisters.UInt32[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.BxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Counter High Byte general purpose register
     /// </summary>
-    public byte CH { get => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.CxIndex] = value; }
+    public byte CH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.CxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.CxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Counter Low Byte general purpose register
     /// </summary>
-    public byte CL { get => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.CxIndex] = value; }
+    public byte CL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.CxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.CxIndex] = value; }
+
     /// <summary>
     /// Gets or sets the word value of the Counter general purpose register.
     /// </summary>
-    public ushort CX { get => GeneralRegisters.UInt16[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.CxIndex] = value; }
+    public ushort CX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.CxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.CxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Extended Counter general purpose register.
@@ -106,22 +108,22 @@ public class State : IDebuggableComponent {
     /// This general purpose register is often used for loop and string operations, as well as for storing function arguments.
     /// </para>
     /// </summary>
-    public uint ECX { get => GeneralRegisters.UInt32[GeneralRegisters.CxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.CxIndex] = value; }
+    public uint ECX { get => GeneralRegisters.UInt32[(uint)RegisterIndex.CxIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.CxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Data High Byte general purpose register.
     /// </summary>
-    public byte DH { get => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8High[GeneralRegisters.DxIndex] = value; }
+    public byte DH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.DxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Data Low Byte general purpose register.
     /// </summary>
-    public byte DL { get => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt8Low[GeneralRegisters.DxIndex] = value; }
+    public byte DL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.DxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the word value of the Data general purpose register.
     /// </summary>
-    public ushort DX { get => GeneralRegisters.UInt16[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DxIndex] = value; }
+    public ushort DX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex] = value; }
     
     /// <summary>
     /// Extended Data general purpose register.
@@ -129,12 +131,12 @@ public class State : IDebuggableComponent {
     /// This general purpose register is often used for I/O operations and for storing function arguments.
     /// </para>
     /// </summary>
-    public uint EDX { get => GeneralRegisters.UInt32[GeneralRegisters.DxIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DxIndex] = value; }
+    public uint EDX { get => GeneralRegisters.UInt32[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.DxIndex] = value; }
 
     /// <summary>
     /// Gets or sets the word value of the Destination Index general purpose register.
     /// </summary>
-    public ushort DI { get => GeneralRegisters.UInt16[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.DiIndex] = value; }
+    public ushort DI { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex] = value; }
     
     /// <summary>
     /// Extended Destination Index general purpose register.
@@ -142,12 +144,12 @@ public class State : IDebuggableComponent {
     /// This general purpose register often used as a pointer to a destination operand in string operations.
     /// </para>
     /// </summary>
-    public uint EDI { get => GeneralRegisters.UInt32[GeneralRegisters.DiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.DiIndex] = value; }
+    public uint EDI { get => GeneralRegisters.UInt32[(uint)RegisterIndex.DiIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.DiIndex] = value; }
 
     /// <summary>
     /// Gets or sets the word value of the Source Index general purpose register.
     /// </summary>
-    public ushort SI { get => GeneralRegisters.UInt16[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SiIndex] = value; }
+    public ushort SI { get => GeneralRegisters.UInt16[(uint)RegisterIndex.SiIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.SiIndex] = value; }
 
     /// <summary>
     /// Extended Source Index general purpose register.
@@ -155,59 +157,63 @@ public class State : IDebuggableComponent {
     /// This general purpose register is often used as a pointer to a source operand in string operations.
     /// </para>
     /// </summary>
-    public uint ESI { get => GeneralRegisters.UInt32[GeneralRegisters.SiIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SiIndex] = value; }
+    public uint ESI { get => GeneralRegisters.UInt32[(uint)RegisterIndex.SiIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.SiIndex] = value; }
 
     /// <summary>
     /// Gets or sets the word value of the Base Pointer general purpose register.
     /// </summary>
-    public ushort BP { get => GeneralRegisters.UInt16[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.BpIndex] = value; }
+    public ushort BP { get => GeneralRegisters.UInt16[(uint)RegisterIndex.BpIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.BpIndex] = value; }
+
     /// <summary>
     /// Gets or sets the value of the Extended Base Pointer general purpose register.
     /// <para>
     /// This general purpose register is often used as a pointer to the base of the current stack frame.
     /// </para>
     /// </summary>
-    public uint EBP { get => GeneralRegisters.UInt32[GeneralRegisters.BpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.BpIndex] = value; }
+    public uint EBP { get => GeneralRegisters.UInt32[(uint)RegisterIndex.BpIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.BpIndex] = value; }
 
     /// <summary>
     /// Gets or sets the word value of the Stack Pointer general purpose register.
     /// </summary>
-    public ushort SP { get => GeneralRegisters.UInt16[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt16[GeneralRegisters.SpIndex] = value; }
+    public ushort SP { get => GeneralRegisters.UInt16[(uint)RegisterIndex.SpIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.SpIndex] = value; }
+
     /// <summary>
     /// Gets or sets the value of the Extended Stack Pointer general purpose register.
     /// <para>
     /// This general purpose register is often used as a pointer to the top of the current stack frame.
     /// </para>
     /// </summary>
-    public uint ESP { get => GeneralRegisters.UInt32[GeneralRegisters.SpIndex]; set => GeneralRegisters.UInt32[GeneralRegisters.SpIndex] = value; }
+    public uint ESP { get => GeneralRegisters.UInt32[(uint)RegisterIndex.SpIndex]; set => GeneralRegisters.UInt32[(uint)RegisterIndex.SpIndex] = value; }
 
     /// <summary>
     /// Code Segment Register. CS:IP points to the current instruction being executed.
     /// </summary>
-    public ushort CS { get => SegmentRegisters.UInt16[SegmentRegisters.CsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.CsIndex] = value; }
+    public ushort CS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex] = value; }
 
     /// <summary>
     /// Gets or sets the DS Register value. (DATA SEGMENT)
     /// </summary>
-    public ushort DS { get => SegmentRegisters.UInt16[SegmentRegisters.DsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.DsIndex] = value; }
+    public ushort DS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Extra segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort ES { get => SegmentRegisters.UInt16[SegmentRegisters.EsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.EsIndex] = value; }
+    public ushort ES { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex] = value; }
+
     /// <summary>
     /// Gets or sets the FS segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort FS { get => SegmentRegisters.UInt16[SegmentRegisters.FsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.FsIndex] = value; }
+    public ushort FS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.FsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.FsIndex] = value; }
+
     /// <summary>
     /// Gets or sets the GS segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort GS { get => SegmentRegisters.UInt16[SegmentRegisters.GsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.GsIndex] = value; }
+    public ushort GS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.GsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.GsIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Stack Segment Register value.
     /// </summary>
-    public ushort SS { get => SegmentRegisters.UInt16[SegmentRegisters.SsIndex]; set => SegmentRegisters.UInt16[SegmentRegisters.SsIndex] = value; }
+    public ushort SS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex] = value; }
 
     /// <summary>
     /// Gets or sets the Instruction Pointer segment register.
@@ -308,7 +314,10 @@ public class State : IDebuggableComponent {
     /// The physical address of the instruction pointer in memory
     /// </summary>
     public uint IpPhysicalAddress => MemoryUtils.ToPhysicalAddress(CS, IP);
-
+    /// <summary>
+    /// The segmented address representation of the instruction pointer in memory
+    /// </summary>
+    public SegmentedAddress IpSegmentedAddress => new SegmentedAddress(CS, IP);
     /// <summary>
     /// The physical address of the stack in memory
     /// </summary>

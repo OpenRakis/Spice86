@@ -12,6 +12,6 @@ public class MemoryBasedDataStructureWithFsBaseAddress : MemoryBasedDataStructur
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    public MemoryBasedDataStructureWithFsBaseAddress(Machine machine) : base(machine, SegmentRegisters.FsIndex) {
+    public MemoryBasedDataStructureWithFsBaseAddress(Machine machine) : base(machine, (uint)SegmentRegisterIndex.FsIndex) {
     }
 }

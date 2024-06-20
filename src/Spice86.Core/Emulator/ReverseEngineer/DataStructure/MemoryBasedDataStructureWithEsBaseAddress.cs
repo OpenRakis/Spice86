@@ -12,6 +12,6 @@ public class MemoryBasedDataStructureWithEsBaseAddress : MemoryBasedDataStructur
     /// Initializes a new instance.
     /// </summary>
     /// <param name="machine">The emulator machine.</param>
-    public MemoryBasedDataStructureWithEsBaseAddress(Machine machine) : base(machine, SegmentRegisters.EsIndex) {
+    public MemoryBasedDataStructureWithEsBaseAddress(Machine machine) : base(machine, (uint)SegmentRegisterIndex.EsIndex) {
     }
 }

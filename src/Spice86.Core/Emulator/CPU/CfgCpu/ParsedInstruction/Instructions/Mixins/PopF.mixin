@@ -1,0 +1,20 @@
+@moxy
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : CfgInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes) :
+        base(address, opcodeField, prefixes) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.State.Flags.FlagRegister = helper.Stack.Pop{{Size}}();
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

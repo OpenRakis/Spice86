@@ -392,7 +392,7 @@ public class Instructions8 : Instructions {
 
     public void Xlat() {
         // XLAT
-        uint address = ModRM.GetAddress(SegmentRegisters.DsIndex, State.BX) + State.AL;
+        uint address = ModRM.GetAddress((uint)SegmentRegisterIndex.DsIndex, State.BX) + State.AL;
         State.AL = Memory.UInt8[address];
     }
 

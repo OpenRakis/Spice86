@@ -1357,27 +1357,27 @@ public class Cpu : IDebuggableComponent {
         switch (opcode) {
             case 0x26:
                 // ES:
-                State.SegmentOverrideIndex = SegmentRegisters.EsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.EsIndex;
                 break;
             case 0x2E:
                 // CS:
-                State.SegmentOverrideIndex = SegmentRegisters.CsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.CsIndex;
                 break;
             case 0x36:
                 // SS:
-                State.SegmentOverrideIndex = SegmentRegisters.SsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.SsIndex;
                 break;
             case 0x3E:
                 // DS:
-                State.SegmentOverrideIndex = SegmentRegisters.DsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.DsIndex;
                 break;
             case 0x64:
                 // FS:
-                State.SegmentOverrideIndex = SegmentRegisters.FsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.FsIndex;
                 break;
             case 0x65:
                 // GS
-                State.SegmentOverrideIndex = SegmentRegisters.GsIndex;
+                State.SegmentOverrideIndex = (uint)SegmentRegisterIndex.GsIndex;
                 break;
             case 0x66:
                 _instructions16Or32 = _instructions32;

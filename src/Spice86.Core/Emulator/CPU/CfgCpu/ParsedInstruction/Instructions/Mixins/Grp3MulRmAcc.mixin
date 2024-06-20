@@ -1,0 +1,34 @@
+@moxy
+@attribute required int Size
+@attribute required string Type
+@attribute required string TypeSigned
+@attribute required string TypeUpped
+@attribute required string SourceReg
+@attribute required string AdditionalReg
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
+         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
+     }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        {{TypeSigned}} v1 = ({{TypeSigned}})helper.State.{{SourceReg}};
+        {{TypeSigned}} v2 = ({{TypeSigned}})helper.ModRm.RM{{Size}};
+        {{TypeUpped}} result = helper.Alu{{Size}}.{{Operation}}(v1, v2);
+        // Upper part of the result goes in {{AdditionalReg}}
+        helper.State.{{AdditionalReg}} = ({{Type}})(result >> {{Size}});
+        helper.State.{{SourceReg}} = ({{Type}})result;
+        helper.MoveIpAndSetNextNode(this);
+    }
+}
+

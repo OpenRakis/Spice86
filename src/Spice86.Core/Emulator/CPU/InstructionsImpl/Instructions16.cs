@@ -457,7 +457,7 @@ public class Instructions16 : Instructions16Or32 {
     public void MovSregRm() {
         // MOV sreg rmw
         ModRM.Read();
-        if (ModRM.RegisterIndex == SegmentRegisters.CsIndex) {
+        if (ModRM.RegisterIndex == (uint)SegmentRegisterIndex.CsIndex) {
             throw new CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         ModRM.SegmentRegister = ModRM.GetRm16();

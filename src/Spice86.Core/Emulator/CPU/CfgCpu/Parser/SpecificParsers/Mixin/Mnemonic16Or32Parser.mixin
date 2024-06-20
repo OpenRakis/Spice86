@@ -1,0 +1,22 @@
+@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+
+    public CfgInstruction Parse(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, bool is32) {
+        if (is32) {
+            return new {{Operation}}32(address, opcodeField, prefixes);
+        }
+        return new {{Operation}}16(address, opcodeField, prefixes);
+    }
+}
