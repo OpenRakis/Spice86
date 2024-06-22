@@ -34,20 +34,20 @@ jobs:
 
     - name: Upload NuGet Bufdio.Spice86
       working-directory: ./src/Bufdio.Spice86/bin/Release
-      run: nuget push Bufdio.Spice86.6.4.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Bufdio.Spice86.6.5.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Shared
       working-directory: ./src/Spice86.Shared/bin/Release
-      run: nuget push Spice86.Shared.6.4.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Shared.6.5.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Logging
       working-directory: ./src/Spice86.Logging/bin/Release
-      run: nuget push Spice86.Logging.6.4.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Logging.6.5.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Core
       working-directory: ./src/Spice86.Core/bin/Release
-      run: nuget push Spice86.Core.6.4.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Core.6.5.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86
       working-directory: ./src/Spice86/bin/Release
-      run: nuget push Spice86.6.4.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.6.5.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
