@@ -18,8 +18,8 @@
 		<NoWarn>CS1591</NoWarn>
 		<PackageId>Spice86</PackageId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>6.4.2</version>
-		<PackageReleaseNotes>Fixed PCM audio performance.</PackageReleaseNotes>
+		<version>6.4.3</version>
+		<PackageReleaseNotes>WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
