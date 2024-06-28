@@ -1,16 +1,22 @@
 ﻿namespace Spice86.ViewModels;
 
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
+using Spice86.Views;
+
+using Structurizer;
+using Structurizer.Types;
 
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -21,10 +27,10 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private IMemory? _memory;
     private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateBinaryDocument;
-    
+
     [ObservableProperty]
     private DataMemoryDocument? _memoryBinaryDocument;
-    
+
     public bool NeedsToVisitEmulator => _memory is null;
 
     private uint? _startAddress = 0;
@@ -43,7 +49,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         _debugWindowViewModel.CloseTab(this);
         UpdateCanCloseTabProperty();
     }
-    
+
     private bool GetIsMemoryRangeValid() {
         if (_memory is null) {
             return false;
@@ -52,7 +58,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         return StartAddress <= (EndAddress ?? _memory.Length)
             && EndAddress >= (StartAddress ?? 0);
     }
-    
+
     public uint? StartAddress {
         get => _startAddress;
         set {
@@ -71,7 +77,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     private uint? _endAddress = 0;
-    
+
     public uint? EndAddress {
         get => _endAddress;
         set {
@@ -103,8 +109,31 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         UpdateCanCloseTabProperty();
         debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
+        StructureViewModel = SetupStructureViewModel();
     }
-    
+
+    private static StructureViewModel SetupStructureViewModel() {
+        var lifetime = Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
+        Configuration configuration = CommandLineParser.ParseCommandLine(lifetime?.Args ?? []);
+        if (string.IsNullOrWhiteSpace(configuration.StructureFile) || !File.Exists(configuration.StructureFile)) {
+            throw new InvalidOperationException($"Invalid structure file: '{configuration.StructureFile}'");
+        }
+        var structurizerSettings = new StructurizerSettings();
+        var parser = new Parser(structurizerSettings);
+        StructureInformation structureInformation = parser.ParseFile(configuration.StructureFile);
+        var hydrator = new Hydrator(structurizerSettings);
+
+        return new StructureViewModel(structureInformation, hydrator);
+    }
+
+    private StructureViewModel StructureViewModel { get; set; }
+
+    [RelayCommand]
+    public void StructureViewCommand() {
+        var structureWindow = new StructureView {DataContext = StructureViewModel};
+        structureWindow.Show();
+    }
+
     private void UpdateCanCloseTabProperty() {
         CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
     }
@@ -127,11 +156,11 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         }
         UpdateCanCloseTabProperty();
         IsPaused = _pauseStatus.IsPaused;
-        if(IsPaused) {
+        if (IsPaused) {
             _needToUpdateBinaryDocument = true;
         }
     }
-    
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
         _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
@@ -178,6 +207,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private bool TryParseMemoryAddress(string? memoryAddress, [NotNullWhen(true)] out uint? address) {
         if (string.IsNullOrWhiteSpace(memoryAddress)) {
             address = null;
+
             return false;
         }
 
@@ -188,16 +218,19 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
                     ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
                     ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
                     address = MemoryUtils.ToPhysicalAddress(segment, offset);
+
                     return true;
                 }
             } else if (uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
                 address = value;
+
                 return true;
             }
         } catch (Exception e) {
             Dispatcher.UIThread.Post(() => ShowError(e));
         }
         address = null;
+
         return false;
     }
 
@@ -217,6 +250,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
+        StructureViewModel.Visit(component);
         if (component is not IMemory memory) {
             return;
         }

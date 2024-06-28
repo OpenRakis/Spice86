@@ -3,6 +3,8 @@
 using Spice86.Shared.Utils;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 /// <summary>
@@ -139,5 +141,31 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     public void Deconstruct(out ushort segment, out ushort offset) {
         segment = Segment;
         offset = Offset;
+    }
+
+    /// <summary>
+    /// Tries to parse a hexadecimal string in the format of segment:offset into a SegmentedAddress object.
+    /// </summary>
+    /// <param name="s">a hex string in the format of segment:offset</param>
+    /// <param name="segmentedAddress"></param>
+    /// <returns>true if s was converted successfully; otherwise, false.</returns>
+    public static bool TryParse(string? s, [NotNullWhen(true)] out SegmentedAddress segmentedAddress) {
+        if (string.IsNullOrWhiteSpace(s)) {
+            segmentedAddress = default;
+
+            return false;
+        }
+        string[] split = s.Split(":");
+        if (split.Length == 2
+            && ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment)
+            && ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
+            segmentedAddress = new SegmentedAddress(segment, offset);
+
+            return true;
+        }
+
+        segmentedAddress = default;
+
+        return false;
     }
 }

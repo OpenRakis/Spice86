@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 /// Represents a DTA (Disk Transfer Area) in memory.
 /// </summary>
 public class DosDiskTransferArea : MemoryBasedDataStructure {
+    private const int ResultIdOffset = 0x02;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DosDiskTransferArea"/> class.
     /// </summary>
@@ -105,4 +107,10 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
         get => GetZeroTerminatedString(FileNameOffset, FileNameSize);
         set => SetZeroTerminatedString(FileNameOffset, value, FileNameSize);
     }
+
+    /// <summary>
+    /// Gets or sets the result id that identifies the search results to use for the FindNext function.
+    /// This is not an official spec, but a Spice86 specific implementation.
+    /// </summary>
+    public ushort ResultId { get => UInt16[ResultIdOffset]; set => UInt16[ResultIdOffset] = value; }
 }

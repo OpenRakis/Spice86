@@ -34,6 +34,7 @@
                     <NumericUpDown Value="{Binding EndAddress}"/>
                 </UniformGrid>
                 <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+                <Button Command="{Binding StructureViewCommand}" Content="Structure view" />
             </WrapPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
