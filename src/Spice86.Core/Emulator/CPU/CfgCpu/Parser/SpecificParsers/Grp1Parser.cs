@@ -2,33 +2,22 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
-public class Grp1Parser : BaseInstructionParser {
+public class Grp1Parser : BaseGrpOperationParser {
     public Grp1Parser(BaseInstructionParser instructionParser) : base(instructionParser) {
     }
 
-    public CfgInstruction Parse(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes,
-        bool hasOperandSize32,
-        BitWidth addressWidthFromPrefixes,
-        uint? segmentOverrideFromPrefixes) {
-        ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);
-        byte opCode = opcodeField.Value;
+    protected override CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
+        ushort opCode = context.OpcodeField.Value;
         bool signExtendOp2 = opCode is 0x83;
-        uint groupIndex = modRmContext.RegisterIndex;
-        if (groupIndex > 7) {
-            throw new InvalidGroupIndexException(_state, groupIndex);
-        }
 
-        BitWidth bitWidth = GetBitWidth(opcodeField, hasOperandSize32);
+        BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         Grp1OperationParser operationParser = GetOperationParser(groupIndex);
-        return operationParser.Parse(address, opcodeField, prefixes, modRmContext, bitWidth, signExtendOp2);
+        return operationParser.Parse(context, modRmContext, bitWidth, signExtendOp2);
     }
 
-    private Grp1OperationParser GetOperationParser(uint groupIndex) {
+    private Grp1OperationParser GetOperationParser(int groupIndex) {
         return groupIndex switch {
             0 => new Grp1AddOperationParser(this),
             1 => new Grp1OrOperationParser(this),
@@ -49,46 +38,36 @@ public abstract class Grp1OperationParser : BaseInstructionParser {
     protected Grp1OperationParser(BaseInstructionParser other) : base(other) {
     }
 
-    public CfgInstruction Parse(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext, BitWidth bitWidth, bool signExtendOp2) {
+    public CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, BitWidth bitWidth, bool signExtendOp2) {
         return bitWidth switch {
-            BitWidth.BYTE_8 => BuildOperandSize8(address, opcodeField, prefixes, modRmContext,
+            BitWidth.BYTE_8 => BuildOperandSize8(context, modRmContext,
                 _instructionReader.UInt8.NextField(false)),
             BitWidth.WORD_16 => signExtendOp2
-                ? BuildOperandSizeSigned16(address, opcodeField, prefixes, modRmContext,
+                ? BuildOperandSizeSigned16(context, modRmContext,
                     _instructionReader.Int8.NextField(false))
-                : BuildOperandSizeUnsigned16(address, opcodeField, prefixes, modRmContext,
+                : BuildOperandSizeUnsigned16(context, modRmContext,
                     _instructionReader.UInt16.NextField(false)),
             BitWidth.DWORD_32 => signExtendOp2
-                ? BuildOperandSizeSigned32(address, opcodeField, prefixes, modRmContext,
+                ? BuildOperandSizeSigned32(context, modRmContext,
                     _instructionReader.Int8.NextField(false))
-                : BuildOperandSizeUnsigned32(address, opcodeField, prefixes, modRmContext,
+                : BuildOperandSizeUnsigned32(context, modRmContext,
                     _instructionReader.UInt32.NextField(false)),
         };
     }
 
 
-    protected abstract CfgInstruction BuildOperandSize8(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext, InstructionField<byte> valueField);
+    protected abstract CfgInstruction BuildOperandSize8(ParsingContext context, ModRmContext modRmContext, InstructionField<byte> valueField);
 
-    protected abstract CfgInstruction BuildOperandSizeSigned16(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+    protected abstract CfgInstruction BuildOperandSizeSigned16(ParsingContext context, ModRmContext modRmContext,
         InstructionField<sbyte> valueField);
 
-    protected abstract CfgInstruction BuildOperandSizeUnsigned16(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+    protected abstract CfgInstruction BuildOperandSizeUnsigned16(ParsingContext context, ModRmContext modRmContext,
         InstructionField<ushort> valueField);
 
-    protected abstract CfgInstruction BuildOperandSizeSigned32(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+    protected abstract CfgInstruction BuildOperandSizeSigned32(ParsingContext context, ModRmContext modRmContext,
         InstructionField<sbyte> valueField);
 
-    protected abstract CfgInstruction BuildOperandSizeUnsigned32(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, ModRmContext modRmContext,
+    protected abstract CfgInstruction BuildOperandSizeUnsigned32(ParsingContext context, ModRmContext modRmContext,
         InstructionField<uint> valueField);
 }
 

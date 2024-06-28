@@ -36,7 +36,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -55,7 +55,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -74,11 +74,32 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
         ushort expectedOffset = BP + 0x11;
+        Assert.Equal(expectedOffset, (int)executor.MemoryOffset);
+        Assert.NotNull(executor.MemoryAddress);
+        Assert.Equal((SS * 16) + expectedOffset, (int)executor.MemoryAddress);
+        
+    }
+    
+    [Fact]
+    public void Execute16Mod1R0Rm110NegativeDisplacement() {
+        // Arrange
+        (ModRmParser parser, ModRmExecutor executor) = Create();
+        _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(1, 0, 0b110),
+            //Displacement field (-1)
+            0xFF
+        );
+
+        // Act
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
+
+        // Assert
+        Assert.NotNull(executor.MemoryOffset);
+        ushort expectedOffset = BP - 1;
         Assert.Equal(expectedOffset, (int)executor.MemoryOffset);
         Assert.NotNull(executor.MemoryAddress);
         Assert.Equal((SS * 16) + expectedOffset, (int)executor.MemoryAddress);
@@ -95,7 +116,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -112,7 +133,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(3, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.WORD_16, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16)));
 
         // Assert
         Assert.Null(executor.MemoryOffset);
@@ -127,7 +148,7 @@ public class ModRmExecutorTest {
         _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -146,7 +167,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -168,7 +189,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -191,7 +212,7 @@ public class ModRmExecutorTest {
 
         // Act
         try {
-            executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+            executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
         } catch (CpuGeneralProtectionFaultException e) {
             // Success!
             return;
@@ -212,7 +233,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -234,7 +255,7 @@ public class ModRmExecutorTest {
         );
 
         // Act
-        executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+        executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
 
         // Assert
         Assert.NotNull(executor.MemoryOffset);
@@ -257,7 +278,7 @@ public class ModRmExecutorTest {
 
         // Act
         try {
-            executor.RefreshWithNewModRmContext(parser.ParseNext(BitWidth.DWORD_32, null));
+            executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
         } catch (CpuGeneralProtectionFaultException e) {
             // Success!
             return;

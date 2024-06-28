@@ -14,27 +14,27 @@ public partial class {{ moxy.Class.Name }} : AluOperationParser {
     public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
     }
     
-    protected override CfgInstruction BuildAccImm(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth) {
+    protected override CfgInstruction ParseAccImm(ParsingContext context, BitWidth bitWidth) {
         return bitWidth switch {
-            BitWidth.BYTE_8 => new {{Operation}}AccImm8(address, opcodeField, prefixes, _instructionReader.UInt8.NextField(false)),
-            BitWidth.WORD_16 => new {{Operation}}AccImm16(address, opcodeField, prefixes, _instructionReader.UInt16.NextField(false)),
-            BitWidth.DWORD_32 => new {{Operation}}AccImm32(address, opcodeField, prefixes, _instructionReader.UInt32.NextField(false))
+            BitWidth.BYTE_8 => new {{Operation}}AccImm8(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt8.NextField(false)),
+            BitWidth.WORD_16 => new {{Operation}}AccImm16(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt16.NextField(false)),
+            BitWidth.DWORD_32 => new {{Operation}}AccImm32(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt32.NextField(false))
         };
     }
 
-    protected override CfgInstruction BuildRegRm(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext) {
+    protected override CfgInstruction ParseRegRm(ParsingContext context, BitWidth bitWidth, ModRmContext modRmContext) {
         return bitWidth switch {
-            BitWidth.BYTE_8 => new {{Operation}}RegRm8(address, opcodeField, prefixes, modRmContext),
-            BitWidth.WORD_16 => new {{Operation}}RegRm16(address, opcodeField, prefixes, modRmContext),
-            BitWidth.DWORD_32 => new {{Operation}}RegRm32(address, opcodeField, prefixes, modRmContext)
+            BitWidth.BYTE_8 => new {{Operation}}RegRm8(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            BitWidth.WORD_16 => new {{Operation}}RegRm16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}RegRm32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
         };
     }
 
-    protected override CfgInstruction BuildRmReg(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext) {
+    protected override CfgInstruction ParseRmReg(ParsingContext context, BitWidth bitWidth, ModRmContext modRmContext) {
         return bitWidth switch {
-            BitWidth.BYTE_8 => new {{Operation}}RmReg8(address, opcodeField, prefixes, modRmContext),
-            BitWidth.WORD_16 => new {{Operation}}RmReg16(address, opcodeField, prefixes, modRmContext),
-            BitWidth.DWORD_32 => new {{Operation}}RmReg32(address, opcodeField, prefixes, modRmContext)
+            BitWidth.BYTE_8 => new {{Operation}}RmReg8(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            BitWidth.WORD_16 => new {{Operation}}RmReg16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}RmReg32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
         };
     }
 }

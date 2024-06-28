@@ -107,8 +107,8 @@ public class EmulationLoop {
             if (_listensToBreakpoints) {
                 _machineBreakpoints.CheckBreakPoint();
             }
-            _cpu.ExecuteNextInstruction();
-            //_cfgCpu.ExecuteNext();
+            //_cpu.ExecuteNextInstruction();
+            _cfgCpu.ExecuteNext();
             _timer.Tick();
         }
         _stopwatch.Stop();

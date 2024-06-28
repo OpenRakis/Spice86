@@ -230,7 +230,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CallbackHandler = new(CpuState, loggerService);
 
         Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
-        CfgCpu = new CfgCpu(Memory, CpuState, IoPortDispatcher, CallbackHandler, DualPic, MachineBreakpoints);
+        CfgCpu = new CfgCpu(Memory, CpuState, IoPortDispatcher, CallbackHandler, DualPic, MachineBreakpoints, loggerService);
 
         // IO devices
         DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);

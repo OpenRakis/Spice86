@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public class Grp5RmJumpNear : InstructionWithModRm {
-    public Grp5RmJumpNear(SegmentedAddress address, InstructionField<byte> opcodeField,
+    public Grp5RmJumpNear(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes,
         modRmContext) {
     }

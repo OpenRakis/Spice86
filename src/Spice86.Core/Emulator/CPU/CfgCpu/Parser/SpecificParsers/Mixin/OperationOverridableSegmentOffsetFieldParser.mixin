@@ -1,0 +1,23 @@
+@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : OperationOverridableSegmentOffsetFieldParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+    
+    protected override CfgInstruction Parse(ParsingContext context, BitWidth bitWidth, int segmentRegisterIndex, InstructionField<ushort> offsetField) {
+        return bitWidth switch {
+            BitWidth.BYTE_8 => new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, offsetField),
+            BitWidth.WORD_16 => new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, offsetField),
+            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex, offsetField)
+        };
+    }
+}

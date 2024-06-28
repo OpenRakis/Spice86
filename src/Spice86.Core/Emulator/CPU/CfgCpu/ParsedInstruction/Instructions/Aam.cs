@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Shared.Emulator.Memory;
 
 public class Aam : InstructionWithValueField<byte> {
-    public Aam(SegmentedAddress address, InstructionField<byte> opcodeField, InstructionField<byte> valueField) :
+    public Aam(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<byte> valueField) :
         base(address, opcodeField, new List<InstructionPrefix>(), valueField) {
     }
 

@@ -16,19 +16,19 @@ public class ModRmParser {
         _state = state;
     }
 
-    public ModRmContext ParseNext(BitWidth addressWidth, uint? segmentOverrideIndex) {
+    public ModRmContext ParseNext(ModRmParsingContext context) {
         InstructionField<byte> modRmByteField = _instructionReader.UInt8.NextField(true);
         byte modRmByte = modRmByteField.Value;
         uint mode = (uint)(modRmByte >> 6 & 0b11);
-        uint registerIndex = (uint)(modRmByte >> 3 & 0b111);
-        uint registerMemoryIndex = (uint)(modRmByte & 0b111);
+        int registerIndex = modRmByte >> 3 & 0b111;
+        int registerMemoryIndex = modRmByte & 0b111;
         MemoryOffsetType memoryOffsetType;
         MemoryAddressType memoryAddressType;
         if (mode == 3) {
             // value at reg[memoryRegisterIndex] to be used instead of memoryAddress
             memoryOffsetType = MemoryOffsetType.NONE;
             memoryAddressType = MemoryAddressType.NONE;
-            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, memoryOffsetType, memoryAddressType, null, null, null, null, null, null);
+            return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, null, null, null, null, null, null);
         }
         memoryOffsetType = MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT;
         memoryAddressType = MemoryAddressType.SEGMENT_OFFSET;
@@ -38,7 +38,7 @@ public class ModRmParser {
         ModRmOffsetType modRmOffsetType;
         InstructionField<ushort>? modRmOffsetField = null;
 
-        if (addressWidth == BitWidth.WORD_16) {
+        if (context.AddressWidthFromPrefixes == BitWidth.WORD_16) {
             // No SIB in 16bit addressing mode
             sibContext = null;
             // Parse displacement
@@ -57,8 +57,8 @@ public class ModRmParser {
             displacementType = ComputeDisplacementType32(mode);
             displacementField = ReadDisplacementField(displacementType);
         }
-        uint segmentIndex = segmentOverrideIndex ?? ComputeDefaultSegmentIndex(mode, registerMemoryIndex);
-        return new(modRmByteField, mode, registerIndex, registerMemoryIndex, memoryOffsetType, memoryAddressType, sibContext,
+        int segmentIndex = context.SegmentOverrideFromPrefixes ?? ComputeDefaultSegmentIndex(mode, registerMemoryIndex);
+        return new(modRmByteField, mode, registerIndex, registerMemoryIndex, context.AddressWidthFromPrefixes, memoryOffsetType, memoryAddressType, sibContext,
             displacementType, displacementField, modRmOffsetType, modRmOffsetField, segmentIndex);
     }
 
@@ -79,15 +79,15 @@ public class ModRmParser {
 
     private DisplacementType ComputeDisplacementType16(uint mode) {
         return mode switch {
-            1 => DisplacementType.UINT8,
-            2 => DisplacementType.UINT16,
+            1 => DisplacementType.INT8,
+            2 => DisplacementType.INT16,
             _ => DisplacementType.ZERO
         };
     }
     private DisplacementType ComputeDisplacementType32(uint mode) {
         return mode switch {
-            1 => DisplacementType.UINT8,
-            2 => DisplacementType.UINT32,
+            1 => DisplacementType.INT8,
+            2 => DisplacementType.INT32,
             _ => DisplacementType.ZERO
         };
     }
@@ -95,29 +95,29 @@ public class ModRmParser {
     private FieldWithValue? ReadDisplacementField(DisplacementType displacementType) {
         return displacementType switch {
             DisplacementType.ZERO => null,
-            DisplacementType.UINT8 => _instructionReader.UInt8.NextField(false),
-            DisplacementType.UINT16 => _instructionReader.UInt16.NextField(false),
-            DisplacementType.UINT32 => _instructionReader.UInt32.NextField(false),
+            DisplacementType.INT8 => _instructionReader.Int8.NextField(false),
+            DisplacementType.INT16 => _instructionReader.Int16.NextField(false),
+            DisplacementType.INT32 => _instructionReader.Int32.NextField(false),
         };
     }
 
-    private uint ComputeDefaultSegmentIndex(uint mode, uint registerMemoryIndex) {
+    private int ComputeDefaultSegmentIndex(uint mode, int registerMemoryIndex) {
         // The default segment register is SS for the effective addresses containing a
         // BP index, DS for other effective addresses
         return registerMemoryIndex switch {
-            0 => (uint)SegmentRegisterIndex.DsIndex,
-            1 => (uint)SegmentRegisterIndex.DsIndex,
-            2 => (uint)SegmentRegisterIndex.SsIndex,
-            3 => (uint)SegmentRegisterIndex.SsIndex,
-            4 => (uint)SegmentRegisterIndex.DsIndex,
-            5 => (uint)SegmentRegisterIndex.DsIndex,
-            6 => mode == 0 ? (uint)SegmentRegisterIndex.DsIndex : (uint)SegmentRegisterIndex.SsIndex,
-            7 => (uint)SegmentRegisterIndex.DsIndex,
-            _ => throw new InvalidModeException(_state, registerMemoryIndex)
+            0 => (int)SegmentRegisterIndex.DsIndex,
+            1 => (int)SegmentRegisterIndex.DsIndex,
+            2 => (int)SegmentRegisterIndex.SsIndex,
+            3 => (int)SegmentRegisterIndex.SsIndex,
+            4 => (int)SegmentRegisterIndex.DsIndex,
+            5 => (int)SegmentRegisterIndex.DsIndex,
+            6 => mode == 0 ? (int)SegmentRegisterIndex.DsIndex : (int)SegmentRegisterIndex.SsIndex,
+            7 => (int)SegmentRegisterIndex.DsIndex,
+            _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
         };
     }
 
-    private ModRmOffsetType ComputeOffset16(uint mode, uint registerMemoryIndex) {
+    private ModRmOffsetType ComputeOffset16(uint mode, int registerMemoryIndex) {
         return registerMemoryIndex switch {
             0 => ModRmOffsetType.BX_PLUS_SI,
             1 => ModRmOffsetType.BX_PLUS_DI,
@@ -127,11 +127,11 @@ public class ModRmParser {
             5 => ModRmOffsetType.DI,
             6 => mode == 0 ? ModRmOffsetType.OFFSET_FIELD_16 : ModRmOffsetType.BP,
             7 => ModRmOffsetType.BX,
-            _ => throw new InvalidModeException(_state, registerMemoryIndex)
+            _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
         };
     }
 
-    private ModRmOffsetType ComputeOffset32(uint mode, uint registerMemoryIndex) {
+    private ModRmOffsetType ComputeOffset32(uint mode, int registerMemoryIndex) {
         return registerMemoryIndex switch {
             0 => ModRmOffsetType.EAX,
             1 => ModRmOffsetType.ECX,
@@ -141,7 +141,7 @@ public class ModRmParser {
             5 => ModRmOffsetType.EBP,
             6 => ModRmOffsetType.ESI,
             7 => ModRmOffsetType.EDI,
-            _ => throw new ArgumentOutOfRangeException(nameof(registerMemoryIndex), registerMemoryIndex, "Register memory index must be between 0 and 7 inclusive")
+            _ => throw new InvalidRegisterMemoryIndexException(_state, registerMemoryIndex)
         };
     }
 
@@ -171,6 +171,14 @@ public class ModRmParser {
             7 => SibBase.EDI,
             _ => throw new ArgumentOutOfRangeException(nameof(baseRegister), baseRegister, "Base register must be between 0 and 7 inclusive")
         };
+    }
+    
+    public ModRmContext EnsureNotMode3(ModRmContext context) {
+        if (context.MemoryAddressType == MemoryAddressType.NONE) {
+            throw new MemoryAddressMandatoryException(_state);
+        }
+
+        return context;
     }
 
 }

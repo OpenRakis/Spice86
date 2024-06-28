@@ -17,13 +17,13 @@ using Xunit;
 namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 
 public class InstructionsFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
-
     private readonly Memory _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
 
     private InstructionsFeeder CreateInstructionsFeeder() {
@@ -45,10 +45,10 @@ public class InstructionsFeederTest {
     }
 
     private JmpNearImm8 CreateReplacementInstruction() {
-        var opcodeField = new InstructionField<byte>(0, 1, 0, 0xEB, ImmutableList.Create<byte?>(0xEB));
+        var opcodeField = new InstructionField<ushort>(0, 1, 0, 0xEB, ImmutableList.Create<byte?>(0xEB));
         // Replacement has a null discriminator byte for offset field -> will not be taken into account when comparing with ram
         var offsetField = new InstructionField<sbyte>(1, 1, 1, -2, ImmutableList.Create((byte?)null));
-        JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, offsetField);
+        JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, new List<InstructionPrefix>(), offsetField);
         res.PostInit();
         return res;
     }

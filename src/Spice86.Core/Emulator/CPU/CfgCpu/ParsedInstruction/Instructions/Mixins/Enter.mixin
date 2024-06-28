@@ -1,0 +1,37 @@
+﻿@moxy
+@attribute required string StackPointerRegister
+@attribute required string StackPointerType
+@attribute required string BasePointerRegister
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : EnterInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+        InstructionField<ushort> storageField,
+        InstructionField<byte> levelField) : base(address, opcodeField, prefixes, storageField, levelField) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        ushort storage = helper.InstructionFieldValueRetriever.GetFieldValue(StorageField);
+        byte level = helper.InstructionFieldValueRetriever.GetFieldValue(LevelField);
+        helper.Stack.Push{{Size}}(helper.State.{{BasePointerRegister}});
+        level &= 0x1f;
+        {{StackPointerType}} framePtr = helper.State.{{StackPointerRegister}};
+        for (int i = 0; i < level; i++) {
+            helper.State.{{BasePointerRegister}} -= {{Size}}/2;
+            helper.Stack.Push{{Size}}(helper.State.{{BasePointerRegister}});
+        }
+
+        helper.State.{{BasePointerRegister}} = framePtr;
+        helper.State.{{StackPointerRegister}} -= storage;
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

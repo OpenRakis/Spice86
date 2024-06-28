@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
@@ -14,7 +15,7 @@ public class ModRmComputer {
         _state = state;
         _instructionFieldValueRetriever = instructionFieldValueRetriever;
         // Dummy value
-        ModRmContext = new ModRmContext(new InstructionField<byte>(0,0,0,0,ImmutableList.CreateRange(new []{(byte?)0})), 0, 0, 0, MemoryOffsetType.NONE, MemoryAddressType.NONE, null, null, null, null, null, null);
+        ModRmContext = new ModRmContext(new InstructionField<byte>(0,0,0,0,ImmutableList.CreateRange(new []{(byte?)0})), 0, 0, 0, BitWidth.WORD_16, MemoryOffsetType.NONE, MemoryAddressType.NONE, null, null, null, null, null, null);
     }
 
     public ModRmContext ModRmContext { get; set; }
@@ -54,16 +55,16 @@ public class ModRmComputer {
         if (ModRmContext.MemoryOffsetType == MemoryOffsetType.NONE) {
             return null;
         }
-        uint displacement = ComputeDisplacement();
+        int displacement = ComputeDisplacement();
         uint offset = ComputeOffset();
-        uint res = offset + displacement;
-        if (res > ushort.MaxValue) {
+        uint res = (uint)(offset + displacement);
+        if (ModRmContext.AddressSize == BitWidth.DWORD_32 && res > ushort.MaxValue) {
             throw new CpuGeneralProtectionFaultException("Displacement overflows 16 bits");
         }
         return (ushort)res;
     }
 
-    private uint ComputeDisplacement() {
+    private int ComputeDisplacement() {
         if (ModRmContext.DisplacementType == null) {
             throw CreateInvalidOperationExceptionForNullFieldButModeNot3(nameof(ModRmContext.DisplacementType));
         }
@@ -73,10 +74,11 @@ public class ModRmComputer {
         if (ModRmContext.DisplacementField == null) {
             throw CreateInvalidOperationExceptionForNullFieldButModeNot3(nameof(ModRmContext.DisplacementField));
         }
+        // Displacement is signed extended!
         return ModRmContext.DisplacementType switch {
-            DisplacementType.UINT8 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<byte>)ModRmContext.DisplacementField),
-            DisplacementType.UINT16 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<ushort>)ModRmContext.DisplacementField),
-            DisplacementType.UINT32 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<uint>)ModRmContext.DisplacementField),
+            DisplacementType.INT8 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<sbyte>)ModRmContext.DisplacementField),
+            DisplacementType.INT16 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<short>)ModRmContext.DisplacementField),
+            DisplacementType.INT32 => _instructionFieldValueRetriever.GetFieldValue((InstructionField<int>)ModRmContext.DisplacementField),
             _ => throw new ArgumentOutOfRangeException(nameof(ModRmContext.DisplacementType), ModRmContext.DisplacementType, "value not handled")
         };
     }

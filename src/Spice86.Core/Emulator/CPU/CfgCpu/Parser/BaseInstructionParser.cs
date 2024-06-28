@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public class BaseInstructionParser {
@@ -30,18 +31,30 @@ public class BaseInstructionParser {
         _state = other._state;
     }
 
-    protected int ComputeRegIndex(InstructionField<byte> opcodeField) {
+    protected static int SegmentFromPrefixesOrDs(ParsingContext context) {
+        return context.SegmentOverrideFromPrefixes ?? (int)SegmentRegisterIndex.DsIndex;
+    }
+
+    protected int ComputeRegIndex(InstructionField<ushort> opcodeField) {
         return opcodeField.Value & RegIndexMask;
     }
 
-    protected bool HasOperandSize8(byte opcode) {
+    protected bool HasOperandSize8(ushort opcode) {
         return (opcode & SizeMask) == 0;
     }
-    protected BitWidth GetBitWidth(InstructionField<byte> opcodeField, bool is32) {
+    protected BitWidth GetBitWidth(InstructionField<ushort> opcodeField, bool is32) {
         return HasOperandSize8(opcodeField.Value) ? BitWidth.BYTE_8 : is32 ? BitWidth.DWORD_32 : BitWidth.WORD_16;
     }
 
     protected BitWidth GetBitWidth(bool is8, bool is32) {
         return is8 ? BitWidth.BYTE_8 : is32 ? BitWidth.DWORD_32 : BitWidth.WORD_16;
+    }
+
+    protected int GetSegmentRegisterOverrideOrDs(ParsingContext context) {
+        return context.SegmentOverrideFromPrefixes ?? (int)SegmentRegisterIndex.DsIndex;
+    }
+
+    protected bool BitIsTrue(uint value, int bitIndex) {
+        return ((value >> bitIndex) & 1) == 1;
     }
 }

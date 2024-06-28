@@ -7,7 +7,7 @@ using Spice86.Shared.Emulator.Memory;
 public class JmpFarImm : InstructionWithSegmentedAddressField {
     public JmpFarImm(
         SegmentedAddress address,
-        InstructionField<byte> opcodeField,
+        InstructionField<ushort> opcodeField,
         InstructionField<SegmentedAddress> segmentedAddressField) :
         base(address, opcodeField, segmentedAddressField) {
     }

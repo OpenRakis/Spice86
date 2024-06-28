@@ -11,11 +11,11 @@ using System.Linq;
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
 public abstract class CfgInstruction : CfgNode {
-    protected CfgInstruction(SegmentedAddress address, InstructionField<byte> opcodeField) : this(address,
+    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
         opcodeField, new List<InstructionPrefix>()) {
     }
 
-    protected CfgInstruction(SegmentedAddress address, InstructionField<byte> opcodeField,
+    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes)
         : base(address) {
         InstructionPrefixes = prefixes;
@@ -74,7 +74,7 @@ public abstract class CfgInstruction : CfgNode {
     /// <summary>
     /// Opcode
     /// </summary>
-    public InstructionField<byte> OpcodeField { get; }
+    public InstructionField<ushort> OpcodeField { get; }
 
     /// <summary>
     /// What allows to uniquely identify the instruction among other at the same address.

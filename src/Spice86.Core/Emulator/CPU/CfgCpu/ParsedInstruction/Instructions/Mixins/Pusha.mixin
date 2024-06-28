@@ -1,0 +1,31 @@
+﻿@moxy
+@attribute required int Size
+@attribute required String SpType
+@attribute required String RegisterPrefix
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : CfgInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) :
+        base(address, opcodeField, prefixes) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        {{SpType}} sp = helper.State.{{RegisterPrefix}}SP;
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}AX);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}CX);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}DX);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}BX);
+        helper.Stack.Push{{Size}}(sp);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}BP);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}SI);
+        helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}DI);
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

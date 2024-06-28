@@ -8,7 +8,7 @@ using System.Numerics;
 
 public abstract class InstructionWithValueFieldAndRegisterIndex<T> : InstructionWithValueField<T>, IInstructionWithRegisterIndex where T : INumberBase<T> {
     public InstructionWithValueFieldAndRegisterIndex(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
+        InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         InstructionField<T> valueField,
         int registerIndex) :

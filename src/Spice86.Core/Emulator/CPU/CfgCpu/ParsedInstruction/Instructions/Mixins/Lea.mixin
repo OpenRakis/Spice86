@@ -1,0 +1,22 @@
+@moxy
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        helper.ModRm.R{{Size}} = helper.ModRm.MandatoryMemoryOffset;
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

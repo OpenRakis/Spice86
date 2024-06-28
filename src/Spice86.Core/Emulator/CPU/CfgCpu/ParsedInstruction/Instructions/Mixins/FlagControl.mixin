@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : CfgInstruction {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField) :
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField) :
         base(address, opcodeField) {
     }
 

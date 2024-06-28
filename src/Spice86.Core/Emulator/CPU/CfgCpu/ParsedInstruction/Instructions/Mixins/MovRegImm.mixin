@@ -12,7 +12,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegisterIndex<{{Type}}> {
     public {{ moxy.Class.Name }}(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
+        InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         InstructionField<{{Type}}> valueField,
         int registerIndex) : base(address, opcodeField, prefixes, valueField, registerIndex) {

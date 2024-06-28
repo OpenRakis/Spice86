@@ -1,0 +1,27 @@
+@moxy
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : BaseOperationModRmFactory {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+    protected override CfgInstruction BuildOperandSize8(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, modRmContext);
+    }
+    
+    protected override CfgInstruction BuildOperandSize16(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, modRmContext);
+    }
+
+    protected override CfgInstruction BuildOperandSize32(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, modRmContext);
+    }
+}

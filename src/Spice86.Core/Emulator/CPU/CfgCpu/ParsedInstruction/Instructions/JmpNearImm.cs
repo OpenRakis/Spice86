@@ -5,3 +5,5 @@ public partial class JmpNearImm8;
 
 [JmpNearImm("short")]
 public partial class JmpNearImm16;
+[JmpNearImm("int")]
+public partial class JmpNearImm32;

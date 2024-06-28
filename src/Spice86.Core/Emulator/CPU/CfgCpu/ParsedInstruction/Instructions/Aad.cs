@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public class Aad : InstructionWithValueField<byte> {
-    public Aad(SegmentedAddress address, InstructionField<byte> opcodeField, InstructionField<byte> valueField) :
+    public Aad(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<byte> valueField) :
         base(address, opcodeField, new List<InstructionPrefix>(), valueField) {
     }
 
