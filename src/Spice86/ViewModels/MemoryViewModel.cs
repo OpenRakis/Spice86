@@ -95,6 +95,8 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
+    public bool IsStructureInfoPresent => StructureViewModel is not null;
+
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
@@ -109,27 +111,34 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         UpdateCanCloseTabProperty();
         debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
-        StructureViewModel = SetupStructureViewModel();
+        SetupStructureViewModel();
     }
 
-    private static StructureViewModel SetupStructureViewModel() {
+    private void SetupStructureViewModel() {
         var lifetime = Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
         Configuration configuration = CommandLineParser.ParseCommandLine(lifetime?.Args ?? []);
-        if (string.IsNullOrWhiteSpace(configuration.StructureFile) || !File.Exists(configuration.StructureFile)) {
-            throw new InvalidOperationException($"Invalid structure file: '{configuration.StructureFile}'");
+        if (string.IsNullOrWhiteSpace(configuration.StructureFile)) {
+            return;
+        }
+        if (!File.Exists(configuration.StructureFile)) {
+            throw new FileNotFoundException($"Specified structure file not found: '{configuration.StructureFile}'");
         }
         var structurizerSettings = new StructurizerSettings();
         var parser = new Parser(structurizerSettings);
         StructureInformation structureInformation = parser.ParseFile(configuration.StructureFile);
         var hydrator = new Hydrator(structurizerSettings);
 
-        return new StructureViewModel(structureInformation, hydrator);
+        StructureViewModel = new StructureViewModel(structureInformation, hydrator);
     }
 
-    private StructureViewModel StructureViewModel { get; set; }
+    private StructureViewModel? StructureViewModel { get; set; }
 
-    [RelayCommand]
-    public void StructureViewCommand() {
+
+    [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
+    public void ShowStructureView() {
+        if (StructureViewModel == null) {
+            return;
+        }
         var structureWindow = new StructureView {DataContext = StructureViewModel};
         structureWindow.Show();
     }
@@ -250,7 +259,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        StructureViewModel.Visit(component);
+        StructureViewModel?.Visit(component);
         if (component is not IMemory memory) {
             return;
         }
