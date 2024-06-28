@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-
 /// <summary>
 /// A class that records machine code execution flow.
 /// </summary>
@@ -46,6 +45,8 @@ public class ExecutionFlowRecorder {
     private readonly HashSet<uint> _instructionsEncountered = new(200000);
     private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
+    private readonly CircularBuffer<string> _callStack = new(20);
+
     /// <summary>
     /// Gets or sets whether we register self modifying machine code.
     /// </summary>
@@ -81,6 +82,9 @@ public class ExecutionFlowRecorder {
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterCall(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         RegisterAddressJump(CallsFromTo, _callsEncountered, fromCS, fromIP, toCS, toIP);
+#if DEBUG
+        _callStack.Add($"{fromCS:X4}:{fromIP:X4} -> {toCS:X4}:{toIP:X4}");
+#endif
     }
 
     /// <summary>
@@ -229,5 +233,13 @@ public class ExecutionFlowRecorder {
             FromTo.Add(physicalFrom, destinationAddresses);
         }
         destinationAddresses.Add(new SegmentedAddress(toCS, toIP));
+    }
+
+    /// <summary>
+    /// Lists the current call stack.
+    /// </summary>
+    /// <returns></returns>
+    public string DumpCallStack() {
+        return _callStack.ToString();
     }
 }

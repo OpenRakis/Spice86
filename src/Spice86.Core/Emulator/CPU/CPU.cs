@@ -77,6 +77,7 @@ public class Cpu : IDebuggableComponent {
     /// CPU uses this internally and adjusts IP after instruction execution is done.
     /// </remarks>
     private ushort _internalIp;
+    private readonly CircularBuffer<string> _lastAddresses = new(20);
 
     private readonly IOPortDispatcher _ioPortDispatcher;
 
@@ -100,7 +101,7 @@ public class Cpu : IDebuggableComponent {
         FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8( this, _memory, _modRM);
+        _instructions8 = new Instructions8(this, _memory, _modRM);
         _instructions16 = new Instructions16(this, _memory, _modRM);
         _instructions32 = new Instructions32(this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
@@ -113,6 +114,9 @@ public class Cpu : IDebuggableComponent {
         _loggerService.LoggerPropertyBag.CsIp = new(State.CS, State.IP);
 
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
+#if DEBUG
+        _lastAddresses.Add($"{State.CS:X4}:{_internalIp:X4}");
+#endif
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
             // continueZeroFlag is either true or false if a rep prefix has been encountered
@@ -120,9 +124,11 @@ public class Cpu : IDebuggableComponent {
         } else {
             try {
                 ExecOpcode(opcode);
-            }
-            catch (CpuException e) {
+            } catch (CpuException e) {
                 HandleCpuException(e);
+            } catch (Exception e) {
+                _loggerService.Fatal(e, "Cpu Failure {LastAdresses}", _lastAddresses.ToString());
+                throw;
             }
         }
 
@@ -182,9 +188,9 @@ public class Cpu : IDebuggableComponent {
     public uint NextUint32() {
         uint res = _memory.UInt32[InternalIpPhysicalAddress];
         ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+3));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 3));
         _internalIp += 4;
         return res;
     }
@@ -192,7 +198,7 @@ public class Cpu : IDebuggableComponent {
     public ushort NextUint16() {
         ushort res = _memory.UInt16[InternalIpPhysicalAddress];
         ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort) (_internalIp+1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 1));
         _internalIp += 2;
         return res;
     }
@@ -206,7 +212,7 @@ public class Cpu : IDebuggableComponent {
 
     private void HandleCpuException(CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+            _loggerService.Debug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.Type is CpuExceptionType.Fault) {
             _instructions16Or32 = _instructions16;
@@ -321,7 +327,7 @@ public class Cpu : IDebuggableComponent {
                 _instructions32.Movsx();
                 break;
             default:
-                HandleInvalidOpcode(subcode);
+                HandleInvalidOpcode((ushort)(subcode | 0x0F00));
                 break;
         }
     }
@@ -573,8 +579,8 @@ public class Cpu : IDebuggableComponent {
             case 0x61:
                 _instructions16Or32.Popa();
                 break;
-            case 0x62:// BOUND
-            case 0x63:// ARPL
+            case 0x62: // BOUND
+            case 0x63: // ARPL
                 HandleInvalidOpcode(opcode);
                 break;
             case 0x64:
@@ -925,41 +931,40 @@ public class Cpu : IDebuggableComponent {
                 break;
             case 0xE0:
             case 0xE1: {
-                    // zeroFlag==true => LOOPZ
-                    // zeroFlag==false =>  LOOPNZ
-                    bool zeroFlag = (opcode & 0x1) == 1;
-                    sbyte address = (sbyte)NextUint8();
-                    bool done = AddressSize switch {
-                        16 => --State.CX == 0,
-                        32 => --State.ECX == 0,
-                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-
-                    };
-                    if (!done && State.ZeroFlag == zeroFlag) {
-                        ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                        _internalIp = targetIp;
-                    }
-
-                    break;
+                // zeroFlag==true => LOOPZ
+                // zeroFlag==false =>  LOOPNZ
+                bool zeroFlag = (opcode & 0x1) == 1;
+                sbyte address = (sbyte)NextUint8();
+                bool done = AddressSize switch {
+                    16 => --State.CX == 0,
+                    32 => --State.ECX == 0,
+                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                };
+                if (!done && State.ZeroFlag == zeroFlag) {
+                    ushort targetIp = (ushort)(_internalIp + address);
+                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                    _internalIp = targetIp;
                 }
+
+                break;
+            }
             case 0xE2: {
-                    // LOOP
-                    sbyte address = (sbyte)NextUint8();
-                    bool done = AddressSize switch {
-                        16 => --State.CX == 0,
-                        32 => --State.ECX == 0,
-                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-                    };
+                // LOOP
+                sbyte address = (sbyte)NextUint8();
+                bool done = AddressSize switch {
+                    16 => --State.CX == 0,
+                    32 => --State.ECX == 0,
+                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                };
 
-                    if (!done) {
-                        ushort targetIp = (ushort)(_internalIp + address);
-                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                        _internalIp = targetIp;
-                    }
-
-                    break;
+                if (!done) {
+                    ushort targetIp = (ushort)(_internalIp + address);
+                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                    _internalIp = targetIp;
                 }
+
+                break;
+            }
             case 0xE3: // JCXZ, JECXZ
                 Jcc(TestJumpConditionCXZ());
                 break;
@@ -976,29 +981,29 @@ public class Cpu : IDebuggableComponent {
                 _instructions16Or32.OutImm8();
                 break;
             case 0xE8: {
-                    // CALL NEAR
-                    short offset = (short)NextUint16();
-                    ushort nextInstruction = _internalIp;
-                    ushort callAddress = (ushort)(nextInstruction + offset);
-                    NearCall(nextInstruction, callAddress);
-                    break;
-                }
+                // CALL NEAR
+                short offset = (short)NextUint16();
+                ushort nextInstruction = _internalIp;
+                ushort callAddress = (ushort)(nextInstruction + offset);
+                NearCall(nextInstruction, callAddress);
+                break;
+            }
             case 0xE9: {
-                    short offset = (short)NextUint16();
-                    JumpNear((ushort)(_internalIp + offset));
-                    break;
-                }
+                short offset = (short)NextUint16();
+                JumpNear((ushort)(_internalIp + offset));
+                break;
+            }
             case 0xEA: {
-                    ushort ip = NextUint16();
-                    ushort cs = NextUint16();
-                    JumpFar(cs, ip);
-                    break;
-                }
+                ushort ip = NextUint16();
+                ushort cs = NextUint16();
+                JumpFar(cs, ip);
+                break;
+            }
             case 0xEB: {
-                    sbyte offset = (sbyte)NextUint8();
-                    JumpNear((ushort)(_internalIp + offset));
-                    break;
-                }
+                sbyte offset = (sbyte)NextUint8();
+                JumpNear((ushort)(_internalIp + offset));
+                break;
+            }
             case 0xEC:
                 _instructions8.InDx();
                 break;
@@ -1330,6 +1335,7 @@ public class Cpu : IDebuggableComponent {
     public void NearCallWithReturnIpNextInstruction(ushort callIP) {
         NearCall(_internalIp, callIP);
     }
+
     private void NearCall(ushort returnIP, ushort callIP) {
         Stack.Push16(returnIP);
         HandleCall(CallType.NEAR, State.CS, returnIP, State.CS, callIP);

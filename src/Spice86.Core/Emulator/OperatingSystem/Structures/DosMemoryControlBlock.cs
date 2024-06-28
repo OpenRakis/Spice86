@@ -73,7 +73,6 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// </summary>
     public bool IsNonLast => TypeField == McbNonLastEntry;
 
-
     /// <summary>
     /// Returns if the MCB is valid.
     /// </summary>
@@ -116,6 +115,16 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
 
     /// <inheritdoc />
     public override string ToString() {
-        return new StringBuilder(System.Text.Json.JsonSerializer.Serialize(this)).Append("typeField: ").Append(TypeField).Append("pspSegment: ").Append(PspSegment).Append("size: ").Append(Size).Append("fileName: ").Append(FileName).ToString();
+        return new StringBuilder("IsValid").Append(IsValid)
+            .Append(" IsFree:").Append(IsFree)
+            .Append(" IsLast:").Append(IsLast)
+            .Append(" IsNonLast:").Append(IsNonLast)
+            .Append(" BaseAddress: ").Append(BaseAddress)
+            .Append(" UsableSpaceSegment: ").Append(UsableSpaceSegment)
+            .Append(" TypeField: ").Append(TypeField)
+            .Append(" PspSegment: ").Append(PspSegment)
+            .Append(" Size: ").Append(Size)
+            .Append(" FileName: ").Append(FileName)
+            .ToString();
     }
 }

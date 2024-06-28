@@ -73,10 +73,10 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction);
         AddAction(0x0D, DiskReset);
         AddAction(0x0E, SelectDefaultDrive);
+        AddAction(0x19, GetCurrentDefaultDrive);
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
-        AddAction(0x19, GetCurrentDefaultDrive);
         AddAction(0x25, SetInterruptVector);
         AddAction(0x2A, GetDate);
         AddAction(0x2C, GetTime);
@@ -95,9 +95,9 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3F, () => ReadFile(true));
         AddAction(0x40, () => WriteFileUsingHandle(true));
         AddAction(0x41, () => RemoveFile(true));
+        AddAction(0x42, () => MoveFilePointerUsingHandle(true));
         AddAction(0x43, () => GetSetFileAttributes(true));
         AddAction(0x44, () => IoControl(true));
-        AddAction(0x42, () => MoveFilePointerUsingHandle(true));
         AddAction(0x45, () => DuplicateFileHandle(true));
         AddAction(0x47, () => GetCurrentDirectory(true));
         AddAction(0x48, () => AllocateMemoryBlock(true));

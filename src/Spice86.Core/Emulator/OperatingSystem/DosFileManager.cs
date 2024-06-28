@@ -3,9 +3,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
-using System.Linq;
-using System.Diagnostics;
-
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -14,8 +11,9 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Collections;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 /// <summary>
 /// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Disk Transfer Area.
@@ -399,7 +397,7 @@ public class DosFileManager {
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
-            return FileNotFoundError(fileName);
+            return FileNotFoundError($"'{fileName}'");
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {

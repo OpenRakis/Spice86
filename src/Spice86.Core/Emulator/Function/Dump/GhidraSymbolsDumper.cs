@@ -89,7 +89,7 @@ public class GhidraSymbolsDumper {
             return new Dictionary<SegmentedAddress, FunctionInformation>();
         }
         return File.ReadLines(filePath)
-            .Select(line => ToFunctionInformation(line))
+            .Select(ToFunctionInformation)
             .OfType<FunctionInformation>()
             .Distinct()
             .ToDictionary(functionInformation => functionInformation.Address, functionInformation => functionInformation);
@@ -107,8 +107,8 @@ public class GhidraSymbolsDumper {
             return NameToFunctionInformation(_loggerService, split[0]);
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Cannot parse line {Line} into a function, type is not f", line);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Cannot parse line {Line} into a function, type is not f", line);
         }
 
         // Not a function line
