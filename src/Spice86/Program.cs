@@ -60,16 +60,7 @@ public class Program {
         MainWindow mainWindow = new();
         ServiceProvider serviceProvider = InjectServices(configuration, mainWindow);
 
-        using var mainWindowViewModel = new MainWindowViewModel(
-            serviceProvider.GetRequiredService<IWindowService>(),
-            serviceProvider.GetRequiredService<IAvaloniaKeyScanCodeConverter>(),
-            new ProgramExecutorFactory(configuration, serviceProvider.GetRequiredService<ILoggerService>()),
-            serviceProvider.GetRequiredService<IUIDispatcher>(),
-            serviceProvider.GetRequiredService<IHostStorageProvider>(),
-            serviceProvider.GetRequiredService<ITextClipboard>(),
-            serviceProvider.GetRequiredService<IUIDispatcherTimerFactory>(),
-            configuration,
-            serviceProvider.GetRequiredService<ILoggerService>());
+        using MainWindowViewModel mainWindowViewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
         
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
@@ -79,7 +70,6 @@ public class Program {
     private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp(string[] args) {
         AppBuilder appBuilder = BuildAvaloniaApp();
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
-        App app = (App?)appBuilder.Instance!;
         return desktop;
     }
 
@@ -87,6 +77,9 @@ public class Program {
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging();
         serviceCollection.AddUserInterfaceInfrastructure(mainWindow);
+        serviceCollection.AddSingleton(configuration);
+        serviceCollection.AddTransient<IProgramExecutorFactory, ProgramExecutorFactory>();
+        serviceCollection.AddScoped<MainWindowViewModel>();
         
         ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
