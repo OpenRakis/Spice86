@@ -77,7 +77,7 @@ public class Cpu : IDebuggableComponent {
     /// CPU uses this internally and adjusts IP after instruction execution is done.
     /// </remarks>
     private ushort _internalIp;
-    private readonly CircularBuffer<string> _lastAddresses = new(20);
+    private readonly CircularBuffer<SegmentedAddress> _lastAddresses = new(20);
 
     private readonly IOPortDispatcher _ioPortDispatcher;
 
@@ -115,7 +115,7 @@ public class Cpu : IDebuggableComponent {
 
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
 #if DEBUG
-        _lastAddresses.Add($"{State.CS:X4}:{_internalIp:X4}");
+        _lastAddresses.Add(new SegmentedAddress(State.CS, _internalIp));
 #endif
         byte opcode = ProcessPrefixes();
         if (State.ContinueZeroFlagValue != null && IsStringOpcode(opcode)) {
@@ -127,7 +127,7 @@ public class Cpu : IDebuggableComponent {
             } catch (CpuException e) {
                 HandleCpuException(e);
             } catch (Exception e) {
-                _loggerService.Fatal(e, "Cpu Failure {LastAdresses}", _lastAddresses.ToString());
+                _loggerService.Fatal(e, "Cpu Failure {LastAddresses}", _lastAddresses.ToString());
                 throw;
             }
         }
