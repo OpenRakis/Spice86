@@ -5,12 +5,12 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 
-public class MemoryBinaryDocument : IBinaryDocument {
+public class DataMemoryDocument : IBinaryDocument {
     private readonly IMemory _memory;
     private readonly uint _startAddress;
     private readonly uint _endAddress;
     
-    public MemoryBinaryDocument(IMemory memory, uint startAddress, uint endAddress) {
+    public DataMemoryDocument(IMemory memory, uint startAddress, uint endAddress) {
         IsReadOnly = false;
         CanInsert = false;
         CanRemove = false;
