@@ -1,0 +1,37 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Design.PreviewWith>
+        <ThemeVariantScope RequestedThemeVariant="Dark">
+            <Border Padding="20">
+                <StackPanel>
+                    <Button Content="This is a &quot;hyperlink&quot;" Classes="hyperlink" />
+                    <TextBlock Foreground="{DynamicResource HighlightColor}">This is highlighted</TextBlock>
+                </StackPanel>
+            </Border>
+        </ThemeVariantScope>
+    </Design.PreviewWith>
+
+    <Style Selector="Button.hyperlink">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <TextBlock Text="{TemplateBinding Content}" Foreground="{StaticResource SystemAccentColor}" TextDecorations="Underline">
+                    <TextBlock.Styles>
+                        <Style Selector="TextBlock:pointerover">
+                            <Setter Property="Foreground" Value="{StaticResource SystemAccentColorLight1}" />
+                        </Style>
+                    </TextBlock.Styles>
+                </TextBlock>
+            </ControlTemplate>
+        </Setter>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style>
+        <Style.Resources>
+            <SolidColorBrush x:Key="HighlightColor">Yellow</SolidColorBrush>
+        </Style.Resources>
+    </Style>
+
+</Styles>
