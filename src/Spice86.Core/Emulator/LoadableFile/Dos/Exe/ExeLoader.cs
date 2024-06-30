@@ -59,8 +59,8 @@ public class ExeLoader : DosFileLoader {
             }
             throw new UnrecoverableException($"Invalid EXE file {file}");
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Read header: {ReadHeader}", exeFile);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
         LoadExeFileInMemory(exeFile, _startSegment);

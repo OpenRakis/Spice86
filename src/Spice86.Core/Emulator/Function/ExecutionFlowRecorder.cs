@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-
 /// <summary>
 /// A class that records machine code execution flow.
 /// </summary>
@@ -46,6 +45,9 @@ public class ExecutionFlowRecorder {
     private readonly HashSet<uint> _instructionsEncountered = new(200000);
     private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
+    private readonly CircularBuffer<CallRecord> _functionCalls = new(20);
+    private ushort _callDepth;
+
     /// <summary>
     /// Gets or sets whether we register self modifying machine code.
     /// </summary>
@@ -81,6 +83,9 @@ public class ExecutionFlowRecorder {
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterCall(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         RegisterAddressJump(CallsFromTo, _callsEncountered, fromCS, fromIP, toCS, toIP);
+#if DEBUG
+        _functionCalls.Add(new CallRecord(_callDepth++, fromCS, fromIP, toCS, toIP));
+#endif
     }
 
     /// <summary>
@@ -103,6 +108,7 @@ public class ExecutionFlowRecorder {
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
         RegisterAddressJump(RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
+        _callDepth--;
     }
 
     /// <summary>
@@ -229,5 +235,17 @@ public class ExecutionFlowRecorder {
             FromTo.Add(physicalFrom, destinationAddresses);
         }
         destinationAddresses.Add(new SegmentedAddress(toCS, toIP));
+    }
+
+    /// <summary>
+    /// Create an overview of the function call flow of the last X function calls.
+    /// </summary>
+    /// <returns></returns>
+    public string DumpFunctionCalls() {
+        return $"Address -> called function\n{_functionCalls}";
+    }
+
+    private readonly record struct CallRecord(ushort Depth, ushort FromCs, ushort FromIp, ushort ToCs, ushort ToIp) {
+        public override string ToString() => $"{new string('.', Depth)}{FromCs:X4}:{FromIp:X4} -> {ToCs:X4}:{ToIp:X4}";
     }
 }

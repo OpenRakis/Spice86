@@ -265,7 +265,6 @@ public class CSharpOverrideHelper {
     /// </summary>
     public short Direction16 => State.Direction16;
 
-    
     /// <summary>
     /// Gets the offset value of the Direction Flag for 32 bit CPU instructions.
     /// </summary>
@@ -326,7 +325,6 @@ public class CSharpOverrideHelper {
         FunctionInformation functionInformation = new(address, name, null);
         _functionInformations.Add(address, functionInformation);
     }
-
 
     /// <summary>
     /// Registers a function at the specified segmented address. <br/>
@@ -409,7 +407,6 @@ public class CSharpOverrideHelper {
         };
     }
 
-
     /// <summary>
     /// Returns an <see cref="Action"/> than makes the CPU perform a <see cref="Cpu.FarRet"/> instruction when invoked.
     /// </summary>
@@ -434,6 +431,7 @@ public class CSharpOverrideHelper {
     public Action NearJump(ushort ip) {
         return () => State.IP = ip;
     }
+
     /// <summary>
     /// Returns an action that performs a near return.
     /// </summary>
@@ -538,8 +536,8 @@ public class CSharpOverrideHelper {
         ushort actualReturnIp = State.IP;
         uint actualStackAddress = State.StackPhysicalAddress;
         // Do not return to the caller until we are sure we are at the right place
-        while ( actualReturnCs != expectedReturnCs ||
-                actualReturnIp != expectedReturnIp) {
+        while (actualReturnCs != expectedReturnCs ||
+               actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
             string message =
@@ -610,6 +608,21 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
+            _ => action.Invoke()
+            , false);
+        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+    }
+
+    /// <summary>
+    /// Executes the specified action when the byte at the specified segment and offset is written to.
+    /// </summary>
+    /// <param name="segment">The segment of the memory location to watch.</param>
+    /// <param name="offset">The offset of the memory location to watch.</param>
+    /// <param name="action">The action to execute when the memory location is written to.</param>
+    public void DoOnMemoryWrite(ushort segment, ushort offset, Action action) {
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.WRITE,
+            MemoryUtils.ToPhysicalAddress(segment, offset),
             _ => action.Invoke()
             , false);
         Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);

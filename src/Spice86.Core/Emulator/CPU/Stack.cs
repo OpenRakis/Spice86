@@ -3,6 +3,8 @@
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using System.Text;
+
 /// <summary>
 /// Represents the stack of the CPU.
 /// In the x86 architecture, the stack grows downwards, meaning it grows from higher memory addresses to lower memory addresses. <br/>
@@ -47,6 +49,15 @@ public class Stack {
 
     /// <summary>
     /// Peeks a 8 bit value from the stack
+    /// </summary>
+    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <returns>The value in memory.</returns>
+    public byte Peek8(int index) {
+        return _memory.UInt8[(uint)(PhysicalAddress + index)];
+    }
+
+    /// <summary>
+    /// Peeks a 16 bit value from the stack
     /// </summary>
     /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
     /// <returns>The value in memory.</returns>
@@ -135,5 +146,22 @@ public class Stack {
         }
 
         _memory.UInt16[flagsAddress] = (ushort)value;
+    }
+
+    /// <summary>
+    ///    Returns a string representation of a window around the current stack address.
+    /// </summary>
+    /// <param name="range">How many entries to show</param>
+    /// <returns>A string detailing the addresses and values on the stack around the current stack pointer</returns>
+    public string PeekWindow(int range = 8) {
+        var sb = new StringBuilder();
+        ushort range16 = (ushort)(range << 1);
+        for (uint i = PhysicalAddress - range16; i < PhysicalAddress + range16; i += 2) {
+            if (i == PhysicalAddress) {
+                sb.Append('*');
+            }
+            sb.Append("[0x").AppendFormat("{0:X6}", i).Append("] 0x").AppendFormat("{0:X4}", _memory.UInt16[i]).AppendLine();
+        }
+        return sb.ToString();
     }
 }

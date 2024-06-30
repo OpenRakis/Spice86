@@ -144,7 +144,7 @@ public class DosMemoryManager {
 
         if (block.Size < requestedSize - 1) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block, requestedSize);
+                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block.Size, requestedSize);
             }
             return false;
         }

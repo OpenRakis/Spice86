@@ -585,8 +585,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
         ushort handleId = State.DX;
         ushort numberOfPages = State.CX;
         uint mapAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information(
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose(
                 "EMS: {@MethodName} Map {@NumberOfPages} pages from handle {@Handle} according to the map at address 0x{@MapAddress:X6}",
                 nameof(MapUnmapMultipleHandlePages), numberOfPages, handleId, mapAddress);
         }

@@ -238,6 +238,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 break;
             case 0x12:
                 _vgaFunctions.WriteToDac(State.ES, State.DX, State.BL, State.CX);
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("{ClassName} INT 10 10 {MethodName} - set block of DAC color registers. {Amount} colors starting at register {StartRegister}, source address: {Segment:X4}:{Offset:X4}",
+                        nameof(VgaBios), nameof(SetPaletteRegisters), State.BL, State.CX, State.ES, State.DX);
+                }
                 break;
             case 0x13:
                 if (_logger.IsEnabled(LogEventLevel.Debug)) {

@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.IOPorts;
+namespace Spice86.Core.Emulator.IOPorts;
 
 using Serilog.Events;
 
@@ -37,8 +37,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override byte ReadByte(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte),
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte),
                     entry.GetType(), port);
             }
             return entry.ReadByte(port);
@@ -50,8 +50,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override ushort ReadWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord),
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord),
                     entry.GetType(), port);
             }
             return entry.ReadWord(port);
@@ -63,8 +63,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override uint ReadDWord(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord),
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord),
                     entry.GetType(), port);
             }
             return entry.ReadDWord(port);
@@ -76,8 +76,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteByte(int port, byte value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteByte), entry.GetType(), port, value);
             }
             entry.WriteByte(port, value);
@@ -89,8 +89,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteWord(int port, ushort value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteWord), entry.GetType(), port, value);
             }
             entry.WriteWord(port, value);
@@ -102,8 +102,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <inheritdoc/>
     public override void WriteDWord(int port, uint value) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteDWord), entry.GetType(), port, value);
             }
             entry.WriteDWord(port, value);
