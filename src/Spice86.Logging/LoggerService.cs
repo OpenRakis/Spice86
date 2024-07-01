@@ -11,7 +11,7 @@ public class LoggerService : ILoggerService {
     /// <summary>
     /// The format for the log message that will be output.
     /// </summary>
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception} {Properties:j}";
 
     /// <inheritdoc/>
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
