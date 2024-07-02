@@ -53,7 +53,7 @@
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.11"/>
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.11"/>
-        <PackageReference Include="AvaloniaGraphControl" Version="0.6.1" />
+        <PackageReference Include="AvaloniaGraphControl" Version="0.6.1"/>
         <PackageReference Include="AvaloniaHex" Version="0.1.2"/>
         <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.10.1"/>
         <PackageReference Include="bodong.PropertyModels" Version="11.0.10.1"/>
@@ -68,7 +68,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Iced" Version="1.21.0"/>
-        <PackageReference Include="JvE.Structurizer" Version="1.0.0" />
+        <PackageReference Include="JvE.Structurizer" Version="1.0.0"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0"/>
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
         <PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
