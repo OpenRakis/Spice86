@@ -31,9 +31,35 @@ public class ModRmExecutor {
     public uint? MemoryAddress  { get; private set; }
     
     /// <summary>
+    /// Gets the MemoryAddress field, crashes if it was <c>null</c>.
+    /// </summary>
+    public uint MandatoryMemoryAddress {
+        get {
+            if (MemoryAddress == null) {
+                throw new MemoryAddressMandatoryException(_state);
+            }
+
+            return MemoryAddress.Value;
+        }
+    }
+    
+    /// <summary>
     /// Gets the memory offset of the ModRM byte can point at. Can be <c>null</c>.
     /// </summary>
     public ushort? MemoryOffset { get; private set; }
+
+    /// <summary>
+    /// Gets the MemoryOffset field, crashes if it was <c>null</c>.
+    /// </summary>
+    public ushort MandatoryMemoryOffset {
+        get {
+            if (MemoryOffset == null) {
+                throw new MemoryAddressMandatoryException(_state);
+            }
+
+            return MemoryOffset.Value;
+        }
+    }
 
     /// <summary>
     /// Computes a physical address from an offset and the segment register used in this modrm operation
@@ -111,5 +137,5 @@ public class ModRmExecutor {
     /// <summary>
     /// Gets the index of the register pointed at by the ModRM byte.
     /// </summary>
-    public uint RegisterIndex => ModRmContext.RegisterIndex;
+    public int RegisterIndex => ModRmContext.RegisterIndex;
 }

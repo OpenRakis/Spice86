@@ -1,0 +1,26 @@
+@moxy
+@attribute required int Size
+@attribute required string SegmentRegister
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
+     }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        uint memoryAddress = helper.ModRm.MandatoryMemoryAddress;
+        helper.ModRm.R{{Size}} = helper.Memory.UInt{{Size}}[memoryAddress];
+        helper.State.{{SegmentRegister}} = helper.Memory.UInt16[memoryAddress + ({{Size}}/8)];
+        helper.MoveIpAndSetNextNode(this);
+    }
+}
+

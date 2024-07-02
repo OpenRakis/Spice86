@@ -1,11 +1,14 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 
+using Spice86.Shared.Emulator.Memory;
+
 public class ModRmContext {
     
     public InstructionField<byte> ModRmField { get; }
     public uint Mode { get; }
-    public uint RegisterIndex { get; }
-    public uint RegisterMemoryIndex { get; }
+    public int RegisterIndex { get; }
+    public int RegisterMemoryIndex { get; }
+    public BitWidth AddressSize;
     public MemoryOffsetType MemoryOffsetType { get; }
     public MemoryAddressType MemoryAddressType { get; }
     public SibContext? SibContext { get; }
@@ -13,15 +16,16 @@ public class ModRmContext {
     public FieldWithValue? DisplacementField { get; }
     public ModRmOffsetType? ModRmOffsetType { get; }
     public InstructionField<ushort>? ModRmOffsetField { get; }
-    public uint? SegmentIndex { get; }
+    public int? SegmentIndex { get; }
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
     public ModRmContext(
         InstructionField<byte> modRmField,
         uint mode,
-        uint registerIndex,
-        uint registerMemoryIndex,
+        int registerIndex,
+        int registerMemoryIndex,
+        BitWidth addressSize,
         MemoryOffsetType memoryOffsetType,
         MemoryAddressType memoryAddressType,
         SibContext? sibContext,
@@ -29,12 +33,13 @@ public class ModRmContext {
         FieldWithValue? displacementField,
         ModRmOffsetType? modRmOffsetType,
         InstructionField<ushort>? modRmOffsetField,
-        uint? segmentIndex
+        int? segmentIndex
     ) {
         ModRmField = modRmField;
         Mode = mode;
         RegisterIndex = registerIndex;
         RegisterMemoryIndex = registerMemoryIndex;
+        AddressSize = addressSize;
         MemoryOffsetType = memoryOffsetType;
         MemoryAddressType = memoryAddressType;
         SibContext = sibContext;

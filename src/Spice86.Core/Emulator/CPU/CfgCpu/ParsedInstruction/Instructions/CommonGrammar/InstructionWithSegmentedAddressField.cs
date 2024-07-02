@@ -5,7 +5,7 @@ using Spice86.Shared.Emulator.Memory;
 public abstract class InstructionWithSegmentedAddressField : CfgInstruction {
     public InstructionWithSegmentedAddressField(
         SegmentedAddress address,
-        InstructionField<byte> opcodeField,
+        InstructionField<ushort> opcodeField,
         InstructionField<SegmentedAddress> segmentedAddressField) :
         base(address, opcodeField) {
         SegmentedAddressField = segmentedAddressField;

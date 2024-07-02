@@ -1,0 +1,32 @@
+@moxy
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex, StringInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex) {
+    }
+
+    public bool ChangesFlags => true;
+
+    public void ExecuteStringOperation(InstructionExecutionHelper helper) {
+        helper.Alu{{Size}}.Sub(
+            helper.Memory.UInt{{Size}}[helper.GetMemoryAddressOverridableDsSi(this)],
+            helper.Memory.UInt{{Size}}[helper.MemoryAddressEsDi]
+        );
+        helper.AdvanceSIDI(helper.State.Direction{{Size}});
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ExecuteStringOperation(this);
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

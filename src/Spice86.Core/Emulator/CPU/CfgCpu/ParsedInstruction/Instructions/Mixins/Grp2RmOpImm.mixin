@@ -1,0 +1,25 @@
+@moxy
+@attribute required int Size
+@attribute required string Operation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<byte> {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+         ModRmContext modRmContext, InstructionField<byte> valueField) : base(address, opcodeField, prefixes, modRmContext, valueField) {
+     }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
+        helper.MoveIpAndSetNextNode(this);
+    }
+}
+

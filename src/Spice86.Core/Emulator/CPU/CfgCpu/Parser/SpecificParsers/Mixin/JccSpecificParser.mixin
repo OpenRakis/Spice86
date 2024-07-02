@@ -1,0 +1,37 @@
+﻿@moxy
+@attribute required int Size
+@attribute required string OffsetType
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+
+public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+
+    public CfgInstruction Parse(ParsingContext context, int condition) {
+        InstructionField<{{OffsetType}}> offsetField = this._instructionReader.Int{{Size}}.NextField(true);
+
+        return condition switch {
+            0x0 => new Jo{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x1 => new Jno{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x2 => new Jb{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x3 => new Jnb{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x4 => new Jz{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x5 => new Jnz{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x6 => new Jbe{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x7 => new Ja{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x8 => new Js{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x9 => new Jns{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xA => new Jp{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xB => new Jpo{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xC => new Jl{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xD => new Jge{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xE => new Jng{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xF => new Jg{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField)
+        };
+    }
+}

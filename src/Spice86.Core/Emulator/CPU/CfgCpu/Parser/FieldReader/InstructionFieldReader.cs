@@ -26,13 +26,16 @@ public abstract class InstructionFieldReader<T> {
     public void Advance() {
         AddressSource.IndexInInstruction += FieldSize();
     }
+    public void Recede() {
+        AddressSource.IndexInInstruction -= FieldSize();
+    }
 
     /// <summary>
     /// Reads field at current address.
     /// </summary>
     /// <param name="finalValue">If true, a change in value in memory will lead to the feeder to create a new instruction with the new value</param>
     /// <returns></returns>
-    public InstructionField<T> PeekField(bool finalValue) {
+    public virtual InstructionField<T> PeekField(bool finalValue) {
         T value = PeekValue();
         ImmutableList<byte?> bytes = PeekDataOrNullList(FieldSize(), finalValue);
         return new InstructionField<T>(AddressSource.IndexInInstruction, FieldSize(),

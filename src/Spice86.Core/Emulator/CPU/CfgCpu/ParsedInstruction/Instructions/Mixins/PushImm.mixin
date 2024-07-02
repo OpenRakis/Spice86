@@ -1,0 +1,23 @@
+﻿@moxy
+@attribute required int Size
+@attribute required string ImmType
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{ImmType}}> {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+        InstructionField<{{ImmType}}> valueField) : base(address, opcodeField, prefixes, valueField) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.Stack.Push{{Size}}(helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

@@ -11,8 +11,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndexAndOffsetField<ushort> {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
-        uint segmentRegisterIndex, InstructionField<ushort> offsetField) : base(address, opcodeField, prefixes,
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+        int segmentRegisterIndex, InstructionField<ushort> offsetField) : base(address, opcodeField, prefixes,
         segmentRegisterIndex, offsetField) {
     }
     

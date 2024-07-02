@@ -1,0 +1,26 @@
+﻿@moxy
+@attribute required int Size
+@attribute required string ImmExtendedSignedType
+@attribute required string ImmExtendedUnsignedType
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithValueField<sbyte> {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
+        InstructionField<sbyte> valueField) : base(address, opcodeField, prefixes, valueField) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        sbyte value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
+        {{ImmExtendedUnsignedType}} valueExtended = ({{ImmExtendedUnsignedType}})({{ImmExtendedSignedType}})value;
+        helper.Stack.Push{{Size}}(valueExtended);
+        helper.MoveIpAndSetNextNode(this);
+    }
+}
