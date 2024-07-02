@@ -2,23 +2,21 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Design.PreviewWith>
-        <ThemeVariantScope RequestedThemeVariant="Dark">
-            <Border Padding="20">
-                <StackPanel>
-                    <Button Content="This is a &quot;hyperlink&quot;" Classes="hyperlink" />
-                    <TextBlock Foreground="{DynamicResource HighlightColor}">This is highlighted</TextBlock>
-                </StackPanel>
-            </Border>
-        </ThemeVariantScope>
+        <Border Padding="20">
+            <StackPanel>
+                <Button Content="This is a &quot;hyperlink&quot;" Classes="hyperlink" />
+                <TextBlock Foreground="{DynamicResource HighlightColor}">This is highlighted</TextBlock>
+            </StackPanel>
+        </Border>
     </Design.PreviewWith>
 
     <Style Selector="Button.hyperlink">
         <Setter Property="Template">
             <ControlTemplate>
-                <TextBlock Text="{TemplateBinding Content}" Foreground="{StaticResource SystemAccentColor}" TextDecorations="Underline">
+                <TextBlock Text="{TemplateBinding Content}" Foreground="{DynamicResource HyperlinkButtonForeground }" TextDecorations="Underline">
                     <TextBlock.Styles>
                         <Style Selector="TextBlock:pointerover">
-                            <Setter Property="Foreground" Value="{StaticResource SystemAccentColorLight1}" />
+                            <Setter Property="Foreground" Value="{DynamicResource HyperlinkButtonOverForeground }" />
                         </Style>
                     </TextBlock.Styles>
                 </TextBlock>
@@ -30,7 +28,19 @@
 
     <Style>
         <Style.Resources>
-            <SolidColorBrush x:Key="HighlightColor">Yellow</SolidColorBrush>
+            <ResourceDictionary>
+                <SolidColorBrush x:Key="HighlightColor" Color="Yellow" />
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#1C1F23" />
+                        <SolidColorBrush x:Key="HyperlinkButtonOverForeground" Color="#0077FA" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Dark">
+                        <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#F9F9F9" />
+                        <SolidColorBrush x:Key="HyperlinkButtonOverForeground" Color="#54A9FF" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+            </ResourceDictionary>
         </Style.Resources>
     </Style>
 
