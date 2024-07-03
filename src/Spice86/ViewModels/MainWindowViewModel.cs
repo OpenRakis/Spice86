@@ -40,6 +40,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
+    private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
@@ -61,7 +62,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [ObservableProperty]
     private Configuration _configuration;
-    
+
     private bool _disposed;
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
@@ -80,12 +81,13 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService) : base(textClipboard) {
+    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _windowService = windowService;
         Configuration = configuration;
         _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
+        _structureViewModelFactory = structureViewModelFactory;
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
@@ -108,7 +110,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             await _hostStorageProvider.SaveBitmapFile(Bitmap);
         }
     }
-    
+
     private bool _showCursor;
 
     public bool ShowCursor {
@@ -154,7 +156,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
     private bool _isPaused;
-    
+
     public bool IsPaused {
         get => _isPaused;
         set {
@@ -223,7 +225,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
-    
+
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
@@ -429,7 +431,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
     public async Task ShowInternalDebugger() {
         if (ProgramExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor);
+            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor, _structureViewModelFactory);
             await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }

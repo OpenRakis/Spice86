@@ -5,6 +5,7 @@
         xmlns:viewModels="clr-namespace:Spice86.ViewModels"
         xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
         xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+        xmlns:converters="clr-namespace:Spice86.Converters"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
         x:Class="Spice86.Views.StructureView"
@@ -13,11 +14,14 @@
         Title="Structure Viewer"
         Width="1080"
         Height="800">
+    <Window.Resources>
+        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+    </Window.Resources>
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top">
             <Label>Address:</Label>
             <TextBox
-                Text="{Binding MemoryAddress}"
+                Text="{Binding MemoryAddress, Converter={StaticResource SegmentedAddressConverter}}"
                 Watermark="segment:offset" />
             <AutoCompleteBox ItemsSource="{Binding AvailableStructures}"
                              FilterMode="Contains"

@@ -8,9 +8,9 @@ using AvaloniaHex.Document;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.DataTemplates;
+using Spice86.MemoryWrappers;
 using Spice86.Shared.Emulator.Memory;
 
 using Structurizer;
@@ -18,25 +18,27 @@ using Structurizer.Types;
 
 using System.Collections.ObjectModel;
 
-public partial class StructureViewModel : ViewModelBase, IInternalDebugger {
-    private readonly StructureInformation _structureInformation;
+public partial class StructureViewModel : ViewModelBase {
+    private readonly Memory<byte> _data;
     private readonly Hydrator _hydrator;
+    private readonly StructureInformation _structureInformation;
 
-    private IMemory? _memory;
+    private IMemory _memory;
 
     [ObservableProperty]
-    private string? _memoryAddress;
+    private SegmentedAddress? _memoryAddress;
 
     [ObservableProperty]
     private ObservableCollection<StructureMember> _structureMembers = [];
 
     [ObservableProperty]
-    private ByteArrayBinaryDocument? _structureMemory;
+    private IBinaryDocument? _structureMemory;
 
     /// <inheritdoc />
-    public StructureViewModel(StructureInformation structureInformation, Hydrator hydrator) {
+    public StructureViewModel(StructureInformation structureInformation, Hydrator hydrator, IMemory memory) {
         _structureInformation = structureInformation;
         _hydrator = hydrator;
+        _memory = memory;
         Source = new HierarchicalTreeDataGridSource<StructureMember>(_structureMembers) {
             Columns = {
                 new HierarchicalExpanderColumn<StructureMember>(new TextColumn<StructureMember, string>("Name", structureMember => structureMember.Name), structureMember => structureMember.Members),
@@ -53,36 +55,30 @@ public partial class StructureViewModel : ViewModelBase, IInternalDebugger {
 
     public string[] AvailableStructures => _structureInformation.Structs.Keys.ToArray();
 
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        if (component is IMemory memory) {
-            _memory ??= memory;
-        }
-    }
-
-    public bool NeedsToVisitEmulator => _memory == null;
-
     public void SelectStructure(string? selectedItem) {
         if (string.IsNullOrWhiteSpace(selectedItem)
-            || _memory == null
             || !_structureInformation.Structs.TryGetValue(selectedItem, out StructType? structType)
-            || !SegmentedAddress.TryParse(MemoryAddress, out SegmentedAddress address)) {
+            || MemoryAddress == null) {
             return;
         }
 
-        byte[] bytes = _memory.GetData(address.ToPhysical(), (uint)structType.Size);
+        uint physicalAddress = MemoryAddress?.ToPhysical() ?? 0;
+        StructureMemory = new MemoryBinaryDocument(_memory, physicalAddress, (uint)(physicalAddress + structType.Size));
+
+        byte[] bytes = _memory.GetData(physicalAddress, (uint)structType.Size);
 
         StructureMembers.Clear();
-        Span<byte> data = bytes.AsSpan();
+        Span<byte> data = _memory.Ram.GetSpan((int)physicalAddress, structType.Size);
+        StructureMemory.ReadBytes(0, data);
         int index = 0;
         foreach (TypeDefinition typeDefinition in structType.Members) {
             Span<byte> slice = data.Slice(index, typeDefinition.Length);
-            StructureMember member1 = _hydrator.Hydrate(typeDefinition, slice);
-            StructureMembers.Add(member1);
+            StructureMember member = _hydrator.Hydrate(typeDefinition, slice);
+            StructureMembers.Add(member);
             index += typeDefinition.Length;
         }
 
         // Hex viewer
-        var document = new ByteArrayBinaryDocument(bytes);
-        StructureMemory = document;
+        StructureMemory = new ByteArrayBinaryDocument(bytes);
     }
 }

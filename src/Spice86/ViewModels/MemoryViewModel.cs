@@ -1,12 +1,13 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+
+using AvaloniaHex.Document;
+using AvaloniaHex.Editing;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
@@ -14,9 +15,6 @@ using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
 using Spice86.Views;
-
-using Structurizer;
-using Structurizer.Types;
 
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -27,6 +25,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private IMemory? _memory;
     private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateBinaryDocument;
+    private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
     private DataMemoryDocument? _memoryBinaryDocument;
@@ -95,51 +94,50 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
-    public bool IsStructureInfoPresent => StructureViewModel is not null;
+    [ObservableProperty]
+    private BitRange? _selectionRange;
+
+    public bool IsStructureInfoPresent => _structureViewModelFactory.IsInitialized;
 
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, IStructureViewModelFactory structureViewModelFactory, uint endAddress = 0) : base(textClipboard) {
         _debugWindowViewModel = debugWindowViewModel;
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;
         IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
+        _structureViewModelFactory = structureViewModelFactory;
         EndAddress = endAddress;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         UpdateCanCloseTabProperty();
         debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
-        SetupStructureViewModel();
     }
 
-    private void SetupStructureViewModel() {
-        var lifetime = Avalonia.Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-        Configuration configuration = CommandLineParser.ParseCommandLine(lifetime?.Args ?? []);
-        if (string.IsNullOrWhiteSpace(configuration.StructureFile)) {
-            return;
-        }
-        if (!File.Exists(configuration.StructureFile)) {
-            throw new FileNotFoundException($"Specified structure file not found: '{configuration.StructureFile}'");
-        }
-        var structurizerSettings = new StructurizerSettings();
-        var parser = new Parser(structurizerSettings);
-        StructureInformation structureInformation = parser.ParseFile(configuration.StructureFile);
-        var hydrator = new Hydrator(structurizerSettings);
-
-        StructureViewModel = new StructureViewModel(structureInformation, hydrator);
+    /// <summary>
+    /// Handles the event when the selection range within the HexEditor changes.
+    /// </summary>
+    /// <param name="sender">The source of the event, expected to be of type <see cref="Selection"/>.</param>
+    /// <param name="e">The event arguments, not used in this method.</param>
+    public void OnSelectionRangeChanged(object? sender, EventArgs e) {
+        SelectionRange = (sender as Selection)?.Range;
     }
-
-    private StructureViewModel? StructureViewModel { get; set; }
-
 
     [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
     public void ShowStructureView() {
-        if (StructureViewModel == null) {
+        if (_memory == null) {
             return;
         }
-        var structureWindow = new StructureView {DataContext = StructureViewModel};
+        StructureViewModel structureViewModel = _structureViewModelFactory.CreateNew(_memory);
+
+        if (SelectionRange is {} bitRange && MemoryBinaryDocument != null) {
+            byte[] data = new byte[bitRange.ByteLength];
+            MemoryBinaryDocument?.ReadBytes(bitRange.Start.ByteIndex, data);
+            structureViewModel.StructureMemory = new ByteArrayBinaryDocument(data);
+        }
+        var structureWindow = new StructureView {DataContext = structureViewModel};
         structureWindow.Show();
     }
 
@@ -259,7 +257,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
-        StructureViewModel?.Visit(component);
         if (component is not IMemory memory) {
             return;
         }
