@@ -47,7 +47,21 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
+    private bool _isProgramExecutorNotNull;
+
     private IProgramExecutor? _programExecutor;
+
+    private IProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set {
+            _programExecutor = value;
+            Dispatcher.UIThread.Post(() => IsProgramExecutorNotNull = value is not null);
+        }
+    }
+
     private SoftwareMixer? _softwareMixer;
     private ITimeMultiplier? _pit;
     private DebugWindowViewModel? _debugViewModel;
@@ -185,26 +199,26 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public async Task DumpEmulatorStateToFile() {
-        if (_programExecutor is not null) {
-            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, _programExecutor);
+        if (ProgramExecutor is not null) {
+            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Pause() {
-        if (_programExecutor is null) {
+        if (ProgramExecutor is null) {
             return;
         }
-        IsPaused = _programExecutor.IsPaused = true;
+        IsPaused = ProgramExecutor.IsPaused = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsMachineRunning))]
     public void Play() {
-        if (_programExecutor is null) {
+        if (ProgramExecutor is null) {
             return;
         }
 
-        IsPaused = _programExecutor.IsPaused = false;
+        IsPaused = ProgramExecutor.IsPaused = false;
     }
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
@@ -428,7 +442,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    private void DisposeEmulator() => _programExecutor?.Dispose();
+    private void DisposeEmulator() => ProgramExecutor?.Dispose();
 
     private bool _isInitLogLevelSet;
 
@@ -502,25 +516,25 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private bool _isPerformanceVisible;
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
     public async Task ShowInternalDebugger() {
-        if (_programExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, _programExecutor);
+        if (ProgramExecutor is not null) {
+            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor);
             await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }
 
     private void StartProgramExecutor() {
         (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) viewModelEmulatorDependencies = CreateEmulator();
-        _programExecutor = viewModelEmulatorDependencies.ProgramExecutor;
+        ProgramExecutor = viewModelEmulatorDependencies.ProgramExecutor;
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
-        PerformanceViewModel = new(_uiDispatcherTimerFactory, _programExecutor, new PerformanceMeasurer(), this);
+        PerformanceViewModel = new(_uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer(), this);
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsMachineRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
-        _programExecutor?.Run();
+        ProgramExecutor?.Run();
         if (_closeAppOnEmulatorExit) {
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }
