@@ -58,7 +58,7 @@
 		<PackageReference Include="DialogHost.Avalonia" Version="0.7.9" />
 		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.11" />
 		<PackageReference Include="Iced" Version="1.21.0" />
-		<PackageReference Include="Semi.Avalonia" Version="11.0.7.3" />
+		<PackageReference Include="Semi.Avalonia" Version="11.0.7.4" />
 		<PackageReference Include="Semi.Avalonia.DataGrid" Version="11.0.7.2" />
 		<PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.1" />
 		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.10.1" />
