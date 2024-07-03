@@ -15,9 +15,8 @@
     <Design.DataContext>
         <viewModels:CfgCpuViewModel />
     </Design.DataContext>
-    <ScrollViewer>
-        <Grid RowDefinitions="Auto, *">
-            <UniformGrid Grid.Row="0">
+        <DockPanel>
+            <UniformGrid DockPanel.Dock="Top">
                 <StackPanel Orientation="Vertical">
                     <Label>Number of nodes</Label>
                     <TextBlock Text="{Binding NumberOfNodes}" />
@@ -27,15 +26,16 @@
                     <TextBlock Text="{Binding AverageNodeTime}" />
                 </StackPanel>
             </UniformGrid>
-            <Border Grid.Row="1" Background="White">
-                <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
+			<Border DockPanel.Dock="Bottom" Background="White">
+				<ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+					<agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
                     <agc:GraphPanel.DataTemplates>
                         <DataTemplate DataType="{x:Type models:CfgNodeInfo}">
                             <agc:TextSticker Padding="30,10" Shape="RoundedRectangle" Text="{Binding Address}" />
                         </DataTemplate>
                     </agc:GraphPanel.DataTemplates>
                 </agc:GraphPanel>
-            </Border>
-        </Grid>
-    </ScrollViewer>
+				</ScrollViewer>
+			</Border>
+			</DockPanel>
 </UserControl>

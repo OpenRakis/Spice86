@@ -100,6 +100,11 @@
 				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
 			</WrapPanel>
 		</Border>
-		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}" />
+		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
+				<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.Column="0" />
+				<Button Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2" Command="{Binding ShowInternalDebuggerCommand}" />
+			</Grid>
+		</WrapPanel>
 	</Grid>
 </Window>

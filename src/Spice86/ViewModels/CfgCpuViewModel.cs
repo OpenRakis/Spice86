@@ -1,6 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using AvaloniaGraphControl;
@@ -23,7 +22,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     private Graph? _graph;
-    
+
     [ObservableProperty]
     private long _numberOfNodes = 0;
 
@@ -32,64 +31,82 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
 
     private readonly IPauseStatus? _pauseStatus;
 
-    public CfgCpuViewModel() {
-        if(!Design.IsDesignMode) {
-            throw new InvalidOperationException("This constructor is not for runtime usage");
-        }
-    }
-
     public CfgCpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
         _pauseStatus = pauseStatus;
+        _pauseStatus.PropertyChanged += (sender, args) => {
+            if (args.PropertyName == nameof(IPauseStatus.IsPaused) && !_pauseStatus.IsPaused) {
+                Graph = null;
+            }
+        };
         _performanceMeasurer = performanceMeasurer;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
 
-    private void UpdateCurrentGraph(object? sender, EventArgs e) {
+    private async void UpdateCurrentGraph(object? sender, EventArgs e) {
         if (_pauseStatus?.IsPaused is false or null) {
             return;
         }
-        ICfgNode? nodeRoot = ExecutionContext?.LastExecuted;
-        if (nodeRoot is null) {
+        if (Graph is not null) {
             return;
         }
 
-        NumberOfNodes = 0;
-        Graph currentGraph = new();
-        Queue<ICfgNode> queue = new();
-        queue.Enqueue(nodeRoot);
-        HashSet<ICfgNode> visitedNodes = new();
-        var stopwatch = Stopwatch.StartNew();
-        while (queue.Count > 0) {
-            ICfgNode node = queue.Dequeue();
-            if (visitedNodes.Contains(node)) {
-                continue;
+        await Task.Run(async () => {
+            ICfgNode? nodeRoot = ExecutionContext?.LastExecuted;
+            if (nodeRoot is null) {
+                return;
             }
-            visitedNodes.Add(node);
-            stopwatch.Restart();
-            foreach (ICfgNode successor in node.Successors) {
-                currentGraph.Edges.Add(new Edge(
-                    $"{node.Address} {Environment.NewLine} {node.GetType().Name}",
-                    $"{successor.Address} {Environment.NewLine} {successor.GetType().Name}"));
-                if (!visitedNodes.Contains(successor)) {
-                    queue.Enqueue(successor);
+
+            long localNumberOfNodes = 0;
+            Graph currentGraph = new();
+            Queue<ICfgNode> queue = new();
+            queue.Enqueue(nodeRoot);
+            HashSet<ICfgNode> visitedNodes = new();
+            HashSet<(string, string)> existingEdges = new();
+            Stopwatch stopwatch = new();
+            while (queue.Count > 0) {
+                ICfgNode node = queue.Dequeue();
+                if (visitedNodes.Contains(node)) {
+                    continue;
                 }
-            }
-            foreach (ICfgNode predecessor in node.Predecessors) {
-                currentGraph.Edges.Add(new Edge(
-                    $"{predecessor.Address} {Environment.NewLine} {predecessor.GetType().Name}",
-                    $"{node.Address} {Environment.NewLine} {node.GetType().Name}"));
-                if (!visitedNodes.Contains(predecessor)) {
-                    queue.Enqueue(predecessor);
+                visitedNodes.Add(node);
+                stopwatch.Restart();
+                foreach (ICfgNode successor in node.Successors) {
+                    var edgeKey = ($"{node.Address}", $"{successor.Address}");
+                    if (!existingEdges.Contains(edgeKey)) {
+                        currentGraph.Edges.Add(new Edge(
+                            $"{node.Address} {Environment.NewLine} {node.GetType().Name}",
+                            $"{successor.Address} {Environment.NewLine} {successor.GetType().Name}"));
+                        existingEdges.Add(edgeKey);
+                    }
+                    if (!visitedNodes.Contains(successor)) {
+                        queue.Enqueue(successor);
+                    }
                 }
+                foreach (ICfgNode predecessor in node.Predecessors) {
+                    var edgeKey = ($"{predecessor.Address}", $"{node.Address}");
+                    if (!existingEdges.Contains(edgeKey)) {
+                        currentGraph.Edges.Add(new Edge(
+                            $"{predecessor.Address} {Environment.NewLine} {predecessor.GetType().Name}",
+                            $"{node.Address} {Environment.NewLine} {node.GetType().Name}"));
+                        existingEdges.Add(edgeKey);
+                    }
+                    if (!visitedNodes.Contains(predecessor)) {
+                        queue.Enqueue(predecessor);
+                    }
+                }
+                stopwatch.Stop();
+                _performanceMeasurer?.UpdateValue(stopwatch.ElapsedMilliseconds);
+                localNumberOfNodes++;
             }
-            stopwatch.Stop();
-            _performanceMeasurer?.UpdateValue(stopwatch.ElapsedMilliseconds);
-            NumberOfNodes++;
-        }
-        Graph = currentGraph;
-        if (_performanceMeasurer is not null) {
-            AverageNodeTime = _performanceMeasurer.ValuePerMillisecond;
-        }
+
+            long averageNodeTime = _performanceMeasurer is not null ? _performanceMeasurer.ValuePerMillisecond : 0;
+
+            await Dispatcher.UIThread.InvokeAsync(() => {
+                Graph = currentGraph;
+                NumberOfNodes = localNumberOfNodes;
+                AverageNodeTime = averageNodeTime;
+            });
+        }).ConfigureAwait(false);
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {
