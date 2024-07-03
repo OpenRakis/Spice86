@@ -52,7 +52,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
     [ObservableProperty]
-    private CfgCpuViewModel? _cfgCpuViewModel;
+    private CfgCpuViewModel _cfgCpuViewModel;
 
     public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
         _programExecutor = programExecutor;
@@ -108,7 +108,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private void UpdateValues(object? sender, EventArgs e) => _programExecutor.Accept(this);
 
     private IEnumerable<IInternalDebugger> InternalDebuggers => new IInternalDebugger[] {
-        PaletteViewModel, CpuViewModel, VideoCardViewModel, MidiViewModel, SoftwareMixerViewModel
+        PaletteViewModel, CpuViewModel, VideoCardViewModel, MidiViewModel, SoftwareMixerViewModel, CfgCpuViewModel
     }
         .Concat(DisassemblyViewModels)
         .Concat(MemoryViewModels);
