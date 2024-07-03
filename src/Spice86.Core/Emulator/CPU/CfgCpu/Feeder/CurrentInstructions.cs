@@ -64,20 +64,18 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
              byteAddress++) {
             // When reached the breakpoint will clear the cache and the other breakpoints for the instruction
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, byteAddress,
-                b => { OnBreakPointReached(b, instruction); }, false);
+                b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
             breakpoints.Add(breakPoint);
             _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
         }
     }
 
-    private void OnBreakPointReached(BreakPoint breakPoint, CfgInstruction instruction) {
-        if (breakPoint is AddressBreakPoint addressBreakPoint) {
-            // Check that value is effectively beeing modified
-            byte current = _memory.UInt8[addressBreakPoint.Address];
-            byte newValue = _memory.CurrentlyWritingByte;
-            if (current == newValue) {
-                return;
-            }
+    private void OnBreakPointReached(AddressBreakPoint addressBreakPoint, CfgInstruction instruction) {
+        // Check that value is effectively beeing modified
+        byte current = _memory.UInt8[addressBreakPoint.Address];
+        byte newValue = _memory.CurrentlyWritingByte;
+        if (current == newValue) {
+            return;
         }
         ClearCurrentInstruction(instruction);
     }

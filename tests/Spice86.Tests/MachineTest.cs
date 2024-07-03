@@ -268,6 +268,16 @@ public class MachineTest {
         TestOneBin("sub");
     }
 
+    [Fact]
+    public void TestSelfModify() {
+        byte[] expected = new byte[4];
+        expected[0x00] = 0x01;
+        expected[0x01] = 0x00;
+        expected[0x02] = 0xff;
+        expected[0x03] = 0xff;
+        TestOneBin("selfmodify", expected);
+    }
+    
     [Theory]
     [InlineData(0b0011110000000000, 0b0010000000000001, 0, 0b0011110000000000, true, true)] // result is same as dest, flags unaffected
     [InlineData(0b0000000000000001, 0b0000000000000000, 1, 0b0000000000000010, false, false)] // shift one bit 
@@ -333,7 +343,7 @@ public class MachineTest {
     private Machine TestOneBin(string binName, byte[] expected) {
         Machine machine = Execute(binName);
         IMemory memory = machine.Memory;
-        CompareMemoryWithExpected(memory, expected, 0, expected.Length - 1);
+        CompareMemoryWithExpected(memory, expected, 0, expected.Length);
         return machine;
     }
 
@@ -341,10 +351,15 @@ public class MachineTest {
         return new MachineCreator().CreateProgramExecutorFromBinName(binName, recordData);
     }
 
+    [AssertionMethod]
     private Machine Execute(string binName) {
         using ProgramExecutor programExecutor = CreateProgramExecutor(binName);
+        // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
+        programExecutor.Machine.MachineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 100000L,
+            (breakpoint) => {
+                Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong.");
+            }, true), true);
         programExecutor.Run();
-        //new StringsOverrides(new(), programExecutor.Machine).entry_F000_FFF0_FFFF0(0);
         return programExecutor.Machine;
     }
 

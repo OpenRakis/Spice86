@@ -30,8 +30,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
 
-    private bool ListensToBreakpoints => _configuration.GdbPort != null || _configuration.DumpDataOnExit is not false;
-
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
@@ -43,7 +41,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _loggerService = loggerService;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, ListensToBreakpoints, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
+        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
     }
 
     /// <summary>
@@ -55,7 +53,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     public void Run() {
         _gdbServer?.StartServerAndWait();
         _emulationLoop.Run();
-        if (ListensToBreakpoints) {
+        if (_configuration.DumpDataOnExit is not false) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
@@ -150,10 +148,10 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private Machine CreateMachine(IGui? gui) {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
-        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(ListensToBreakpoints);
+        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new();
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, ListensToBreakpoints);
+        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;

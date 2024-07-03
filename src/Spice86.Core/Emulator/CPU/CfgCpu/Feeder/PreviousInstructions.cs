@@ -19,7 +19,7 @@ public class PreviousInstructions : IInstructionReplacer<CfgInstruction> {
         _memoryInstructionMatcher = new MemoryInstructionMatcher(memory);
     }
 
-    public CfgInstruction? GetAtAddress(SegmentedAddress address) {
+    public CfgInstruction? GetAtAddressIfMatchesMemory(SegmentedAddress address) {
         if (_previousInstructionsAtAddress.TryGetValue(address,
                 out HashSet<CfgInstruction>? previousInstructionsAtAddress)) {
             return _memoryInstructionMatcher.MatchExistingInstructionWithMemory(previousInstructionsAtAddress);
