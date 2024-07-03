@@ -6,7 +6,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public abstract class InstructionWithRegisterIndex : CfgInstruction, IInstructionWithRegisterIndex {
     protected InstructionWithRegisterIndex(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
+        InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         int registerIndex) :
         base(address, opcodeField, prefixes) {

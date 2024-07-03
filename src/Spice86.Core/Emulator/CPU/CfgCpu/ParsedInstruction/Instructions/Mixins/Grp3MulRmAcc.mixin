@@ -16,7 +16,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
          ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
      }
     

@@ -6,11 +6,12 @@ namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{SignedType}}> {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, InstructionField<{{SignedType}}> offsetField) :
-        base(address, opcodeField, offsetField) {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, InstructionField<{{SignedType}}> offsetField) :
+        base(address, opcodeField, prefixes, offsetField) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

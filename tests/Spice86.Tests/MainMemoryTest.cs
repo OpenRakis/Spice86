@@ -66,9 +66,22 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x1234, actual);
     }
+    
+    [Fact]
+    public void TestGetUint16BigEndian() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0x12;
+        _memory.UInt8[0x1235] = 0x34;
+
+        // Act
+        ushort actual = _memory.UInt16BigEndian[0x1234];
+
+        // Assert
+        Assert.Equal(0x1234, actual);
+    }
 
     [Fact]
-    public void TestGetUnt16() {
+    public void TestGetInt16() {
         // Arrange
         _memory.UInt8[0x1234] = 0xFF;
         _memory.UInt8[0x1235] = 0xFF;
@@ -146,6 +159,20 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x34, _memory.UInt8[0x1234]);
         Assert.Equal(0x12, _memory.UInt8[0x1235]);
+    }
+
+    [Fact]
+    public void TestSetUint16BigEndian() {
+        // Arrange
+        _memory.UInt8[0x1234] = 0x00;
+        _memory.UInt8[0x1235] = 0x00;
+
+        // Act
+        _memory.UInt16BigEndian[0x1234] = 0x1234;
+
+        // Assert
+        Assert.Equal(0x12, _memory.UInt8[0x1234]);
+        Assert.Equal(0x34, _memory.UInt8[0x1235]);
     }
 
     [Fact]

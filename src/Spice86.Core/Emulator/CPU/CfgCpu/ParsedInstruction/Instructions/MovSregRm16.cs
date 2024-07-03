@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public class MovSregRm16 : InstructionWithModRm {
-    public MovSregRm16(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
+    public MovSregRm16(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
         if(modRmContext.RegisterIndex == (uint)SegmentRegisterIndex.CsIndex) {
             throw new CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");

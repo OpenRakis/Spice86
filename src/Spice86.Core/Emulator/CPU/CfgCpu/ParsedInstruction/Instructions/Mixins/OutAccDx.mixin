@@ -1,0 +1,22 @@
+@moxy
+@attribute required string Accumulator
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : CfgInstruction {
+    public {{ moxy.Class.Name }}(SegmentedAddress address,
+        InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) : base(address, opcodeField, prefixes) {
+    }
+    
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.Out{{Size}}(helper.State.DX, helper.State.{{Accumulator}});
+        helper.MoveIpAndSetNextNode(this);
+    }
+}

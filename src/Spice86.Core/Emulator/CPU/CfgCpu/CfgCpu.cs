@@ -4,29 +4,35 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 
 public class CfgCpu : IDebuggableComponent {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
+    private readonly ExecutionContextManager _executionContextManager;
 
     private readonly CfgNodeFeeder _cfgNodeFeeder;
 
-    public CfgCpu(IMemory memory, State state, IOPortDispatcher? ioPortDispatcher, CallbackHandler callbackHandler,
-        DualPic dualPic, MachineBreakpoints machineBreakpoints) {
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler);
+    public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
+        DualPic dualPic, MachineBreakpoints machineBreakpoints, ILoggerService loggerService) {
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
         _state = state;
         _dualPic = dualPic;
+        _executionContextManager = new(machineBreakpoints);
         _cfgNodeFeeder = new(memory, state, machineBreakpoints);
     }
 
-    private ExecutionContext CurrentExecutionContext { get; } = new();
+    private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
 
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         emulatorDebugger.Visit(this);
@@ -38,12 +44,34 @@ public class CfgCpu : IDebuggableComponent {
         ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
         // Execute the node
-        toExecute.Execute(_instructionExecutionHelper);
+        try {
+            toExecute.Execute(_instructionExecutionHelper);
+        } catch (CpuException e) {
+            if(toExecute is CfgInstruction cfgInstruction) {
+                _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
+            }
+        }
+
         ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
         _state.IncCycles();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;
         CurrentExecutionContext.NodeToExecuteNextAccordingToGraph = nextToExecute;
+        HandleExternalInterrupt();
+    }
+    
+    private void HandleExternalInterrupt() {
+        if (!_state.InterruptFlag) {
+            return;
+        }
+
+        byte? externalInterruptVectorNumber = _dualPic.ComputeVectorNumber();
+        if (externalInterruptVectorNumber == null) {
+            return;
+        }
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
+
+        _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
     }
 }

@@ -1,0 +1,28 @@
+@moxy
+@attribute required string Operation
+@attribute required bool IsOnlyField8
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : BaseOperationModRmFactory {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }   
+    protected override CfgInstruction BuildOperandSize8(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, modRmContext, _instructionReader.UInt8.NextField(false));
+    }
+    
+    protected override CfgInstruction BuildOperandSize16(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, modRmContext, _instructionReader.UInt{{if IsOnlyField8}}8{{else}}16{{end}}.NextField(false));
+    }
+
+    protected override CfgInstruction BuildOperandSize32(ParsingContext context, ModRmContext modRmContext) {
+        return new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, modRmContext, _instructionReader.UInt{{if IsOnlyField8}}8{{else}}32{{end}}.NextField(false));
+    }
+}

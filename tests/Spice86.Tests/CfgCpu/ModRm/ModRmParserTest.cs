@@ -19,12 +19,12 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(0, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
@@ -33,7 +33,7 @@ public class ModRmParserTest {
         Assert.Null(context.DisplacementField);
         Assert.Equal(ModRmOffsetType.BX_PLUS_SI, context.ModRmOffsetType);
         Assert.Null(context.ModRmOffsetField);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
     }
 
     [Fact]
@@ -46,12 +46,12 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(0, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b110, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
@@ -60,7 +60,7 @@ public class ModRmParserTest {
         Assert.Null(context.DisplacementField);
         Assert.Equal(ModRmOffsetType.OFFSET_FIELD_16, context.ModRmOffsetType);
         Assert.Equal(0x2211, _modRmHelper.InstructionFieldValueRetriever.GetFieldValue(context.ModRmOffsetField!));
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
     }
 
     [Fact]
@@ -73,22 +73,22 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(1, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b110, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
         Assert.Null(context.SibContext);
-        Assert.Equal(DisplacementType.UINT8, context.DisplacementType);
+        Assert.Equal(DisplacementType.INT8, context.DisplacementType);
         Assert.Equal(0x11,
-            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<byte>?)context.DisplacementField!));
+            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<sbyte>?)context.DisplacementField!));
         Assert.Equal(ModRmOffsetType.BP, context.ModRmOffsetType);
         Assert.Null(context.ModRmOffsetField);
-        Assert.Equal((uint)SegmentRegisterIndex.SsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.SsIndex, context.SegmentIndex);
     }
 
     [Fact]
@@ -101,22 +101,22 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(2, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b110, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
         Assert.Null(context.SibContext);
-        Assert.Equal(DisplacementType.UINT16, context.DisplacementType);
+        Assert.Equal(DisplacementType.INT16, context.DisplacementType);
         Assert.Equal(0x2211,
-            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<ushort>?)context.DisplacementField!));
+            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<short>?)context.DisplacementField!));
         Assert.Equal(ModRmOffsetType.BP, context.ModRmOffsetType);
         Assert.Null(context.ModRmOffsetField);
-        Assert.Equal((uint)SegmentRegisterIndex.SsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.SsIndex, context.SegmentIndex);
     }
 
     [Fact]
@@ -126,12 +126,12 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(3, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.WORD_16, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.WORD_16));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(3, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.NONE, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.NONE, context.MemoryAddressType);
@@ -151,12 +151,12 @@ public class ModRmParserTest {
         int expectedBytesLength = _modRmHelper.WriteToMemory(_modRmHelper.GenerateModRm(0, 0, 0));
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(0, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
@@ -165,7 +165,7 @@ public class ModRmParserTest {
         Assert.Null(context.DisplacementField);
         Assert.Equal(ModRmOffsetType.EAX, context.ModRmOffsetType);
         Assert.Null(context.ModRmOffsetField);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
     }
 
     [Fact]
@@ -178,12 +178,12 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(0, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b100, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
@@ -191,7 +191,7 @@ public class ModRmParserTest {
         Assert.Null(context.DisplacementField);
         Assert.Equal(ModRmOffsetType.SIB, context.ModRmOffsetType);
         Assert.NotNull(context.SibContext);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
         SibContext sibContext = context.SibContext;
         // scale is x2 the amount in the SIB byte
         Assert.Equal(2, sibContext.Scale);
@@ -212,12 +212,12 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(0, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b100, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
@@ -225,7 +225,7 @@ public class ModRmParserTest {
         Assert.Null(context.DisplacementField);
         Assert.Equal(ModRmOffsetType.SIB, context.ModRmOffsetType);
         Assert.NotNull(context.SibContext);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
         SibContext sibContext = context.SibContext;
         // scale is x2 the amount in the SIB byte
         Assert.Equal(2, sibContext.Scale);
@@ -247,21 +247,21 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(1, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b100, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
-        Assert.Equal(DisplacementType.UINT8, context.DisplacementType);
+        Assert.Equal(DisplacementType.INT8, context.DisplacementType);
         Assert.Equal(0x11,
-            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<byte>?)context.DisplacementField!));
+            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<sbyte>?)context.DisplacementField!));
         Assert.Equal(ModRmOffsetType.SIB, context.ModRmOffsetType);
         Assert.NotNull(context.SibContext);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
         SibContext sibContext = context.SibContext;
         // scale is x2 the amount in the SIB byte
         Assert.Equal(2, sibContext.Scale);
@@ -282,21 +282,21 @@ public class ModRmParserTest {
         );
 
         // Act
-        ModRmContext context = parser.ParseNext(BitWidth.DWORD_32, null);
+        ModRmContext context = parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32));
 
         // Assert
         Assert.Equal(expectedBytesLength, _modRmHelper.BytesLength(context.FieldsInOrder));
         Assert.Equal(2, (int)context.Mode);
-        Assert.Equal((uint)RegisterIndex.AxIndex, context.RegisterIndex);
+        Assert.Equal((int)RegisterIndex.AxIndex, context.RegisterIndex);
         Assert.Equal(0b100, (int)context.RegisterMemoryIndex);
         Assert.Equal(MemoryOffsetType.OFFSET_PLUS_DISPLACEMENT, context.MemoryOffsetType);
         Assert.Equal(MemoryAddressType.SEGMENT_OFFSET, context.MemoryAddressType);
-        Assert.Equal(DisplacementType.UINT32, context.DisplacementType);
+        Assert.Equal(DisplacementType.INT32, context.DisplacementType);
         Assert.Equal(0x44332211,
-            (int)_modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<uint>?)context.DisplacementField!));
+            _modRmHelper.InstructionFieldValueRetriever.GetFieldValue((InstructionField<int>?)context.DisplacementField!));
         Assert.Equal(ModRmOffsetType.SIB, context.ModRmOffsetType);
         Assert.NotNull(context.SibContext);
-        Assert.Equal((uint)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
+        Assert.Equal((int)SegmentRegisterIndex.DsIndex, context.SegmentIndex);
         SibContext sibContext = context.SibContext;
         // scale is x2 the amount in the SIB byte
         Assert.Equal(2, sibContext.Scale);

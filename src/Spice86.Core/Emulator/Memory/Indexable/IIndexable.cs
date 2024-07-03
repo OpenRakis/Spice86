@@ -26,6 +26,13 @@ public interface IIndexable {
     UInt16Indexer UInt16 {
         get;
     }
+    
+    /// <summary>
+    ///     Allows indexed big endian word access to the memory.
+    /// </summary>
+    UInt16BigEndianIndexer UInt16BigEndian {
+        get;
+    }
 
     /// <summary>
     ///     Allows indexed double word access to the memory.

@@ -2,7 +2,6 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -27,35 +26,27 @@ public abstract class AluOperationParser : BaseInstructionParser {
     public AluOperationParser(BaseInstructionParser other) : base(other) {
     }
     
-    public CfgInstruction Parse(SegmentedAddress address,
-        InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes,
-        BitWidth addressWidthFromPrefixes,
-        uint? segmentOverrideFromPrefixes,
-        bool hasOperandSize32) {
-        byte opcode = opcodeField.Value;
+    public CfgInstruction Parse(ParsingContext context) {
+        ushort opcode = context.OpcodeField.Value;
         bool hasModRm = (opcode & ModRmMask) == 0;
-        BitWidth bitWidth = GetBitWidth(opcodeField, hasOperandSize32);
+        BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
 
         if (hasModRm) {
-            ModRmContext modRmContext = _modRmParser.ParseNext(addressWidthFromPrefixes, segmentOverrideFromPrefixes);
+            ModRmContext modRmContext = _modRmParser.ParseNext(context);
             bool rmReg = (opcode & RmRegDirectionMask) == 0;
             if (rmReg) {
-                return BuildRmReg(address, opcodeField, prefixes, bitWidth, modRmContext);
+                return ParseRmReg(context, bitWidth, modRmContext);
             }
-            return BuildRegRm(address, opcodeField, prefixes, bitWidth, modRmContext);
+            return ParseRegRm(context, bitWidth, modRmContext);
         }
-        return BuildAccImm(address, opcodeField, prefixes, bitWidth);
+        return ParseAccImm(context, bitWidth);
     }
 
-    protected abstract CfgInstruction BuildAccImm(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, BitWidth bitWidth);
+    protected abstract CfgInstruction ParseAccImm(ParsingContext context, BitWidth bitWidth);
 
-    protected abstract CfgInstruction BuildRegRm(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext);
+    protected abstract CfgInstruction ParseRegRm(ParsingContext context, BitWidth bitWidth, ModRmContext modRmContext);
 
-    protected abstract CfgInstruction BuildRmReg(SegmentedAddress address, InstructionField<byte> opcodeField,
-        List<InstructionPrefix> prefixes, BitWidth bitWidth, ModRmContext modRmContext);
+    protected abstract CfgInstruction ParseRmReg(ParsingContext context, BitWidth bitWidth, ModRmContext modRmContext);
 }
 
 [AluOperationParser("Add")]

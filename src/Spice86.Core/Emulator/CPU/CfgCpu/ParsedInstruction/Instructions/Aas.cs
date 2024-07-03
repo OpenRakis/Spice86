@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 public class Aas : CfgInstruction {
-    public Aas(SegmentedAddress address, InstructionField<byte> opcodeField) :
+    public Aas(SegmentedAddress address, InstructionField<ushort> opcodeField) :
         base(address, opcodeField) {
     }
 

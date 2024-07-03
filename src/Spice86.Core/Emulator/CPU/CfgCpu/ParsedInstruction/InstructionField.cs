@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
+using Spice86.Core.Emulator.Memory.Indexable;
+
 using System.Collections.Generic;
 using System.Collections.Immutable;
 

@@ -129,6 +129,10 @@ public class Stack {
         _memory.UInt32[_state.StackPhysicalAddress] = value;
     }
 
+    public void Discard(int numberOfBytesToPop) {
+        _state.SP = (ushort)(numberOfBytesToPop + _state.SP);
+    }
+
     /// <summary>
     /// Sets the flag on the interrupt stack, which is at SS:SP+4 <br/>
     /// The interrupt stack is a special stack used to store the state of the processor when an interrupt occurs.<br/>

@@ -1,0 +1,27 @@
+@moxy
+@attribute required string Operation
+@attribute required bool Has8
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
+    public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
+    }
+
+    public CfgInstruction Parse(ParsingContext context) {
+        ModRmContext modRmContext = _modRmParser.ParseNext(context);
+        BitWidth bitWidth = GetBitWidth({{ if !Has8 }}false{{ else }}context.OpcodeField{{ end }}, context.HasOperandSize32);
+        return bitWidth switch {
+            {{ if Has8 }}BitWidth.BYTE_8 => new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, modRmContext),{{ end }}
+            BitWidth.WORD_16 => new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
+        };
+    }
+}

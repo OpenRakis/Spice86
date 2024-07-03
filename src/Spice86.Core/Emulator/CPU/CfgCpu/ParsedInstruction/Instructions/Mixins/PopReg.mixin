@@ -1,5 +1,6 @@
 @moxy
 @attribute required int Size
+@attribute required bool IsSegment
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
@@ -7,15 +8,21 @@ namespace {{ moxy.Class.Namespace }};
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<byte> opcodeField, List<InstructionPrefix> prefixes,
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         int registerIndex) : base(address, opcodeField, prefixes, registerIndex) {
+        {{ if IsSegment }}
+        if(registerIndex == (int)SegmentRegisterIndex.CsIndex) {
+            throw new ArgumentException("Register CS is not allowed");
+        }
+        {{ end }}
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        helper.UInt{{Size}}Registers[RegisterIndex] = helper.Stack.Pop{{Size}}();
+        helper.{{ if IsSegment }}SegmentRegisters{{ else }}UInt{{Size}}Registers{{ end }}[RegisterIndex] = helper.Stack.Pop{{Size}}();
         helper.MoveIpAndSetNextNode(this);
     }
 }
