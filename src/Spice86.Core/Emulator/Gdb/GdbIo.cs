@@ -1,13 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.Linq;
+using Serilog.Events;
+
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-
-using Spice86.Shared.Interfaces;
-
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Handles the I/O operations for a GDB (GNU Debugger) connection.
@@ -27,9 +27,8 @@ public sealed class GdbIo : IDisposable {
     /// <param name="port">The port number to listen on.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public GdbIo(int port, ILoggerService loggerService) {
-        _loggerService = loggerService;
-        IPHostEntry host = Dns.GetHostEntry("localhost");
-        IPAddress ip = new IPAddress(host.AddressList.First().GetAddressBytes());
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
+        IPAddress ip = IPAddress.Any;
         _tcpListener = new TcpListener(ip, port);
     }
 
@@ -39,7 +38,7 @@ public sealed class GdbIo : IDisposable {
     public void WaitForConnection() {
         _tcpListener.Start();
         _socket = _tcpListener.AcceptSocket();
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
             _loggerService.Information("GDB Server listening on port {Port}", port);
             _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
@@ -121,7 +120,7 @@ public sealed class GdbIo : IDisposable {
             chr = _stream.ReadByte();
         }
         string payload = GetPayload(resBuilder);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Received command from GDB {GdbPayload}", payload);
         }
         return payload;
@@ -133,14 +132,14 @@ public sealed class GdbIo : IDisposable {
     /// <param name="data">The response data to send.</param>
     public void SendResponse(string? data) {
         if (!IsClientConnected) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Cannot send response, client is not connected anymore");
             }
             // Happens when the emulator thread reaches a breakpoint but the client is gone
             return;
         }
         if (data != null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Sending response {ResponseData}", data);
             }
             _stream?.Write(Encoding.UTF8.GetBytes(data));

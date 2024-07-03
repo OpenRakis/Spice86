@@ -117,7 +117,7 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     /// </summary>
     /// <returns>A string representation of the SegmentedAddress object.</returns>
     public override string ToString() {
-        return $"{ToSegmentOffsetRepresentation()}/{ConvertUtils.ToHex(ToPhysical())}";
+        return $"{Segment:X4}:{Offset:X4}";
     }
 
     /// <summary>

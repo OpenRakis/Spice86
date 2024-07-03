@@ -4,6 +4,7 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Exceptions;
+
 using Spice86.Shared.Interfaces;
 
 /// <inheritdoc cref="ILoggerService"/>
@@ -14,7 +15,7 @@ public class LoggerService : ILoggerService {
     private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
 
     /// <inheritdoc/>
-    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Warning);
+    public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Information);
 
     /// <inheritdoc/>
     public bool AreLogsSilenced { get; set; }
