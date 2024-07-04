@@ -82,12 +82,28 @@ public abstract class CfgInstruction : CfgNode {
     /// </summary>
     public Discriminator Discriminator {
         get {
-            ImmutableList<byte?> discriminatorBytes = FieldsInOrder
-                    .Select(field => field.DiscriminatorValue)
-                    .SelectMany(i => i)
-                    .ToImmutableList();
+            ImmutableList<byte?> discriminatorBytes = ComputeDiscriminatorBytes(FieldsInOrder);
             return new Discriminator(discriminatorBytes);
         }
     }
-    // Equals and HashCode to use the discriminator and super methods
+
+    /// <summary>
+    /// Same as Discriminator but only aggregates final fields, ignoring those that can change.
+    /// </summary>
+    public Discriminator DiscriminatorFinal {
+        get {
+            ImmutableList<byte?> discriminatorBytes = ComputeDiscriminatorBytes(FieldsInOrder
+                .Where(field => field.Final));
+            return new Discriminator(discriminatorBytes);
+        }
+    }
+
+    private ImmutableList<byte?> ComputeDiscriminatorBytes(IEnumerable<FieldWithValue> bytes) {
+        return bytes
+            .Select(field => field.DiscriminatorValue)
+            .SelectMany(i => i)
+            .ToImmutableList();
+    }
+
+// Equals and HashCode to use the discriminator and super methods
 }

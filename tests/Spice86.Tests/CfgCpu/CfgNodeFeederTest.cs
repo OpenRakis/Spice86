@@ -155,11 +155,10 @@ public class CfgNodeFeederTest {
         // We are still after movAx0 but it changed to MOV AX 1234.
         WriteMovAx(EndOfMov0Address, NewValue);
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
-        ICfgNode shouldBeMovAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        // Instructions instances should be the same, no new instruction should have been created
-        Assert.Equal(movAx1, shouldBeMovAx1);
+        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullDiscriminator);
     }
 
     [Fact]
@@ -207,8 +206,10 @@ public class CfgNodeFeederTest {
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
 
         // Act
-        ICfgNode shouldBeMovAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
-        Assert.Equal(movAx1, shouldBeMovAx1);
+        ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+
+        // Assert
+        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullDiscriminator);
     }
 
     [AssertionMethod]
@@ -267,5 +268,17 @@ public class CfgNodeFeederTest {
         Assert.Equal(typeof(MovRegImm16), node.GetType());
         Assert.Equal(expectedRegIndex, ((MovRegImm16)node).RegisterIndex);
         return (MovRegImm16)node;
+    }
+
+    [AssertionMethod]
+    private void AssertMovAxIsSameButValueFieldRefersMemory(ICfgNode movAx1, ICfgNode movAx1WithNullDiscriminator) {
+        // Instructions instances are not necessarily the same. However, their types and addresses should be the same.
+        // The value of the new instruction should be read from memory.
+        Assert.Equal(movAx1.Address, movAx1WithNullDiscriminator.Address);
+        MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1WithNullDiscriminator);
+        // Since value has been overwritten use value should be false. Value need to be read from ram
+        Assert.False(movAx1RegImm16.ValueField.UseValue);
+        Assert.Null(movAx1RegImm16.ValueField.DiscriminatorValue[0]);
+        Assert.Null(movAx1RegImm16.ValueField.DiscriminatorValue[1]);
     }
 }

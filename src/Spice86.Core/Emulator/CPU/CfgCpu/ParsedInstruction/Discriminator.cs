@@ -17,7 +17,19 @@ public class Discriminator : IComparable<Discriminator> {
     /// <summary>
     /// Value of the discriminator
     /// </summary>
-    public ImmutableList<byte?> DiscriminatorValue { get; }
+    public ImmutableList<byte?> DiscriminatorValue { get; private set; }
+
+    public void NullifyDiscriminator() {
+        DiscriminatorValue = GenerateNullBytes(DiscriminatorValue.Count);
+    }
+    
+    private static ImmutableList<byte?> GenerateNullBytes(int size) {
+        List<byte?> res = new List<byte?>();
+        for (int i = 0; i < size; i++) {
+            res.Add(null);
+        }
+        return ImmutableList.CreateRange(res);
+    }
 
     /// <inheritdoc/>
     public int CompareTo(Discriminator? other) {

@@ -15,7 +15,7 @@ public class ModRmComputer {
         _state = state;
         _instructionFieldValueRetriever = instructionFieldValueRetriever;
         // Dummy value
-        ModRmContext = new ModRmContext(new InstructionField<byte>(0,0,0,0,ImmutableList.CreateRange(new []{(byte?)0})), 0, 0, 0, BitWidth.WORD_16, MemoryOffsetType.NONE, MemoryAddressType.NONE, null, null, null, null, null, null);
+        ModRmContext = new ModRmContext(new InstructionField<byte>(0,0,0,0,ImmutableList.CreateRange(new []{(byte?)0}), true), 0, 0, 0, BitWidth.WORD_16, MemoryOffsetType.NONE, MemoryAddressType.NONE, null, null, null, null, null, null);
     }
 
     public ModRmContext ModRmContext { get; set; }

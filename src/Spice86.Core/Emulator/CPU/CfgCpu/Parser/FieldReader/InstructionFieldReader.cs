@@ -37,9 +37,9 @@ public abstract class InstructionFieldReader<T> {
     /// <returns></returns>
     public virtual InstructionField<T> PeekField(bool finalValue) {
         T value = PeekValue();
-        ImmutableList<byte?> bytes = PeekDataOrNullList(FieldSize(), finalValue);
+        ImmutableList<byte?> bytes = PeekData(FieldSize());
         return new InstructionField<T>(AddressSource.IndexInInstruction, FieldSize(),
-            CurrentAddress.ToPhysical(), value, bytes);
+            CurrentAddress.ToPhysical(), value, bytes, finalValue);
     }
 
     /// <summary>
@@ -51,21 +51,6 @@ public abstract class InstructionFieldReader<T> {
         InstructionField<T> res = PeekField(finalValue);
         Advance();
         return res;
-    }
-
-    private ImmutableList<byte?> PeekDataOrNullList(int size, bool data) {
-        if (data) {
-            return PeekData(size);
-        }
-        return GenerateNullBytes(size);
-    }
-    
-    private static ImmutableList<byte?> GenerateNullBytes(int size) {
-        List<byte?> res = new List<byte?>();
-        for (int i = 0; i < size; i++) {
-            res.Add(null);
-        }
-        return ImmutableList.CreateRange(res);
     }
 
     private ImmutableList<byte?> PeekData(int size) {

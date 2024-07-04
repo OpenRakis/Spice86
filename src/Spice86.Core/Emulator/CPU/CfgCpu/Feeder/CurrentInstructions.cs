@@ -48,6 +48,8 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
 
 
     public void SetAsCurrent(CfgInstruction instruction) {
+        // Clear it because in some cases it can be added twice (discriminator reducer)
+        ClearCurrentInstruction(instruction);
         // Set breakpoints so that we are notified if instruction changes in memory
         CreateBreakpointsForInstruction(instruction);
         // Add instruction in current cache
@@ -71,7 +73,7 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
     }
 
     private void OnBreakPointReached(AddressBreakPoint addressBreakPoint, CfgInstruction instruction) {
-        // Check that value is effectively beeing modified
+        // Check that value is effectively being modified
         byte current = _memory.UInt8[addressBreakPoint.Address];
         byte newValue = _memory.CurrentlyWritingByte;
         if (current == newValue) {
@@ -87,10 +89,12 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
 
     private void ClearCurrentInstruction(CfgInstruction instruction) {
         SegmentedAddress instructionAddress = instruction.Address;
-        IList<AddressBreakPoint> breakpoints = _breakpointsForInstruction[instructionAddress];
-        _breakpointsForInstruction.Remove(instructionAddress);
-        foreach (AddressBreakPoint breakPoint in breakpoints) {
-            _machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        if (_breakpointsForInstruction.ContainsKey(instructionAddress)) {
+            IList<AddressBreakPoint> breakpoints = _breakpointsForInstruction[instructionAddress];
+            _breakpointsForInstruction.Remove(instructionAddress);
+            foreach (AddressBreakPoint breakPoint in breakpoints) {
+                _machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+            }
         }
 
         _currentInstructionAtAddress.Remove(instruction.Address);

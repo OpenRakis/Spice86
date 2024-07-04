@@ -17,7 +17,7 @@ public class InstructionField<T> : FieldWithValue {
     public int IndexInInstruction { get; }
 
     public InstructionField(int indexInInstruction, int length, uint physicalAddress, T value,
-        ImmutableList<byte?> discriminatorValue) : base(discriminatorValue) {
+        ImmutableList<byte?> discriminatorValue, bool final) : base(discriminatorValue, final) {
         IndexInInstruction = indexInInstruction;
         Length = length;
         PhysicalAddress = physicalAddress;
