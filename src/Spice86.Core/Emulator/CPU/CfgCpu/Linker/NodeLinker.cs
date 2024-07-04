@@ -30,7 +30,7 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
         }
 
         if (!ReferenceEquals(shouldBeNext, next)) {
-            throw new UnhandledCfgDiscrepancyException("Current node has already a successor at next node address but it is not the next node. This should never happen.");
+            throw new UnhandledCfgDiscrepancyException($"Current node has already a successor at next node address but it is not the next node. This should never happen. Tried to attach {next}, found {shouldBeNext} in successors at this address.");
         }
     }
 

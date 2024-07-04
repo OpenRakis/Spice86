@@ -3,8 +3,8 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using System.Collections.Immutable;
 
 public abstract class FieldWithValue : Discriminator {
-    public FieldWithValue(ImmutableList<byte?> discriminatorValue) : base(discriminatorValue)
-    {
+    public FieldWithValue(ImmutableList<byte?> discriminatorValue, bool final) : base(discriminatorValue) {
+        Final = final;
     }
 
     /// <summary>
@@ -24,4 +24,9 @@ public abstract class FieldWithValue : Discriminator {
     /// Length of this field
     /// </summary>
     public int Length { get; init;  }
+    
+    /// <summary>
+    /// True means if the value of this field changes, enclosing instruction is not the same instruction anymore
+    /// </summary>
+    public bool Final { get; }
 }
