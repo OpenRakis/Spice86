@@ -37,7 +37,7 @@ public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
         // First try to see if it has been encountered before at this address instead of re-parsing.
         // Reason is we don't want several versions of the same instructions hanging around in the graph,
         // this would be bad for successors / predecessors management and self modifying code detection.
-        CfgInstruction? previousMatching = _previousInstructions.GetAtAddress(address);
+        CfgInstruction? previousMatching = _previousInstructions.GetAtAddressIfMatchesMemory(address);
         if (previousMatching != null) {
             _currentInstructions.SetAsCurrent(previousMatching);
             return previousMatching;

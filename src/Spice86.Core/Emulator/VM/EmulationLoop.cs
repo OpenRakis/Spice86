@@ -44,18 +44,16 @@ public class EmulationLoop {
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
-    /// <param name="listensToBreakpoints">Whether we react to breakpoints in the emulation loop.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
-    public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, bool listensToBreakpoints, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, MachineBreakpoints machineBreakpoints,
         DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
         _cfgCpu = cfgCpu;
         _cpuState = cpuState;
         _timer = timer;
-        _listensToBreakpoints = listensToBreakpoints;
         _machineBreakpoints = machineBreakpoints;
         _dmaController = dmaController;
         _gdbCommandHandler = gdbCommandHandler;
@@ -104,9 +102,7 @@ public class EmulationLoop {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
             PauseIfAskedTo();
-            if (_listensToBreakpoints) {
-                _machineBreakpoints.CheckBreakPoint();
-            }
+            _machineBreakpoints.CheckBreakPoint();
             _cpu.ExecuteNextInstruction();
             //_cfgCpu.ExecuteNext();
             _timer.Tick();
