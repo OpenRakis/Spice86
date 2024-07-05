@@ -29,6 +29,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private bool _isCtrlCFlag;
+    private int _resultErrorCode;
 
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
@@ -103,6 +104,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
         AddAction(0x4A, () => ModifyMemoryBlock(true));
+        AddAction(0x4B, () => LoadAndOrExecuteProgram(true));
         AddAction(0x4C, QuitWithExitCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
@@ -693,6 +695,19 @@ public class DosInt21Handler : InterruptHandler {
             State.AX = 0x08;
             State.BX = 0;
         }
+    }
+
+    /// <summary>
+    /// Loads and/or executes a DOS (COM or EXE) program.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
+    public void LoadAndOrExecuteProgram(bool calledFromVm) {
+        _resultErrorCode = 0;
+        string dosPath = GetZeroTerminatedStringAtDsDx();
+        ushort execFlags = State.AL;
+        uint envBlock = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        //TODO: Complete this implementation
+        SetCarryFlag(true, calledFromVm);
     }
 
     /// <summary>
