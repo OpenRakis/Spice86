@@ -179,9 +179,10 @@ public class DosFileManager {
         EnumerationOptions enumerationOptions = GetEnumerationOptions(searchAttributes);
 
         try {
+            string? searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
             string[] matchingPaths = Directory.GetFileSystemEntries(
                 searchFolder,
-                GetFileSpecWithoutSubFolderInIt(fileSpec) ?? fileSpec,
+                searchPattern,
                 enumerationOptions);
 
             if (matchingPaths.Length == 0) {
@@ -195,7 +196,7 @@ public class DosFileManager {
             _activeFileSearches.Add(dta.SearchId, (matchingPaths[0], fileSpec));
             return DosFileOperationResult.NoValue();
 
-        } catch (IOException e) {
+        } catch (Exception e) when (e is UnauthorizedAccessException or IOException or PathTooLongException or DirectoryNotFoundException or ArgumentException) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "Error while walking path {SearchFolder} or getting attributes", searchFolder);
             }
@@ -226,8 +227,11 @@ public class DosFileManager {
     }
 
 
-    private static string? GetFileSpecWithoutSubFolderInIt(string fileSpec) {
+    private static string? GetFileSpecWithoutSubFolderOrDriveInIt(string fileSpec) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
+        if(index == -1){
+            index = fileSpec.LastIndexOfAny([DosPathResolver.VolumeSeparatorChar]);
+        }
         if (index != -1){
             int indexIncludingDirChar = index + 1;
             return fileSpec[indexIncludingDirChar..];
@@ -297,7 +301,7 @@ public class DosFileManager {
             return FileOperationErrorWithLog("Search in an invalid folder", ErrorCode.NoMoreMatchingFiles);
         }
 
-        string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder, GetFileSpecWithoutSubFolderInIt(search.FileSpec) ?? search.FileSpec, GetEnumerationOptions(dta.SearchAttributes));
+        string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder, GetFileSpecWithoutSubFolderOrDriveInIt(search.FileSpec) ?? search.FileSpec, GetEnumerationOptions(dta.SearchAttributes));
 
         if (matchingFiles.Length == 0 || dta.EntryCountWithinSearchResults >= matchingFiles.Length ||
             (!File.Exists(search.FileSystemEntry) && !Directory.Exists(search.FileSystemEntry))) {
