@@ -3,7 +3,6 @@
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using Serilog.Exceptions;
 
 using Spice86.Shared.Interfaces;
 
@@ -55,7 +54,6 @@ public class LoggerService : ILoggerService {
     public LoggerConfiguration CreateLoggerConfiguration() {
         return new LoggerConfiguration()
             .Enrich.FromLogContext()
-            .Enrich.WithExceptionDetails()
             .WriteTo.Console(outputTemplate: LogFormat)
             .WriteTo.Debug(outputTemplate: LogFormat);
     }
