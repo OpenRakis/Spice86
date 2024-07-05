@@ -1,11 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile;
 
-using System.IO;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.IO;
 
 /// <summary>
 /// Base class for loading executable files in the VM like exe, bios, ...

@@ -81,7 +81,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// DOS Services.
     /// </summary>
-    public Dos Dos { get; }
+    public DosKernel Dos { get; }
 
     /// <summary>
     /// The Gravis Ultrasound sound card.
@@ -293,7 +293,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, loggerService, TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, gui, VgaFunctions, loggerService);
-        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration.CDrive, configuration.Exe, loggerService);
+        Dos = new DosKernel(loggerService, Memory, Cpu, cpuState, KeyboardInt16Handler, VgaFunctions, configuration.CDrive, configuration.Exe);
 
         if (configuration.InitializeDOS is not false) {
             // Register the interrupt handlers

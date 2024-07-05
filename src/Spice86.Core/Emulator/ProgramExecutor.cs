@@ -11,8 +11,11 @@ using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
+using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -20,6 +23,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
+using Spice86.Core.Emulator.Memory;
 
 /// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
@@ -115,19 +119,18 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
+    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration, IMemory memory, EnvironmentVariables environmentVariables, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
         ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
+        PspGenerator pspGenerator = new PspGenerator(memory, environmentVariables, dosMemoryManager, dosFileManager);
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(Machine.Memory,
                 Machine.Cpu.State,
                 _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
+                pspGenerator,
                 entryPointSegment);
         }
 
@@ -135,9 +138,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             return new ComLoader(Machine.Memory,
                 Machine.Cpu.State,
                 _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
+                pspGenerator,
                 entryPointSegment);
         }
 
@@ -151,7 +152,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         State cpuState = new();
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
         Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
-        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
+        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration, Machine.Memory, Machine.Dos.EnvironmentVariables, Machine.Dos.MemoryManager, Machine.Dos.FileManager);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {

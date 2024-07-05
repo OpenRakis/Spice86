@@ -49,12 +49,12 @@ public class DosFileManager {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    public DosFileManager(IMemory memory, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+    public DosFileManager(ILoggerService loggerService, IMemory memory, IList<IVirtualDevice> dosVirtualDevices, string? cDriveFolderPath = null, string? executablePath = null) {
         _loggerService = loggerService;
         _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;

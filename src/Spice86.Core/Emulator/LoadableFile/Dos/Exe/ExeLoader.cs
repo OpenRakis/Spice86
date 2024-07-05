@@ -5,8 +5,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
-using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -18,27 +16,21 @@ using Spice86.Shared.Utils;
 public class ExeLoader : DosFileLoader {
     private readonly ILoggerService _loggerService;
     private readonly ushort _startSegment;
-    private readonly EnvironmentVariables _environmentVariables;
-    private readonly DosFileManager _dosFileManager;
-    private readonly DosMemoryManager _dosMemoryManager;
+    private readonly PspGenerator _pspGenerator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ExeLoader"/> class with the specified machine, logger service, and starting segment.
+    /// Initializes a new instance of the <see cref="ExeLoader"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="state">The CPU's state registers.</param>
-    /// <param name="environmentVariables">The master environment block, from the DOS kernel.</param>
-    /// <param name="dosFileManager">The DOS file manager.</param>
-    /// <param name="dosMemoryManager">The DOS memory manager.</param>
+    /// <param name="pspGenerator">The DOS program segment prefix generator.</param>
     /// <param name="startSegment">The starting segment for the executable.</param>
-    public ExeLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
+    public ExeLoader(IMemory memory, State state, ILoggerService loggerService, PspGenerator pspGenerator, ushort startSegment) : base(memory, state, loggerService) {
         _loggerService = loggerService;
         _startSegment = startSegment;
         _state = state;
-        _environmentVariables = environmentVariables;
-        _dosFileManager = dosFileManager;
-        _dosMemoryManager = dosMemoryManager;
+        _pspGenerator = pspGenerator;
     }
 
     /// <summary>
@@ -66,7 +58,7 @@ public class ExeLoader : DosFileLoader {
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
-        new PspGenerator(_memory, _environmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
+        _pspGenerator.GeneratePsp(pspSegment, arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Initial CPU State: {CpuState}", _state);
         }

@@ -100,7 +100,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExpandedMemoryManager(IMemory memory, Cpu cpu, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public ExpandedMemoryManager(IMemory memory, Cpu cpu, DosKernel dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
         dos.AddDevice(device, DosDeviceSegment, 0x0000);
         FillDispatchTable();

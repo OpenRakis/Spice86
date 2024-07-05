@@ -33,7 +33,7 @@ public class DosInt21Handler : InterruptHandler {
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
     private readonly List<IVirtualDevice> _devices;
-    private readonly Dos _dos;
+    private readonly DosKernel _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
 
@@ -46,7 +46,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, DosKernel dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;

@@ -4,7 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -14,18 +13,15 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.Memory.Indexable;
 
-using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public class Dos {
+public class DosKernel {
     private const int DeviceDriverHeaderLength = 18;
     private readonly IMemory _memory;
     private readonly Cpu _cpu;
@@ -97,22 +93,23 @@ public class Dos {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
-    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService) {
+    public DosKernel(ILoggerService loggerService, IMemory memory, Cpu cpu, State state, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, string? cDriveFolderPath = null, string? executablePath = null) {
         _loggerService = loggerService;
         _memory = memory;
         _cpu = cpu;
-        _state = cpu.State;
+        _state = state;
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
+        FileManager = new DosFileManager(_loggerService, _memory, this.Devices, cDriveFolderPath, executablePath);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, _cpu, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, _cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
