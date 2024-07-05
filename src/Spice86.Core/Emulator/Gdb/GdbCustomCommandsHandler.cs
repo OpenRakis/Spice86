@@ -155,7 +155,6 @@ public class GdbCustomCommandsHandler {
             _recordedDataWriter.DumpAll(executionFlowRecorder, functionHandler);
             return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
         } catch (IOException e) {
-            e.Demystify();
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
     }

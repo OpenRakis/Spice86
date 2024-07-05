@@ -59,7 +59,6 @@ public class GdbCommandRegisterHandler {
             }
             return _gdbIo.GenerateResponse(_gdbFormatter.FormatValueAsHex32(GetRegisterValue((int)index)));
         } catch (FormatException nfe) {
-            nfe.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Register read requested but could not understand the request {CommandContent}", commandContent);
             }
@@ -82,7 +81,6 @@ public class GdbCommandRegisterHandler {
 
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            nfe.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Register write requested but could not understand the request {CommandContent}", commandContent);
             }

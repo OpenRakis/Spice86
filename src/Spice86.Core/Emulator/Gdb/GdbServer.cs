@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-using System.Diagnostics;
 
 /// <summary>
 /// A GDB server that allows for remote debugging of the emulator.
@@ -140,7 +139,6 @@ public sealed class GdbServer : IDisposable {
                     AcceptOneConnection(gdbIo);
                     _gdbIo = null;
                 } catch (IOException e) {
-                    e.Demystify();
                     if (_isRunning) {
                         _loggerService.Error(e, "Error in the GDB server, restarting it...");
                     } else {
@@ -149,7 +147,6 @@ public sealed class GdbServer : IDisposable {
                 }
             }
         } catch (Exception e) {
-            e.Demystify();
             _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
             _state.IsRunning = false;

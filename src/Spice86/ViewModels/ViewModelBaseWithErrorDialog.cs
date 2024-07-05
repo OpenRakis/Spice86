@@ -6,8 +6,6 @@ using CommunityToolkit.Mvvm.Input;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
-using System.Diagnostics;
-
 public partial class ViewModelBaseWithErrorDialog : ViewModelBase {
     protected readonly ITextClipboard _textClipboard;
     
@@ -29,7 +27,6 @@ public partial class ViewModelBaseWithErrorDialog : ViewModelBase {
     [RelayCommand]
     public async Task CopyExceptionToClipboard() {
         if(Exception is not null) {
-            Exception.Demystify();
             await _textClipboard.SetTextAsync(
                 Newtonsoft.Json.JsonConvert.SerializeObject(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));

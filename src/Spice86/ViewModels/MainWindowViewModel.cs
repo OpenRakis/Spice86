@@ -1,40 +1,35 @@
 ﻿namespace Spice86.ViewModels;
 
-using System.Threading;
-using System.Diagnostics;
-
 using Avalonia;
-
-using Serilog.Events;
-
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Serilog.Events;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Infrastructure;
+using Spice86.Interfaces;
+using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
+using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
+
+using System.Threading;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
-
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.InternalDebugger;
-
-using Spice86.Interfaces;
-using Spice86.Shared.Diagnostics;
-using Spice86.Infrastructure;
-using Spice86.Shared.Emulator.Video;
-
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
@@ -497,7 +492,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             try {
                 StartProgramExecutor();
             } catch (Exception e) {
-                e.Demystify();
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error(e, "An error occurred during execution");
                 }

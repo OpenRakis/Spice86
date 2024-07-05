@@ -61,7 +61,6 @@ public class GdbCommandMemoryHandler {
 
             return _gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
-            nfe.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Memory read requested but could not understand the request {CommandContent}", commandContent);
             }
@@ -119,7 +118,6 @@ public class GdbCommandMemoryHandler {
             _memory.LoadData(address, data);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            nfe.Demystify();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Memory write requested but could not understand the request {CommandContent}", commandContent);
             }
