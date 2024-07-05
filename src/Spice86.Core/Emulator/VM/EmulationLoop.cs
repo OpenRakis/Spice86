@@ -72,10 +72,8 @@ public class EmulationLoop {
             // Actually a signal generated code requested Exit
             return;
         } catch (InvalidVMOperationException e) {
-            e.Demystify();
             throw;
         } catch (Exception e) {
-            e.Demystify();
             throw new InvalidVMOperationException(_cpuState, e);
         }
         _machineBreakpoints.OnMachineStop();

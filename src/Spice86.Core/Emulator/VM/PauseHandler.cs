@@ -1,10 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
-using System.Diagnostics;
-using System.Threading;
-
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
+
+using System.Threading;
 
 /// <summary>
 /// Provides functionality to handle pausing of the emulator.
@@ -77,7 +76,6 @@ public sealed class PauseHandler : IDisposable {
                 _manualResetEvent.WaitOne(Timeout.Infinite);
             }
         } catch (AbandonedMutexException exception) {
-            exception.Demystify();
             Thread.CurrentThread.Interrupt();
             throw new UnrecoverableException($"Fatal error while waiting paused in {nameof(Await)}", exception);
         }

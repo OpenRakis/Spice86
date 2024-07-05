@@ -51,7 +51,6 @@ public class ExecutionFlowDumper {
         try {
             return JsonSerializer.Deserialize<ExecutionFlowRecorder>(File.ReadAllText(filePath)) ?? new();
         } catch (JsonException e) {
-            e.Demystify();
             throw new UnrecoverableException($"File {filePath} is not valid", e);
         }
     }

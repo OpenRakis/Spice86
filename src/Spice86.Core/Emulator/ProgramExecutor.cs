@@ -19,7 +19,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics;
 using System.Security.Cryptography;
 
 /// <inheritdoc cref="IProgramExecutor"/>
@@ -228,7 +227,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
-            e.Demystify();
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
     }

@@ -11,7 +11,6 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
@@ -85,7 +84,6 @@ public class DosFileManager {
                 file.RandomAccessFile.Close();
             }
         } catch (IOException e) {
-            e.Demystify();
             throw new UnrecoverableException("IOException while closing file", e);
         }
 
@@ -114,7 +112,6 @@ public class DosFileManager {
             testFileStream = File.Create(prefixedPath);
             File.SetAttributes(prefixedPath, (FileAttributes)fileAttribute);
         } catch (IOException e) {
-            e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating a file using a handle with {FileName} and {FileAttribute}", fileName, fileAttribute);
             }
@@ -199,7 +196,6 @@ public class DosFileManager {
             return DosFileOperationResult.NoValue();
 
         } catch (IOException e) {
-            e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "Error while walking path {SearchFolder} or getting attributes", searchFolder);
             }
@@ -324,7 +320,6 @@ public class DosFileManager {
             UpdateDosTransferAreaWithFileMatch(dta, filename, searchAttributes);
         }
         catch (IOException e) {
-            e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Warning)){
                 _loggerService.Warning(e, "Error while getting attributes");
             }
@@ -370,7 +365,6 @@ public class DosFileManager {
             uint newOffset = Seek(randomAccessFile, originOfMove, offset);
             return DosFileOperationResult.Value32(newOffset);
         } catch (IOException e) {
-            e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred while seeking file {Error}", e);
             }
@@ -453,7 +447,6 @@ public class DosFileManager {
         try {
             actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
         } catch (IOException e) {
-            e.Demystify();
             throw new UnrecoverableException("IOException while reading file", e);
         }
 
@@ -514,7 +507,6 @@ public class DosFileManager {
             Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
             file.RandomAccessFile.Write(data);
         } catch (IOException e) {
-            e.Demystify();
             throw new UnrecoverableException("IOException while writing file", e);
         }
 

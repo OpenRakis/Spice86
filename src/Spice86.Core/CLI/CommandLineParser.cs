@@ -2,12 +2,7 @@
 
 using CommandLine;
 
-using Serilog;
-using Serilog.Events;
-
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
 
@@ -66,22 +61,16 @@ public static class CommandLineParser {
 
             return (IOverrideSupplier?)Activator.CreateInstance(supplierClass);
         } catch (MethodAccessException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not load provided class {supplierClassName}", exception);
         } catch (TargetInvocationException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         } catch (NotSupportedException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         } catch (ArgumentException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         } catch (MemberAccessException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         } catch (TypeLoadException exception) {
-            exception.Demystify();
             throw new UnrecoverableException($"Could not instantiate provided class {supplierClassName}", exception);
         }
     }

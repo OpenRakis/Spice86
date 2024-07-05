@@ -1,14 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.Diagnostics;
+using Serilog.Events;
 
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-
-using Serilog.Events;
 
 /// <summary>
 /// Handles GDB commands related to breakpoints and stepping through instructions.
@@ -84,7 +82,6 @@ public class GdbCommandBreakpointHandler {
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
         } catch (IOException e) {
-            e.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "IOException while sending breakpoint info");
             }
@@ -123,7 +120,6 @@ public class GdbCommandBreakpointHandler {
             }
             return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false);
         } catch (FormatException nfe) {
-            nfe.Demystify();
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Cannot parse breakpoint {Command}", command);
             }
