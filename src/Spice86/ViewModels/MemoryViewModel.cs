@@ -127,16 +127,20 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
     public void ShowStructureView() {
-        if (_memory == null) {
+        if (MemoryBinaryDocument == null) {
             return;
         }
-        StructureViewModel structureViewModel = _structureViewModelFactory.CreateNew(_memory);
 
-        if (SelectionRange is {} bitRange && MemoryBinaryDocument != null) {
-            byte[] data = new byte[bitRange.ByteLength];
-            MemoryBinaryDocument?.ReadBytes(bitRange.Start.ByteIndex, data);
-            structureViewModel.StructureMemory = new ByteArrayBinaryDocument(data);
+        // Use either the selected range or the entire document if no range is selected.
+        IBinaryDocument data;
+        if (SelectionRange is {ByteLength: > 1} bitRange) {
+            byte[] bytes = new byte[bitRange.ByteLength];
+            MemoryBinaryDocument.ReadBytes(bitRange.Start.ByteIndex, bytes);
+            data = new ByteArrayBinaryDocument(bytes);
+        } else {
+            data = MemoryBinaryDocument;
         }
+        StructureViewModel structureViewModel = _structureViewModelFactory.CreateNew(data);
         var structureWindow = new StructureView {DataContext = structureViewModel};
         structureWindow.Show();
     }

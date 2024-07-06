@@ -3,8 +3,10 @@ namespace Spice86.ViewModels;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 
+using AvaloniaHex.Document;
+
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Interfaces;
 
 using Structurizer;
 using Structurizer.Types;
@@ -29,12 +31,12 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
 
     public bool IsInitialized => _structureInformation != null && _hydrator != null;
 
-    public StructureViewModel CreateNew(IMemory memory) {
+    public StructureViewModel CreateNew(IBinaryDocument data) {
         if (_structureInformation == null || _hydrator == null) {
             throw new InvalidOperationException("Factory not initialized.");
         }
 
-        return new StructureViewModel(_structureInformation, _hydrator, memory);
+        return new StructureViewModel(_structureInformation, _hydrator, data);
     }
 
     public void Parse(string headerFilePath) {

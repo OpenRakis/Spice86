@@ -1,17 +1,25 @@
+namespace Spice86.Views;
+
+using Avalonia;
 using Avalonia.Controls;
 
-namespace Spice86.Views;
+using Spice86.Models;
+using Spice86.ViewModels;
 
 public partial class StructureView : Window {
     public StructureView() {
         InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
     }
 
-    private void AutoCompleteBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) {
-        if (DataContext is not ViewModels.StructureViewModel structureViewModel || e.AddedItems.Count != 1) {
-            return;
+    private void OnDataContextChanged(object? sender, EventArgs e) {
+        if (DataContext is StructureViewModel viewModel) {
+            viewModel.RequestScrollToAddress += ViewModel_RequestScrollToAddress;
         }
-        var selectedItem = e.AddedItems[0]?.ToString();
-        structureViewModel.SelectStructure(selectedItem);
+    }
+
+    private void ViewModel_RequestScrollToAddress(object? sender, AddressChangedMessage e) {
+        var scrollOffset = new Vector(0.0, (double)e.Address / StructureHexEditor.HexView.ActualBytesPerLine);
+        StructureHexEditor.Caret.HexView.ScrollOffset = scrollOffset;
     }
 }
