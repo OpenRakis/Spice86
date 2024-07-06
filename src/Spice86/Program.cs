@@ -1,19 +1,18 @@
 ﻿namespace Spice86;
 
 using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
-using Avalonia.Threading;
-
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
-using Spice86.Shared.Interfaces;
+using Avalonia.Controls.ApplicationLifetimes;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.DependencyInjection;
 using Spice86.Infrastructure;
-using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 using Spice86.Views;
 
@@ -43,48 +42,44 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        Configuration configuration = CommandLineParser.ParseCommandLine(args);
-
+        ServiceCollection serviceCollection = InjectCommonServices(args);
+        //We need to build the service provider before retrieving the configuration service
+        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+        Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
         if (configuration.HeadlessMode) {
-            ProgramExecutor programExecutor = new(configuration, new LoggerService(new LoggerPropertyBag()), null);
+            ProgramExecutor programExecutor = new(configuration, serviceProvider.GetRequiredService<ILoggerService>(), null);
             programExecutor.Run();
-        }
-        else {
-            StartGraphicalUserInterface(args, configuration);
+        } else {
+            ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();
+            MainWindow mainWindow = new();
+            serviceCollection.AddGuiInfrastructure(mainWindow);
+            //We need to rebuild the service provider after adding new services to the collection
+            using MainWindowViewModel mainWindowViewModel = serviceCollection.BuildServiceProvider().GetRequiredService<MainWindowViewModel>();
+            StartGraphicalUserInterface(desktop, mainWindowViewModel, mainWindow, args);
         }
     }
 
-    private static void StartGraphicalUserInterface(string[] args, Configuration configuration) {
-        ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp(args);
-
-        MainWindow mainWindow = new();
-        ServiceProvider serviceProvider = InjectServices(configuration, mainWindow);
-
-        using MainWindowViewModel mainWindowViewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
-        
+    private static void StartGraphicalUserInterface(ClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel mainWindowViewModel, MainWindow mainWindow, string[] args) {
         mainWindow.DataContext = mainWindowViewModel;
         desktop.MainWindow = mainWindow;
         desktop.Start(args);
     }
-    
-    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp(string[] args) {
+
+    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp() {
         AppBuilder appBuilder = BuildAvaloniaApp();
-        ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder, args);
+        ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder);
         return desktop;
     }
 
-    private static ServiceProvider InjectServices(Configuration configuration, MainWindow mainWindow) {
+    private static ServiceCollection InjectCommonServices(string[] args) {
         var serviceCollection = new ServiceCollection();
+
+        serviceCollection.AddConfiguration(args);
         serviceCollection.AddLogging();
-        serviceCollection.AddUserInterfaceInfrastructure(mainWindow);
-        serviceCollection.AddSingleton(configuration);
-        serviceCollection.AddTransient<IProgramExecutorFactory, ProgramExecutorFactory>();
+
+        serviceCollection.AddScoped<IProgramExecutorFactory, ProgramExecutorFactory>();
         serviceCollection.AddScoped<MainWindowViewModel>();
-        
-        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
-        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-        Startup.SetLoggingLevel(loggerService, configuration);
-        return serviceProvider;
+        return serviceCollection;
     }
 
     private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
@@ -92,10 +87,8 @@ public class Program {
             .LogToTrace()
             .WithInterFont();
 
-    private static ClassicDesktopStyleApplicationLifetime SetupWithClassicDesktopLifetime(
-        AppBuilder builder, string[] args) {
+    private static ClassicDesktopStyleApplicationLifetime SetupWithClassicDesktopLifetime(AppBuilder builder) {
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
-            Args = args,
             ShutdownMode = ShutdownMode.OnMainWindowClose
         };
         builder.SetupWithLifetime(lifetime);
