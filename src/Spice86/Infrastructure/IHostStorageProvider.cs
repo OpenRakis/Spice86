@@ -56,13 +56,6 @@ public interface IHostStorageProvider {
     Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options);
 
     /// <summary>
-    /// Opens file picker dialog.
-    /// </summary>
-    /// <param name="options">The file picker configuration.</param>
-    /// <returns>A list of selected files.</returns>
-    Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options);
-
-    /// <summary>
     /// Spawns the file pciker to saves a bitmap to a file.
     /// </summary>
     /// <param name="bitmap">The bitmap to save on the host storage.</param>
@@ -75,13 +68,6 @@ public interface IHostStorageProvider {
     /// <param name="configuration">The emulator configuration, used for RecordedDataDirectory path property.</param>
     /// <param name="programExecutor">The emulated program's executor, to save the emulator dump and other reverse-engineering information.</param>
     Task DumpEmulatorStateToFile(Configuration configuration, IProgramExecutor programExecutor);
-
-    /// <summary>
-    /// Spanws the file picker to pick an executable file, and returns the first file picked by the user.
-    /// </summary>
-    /// <param name="lastExecutableDirectory">The directory of the last file picked, if any.</param>
-    /// <returns>The operation as an awaitable Task, containing the first picked file, or <c>null</c>.</returns>
-    Task<IStorageFile?> PickExecutableFile(string lastExecutableDirectory);
 
     /// <summary>
     /// Spanws the file picker to save a binary file.

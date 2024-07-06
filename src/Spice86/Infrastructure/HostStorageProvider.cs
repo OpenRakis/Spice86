@@ -32,11 +32,6 @@ public class HostStorageProvider : IHostStorageProvider {
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options) {
-        return await _storageProvider.OpenFilePickerAsync(options);
-    }
-
-    /// <inheritdoc />
     public async Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options) {
         return await _storageProvider.OpenFolderPickerAsync(options);
     }
@@ -91,28 +86,5 @@ public class HostStorageProvider : IHostStorageProvider {
                 programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
             }
         }
-    }
-    
-    public async Task<IStorageFile?> PickExecutableFile(string lastExecutableDirectory) {
-        FilePickerOpenOptions options = new() {
-            Title = "Start Executable...",
-            AllowMultiple = false,
-            FileTypeFilter = new[] {
-                new FilePickerFileType("DOS Executables") {
-                    Patterns = new[] {"*.com", "*.exe", "*.EXE", "*.COM"}
-                },
-                new FilePickerFileType("All files") {
-                    Patterns = new[] {"*"}
-                }
-            }
-        };
-        IStorageFolder? folder = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-        options.SuggestedStartLocation = folder;
-        if (Directory.Exists(lastExecutableDirectory)) {
-            options.SuggestedStartLocation = await TryGetFolderFromPathAsync(lastExecutableDirectory);
-        }
-
-        IReadOnlyList<IStorageFile> files = await OpenFilePickerAsync(options);
-        return files.FirstOrDefault();
     }
 }
