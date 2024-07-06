@@ -14,6 +14,7 @@ using Spice86.Shared.Interfaces;
 public class PortAudioPlayerFactory {
     private static readonly object _lock = new();
     private readonly ILoggerService _loggerService;
+    private const string LibPortAudioDllWin64 = "libportaudio.dll";
 
     /// <summary>
     /// Initializes a new instance.
@@ -21,11 +22,16 @@ public class PortAudioPlayerFactory {
     /// <param name="loggerService">The logger service implementation.</param>
     public PortAudioPlayerFactory(ILoggerService loggerService) => _loggerService = loggerService;
 
+    internal bool CanPortAudioBeLoaded =>
+        (OperatingSystem.IsWindows() && Environment.Is64BitOperatingSystem && File.Exists(LibPortAudioDllWin64)) ||
+        OperatingSystem.IsLinux() ||
+        OperatingSystem.IsMacOS();
+
+
     private PortAudioLib LoadPortAudioLibrary() {
         if (OperatingSystem.IsWindows() && Environment.Is64BitOperatingSystem) {
-            const string path = "libportaudio.dll";
-            if (File.Exists(path)) {
-                return new PortAudioLib(path);
+            if (File.Exists(LibPortAudioDllWin64)) {
+                return new PortAudioLib(LibPortAudioDllWin64);
             }
         }
 
