@@ -1,12 +1,10 @@
 ﻿namespace Spice86.ViewModels;
 
 using Avalonia;
-using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -105,11 +103,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     }
 
     [RelayCommand]
-    public void EndProgram() {
-        ClearDialogCommand.Execute(null);
-    }
-
-    [RelayCommand]
     public async Task SaveBitmap() {
         if (Bitmap is not null) {
             await _hostStorageProvider.SaveBitmapFile(Bitmap);
@@ -172,11 +165,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartMostRecentlyUsedCommand))]
-    private AvaloniaList<FileInfo> _mostRecentlyUsed = new();
-
-
     public int Width { get; private set; }
 
     public int Height { get; private set; }
@@ -190,16 +178,16 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
-    private bool _isMachineRunning;
+    private bool _isEmulatorRunning;
 
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public async Task DumpEmulatorStateToFile() {
         if (ProgramExecutor is not null) {
             await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void Pause() {
         if (ProgramExecutor is null) {
             return;
@@ -207,7 +195,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         IsPaused = ProgramExecutor.IsPaused = true;
     }
 
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void Play() {
         if (ProgramExecutor is null) {
             return;
@@ -221,55 +209,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private string? _mainTitle;
 
-    [RelayCommand(CanExecute = nameof(CanStartMostRecentlyUsed))]
-    public async Task StartMostRecentlyUsed(object? parameter) {
-        int index = Convert.ToInt32(parameter);
-        if (MostRecentlyUsed.Count > index) {
-            await StartNewExecutable(MostRecentlyUsed[index].FullName);
-        }
-    }
-
-    private bool CanStartMostRecentlyUsed() => MostRecentlyUsed.Count > 0;
-
-    [RelayCommand]
-    public async Task DebugExecutable() {
-        _closeAppOnEmulatorExit = false;
-        await StartNewExecutable();
-        Pause();
-    }
-
-    [RelayCommand]
-    public async Task StartExecutable(object? filePath) {
-        _closeAppOnEmulatorExit = false;
-        await StartNewExecutable(filePath as string);
-    }
-
-    private async Task StartNewExecutable(string? filePath = null) {
-        if(!string.IsNullOrWhiteSpace(filePath) &&
-            File.Exists(filePath)) {
-            await RestartEmulatorWithNewProgram(filePath);
-        }
-        else if (_hostStorageProvider.CanOpen) {
-            IStorageFile? file = await _hostStorageProvider.PickExecutableFile(_lastExecutableDirectory);
-            if (file is not null) {
-                filePath = file.Path.LocalPath;
-                await RestartEmulatorWithNewProgram(filePath);
-            }
-        }
-    }
-
-    private async Task RestartEmulatorWithNewProgram(string filePath) {
-        Configuration.Exe = filePath;
-        Configuration.ExeArgs = "";
-        Configuration.CDrive = Path.GetDirectoryName(Configuration.Exe);
-        Configuration.UseCodeOverride = false;
-        Play();
-        await _uiDispatcher.InvokeAsync(DisposeEmulator, DispatcherPriority.MaxValue);
-        IsMachineRunning = false;
-        _closeAppOnEmulatorExit = false;
-        RunEmulator();
-    }
-
     private double _timeMultiplier = 1;
 
     public double? TimeMultiplier {
@@ -282,7 +221,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsMachineRunning))]
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
     
     [RelayCommand]
@@ -324,34 +263,11 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    [ObservableProperty]
-    private string? _firstProgramName = "";
-
-    [ObservableProperty]
-    private string? _secondProgramName = "";
-
-    [ObservableProperty]
-    private string? _thirdProgramName = "";
-
-    private void AddOrReplaceMostRecentlyUsed(string filePath) {
-        if (MostRecentlyUsed.Any(x => x.FullName == filePath)) {
-            return;
-        }
-        MostRecentlyUsed.Insert(0,new FileInfo(filePath));
-        if (MostRecentlyUsed.Count > 3) {
-            MostRecentlyUsed.RemoveAt(3);
-        }
-        FirstProgramName = MostRecentlyUsed.ElementAtOrDefault(0)?.Name;
-        SecondProgramName = MostRecentlyUsed.ElementAtOrDefault(1)?.Name;
-        ThirdProgramName = MostRecentlyUsed.ElementAtOrDefault(2)?.Name;
-    }
-
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
-        AddOrReplaceMostRecentlyUsed(Configuration.Exe);
         _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
@@ -362,7 +278,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         };
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
-        RunMachine();
+        StartEmulatorThread();
         return true;
     }
 
@@ -428,7 +344,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                 }, DispatcherPriority.MaxValue);
                 _drawingSemaphoreSlim?.Dispose();
                 PlayCommand.Execute(null);
-                IsMachineRunning = false;
+                IsEmulatorRunning = false;
                 DisposeEmulator();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
@@ -475,8 +391,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    private void RunMachine() {
-        _emulatorThread = new Thread(MachineThread) {
+    private void StartEmulatorThread() {
+        _emulatorThread = new Thread(EmulatorThread) {
             Name = "Emulator"
         };
         _emulatorThread.Start();
@@ -487,7 +403,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         ShowError(e);
     });
 
-    private void MachineThread() {
+    private void EmulatorThread() {
         try {
             try {
                 StartProgramExecutor();
@@ -498,7 +414,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                 OnEmulatorErrorOccured(e);
             }
         }  finally {
-            _uiDispatcher.Post(() => IsMachineRunning = false);
+            _uiDispatcher.Post(() => IsEmulatorRunning = false);
             _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
@@ -526,7 +442,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         PerformanceViewModel = new(_uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer(), this);
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
-        _uiDispatcher.Post(() => IsMachineRunning = true);
+        _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
         ProgramExecutor?.Run();
         if (_closeAppOnEmulatorExit) {

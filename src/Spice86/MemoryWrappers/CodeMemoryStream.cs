@@ -2,16 +2,16 @@ namespace Spice86.MemoryWrappers;
 
 using Spice86.Core.Emulator.Memory;
 
-public class EmulatedMemoryStream : Stream {
+public class CodeMemoryStream : Stream {
     private readonly IMemory _memory;
     private long _length;
     private readonly bool _canRead;
     private readonly bool _canWrite;
     private readonly bool _canSeek;
-    public EmulatedMemoryStream(IMemory memory) {
+    public CodeMemoryStream(IMemory memory) {
         _memory = memory;
         _length = memory.Length;
-        _canWrite = true;
+        _canWrite = false;
         _canSeek = true;
         _canRead = true;
     }
@@ -21,16 +21,10 @@ public class EmulatedMemoryStream : Stream {
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
-        int bytesRead = 0;
-        for (int i = 0; i < buffer.Length; i++) {
-            if (i + offset > buffer.Length || Position > _memory.Length) {
-                break;
-            }
-            buffer[i + offset] = _memory[(uint)Position];
-            bytesRead++;
-            Position++;
-        }
-        return bytesRead;
+        byte[] ramCopy = _memory.ReadRam((uint)Math.Min(count, _memory.Length - Position), (uint)Position);
+        ramCopy.CopyTo(buffer, offset);
+        Position += ramCopy.Length;
+        return ramCopy.Length;
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
@@ -53,13 +47,7 @@ public class EmulatedMemoryStream : Stream {
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
-        for (int i = 0; i < count; i++) {
-            if (i + offset > buffer.Length || Position > _memory.Length) {
-                break;
-            }
-            _memory[(uint)Position] = buffer[i + offset];
-            Position++;
-        }
+        throw new NotSupportedException();
     }
 
     public override bool CanRead => _canRead;

@@ -144,7 +144,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
             return;
         }
         _needToUpdateDisassembly = false;
-        CodeReader codeReader = CreateCodeReader(_memory, out EmulatedMemoryStream emulatedMemoryStream);
+        CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
         Decoder decoder = InitializeDecoder(codeReader, StartAddress.Value);
         try {
             DecodeInstructions(_state, _memory, emulatedMemoryStream, decoder, StartAddress.Value);
@@ -153,13 +153,13 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    private void DecodeInstructions(State state, IMemory memory, EmulatedMemoryStream emulatedMemoryStream,
+    private void DecodeInstructions(State state, IMemory memory, CodeMemoryStream codeMemoryStream,
         Decoder decoder, uint startAddress) {
         int byteOffset = 0;
-        emulatedMemoryStream.Position = startAddress;
+        codeMemoryStream.Position = startAddress;
         var instructions = new List<CpuInstructionInfo>();
         while (instructions.Count < NumberOfInstructionsShown) {
-            long instructionAddress = emulatedMemoryStream.Position;
+            long instructionAddress = codeMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
@@ -194,9 +194,9 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         return decoder;
     }
 
-    private static CodeReader CreateCodeReader(IMemory memory, out EmulatedMemoryStream emulatedMemoryStream) {
-        emulatedMemoryStream = new EmulatedMemoryStream(memory);
-        CodeReader codeReader = new StreamCodeReader(emulatedMemoryStream);
+    private static CodeReader CreateCodeReader(IMemory memory, out CodeMemoryStream codeMemoryStream) {
+        codeMemoryStream = new CodeMemoryStream(memory);
+        CodeReader codeReader = new StreamCodeReader(codeMemoryStream);
         return codeReader;
     }
 }
