@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Shared.Emulator.Memory;
 
 public class NodeLinker : IInstructionReplacer<ICfgNode> {
+    private readonly NodeToString _nodeToString = new();
+
     /// <summary>
     /// Ensure current and next are linked together.
     /// </summary>
@@ -30,7 +32,20 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
         }
 
         if (!ReferenceEquals(shouldBeNext, next)) {
-            throw new UnhandledCfgDiscrepancyException($"Current node has already a successor at next node address but it is not the next node. This should never happen. Tried to attach {next}, found {shouldBeNext} in successors at this address.");
+            string nextToString = _nodeToString.ToString(next);
+            string shouldBeNextToString = _nodeToString.ToString(shouldBeNext);
+            string currentToString = _nodeToString.ToString(current);
+            string currentSuccessors = _nodeToString.SuccessorsToString(current);
+            throw new UnhandledCfgDiscrepancyException(
+                $"""
+                 Current node has already a successor at next node address but it is not the next node. This should never happen. 
+                 Details:
+                 Next {nextToString}
+                 Found instead {shouldBeNextToString}
+                 Current node {currentToString}
+                 Current successors
+                 {currentSuccessors}
+                 """);
         }
     }
 

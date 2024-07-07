@@ -33,14 +33,22 @@
             </UniformGrid>
 			<Border DockPanel.Dock="Bottom" Background="White">
 				<ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-					<agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
-                    <agc:GraphPanel.DataTemplates>
-                        <DataTemplate DataType="{x:Type models:CfgNodeInfo}">
-                            <agc:TextSticker Padding="30,10" Shape="RoundedRectangle" Text="{Binding Address}" />
-                        </DataTemplate>
-                    </agc:GraphPanel.DataTemplates>
-                </agc:GraphPanel>
+                    <ZoomBorder Name="ZoomBorder"
+                                    Stretch="None"
+                                    ZoomSpeed="1.5"
+                                    EnableConstrains="True"
+                                    ClipToBounds="True" Focusable="True"
+                                    VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
+                            <agc:GraphPanel.DataTemplates>
+                                <DataTemplate DataType="{x:Type models:CfgNodeInfo}">
+                                    <agc:TextSticker Padding="30,10" Shape="RoundedRectangle" Text="{Binding Address}" />
+                                </DataTemplate>
+                            </agc:GraphPanel.DataTemplates>
+                        </agc:GraphPanel>
+                    </ZoomBorder>
 				</ScrollViewer>
+                
 			</Border>
 			</DockPanel>
 </UserControl>

@@ -8,10 +8,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -80,7 +83,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 foreach (ICfgNode successor in node.Successors) {
                     var edgeKey = GenerateEdgeKey(node, successor);
                     if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(new Edge(GenerateNodeText(node), GenerateNodeText(successor)));
+                        currentGraph.Edges.Add(CreateEdge(node, successor));
                         existingEdges.Add(edgeKey);
                     }
                     if (!visitedNodes.Contains(successor)) {
@@ -90,7 +93,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 foreach (ICfgNode predecessor in node.Predecessors) {
                     var edgeKey = GenerateEdgeKey(predecessor, node);
                     if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(new Edge(GenerateNodeText(predecessor), GenerateNodeText(node)));
+                        currentGraph.Edges.Add(CreateEdge(predecessor, node));
                         existingEdges.Add(edgeKey);
                     }
                     if (!visitedNodes.Contains(predecessor)) {
@@ -110,6 +113,22 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 AverageNodeTime = averageNodeTime;
             });
         }).ConfigureAwait(false);
+    }
+
+    private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
+        string label = string.Empty;
+        if (node is CfgInstruction cfgInstruction) {
+            SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment, (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
+            if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
+                // Not direct successor, jump or call
+                label = "not contiguous";
+            }
+        }
+        if (node is DiscriminatedNode discriminatedNode) {
+            Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator.FirstOrDefault(x => x.Value == successor).Key;
+            label = discriminator.ToString();
+        }
+        return new Edge(GenerateNodeText(node), GenerateNodeText(successor), label);
     }
 
     private (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor) {
