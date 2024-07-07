@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using Microsoft.Extensions.DependencyInjection;
 
 using Spice86.Core.CLI;
@@ -42,5 +44,6 @@ public static class ServiceCollectionExtensions {
         serviceCollection.AddSingleton<IHostStorageProvider, HostStorageProvider>();
         serviceCollection.AddSingleton<ITextClipboard>(_ => new TextClipboard(mainWindow.Clipboard));
         serviceCollection.AddSingleton<IStructureViewModelFactory, StructureViewModelFactory>();
+        serviceCollection.AddSingleton<IMessenger>(_ => WeakReferenceMessenger.Default);
     }
 }

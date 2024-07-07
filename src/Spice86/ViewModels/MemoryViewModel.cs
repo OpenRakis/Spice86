@@ -7,6 +7,7 @@ using AvaloniaHex.Editing;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
@@ -15,6 +16,7 @@ using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
 using Spice86.Views;
+using Spice86.ViewModels.Messages;
 
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -44,11 +46,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private bool _canCloseTab;
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _debugWindowViewModel.CloseTab(this);
-        UpdateCanCloseTabProperty();
-    }
-
+    private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<MemoryViewModel>(this));
     private bool GetIsMemoryRangeValid() {
         if (_memory is null) {
             return false;
@@ -99,15 +97,16 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     public bool IsStructureInfoPresent => _structureViewModelFactory.IsInitialized;
 
-    private readonly IPauseStatus _pauseStatus;
+    private readonly IMessenger _messenger;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, IStructureViewModelFactory structureViewModelFactory, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, IMessenger messenger, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, bool isPaused, bool canCloseTab, uint startAddress, uint endAddress, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
         _debugWindowViewModel = debugWindowViewModel;
-        pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
-        _pauseStatus = pauseStatus;
+        _messenger = messenger;
+        IsPaused = isPaused;
+        CanCloseTab = canCloseTab;
+        _messenger.Register<PauseStatusChangedMessage>(this, HandlePauseStatusMessage);
         _storageProvider = storageProvider;
-        IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
         _structureViewModelFactory = structureViewModelFactory;
         EndAddress = endAddress;
@@ -161,21 +160,15 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         _needToUpdateBinaryDocument = false;
     }
 
-    private void PauseStatus_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        if (e.PropertyName != nameof(IPauseStatus.IsPaused)) {
-            return;
-        }
-        UpdateCanCloseTabProperty();
-        IsPaused = _pauseStatus.IsPaused;
+    private void HandlePauseStatusMessage(object recipient, PauseStatusChangedMessage message) {
+        IsPaused = message.IsPaused;
         if (IsPaused) {
             _needToUpdateBinaryDocument = true;
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void NewMemoryView() {
-        _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
-    }
+    public void NewMemoryView() => _messenger.Send(new AddViewModelMessage<MemoryViewModel>());
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private void UpdateBinaryDocument() {
@@ -187,9 +180,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         DataMemoryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
 
-    private void OnMemoryReadInvalidOperation(Exception exception) {
-        Dispatcher.UIThread.Post(() => ShowError(exception));
-    }
+    private void OnMemoryReadInvalidOperation(Exception exception) => Dispatcher.UIThread.Post(() => ShowError(exception));
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {

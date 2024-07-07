@@ -9,6 +9,7 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Serilog.Events;
 
@@ -23,6 +24,7 @@ using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Messages;
 
 using System.Threading;
 
@@ -31,7 +33,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, IPauseStatus, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
@@ -40,6 +42,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
+    private readonly IMessenger _messenger;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
@@ -81,7 +84,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
+    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _windowService = windowService;
         Configuration = configuration;
@@ -91,6 +94,18 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
+        _messenger = messenger;
+        _messenger.Register<PauseStatusChangedMessage>(this, HandlePauseStatusMessage);
+    }
+
+    private void HandlePauseStatusMessage(object recipient, PauseStatusChangedMessage message) {
+        if (message.IsPaused) {
+            if (PauseCommand.CanExecute(null)) {
+                PauseInternal(true);
+            }
+        } else if(PlayCommand.CanExecute(null)) {
+            PlayInternal(true);
+        }
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -155,17 +170,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
+    [ObservableProperty]
     private bool _isPaused;
-
-    public bool IsPaused {
-        get => _isPaused;
-        set {
-            SetProperty(ref _isPaused, value);
-            if (_softwareMixer is not null) {
-                _softwareMixer.IsPaused = value;
-            }
-        }
-    }
 
     public int Width { get; private set; }
 
@@ -191,19 +197,39 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void Pause() {
+        PauseInternal();
+    }
+
+    private void PauseInternal(bool fromMessage = false) {
         if (ProgramExecutor is null) {
             return;
         }
         IsPaused = ProgramExecutor.IsPaused = true;
+        if(!fromMessage) {
+            NotifyViaMessageAboutPauseStatus();
+        }
+    }
+
+    private void NotifyViaMessageAboutPauseStatus() {
+        if (_softwareMixer is not null) {
+            _softwareMixer.IsPaused = IsPaused;
+        }
+        _messenger.Send(new PauseStatusChangedMessage(IsPaused));
     }
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     public void Play() {
+        PlayInternal();
+    }
+
+    private void PlayInternal(bool fromMessage = false) {
         if (ProgramExecutor is null) {
             return;
         }
-
         IsPaused = ProgramExecutor.IsPaused = false;
+        if(!fromMessage) {
+            NotifyViaMessageAboutPauseStatus();
+        }
     }
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
@@ -431,7 +457,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
     public async Task ShowInternalDebugger() {
         if (ProgramExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor, _structureViewModelFactory);
+            _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory);
             await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }
@@ -441,7 +467,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         ProgramExecutor = viewModelEmulatorDependencies.ProgramExecutor;
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
-        PerformanceViewModel = new(_uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer(), this);
+        PerformanceViewModel = new(_messenger, _uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer());
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
