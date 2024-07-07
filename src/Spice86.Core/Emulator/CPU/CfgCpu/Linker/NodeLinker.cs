@@ -79,7 +79,6 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
             predecessor.UpdateSuccessorCache();
         }
         current.Predecessors.Clear();
-        current.Predecessors.Add(newPredecessor);
         LinkCurrentToNext(newPredecessor, current);
         newPredecessor.UpdateSuccessorCache();
     }

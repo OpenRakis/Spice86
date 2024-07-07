@@ -21,6 +21,9 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
     private ExecutionContext? ExecutionContext { get; set; }
 
     [ObservableProperty]
+    private int _maxNodesToDisplay = 200;
+
+    [ObservableProperty]
     private Graph? _graph;
 
     [ObservableProperty]
@@ -42,6 +45,10 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
 
+    partial void OnMaxNodesToDisplayChanging(int value) {
+        Graph = null;
+    }
+
     private async void UpdateCurrentGraph(object? sender, EventArgs e) {
         if (_pauseStatus?.IsPaused is false or null) {
             return;
@@ -55,15 +62,15 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
             if (nodeRoot is null) {
                 return;
             }
-
+            
             long localNumberOfNodes = 0;
             Graph currentGraph = new();
             Queue<ICfgNode> queue = new();
             queue.Enqueue(nodeRoot);
             HashSet<ICfgNode> visitedNodes = new();
-            HashSet<(string, string)> existingEdges = new();
+            HashSet<(int, int)> existingEdges = new();
             Stopwatch stopwatch = new();
-            while (queue.Count > 0) {
+            while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                 ICfgNode node = queue.Dequeue();
                 if (visitedNodes.Contains(node)) {
                     continue;
@@ -71,11 +78,9 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 visitedNodes.Add(node);
                 stopwatch.Restart();
                 foreach (ICfgNode successor in node.Successors) {
-                    var edgeKey = ($"{node.Address}", $"{successor.Address}");
+                    var edgeKey = GenerateEdgeKey(node, successor);
                     if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(new Edge(
-                            $"{node.Address} {Environment.NewLine} {node.GetType().Name}",
-                            $"{successor.Address} {Environment.NewLine} {successor.GetType().Name}"));
+                        currentGraph.Edges.Add(new Edge(GenerateNodeText(node), GenerateNodeText(successor)));
                         existingEdges.Add(edgeKey);
                     }
                     if (!visitedNodes.Contains(successor)) {
@@ -83,11 +88,9 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                     }
                 }
                 foreach (ICfgNode predecessor in node.Predecessors) {
-                    var edgeKey = ($"{predecessor.Address}", $"{node.Address}");
+                    var edgeKey = GenerateEdgeKey(predecessor, node);
                     if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(new Edge(
-                            $"{predecessor.Address} {Environment.NewLine} {predecessor.GetType().Name}",
-                            $"{node.Address} {Environment.NewLine} {node.GetType().Name}"));
+                        currentGraph.Edges.Add(new Edge(GenerateNodeText(predecessor), GenerateNodeText(node)));
                         existingEdges.Add(edgeKey);
                     }
                     if (!visitedNodes.Contains(predecessor)) {
@@ -107,6 +110,14 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 AverageNodeTime = averageNodeTime;
             });
         }).ConfigureAwait(false);
+    }
+
+    private (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor) {
+        return (node.Id, successor.Id);
+    }
+
+    private string GenerateNodeText(ICfgNode node) {
+        return $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
     }
 
     public void Visit<T>(T component) where T : IDebuggableComponent {

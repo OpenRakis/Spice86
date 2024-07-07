@@ -25,6 +25,11 @@
                     <Label>Average time (ms) for adding a node</Label>
                     <TextBlock Text="{Binding AverageNodeTime}" />
                 </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <Label>Max number of nodes to display</Label>
+                    <NumericUpDown Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
+                </StackPanel>
+                
             </UniformGrid>
 			<Border DockPanel.Dock="Bottom" Background="White">
 				<ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">

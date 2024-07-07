@@ -20,12 +20,14 @@ internal partial class CfgNodeInfo : ObservableObject, ICfgNode {
     }
 
     public CfgNodeInfo(ICfgNode nodeToExecuteNextAccordingToGraph) {
+        Id = nodeToExecuteNextAccordingToGraph.Id;
         Predecessors = nodeToExecuteNextAccordingToGraph.Predecessors;
         Successors = nodeToExecuteNextAccordingToGraph.Successors;
         Address = nodeToExecuteNextAccordingToGraph.Address;
         IsAssembly = nodeToExecuteNextAccordingToGraph.IsAssembly;
     }
-
+    [ObservableProperty]
+    private int _id;
     [ObservableProperty]
     private HashSet<ICfgNode> _predecessors;
     [ObservableProperty]
