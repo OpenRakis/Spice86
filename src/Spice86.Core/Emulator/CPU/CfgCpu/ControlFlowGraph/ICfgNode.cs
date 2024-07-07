@@ -8,6 +8,11 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public interface ICfgNode {
     /// <summary>
+    /// Unique identifier of the node
+    /// </summary>
+    int Id { get; }
+
+    /// <summary>
     /// Nodes that were executed before this node
     /// </summary>
     HashSet<ICfgNode> Predecessors { get; }

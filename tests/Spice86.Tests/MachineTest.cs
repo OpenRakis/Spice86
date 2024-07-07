@@ -269,13 +269,25 @@ public class MachineTest {
     }
 
     [Fact]
-    public void TestSelfModify() {
+    public void TestSelfModifyValue() {
         byte[] expected = new byte[4];
         expected[0x00] = 0x01;
         expected[0x01] = 0x00;
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
-        TestOneBin("selfmodify", expected);
+        TestOneBin("selfmodifyvalue", expected);
+    }
+    
+    [Fact]
+    public void TestSelfModifyInstructions() {
+        byte[] expected = new byte[6];
+        expected[0x00] = 0x03;
+        expected[0x01] = 0x00;
+        expected[0x02] = 0x02;
+        expected[0x03] = 0x00;
+        expected[0x04] = 0x01;
+        expected[0x05] = 0x00;
+        TestOneBin("selfmodifyinstructions", expected);
     }
     
     [Theory]

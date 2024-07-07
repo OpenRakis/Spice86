@@ -95,7 +95,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="port">The port number that was read.</param>
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
     protected void LogUnhandledPortRead(int port, [CallerMemberName] string? methodName = null) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("Unhandled port read: 0x{PortNumber:X4} in {MethodName}", port, methodName);
         }
     }
@@ -109,7 +109,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
     protected void LogUnhandledPortWrite<T>(int port, T value, [CallerMemberName] string? methodName = null)
         where T : INumber<T> {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("Unhandled port write: 0x{PortNumber:X4}, 0x{Value:X4} in {MethodName}", port, value,
                 methodName);
         }
