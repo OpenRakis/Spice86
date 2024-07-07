@@ -9,10 +9,12 @@ using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Logging;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels;
 
 public static class ServiceCollectionExtensions {
     public static void AddConfiguration(this IServiceCollection serviceCollection, string[] args) {
@@ -45,5 +47,18 @@ public static class ServiceCollectionExtensions {
         serviceCollection.AddSingleton<ITextClipboard>(_ => new TextClipboard(mainWindow.Clipboard));
         serviceCollection.AddSingleton<IStructureViewModelFactory, StructureViewModelFactory>();
         serviceCollection.AddSingleton<IMessenger>(_ => WeakReferenceMessenger.Default);
+    }
+
+    public static void AddEmulatorServices(this IServiceCollection serviceCollection) {
+        serviceCollection.AddScoped<IProgramExecutor, ProgramExecutor>((serviceProvider) => {
+            Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
+            ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
+            return new ProgramExecutor(configuration, loggerService, serviceProvider.GetService<IGui>());
+        });
+    }
+
+    public static void AddViewModels(this IServiceCollection serviceCollection) {
+        serviceCollection.AddScoped<DebugWindowViewModel>();
+        serviceCollection.AddScoped<MainWindowViewModel>();
     }
 }

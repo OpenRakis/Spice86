@@ -15,7 +15,7 @@ using System.ComponentModel;
 using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private IMessenger _messenger;
+    private readonly IMessenger _messenger;
     private State? _cpuState;
     private bool _isPaused;
     

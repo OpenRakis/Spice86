@@ -43,6 +43,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
     private readonly IMessenger _messenger;
+    private readonly DebugWindowViewModel _debugViewModel;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
@@ -61,7 +62,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     private SoftwareMixer? _softwareMixer;
     private ITimeMultiplier? _pit;
-    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -84,7 +84,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
+    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, DebugWindowViewModel debugWindowViewModel) : base(textClipboard) {
+        _debugViewModel = debugWindowViewModel;
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _windowService = windowService;
         Configuration = configuration;
@@ -457,7 +458,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
     public async Task ShowInternalDebugger() {
         if (ProgramExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory);
             await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }

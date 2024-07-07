@@ -53,8 +53,11 @@ public class Program {
             ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();
             MainWindow mainWindow = new();
             serviceCollection.AddGuiInfrastructure(mainWindow);
+            serviceCollection.AddEmulatorServices();
+            serviceCollection.AddViewModels();
             //We need to rebuild the service provider after adding new services to the collection
-            using MainWindowViewModel mainWindowViewModel = serviceCollection.BuildServiceProvider().GetRequiredService<MainWindowViewModel>();
+            serviceProvider = serviceCollection.BuildServiceProvider();
+            using MainWindowViewModel mainWindowViewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
             StartGraphicalUserInterface(desktop, mainWindowViewModel, mainWindow, args);
         }
     }
@@ -78,7 +81,6 @@ public class Program {
         serviceCollection.AddLogging();
 
         serviceCollection.AddScoped<IProgramExecutorFactory, ProgramExecutorFactory>();
-        serviceCollection.AddScoped<MainWindowViewModel>();
         return serviceCollection;
     }
 
