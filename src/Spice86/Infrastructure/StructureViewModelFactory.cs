@@ -1,12 +1,10 @@
-namespace Spice86.ViewModels;
-
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
+namespace Spice86.Infrastructure;
 
 using AvaloniaHex.Document;
 
 using Spice86.Core.CLI;
 using Spice86.Interfaces;
+using Spice86.ViewModels;
 
 using Structurizer;
 using Structurizer.Types;
@@ -17,8 +15,10 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly StructurizerSettings _structurizerSettings = new();
     private FileSystemWatcher? _fileWatcher;
     private StructureInformation? _structureInformation;
+    private readonly Configuration _configuration;
 
-    public StructureViewModelFactory() {
+    public StructureViewModelFactory(Configuration configuration) {
+        _configuration = configuration;
         if (!TryGetHeaderFilePath(out string headerFilePath)) {
             return;
         }
@@ -61,14 +61,12 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
         _fileWatcher.EnableRaisingEvents = true;
     }
 
-    private static bool TryGetHeaderFilePath(out string headerFilePath) {
+    private bool TryGetHeaderFilePath(out string headerFilePath) {
         headerFilePath = string.Empty;
-        var lifetime = Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-        Configuration configuration = CommandLineParser.ParseCommandLine(lifetime?.Args ?? []);
-        if (string.IsNullOrWhiteSpace(configuration.StructureFile)) {
+        if (string.IsNullOrWhiteSpace(_configuration.StructureFile)) {
             return false;
         }
-        headerFilePath = configuration.StructureFile;
+        headerFilePath = _configuration.StructureFile;
 
         return true;
     }

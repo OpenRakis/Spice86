@@ -41,7 +41,7 @@
                 <avaloniaHex:HexEditor
                     x:Name="HexViewer"
                     Width="800"
-                    Document="{Binding MemoryBinaryDocument}"
+                    Document="{Binding DataMemoryDocument}"
                     IsVisible="{Binding IsPaused}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />

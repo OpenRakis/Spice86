@@ -28,7 +28,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
-    private DataMemoryDocument? _memoryBinaryDocument;
+    private DataMemoryDocument? _dataMemoryDocument;
 
     public bool NeedsToVisitEmulator => _memory is null;
 
@@ -127,7 +127,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
     public void ShowStructureView() {
-        if (MemoryBinaryDocument == null) {
+        if (DataMemoryDocument == null) {
             return;
         }
 
@@ -135,10 +135,10 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         IBinaryDocument data;
         if (SelectionRange is {ByteLength: > 1} bitRange) {
             byte[] bytes = new byte[bitRange.ByteLength];
-            MemoryBinaryDocument.ReadBytes(bitRange.Start.ByteIndex, bytes);
+            DataMemoryDocument.ReadBytes(bitRange.Start.ByteIndex, bytes);
             data = new ByteArrayBinaryDocument(bytes);
         } else {
-            data = MemoryBinaryDocument;
+            data = DataMemoryDocument;
         }
         StructureViewModel structureViewModel = _structureViewModelFactory.CreateNew(data);
         var structureWindow = new StructureView {DataContext = structureViewModel};
@@ -182,9 +182,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         if (_memory is null || StartAddress is null || EndAddress is null) {
             return;
         }
-        MemoryBinaryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
-        MemoryBinaryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
-        MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
+        DataMemoryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        DataMemoryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
+        DataMemoryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
 
     private void OnMemoryReadInvalidOperation(Exception exception) {
@@ -256,7 +256,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
-        MemoryBinaryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
+        DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
         IsEditingMemory = false;
     }
 

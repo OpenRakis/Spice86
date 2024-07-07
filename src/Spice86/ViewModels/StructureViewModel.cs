@@ -79,7 +79,7 @@ public partial class StructureViewModel : ViewModelBase {
         && structType.Size <= (int)StructureMemory.Length;
 
     partial void OnStructureMemoryChanged(IBinaryDocument? value) {
-        IsAddressableMemory = value is MemoryBinaryDocument;
+        IsAddressableMemory = value is DataMemoryDocument;
     }
 
     partial void OnSelectedStructureChanged(StructType? value) {
