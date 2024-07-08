@@ -139,4 +139,9 @@ public class Discriminator : IComparable<Discriminator> {
         // Hashcode cannot depend on the discriminator value because 2 values can be equals if they have null bytes 
         return 1;
     }
+
+    /// <inheritdoc/>
+    public override string ToString() {
+        return string.Join(", ", DiscriminatorValue);
+    }
 }
