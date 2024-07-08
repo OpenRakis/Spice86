@@ -4,6 +4,7 @@ using AvaloniaHex.Document;
 
 using Spice86.Core.CLI;
 using Spice86.Interfaces;
+using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
 using Structurizer;
@@ -13,11 +14,14 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly Hydrator? _hydrator;
     private readonly Parser? _parser;
     private readonly StructurizerSettings _structurizerSettings = new();
-    private FileSystemWatcher? _fileWatcher;
     private StructureInformation? _structureInformation;
     private readonly Configuration _configuration;
+    private readonly ILoggerService _logger;
 
-    public StructureViewModelFactory(Configuration configuration) {
+    public event EventHandler? StructureInformationChanged;
+
+    public StructureViewModelFactory(Configuration configuration, ILoggerService logger) {
+        _logger = logger;
         _configuration = configuration;
         if (!TryGetHeaderFilePath(out string headerFilePath)) {
             return;
@@ -26,7 +30,8 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
         _hydrator = new Hydrator(_structurizerSettings);
 
         Parse(headerFilePath);
-        SetupFileWatcher(headerFilePath);
+        var poller = new FilePoller(headerFilePath, () => Parse(headerFilePath));
+        poller.Start();
     }
 
     public bool IsInitialized => _structureInformation != null && _hydrator != null;
@@ -36,29 +41,26 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
             throw new InvalidOperationException("Factory not initialized.");
         }
 
-        return new StructureViewModel(_structureInformation, _hydrator, data);
+        var viewModel = new StructureViewModel(_structureInformation, _hydrator, data);
+        StructureInformationChanged += viewModel.OnStructureInformationChanged;
+
+        return viewModel;
     }
 
     public void Parse(string headerFilePath) {
+        _logger.Information("Start parsing {HeaderFilePath} for structure information", headerFilePath);
         if (_parser == null) {
             throw new InvalidOperationException("Factory not initialized.");
         }
         if (!File.Exists(headerFilePath)) {
             throw new FileNotFoundException($"Specified structure file not found: '{headerFilePath}'");
         }
-        _structureInformation = _parser.ParseFile(headerFilePath);
-    }
 
-    private void SetupFileWatcher(string filePath) {
-        string? directory = Path.GetDirectoryName(filePath);
-        string fileName = Path.GetFileName(filePath);
+        string source = File.ReadAllText(headerFilePath);
 
-        _fileWatcher = new FileSystemWatcher(directory!, fileName) {
-            NotifyFilter = NotifyFilters.LastWrite
-        };
-
-        _fileWatcher.Changed += (_, _) => Parse(filePath);
-        _fileWatcher.EnableRaisingEvents = true;
+        _structureInformation = _parser.ParseSource(source);
+        StructureInformationChanged?.Invoke(this, EventArgs.Empty);
+        _logger.Information("Parsing {HeaderFilePath} complete", headerFilePath);
     }
 
     private bool TryGetHeaderFilePath(out string headerFilePath) {
