@@ -137,16 +137,10 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(Mouse), Default = MouseType.Ps2, Required = false, HelpText = "Specify the type of mouse to use. Valid values are None, PS2 (default), and PS2Wheel")]
     public MouseType Mouse { get; init; }
-    
+
     /// <summary>
     /// Specify a C header file to be used for structure information
     /// </summary>
     [Option(nameof(StructureFile), Default = null, Required = false, HelpText = "Specify a C header file to be used for structure information")]
     public string? StructureFile { get; init; }
-    
-    /// <summary>
-    /// Set the default value of the DS register, for use in near pointers.
-    /// </summary>
-    [Option(nameof(DataSegment), Default = null, Required = false, HelpText = "Set the default value of the DS register, for use in near pointers in the debugger.")]
-    public string? DataSegment { get; init; }
 }
