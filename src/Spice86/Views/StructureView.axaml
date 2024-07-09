@@ -22,7 +22,6 @@
         <StackPanel DockPanel.Dock="Top">
             <Label>Address:</Label>
             <TextBox
-                IsEnabled="{Binding IsAddressableMemory}"
                 Text="{Binding MemoryAddress, Mode=OneWayToSource, Converter={StaticResource SegmentedAddressConverter}}"
                 Watermark="segment:offset" />
             <AutoCompleteBox
