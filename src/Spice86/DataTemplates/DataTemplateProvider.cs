@@ -1,5 +1,6 @@
 namespace Spice86.DataTemplates;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
@@ -24,11 +25,18 @@ public static class DataTemplateProvider {
                 Command = new RelayCommand(() => throw new NotImplementedException("This should open a new memory view at the address the pointer points to")),
                 Classes = {"hyperlink"},
                 HorizontalAlignment = HorizontalAlignment.Right,
-                HorizontalContentAlignment = HorizontalAlignment.Right
+                HorizontalContentAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0,0,5,0)
             };
         }
 
-        return new TextBlock {Text = FormatValue(structureMember), TextAlignment = TextAlignment.Right};
+        return new TextBlock {
+            Text = FormatValue(structureMember),
+            TextAlignment = TextAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0,0,5,0)
+        };
     }
 
     private static string FormatValue(StructureMember structureMember) {

@@ -48,7 +48,7 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     }
 
     public void Parse(string headerFilePath) {
-        _logger.Information("Start parsing {HeaderFilePath} for structure information", headerFilePath);
+        _logger.Information("Parsing {HeaderFilePath} for structure information", headerFilePath);
         if (_parser == null) {
             throw new InvalidOperationException("Factory not initialized.");
         }
@@ -60,7 +60,6 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
 
         _structureInformation = _parser.ParseSource(source);
         StructureInformationChanged?.Invoke(this, EventArgs.Empty);
-        _logger.Information("Parsing {HeaderFilePath} complete", headerFilePath);
     }
 
     private bool TryGetHeaderFilePath(out string headerFilePath) {

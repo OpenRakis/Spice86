@@ -21,7 +21,7 @@ using Structurizer.Types;
 /// ViewModel for handling the structure view in the application. It manages the display and interaction
 /// with memory structures, including selection, filtering, and updating the view based on the selected structure.
 /// </summary>
-public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
+public partial class StructureViewModel : ViewModelBase {
     private readonly Hydrator _hydrator;
     private readonly IBinaryDocument _originalMemory;
     private readonly StructureInformation? _structureInformation;
@@ -56,6 +56,7 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
         _structureMemory = data;
         _originalMemory = data;
         _availableStructures = new AvaloniaList<StructType>(structureInformation.Structs.Values);
+        _isAddressableMemory = data is DataMemoryDocument;
         Source = InitializeSource();
     }
 
@@ -78,13 +79,6 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
         && item is StructType structType
         && structType.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
         && structType.Size <= (int)StructureMemory.Length;
-
-    /// <summary>
-    /// Disposes of the resources used by this instance of <see cref="StructureViewModel" />.
-    /// </summary>
-    public void Dispose() {
-        Source.Dispose();
-    }
 
     /// <summary>
     /// Event that is raised to request scrolling to a specific address in the memory view.
@@ -113,9 +107,11 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
     }
 
     private HierarchicalTreeDataGridSource<StructureMember> InitializeSource() {
+        var nameColumn = new TextColumn<StructureMember, string>("Name", structureMember => structureMember.Name);
+
         return new HierarchicalTreeDataGridSource<StructureMember>(StructureMembers) {
             Columns = {
-                new HierarchicalExpanderColumn<StructureMember>(new TextColumn<StructureMember, string>("Name", structureMember => structureMember.Name), structureMember => structureMember.Members),
+                new HierarchicalExpanderColumn<StructureMember>(nameColumn, structureMember => structureMember.Members),
                 new TextColumn<StructureMember, string>("Type", x => x.Type.Type),
                 new TextColumn<StructureMember, int>("Size", x => x.Size, null, new TextColumnOptions<StructureMember> {
                     TextAlignment = TextAlignment.Right
@@ -125,11 +121,13 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
         };
     }
 
-    partial void OnStructureMemoryChanged(IBinaryDocument? value) {
-        IsAddressableMemory = value is DataMemoryDocument;
-    }
-
     partial void OnSelectedStructureChanged(StructType? value) {
+        if (value is null) {
+            StructureMemory = _originalMemory;
+            if (MemoryAddress is { } address) {
+                RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.ToPhysical()));
+            }
+        }
         Update();
     }
 
@@ -148,11 +146,10 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
         StructureMembers.Clear();
 
         if (SelectedStructure is null) {
-            StructureMemory = _originalMemory;
-
             return;
         }
 
+        // Calculate the offset into the viewed memory.
         uint offset = IsAddressableMemory && MemoryAddress is { } address
             ? address.ToPhysical()
             : 0;
@@ -160,17 +157,23 @@ public sealed partial class StructureViewModel : ViewModelBase, IDisposable {
         byte[] data = new byte[SelectedStructure.Size];
         _originalMemory.ReadBytes(offset, data);
 
+        List<StructureMember> members = PopulateMembers(SelectedStructure.Members, data);
+        StructureMembers.AddRange(members);
+
+        // This "zooms" the hex view to the selected structure data.
+        StructureMemory = new ByteArrayBinaryDocument(data);
+    }
+
+    private List<StructureMember> PopulateMembers(IEnumerable<TypeDefinition> selectedStructure, byte[] data) {
         int index = 0;
         var members = new List<StructureMember>();
-        foreach (TypeDefinition typeDefinition in SelectedStructure.Members) {
+        foreach (TypeDefinition typeDefinition in selectedStructure) {
             var slice = new ReadOnlySpan<byte>(data, index, typeDefinition.Length);
             StructureMember member = _hydrator.Hydrate(typeDefinition, slice);
             members.Add(member);
             index += typeDefinition.Length;
         }
 
-        StructureMembers.AddRange(members);
-
-        StructureMemory = new ByteArrayBinaryDocument(data);
+        return members;
     }
 }

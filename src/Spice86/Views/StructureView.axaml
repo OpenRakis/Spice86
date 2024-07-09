@@ -19,12 +19,25 @@
         <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
     </Window.Resources>
     <DockPanel Margin="10">
-        <StackPanel DockPanel.Dock="Top">
-            <Label>Address:</Label>
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*" DockPanel.Dock="Top">
+            <Label Grid.Column="0" Grid.Row="0"
+                   IsVisible="{Binding IsAddressableMemory}"
+                   VerticalAlignment="Center"
+                   Margin="0 0 5 0">
+                Address:
+            </Label>
             <TextBox
+                Grid.Column="1" Grid.Row="0"
+                IsVisible="{Binding IsAddressableMemory}"
                 Text="{Binding MemoryAddress, Mode=OneWayToSource, Converter={StaticResource SegmentedAddressConverter}}"
                 Watermark="segment:offset" />
+            <Label Grid.Column="0" Grid.Row="1"
+                   VerticalAlignment="Center"
+                   Margin="0 0 5 0">
+                Structure:
+            </Label>
             <AutoCompleteBox
+                Grid.Column="1" Grid.Row="1"
                 ItemsSource="{Binding AvailableStructures}"
                 SelectedItem="{Binding SelectedStructure}"
                 FilterMode="Custom"
@@ -44,13 +57,21 @@
                     </DataTemplate>
                 </AutoCompleteBox.ItemTemplate>
             </AutoCompleteBox>
-        </StackPanel>
+        </Grid>
         <Grid ColumnDefinitions="Auto,4,*">
             <ScrollViewer Grid.Column="0">
                 <TreeDataGrid
                     Source="{Binding Source}"
                     FontFamily="Cascadia Code,JetBrains Mono,Monospace,monospace"
-                    FontWeight="Light" />
+                    FontWeight="Light"
+                    CanUserResizeColumns="True">
+                    <TreeDataGrid.Styles>
+                        <Style Selector="TreeDataGrid :is(TreeDataGridCell)">
+                            <Setter Property="BorderThickness" Value="0 0 1 1" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource TreeDataGridGridLinesBrush}" />
+                        </Style>
+                    </TreeDataGrid.Styles>
+                </TreeDataGrid>
             </ScrollViewer>
             <GridSplitter
                 Grid.Column="1"
