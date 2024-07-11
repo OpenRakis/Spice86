@@ -2,6 +2,9 @@
 
 using Avalonia.Threading;
 
+using AvaloniaHex.Document;
+using AvaloniaHex.Editing;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -11,6 +14,7 @@ using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Shared.Utils;
+using Spice86.Views;
 
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -21,10 +25,11 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private IMemory? _memory;
     private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateBinaryDocument;
-    
+    private readonly IStructureViewModelFactory _structureViewModelFactory;
+
     [ObservableProperty]
-    private DataMemoryDocument? _memoryBinaryDocument;
-    
+    private DataMemoryDocument? _dataMemoryDocument;
+
     public bool NeedsToVisitEmulator => _memory is null;
 
     private uint? _startAddress = 0;
@@ -43,7 +48,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         _debugWindowViewModel.CloseTab(this);
         UpdateCanCloseTabProperty();
     }
-    
+
     private bool GetIsMemoryRangeValid() {
         if (_memory is null) {
             return false;
@@ -52,7 +57,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         return StartAddress <= (EndAddress ?? _memory.Length)
             && EndAddress >= (StartAddress ?? 0);
     }
-    
+
     public uint? StartAddress {
         get => _startAddress;
         set {
@@ -71,7 +76,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     private uint? _endAddress = 0;
-    
+
     public uint? EndAddress {
         get => _endAddress;
         set {
@@ -89,22 +94,57 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     [NotifyCanExecuteChangedFor(nameof(EditMemoryCommand))]
     private bool _isPaused;
 
+    [ObservableProperty]
+    private BitRange? _selectionRange;
+
+    public bool IsStructureInfoPresent => _structureViewModelFactory.IsInitialized;
+
     private readonly IPauseStatus _pauseStatus;
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IPauseStatus pauseStatus, uint startAddress, IStructureViewModelFactory structureViewModelFactory, uint endAddress = 0) : base(textClipboard) {
         _debugWindowViewModel = debugWindowViewModel;
         pauseStatus.PropertyChanged += PauseStatus_PropertyChanged;
         _pauseStatus = pauseStatus;
         _storageProvider = storageProvider;
         IsPaused = _pauseStatus.IsPaused;
         StartAddress = startAddress;
+        _structureViewModelFactory = structureViewModelFactory;
         EndAddress = endAddress;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         UpdateCanCloseTabProperty();
         debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
     }
-    
+
+    /// <summary>
+    /// Handles the event when the selection range within the HexEditor changes.
+    /// </summary>
+    /// <param name="sender">The source of the event, expected to be of type <see cref="Selection"/>.</param>
+    /// <param name="e">The event arguments, not used in this method.</param>
+    public void OnSelectionRangeChanged(object? sender, EventArgs e) {
+        SelectionRange = (sender as Selection)?.Range;
+    }
+
+    [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
+    public void ShowStructureView() {
+        if (DataMemoryDocument == null) {
+            return;
+        }
+
+        // Use either the selected range or the entire document if no range is selected.
+        IBinaryDocument data;
+        if (SelectionRange is {ByteLength: > 1} bitRange) {
+            byte[] bytes = new byte[bitRange.ByteLength];
+            DataMemoryDocument.ReadBytes(bitRange.Start.ByteIndex, bytes);
+            data = new ByteArrayBinaryDocument(bytes);
+        } else {
+            data = DataMemoryDocument;
+        }
+        StructureViewModel structureViewModel = _structureViewModelFactory.CreateNew(data);
+        var structureWindow = new StructureView {DataContext = structureViewModel};
+        structureWindow.Show();
+    }
+
     private void UpdateCanCloseTabProperty() {
         CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
     }
@@ -127,11 +167,11 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         }
         UpdateCanCloseTabProperty();
         IsPaused = _pauseStatus.IsPaused;
-        if(IsPaused) {
+        if (IsPaused) {
             _needToUpdateBinaryDocument = true;
         }
     }
-    
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
         _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
@@ -142,9 +182,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         if (_memory is null || StartAddress is null || EndAddress is null) {
             return;
         }
-        MemoryBinaryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
-        MemoryBinaryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
-        MemoryBinaryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
+        DataMemoryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
+        DataMemoryDocument.MemoryReadInvalidOperation -= OnMemoryReadInvalidOperation;
+        DataMemoryDocument.MemoryReadInvalidOperation += OnMemoryReadInvalidOperation;
     }
 
     private void OnMemoryReadInvalidOperation(Exception exception) {
@@ -178,6 +218,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private bool TryParseMemoryAddress(string? memoryAddress, [NotNullWhen(true)] out uint? address) {
         if (string.IsNullOrWhiteSpace(memoryAddress)) {
             address = null;
+
             return false;
         }
 
@@ -188,16 +229,19 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
                     ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
                     ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
                     address = MemoryUtils.ToPhysicalAddress(segment, offset);
+
                     return true;
                 }
             } else if (uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
                 address = value;
+
                 return true;
             }
         } catch (Exception e) {
             Dispatcher.UIThread.Post(() => ShowError(e));
         }
         address = null;
+
         return false;
     }
 
@@ -212,7 +256,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
-        MemoryBinaryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
+        DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
         IsEditingMemory = false;
     }
 

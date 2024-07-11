@@ -20,26 +20,28 @@
                 <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
                 <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
                 <Button
-                        Command="{Binding NewMemoryViewCommand}"
-                        Content="New Memory View"
-                        IsEnabled="{Binding IsPaused}" />
+                    Command="{Binding NewMemoryViewCommand}"
+                    Content="New Memory View"
+                    IsEnabled="{Binding IsPaused}" />
                 <Button
-                        Command="{Binding CloseTabCommand}"
-                        Content="Close View"
-                        IsEnabled="{Binding CanCloseTab}"/>
+                    Command="{Binding CloseTabCommand}"
+                    Content="Close View"
+                    IsEnabled="{Binding CanCloseTab}" />
                 <UniformGrid>
                     <Label Content="Start" />
-                    <NumericUpDown Value="{Binding StartAddress}"/>
+                    <NumericUpDown Value="{Binding StartAddress}" />
                     <Label Content="End" />
-                    <NumericUpDown Value="{Binding EndAddress}"/>
+                    <NumericUpDown Value="{Binding EndAddress}" />
                 </UniformGrid>
                 <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+                <Button IsVisible="{Binding IsStructureInfoPresent}" Command="{Binding ShowStructureView}" Content="Structure view" />
             </WrapPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor
+                    x:Name="HexViewer"
                     Width="800"
-                    Document="{Binding MemoryBinaryDocument}"
+                    Document="{Binding DataMemoryDocument}"
                     IsVisible="{Binding IsPaused}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
@@ -49,6 +51,14 @@
                         <rendering:HexColumn />
                         <rendering:AsciiColumn />
                     </avaloniaHex:HexEditor.Columns>
+                    <avaloniaHex:HexEditor.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem
+                                IsEnabled="{Binding IsStructureInfoPresent}"
+                                Header="Open in structure viewer"
+                                Command="{Binding ShowStructureView}" />
+                        </ContextMenu>
+                    </avaloniaHex:HexEditor.ContextMenu>
                 </avaloniaHex:HexEditor>
             </Grid>
             <dialogHost:DialogHost

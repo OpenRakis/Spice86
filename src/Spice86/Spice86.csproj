@@ -1,93 +1,97 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<EnablePackageValidation>true</EnablePackageValidation>
-		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
-		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-		<ApplicationManifest>app.manifest</ApplicationManifest>
-		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-	</PropertyGroup>
-	<!-- Properties geared towards NuGet -->
-	<PropertyGroup>
-		<NoWarn>CS1591</NoWarn>
-		<PackageId>Spice86</PackageId>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>7.0.0</version>
-		<PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>nullable</WarningsAsErrors>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <NoWarn>CS1591</NoWarn>
+        <PackageId>Spice86</PackageId>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <version>7.0.0</version>
+        <PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
         <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<Description>Reverse engineer and rewrite real mode DOS programs</Description>
-		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
-		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-	</PropertyGroup>
-	<ItemGroup>
-		<Content Include="libportaudio.dll">
-			<PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-			<Pack>True</Pack>
-		</Content>
-	</ItemGroup>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Description>Reverse engineer and rewrite real mode DOS programs</Description>
+        <PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
+        <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
 
-	<!-- Source Link configuration -->
-	<PropertyGroup>
-		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-	</PropertyGroup>
-	<ItemGroup>
-		<PackageReference Include="AvaloniaHex" Version="0.1.2" />
-		<PackageReference Include="AvaloniaGraphControl" Version="0.6.1" />
-		<PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.0.0.3" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.4">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
+    <!-- set by DotNet.ReproducibleBuilds -->
+    <PropertyGroup>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="bodong.PropertyModels" Version="11.0.10.1" />
-		<PackageReference Include="DialogHost.Avalonia" Version="0.7.9" />
-		<PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.11" />
-		<PackageReference Include="Iced" Version="1.21.0" />
-		<PackageReference Include="Semi.Avalonia" Version="11.0.7.4" />
-		<PackageReference Include="Semi.Avalonia.DataGrid" Version="11.0.7.2" />
-		<PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.1" />
-		<PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.10.1" />
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Avalonia" Version="11.0.11" />
-		<PackageReference Include="Avalonia.Desktop" Version="11.0.11" />
-		<PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.11" />
-		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.11" />
-		<PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.4">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
-	<ItemGroup>
-		<AvaloniaResource Include="Assets\**" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
-		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <Content Include="libportaudio.dll">
+            <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <Pack>True</Pack>
+        </Content>
+    </ItemGroup>
+
+    <!-- Package references -->
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.0.11"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.11"/>
+        <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.0.0.3" />
+        <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.10"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.11"/>
+        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.11"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.11"/>
+        <PackageReference Include="AvaloniaGraphControl" Version="0.6.1"/>
+        <PackageReference Include="AvaloniaHex" Version="0.1.3" />
+        <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.0.10.1"/>
+        <PackageReference Include="bodong.PropertyModels" Version="11.0.10.1"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
+        <PackageReference Include="DialogHost.Avalonia" Version="0.7.9"/>
+        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Iced" Version="1.21.0"/>
+        <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0"/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+        <PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.4">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Semi.Avalonia" Version="11.0.7.4" />
+        <PackageReference Include="Semi.Avalonia.DataGrid" Version="11.0.7.2" />
+        <PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj"/>
+        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+    </ItemGroup>
 </Project>

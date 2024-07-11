@@ -20,6 +20,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     private readonly IHostStorageProvider _storageProvider;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly ITextClipboard _textClipboard;
+    private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
@@ -35,7 +36,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     private AvaloniaList<MemoryViewModel> _memoryViewModels = new();
-    
+
     [ObservableProperty]
     private VideoCardViewModel _videoCardViewModel;
 
@@ -47,15 +48,16 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
 
     [ObservableProperty]
     private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
-    
+
     [ObservableProperty]
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
     [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
-    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor) {
+    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory) {
         _programExecutor = programExecutor;
+        _structureViewModelFactory = structureViewModelFactory;
         _storageProvider = storageProvider;
         _textClipboard = textClipboard;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
@@ -70,7 +72,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         VideoCardViewModel = new(uiDispatcherTimerFactory);
         CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
         MidiViewModel = new(uiDispatcherTimerFactory);
-        MemoryViewModels.Add( new(this, textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0));
+        MemoryViewModels.Add(new(this, textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0, _structureViewModelFactory));
         CfgCpuViewModel = new(uiDispatcherTimerFactory, new PerformanceMeasurer(), pauseStatus);
         Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
     }
@@ -79,18 +81,20 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
         switch (internalDebuggerViewModel) {
             case MemoryViewModel memoryViewModel:
                 MemoryViewModels.Remove(memoryViewModel);
+
                 break;
             case DisassemblyViewModel disassemblyViewModel:
                 DisassemblyViewModels.Remove(disassemblyViewModel);
+
                 break;
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewMemoryView() {
-        MemoryViewModels.Add(new MemoryViewModel(this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0));
+        MemoryViewModels.Add(new MemoryViewModel(this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0, _structureViewModelFactory));
     }
-    
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void NewDisassemblyView() => DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
 
@@ -109,7 +113,7 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
 
     private IEnumerable<IInternalDebugger> InternalDebuggers => new IInternalDebugger[] {
         PaletteViewModel, CpuViewModel, VideoCardViewModel, MidiViewModel, SoftwareMixerViewModel, CfgCpuViewModel
-    }
+        }
         .Concat(DisassemblyViewModels)
         .Concat(MemoryViewModels);
 

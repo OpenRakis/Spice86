@@ -1,0 +1,97 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+        xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+        xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+        xmlns:converters="clr-namespace:Spice86.Converters"
+        xmlns:types="clr-namespace:Structurizer.Types;assembly=Structurizer"
+        WindowStartupLocation="CenterOwner"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+        x:Class="Spice86.Views.StructureView"
+        x:CompileBindings="True"
+        x:DataType="viewModels:StructureViewModel"
+        Title="Structure Viewer"
+        Width="1080"
+        Height="800">
+    <Window.Resources>
+        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+    </Window.Resources>
+    <DockPanel Margin="10">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*" DockPanel.Dock="Top">
+            <Label Grid.Column="0" Grid.Row="0"
+                   IsVisible="{Binding IsAddressableMemory}"
+                   VerticalAlignment="Center"
+                   Margin="0 0 5 0">
+                Address:
+            </Label>
+            <TextBox
+                Grid.Column="1" Grid.Row="0"
+                IsVisible="{Binding IsAddressableMemory}"
+                Text="{Binding MemoryAddress, Mode=OneWayToSource, Converter={StaticResource SegmentedAddressConverter}}"
+                Watermark="segment:offset" />
+            <Label Grid.Column="0" Grid.Row="1"
+                   VerticalAlignment="Center"
+                   Margin="0 0 5 0">
+                Structure:
+            </Label>
+            <AutoCompleteBox
+                Grid.Column="1" Grid.Row="1"
+                ItemsSource="{Binding AvailableStructures}"
+                SelectedItem="{Binding SelectedStructure}"
+                FilterMode="Custom"
+                ItemFilter="{Binding StructFilter}"
+                Watermark="Type to select structure"
+                ItemSelector="{Binding StructItemSelector}">
+                <AutoCompleteBox.ItemTemplate>
+                    <DataTemplate DataType="types:StructType">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock>
+                                <Run Text="{Binding Name}" />
+                                <Run Text=" [" />
+                                <Run Text="{Binding Size}" />
+                                <Run Text=" bytes]" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </AutoCompleteBox.ItemTemplate>
+            </AutoCompleteBox>
+        </Grid>
+        <Grid ColumnDefinitions="Auto,4,*">
+            <ScrollViewer Grid.Column="0">
+                <TreeDataGrid
+                    Source="{Binding Source}"
+                    FontFamily="Cascadia Code,JetBrains Mono,Monospace,monospace"
+                    FontWeight="Light"
+                    CanUserResizeColumns="True">
+                    <TreeDataGrid.Styles>
+                        <Style Selector="TreeDataGrid :is(TreeDataGridCell)">
+                            <Setter Property="BorderThickness" Value="0 0 1 1" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource TreeDataGridGridLinesBrush}" />
+                        </Style>
+                    </TreeDataGrid.Styles>
+                </TreeDataGrid>
+            </ScrollViewer>
+            <GridSplitter
+                Grid.Column="1"
+                ResizeDirection="Columns"
+                Margin="20,0,10,0" />
+            <avaloniaHex:HexEditor
+                Grid.Column="2"
+                x:Name="StructureHexEditor"
+                BorderThickness="1"
+                FontSize="14"
+                ColumnPadding="30"
+                FontFamily="Cascadia Code,JetBrains Mono,Monospace,monospace"
+                Document="{Binding StructureMemory}">
+                <avaloniaHex:HexEditor.Columns>
+                    <rendering:OffsetColumn />
+                    <rendering:HexColumn />
+                    <rendering:BinaryColumn IsVisible="False" />
+                    <rendering:AsciiColumn InvalidCellChar="?" />
+                </avaloniaHex:HexEditor.Columns>
+            </avaloniaHex:HexEditor>
+        </Grid>
+    </DockPanel>
+</Window>
