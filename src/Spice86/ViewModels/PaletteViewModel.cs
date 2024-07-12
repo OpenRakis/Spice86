@@ -1,7 +1,6 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Threading;

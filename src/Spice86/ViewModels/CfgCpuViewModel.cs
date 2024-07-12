@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using AvaloniaGraphControl;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -12,10 +13,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Messages;
 
 using System.Diagnostics;
 
@@ -35,15 +36,18 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private long _averageNodeTime = 0;
 
-    private readonly IPauseStatus? _pauseStatus;
+    private readonly IMessenger _messenger;
 
-    public CfgCpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
-        _pauseStatus.PropertyChanged += (sender, args) => {
-            if (args.PropertyName == nameof(IPauseStatus.IsPaused) && !_pauseStatus.IsPaused) {
+    private bool _isPaused;
+
+    public CfgCpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
+        _messenger = messenger;
+        _messenger.Register<PauseStatusChangedMessage>(this, (_, message) => {
+            _isPaused = message.IsPaused;
+            if(!message.IsPaused) {
                 Graph = null;
             }
-        };
+        });
         _performanceMeasurer = performanceMeasurer;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
@@ -53,7 +57,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
     }
 
     private async void UpdateCurrentGraph(object? sender, EventArgs e) {
-        if (_pauseStatus?.IsPaused is false or null) {
+        if (!_isPaused) {
             return;
         }
         if (Graph is not null) {
@@ -81,7 +85,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 visitedNodes.Add(node);
                 stopwatch.Restart();
                 foreach (ICfgNode successor in node.Successors) {
-                    var edgeKey = GenerateEdgeKey(node, successor);
+                    (int, int) edgeKey = GenerateEdgeKey(node, successor);
                     if (!existingEdges.Contains(edgeKey)) {
                         currentGraph.Edges.Add(CreateEdge(node, successor));
                         existingEdges.Add(edgeKey);
@@ -91,7 +95,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                     }
                 }
                 foreach (ICfgNode predecessor in node.Predecessors) {
-                    var edgeKey = GenerateEdgeKey(predecessor, node);
+                    (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
                     if (!existingEdges.Contains(edgeKey)) {
                         currentGraph.Edges.Add(CreateEdge(predecessor, node));
                         existingEdges.Add(edgeKey);

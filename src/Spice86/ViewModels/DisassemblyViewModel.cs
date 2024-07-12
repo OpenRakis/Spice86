@@ -5,6 +5,7 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Iced.Intel;
 
@@ -13,17 +14,13 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
-
-using System.Collections.Specialized;
-using System.ComponentModel;
+using Spice86.ViewModels.Messages;
 
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus _pauseStatus;
-    private readonly DebugWindowViewModel _debugWindowViewModel;
+    private readonly IMessenger _messenger;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
@@ -62,29 +59,16 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(DebugWindowViewModel debugWindowViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
-        _debugWindowViewModel = debugWindowViewModel;
-        _pauseStatus = pauseStatus;
-        IsPaused = pauseStatus.IsPaused;
-        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
+    public DisassemblyViewModel(IMessenger messenger, bool isPaused, bool canCloseTab, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        IsPaused = isPaused;
+        CanCloseTab = canCloseTab;
+        _messenger = messenger;
+        _messenger.Register<PauseStatusChangedMessage>(this, HandlePauseStatusMessage);
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        UpdateCanCloseTabProperty();
-        debugWindowViewModel.DisassemblyViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
     }
 
-    private void UpdateCanCloseTabProperty() {
-        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
-    }
-    
-    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        UpdateCanCloseTabProperty();
-    }
-    
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _debugWindowViewModel.CloseTab(this);
-        UpdateCanCloseTabProperty();
-    }
+    private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
 
     private void UpdateValues(object? sender, EventArgs e) {
         if (_needToUpdateDisassembly && IsPaused) {
@@ -92,9 +76,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
-        IsPaused = _pauseStatus.IsPaused;
-        UpdateCanCloseTabProperty();
+    private void HandlePauseStatusMessage(object recipient, PauseStatusChangedMessage message) {
+        IsPaused = message.IsPaused;
         if (!IsPaused) {
             return;
         }
@@ -124,9 +107,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void NewDisassemblyView() {
-        _debugWindowViewModel.NewDisassemblyViewCommand.Execute(null);
-    }
+    public void NewDisassemblyView() => _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>());
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public void StepInstruction() => _programExecutor?.StepInstruction();
