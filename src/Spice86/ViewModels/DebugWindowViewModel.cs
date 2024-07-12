@@ -5,25 +5,22 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
-using Spice86.ViewModels.Messages;
 
 using System.ComponentModel;
 
 public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IDebuggableComponent _programExecutor;
+    private readonly IPauseStatus _pauseStatus;
+    private readonly IProgramExecutor _programExecutor;
     private readonly IHostStorageProvider _storageProvider;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly ITextClipboard _textClipboard;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
-    private readonly IMessenger _messenger;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
@@ -58,35 +55,27 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
-    public DebugWindowViewModel(IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory) {
-        _messenger = messenger;
-        _messenger.Register<PauseStatusChangedMessage>(this, (_, message) => HandlePauseStatusChanged(message.IsPaused));
+    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory) {
         _programExecutor = programExecutor;
         _structureViewModelFactory = structureViewModelFactory;
         _storageProvider = storageProvider;
         _textClipboard = textClipboard;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
-        IsPaused = programExecutor.IsPaused;
+        _pauseStatus = pauseStatus;
+        IsPaused = _programExecutor.IsPaused;
+        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        var disassemblyVm = new DisassemblyViewModel(_messenger, programExecutor.IsPaused, false, uiDispatcherTimerFactory);
+        var disassemblyVm = new DisassemblyViewModel(this, uiDispatcherTimerFactory, pauseStatus);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(uiDispatcherTimerFactory);
         SoftwareMixerViewModel = new(uiDispatcherTimerFactory);
         VideoCardViewModel = new(uiDispatcherTimerFactory);
-        CpuViewModel = new(_messenger, uiDispatcherTimerFactory);
+        CpuViewModel = new(uiDispatcherTimerFactory, pauseStatus);
         MidiViewModel = new(uiDispatcherTimerFactory);
-        MemoryViewModels.Add(new(this, _messenger, textClipboard, uiDispatcherTimerFactory, storageProvider, programExecutor.IsPaused, false, 0, A20Gate.EndOfHighMemoryArea, _structureViewModelFactory));
-        CfgCpuViewModel = new(_messenger, uiDispatcherTimerFactory, new PerformanceMeasurer());
+        MemoryViewModels.Add(new(this, textClipboard, uiDispatcherTimerFactory, storageProvider, pauseStatus, 0, _structureViewModelFactory));
+        CfgCpuViewModel = new(uiDispatcherTimerFactory, new PerformanceMeasurer(), pauseStatus);
         Dispatcher.UIThread.Post(ForceUpdate, DispatcherPriority.Background);
-        _messenger.Register<AddViewModelMessage<MemoryViewModel>>(this, (_, _) => NewMemoryViewCommand.Execute(null));
-        _messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this, (_, _) => NewDisassemblyViewCommand.Execute(null));
-        _messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this, (_, message) => CloseTab(message.Sender));
-        _messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this, (_, message) => CloseTab(message.Sender));
     }
-
-    private void HandlePauseStatusChanged(bool isPaused) => IsPaused = isPaused;
-
-    private void NotifyViaMessageAboutPauseStatus(bool isPaused) => _messenger.Send(new PauseStatusChangedMessage(isPaused));
 
     internal void CloseTab(IInternalDebugger internalDebuggerViewModel) {
         switch (internalDebuggerViewModel) {
@@ -102,24 +91,20 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void NewMemoryView() =>
-        MemoryViewModels.Add(new MemoryViewModel(this, _messenger, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, IsPaused, true, 0, A20Gate.EndOfHighMemoryArea, _structureViewModelFactory));
-    
+    public void NewMemoryView() {
+        MemoryViewModels.Add(new MemoryViewModel(this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, _pauseStatus, 0, _structureViewModelFactory));
+    }
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void NewDisassemblyView() =>
-        DisassemblyViewModels.Add(new DisassemblyViewModel(_messenger, true, IsPaused, _uiDispatcherTimerFactory));
+    public void NewDisassemblyView() => DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
 
     [RelayCommand]
-    public void Pause() {
-        IsPaused = true;
-        NotifyViaMessageAboutPauseStatus(IsPaused);
-    }
+    public void Pause() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void Continue() {
-        IsPaused = false;
-        NotifyViaMessageAboutPauseStatus(IsPaused);
-    }
+    public void Continue() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
+
+    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) => IsPaused = _pauseStatus.IsPaused;
 
     [RelayCommand]
     public void ForceUpdate() => UpdateValues(this, EventArgs.Empty);

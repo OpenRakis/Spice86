@@ -3,21 +3,19 @@ namespace Spice86.ViewModels;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
+using Spice86.Interfaces;
 using Spice86.Models.Debugging;
-using Spice86.ViewModels.Messages;
 
 using System.ComponentModel;
 using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IMessenger _messenger;
+    private readonly IPauseStatus _pauseStatus;
     private State? _cpuState;
-    private bool _isPaused;
     
     [ObservableProperty]
     private StateInfo _state = new();
@@ -25,9 +23,8 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory) {
-        _messenger = messenger;
-        _messenger.Register<PauseStatusChangedMessage>(this, (_, message) => _isPaused = message.IsPaused);
+    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
+        _pauseStatus = pauseStatus;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
@@ -43,12 +40,14 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         _cpuState ??= component as State;
     }
     
+    private bool IsPaused => _pauseStatus.IsPaused;
+    
     private void VisitCpuState(State state) {
-        if (!_isPaused) {
+        if (!IsPaused) {
             UpdateCpuState(state);
         }
 
-        if (_isPaused) {
+        if (IsPaused) {
             State.PropertyChanged -= OnStatePropertyChanged;
             State.PropertyChanged += OnStatePropertyChanged;
             Flags.PropertyChanged -= OnStatePropertyChanged;
@@ -61,7 +60,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         return;
 
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !_isPaused) {
+            if (sender is null || e.PropertyName == null || !IsPaused) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
