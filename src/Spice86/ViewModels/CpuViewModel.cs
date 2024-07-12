@@ -43,9 +43,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     private bool IsPaused => _pauseStatus.IsPaused;
     
     private void VisitCpuState(State state) {
-        if (!IsPaused) {
-            UpdateCpuState(state);
-        }
+        UpdateCpuState(state);
 
         if (IsPaused) {
             State.PropertyChanged -= OnStatePropertyChanged;
@@ -102,6 +100,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         State.GS = state.GS;
         State.SS = state.SS;
         State.IP = state.IP;
+        State.Cycles = state.Cycles;
         State.IpPhysicalAddress = state.IpPhysicalAddress;
         State.StackPhysicalAddress = state.StackPhysicalAddress;
         State.SegmentOverrideIndex = state.SegmentOverrideIndex;
