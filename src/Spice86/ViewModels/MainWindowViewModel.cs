@@ -41,10 +41,11 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
+    private readonly bool _isGdbServerRunning;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
-    private bool _isProgramExecutorNotNull;
+    private bool _canUseInternalDebugger;
 
     private IProgramExecutor? _programExecutor;
 
@@ -52,7 +53,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         get => _programExecutor;
         set {
             _programExecutor = value;
-            Dispatcher.UIThread.Post(() => IsProgramExecutorNotNull = value is not null);
+            Dispatcher.UIThread.Post(() => CanUseInternalDebugger = value is not null && !_isGdbServerRunning);
         }
     }
 
@@ -67,7 +68,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
-    private string _lastExecutableDirectory = string.Empty;
     private bool _closeAppOnEmulatorExit;
     private bool _isAppClosing;
 
@@ -91,6 +91,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
+        _isGdbServerRunning = configuration.GdbPort is not null;
     }
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
@@ -270,7 +271,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
             return false;
         }
-        _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
             { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
@@ -428,7 +428,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private bool _isPerformanceVisible;
 
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
+    [RelayCommand(CanExecute = nameof(CanUseInternalDebugger))]
     public async Task ShowInternalDebugger() {
         if (ProgramExecutor is not null) {
             _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor, _structureViewModelFactory);
