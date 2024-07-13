@@ -5,7 +5,6 @@
     xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:models="clr-namespace:Spice86.Models.Debugging.CfgCpu"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
     d:DesignHeight="450"
     d:DesignWidth="800"
@@ -39,13 +38,7 @@
                                     EnableConstrains="True"
                                     ClipToBounds="True" Focusable="True"
                                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-                        <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme">
-                            <agc:GraphPanel.DataTemplates>
-                                <DataTemplate DataType="{x:Type models:CfgNodeInfo}">
-                                    <agc:TextSticker Padding="30,10" Shape="RoundedRectangle" Text="{Binding Address}" />
-                                </DataTemplate>
-                            </agc:GraphPanel.DataTemplates>
-                        </agc:GraphPanel>
+                        <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
                     </ZoomBorder>
 				</ScrollViewer>
                 
