@@ -15,21 +15,20 @@
         <viewModels:CfgCpuViewModel />
     </Design.DataContext>
         <DockPanel>
-            <UniformGrid DockPanel.Dock="Top">
-                <StackPanel Orientation="Vertical">
-                    <Label>Number of nodes</Label>
-                    <TextBlock Text="{Binding NumberOfNodes}" />
+            <Grid Margin="5" ColumnDefinitions="*,*,*" DockPanel.Dock="Top">
+                <StackPanel Grid.Column="0" Margin="5" Orientation="Horizontal">
+                    <Label HorizontalAlignment="Center" Margin="5">Number of nodes</Label>
+                    <TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding NumberOfNodes}" />
                 </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label>Average time (ms) for adding a node</Label>
-                    <TextBlock Text="{Binding AverageNodeTime}" />
+                <StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
+                    <Label HorizontalAlignment="Center" Margin="5">Average time (ms) for adding a node</Label>
+                    <TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding AverageNodeTime}" />
                 </StackPanel>
-                <StackPanel Orientation="Vertical">
-                    <Label>Max number of nodes to display</Label>
-                    <NumericUpDown Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
+                <StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
+                    <Label HorizontalAlignment="Center" Margin="5">Max number of nodes to display</Label>
+                    <NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
                 </StackPanel>
-                
-            </UniformGrid>
+            </Grid>
 			<Border DockPanel.Dock="Bottom" Background="White">
 				<ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
                     <ZoomBorder Name="ZoomBorder"
@@ -41,7 +40,6 @@
                         <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
                     </ZoomBorder>
 				</ScrollViewer>
-                
 			</Border>
 			</DockPanel>
 </UserControl>
