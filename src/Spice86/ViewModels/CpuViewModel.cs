@@ -46,9 +46,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         UpdateCpuState(state);
 
         if (IsPaused) {
-            State.PropertyChanged -= OnStatePropertyChanged;
             State.PropertyChanged += OnStatePropertyChanged;
-            Flags.PropertyChanged -= OnStatePropertyChanged;
             Flags.PropertyChanged += OnStatePropertyChanged;
         } else {
             State.PropertyChanged -= OnStatePropertyChanged;
