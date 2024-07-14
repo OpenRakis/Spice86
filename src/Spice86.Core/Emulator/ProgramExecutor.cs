@@ -172,8 +172,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
                 Machine.MachineBreakpoints,
                 Machine.MachineBreakpoints.PauseHandler,
                 _loggerService,
-                _configuration,
-                gui);
+                _configuration);
         }
 
         return null;

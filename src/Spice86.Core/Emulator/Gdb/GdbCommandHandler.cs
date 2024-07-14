@@ -20,8 +20,6 @@ public class GdbCommandHandler {
     private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
     private readonly GdbCustomCommandsHandler _gdbCustomCommandsHandler;
     private readonly GdbIo _gdbIo;
-    private readonly Cpu _cpu;
-    private readonly IMemory _memory;
     private readonly PauseHandler _pauseHandler;
     private readonly State _state;
     private readonly FunctionHandler _functionHandler;
@@ -41,22 +39,19 @@ public class GdbCommandHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
-    /// <param name="gui">The emulator's UI.</param>
     public GdbCommandHandler(IMemory memory, Cpu cpu, State state, PauseHandler pauseHandler,
         MachineBreakpoints machineBreakpoints, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
-        FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration, IGui? gui) {
+        FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
-        _cpu = cpu;
         _state = state;
-        _memory = memory;
         _gdbIo = gdbIo;
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
         _pauseHandler = pauseHandler;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(_memory, gdbIo, _loggerService);
+        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, _memory, _cpu, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo, gui,
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, memory, cpu, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }

@@ -136,7 +136,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private BlasterState _blasterState;
     private bool _playbackStarted;
     private readonly DualPic _dualPic;
-    private readonly IGui? _gui;
     private readonly DmaController _dmaController;
 
     /// <summary>
@@ -163,17 +162,15 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="state">The CPU state.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
-    /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
         PCMSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _dmaController = dmaController;
-        _gui = gui;
         _dualPic = dualPic;
         FMSynthSoundChannel = opl3SoundChannel;
         _ctMixer = new HardwareMixer(this, loggerService);
