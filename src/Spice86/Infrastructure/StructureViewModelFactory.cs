@@ -3,12 +3,17 @@ namespace Spice86.Infrastructure;
 using AvaloniaHex.Document;
 
 using Spice86.Core.CLI;
-using Spice86.Interfaces;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
 using Structurizer;
 using Structurizer.Types;
+
+public interface IStructureViewModelFactory {
+    bool IsInitialized { get; }
+    StructureViewModel CreateNew(IBinaryDocument data);
+    void Parse(string headerFilePath);
+}
 
 public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly Hydrator? _hydrator;

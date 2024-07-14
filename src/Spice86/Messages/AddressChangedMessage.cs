@@ -1,3 +1,3 @@
-namespace Spice86.Models;
+namespace Spice86.Messages;
 
 public record AddressChangedMessage(ulong Address);

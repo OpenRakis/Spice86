@@ -3,18 +3,18 @@ namespace Spice86.ViewModels;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
+using Spice86.Messages;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus _pauseStatus;
+public partial class CpuViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
     private State? _cpuState;
     
     [ObservableProperty]
@@ -23,10 +23,12 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
+    public CpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        messenger.Register(this);
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
+    
+    public void Receive(PauseChangedMessage message) => _isPaused = message.IsPaused;
 
     private void UpdateValues(object? sender, EventArgs e) {
         if (_cpuState is not null) {
@@ -36,16 +38,15 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     
     public bool NeedsToVisitEmulator => _cpuState is null;
 
-    public void Visit<T>(T component) where T : IDebuggableComponent {
+    public void Visit<T>(T component) where T : IDebuggableComponent =>
         _cpuState ??= component as State;
-    }
-    
-    private bool IsPaused => _pauseStatus.IsPaused;
+
+    private bool _isPaused;
     
     private void VisitCpuState(State state) {
         UpdateCpuState(state);
 
-        if (IsPaused) {
+        if (_isPaused) {
             State.PropertyChanged += OnStatePropertyChanged;
             Flags.PropertyChanged += OnStatePropertyChanged;
         } else {
@@ -56,12 +57,12 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         return;
 
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !IsPaused) {
+            if (sender is null || e.PropertyName == null || !_isPaused) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
             PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
-            if (propertyInfo is not null && originalPropertyInfo is not null) {
+            if (propertyInfo is not null && originalPropertyInfo is not null && originalPropertyInfo.CanWrite) {
                 originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
             }
         }
