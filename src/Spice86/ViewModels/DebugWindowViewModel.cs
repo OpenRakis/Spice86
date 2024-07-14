@@ -13,21 +13,17 @@ using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Shared.Diagnostics;
 
-public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
+public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage>,
+    IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
+    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
     private readonly IMessenger _messenger;
     private readonly IProgramExecutor _programExecutor;
-    private readonly IHostStorageProvider _storageProvider;
-    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
-    private readonly ITextClipboard _textClipboard;
-    private readonly IStructureViewModelFactory _structureViewModelFactory;
 
     [ObservableProperty]
     private DateTime? _lastUpdate;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
-    [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]
-    [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -57,49 +53,24 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IR
     public DebugWindowViewModel(IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory) {
         _programExecutor = programExecutor;
         _messenger = messenger;
-        _messenger.Register(this);
-        _structureViewModelFactory = structureViewModelFactory;
-        _storageProvider = storageProvider;
-        _textClipboard = textClipboard;
-        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
+        _messenger.Register<PauseChangedMessage>(this);
+        _messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
+        _messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
+        _messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
+        _messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         IsPaused = _programExecutor.IsPaused;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        var disassemblyVm = new DisassemblyViewModel(messenger, this, uiDispatcherTimerFactory);
+        var disassemblyVm = new DisassemblyViewModel(messenger, uiDispatcherTimerFactory);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(uiDispatcherTimerFactory);
         SoftwareMixerViewModel = new(uiDispatcherTimerFactory);
         VideoCardViewModel = new(uiDispatcherTimerFactory);
         CpuViewModel = new(messenger, uiDispatcherTimerFactory);
         MidiViewModel = new(uiDispatcherTimerFactory);
-        MemoryViewModels.Add(new(messenger, this, textClipboard, uiDispatcherTimerFactory, storageProvider, 0, _structureViewModelFactory));
+        MemoryViewModels.Add(new(messenger, textClipboard, uiDispatcherTimerFactory, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(messenger, uiDispatcherTimerFactory, new PerformanceMeasurer());
     }
-
-    internal void CloseTab(IInternalDebugger internalDebuggerViewModel) {
-        switch (internalDebuggerViewModel) {
-            case MemoryViewModel memoryViewModel:
-                MemoryViewModels.Remove(memoryViewModel);
-
-                break;
-            case DisassemblyViewModel disassemblyViewModel:
-                DisassemblyViewModels.Remove(disassemblyViewModel);
-
-                break;
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void NewMemoryView() {
-        MemoryViewModels.Add(new MemoryViewModel(_messenger, this, _textClipboard, _uiDispatcherTimerFactory, _storageProvider, 0, _structureViewModelFactory));
-        _messenger.Send(new PauseChangedMessage(IsPaused: IsPaused));
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void NewDisassemblyView() {
-        DisassemblyViewModels.Add(new DisassemblyViewModel(_messenger, this, _uiDispatcherTimerFactory));
-        _messenger.Send(new PauseChangedMessage(IsPaused: IsPaused));
-    }
-
+    
     [RelayCommand]
     private void Pause() => _messenger.Send(new PauseChangedMessage(true));
 
@@ -129,4 +100,8 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger, IR
     }
 
     public bool NeedsToVisitEmulator => InternalDebuggers.Any(x => x.NeedsToVisitEmulator);
+    public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
+    public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
+    public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
+    public void Receive(RemoveViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Remove(message.ViewModel);
 }

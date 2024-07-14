@@ -17,15 +17,15 @@ using Spice86.Messages;
 using Spice86.Shared.Utils;
 using Spice86.Views;
 
-using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger, IRecipient<PauseChangedMessage> {
     private IMemory? _memory;
-    private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateBinaryDocument;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
+    private readonly IMessenger _messenger;
+    private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
 
     [ObservableProperty]
     private DataMemoryDocument? _dataMemoryDocument;
@@ -44,10 +44,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     private bool _canCloseTab;
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _debugWindowViewModel.CloseTab(this);
-        UpdateCanCloseTabProperty();
-    }
+    private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<MemoryViewModel>(this));
 
     private bool GetIsMemoryRangeValid() {
         if (_memory is null) {
@@ -68,11 +65,10 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
     }
 
     private void TryUpdateHeaderAndMemoryDocument() {
-        if (!UpdateBinaryDocumentCommand.CanExecute(null)) {
-            return;
-        }
         Header = $"{StartAddress:X} - {EndAddress:X}";
-        UpdateBinaryDocumentCommand.Execute(null);
+        if (UpdateBinaryDocumentCommand.CanExecute(null)) {
+            UpdateBinaryDocumentCommand.Execute(null);
+        }
     }
 
     private uint? _endAddress = 0;
@@ -101,16 +97,16 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IMessenger messenger, DebugWindowViewModel debugWindowViewModel, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, uint startAddress, IStructureViewModelFactory structureViewModelFactory, uint endAddress = 0) : base(textClipboard) {
+    public MemoryViewModel(IMessenger messenger, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
         messenger.Register(this);
-        _debugWindowViewModel = debugWindowViewModel;
+        _messenger = messenger;
+        _dispatcherTimerFactory = dispatcherTimerFactory;
         _storageProvider = storageProvider;
-        StartAddress = startAddress;
         _structureViewModelFactory = structureViewModelFactory;
+        StartAddress = startAddress;
         EndAddress = endAddress;
+        CanCloseTab = canCloseTab;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        UpdateCanCloseTabProperty();
-        debugWindowViewModel.MemoryViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
     }
 
     /// <summary>
@@ -141,15 +137,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         var structureWindow = new StructureView {DataContext = structureViewModel};
         structureWindow.Show();
     }
-
-    private void UpdateCanCloseTabProperty() {
-        CanCloseTab = _debugWindowViewModel.MemoryViewModels.Count > 1;
-    }
-
-    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        UpdateCanCloseTabProperty();
-    }
-
+    
     private void UpdateValues(object? sender, EventArgs e) {
         if (!_needToUpdateBinaryDocument) {
             return;
@@ -167,7 +155,16 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewMemoryView() {
-        _debugWindowViewModel.NewMemoryViewCommand.Execute(null);
+        if (_memory is null) {
+            return;
+        }
+        MemoryViewModel memoryViewModel = new(_messenger, _textClipboard, _dispatcherTimerFactory,
+            _storageProvider,
+            _structureViewModelFactory, canCloseTab: true) {
+            IsPaused = IsPaused
+        };
+        memoryViewModel.Visit(_memory);
+        _messenger.Send(new AddViewModelMessage<MemoryViewModel>(memoryViewModel));
     }
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
@@ -262,6 +259,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
                 EndAddress = _memory.Length;
             }
         }
+        IsMemoryRangeValid = GetIsMemoryRangeValid();
         TryUpdateHeaderAndMemoryDocument();
     }
 }

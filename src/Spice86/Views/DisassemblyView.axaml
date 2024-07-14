@@ -24,8 +24,7 @@
             <Button Grid.Column="0"
                 Margin="5"
                 Command="{Binding StepInstructionCommand}"
-                Content="Step instruction"
-                IsVisible="{Binding IsGdbServerAvailable}" />
+                Content="Step instruction" />
             <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto">
                 <Button Grid.Column="0"
                     Command="{Binding NewDisassemblyViewCommand}"

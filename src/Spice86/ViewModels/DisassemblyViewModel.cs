@@ -19,14 +19,13 @@ using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
-using System.Collections.Specialized;
-
 public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
-    private readonly DebugWindowViewModel _debugWindowViewModel;
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
     private IProgramExecutor? _programExecutor;
+    private readonly IMessenger _messenger;
+    private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -40,9 +39,6 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
-
-    [ObservableProperty]
-    private bool _isGdbServerAvailable;
 
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
@@ -61,27 +57,16 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IMessenger messenger, DebugWindowViewModel debugWindowViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+    public DisassemblyViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
         messenger.Register(this);
-        _debugWindowViewModel = debugWindowViewModel;
+        _dispatcherTimerFactory = dispatcherTimerFactory;
+        _messenger = messenger;
+        CanCloseTab = canCloseTab;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        UpdateCanCloseTabProperty();
-        debugWindowViewModel.DisassemblyViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
-    }
-
-    private void UpdateCanCloseTabProperty() {
-        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
-    }
-    
-    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        UpdateCanCloseTabProperty();
     }
     
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _debugWindowViewModel.CloseTab(this);
-        UpdateCanCloseTabProperty();
-    }
+    private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
 
     private void UpdateValues(object? sender, EventArgs e) {
         if (_needToUpdateDisassembly && IsPaused) {
@@ -91,12 +76,10 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
 
     public void Receive(PauseChangedMessage message) {
         IsPaused = message.IsPaused;
-        UpdateCanCloseTabProperty();
         if (!IsPaused) {
             return;
         }
         _needToUpdateDisassembly = true;
-        StartAddress ??= _state?.IpPhysicalAddress;
     }
     
     public bool NeedsToVisitEmulator => _memory is null || _state is null || _programExecutor is null;
@@ -108,6 +91,9 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
                 break;
             case State state: {
                 _state ??= state;
+                if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
+                    GoToCsIpCommand.Execute(null);
+                }
                 if (_needToUpdateDisassembly && IsPaused) {
                     UpdateDisassembly();
                 }
@@ -115,14 +101,21 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
             }
             case IProgramExecutor programExecutor:
                 _programExecutor ??= programExecutor;
-                IsGdbServerAvailable = programExecutor.IsGdbCommandHandlerAvailable;
                 break;
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        _debugWindowViewModel.NewDisassemblyViewCommand.Execute(null);
+        if(_memory is null || _state is null) {
+            return;
+        }
+        DisassemblyViewModel memoryViewModel = new(_messenger, _dispatcherTimerFactory, canCloseTab: true) {
+            IsPaused = IsPaused
+        };
+        memoryViewModel.Visit(_memory);
+        memoryViewModel.Visit(_state);
+        _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(memoryViewModel));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
