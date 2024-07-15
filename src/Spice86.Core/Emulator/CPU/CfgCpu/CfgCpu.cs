@@ -15,7 +15,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IDebuggableComponent {
+public class CfgCpu : IInstructionExecutor, IDebuggableComponent {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
@@ -40,6 +40,7 @@ public class CfgCpu : IDebuggableComponent {
         CurrentExecutionContext.Accept(emulatorDebugger);
     }
 
+    /// <inheritdoc />
     public void ExecuteNext() {
         ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
