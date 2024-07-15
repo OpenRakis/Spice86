@@ -17,7 +17,7 @@ public class JumpDispatcher {
     /// </summary>
     public int NextEntryAddress { get; private set; }
 
-    private readonly int _instanceId = _instanceCounter++;
+    private int _instanceId = _instanceCounter++;
     private readonly Stack<Func<int, Action>> _jumpStack = new();
     private Func<int, Action>? _returnTo;
 
@@ -26,6 +26,24 @@ public class JumpDispatcher {
     /// </summary>
     public JumpDispatcher() {
     }
+
+    /// <summary>
+    /// Resets all the internal state of the class.
+    /// </summary>
+    public void Reset() {
+        _jumpStack.Clear();
+        NextEntryAddress = default;
+        _instanceCounter = default;
+        _instanceId = default;
+        _jumpStack.Clear();
+        _returnTo = default;
+    }
+    
+    /// <summary>
+    /// Pushes a function to the internal stack.
+    /// </summary>
+    /// <param name="target">The target <see cref="Func{TResult}"/></param>
+    public void Push(Func<int, Action> target) => _jumpStack.Push(target);
 
     /// <summary>
     /// Initializes the JumpDispatcher with an initial target function.

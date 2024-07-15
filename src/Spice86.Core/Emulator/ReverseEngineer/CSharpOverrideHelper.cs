@@ -5,8 +5,10 @@ using System.Linq;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM;
@@ -15,11 +17,48 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
 /// </summary>
 public class CSharpOverrideHelper {
+    /// <summary>
+    /// The CPU registers and flags.
+    /// </summary>
+    protected readonly State _state;
+    /// <summary>
+    /// The CPU stack.
+    /// </summary>
+    protected readonly Stack _stack;
+    /// <summary>
+    /// The emulated CPU.
+    /// </summary>
+    protected readonly Cpu _cpu;
+    /// <summary>
+    /// The memory bus of the IBM PC.
+    /// </summary>
+    protected readonly IMemory _memory;
+    /// <summary>
+    /// The two programmable interrupt controllers.
+    /// </summary>
+    protected readonly DualPic _dualPic;
+    /// <summary>
+    /// The execution flow recorder.
+    /// </summary>
+    protected readonly ExecutionFlowRecorder _executionFlowRecorder;
+    /// <summary>
+    /// The class that stores callback instructions definitions.
+    /// </summary>
+    protected readonly CallbackHandler _callbackHandler;
+    /// <summary>
+    /// The IBM PC timer device.
+    /// </summary>
+    protected readonly Timer _timer;
+    /// <summary>
+    /// The class that manages software breakpoints.
+    /// </summary>
+    protected readonly MachineBreakpoints _machineBreakpoints;
     /// <summary>
     /// The service used for logging.
     /// </summary>
@@ -33,7 +72,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu => Machine.Cpu;
+    public Cpu Cpu => _cpu;
 
     /// <summary>
     /// The emulator machine.
@@ -43,7 +82,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The memory bus of the IBM PC.
     /// </summary>
-    public IMemory Memory => Machine.Memory;
+    public IMemory Memory => _memory;
 
     /// <summary>
     /// Gets the 8-bit indexer of the memory bus.
@@ -63,12 +102,12 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
-    public Stack Stack => Cpu.Stack;
+    public Stack Stack => _stack;
 
     /// <summary>
     /// Gets the state of the CPU.
     /// </summary>
-    public State State => Cpu.State;
+    public State State => _state;
 
     /// <summary>
     /// Arithmetic-logic unit for 8 bit operations
@@ -273,7 +312,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// A dictionary that stores the function information of each function defined in memory.
     /// </summary>
-    protected readonly Dictionary<SegmentedAddress, FunctionInformation> _functionInformations;
+    protected readonly IDictionary<SegmentedAddress, FunctionInformation> _functionInformations;
 
     /// <summary>
     /// Gets or sets the <see cref="JumpDispatcher"/>
@@ -287,8 +326,8 @@ public class CSharpOverrideHelper {
     /// This is a shortcut to <see cref="ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled" />
     /// </remarks>
     public bool IsRegisterExecutableCodeModificationEnabled {
-        get => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled;
-        set => Machine.Cpu.ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled = value;
+        get => _executionFlowRecorder.IsRegisterExecutableCodeModificationEnabled;
+        set => _executionFlowRecorder.IsRegisterExecutableCodeModificationEnabled = value;
     }
 
     /// <summary>
@@ -298,8 +337,29 @@ public class CSharpOverrideHelper {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration.</param>
-    public CSharpOverrideHelper(Dictionary<SegmentedAddress, FunctionInformation> functionInformations,
+    /// <param name="memory">The memory bus</param>
+    /// <param name="state">The CPU registers and flags</param>
+    /// <param name="cpu">The emulated CPU</param>
+    /// <param name="stack">The CPU stack</param>
+    /// <param name="dualPic">The two programmable interrupt controllers</param>
+    /// <param name="timer">The IBM PC Timer device</param>
+    /// <param name="executionFlowRecorder">The class that records machine code flow</param>
+    /// <param name="callbackHandler">The class that registers callback instructions definitions</param>
+    /// <param name="machineBreakpoints">The class that manages software breakpoints</param>
+    public CSharpOverrideHelper(IMemory memory, State state, Cpu cpu,
+        Stack stack, DualPic dualPic, Timer timer,
+        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) {
+        _cpu = cpu;
+        _memory = memory;
+        _state = state;
+        _stack = stack;
+        _dualPic = dualPic;
+        _timer = timer;
+        _executionFlowRecorder = executionFlowRecorder;
+        _callbackHandler = callbackHandler;
+        _machineBreakpoints = machineBreakpoints;
         _loggerService = loggerService;
         Configuration = configuration;
         _functionInformations = functionInformations;
@@ -475,7 +535,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="callbackNumber">The callback identifier.</param>
     public void Callback(byte callbackNumber) {
-        Machine.CallbackHandler.RunFromOverriden(callbackNumber);
+        _callbackHandler.RunFromOverriden(callbackNumber);
     }
 
     /// <summary>
@@ -503,7 +563,7 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
-        SegmentedAddress target = new SegmentedAddress(Cpu.InterruptVectorTable[vectorNumber]);
+        SegmentedAddress target = new(Cpu.InterruptVectorTable[vectorNumber]);
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");
@@ -518,11 +578,10 @@ public class CSharpOverrideHelper {
     /// <param name="target">The <see cref="SegmentedAddress"/> where the function is defined.</param>
     /// <returns>The C# function override, or <c>null</c> if not found.</returns>
     public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
-        if (!Machine.Cpu.FunctionHandler.FunctionInformations.TryGetValue(target,
+        if (!_functionInformations.TryGetValue(target,
                 out FunctionInformation? functionInformation)) {
             return null;
         }
-
         return functionInformation.FunctionOverride;
     }
 
@@ -574,7 +633,8 @@ public class CSharpOverrideHelper {
     private void ExecuteCall(Func<int, Action> function, Action action) {
         JumpDispatcher currentJumpDispatcher = JumpDispatcher;
         // Ensure the jump dispatcher has the function we are calling as starting point
-        JumpDispatcher = new JumpDispatcher(function);
+        JumpDispatcher.Reset();
+        JumpDispatcher.Push(function);
         action.Invoke();
         JumpDispatcher = currentJumpDispatcher;
     }
@@ -593,7 +653,7 @@ public class CSharpOverrideHelper {
                 offset),
             _ => renamedOverride.Invoke().Invoke()
             , false);
-        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -610,7 +670,7 @@ public class CSharpOverrideHelper {
                 offset),
             _ => action.Invoke()
             , false);
-        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -625,7 +685,7 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(segment, offset),
             _ => action.Invoke()
             , false);
-        Machine.MachineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -656,7 +716,7 @@ public class CSharpOverrideHelper {
     /// <param name="endAddress">The end address of the executable area.</param>
     public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
-            Cpu.ExecutionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.MachineBreakpoints, address);
+            _executionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.MachineBreakpoints, address);
         }
     }
 
@@ -699,11 +759,11 @@ public class CSharpOverrideHelper {
             Exit();
         }
         State.IncCycles();
-        Machine.Timer.Tick();
+        _timer.Tick();
         if (!InterruptFlag) {
             return;
         }
-        byte? vectorNumber = Machine.DualPic.ComputeVectorNumber();
+        byte? vectorNumber = _dualPic.ComputeVectorNumber();
         if (vectorNumber != null) {
             InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber.Value);
         }
@@ -714,7 +774,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="vectorNumber">The vector number to call</param>
     public void Interrupt(byte vectorNumber) {
-        Machine.CallbackHandler.RunFromOverriden(vectorNumber);
+        _callbackHandler.RunFromOverriden(vectorNumber);
     }
     
     /// <summary>
@@ -730,7 +790,7 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                    Machine.CallbackHandler.RunFromOverriden(callback);
+                    _callbackHandler.RunFromOverriden(callback);
                     return InterruptRet();
                 }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
         }
