@@ -4,6 +4,7 @@ using Function.Dump;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
@@ -148,7 +149,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
-        State cpuState = new();
+        State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
         Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);

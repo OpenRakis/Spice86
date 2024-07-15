@@ -21,6 +21,7 @@ using ExecutionContext = Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContex
 namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.Registers;
 
 public class CfgNodeFeederTest {
     private const int AxIndex = 0;
@@ -33,12 +34,12 @@ public class CfgNodeFeederTest {
     private static readonly SegmentedAddress EndOfMov0Address = new(0, MovRegImm16Length);
 
     private Memory _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
-    private State _state = new();
+    private State _state = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
 
     private CfgNodeFeeder CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
-        _state = new State();
+        _state = new State(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, _state, loggerService);
         return new(_memory, _state, machineBreakpoints);
     }

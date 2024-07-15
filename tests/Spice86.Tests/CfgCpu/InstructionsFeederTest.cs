@@ -18,6 +18,7 @@ namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 
 public class InstructionsFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
@@ -29,7 +30,7 @@ public class InstructionsFeederTest {
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
-        State state = new();
+        State state = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, state, loggerService);
         return new InstructionsFeeder(machineBreakpoints, _memory, state);
     }

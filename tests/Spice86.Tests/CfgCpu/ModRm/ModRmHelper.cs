@@ -5,12 +5,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 
 public class ModRmHelper {
     public Memory Memory { get; private set; } = new(new Ram(64), is20ThAddressLineSilenced: false);
     public InstructionFieldValueRetriever InstructionFieldValueRetriever { get; private set; }
-    public State State { get; private set; } = new();
+    public State State { get; private set; } = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
 
     public ModRmHelper() {
         InstructionFieldValueRetriever = new(Memory);
@@ -19,7 +20,7 @@ public class ModRmHelper {
     private void Init() {
         Memory = new(new Ram(64), is20ThAddressLineSilenced: false);
         InstructionFieldValueRetriever = new(Memory);
-        State = new();
+        State = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
     }
 
     public byte GenerateModRm(int mod, int reg, int rm) {
