@@ -24,14 +24,14 @@ public class Memory : Indexable.Indexable, IMemory {
     /// Instantiate a new memory bus.
     /// </summary>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
-    /// <param name="is20ThAddressLineSilenced">whether the A20 gate is silenced.</param>
-    public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced) {
+    /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
+    public Memory(IMemoryDevice baseMemory, A20Gate a20gate) {
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
-        Ram = new Ram(memorySize);
+        Ram = baseMemory;
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
-        A20Gate = new(is20ThAddressLineSilenced);
+        A20Gate = a20gate;
     }
 
     /// <summary>

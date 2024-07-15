@@ -25,7 +25,7 @@ public class InstructionsFeederTest {
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
-    private readonly Memory _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
+    private readonly Memory _memory = new(new Ram(64), new A20Gate());
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);

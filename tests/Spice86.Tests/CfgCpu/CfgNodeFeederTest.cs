@@ -33,12 +33,12 @@ public class CfgNodeFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress EndOfMov0Address = new(0, MovRegImm16Length);
 
-    private Memory _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
+    private Memory _memory = new(new Ram(64), new A20Gate());
     private State _state = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
 
     private CfgNodeFeeder CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
-        _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
+        _memory = new(new Ram(64), new A20Gate());
         _state = new State(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, _state, loggerService);
         return new(_memory, _state, machineBreakpoints);

@@ -207,12 +207,17 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The internal software mixer for all sound channels.
     /// </summary>
     public SoftwareMixer SoftwareMixer { get; }
+    
+    /// <summary>
+    /// The size of the conventional memory in kilobytes.
+    /// </summary>
+    public const uint ConventionalMemorySizeKb = 640;
 
     /// <summary>
     /// Initializes a new instance
     /// </summary>
     public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
-        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
+        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
@@ -220,7 +225,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         }
         IoPortDispatcher = ioPortDispatcher;
         BiosDataArea = new BiosDataArea(Memory) {
-            ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, 640) // max 640k conventional memory
+            ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, ConventionalMemorySizeKb)
         };
         CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
