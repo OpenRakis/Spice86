@@ -85,7 +85,11 @@ public class Cpu : IInstructionExecutor, IDebuggableComponent {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(IMemory memory, State state, DualPic dualPic, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(InterruptVectorTable interruptVectorTable, Alu8 alu8, Alu16 alu16, Alu32 alu32,
+        Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
+        IMemory memory, State state, DualPic dualPic,
+        IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
+        ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder) {
         _loggerService = loggerService;
         _memory = memory;
         State = state;
@@ -93,17 +97,17 @@ public class Cpu : IInstructionExecutor, IDebuggableComponent {
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
         MachineBreakpoints = machineBreakpoints;
-        InterruptVectorTable = new(_memory);
-        _alu8 = new Alu8(state);
-        Stack = new Stack(_memory, state);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
+        InterruptVectorTable = interruptVectorTable;
+        _alu8 = alu8;
+        Stack = stack;
+        FunctionHandler = functionHandler;
+        FunctionHandlerInExternalInterrupt = functionHandlerInExternalInterrupt;
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8(this, _memory, _modRM);
-        _instructions16 = new Instructions16(this, _memory, _modRM);
-        _instructions32 = new Instructions32(this, _memory, _modRM);
+        _instructions8 = new Instructions8(alu8, this, _memory, _modRM);
+        _instructions16 = new Instructions16(alu16, this, _memory, _modRM);
+        _instructions32 = new Instructions32(alu32, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }

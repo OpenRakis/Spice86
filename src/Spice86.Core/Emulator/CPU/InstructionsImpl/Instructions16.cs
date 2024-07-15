@@ -7,9 +7,9 @@ using Spice86.Core.Emulator.CPU.Registers;
 public class Instructions16 : Instructions16Or32 {
     private readonly Alu16 _alu16;
 
-    public Instructions16(Cpu cpu, Memory.IMemory memory, ModRM modRm)
+    public Instructions16(Alu16 alu16, Cpu cpu, Memory.IMemory memory, ModRM modRm)
         : base(cpu, memory, modRm) {
-        _alu16 = new Alu16(cpu.State);
+        _alu16 = alu16;
 
     }
 

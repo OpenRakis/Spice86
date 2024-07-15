@@ -236,7 +236,16 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 
-        Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
+        InterruptVectorTable interruptVectorTable = new(Memory);
+        Alu8 alu8 = new(cpuState);
+        Alu16 alu16 = new Alu16(cpuState);
+        Alu32 alu32 = new Alu32(cpuState);
+        FunctionHandler functionHandler = new FunctionHandler(Memory, cpuState, executionFlowRecorder, loggerService, recordData);
+        FunctionHandler functionHandlerInExternalInterrupt = new FunctionHandler(Memory, cpuState, executionFlowRecorder, loggerService, recordData);
+        Cpu = new Cpu(interruptVectorTable, alu8, alu16, alu32, new Stack(Memory, cpuState),
+            functionHandler, functionHandlerInExternalInterrupt, Memory, CpuState,
+            DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints,
+            loggerService, executionFlowRecorder);
         
         InstructionExecutionHelper instructionExecutionHelper = new(CpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(MachineBreakpoints);
