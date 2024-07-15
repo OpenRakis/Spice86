@@ -173,13 +173,14 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dmaController = dmaController;
         _dualPic = dualPic;
         FMSynthSoundChannel = opl3SoundChannel;
-        _ctMixer = new HardwareMixer(this, loggerService);
+        _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
-        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma], this);
+        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
+        _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
+        _dmaController.SetupDmaDeviceChannel(this);
         _playbackThread = new Thread(AudioPlayback) {
             Name = nameof(SoundBlaster),
         };
-        _dmaController.SetupDmaDeviceChannel(this);
     }
 
     /// <summary>
