@@ -23,13 +23,15 @@ public class CfgCpu : IInstructionExecutor, IDebuggableComponent {
 
     private readonly CfgNodeFeeder _cfgNodeFeeder;
 
-    public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
-        DualPic dualPic, MachineBreakpoints machineBreakpoints, ILoggerService loggerService) {
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
+    public CfgCpu(InstructionExecutionHelper instructionExecutionHelper,
+        ExecutionContextManager executionContextManager,
+        CfgNodeFeeder cfgNodeFeeder,
+        State state, DualPic dualPic) {
         _state = state;
         _dualPic = dualPic;
-        _executionContextManager = new(machineBreakpoints);
-        _cfgNodeFeeder = new(memory, state, machineBreakpoints);
+        _instructionExecutionHelper = instructionExecutionHelper;
+        _cfgNodeFeeder = cfgNodeFeeder;
+        _executionContextManager = executionContextManager;
     }
 
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;

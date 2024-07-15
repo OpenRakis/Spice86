@@ -3,6 +3,8 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -228,14 +230,18 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, ConventionalMemorySizeKb)
         };
         CpuState = cpuState;
-        DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+        DualPic = new(new Pic(loggerService), new Pic(loggerService), CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 
         Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
-        CfgCpu = new CfgCpu(Memory, CpuState, IoPortDispatcher, CallbackHandler, DualPic, MachineBreakpoints, loggerService);
+        
+        InstructionExecutionHelper instructionExecutionHelper = new(CpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
+        ExecutionContextManager executionContextManager = new(MachineBreakpoints);
+        CfgNodeFeeder cfgNodeFeeder = new(Memory, CpuState, MachineBreakpoints);
+        CfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, CpuState, DualPic);
 
         // IO devices
         DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);
