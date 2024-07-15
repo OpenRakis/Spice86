@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>
-/// The API contract for the CPU for the <see cref="EmulationLoop"/>
+/// The <see cref="Cpu"/>'s API contract for the <see cref="EmulationLoop"/>
 /// </summary>
 public interface IInstructionExecutor {
     /// <summary>

@@ -65,7 +65,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
         }
     }
     
-    public void StopDmaThread() {
+    internal void StopDmaThread() {
         _exitDmaLoop = true;
     }
 
