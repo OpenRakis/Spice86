@@ -69,9 +69,9 @@ public class CfgNodeFeeder {
 
     private ICfgNode CreateDiscriminatedNode(CfgInstruction instruction1, CfgInstruction instruction2) {
         IList<CfgInstruction> reducedInstructions =
-            _discriminatorReducer.ReduceAll(new List<CfgInstruction>() { instruction1, instruction2 });
+            _discriminatorReducer.ReduceAll([instruction1, instruction2]);
         if (reducedInstructions.Count == 1) {
-            return reducedInstructions.First();
+            return reducedInstructions[0];
         }
 
         DiscriminatedNode res = new DiscriminatedNode(instruction1.Address);

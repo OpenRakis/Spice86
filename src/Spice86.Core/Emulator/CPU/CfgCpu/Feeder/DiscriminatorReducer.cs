@@ -11,11 +11,11 @@ public class DiscriminatorReducer {
         _instructionReplacers = instructionReplacers;
     }
 
-    private IDictionary<Type, List<CfgInstruction>> GroupByType(List<CfgInstruction> instructions) {
+    private static Dictionary<Type, List<CfgInstruction>> GroupByType(List<CfgInstruction> instructions) {
         IEnumerable<IGrouping<Type, CfgInstruction>> grouped =
             instructions.GroupBy(i => i.GetType());
         return grouped.ToDictionary(
-            g => g.Key, 
+            g => g.Key,
             g => g.ToList()
         );
     }
@@ -31,7 +31,7 @@ public class DiscriminatorReducer {
         return res;
     }
 
-    private IList<CfgInstruction> ReduceAllWithSameType(IList<CfgInstruction> instructions) {
+    private List<CfgInstruction> ReduceAllWithSameType(IList<CfgInstruction> instructions) {
         // Group by a discriminator composed of only final fields.
         // Each list here is reducible since diverging fields are non final.
         IDictionary<Discriminator, List<CfgInstruction>> groupedByDiscriminatorFinal =
@@ -44,7 +44,7 @@ public class DiscriminatorReducer {
     }
     
     
-    private IDictionary<Discriminator, List<CfgInstruction>> GroupByDiscriminatorWithOnlyFinal(
+    private static Dictionary<Discriminator, List<CfgInstruction>> GroupByDiscriminatorWithOnlyFinal(
         IList<CfgInstruction> instructions) {
         IEnumerable<IGrouping<Discriminator, CfgInstruction>> grouped =
             instructions.GroupBy(i => i.DiscriminatorFinal);
