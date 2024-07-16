@@ -8,12 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 
 public class CfgCpu : IInstructionExecutor, IDebuggableComponent {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
