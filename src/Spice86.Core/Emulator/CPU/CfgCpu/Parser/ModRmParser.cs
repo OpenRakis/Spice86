@@ -159,7 +159,7 @@ public class ModRmParser {
         };
     }
 
-    private SibBase ComputeSibBase(int baseRegister, uint mode) {
+    private static SibBase ComputeSibBase(int baseRegister, uint mode) {
         return baseRegister switch {
             0 => SibBase.EAX,
             1 => SibBase.ECX,
