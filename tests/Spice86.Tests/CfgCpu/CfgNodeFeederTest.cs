@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -16,14 +15,15 @@ using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-using ExecutionContext = Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContext;
-
 namespace Spice86.Tests.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.IOPorts;
 
 public class CfgNodeFeederTest {
     private const int AxIndex = 0;
@@ -42,8 +42,15 @@ public class CfgNodeFeederTest {
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         _memory = new(new Ram(64), new A20Gate());
         _state = new State(new Flags(), new GeneralRegisters(), new SegmentRegisters());
+        IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(_state, loggerService, failOnUnhandledPort: true);
+        CallbackHandler callbackHandler = new(_state, loggerService);
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, _state, loggerService);
-        return new(_memory, _state, machineBreakpoints);
+        InstructionExecutionHelper instructionExecutionHelper = new(_state, _memory, ioPortDispatcher, callbackHandler, loggerService);
+        ExecutionContextManager executionContextManager = new(machineBreakpoints, new ExecutionContext());
+        NodeLinker nodeLinker = new();
+        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, _memory, _state);
+        return new(instructionsFeeder, new(new List<IInstructionReplacer<CfgInstruction>>()
+            { nodeLinker, instructionsFeeder }), nodeLinker, _state);
     }
 
     private void WriteMovReg16(SegmentedAddress address, byte opcode, ushort value) {
@@ -216,8 +223,7 @@ public class CfgNodeFeederTest {
     }
 
     [AssertionMethod]
-    private static void
-        AssertSuccessorAtDiscriminator(DiscriminatedNode predecessor, CfgInstruction expectedSuccessor) {
+    private static void AssertSuccessorAtDiscriminator(DiscriminatedNode predecessor, CfgInstruction expectedSuccessor) {
         AssertLinksTo(predecessor, expectedSuccessor);
         Assert.Equal(expectedSuccessor, predecessor.SuccessorsPerDiscriminator[expectedSuccessor.Discriminator]);
     }

@@ -234,7 +234,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, ConventionalMemorySizeKb)
         };
         DualPic = new(new Pic(loggerService), new Pic(loggerService), CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
-        // Breakpoints
+
         MachineBreakpoints = new(Memory, CpuState, loggerService);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
@@ -253,7 +253,10 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         
         InstructionExecutionHelper instructionExecutionHelper = new(cpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
-        CfgNodeFeeder cfgNodeFeeder = new(Memory, cpuState, MachineBreakpoints);
+        NodeLinker nodeLinker = new();
+        InstructionsFeeder instructionsFeeder = new(MachineBreakpoints, Memory, CpuState);
+        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new(new List<IInstructionReplacer<CfgInstruction>>()
+            { nodeLinker, instructionsFeeder }), nodeLinker, CpuState);
         CfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, CpuState, DualPic);
 
         // IO devices
