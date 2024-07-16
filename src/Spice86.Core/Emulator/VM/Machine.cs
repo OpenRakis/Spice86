@@ -5,6 +5,9 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -219,6 +222,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Initializes a new instance
     /// </summary>
     public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+        CpuState = cpuState;
         Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -229,7 +233,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         BiosDataArea = new BiosDataArea(Memory) {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, ConventionalMemorySizeKb)
         };
-        CpuState = cpuState;
         DualPic = new(new Pic(loggerService), new Pic(loggerService), CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
         MachineBreakpoints = new(Memory, CpuState, loggerService);
@@ -237,19 +240,20 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CallbackHandler = new(CpuState, loggerService);
 
         InterruptVectorTable interruptVectorTable = new(Memory);
+        Stack stack = new(Memory, CpuState);
         Alu8 alu8 = new(cpuState);
         Alu16 alu16 = new Alu16(cpuState);
         Alu32 alu32 = new Alu32(cpuState);
         FunctionHandler functionHandler = new FunctionHandler(Memory, cpuState, executionFlowRecorder, loggerService, recordData);
         FunctionHandler functionHandlerInExternalInterrupt = new FunctionHandler(Memory, cpuState, executionFlowRecorder, loggerService, recordData);
-        Cpu = new Cpu(interruptVectorTable, alu8, alu16, alu32, new Stack(Memory, cpuState),
+        Cpu = new Cpu(interruptVectorTable, alu8, alu16, alu32, stack,
             functionHandler, functionHandlerInExternalInterrupt, Memory, CpuState,
             DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints,
             loggerService, executionFlowRecorder);
         
-        InstructionExecutionHelper instructionExecutionHelper = new(CpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
-        ExecutionContextManager executionContextManager = new(MachineBreakpoints);
-        CfgNodeFeeder cfgNodeFeeder = new(Memory, CpuState, MachineBreakpoints);
+        InstructionExecutionHelper instructionExecutionHelper = new(cpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
+        ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
+        CfgNodeFeeder cfgNodeFeeder = new(Memory, cpuState, MachineBreakpoints);
         CfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, CpuState, DualPic);
 
         // IO devices

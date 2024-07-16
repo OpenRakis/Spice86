@@ -20,7 +20,9 @@ using ExecutionContext = Spice86.Core.Emulator.CPU.CfgCpu.Linker.ExecutionContex
 
 namespace Spice86.Tests.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class CfgNodeFeederTest {
