@@ -34,11 +34,6 @@ public class EmulationLoop {
     public bool IsPaused { get; set; }
 
     /// <summary>
-    /// Gets if we check for breakpoints in the emulation loop.
-    /// </summary>
-    private readonly bool _listensToBreakpoints;
-
-    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
@@ -72,7 +67,7 @@ public class EmulationLoop {
         } catch (HaltRequestedException) {
             // Actually a signal generated code requested Exit
             return;
-        } catch (InvalidVMOperationException e) {
+        } catch (InvalidVMOperationException) {
             throw;
         } catch (Exception e) {
             throw new InvalidVMOperationException(_cpuState, e);
