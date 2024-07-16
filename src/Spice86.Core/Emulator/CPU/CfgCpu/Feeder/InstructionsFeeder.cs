@@ -33,7 +33,7 @@ public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
         }
 
         // Instruction was not in cache.
-        // Either is has never been parsed or it has been evicted from cache due to self modifying code.
+        // Either it has never been parsed or it has been evicted from cache due to self modifying code.
         // First try to see if it has been encountered before at this address instead of re-parsing.
         // Reason is we don't want several versions of the same instructions hanging around in the graph,
         // this would be bad for successors / predecessors management and self modifying code detection.
