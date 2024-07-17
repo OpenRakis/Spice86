@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Backend.Audio.PortAudio;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -290,7 +291,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
         
-        SoftwareMixer = new(new AudioPlayerFactory(loggerService));
+        SoftwareMixer = new(new (new PortAudioPlayerFactory(loggerService)));
         
         PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
