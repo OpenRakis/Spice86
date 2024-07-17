@@ -312,7 +312,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
 
         VgaRom = new VgaRom();
         Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
+        VgaFunctions = new VgaFunctionality(interruptVectorTable, Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
         VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
 
         TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);

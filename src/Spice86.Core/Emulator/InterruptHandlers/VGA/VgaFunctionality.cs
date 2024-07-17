@@ -23,17 +23,18 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
     /// </summary>
+    /// <param name="interruptVectorTable">The interrupt vector table wrapper.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="ioPortDispatcher">The IOPortDispatcher, used to read from or write to VGA ports.</param>
     /// <param name="biosDataArea">The global BIOS variables.</param>
     /// <param name="vgaRom">The VGA ROM, so we can access the IBM fonts.</param>
     /// <param name="bootUpInTextMode">Whether we begin with mode 0x03.</param>
-    public VgaFunctionality(IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
+    public VgaFunctionality(InterruptVectorTable interruptVectorTable, IIndexable memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
-        _interruptVectorTable = new (memory);
+        _interruptVectorTable = interruptVectorTable;
         if(bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
