@@ -19,10 +19,10 @@ public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
     private readonly CurrentInstructions _currentInstructions;
     private readonly PreviousInstructions _previousInstructions;
 
-    public InstructionsFeeder(MachineBreakpoints machineBreakpoints, IMemory memory, State cpuState) {
-        _currentInstructions = new(memory, machineBreakpoints);
-        _instructionParser = new(memory, cpuState);
-        _previousInstructions = new(memory);
+    public InstructionsFeeder(CurrentInstructions currentInstructions, InstructionParser instructionParser, PreviousInstructions previousInstructions) {
+        _currentInstructions = currentInstructions;
+        _instructionParser = instructionParser;
+        _previousInstructions = previousInstructions;
     }
 
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {

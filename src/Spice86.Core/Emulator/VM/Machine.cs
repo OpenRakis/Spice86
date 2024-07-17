@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -253,7 +254,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         InstructionExecutionHelper instructionExecutionHelper = new(cpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
         NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(MachineBreakpoints, Memory, CpuState);
+        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(Memory, MachineBreakpoints), new InstructionParser(Memory, CpuState), new PreviousInstructions(Memory));
         CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new(nodeLinker, instructionsFeeder), nodeLinker, cpuState);
         CfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, CpuState, DualPic);
 

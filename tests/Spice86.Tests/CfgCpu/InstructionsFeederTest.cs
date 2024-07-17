@@ -33,7 +33,7 @@ public class InstructionsFeederTest {
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         State state = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, state, loggerService);
-        return new InstructionsFeeder(machineBreakpoints, _memory, state);
+        return new InstructionsFeeder(new CurrentInstructions(_memory, machineBreakpoints), new InstructionParser(_memory, state), new PreviousInstructions(_memory));
     }
 
     private void WriteJumpNear(SegmentedAddress address) {
