@@ -35,6 +35,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -223,7 +224,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// </summary>
     public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         CpuState = cpuState;
-        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
+        Memory = new Memory(new MemoryBreakpoints(), new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
@@ -235,7 +236,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         };
         DualPic = new(new Pic(loggerService), new Pic(loggerService), CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
-        MachineBreakpoints = new(Memory, CpuState, loggerService);
+        MachineBreakpoints = new(new PauseHandler(loggerService), new BreakPointHolder(), new BreakPointHolder(), Memory, CpuState);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 

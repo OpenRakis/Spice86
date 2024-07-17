@@ -11,7 +11,7 @@ public class Memory : Indexable.Indexable, IMemory {
     public IMemoryDevice Ram { get; }
 
     /// <inheritdoc/>
-    public MemoryBreakpoints MemoryBreakpoints { get; } = new();
+    public MemoryBreakpoints MemoryBreakpoints { get; }
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -23,9 +23,11 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>
+    /// <param name="memoryBreakpoints">The class that manages breakpoints based on memory access.</param>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
-    public Memory(IMemoryDevice baseMemory, A20Gate a20gate) {
+    public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate) {
+        MemoryBreakpoints = memoryBreakpoints;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = baseMemory;

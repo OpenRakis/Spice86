@@ -7,7 +7,7 @@ using System;
 using Xunit;
 
 public class MainMemoryTest {
-    private readonly Memory _memory = new(new Ram(64 * 1024), new A20Gate());
+    private readonly Memory _memory = new(new(), new Ram(64 * 1024), new A20Gate());
 
     [Fact]
     public void EnabledA20Gate_Should_ThrowExceptionAbove1MB() {

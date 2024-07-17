@@ -12,12 +12,12 @@ public sealed class MachineBreakpoints : IDisposable {
     /// <summary>
     /// A holder for cycle breakpoints.
     /// </summary>
-    private readonly BreakPointHolder _cycleBreakPoints = new();
+    private readonly BreakPointHolder _cycleBreakPoints;
 
     /// <summary>
     /// A holder for execution breakpoints.
     /// </summary>
-    private readonly BreakPointHolder _executionBreakPoints = new();
+    private readonly BreakPointHolder _executionBreakPoints;
 
     /// <summary>
     /// The memory bus.
@@ -42,13 +42,17 @@ public sealed class MachineBreakpoints : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
-    /// <param name="memory">The memory bus</param>
-    /// <param name="state">The CPU state</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    public MachineBreakpoints(IMemory memory, State state, ILoggerService loggerService) {
+    /// <param name="pauseHandler">Used to pause/resume the emulator.</param>
+    /// <param name="cycleBreakPoints">Holds breakpoints based on CPU cycles.</param>
+    /// <param name="executionBreakPoints">Holds breakpoints based on the current instruction to be executed by the CPU.</param>
+    /// <param name="memory">The IBM PC memory bus</param>
+    /// <param name="state">The CPU registers and flags</param>
+    public MachineBreakpoints(PauseHandler pauseHandler, BreakPointHolder cycleBreakPoints, BreakPointHolder executionBreakPoints, IMemory memory, State state) {
         _state = state;
         _memory = memory;
-        PauseHandler = new(loggerService);
+        PauseHandler = pauseHandler;
+        _cycleBreakPoints = cycleBreakPoints;
+        _executionBreakPoints = executionBreakPoints;
     }
 
     /// <summary>

@@ -3,7 +3,7 @@
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
-/// Manages memory breakpoints
+/// Manages memory breakpoints (breakpoints based on memory access).
 /// </summary>
 public class MemoryBreakpoints {
     private readonly BreakPointHolder _readBreakPoints = new();
