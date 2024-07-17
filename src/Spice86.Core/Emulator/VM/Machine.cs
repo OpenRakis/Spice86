@@ -251,7 +251,13 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints,
             loggerService, executionFlowRecorder);
         
-        InstructionExecutionHelper instructionExecutionHelper = new(cpuState, Memory, ioPortDispatcher, CallbackHandler, loggerService);
+        InstructionFieldValueRetriever instructionFieldValueRetriever = new(Memory);
+        ModRmExecutor modRmExecutor = new(CpuState, Memory, instructionFieldValueRetriever);
+        InstructionExecutionHelper instructionExecutionHelper = new(
+            cpuState, Memory, ioPortDispatcher,
+            CallbackHandler, interruptVectorTable, stack,
+            alu8, alu16, alu32,
+            instructionFieldValueRetriever, modRmExecutor, loggerService);
         ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(Memory, MachineBreakpoints), new InstructionParser(Memory, CpuState), new PreviousInstructions(Memory));
