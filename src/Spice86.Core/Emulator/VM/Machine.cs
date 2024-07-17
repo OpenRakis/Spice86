@@ -293,7 +293,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         
         SoftwareMixer = new(new (new PortAudioPlayerFactory(loggerService)));
         
-        PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(new(), SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
         OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
