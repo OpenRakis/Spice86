@@ -15,6 +15,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 internal sealed class GeneralMidiDevice : MidiDevice {
     private readonly SoundChannel _soundChannel;
+    private readonly Synthesizer _synthesizer;
 
     private bool _disposed;
     private bool _threadStarted;
@@ -25,14 +26,15 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private volatile uint _message;
 
     /// <summary>
-    /// The soundfont file name we use for all General MIDI preset sounds.
+    /// The file name of the soundfont we load and use for all General MIDI preset sounds.
     /// </summary>
-    private const string SoundFont = "2MGM.sf2";
+    public const string SoundFont = "2MGM.sf2";
 
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice(SoftwareMixer softwareMixer) {
-        _soundChannel = new SoundChannel(softwareMixer, "General MIDI");
+    public GeneralMidiDevice(Synthesizer synthesizer, SoundChannel generalMidiSoundChannel) {
+        _synthesizer = synthesizer;
+        _soundChannel = generalMidiSoundChannel;
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = nameof(GeneralMidiDevice)
         };
@@ -44,37 +46,33 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     ~GeneralMidiDevice() => Dispose(false);
 
     private void StartThreadIfNeeded() {
-        if(!_disposed && !_endThread && !_threadStarted) {
+        if (!_disposed && !_endThread && !_threadStarted) {
             _playbackThread?.Start();
             _threadStarted = true;
         }
     }
 
-    private void RenderThreadMethod()
-    {
-        if (!File.Exists(SoundFont))
-        {
+    private void RenderThreadMethod() {
+        if (!File.Exists(SoundFont)) {
             return;
         }
+
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
         Span<float> data = stackalloc float[16384];
-        Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
-        while (!_endThread)
-        {
-            if (!_endThread)
-            {
+        while (!_endThread) {
+            if (!_endThread) {
                 _fillBufferEvent.WaitOne(Timeout.Infinite);
             }
-            FillBuffer(synthesizer, data);
+
+            FillBuffer(_synthesizer, data);
             _soundChannel.Render(data);
             data.Clear();
         }
     }
 
-    private void FillBuffer(Synthesizer synthesizer, Span<float> data)
-    {
+    private void FillBuffer(Synthesizer synthesizer, Span<float> data) {
         ExtractAndProcessMidiMessage(_message, synthesizer);
         synthesizer.RenderInterleaved(data);
     }
@@ -90,7 +88,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     private void WakeUpRenderThread() {
-        if(!_disposed && !_endThread) {
+        if (!_disposed && !_endThread) {
             _fillBufferEvent.Set();
         }
     }
@@ -107,7 +105,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         // Extract second data byte from the high word, low-order byte
         byte data2 = bytes[2];
 
-        byte command = (byte) (midiStatus & 0xF0);
+        byte command = (byte)(midiStatus & 0xF0);
 
         if (command is < 0x80 or > 0xE0) {
             return;
@@ -115,7 +113,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
         // it's a voice message
         // find the channel by masking off all but the low 4 bits
-        byte channel = (byte) (midiStatus & 0x0F);
+        byte channel = (byte)(midiStatus & 0x0F);
 
         synthesizer.ProcessMidiMessage(channel, command, data1, data2);
     }
@@ -130,20 +128,23 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
-            if(disposing) {
-                if(OperatingSystem.IsWindows()) {
+            if (disposing) {
+                if (OperatingSystem.IsWindows()) {
                     if (_midiOutHandle != IntPtr.Zero) {
                         NativeMethods.midiOutClose(_midiOutHandle);
                         _midiOutHandle = IntPtr.Zero;
                     }
                 }
+
                 _endThread = true;
                 _fillBufferEvent.Set();
-                if(_playbackThread?.IsAlive == true) {
+                if (_playbackThread?.IsAlive == true) {
                     _playbackThread.Join();
                 }
+
                 _fillBufferEvent.Dispose();
             }
+
             _disposed = true;
         }
     }

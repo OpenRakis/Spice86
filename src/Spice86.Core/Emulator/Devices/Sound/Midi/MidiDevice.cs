@@ -5,7 +5,7 @@ using System;
 /// <summary>
 /// The base class for all classes talking to an external MIDI device.
 /// </summary>
-internal abstract class MidiDevice : IDisposable {
+public abstract class MidiDevice : IDisposable {
     private uint _currentMessage;
     private uint _bytesReceived;
     private uint _bytesExpected;

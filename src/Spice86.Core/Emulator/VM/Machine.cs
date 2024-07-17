@@ -1,5 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using MeltySynth;
+
+using Mt32emu;
+
 using Spice86.Core.Backend.Audio.PortAudio;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -17,6 +21,7 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
+using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -293,16 +298,24 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         
         SoftwareMixer = new(new (new PortAudioPlayerFactory(loggerService)));
         
-        PcSpeaker = new PcSpeaker(new(), SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(new(), new SoundChannel(SoftwareMixer, nameof(PcSpeaker)), CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
+        OPL3FM = new OPL3FM(new FmSynthesizer(48000), SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        
+        // the external MIDI device (external General MIDI or external Roland MT-32).
+        MidiDevice midiMapper;
+        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath)) {
+            midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(SoftwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
+        } else {
+            midiMapper = new GeneralMidiDevice(new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000), new SoundChannel(SoftwareMixer, "General MIDI"));
+        }
+        MidiDevice = new Midi(midiMapper, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(MidiDevice);
 
         // Services

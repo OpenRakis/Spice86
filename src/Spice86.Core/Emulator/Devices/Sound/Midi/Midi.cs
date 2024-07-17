@@ -1,8 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
+using Mt32emu;
+
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
+using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
@@ -10,7 +12,7 @@ using Spice86.Shared.Interfaces;
 /// MPU401 MIDI interface implementation.
 /// </summary>
 public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
-    private MidiDevice? _midiMapper;
+    private MidiDevice _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
     /// <summary>
@@ -43,18 +45,14 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
-    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="midiMapper">Either the <see cref="Mt32MidiDevice"/> or the <see cref="GeneralMidiDevice"/>.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(SoftwareMixer softwareMixer, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public Midi(MidiDevice midiMapper, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
-        if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-            _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, _loggerService);
-        } else {
-            _midiMapper = new GeneralMidiDevice(softwareMixer);
-        }
+        _midiMapper = midiMapper;
     }
 
     /// <summary>
@@ -125,20 +123,11 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// <inheritdoc />
     public override byte ReadByte(int port) {
         UpdateLastPortRead(port);
-        switch (port) {
-            case DataPort:
-                if (_dataBytes.Count > 0) {
-                    return _dataBytes.Dequeue();
-                } else {
-                    return 0;
-                }
-
-            case StatusPort:
-                return (byte)(~(byte)Status & 0xC0);
-
-            default:
-                return base.ReadByte(port);
-        }
+        return port switch {
+            DataPort => _dataBytes.Count > 0 ? _dataBytes.Dequeue() : (byte)0,
+            StatusPort => (byte)(~(byte)Status & 0xC0),
+            _ => base.ReadByte(port)
+        };
     }
 
     /// <inheritdoc />
@@ -152,7 +141,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
         UpdateLastPortWrite(port, value);
         switch (port) {
             case DataPort:
-                _midiMapper?.SendByte(value);
+                _midiMapper.SendByte(value);
                 break;
 
             case StatusPort:
@@ -178,8 +167,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                _midiMapper?.Dispose();
-                _midiMapper = null;
+                _midiMapper.Dispose();
             }
             _disposed = true;
         }
