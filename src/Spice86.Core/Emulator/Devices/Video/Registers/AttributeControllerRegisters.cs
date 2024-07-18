@@ -7,13 +7,13 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 ///     Emulates the VGA Attribute Controller registers.
 /// </summary>
 public sealed class AttributeControllerRegisters {
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="AttributeControllerRegisters" /> class.
-    /// </summary>
-    public AttributeControllerRegisters() {
+    public AttributeControllerRegisters(AttributeControllerModeRegister attributeControllerModeRegister, ColorPlaneEnableRegister colorPlaneEnableRegister, ColorSelectRegister colorSelectRegister) {
         InternalPalette = new byte[16];
+        AttributeControllerModeRegister = attributeControllerModeRegister;
+        ColorPlaneEnableRegister = colorPlaneEnableRegister;
+        ColorSelectRegister = colorSelectRegister;
     }
-
+    
     /// <summary>
     /// Gets or sets the address register.
     /// </summary>
@@ -22,12 +22,12 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets the internal palette.
     /// </summary>
-    public byte[] InternalPalette { get; set; }
+    public byte[] InternalPalette { get; }
 
     /// <summary>
     ///     Gets or sets the Attribute Mode Control register.
     /// </summary>
-    public AttributeControllerModeRegister AttributeControllerModeRegister { get; } = new();
+    public AttributeControllerModeRegister AttributeControllerModeRegister { get; }
 
     /// <summary>
     ///     Gets or sets the Overscan Color register LUT index.
@@ -37,7 +37,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Color Plane Enable register.
     /// </summary>
-    public ColorPlaneEnableRegister ColorPlaneEnableRegister { get; } = new();
+    public ColorPlaneEnableRegister ColorPlaneEnableRegister { get; }
 
     /// <summary>
     ///     Gets or sets the Horizontal Pixel Panning register.
@@ -47,7 +47,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Color Select register.
     /// </summary>
-    public ColorSelectRegister ColorSelectRegister { get; set; } = new();
+    public ColorSelectRegister ColorSelectRegister { get; }
 
     /// <summary>
     ///     Returns the current value of an attribute controller register.

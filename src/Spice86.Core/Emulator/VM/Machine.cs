@@ -305,7 +305,12 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         RegisterIoPortHandler(DualPic);
 
         DacRegisters dacRegisters = new DacRegisters(new ArgbPalette());
-        VgaRegisters = new VideoState(dacRegisters, new(), new(), new(), new(), new());
+        VgaRegisters = new VideoState(dacRegisters, new(
+                new(),new(),new()),
+                new(new(), new(), new(), new(), new()),
+                new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new()),
+                new(new(), new(), new(), new(), new(), new()),
+                new(new(), new(), new()));
         VgaIoPortHandler = new VgaIoPortHandler(CpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
 

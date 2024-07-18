@@ -7,6 +7,14 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Sequencer;
 ///     Emulates the VGA Sequencer registers.
 /// </summary>
 public class SequencerRegisters {
+    public SequencerRegisters(ResetRegister resetRegister, ClockingModeRegister clockingModeRegister, Register8 planeMaskRegister, CharacterMapSelectRegister characterMapSelectRegister, MemoryModeRegister memoryModeRegister) {
+        ResetRegister = resetRegister;
+        ClockingModeRegister = clockingModeRegister;
+        PlaneMaskRegister = planeMaskRegister;
+        CharacterMapSelectRegister = characterMapSelectRegister;
+        MemoryModeRegister = memoryModeRegister;
+    }
+    
     /// <summary>
     ///     The Sequencer Address field (bits 2− 0) contains the index value that points to the data register to be
     ///     accessed.
@@ -16,27 +24,27 @@ public class SequencerRegisters {
     /// <summary>
     ///     Gets the Reset register.
     /// </summary>
-    public ResetRegister ResetRegister { get; } = new();
+    public ResetRegister ResetRegister { get; }
 
     /// <summary>
     ///     Gets the Clocking Mode register.
     /// </summary>
-    public ClockingModeRegister ClockingModeRegister { get; } = new();
+    public ClockingModeRegister ClockingModeRegister { get; }
 
     /// <summary>
     ///     Gets the Map Mask register.
     /// </summary>
-    public Register8 PlaneMaskRegister { get; } = new();
+    public Register8 PlaneMaskRegister { get; }
 
     /// <summary>
     ///     Gets the Character Map Select register.
     /// </summary>
-    public CharacterMapSelectRegister CharacterMapSelectRegister { get; } = new();
+    public CharacterMapSelectRegister CharacterMapSelectRegister { get; }
 
     /// <summary>
     ///     Gets the Sequencer Memory Mode register.
     /// </summary>
-    public MemoryModeRegister MemoryModeRegister { get; } = new();
+    public MemoryModeRegister MemoryModeRegister { get; }
 
     /// <summary>
     ///     Returns the current value of a sequencer register.

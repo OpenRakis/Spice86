@@ -7,6 +7,15 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 ///     Emulates the VGA Graphics registers.
 /// </summary>
 public sealed class GraphicsControllerRegisters {
+    public GraphicsControllerRegisters(Register8 setReset, Register8 enableSetReset, DataRotateRegister dataRotateRegister, ReadMapSelectRegister readMapSelectRegister, GraphicsModeRegister graphicsModeRegister, MiscellaneousGraphicsRegister miscellaneousGraphicsRegister) {
+        SetReset = setReset;
+        EnableSetReset = enableSetReset;
+        DataRotateRegister = dataRotateRegister;
+        ReadMapSelectRegister = readMapSelectRegister;
+        GraphicsModeRegister = graphicsModeRegister;
+        MiscellaneousGraphicsRegister = miscellaneousGraphicsRegister;
+    }
+    
     /// <summary>
     /// Gets or sets the address register.
     /// </summary>
@@ -15,12 +24,12 @@ public sealed class GraphicsControllerRegisters {
     /// <summary>
     ///     Gets the Set/Reset register.
     /// </summary>
-    public Register8 SetReset { get; } = new();
+    public Register8 SetReset { get; }
 
     /// <summary>
     ///     Gets the Enable Set/Reset register.
     /// </summary>
-    public Register8 EnableSetReset { get; } = new();
+    public Register8 EnableSetReset { get; }
 
     /// <summary>
     ///     Gets the Color Compare register.
@@ -30,22 +39,22 @@ public sealed class GraphicsControllerRegisters {
     /// <summary>
     ///     Gets the Data Rotate register.
     /// </summary>
-    public DataRotateRegister DataRotateRegister { get; } = new();
+    public DataRotateRegister DataRotateRegister { get; }
 
     /// <summary>
     ///     Gets the Read Map Select register.
     /// </summary>
-    public ReadMapSelectRegister ReadMapSelectRegister { get; } = new();
+    public ReadMapSelectRegister ReadMapSelectRegister { get; }
 
     /// <summary>
     ///     Gets or sets the Graphics Mode register.
     /// </summary>
-    public GraphicsModeRegister GraphicsModeRegister { get; } = new();
+    public GraphicsModeRegister GraphicsModeRegister { get; }
 
     /// <summary>
     ///     Gets or sets the Miscellaneous Graphics register.
     /// </summary>
-    public MiscellaneousGraphicsRegister MiscellaneousGraphicsRegister { get; } = new();
+    public MiscellaneousGraphicsRegister MiscellaneousGraphicsRegister { get; }
 
     /// <summary>
     ///     Gets the Color Don't Care register.
