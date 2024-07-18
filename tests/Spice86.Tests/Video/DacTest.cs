@@ -10,7 +10,7 @@ public class DacTest {
     [Fact]
     public void TestReadingDacReturns6BitData() {
         // Arrange
-        var dac = new DacRegisters();
+        var dac = new DacRegisters(new());
 
         // Act
         for (byte i = 0; i < byte.MaxValue; i++) {
@@ -29,7 +29,7 @@ public class DacTest {
     [Fact]
     public void WhiteStaysWhite() {
         // Arrange
-        var dac = new DacRegisters();
+        var dac = new DacRegisters(new());
 
         // Act
         dac.DataRegister = 0b111111;

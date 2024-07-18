@@ -6,15 +6,14 @@ using Spice86.Core.Emulator.InternalDebugger;
 ///   A 32 bit representation of an 18-bit color palette.
 /// </summary>
 public class ArgbPalette : IDebuggableComponent {
-    private readonly byte[,] _sixBitPalette;
     private readonly uint[,,] _32BitPalette;
+
+    internal byte[,] SixBytePalette { get; } = new byte[256, 3];
 
     /// <summary>
     ///    Creates a new instance of the <see cref="ArgbPalette"/> class.
     /// </summary>
-    /// <param name="sixBitPalette">The VGA palette in 256 6-bit rgb triplets</param>
-    public ArgbPalette(byte[,] sixBitPalette) {
-        _sixBitPalette = sixBitPalette;
+    public ArgbPalette() {
         // Pre-calculate 32-bit palette.
         _32BitPalette = new uint[64, 64, 64];
         for (int r = 0; r < 64; r++) {
@@ -34,15 +33,15 @@ public class ArgbPalette : IDebuggableComponent {
     /// </summary>
     public uint this[int index] {
         get {
-            uint r = _sixBitPalette[index, 0];
-            uint g = _sixBitPalette[index, 1];
-            uint b = _sixBitPalette[index, 2];
+            uint r = SixBytePalette[index, 0];
+            uint g = SixBytePalette[index, 1];
+            uint b = SixBytePalette[index, 2];
             return _32BitPalette[r, g, b];
         }
         set {
-            _sixBitPalette[index, 0] = (byte)(value >> 16 & 0x3F);
-            _sixBitPalette[index, 1] = (byte)(value >> 8 & 0x3F);
-            _sixBitPalette[index, 2] = (byte)(value & 0x3F);
+            SixBytePalette[index, 0] = (byte)(value >> 16 & 0x3F);
+            SixBytePalette[index, 1] = (byte)(value >> 8 & 0x3F);
+            SixBytePalette[index, 2] = (byte)(value & 0x3F);
         }
     }
 

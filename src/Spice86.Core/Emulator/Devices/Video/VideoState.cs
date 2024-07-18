@@ -8,13 +8,13 @@ public class VideoState : IVideoState {
     /// <summary>
     ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>
-    public VideoState() {
-        DacRegisters = new DacRegisters();
-        GeneralRegisters = new GeneralRegisters();
-        SequencerRegisters = new SequencerRegisters();
-        CrtControllerRegisters = new CrtControllerRegisters();
-        GraphicsControllerRegisters = new GraphicsControllerRegisters();
-        AttributeControllerRegisters = new AttributeControllerRegisters();
+    public VideoState(DacRegisters dacRegisters, GeneralRegisters generalRegisters, SequencerRegisters sequencerRegisters, CrtControllerRegisters crtControllerRegisters, GraphicsControllerRegisters graphicsControllerRegisters, AttributeControllerRegisters attributeControllerRegisters) {
+        DacRegisters = dacRegisters;
+        GeneralRegisters = generalRegisters;
+        SequencerRegisters = sequencerRegisters;
+        CrtControllerRegisters = crtControllerRegisters;
+        GraphicsControllerRegisters = graphicsControllerRegisters;
+        AttributeControllerRegisters = attributeControllerRegisters;
     }
 
     /// <inheritdoc />

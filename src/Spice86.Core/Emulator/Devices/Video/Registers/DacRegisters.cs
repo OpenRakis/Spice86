@@ -8,19 +8,20 @@ using System.Diagnostics;
 /// Represents the registers of the video DAC.
 /// </summary>
 public class DacRegisters : IDebuggableComponent {
-    /// <summary>
-    /// The DAC Palette, represented as a 256 * 3 array. Stores the current set of colors.
-    /// </summary>
-    public readonly byte[,] Palette = new byte[256, 3];
     private int _indexRegister;
     private byte _internalIndex;
     private int _tripletCounter;
 
     /// <summary>
+    /// The DAC Palette, represented as a 256 * 3 array. Stores the current set of colors.
+    /// </summary>
+    public byte[,] Palette => ArgbPalette.SixBytePalette;
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    public DacRegisters() {
-        ArgbPalette = new ArgbPalette(Palette);
+    public DacRegisters(ArgbPalette argbPalette) {
+        ArgbPalette = argbPalette;
     }
 
     /// <summary>

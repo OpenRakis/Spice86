@@ -26,6 +26,7 @@ using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -303,7 +304,8 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
 
         RegisterIoPortHandler(DualPic);
 
-        VgaRegisters = new VideoState();
+        DacRegisters dacRegisters = new DacRegisters(new ArgbPalette());
+        VgaRegisters = new VideoState(dacRegisters, new(), new(), new(), new(), new());
         VgaIoPortHandler = new VgaIoPortHandler(CpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(VgaIoPortHandler);
 
