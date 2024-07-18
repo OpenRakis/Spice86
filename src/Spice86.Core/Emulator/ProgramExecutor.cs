@@ -146,12 +146,11 @@ public sealed class ProgramExecutor : IProgramExecutor {
     }
 
     private Machine CreateMachine(IGui? gui) {
-        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
         RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
+        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;

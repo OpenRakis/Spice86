@@ -31,13 +31,11 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Timer(State state, ILoggerService loggerService, DualPic dualPic, Counter firstCounter, Counter secondCounter, Counter thirdCounter, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(state,
-                _loggerService,
-                i, counterConfigurator.InstanciateCounterActivator(state));
-        }
+        _counters[0] = firstCounter;
+        _counters[1] = secondCounter;
+        _counters[2] = thirdCounter;
     }
 
     /// <inheritdoc cref="ITimeMultiplier" />

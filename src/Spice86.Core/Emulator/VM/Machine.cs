@@ -226,12 +226,36 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The size of the conventional memory in kilobytes.
     /// </summary>
     public const uint ConventionalMemorySizeKb = 640;
+    
+    /// <summary>
+    /// Returns the appropriate <see cref="CounterActivator"/> based on the configuration.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="loggerService">The service used for logging.</param>
+    /// <param name="configuration">The emulator's configuration.</param>
+    /// <returns>The appropriate <see cref="CyclesCounterActivator"/> or <see cref="TimeCounterActivator"/></returns>
+    private static CounterActivator CreateCounterActivator(State state, ILoggerService loggerService, Configuration configuration) {
+        const long DefaultInstructionsPerSecond = 1000000L;
+        long? instructionsPerSecond = configuration.InstructionsPerSecond;
+        if (instructionsPerSecond == null && configuration.GdbPort != null) {
+            // With GDB, force to instructions per seconds as time based timers could perturb steps
+            instructionsPerSecond = DefaultInstructionsPerSecond;
+            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                loggerService.Warning("Forcing Counter to use instructions per seconds since we are in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
+            }
+        }
+        if (instructionsPerSecond != null) {
+            return new CyclesCounterActivator(state, instructionsPerSecond.Value, configuration.TimeMultiplier);
+        }
+        return new TimeCounterActivator(configuration.TimeMultiplier);
+    }
 
     /// <summary>
     /// Initializes a new instance
     /// </summary>
-    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         CpuState = cpuState;
+
         Memory = new Memory(new MemoryBreakpoints(), new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -288,8 +312,18 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
         VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
-
-        Timer = new Timer(CpuState, loggerService, DualPic, counterConfigurator, configuration.FailOnUnhandledPort);
+        
+        Counter firstCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
+            Index = 0
+        };
+        Counter secondCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
+            Index = 1
+        };
+        Counter thirdCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
+            Index = 2
+        };
+        
+        Timer = new Timer(CpuState, loggerService, DualPic, firstCounter, secondCounter, thirdCounter, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Timer);
         Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(Keyboard);
