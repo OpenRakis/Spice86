@@ -45,6 +45,8 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.Linq;
+
 /// <summary>
 /// Centralizes classes instances that should live while the CPU is running.
 /// </summary>
@@ -296,21 +298,28 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(Joystick);
         
-        SoftwareMixer = new(new (new PortAudioPlayerFactory(loggerService)));
+        SoftwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
         
-        PcSpeaker = new PcSpeaker(new(), new SoundChannel(SoftwareMixer, nameof(PcSpeaker)), CpuState, loggerService, configuration.FailOnUnhandledPort);
+        PcSpeaker = new PcSpeaker(new LatchedUInt16(), new SoundChannel(SoftwareMixer, nameof(PcSpeaker)), CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(new FmSynthesizer(48000), SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
+        
+        SoundChannel fmSynthSoundChannel = new SoundChannel(SoftwareMixer, "SoundBlaster OPL3 FM Synth");
+        OPL3FM = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
-        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
+        SoundChannel pcmSoundChannel = new SoundChannel(SoftwareMixer, "SoundBlaster PCM");
+        HardwareMixer hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, loggerService);
+        DmaChannel eightByteDmaChannel = DmaController.Channels[soundBlasterHardwareConfig.LowDma];
+        Dsp dsp = new Dsp(eightByteDmaChannel, DmaController.Channels[soundBlasterHardwareConfig.HighDma], new ADPCM2(),  new ADPCM3(), new ADPCM4());
+        SoundBlaster = new SoundBlaster(pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, CpuState, DmaController, DualPic, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
         RegisterIoPortHandler(SoundBlaster);
+        
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
         
         // the external MIDI device (external General MIDI or external Roland MT-32).
         MidiDevice midiMapper;
-        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath)) {
+        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
             midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(SoftwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
         } else {
             midiMapper = new GeneralMidiDevice(new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000), new SoundChannel(SoftwareMixer, "General MIDI"));

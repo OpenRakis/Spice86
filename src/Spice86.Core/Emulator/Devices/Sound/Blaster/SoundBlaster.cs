@@ -17,7 +17,8 @@ using System.Threading;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt, IBlasterEnvVarProvider, IDisposable {
+public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt,
+    IBlasterEnvVarProvider, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -101,24 +102,24 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private bool _disposed;
 
     private static readonly FrozenDictionary<byte, byte> CommandLengths = new Dictionary<byte, byte>() {
-        {Commands.SetTimeConstant, 1},
-        {Commands.SingleCycleDmaOutput8, 2},
-        {Commands.DspIdentification, 1},
-        {Commands.SetBlockTransferSize, 2},
-        {Commands.SetSampleRate, 2},
-        {Commands.SetInputSampleRate, 2},
-        {Commands.SingleCycleDmaOutput16, 3},
-        {Commands.AutoInitDmaOutput16, 3},
-        {Commands.SingleCycleDmaOutput16Fifo, 3},
-        {Commands.AutoInitDmaOutput16Fifo, 3},
-        {Commands.SingleCycleDmaOutput8_Alt, 3},
-        {Commands.AutoInitDmaOutput8_Alt, 3},
-        {Commands.SingleCycleDmaOutput8Fifo_Alt, 3},
-        {Commands.AutoInitDmaOutput8Fifo_Alt, 3},
-        {Commands.PauseForDuration, 2},
-        {Commands.SingleCycleDmaOutputADPCM4Ref, 2},
-        {Commands.SingleCycleDmaOutputADPCM2Ref, 2},
-        {Commands.SingleCycleDmaOutputADPCM3Ref, 2}
+        { Commands.SetTimeConstant, 1 },
+        { Commands.SingleCycleDmaOutput8, 2 },
+        { Commands.DspIdentification, 1 },
+        { Commands.SetBlockTransferSize, 2 },
+        { Commands.SetSampleRate, 2 },
+        { Commands.SetInputSampleRate, 2 },
+        { Commands.SingleCycleDmaOutput16, 3 },
+        { Commands.AutoInitDmaOutput16, 3 },
+        { Commands.SingleCycleDmaOutput16Fifo, 3 },
+        { Commands.AutoInitDmaOutput16Fifo, 3 },
+        { Commands.SingleCycleDmaOutput8_Alt, 3 },
+        { Commands.AutoInitDmaOutput8_Alt, 3 },
+        { Commands.SingleCycleDmaOutput8Fifo_Alt, 3 },
+        { Commands.AutoInitDmaOutput8Fifo_Alt, 3 },
+        { Commands.PauseForDuration, 2 },
+        { Commands.SingleCycleDmaOutputADPCM4Ref, 2 },
+        { Commands.SingleCycleDmaOutputADPCM2Ref, 2 },
+        { Commands.SingleCycleDmaOutputADPCM3Ref, 2 }
     }.ToFrozenDictionary();
 
     private readonly List<byte> _commandData = new();
@@ -156,26 +157,32 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="pcmSoundChannel">The software's mixer sound channel the SoundBlaster's PCM.</param>
+    /// <param name="hardwareMixer">The Sound Blaster hardware mixer.</param>
+    /// <param name="dsp">The digital signal processor.</param>
+    /// <param name="eightByteDmaChannel">The 8-bit DMA channel for DMA transfers of PCM data.</param>
     /// <param name="opl3SoundChannel">The sound channel registered by the SoundBlaster's OPL3 FM Chip.</param>
-    /// <param name="loggerService">The logging service used for logging events.</param>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
+    /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    public SoundBlaster(SoundChannel pcmSoundChannel, HardwareMixer hardwareMixer, Dsp dsp,
+        DmaChannel eightByteDmaChannel, SoundChannel opl3SoundChannel, State state, DmaController dmaController,
+        DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
-        PCMSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
+        PCMSoundChannel = pcmSoundChannel;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _dmaController = dmaController;
         _dualPic = dualPic;
         FMSynthSoundChannel = opl3SoundChannel;
-        _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
-        _eightByteDmaChannel = _dmaController.Channels[soundBlasterHardwareConfig.LowDma];
-        _dsp = new Dsp(_eightByteDmaChannel, _dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
+        _ctMixer = hardwareMixer;
+        _eightByteDmaChannel = eightByteDmaChannel;
+        _dsp = dsp;
         _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
         _dmaController.SetupDmaDeviceChannel(this);
         _playbackThread = new Thread(AudioPlayback) {
@@ -192,31 +199,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     public override byte ReadByte(int port) {
         switch (port) {
             case DspPorts.DspReadStatus:
-                if(_dsp.IsDmaTransferActive) {
-                    return 0xff;
-                } else {
-                    return 0x7f;
-                }
+                return _dsp.IsDmaTransferActive ? (byte)0xff : (byte)0x7f;
             case DspPorts.DspReadData:
-                if (_outputData.Count > 0) {
-                    return _outputData.Dequeue();
-                } else {
-                    return 0;
-                }
-
+                return _outputData.Count > 0 ? _outputData.Dequeue() : (byte)0;
             case DspPorts.DspWrite:
                 return 0x00;
-
             case DspPorts.DspReadBufferStatus:
-                if (_ctMixer.InterruptStatusRegister == InterruptStatus.Dma8) {
-                }
-
                 _ctMixer.InterruptStatusRegister = InterruptStatus.None;
                 return _outputData.Count > 0 ? (byte)0x80 : (byte)0u;
-
             case DspPorts.MixerAddress:
                 return (byte)_ctMixer.CurrentAddress;
-
             case DspPorts.MixerData:
                 return _ctMixer.ReadData();
             default:
@@ -230,48 +222,54 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             _playbackThread.Start();
             _playbackStarted = true;
         }
+
         switch (port) {
             case DspPorts.DspWriteStatus:
                 return;
-
             case DspPorts.DspReset:
-                // Expect a 1, then 0 written to reset the DSP.
-                if (value == 1) {
-                    _blasterState = BlasterState.ResetRequest;
-                } else if (value == 0 && _blasterState == BlasterState.ResetRequest) {
-                    _blasterState = BlasterState.Resetting;
-                    if(_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("SoundBlaster DSP was reset");
+                switch (value) {
+                    // Expect a 1, then 0 written to reset the DSP.
+                    case 1:
+                        _blasterState = BlasterState.ResetRequest;
+                        break;
+                    case 0 when _blasterState == BlasterState.ResetRequest: {
+                        _blasterState = BlasterState.Resetting;
+                        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                            _loggerService.Verbose("SoundBlaster DSP was reset");
+                        }
+                        Reset();
+                        break;
                     }
-                    Reset();
                 }
                 break;
-
             case DspPorts.DspWrite:
-                if (_blasterState == BlasterState.WaitingForCommand) {
-                    _currentCommand = value;
-                    _blasterState = BlasterState.ReadingCommand;
-                    _commandData.Clear();
-                    CommandLengths.TryGetValue(value, out _commandDataLength);
-                    if (_commandDataLength == 0) {
-                        if (!ProcessCommand()) {
-                            base.WriteByte(port, value);
+                switch (_blasterState) {
+                    case BlasterState.WaitingForCommand: {
+                        _currentCommand = value;
+                        _blasterState = BlasterState.ReadingCommand;
+                        _commandData.Clear();
+                        CommandLengths.TryGetValue(value, out _commandDataLength);
+                        if (_commandDataLength == 0) {
+                            if (!ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
                         }
+                        break;
                     }
-                } else if (_blasterState == BlasterState.ReadingCommand) {
-                    _commandData.Add(value);
-                    if (_commandData.Count >= _commandDataLength) {
-                        if (!ProcessCommand()) {
-                            base.WriteByte(port, value);
+                    case BlasterState.ReadingCommand: {
+                        _commandData.Add(value);
+                        if (_commandData.Count >= _commandDataLength) {
+                            if (!ProcessCommand()) {
+                                base.WriteByte(port, value);
+                            }
                         }
+                        break;
                     }
                 }
                 break;
-
             case DspPorts.MixerData:
                 _ctMixer.Write(value);
                 break;
-
             case DspPorts.MixerAddress:
                 _ctMixer.CurrentAddress = value;
                 break;
@@ -300,7 +298,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of input ports.
     /// </summary>
-    public FrozenSet<int> InputPorts => new int[] { DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData }.ToFrozenSet();
+    public FrozenSet<int> InputPorts => new int[] {
+        DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData
+    }.ToFrozenSet();
 
     /// <summary>
     /// Gets the hardware IRQ assigned to the device.
@@ -310,7 +310,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// The list of output ports.
     /// </summary>
-    public FrozenSet<int> OutputPorts => new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress }.ToFrozenSet();
+    public FrozenSet<int> OutputPorts =>
+        new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress }.ToFrozenSet();
 
     /// <inheritdoc />
     public void Dispose() {
@@ -320,14 +321,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     }
 
     private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
+        if (!_disposed) {
+            if (disposing) {
                 _endPlayback = true;
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();
                 }
+
                 _dsp.Dispose();
             }
+
             _disposed = true;
         }
     }
@@ -364,7 +367,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => _dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
-    
+
     private void AudioPlayback() {
         Span<byte> buffer = stackalloc byte[512];
         short[] writeBuffer = new short[65536 * 2];
@@ -549,6 +552,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
 
                 return false;
         }
+
         _blasterState = BlasterState.WaitingForCommand;
         return true;
     }

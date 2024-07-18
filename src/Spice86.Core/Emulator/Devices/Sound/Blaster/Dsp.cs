@@ -10,13 +10,22 @@ using System.Threading;
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
 public sealed class Dsp : IDisposable {
+    private readonly ADPCM2 _adpcm2;
+    private readonly ADPCM3 _adpcm3;
+    private readonly ADPCM4 _adpcm4;
 
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
     /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
     /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
-    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel) {
+    /// <param name="adpcm2">The 2-bit ADPCM decoder.</param>
+    /// <param name="adpcm3">The 3-bit ADPCM decoder.</param>
+    /// <param name="adpcm4">The 4-bit ADPCM decoder.</param>
+    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, ADPCM2 adpcm2, ADPCM3 adpcm3, ADPCM4 adpcm4) {
+        _adpcm2 = adpcm2;
+        _adpcm3 = adpcm3;
+        _adpcm4 = adpcm4;
         dmaChannel8 = eightBitDmaChannel;
         dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;
@@ -82,9 +91,9 @@ public sealed class Dsp : IDisposable {
         decodeRemainderOffset = -1;
 
         decoder = compressionLevel switch {
-            CompressionLevel.ADPCM2 => new ADPCM2(),
-            CompressionLevel.ADPCM3 => new ADPCM3(),
-            CompressionLevel.ADPCM4 => new ADPCM4(),
+            CompressionLevel.ADPCM2 => _adpcm2,
+            CompressionLevel.ADPCM3 => _adpcm3,
+            CompressionLevel.ADPCM4 => _adpcm4,
             _ => null,
         };
 

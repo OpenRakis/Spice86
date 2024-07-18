@@ -36,12 +36,12 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
     /// <param name="fmSynthesizer">The OPL3's FM synthesizer. Contains the core logic for producing synthesized music.</param>
-    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL3 FM Synth chip.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public OPL3FM(FmSynthesizer fmSynthesizer, SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
+    public OPL3FM(FmSynthesizer fmSynthesizer, SoundChannel fmSynthSoundChannel, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        _soundChannel = fmSynthSoundChannel;
         _synth = fmSynthesizer;
         _playbackThread = new Thread(GenerateWaveforms) {
             Name = nameof(OPL3FM)
