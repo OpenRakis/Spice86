@@ -254,10 +254,9 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// Initializes a new instance
     /// </summary>
-    public Machine(IGui? gui, PauseHandler pauseHandler, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(IGui? gui, IMemory memory,  MachineBreakpoints machineBreakpoints, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
         CpuState = cpuState;
-
-        Memory = new Memory(new MemoryBreakpoints(), new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
+        Memory = memory;
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
@@ -269,7 +268,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         };
         DualPic = new(new Pic(loggerService), new Pic(loggerService), CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
-        MachineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), Memory, CpuState);
+        MachineBreakpoints = machineBreakpoints;
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 

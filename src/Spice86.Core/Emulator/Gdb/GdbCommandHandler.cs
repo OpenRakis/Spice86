@@ -28,32 +28,30 @@ public class GdbCommandHandler {
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
-    /// <param name="machineBreakpoints">The class used to store and retrieve breakpoints.</param>
     /// <param name="executionFlowRecorder">The class that records emulation execution flow.</param>
-    /// <param name="recorderDataWriter">The class that stores callbacks as machine code instructions and is responsible for calling our C# handlers.</param>
     /// <param name="functionHandler">The class that handles function calls at the machine code level.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GdbCommandHandler(IMemory memory, Cpu cpu, State state, PauseHandler pauseHandler,
-        MachineBreakpoints machineBreakpoints, ExecutionFlowRecorder executionFlowRecorder,
-        RecorderDataWriter recorderDataWriter,
+    public GdbCommandHandler(
+        GdbCommandBreakpointHandler gdbCommandBreakpointHandler,
+        GdbCommandMemoryHandler gdbCommandMemoryHandler,
+        GdbCommandRegisterHandler gdbCommandRegisterHandler,
+        GdbCustomCommandsHandler gdbCustomCommandsHandler,
+        State state, PauseHandler pauseHandler,
+        ExecutionFlowRecorder executionFlowRecorder,
         FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService) {
+        _gdbCommandBreakpointHandler = gdbCommandBreakpointHandler;
+        _gdbCommandMemoryHandler = gdbCommandMemoryHandler;
+        _gdbCommandRegisterHandler = gdbCommandRegisterHandler;
+        _gdbCustomCommandsHandler = gdbCustomCommandsHandler;
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
         _pauseHandler = pauseHandler;
-        _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(memory, cpu, machineBreakpoints, recorderDataWriter, gdbIo,
-            _loggerService,
-            _gdbCommandBreakpointHandler.OnBreakPointReached);
     }
 
     /// <summary>

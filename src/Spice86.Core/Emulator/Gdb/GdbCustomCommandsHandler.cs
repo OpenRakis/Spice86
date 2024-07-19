@@ -37,15 +37,16 @@ public class GdbCustomCommandsHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU registers and flags.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="recordedDataWriter">The class that writes recorded emulator execution data to files.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
-    public GdbCustomCommandsHandler(IMemory memory, Cpu cpu, MachineBreakpoints machineBreakpoints, RecorderDataWriter recordedDataWriter, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached) {
+    public GdbCustomCommandsHandler(IMemory memory, State state, Cpu cpu, MachineBreakpoints machineBreakpoints, RecorderDataWriter recordedDataWriter, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached) {
         _loggerService = loggerService;
-        _state = cpu.State;
+        _state = state;
         _memory = memory;
         _machineBreakpoints = machineBreakpoints;
         _cpu = cpu;

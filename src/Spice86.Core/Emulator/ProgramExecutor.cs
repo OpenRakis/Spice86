@@ -5,7 +5,6 @@ using Function.Dump;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.InternalDebugger;
@@ -14,7 +13,9 @@ using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -29,7 +30,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly PauseHandler _pauseHandler;
     private readonly RecorderDataWriter _recorderDataWriter;
     private GdbCommandHandler? _gdbCommandHandler;
 
@@ -42,8 +42,8 @@ public sealed class ProgramExecutor : IProgramExecutor {
     public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
         _configuration = configuration;
         _loggerService = loggerService;
-        _pauseHandler = new PauseHandler(loggerService);
-        Machine = CreateMachine(gui);
+        PauseHandler pauseHandler = new(_loggerService);
+        Machine = CreateMachine(pauseHandler, configuration, gui);
         _recorderDataWriter = new RecorderDataWriter(Machine.Cpu.ExecutionFlowRecorder,
             Machine.Cpu.State,
             new MemoryDataExporter(Machine.Memory, Machine.CallbackHandler, _configuration,
@@ -51,7 +51,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             new ExecutionFlowDumper(_loggerService),
             _loggerService,
             _configuration.RecordedDataDirectory);
-        _gdbServer = CreateGdbServer();
+        _gdbServer = CreateGdbServer(pauseHandler);
         _emulationLoop = new(loggerService, Machine.Cpu.FunctionHandler, Machine.Cpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbCommandHandler);
     }
 
@@ -155,12 +155,18 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
     }
 
-    private Machine CreateMachine(IGui? gui) {
-        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
+    private Machine CreateMachine(PauseHandler pauseHandler, Configuration configuration, IGui? gui) {
+        RecordedDataReader reader = new(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
-        IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, _pauseHandler, cpuState, ioPortDispatcher, _loggerService, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
+        IOPortDispatcher ioPortDispatcher = new(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
+        IMemory memory = new Emulator.Memory.Memory(new MemoryBreakpoints(), new Ram(A20Gate.EndOfHighMemoryArea),new A20Gate(!configuration.A20Gate));
+        MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, cpuState);
+
+        Machine = new Machine(gui, memory, machineBreakpoints,
+            cpuState, ioPortDispatcher, _loggerService,
+            executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
+
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -173,22 +179,28 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return Machine;
     }
 
-    private GdbServer? CreateGdbServer() {
+    private GdbServer? CreateGdbServer(PauseHandler pauseHandler) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
             GdbIo gdbIo = new(gdbPort.Value, _loggerService);
-            _gdbCommandHandler = new(Machine.Memory,
-                Machine.Cpu,
+            GdbFormatter gdbFormatter = new();
+            var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(Machine.Cpu.State, gdbFormatter, gdbIo, _loggerService);
+            var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(Machine.Memory, gdbFormatter, gdbIo, _loggerService);
+            var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(Machine.MachineBreakpoints, pauseHandler, gdbIo, _loggerService);
+            var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(Machine.Memory, Machine.Cpu.State, Machine.Cpu,
+                Machine.MachineBreakpoints, _recorderDataWriter, gdbIo,
+                _loggerService,
+                gdbCommandBreakpointHandler.OnBreakPointReached);
+            _gdbCommandHandler = new(gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler, gdbCustomCommandsHandler,
                 Machine.Cpu.State,
-                _pauseHandler,
-                Machine.Cpu.MachineBreakpoints,
+                pauseHandler,
                 Machine.Cpu.ExecutionFlowRecorder,
-                _recorderDataWriter,
                 Machine.Cpu.FunctionHandler,
                 gdbIo,
                 _loggerService);
                 
             return new GdbServer(
+                gdbIo,
                 Machine.Cpu.State,
                 Machine.MachineBreakpoints.PauseHandler,
                 _gdbCommandHandler,

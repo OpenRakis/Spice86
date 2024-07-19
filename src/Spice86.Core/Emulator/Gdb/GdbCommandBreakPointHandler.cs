@@ -23,8 +23,8 @@ public class GdbCommandBreakpointHandler {
     /// </summary>
     /// <param name="pauseHandler">The class responsible for pausing/resuming emulation via GDB commands.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public GdbCommandBreakpointHandler(MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
         _machineBreakpoints = machineBreakpoints;
