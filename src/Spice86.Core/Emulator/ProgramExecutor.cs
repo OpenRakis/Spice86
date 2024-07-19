@@ -181,34 +181,32 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     private GdbServer? CreateGdbServer(PauseHandler pauseHandler) {
         int? gdbPort = _configuration.GdbPort;
-        if (gdbPort != null) {
-            GdbIo gdbIo = new(gdbPort.Value, _loggerService);
-            GdbFormatter gdbFormatter = new();
-            var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(Machine.Cpu.State, gdbFormatter, gdbIo, _loggerService);
-            var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(Machine.Memory, gdbFormatter, gdbIo, _loggerService);
-            var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(Machine.MachineBreakpoints, pauseHandler, gdbIo, _loggerService);
-            var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(Machine.Memory, Machine.Cpu.State, Machine.Cpu,
-                Machine.MachineBreakpoints, _recorderDataWriter, gdbIo,
-                _loggerService,
-                gdbCommandBreakpointHandler.OnBreakPointReached);
-            _gdbCommandHandler = new(gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler, gdbCustomCommandsHandler,
-                Machine.Cpu.State,
-                pauseHandler,
-                Machine.Cpu.ExecutionFlowRecorder,
-                Machine.Cpu.FunctionHandler,
-                gdbIo,
-                _loggerService);
-                
-            return new GdbServer(
-                gdbIo,
-                Machine.Cpu.State,
-                Machine.MachineBreakpoints.PauseHandler,
-                _gdbCommandHandler,
-                _loggerService,
-                _configuration);
+        if (gdbPort == null) {
+            return null;
         }
-
-        return null;
+        GdbIo gdbIo = new(gdbPort.Value, _loggerService);
+        GdbFormatter gdbFormatter = new();
+        var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(Machine.Cpu.State, gdbFormatter, gdbIo, _loggerService);
+        var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(Machine.Memory, gdbFormatter, gdbIo, _loggerService);
+        var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(Machine.MachineBreakpoints, pauseHandler, gdbIo, _loggerService);
+        var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(Machine.Memory, Machine.Cpu.State, Machine.Cpu,
+            Machine.MachineBreakpoints, _recorderDataWriter, gdbIo,
+            _loggerService,
+            gdbCommandBreakpointHandler.OnBreakPointReached);
+        _gdbCommandHandler = new(gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler, gdbCustomCommandsHandler,
+            Machine.Cpu.State,
+            pauseHandler,
+            Machine.Cpu.ExecutionFlowRecorder,
+            Machine.Cpu.FunctionHandler,
+            gdbIo,
+            _loggerService);
+        return new GdbServer(
+            gdbIo,
+            Machine.Cpu.State,
+            pauseHandler,
+            _gdbCommandHandler,
+            _loggerService,
+            _configuration);
     }
 
     private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(

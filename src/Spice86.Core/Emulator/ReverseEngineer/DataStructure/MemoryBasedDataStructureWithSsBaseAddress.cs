@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>
@@ -11,7 +12,8 @@ public class MemoryBasedDataStructureWithSsBaseAddress : MemoryBasedDataStructur
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
-    public MemoryBasedDataStructureWithSsBaseAddress(Machine machine) : base(machine, (uint)SegmentRegisterIndex.SsIndex) {
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="segmentRegisters">The CPU segment registers.</param>
+    public MemoryBasedDataStructureWithSsBaseAddress(IByteReaderWriter memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters, (uint)SegmentRegisterIndex.SsIndex) {
     }
 }
