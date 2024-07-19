@@ -25,11 +25,6 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     bool IsPaused { get; set; }
 
     /// <summary>
-    /// Gets whether can generate an unconditional GDB breakpoint.
-    /// </summary>
-    bool IsGdbCommandHandlerAvailable { get; }
-
-    /// <summary>
     /// Steps the current instruction.
     /// </summary>
     void StepInstruction();

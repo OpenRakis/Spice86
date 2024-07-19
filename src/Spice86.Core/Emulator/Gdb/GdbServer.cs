@@ -1,9 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -18,39 +15,24 @@ public sealed class GdbServer : IDisposable {
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
-    private readonly Cpu _cpu;
     private readonly PauseHandler _pauseHandler;
-    private readonly IMemory _memory;
     private readonly State _state;
-    private readonly CallbackHandler _callbackHandler;
-    private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private readonly FunctionHandler _functionHandler;
-    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly GdbCommandHandler _gdbCommandHandler;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
     /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
+    /// <param name="gdbCommandHandler">The class that answers to custom GDB commands.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
-    /// <param name="functionHandler">The class that handles functions calls.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code exexcution flow.</param>
-    /// <param name="machineBreakpoints">The class that handles breakpoints.</param>
-    public GdbServer(IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, ILoggerService loggerService, Configuration configuration) {
+    public GdbServer(State state, PauseHandler pauseHandler, GdbCommandHandler gdbCommandHandler, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
-        _functionHandler = functionHandler;
-        _cpu = cpu;
         _state = state;
-        _memory = memory;
-        _callbackHandler = callbackHandler;
-        _executionFlowRecorder = executionFlowRecorder;
-        _machineBreakpoints = machineBreakpoints;
         _configuration = configuration;
+        _gdbCommandHandler = gdbCommandHandler;
     }
 
     /// <inheritdoc />
@@ -81,35 +63,17 @@ public sealed class GdbServer : IDisposable {
     }
 
     /// <summary>
-    /// Gets the GdbCommandHandler instance associated with the current GdbServer instance.
-    /// </summary>
-    public GdbCommandHandler? GdbCommandHandler { get; private set; }
-
-    /// <summary>
-    /// Returns a value indicating whether the GdbCommandHandler instance is available.<br/>
-    /// This means that we set a connection with GDB earlier, and we assume that GDB client is still connected.
-    /// </summary>
-    public bool IsGdbCommandHandlerAvailable => GdbCommandHandler is not null;
-
-    /// <summary>
     /// Accepts a single connection to the GDB server and creates a new GdbCommandHandler instance to handle the connection.
     /// </summary>
     /// <param name="gdbIo">The GdbIo instance used to communicate with the GDB client.</param>
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
-        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
-            _memory, _cpu, _state, _pauseHandler, _machineBreakpoints,
-            _callbackHandler, _executionFlowRecorder, _functionHandler,
-            gdbIo,
-            _loggerService,
-            _configuration);
-        gdbCommandHandler.PauseEmulator();
+        _gdbCommandHandler.PauseEmulator();
         OnConnect();
-        GdbCommandHandler = gdbCommandHandler;
-        while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
+        while (_gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
             if (!string.IsNullOrWhiteSpace(command)) {
-                gdbCommandHandler.RunCommand(command);
+                _gdbCommandHandler.RunCommand(command);
             }
         }
         _loggerService.Verbose("Client disconnected");
@@ -189,6 +153,6 @@ public sealed class GdbServer : IDisposable {
     /// Executes a single CPU instruction.
     /// </summary>
     public void StepInstruction() {
-        GdbCommandHandler?.Step();
+        _gdbCommandHandler?.Step();
     }
 }

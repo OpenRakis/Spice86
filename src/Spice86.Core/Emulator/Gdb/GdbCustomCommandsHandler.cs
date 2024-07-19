@@ -36,18 +36,14 @@ public class GdbCustomCommandsHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
+    /// <param name="recordedDataWriter">The class that writes recorded emulator execution data to files.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
-    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    /// <param name="configuration">The emulator configuration.</param>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
-        string recordedDataDirectory) {
+    public GdbCustomCommandsHandler(IMemory memory, Cpu cpu, MachineBreakpoints machineBreakpoints, RecorderDataWriter recordedDataWriter, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached) {
         _loggerService = loggerService;
         _state = cpu.State;
         _memory = memory;
@@ -55,7 +51,7 @@ public class GdbCustomCommandsHandler {
         _cpu = cpu;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(_memory, _cpu.State, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = recordedDataWriter;
     }
 
     /// <summary>

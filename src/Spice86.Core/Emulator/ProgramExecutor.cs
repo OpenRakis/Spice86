@@ -29,6 +29,9 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
+    private readonly PauseHandler _pauseHandler;
+    private readonly RecorderDataWriter _recorderDataWriter;
+    private GdbCommandHandler? _gdbCommandHandler;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -39,9 +42,17 @@ public sealed class ProgramExecutor : IProgramExecutor {
     public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
         _configuration = configuration;
         _loggerService = loggerService;
+        _pauseHandler = new PauseHandler(loggerService);
         Machine = CreateMachine(gui);
-        _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(loggerService, Machine.Cpu.FunctionHandler, Machine.Cpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
+        _recorderDataWriter = new RecorderDataWriter(Machine.Cpu.ExecutionFlowRecorder,
+            Machine.Cpu.State,
+            new MemoryDataExporter(Machine.Memory, Machine.CallbackHandler, _configuration,
+                _configuration.RecordedDataDirectory, _loggerService),
+            new ExecutionFlowDumper(_loggerService),
+            _loggerService,
+            _configuration.RecordedDataDirectory);
+        _gdbServer = CreateGdbServer();
+        _emulationLoop = new(loggerService, Machine.Cpu.FunctionHandler, Machine.Cpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbCommandHandler);
     }
 
     /// <summary>
@@ -57,10 +68,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
-
-    /// <inheritdoc/>
-    public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
-
+    
     /// <summary>
     /// Steps a single instruction for the internal UI debugger
     /// </summary>
@@ -72,10 +80,12 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     /// <inheritdoc/>
     public void DumpEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(Machine.Memory,
-                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
-                Machine.Cpu.ExecutionFlowRecorder,
-                path, _loggerService)
+        new RecorderDataWriter(Machine.Cpu.ExecutionFlowRecorder,
+                Machine.Cpu.State,
+                new MemoryDataExporter(Machine.Memory, Machine.CallbackHandler, _configuration, path, _loggerService),
+                new ExecutionFlowDumper(_loggerService),
+                _loggerService,
+                path)
             .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
     }
 
@@ -150,7 +160,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
+        Machine = new Machine(gui, _pauseHandler, cpuState, ioPortDispatcher, _loggerService, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -163,14 +173,25 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return Machine;
     }
 
-    private GdbServer? CreateGdbServer(IGui? gui) {
+    private GdbServer? CreateGdbServer() {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort != null) {
-            return new GdbServer(Machine.Memory, Machine.Cpu,
-                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandler,
+            GdbIo gdbIo = new(gdbPort.Value, _loggerService);
+            _gdbCommandHandler = new(Machine.Memory,
+                Machine.Cpu,
+                Machine.Cpu.State,
+                _pauseHandler,
+                Machine.Cpu.MachineBreakpoints,
                 Machine.Cpu.ExecutionFlowRecorder,
-                Machine.MachineBreakpoints,
+                _recorderDataWriter,
+                Machine.Cpu.FunctionHandler,
+                gdbIo,
+                _loggerService);
+                
+            return new GdbServer(
+                Machine.Cpu.State,
                 Machine.MachineBreakpoints.PauseHandler,
+                _gdbCommandHandler,
                 _loggerService,
                 _configuration);
         }
@@ -181,15 +202,17 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
         IOverrideSupplier? supplier, ushort entryPointSegment, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
-        if (supplier != null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Override supplied: {OverrideSupplier}", supplier);
-            }
+        if (supplier == null) {
+            return res;
+        }
 
-            foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Override supplied: {OverrideSupplier}", supplier);
+        }
+
+        foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
                     .GenerateFunctionInformations(_loggerService, _configuration, entryPointSegment, machine)) {
-                res.Add(element.Key, element.Value);
-            }
+            res.Add(element.Key, element.Value);
         }
 
         return res;
