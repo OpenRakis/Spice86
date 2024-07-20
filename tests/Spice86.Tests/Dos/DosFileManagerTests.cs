@@ -10,10 +10,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 public class DosFileManagerTests {
     private static readonly string MountPoint = Path.GetFullPath(@"Resources\MountPoint");
+
 
     [Theory]
     [InlineData(@"\FoO", "FOO")]
@@ -79,10 +81,15 @@ public class DosFileManagerTests {
             DumpDataOnExit = false,
             CDrive = mountPoint
         };
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        
         ILoggerService loggerServiceMock = Substitute.For<ILoggerService>();
-        IVirtualDevice characterDeviceMock = Substitute.For<IVirtualDevice>();
-        List<IVirtualDevice> dosDevicesMock = new List<IVirtualDevice>() { characterDeviceMock };
-        return new DosFileManager(new Memory(new(), ram, new(!configuration.A20Gate)), configuration.CDrive, configuration.Exe, loggerServiceMock, dosDevicesMock);
+        var stdAux = new CharacterDevice(DeviceAttributes.Character, "AUX", loggerServiceMock);
+        var printer = new CharacterDevice(DeviceAttributes.Character, "PRN", loggerServiceMock);
+        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        return new DosFileManager(
+            new Memory(new(), ram, new(!configuration.A20Gate)),
+            new (configuration.CDrive, configuration.Exe),
+            loggerServiceMock,
+            printer, stdAux);
     }
 }

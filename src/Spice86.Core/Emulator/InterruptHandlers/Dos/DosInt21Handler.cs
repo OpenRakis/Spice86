@@ -25,37 +25,41 @@ using System.Text;
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly Encoding _cp850CharSet;
-
+    private readonly CharacterDevice _currentConsoleDevice;
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
-    private bool _isCtrlCFlag;
-
-    private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
-    private readonly List<IVirtualDevice> _devices;
-    private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
+    private readonly CountryInfo _countryInfo;
+    private readonly CharacterDevice _stdAux;
+    private readonly CharacterDevice _printer;
+    private readonly List<IVirtualDevice> _devices = new();
+
+    private bool _isCtrlCFlag;
+    private StringBuilder _displayOutputBuilder = new();
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt21Handler(IMemory memory, Cpu cpu, InterruptVectorTable interruptVectorTable, CountryInfo countryInfo,
+        CharacterDevice stdAux, CharacterDevice printer, ConsoleDevice con, CharacterDevice clock, BlockDevice hdd, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        _countryInfo = countryInfo;
+        _stdAux = stdAux;
+        _printer = printer;
         _cp850CharSet = Encoding.GetEncoding("ibm850");
-        _dos = dos;
         _vgaFunctionality = vgaFunctionality;
         _keyboardInt16Handler = keyboardInt16Handler;
-        _dosMemoryManager = dos.MemoryManager;
-        _dosFileManager = dos.FileManager;
-        _devices = dos.Devices;
-        _interruptVectorTable = new InterruptVectorTable(memory);
+        _dosMemoryManager = dosMemoryManager;
+        _dosFileManager = dosFileManager;
+        _currentConsoleDevice = con;
+        _interruptVectorTable = interruptVectorTable;
+        _devices.AddRange([con, stdAux, printer, clock, hdd]);
         FillDispatchTable();
     }
 
@@ -114,12 +118,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
     /// </summary>
     public void ReadCharacterFromStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
-        if (aux is not CharacterDevice stdAux) {
-            return;
-        }
-
-        using Stream stream = stdAux.OpenStream("r");
+        using Stream stream = _stdAux.OpenStream("r");
         if (stream.CanRead) {
             State.AL = (byte)stream.ReadByte();
         } else {
@@ -131,12 +130,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
     public void WriteCharacterToStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
-        if (aux is not CharacterDevice stdAux) {
-            return;
-        }
-
-        using Stream stream = stdAux.OpenStream("w");
+        using Stream stream = _stdAux.OpenStream("w");
         if (stream.CanWrite) {
             stream.WriteByte(State.AL);
         }
@@ -146,12 +140,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the printer device.
     /// </summary>
     public void PrinterOutput() {
-        IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
-        if (prn is not CharacterDevice printer) {
-            return;
-        }
-
-        using Stream stream = printer.OpenStream("w");
+        using Stream stream = _printer.OpenStream("w");
         if (stream.CanWrite) {
             stream.WriteByte(State.AL);
         }
@@ -161,7 +150,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
     /// </summary>
     public void CheckStandardInputStatus() {
-        CharacterDevice device = _dos.CurrentConsoleDevice;
+        CharacterDevice device = _currentConsoleDevice;
         if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
@@ -179,7 +168,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Copies a character from the standard input to _state.AL, without echo on the standard output.
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
-        CharacterDevice device = _dos.CurrentConsoleDevice;
+        CharacterDevice device = _currentConsoleDevice;
         if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
@@ -259,7 +248,7 @@ public class DosInt21Handler : InterruptHandler {
         switch (State.AL) {
             case 0: //Get country specific information
                 uint dest = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-                Memory.LoadData(dest, BitConverter.GetBytes((ushort)_dos.CurrentCountryId));
+                Memory.LoadData(dest, BitConverter.GetBytes((ushort)_countryInfo.Country));
                 State.AX = (ushort) (State.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;

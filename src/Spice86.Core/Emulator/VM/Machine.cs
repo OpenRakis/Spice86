@@ -34,6 +34,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -42,6 +43,9 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -389,7 +393,27 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, loggerService, TimerInt8Handler);
 
         MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, gui, VgaFunctions, loggerService);
-        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration.CDrive, configuration.Exe, loggerService);
+        
+        var keyboardStreamedInput = new KeyboardStreamedInput(KeyboardInt16Handler);
+        var console = new ConsoleDevice(CpuState, VgaFunctions, keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", loggerService);
+        var stdAux = new CharacterDevice(DeviceAttributes.Character, "AUX", loggerService);
+        var printer = new CharacterDevice(DeviceAttributes.Character, "PRN", loggerService);
+        var clock = new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", loggerService);
+        var hdd = new BlockDevice(DeviceAttributes.FatDevice, 1);
+        CountryInfo countryInfo = new();
+        DosPathResolver dosPathResolver = new(configuration.CDrive, configuration.Exe);
+        DosFileManager dosFileManager = new DosFileManager(memory, dosPathResolver, loggerService, printer, stdAux);
+        DosMemoryManager dosMemoryManager = new DosMemoryManager(memory, loggerService);
+        DosInt20Handler dosInt20Handler = new DosInt20Handler(memory, Cpu, loggerService);
+        DosInt21Handler dosInt21Handler = new DosInt21Handler(
+            memory, Cpu, interruptVectorTable, countryInfo, stdAux, printer, console, clock, hdd, dosMemoryManager,
+            dosFileManager, KeyboardInt16Handler, VgaFunctions, loggerService);
+        DosInt2fHandler dosInt2FHandler = new DosInt2fHandler(memory, Cpu, loggerService);
+
+        Dos = new Dos(Memory, Cpu, new(),
+            console, stdAux, printer, clock, hdd,
+            dosFileManager, dosMemoryManager,
+            dosInt20Handler, dosInt21Handler, dosInt2FHandler, loggerService);
 
         if (configuration.InitializeDOS is not false) {
             // Register the interrupt handlers
