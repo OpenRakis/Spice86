@@ -17,7 +17,7 @@ public class JumpDispatcher {
     /// </summary>
     public int NextEntryAddress { get; private set; }
 
-    private int _instanceId = _instanceCounter++;
+    private readonly int _instanceId = _instanceCounter++;
     private readonly Stack<Func<int, Action>> _jumpStack = new();
     private Func<int, Action>? _returnTo;
 
@@ -36,12 +36,6 @@ public class JumpDispatcher {
         newInstance._jumpStack.Push(initialTarget);
         return newInstance;
     }
-
-    /// <summary>
-    /// Pushes a function to the internal stack.
-    /// </summary>
-    /// <param name="target">The target <see cref="Func{TResult}"/></param>
-    private void Push(Func<int, Action> target) => _jumpStack.Push(target);
 
     /// <summary>
     /// Emulates a jump by calling target and jumping inside it at entryAddress.
