@@ -28,30 +28,20 @@ public class JumpDispatcher {
     }
 
     /// <summary>
-    /// Resets all the internal state of the class.
+    /// Creates a new temporary JumpDispatcher instance for the <see cref="CSharpOverrideHelper"/>
     /// </summary>
-    public void Reset() {
-        _jumpStack.Clear();
-        NextEntryAddress = default;
-        _instanceCounter = default;
-        _instanceId = default;
-        _jumpStack.Clear();
-        _returnTo = default;
+    /// <param name="initialTarget">The initial target <see cref="Func{TResult}"/></param>
+    internal JumpDispatcher CreateNew(Func<int, Action> initialTarget) {
+        JumpDispatcher newInstance = new();
+        newInstance._jumpStack.Push(initialTarget);
+        return newInstance;
     }
-    
+
     /// <summary>
     /// Pushes a function to the internal stack.
     /// </summary>
     /// <param name="target">The target <see cref="Func{TResult}"/></param>
-    public void Push(Func<int, Action> target) => _jumpStack.Push(target);
-
-    /// <summary>
-    /// Initializes the JumpDispatcher with an initial target function.
-    /// </summary>
-    /// <param name="initialTarget">The initial target function.</param>
-    public JumpDispatcher(Func<int, Action> initialTarget) {
-        _jumpStack.Push(initialTarget);
-    }
+    private void Push(Func<int, Action> target) => _jumpStack.Push(target);
 
     /// <summary>
     /// Emulates a jump by calling target and jumping inside it at entryAddress.

@@ -633,8 +633,7 @@ public class CSharpOverrideHelper {
     private void ExecuteCall(Func<int, Action> function, Action action) {
         JumpDispatcher currentJumpDispatcher = JumpDispatcher;
         // Ensure the jump dispatcher has the function we are calling as starting point
-        JumpDispatcher.Reset();
-        JumpDispatcher.Push(function);
+        JumpDispatcher = JumpDispatcher.CreateNew(function);
         action.Invoke();
         JumpDispatcher = currentJumpDispatcher;
     }
