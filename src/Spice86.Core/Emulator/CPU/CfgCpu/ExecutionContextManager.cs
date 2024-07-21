@@ -9,10 +9,10 @@ public class ExecutionContextManager {
     private MachineBreakpoints _machineBreakpoints;
     private IDictionary<uint, ExecutionContext> _executionContextEntryPoints = new Dictionary<uint, ExecutionContext>();
     
-    public ExecutionContextManager(MachineBreakpoints machineBreakpoints, ExecutionContext executionContext) {
+    public ExecutionContextManager(MachineBreakpoints machineBreakpoints) {
         _machineBreakpoints = machineBreakpoints;
         // Initial context at init
-        CurrentExecutionContext = executionContext;
+        CurrentExecutionContext = new();
         InitialExecutionContext = CurrentExecutionContext;
     }
     

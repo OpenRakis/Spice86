@@ -20,8 +20,8 @@ public class ExecutionContext : IDebuggableComponent {
     /// Next node to execute according to the graph.
     /// </summary>
     public ICfgNode? NodeToExecuteNextAccordingToGraph { get; set; }
-    
 
+    //TODO: instead of visiting the execution context, inject the ExecutionContextManager in the UI.
     public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
         emulatorDebugger.Visit(this);
     }

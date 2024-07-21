@@ -295,7 +295,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             CallbackHandler, interruptVectorTable, stack,
             alu8, alu16, alu32,
             instructionFieldValueRetriever, modRmExecutor, loggerService);
-        ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
+        ExecutionContextManager executionContextManager = new(MachineBreakpoints);
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(Memory, MachineBreakpoints), new InstructionParser(Memory, CpuState), new PreviousInstructions(Memory));
         CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
