@@ -6,10 +6,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using System.Linq;
 
 public class DiscriminatorReducer {
-    private readonly List<IInstructionReplacer<CfgInstruction>> _instructionReplacers;
+    private readonly IList<IInstructionReplacer<CfgInstruction>> _instructionReplacers;
 
-    public DiscriminatorReducer(NodeLinker nodeLinker, InstructionsFeeder instructionsFeeder) {
-        _instructionReplacers = new List<IInstructionReplacer<CfgInstruction>> { nodeLinker, instructionsFeeder };
+    public DiscriminatorReducer(IList<IInstructionReplacer<CfgInstruction>> instructionReplacers) {
+        _instructionReplacers = instructionReplacers;
     }
 
     private static Dictionary<Type, List<CfgInstruction>> GroupByType(List<CfgInstruction> instructions) {

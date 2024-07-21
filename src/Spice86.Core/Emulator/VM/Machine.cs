@@ -298,7 +298,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         ExecutionContextManager executionContextManager = new(MachineBreakpoints, new ExecutionContext());
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(Memory, MachineBreakpoints), new InstructionParser(Memory, CpuState), new PreviousInstructions(Memory));
-        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new(nodeLinker, instructionsFeeder), nodeLinker, cpuState);
+        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
         CfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, CpuState, DualPic);
 
         // IO devices

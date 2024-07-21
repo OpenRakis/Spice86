@@ -46,7 +46,7 @@ public class CfgNodeFeederTest {
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(new(loggerService), new (), new(), _memory, _state);
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(_memory, machineBreakpoints), new InstructionParser(_memory, _state), new PreviousInstructions(_memory));
-        return new(instructionsFeeder, new(nodeLinker, instructionsFeeder), nodeLinker, _state);
+        return new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, _state);
     }
 
     private void WriteMovReg16(SegmentedAddress address, byte opcode, ushort value) {
