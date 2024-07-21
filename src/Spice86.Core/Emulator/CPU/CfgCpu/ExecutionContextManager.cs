@@ -33,7 +33,7 @@ public class ExecutionContextManager {
         CurrentExecutionContext = executionContext;
         if (expectedReturnAddress != null) {
             // breakpoint that deletes itself on reach. Should be triggered when the return address is reached and before it starts execution.
-            _machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, expectedReturnAddress.Value.ToPhysical(), (breakpoint) => {
+            _machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, expectedReturnAddress.Value.ToPhysical(), (_) => {
                 // Restore previous execution context
                 CurrentExecutionContext = previousExecutionContext;
             }, true), true);
