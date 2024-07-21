@@ -52,7 +52,7 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
-        _machineBreakpoints.PauseHandler.RequestResume();
+        _machineBreakpoints.PauseHandler.Resume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");

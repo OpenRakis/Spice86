@@ -150,7 +150,7 @@ public sealed class GdbServer : IDisposable {
             _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
             _state.IsRunning = false;
-            _pauseHandler.RequestResume();
+            _pauseHandler.Resume();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("GDB server stopped");
             }

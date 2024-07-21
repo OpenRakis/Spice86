@@ -86,7 +86,7 @@ public class GdbCommandHandler {
         }
         char first = command[0];
         string commandContent = command[1..];
-        _pauseHandler.RequestPauseAndWait();
+        _pauseHandler.Pause();
         try {
             string? response = first switch {
                 (char)0x03 => _gdbCommandBreakpointHandler.Step(),
@@ -117,7 +117,7 @@ public class GdbCommandHandler {
             }
         } finally {
             if (_gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd) {
-                _pauseHandler.RequestResume();
+                _pauseHandler.Resume();
             }
         }
     }
