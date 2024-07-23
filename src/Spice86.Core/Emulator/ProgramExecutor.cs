@@ -131,7 +131,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
-        ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
+        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
             return new ExeLoader(Machine.Memory,
                 Machine.Cpu.State,

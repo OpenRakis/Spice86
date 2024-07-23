@@ -22,8 +22,8 @@ public class ComLoader : DosFileLoader {
     /// Initializes a new instance of the <see cref="ComLoader"/> class with the specified parameters.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="state">The CPU state registers.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="environmentVariables">The master environment block, from the DOS kernel.</param>
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
