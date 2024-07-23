@@ -96,8 +96,10 @@ public class Dos {
     /// <param name="memory">The emulator memory.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(IMemory memory, Cpu cpu, CountryInfo countryInfo,
-        ConsoleDevice con, CharacterDevice aux, CharacterDevice prn, CharacterDevice clock, BlockDevice hdd,
+    public Dos(IMemory memory, Cpu cpu,
+        CountryInfo countryInfo, ConsoleDevice con, CharacterDevice aux, CharacterDevice prn,
+        CharacterDevice clock, BlockDevice hdd,
+        IDictionary<string, string> envVars, bool enableEms,bool initializeDosMemoryStructures,
         DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, DosInt20Handler dosInt20Handler,
         DosInt21Handler dosInt21Handler, DosInt2fHandler dosInt2fHandler, ILoggerService loggerService) {
         _countryInfo = countryInfo;
@@ -110,24 +112,29 @@ public class Dos {
         DosInt20Handler = dosInt20Handler;
         DosInt21Handler = dosInt21Handler;
         DosInt2FHandler = dosInt2fHandler;
-    }
-
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        OpenDefaultFileHandles();
-        SetEnvironmentVariables(blasterEnvVarProvider);
-
-        if (enableEms) {
-            Ems = new ExpandedMemoryManager(_memory, _cpu, _loggerService);
-            var device = new CharacterDevice(DeviceAttributes.Ioctl, ExpandedMemoryManager.EmsIdentifier, _loggerService);
-            AddDevice(device, ExpandedMemoryManager.DosDeviceSegment, 0x0000);
+        if (!initializeDosMemoryStructures) {
+            return;
         }
+        OpenDefaultFileHandles();
+        SetEnvironmentVariables(envVars);
+
+        if (!enableEms) {
+            return;
+        }
+        Ems = new ExpandedMemoryManager(_memory, _cpu, _loggerService);
+        var device = new CharacterDevice(DeviceAttributes.Ioctl, ExpandedMemoryManager.EmsIdentifier, _loggerService);
+        AddDevice(device, ExpandedMemoryManager.DosDeviceSegment, 0x0000);
     }
 
-    private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) => EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
+    private void SetEnvironmentVariables(IDictionary<string, string> envVars) {
+        foreach ((string key, string value) in envVars) {
+            EnvironmentVariables[key] = value;
+        }
+    }
 
     private void OpenDefaultFileHandles() {
         if (_devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {

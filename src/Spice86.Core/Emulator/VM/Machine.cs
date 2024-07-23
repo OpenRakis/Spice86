@@ -409,12 +409,13 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             memory, Cpu, interruptVectorTable, countryInfo, stdAux, printer, console, clock, hdd, dosMemoryManager,
             dosFileManager, KeyboardInt16Handler, VgaFunctions, loggerService);
         DosInt2fHandler dosInt2FHandler = new DosInt2fHandler(memory, Cpu, loggerService);
-
         Dos = new Dos(Memory, Cpu, new(),
             console, stdAux, printer, clock, hdd,
-            dosFileManager, dosMemoryManager,
-            dosInt20Handler, dosInt21Handler, dosInt2FHandler, loggerService);
-
+            new Dictionary<string, string>() { { "BLASTER", SoundBlaster.BlasterString } },
+            configuration.Ems, configuration.InitializeDOS is not false,
+            dosFileManager, dosMemoryManager, dosInt20Handler, dosInt21Handler, dosInt2FHandler,
+            loggerService);
+        
         if (configuration.InitializeDOS is not false) {
             // Register the interrupt handlers
             RegisterInterruptHandler(VideoInt10Handler);
@@ -428,13 +429,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             RegisterInterruptHandler(Dos.DosInt20Handler);
             RegisterInterruptHandler(Dos.DosInt21Handler);
             RegisterInterruptHandler(Dos.DosInt2FHandler);
-
-            // Initialize DOS.
-            Dos.Initialize(SoundBlaster, CpuState, configuration.Ems);
-            if (Dos.Ems is not null) {
-                RegisterInterruptHandler(Dos.Ems);
-            }
-
+            
             var mouseInt33Handler = new MouseInt33Handler(Memory, Cpu, loggerService, MouseDriver);
             RegisterInterruptHandler(mouseInt33Handler);
 
