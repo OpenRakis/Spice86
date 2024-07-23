@@ -336,7 +336,6 @@ public class CSharpOverrideHelper {
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="configuration">The configuration.</param>
     /// <param name="memory">The memory bus</param>
     /// <param name="state">The CPU registers and flags</param>
     /// <param name="cpu">The emulated CPU</param>
@@ -346,6 +345,7 @@ public class CSharpOverrideHelper {
     /// <param name="executionFlowRecorder">The class that records machine code flow</param>
     /// <param name="callbackHandler">The class that registers callback instructions definitions</param>
     /// <param name="machineBreakpoints">The class that manages software breakpoints</param>
+    /// <param name="configuration">The emulator configuration.</param>
     public CSharpOverrideHelper(IMemory memory, State state, Cpu cpu,
         Stack stack, DualPic dualPic, Timer timer,
         ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
