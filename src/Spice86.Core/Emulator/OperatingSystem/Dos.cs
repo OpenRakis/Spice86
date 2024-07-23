@@ -121,7 +121,9 @@ public class Dos {
         SetEnvironmentVariables(blasterEnvVarProvider);
 
         if (enableEms) {
-            Ems = new(_memory, _cpu, this, _loggerService);
+            Ems = new ExpandedMemoryManager(_memory, _cpu, _loggerService);
+            var device = new CharacterDevice(DeviceAttributes.Ioctl, ExpandedMemoryManager.EmsIdentifier, _loggerService);
+            AddDevice(device, ExpandedMemoryManager.DosDeviceSegment, 0x0000);
         }
     }
 
