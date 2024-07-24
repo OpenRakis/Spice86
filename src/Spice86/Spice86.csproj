@@ -46,9 +46,9 @@
 
     <!-- Package references -->
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.0.11"/>
+        <PackageReference Include="Avalonia" Version="11.1.0"/>
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.11"/>
-        <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.0.0.3" />
+        <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.1.0.1" />
         <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.10"/>
         <PackageReference Include="Avalonia.Desktop" Version="11.0.11"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
