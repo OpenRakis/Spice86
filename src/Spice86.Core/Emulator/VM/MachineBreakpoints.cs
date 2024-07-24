@@ -3,12 +3,11 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// A class for managing breakpoints in the machine.
 /// </summary>
-public sealed class MachineBreakpoints : IDisposable {
+public sealed class MachineBreakpoints {
     /// <summary>
     /// A holder for cycle breakpoints.
     /// </summary>
@@ -35,20 +34,20 @@ public sealed class MachineBreakpoints : IDisposable {
     private BreakPoint? _machineStopBreakPoint;
 
     /// <summary>
-    /// True if the object has been disposed.
+    /// The pause handler for the machine.
     /// </summary>
-    private bool _disposed;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
     /// <param name="memory">The memory bus</param>
     /// <param name="state">The CPU state</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    public MachineBreakpoints(IMemory memory, State state, ILoggerService loggerService) {
+    /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
+    public MachineBreakpoints(IMemory memory, State state, IPauseHandler pauseHandler) {
         _state = state;
         _memory = memory;
-        PauseHandler = new(loggerService);
+        _pauseHandler = pauseHandler;
     }
 
     /// <summary>
@@ -56,13 +55,8 @@ public sealed class MachineBreakpoints : IDisposable {
     /// </summary>
     public void CheckBreakPoint() {
         CheckBreakPoints();
-        PauseHandler.WaitIfPaused();
+        _pauseHandler.WaitIfPaused();
     }
-
-    /// <summary>
-    /// The pause handler associated with the breakpoints.
-    /// </summary>
-    public PauseHandler PauseHandler { get; }
 
     /// <summary>
     /// Called when the machine stops.
@@ -70,7 +64,7 @@ public sealed class MachineBreakpoints : IDisposable {
     public void OnMachineStop() {
         if (_machineStopBreakPoint is not null) {
             _machineStopBreakPoint.Trigger();
-            PauseHandler.WaitIfPaused();
+            _pauseHandler.WaitIfPaused();
         }
     }
 
@@ -108,21 +102,5 @@ public sealed class MachineBreakpoints : IDisposable {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
-    }
-
-    private void Dispose(bool disposing) {
-        if (!_disposed) {
-            if (disposing) {
-                PauseHandler.Dispose();
-            }
-            _disposed = true;
-        }
-    }
-
-    /// <inheritdoc />
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

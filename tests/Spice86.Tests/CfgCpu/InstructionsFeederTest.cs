@@ -30,7 +30,7 @@ public class InstructionsFeederTest {
         _memory.Memset8(0, 0, 64);
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         State state = new();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, state, loggerService);
+        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, state, new PauseHandler(loggerService));
         return new InstructionsFeeder(machineBreakpoints, _memory, state);
     }
 

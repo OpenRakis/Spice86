@@ -28,6 +28,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -35,12 +36,14 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
-    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
+    /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
+    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui, IPauseHandler pauseHandler) {
         _configuration = configuration;
         _loggerService = loggerService;
+        _pauseHandler = pauseHandler;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbServer?.GdbCommandHandler);
+        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController);
     }
 
     /// <summary>
@@ -66,7 +69,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
     public void StepInstruction() {
         _gdbServer?.StepInstruction();
-        IsPaused = false;
+        _pauseHandler.Resume();
     }
 
     /// <inheritdoc/>
@@ -77,9 +80,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
                 path, _loggerService)
             .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
     }
-
-    /// <inheritdoc/>
-    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -150,7 +150,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new();
         IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false);
+        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false, _pauseHandler);
         ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
@@ -170,7 +170,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
                 Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandler,
                 Machine.Cpu.ExecutionFlowRecorder,
                 Machine.MachineBreakpoints,
-                Machine.MachineBreakpoints.PauseHandler,
+                _pauseHandler,
                 _loggerService,
                 _configuration,
                 gui);

@@ -20,11 +20,6 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     void DumpEmulatorStateToDirectory(string path);
 
     /// <summary>
-    /// Gets whether the emulator is currently paused.
-    /// </summary>
-    bool IsPaused { get; set; }
-
-    /// <summary>
     /// Gets whether can generate an unconditional GDB breakpoint.
     /// </summary>
     bool IsGdbCommandHandlerAvailable { get; }

@@ -211,7 +211,8 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// Initializes a new instance
     /// </summary>
-    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData, IPauseHandler pauseHandler) {
+        PauseHandler = pauseHandler;
         Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -225,7 +226,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
-        MachineBreakpoints = new(Memory, CpuState, loggerService);
+        MachineBreakpoints = new(Memory, CpuState, pauseHandler);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 
@@ -327,6 +328,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     }
 
     /// <summary>
+    /// The pause handler for the entire machine.
+    /// </summary>
+    public IPauseHandler PauseHandler { get; }
+
+    /// <summary>
     /// The mouse device hardware abstraction.
     /// </summary>
     public IMouseDevice MouseDevice { get; }
@@ -367,7 +373,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
-                MachineBreakpoints.Dispose();
             }
             _disposed = true;
         }

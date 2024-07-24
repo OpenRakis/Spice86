@@ -5,7 +5,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Provides functionality to handle pausing of the emulator.
 /// </summary>
-public class PauseHandler : IDisposable {
+public class PauseHandler : IDisposable, IPauseHandler {
     /// <summary>
     /// Delegate for handling pause request events.
     /// </summary>
@@ -21,9 +21,9 @@ public class PauseHandler : IDisposable {
     public delegate void ResumedEventHandler(object sender, EventArgs e);
 
     private readonly ILoggerService _loggerService;
-    private readonly ManualResetEvent _manualResetEvent = new(true);
+    private readonly ManualResetEvent _manualResetEvent = new(false);
     private bool _disposed;
-    private volatile bool _pauseRequested;
+    private volatile bool _pausing;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service.
@@ -32,6 +32,11 @@ public class PauseHandler : IDisposable {
     public PauseHandler(ILoggerService loggerService) {
         _loggerService = loggerService;
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the emulator is currently paused.
+    /// </summary>
+    public bool IsPaused => _pausing;
 
     /// <summary>
     /// Releases the resources used by the PauseHandler.
@@ -58,54 +63,34 @@ public class PauseHandler : IDisposable {
     public event EventHandler<EventArgs>? Resumed;
 
     /// <summary>
-    /// Pauses the emulator immediately.
-    /// </summary>
-    public void Pause() {
-        RequestPause();
-        WaitIfPaused();
-    }
-
-    /// <summary>
     /// Requests to pause the emulator.
     /// </summary>
-    public void RequestPause() {
-        _loggerService.Debug("Pause requested");
-        _pauseRequested = true;
+    public void RequestPause(string? reason = null) {
+        _loggerService.Information("Pause requested by thread `{Thread}`: {Reason}",
+            Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
+        Pausing?.Invoke(this, EventArgs.Empty);
+        _pausing = true;
+        _manualResetEvent.Reset();
     }
 
     /// <summary>
     /// Requests to resume the emulator.
     /// </summary>
     public void Resume() {
-        _loggerService.Debug("Resume requested");
-        _pauseRequested = false;
+        _loggerService.Information("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.Set();
+        _pausing = false;
+        Resumed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
     /// Waits if the emulator is paused.
     /// </summary>
     public void WaitIfPaused() {
-        if (!_pauseRequested) {
+        if (!_pausing) {
             return;
         }
-        _loggerService.Debug("Waiting due to pause request");
-        OnPausing();
+        _loggerService.Information("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.WaitOne(Timeout.Infinite);
-        OnResumed();
-    }
-
-    /// <summary>
-    /// Method to raise the Pausing event.
-    /// </summary>
-    protected virtual void OnPausing() {
-        Pausing?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// Method to raise the Resumed event.
-    /// </summary>
-    protected virtual void OnResumed() {
-        Resumed?.Invoke(this, EventArgs.Empty);
     }
 }

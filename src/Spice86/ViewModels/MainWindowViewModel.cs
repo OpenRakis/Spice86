@@ -16,6 +16,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
@@ -24,8 +25,6 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
-using System.Threading;
-
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
@@ -33,55 +32,84 @@ using Timer = System.Timers.Timer;
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, IPauseStatus, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
-    private readonly ILoggerService _loggerService;
-    private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly IUIDispatcher _uiDispatcher;
-    private readonly IProgramExecutorFactory _programExecutorFactory;
-    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
+    private static Action? _uiUpdateMethod;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
-    private readonly IWindowService _windowService;
+    private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
+    private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
+    private readonly IHostStorageProvider _hostStorageProvider;
+    private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
+    private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
+    private readonly IUIDispatcher _uiDispatcher;
+    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
+    private readonly IWindowService _windowService;
+
+    [ObservableProperty]
+    private string _asmOverrideStatus = "ASM Overrides: not used.";
+
+    [ObservableProperty]
+    private WriteableBitmap? _bitmap;
+
+    private bool _closeAppOnEmulatorExit;
+
+    [ObservableProperty]
+    private Configuration _configuration;
+
+    private string _currentLogLevel = "";
+
+    [ObservableProperty]
+    private Cursor? _cursor = Cursor.Default;
+
+    private DebugWindowViewModel? _debugViewModel;
+    private bool _disposed;
+    private Thread? _emulatorThread;
+    private bool _isAppClosing;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
+    private bool _isEmulatorRunning;
+
+    private bool _isInitLogLevelSet;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
+    private bool _isPaused;
+
+    [ObservableProperty]
+    private bool _isPerformanceVisible;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
     private bool _isProgramExecutorNotNull;
 
-    private IProgramExecutor? _programExecutor;
-
-    private IProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set {
-            _programExecutor = value;
-            Dispatcher.UIThread.Post(() => IsProgramExecutorNotNull = value is not null);
-        }
-    }
-
-    private SoftwareMixer? _softwareMixer;
-    private ITimeMultiplier? _pit;
-    private DebugWindowViewModel? _debugViewModel;
-
-    [ObservableProperty]
-    private Configuration _configuration;
-
-    private bool _disposed;
-    private bool _renderingTimerInitialized;
-    private Thread? _emulatorThread;
     private bool _isSettingResolution;
     private string _lastExecutableDirectory = string.Empty;
-    private bool _closeAppOnEmulatorExit;
-    private bool _isAppClosing;
 
-    private static Action? _uiUpdateMethod;
-    private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
-    private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
+    [ObservableProperty]
+    private string? _mainTitle;
 
-    public event EventHandler<KeyboardEventArgs>? KeyUp;
-    public event EventHandler<KeyboardEventArgs>? KeyDown;
-    public event EventHandler<MouseMoveEventArgs>? MouseMoved;
-    public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
-    public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+    [ObservableProperty]
+    private PerformanceViewModel? _performanceViewModel;
 
-    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration, ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory) : base(textClipboard) {
+    private ITimeMultiplier? _pit;
+    private IProgramExecutor? _programExecutor;
+    private bool _renderingTimerInitialized;
+    private double _scale = 1;
+    private bool _showCursor;
+    private SoftwareMixer? _softwareMixer;
+
+    [ObservableProperty]
+    private string _statusMessage = "Emulator: not started.";
+
+    private double _timeMultiplier = 1;
+
+    public MainWindowViewModel(IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
+        ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _windowService = windowService;
         Configuration = configuration;
@@ -91,9 +119,125 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
+        _pauseHandler = pauseHandler;
+        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Resumed += OnResumed;
     }
 
-    internal void OnMainWindowClosing() => _isAppClosing = true;
+    public bool ShowCursor {
+        get => _showCursor;
+        set {
+            SetProperty(ref _showCursor, value);
+            if (_showCursor) {
+                Cursor?.Dispose();
+                Cursor = Cursor.Default;
+            } else {
+                Cursor?.Dispose();
+                Cursor = new Cursor(StandardCursorType.None);
+            }
+        }
+    }
+
+    public double Scale {
+        get => _scale;
+        set => SetProperty(ref _scale, Math.Max(value, 1));
+    }
+
+    public double? TimeMultiplier {
+        get => _timeMultiplier;
+        set {
+            if (value is not null) {
+                SetProperty(ref _timeMultiplier, value.Value);
+                _pit?.SetTimeMultiplier(value.Value);
+            }
+        }
+    }
+
+    public string CurrentLogLevel {
+        get {
+            if (_isInitLogLevelSet) {
+                return _currentLogLevel;
+            }
+            SetLogLevel(_loggerService.AreLogsSilenced ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+            _isInitLogLevelSet = true;
+
+            return _currentLogLevel;
+        }
+        set => SetProperty(ref _currentLogLevel, value);
+    }
+
+    private IProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set {
+            _programExecutor = value;
+            Dispatcher.UIThread.Post(() => IsProgramExecutorNotNull = value is not null);
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    public event EventHandler<KeyboardEventArgs>? KeyUp;
+
+    public event EventHandler<KeyboardEventArgs>? KeyDown;
+
+    public event EventHandler<MouseMoveEventArgs>? MouseMoved;
+
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
+
+    public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
+
+    public int Width { get; private set; }
+
+    public int Height { get; private set; }
+
+    public void HideMouseCursor() {
+        _uiDispatcher.Post(() => ShowCursor = false);
+    }
+
+    public void ShowMouseCursor() {
+        _uiDispatcher.Post(() => ShowCursor = true);
+    }
+
+    public double MouseX { get; set; }
+
+    public double MouseY { get; set; }
+
+    public void SetResolution(int width, int height) {
+        _uiDispatcher.Post(() => {
+            _isSettingResolution = true;
+            Scale = 1;
+            if (Width != width || Height != height) {
+                Width = width;
+                Height = height;
+                if (_disposed) {
+                    return;
+                }
+                _drawingSemaphoreSlim?.Wait();
+                try {
+                    Bitmap?.Dispose();
+                    Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+                } finally {
+                    if (!_disposed) {
+                        _drawingSemaphoreSlim?.Release();
+                    }
+                }
+            }
+            _isSettingResolution = false;
+            InitializeRenderingTimer();
+        }, DispatcherPriority.MaxValue);
+    }
+
+    public event EventHandler<UIRenderEventArgs>? RenderScreen;
+
+    public event EventHandler? CloseMainWindow;
+
+    internal void OnMainWindowClosing() {
+        _isAppClosing = true;
+    }
 
     internal void OnKeyUp(KeyEventArgs e) {
         KeyUp?.Invoke(this,
@@ -111,34 +255,101 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    private bool _showCursor;
-
-    public bool ShowCursor {
-        get => _showCursor;
-        set {
-            SetProperty(ref _showCursor, value);
-            if (_showCursor) {
-                Cursor?.Dispose();
-                Cursor = Cursor.Default;
-            } else {
-                Cursor?.Dispose();
-                Cursor = new Cursor(StandardCursorType.None);
-            }
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
+    public async Task DumpEmulatorStateToFile() {
+        if (ProgramExecutor is not null) {
+            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
         }
     }
 
-    private double _scale = 1;
-
-    public double Scale {
-        get => _scale;
-        set => SetProperty(ref _scale, Math.Max(value, 1));
+    [RelayCommand(CanExecute = nameof(CanPause))]
+    public void Pause() {
+        _pauseHandler.RequestPause();
     }
 
-    [ObservableProperty]
-    private Cursor? _cursor = Cursor.Default;
+    [RelayCommand(CanExecute = nameof(CanPlay))]
+    public void Play() {
+        _pauseHandler.Resume();
+    }
 
-    [ObservableProperty]
-    private WriteableBitmap? _bitmap;
+    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
+    public void ShowPerformance() {
+        IsPerformanceVisible = !IsPerformanceVisible;
+    }
+
+    [RelayCommand]
+    public void ResetTimeMultiplier() {
+        TimeMultiplier = Configuration.TimeMultiplier;
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToSilent() {
+        SetLogLevel("Silent");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToVerbose() {
+        SetLogLevel("Verbose");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToDebug() {
+        SetLogLevel("Debug");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToInformation() {
+        SetLogLevel("Information");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToWarning() {
+        SetLogLevel("Warning");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToError() {
+        SetLogLevel("Error");
+    }
+
+    [RelayCommand]
+    public void SetLogLevelToFatal() {
+        SetLogLevel("Fatal");
+    }
+
+    [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
+    public async Task ShowInternalDebugger() {
+        if (ProgramExecutor is not null) {
+            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor, _structureViewModelFactory, _pauseHandler);
+            await _windowService.ShowDebugWindow(_debugViewModel);
+        }
+    }
+
+    public void OnMainWindowInitialized(Action uiUpdateMethod) {
+        _uiUpdateMethod = uiUpdateMethod;
+        if (RunEmulator()) {
+            _closeAppOnEmulatorExit = true;
+        }
+    }
+
+    public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
+    }
+
+    public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
+        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
+        MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
+    }
+
+    public void OnMouseMoved(PointerEventArgs @event, Image image) {
+        if (image.Source is null) {
+            return;
+        }
+        MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
+        MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
+        MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
+    }
 
     internal void OnKeyDown(KeyEventArgs e) {
         KeyDown?.Invoke(this,
@@ -149,85 +360,17 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                     _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
     }
 
-    [ObservableProperty]
-    private string _statusMessage = "Emulator: not started.";
-
-    [ObservableProperty]
-    private string _asmOverrideStatus = "ASM Overrides: not used.";
-
-    private bool _isPaused;
-
-    public bool IsPaused {
-        get => _isPaused;
-        set {
-            SetProperty(ref _isPaused, value);
-            if (_softwareMixer is not null) {
-                _softwareMixer.IsPaused = value;
-            }
-        }
+    private bool CanPause() {
+        return IsEmulatorRunning && !IsPaused;
     }
 
-    public int Width { get; private set; }
-
-    public int Height { get; private set; }
-
-    public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
-
-    public void ShowMouseCursor() => _uiDispatcher.Post(() => ShowCursor = true);
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
-    [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
-    private bool _isEmulatorRunning;
-
-    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
-    public async Task DumpEmulatorStateToFile() {
-        if (ProgramExecutor is not null) {
-            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
-        }
+    private bool CanPlay() {
+        return IsEmulatorRunning && IsPaused;
     }
 
-    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
-    public void Pause() {
-        if (ProgramExecutor is null) {
-            return;
-        }
-        IsPaused = ProgramExecutor.IsPaused = true;
+    private void SetMainTitle() {
+        MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
     }
-
-    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
-    public void Play() {
-        if (ProgramExecutor is null) {
-            return;
-        }
-
-        IsPaused = ProgramExecutor.IsPaused = false;
-    }
-
-    private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
-
-    [ObservableProperty]
-    private string? _mainTitle;
-
-    private double _timeMultiplier = 1;
-
-    public double? TimeMultiplier {
-        get => _timeMultiplier;
-        set {
-            if (value is not null) {
-                SetProperty(ref _timeMultiplier, value.Value);
-                _pit?.SetTimeMultiplier(value.Value);
-            }
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
-    public void ShowPerformance() => IsPerformanceVisible = !IsPerformanceVisible;
-
-    [RelayCommand]
-    public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
     private void InitializeRenderingTimer() {
         if (_renderingTimerInitialized) {
@@ -255,16 +398,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
     }
 
-    public double MouseX { get; set; }
-    public double MouseY { get; set; }
-
-    public void OnMainWindowInitialized(Action uiUpdateMethod) {
-        _uiUpdateMethod = uiUpdateMethod;
-        if(RunEmulator()) {
-            _closeAppOnEmulatorExit = true;
-        }
-    }
-
     private bool RunEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
@@ -273,65 +406,16 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _lastExecutableDirectory = Configuration.CDrive;
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
-            { UseCodeOverride: false, OverrideSupplier: not null } =>
+            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
+            {UseCodeOverride: false, OverrideSupplier: not null} =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
         StartEmulatorThread();
+
         return true;
-    }
-
-    public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
-        MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
-    }
-
-    public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
-        Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
-        MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
-    }
-
-    public void OnMouseMoved(PointerEventArgs @event, Image image) {
-        if (image.Source is null) {
-            return;
-        }
-        MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
-        MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
-        MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
-    }
-
-    public void SetResolution(int width, int height) => _uiDispatcher.Post(() => {
-        _isSettingResolution = true;
-        Scale = 1;
-        if (Width != width || Height != height) {
-            Width = width;
-            Height = height;
-            if (_disposed) {
-                return;
-            }
-            _drawingSemaphoreSlim?.Wait();
-            try {
-                Bitmap?.Dispose();
-                Bitmap = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
-            } finally {
-                if (!_disposed) {
-                    _drawingSemaphoreSlim?.Release();
-                }
-            }
-        }
-        _isSettingResolution = false;
-        InitializeRenderingTimer();
-    }, DispatcherPriority.MaxValue);
-
-    public event EventHandler<UIRenderEventArgs>? RenderScreen;
-
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 
     private void Dispose(bool disposing) {
@@ -340,46 +424,41 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             if (disposing) {
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
+
+                // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {
                     Bitmap?.Dispose();
                     Cursor?.Dispose();
                 }, DispatcherPriority.MaxValue);
+
                 _drawingSemaphoreSlim?.Dispose();
+
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
+
                 DisposeEmulator();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
+
+                // Unsubscribe from PauseHandler events
+                _pauseHandler.Pausing -= OnPausing;
+                _pauseHandler.Resumed -= OnResumed;
             }
         }
     }
 
-    private void DisposeEmulator() => ProgramExecutor?.Dispose();
-
-    private bool _isInitLogLevelSet;
-
-    private string _currentLogLevel = "";
-
-    public string CurrentLogLevel {
-        get {
-            if (_isInitLogLevelSet) {
-                return _currentLogLevel;
-            }
-            SetLogLevel(_loggerService.AreLogsSilenced ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-            _isInitLogLevelSet = true;
-            return _currentLogLevel;
-        }
-        set => SetProperty(ref _currentLogLevel, value);
+    private void OnResumed(object? sender, EventArgs e) {
+        Dispatcher.UIThread.Invoke(() => IsPaused = false, DispatcherPriority.Normal);
     }
 
-    [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
-    [RelayCommand] public void SetLogLevelToVerbose() => SetLogLevel("Verbose");
-    [RelayCommand] public void SetLogLevelToDebug() => SetLogLevel("Debug");
-    [RelayCommand] public void SetLogLevelToInformation() => SetLogLevel("Information");
-    [RelayCommand] public void SetLogLevelToWarning() => SetLogLevel("Warning");
-    [RelayCommand] public void SetLogLevelToError() => SetLogLevel("Error");
-    [RelayCommand] public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+    private void OnPausing(object? sender, EventArgs e) {
+        Dispatcher.UIThread.Invoke(() => IsPaused = true, DispatcherPriority.Normal);
+    }
+
+    private void DisposeEmulator() {
+        ProgramExecutor?.Dispose();
+    }
 
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
@@ -400,10 +479,12 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _emulatorThread.Start();
     }
 
-    private void OnEmulatorErrorOccured(Exception e) => _uiDispatcher.Post(() => {
-        StatusMessage = "Emulator crashed.";
-        ShowError(e);
-    });
+    private void OnEmulatorErrorOccured(Exception e) {
+        _uiDispatcher.Post(() => {
+            StatusMessage = "Emulator crashed.";
+            ShowError(e);
+        });
+    }
 
     private void EmulatorThread() {
         try {
@@ -415,24 +496,10 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                 }
                 OnEmulatorErrorOccured(e);
             }
-        }  finally {
+        } finally {
             _uiDispatcher.Post(() => IsEmulatorRunning = false);
             _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
-        }
-    }
-
-    [ObservableProperty]
-    private PerformanceViewModel? _performanceViewModel;
-
-    [ObservableProperty]
-    private bool _isPerformanceVisible;
-
-    [RelayCommand(CanExecute = nameof(IsProgramExecutorNotNull))]
-    public async Task ShowInternalDebugger() {
-        if (ProgramExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, this, ProgramExecutor, _structureViewModelFactory);
-            await _windowService.ShowDebugWindow(_debugViewModel);
         }
     }
 
@@ -441,7 +508,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         ProgramExecutor = viewModelEmulatorDependencies.ProgramExecutor;
         _softwareMixer = viewModelEmulatorDependencies.SoftwareMixer;
         _pit = viewModelEmulatorDependencies.Pit;
-        PerformanceViewModel = new(_uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer(), this);
+        PerformanceViewModel = new PerformanceViewModel(_uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer(), this);
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
@@ -451,7 +518,15 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }
     }
-    
+
+    private (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) CreateEmulator() {
+        IProgramExecutor programExecutor = _programExecutorFactory.Create(this);
+        ViewModelEmulatorDependenciesVisitor visitor = new();
+        programExecutor.Accept(visitor);
+
+        return (programExecutor, visitor.SoftwareMixer, visitor.Pit);
+    }
+
     private sealed class ViewModelEmulatorDependenciesVisitor : IInternalDebugger {
         public SoftwareMixer? SoftwareMixer { get; private set; }
         public ITimeMultiplier? Pit { get; private set; }
@@ -460,14 +535,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             SoftwareMixer ??= component as SoftwareMixer;
             Pit ??= component as ITimeMultiplier;
         }
+
         public bool NeedsToVisitEmulator => SoftwareMixer is null || Pit is null;
     }
-
-    private (IProgramExecutor ProgramExecutor, SoftwareMixer? SoftwareMixer, ITimeMultiplier? Pit) CreateEmulator() {
-        IProgramExecutor programExecutor = _programExecutorFactory.Create(this);
-        ViewModelEmulatorDependenciesVisitor visitor = new();
-        programExecutor.Accept(visitor);
-        return (programExecutor, visitor.SoftwareMixer, visitor.Pit);
-    }
-    public event EventHandler? CloseMainWindow;
 }
