@@ -46,7 +46,7 @@
 
     <!-- Package references -->
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.0.11"/>
+        <PackageReference Include="Avalonia" Version="11.1.0"/>
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.11"/>
         <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.0.0.3" />
         <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.10"/>
@@ -80,7 +80,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Semi.Avalonia" Version="11.0.7.4" />
+        <PackageReference Include="Semi.Avalonia" Version="11.1.0" />
         <PackageReference Include="Semi.Avalonia.DataGrid" Version="11.0.7.2" />
         <PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.1" />
     </ItemGroup>
