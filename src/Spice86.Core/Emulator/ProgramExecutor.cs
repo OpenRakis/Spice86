@@ -72,6 +72,11 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
     private readonly RecorderDataWriter _recorderDataWriter;
+    private readonly IMemory _memory;
+    private readonly State _cpuState;
+    private readonly CallbackHandler _callbackHandler;
+    private readonly FunctionHandler _functionHandler;
+    private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private GdbCommandHandler? _gdbCommandHandler;
 
     /// <summary>
@@ -84,152 +89,13 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _configuration = configuration;
         _loggerService = loggerService;
         PauseHandler pauseHandler = new(_loggerService);
-        Machine = CreateMachine(pauseHandler, configuration, gui);
-        _recorderDataWriter = new RecorderDataWriter(Machine.Cpu.ExecutionFlowRecorder,
-            Machine.Cpu.State,
-            new MemoryDataExporter(Machine.Memory, Machine.CallbackHandler, _configuration,
-                _configuration.RecordedDataDirectory, _loggerService),
-            new ExecutionFlowDumper(_loggerService),
-            _loggerService,
-            _configuration.RecordedDataDirectory);
-        _gdbServer = CreateGdbServer(pauseHandler);
-        _emulationLoop = new(loggerService, Machine.Cpu.FunctionHandler, Machine.Cpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _gdbCommandHandler);
-    }
-
-    /// <summary>
-    /// The emulator machine.
-    /// </summary>
-    public Machine Machine { get; private set; }
-
-    /// <inheritdoc/>
-    public void Run() {
-        _gdbServer?.StartServerAndWait();
-        _emulationLoop.Run();
-        if (_configuration.DumpDataOnExit is not false) {
-            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
-        }
-    }
-    
-    /// <summary>
-    /// Steps a single instruction for the internal UI debugger
-    /// </summary>
-    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
-    public void StepInstruction() {
-        _gdbServer?.StepInstruction();
-        IsPaused = false;
-    }
-
-    /// <inheritdoc/>
-    public void DumpEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(Machine.Cpu.ExecutionFlowRecorder,
-                Machine.Cpu.State,
-                new MemoryDataExporter(Machine.Memory, Machine.CallbackHandler, _configuration, path, _loggerService),
-                new ExecutionFlowDumper(_loggerService),
-                _loggerService,
-                path)
-            .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
-    }
-
-    /// <inheritdoc/>
-    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
-
-    /// <inheritdoc />
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if (!_disposed) {
-            if (disposing) {
-                _gdbServer?.Dispose();
-                _emulationLoop.Exit();
-                Machine.Dispose();
-            }
-            _disposed = true;
-        }
-    }
-
-    private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
-        ArgumentNullException.ThrowIfNull(expectedHash, nameof(expectedHash));
-        if (expectedHash.Length == 0) {
-            // No hash check
-            return;
-        }
-
-        byte[] actualHash = SHA256.HashData(file);
-
-        if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
-            string error =
-                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
-            throw new UnrecoverableException(error);
-        }
-    }
-
-    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
-        string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
-
-        string lowerCaseFileName = executableFileName.ToLowerInvariant();
-        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
-        if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(Machine.Memory,
-                Machine.Cpu.State,
-                _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
-                entryPointSegment);
-        }
-
-        if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine.Memory,
-                Machine.Cpu.State,
-                _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
-                entryPointSegment);
-        }
-
-        return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
-    }
-    
-    /// <summary>
-    /// Returns the appropriate <see cref="CounterActivator"/> based on the configuration.
-    /// </summary>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="loggerService">The service used for logging.</param>
-    /// <param name="configuration">The emulator's configuration.</param>
-    /// <returns>The appropriate <see cref="CyclesCounterActivator"/> or <see cref="TimeCounterActivator"/></returns>
-    private static CounterActivator CreateCounterActivator(State state, ILoggerService loggerService, Configuration configuration) {
-        const long DefaultInstructionsPerSecond = 1000000L;
-        long? instructionsPerSecond = configuration.InstructionsPerSecond;
-        if (instructionsPerSecond == null && configuration.GdbPort != null) {
-            // With GDB, force to instructions per seconds as time based timers could perturb steps
-            instructionsPerSecond = DefaultInstructionsPerSecond;
-            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                loggerService.Warning("Forcing Counter to use instructions per seconds since we are in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
-            }
-        }
-        if (instructionsPerSecond != null) {
-            return new CyclesCounterActivator(state, instructionsPerSecond.Value, configuration.TimeMultiplier);
-        }
-        return new TimeCounterActivator(configuration.TimeMultiplier);
-    }
-    
-    private static void RegisterInterruptHandler(InterruptInstaller interruptInstaller, IInterruptHandler interruptHandler) => interruptInstaller.InstallInterruptHandler(interruptHandler);
-    private static void RegisterIoPortHandler(IOPortDispatcher ioPortDispatcher, IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(ioPortDispatcher);
-
-    private Machine CreateMachine(PauseHandler pauseHandler, Configuration configuration, IGui? gui) {
         RecordedDataReader reader = new(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
         IOPortDispatcher ioPortDispatcher = new(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        A20Gate a20gate = new A20Gate(configuration.A20Gate);
-        IMemory memory = new Emulator.Memory.Memory(new MemoryBreakpoints(), ram, a20gate);
+        Ram ram = new(A20Gate.EndOfHighMemoryArea);
+        A20Gate a20gate = new(configuration.A20Gate);
+        IMemory memory = new Memory.Memory(new MemoryBreakpoints(), ram, a20gate);
         MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, cpuState);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
@@ -248,11 +114,11 @@ public sealed class ProgramExecutor : IProgramExecutor {
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, cpuState);
         Alu8 alu8 = new(cpuState);
-        Alu16 alu16 = new Alu16(cpuState);
-        Alu32 alu32 = new Alu32(cpuState);
-        FunctionHandler functionHandler = new FunctionHandler(memory, cpuState, executionFlowRecorder, _loggerService, configuration.DumpDataOnExit is not false);
-        FunctionHandler functionHandlerInExternalInterrupt = new FunctionHandler(memory, cpuState, executionFlowRecorder, _loggerService, configuration.DumpDataOnExit is not false);
-        Cpu cpu  = new Cpu(interruptVectorTable, alu8, alu16, alu32, stack,
+        Alu16 alu16 = new(cpuState);
+        Alu32 alu32 = new(cpuState);
+        FunctionHandler functionHandler = new(memory, cpuState, executionFlowRecorder, _loggerService, configuration.DumpDataOnExit is not false);
+        FunctionHandler functionHandlerInExternalInterrupt = new(memory, cpuState, executionFlowRecorder, _loggerService, configuration.DumpDataOnExit is not false);
+        Cpu cpu  = new(interruptVectorTable, alu8, alu16, alu32, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, cpuState,
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             _loggerService, executionFlowRecorder);
@@ -268,29 +134,29 @@ public sealed class ProgramExecutor : IProgramExecutor {
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, cpuState), new PreviousInstructions(memory));
         CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
-        CfgCpu cfgCpu = new CfgCpu(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
+        CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
 
         // IO devices
-        DmaController dmaController = new DmaController(memory, cpuState, configuration.FailOnUnhandledPort, _loggerService);
+        DmaController dmaController = new(memory, cpuState, configuration.FailOnUnhandledPort, _loggerService);
         RegisterIoPortHandler(ioPortDispatcher, dmaController);
 
         RegisterIoPortHandler(ioPortDispatcher, dualPic);
 
-        DacRegisters dacRegisters = new DacRegisters(new ArgbPalette());
-        VideoState videoState = new VideoState(dacRegisters, new(
+        DacRegisters dacRegisters = new(new ArgbPalette());
+        VideoState videoState = new(dacRegisters, new(
                 new(),new(),new()),
                 new(new(), new(), new(), new(), new()),
                 new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new()),
                 new(new(), new(), new(), new(), new(), new()),
                 new(new(), new(), new()));
-        VgaIoPortHandler videoInt10Handler = new VgaIoPortHandler(cpuState, _loggerService, videoState, configuration.FailOnUnhandledPort);
+        VgaIoPortHandler videoInt10Handler = new(cpuState, _loggerService, videoState, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
 
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(videoState);
         memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        Renderer renderer = new Renderer(videoState, vgaMemory);
-        VgaCard vgaCard = new VgaCard(gui, renderer, _loggerService);
+        Renderer renderer = new(videoState, vgaMemory);
+        VgaCard vgaCard = new(gui, renderer, _loggerService);
         
         Counter firstCounter = new Counter(cpuState, _loggerService, CreateCounterActivator(cpuState, _loggerService, configuration)) {
             Index = 0
@@ -423,42 +289,168 @@ public sealed class ProgramExecutor : IProgramExecutor {
             dmaController, opl3fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality);
 
-        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
+        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration, memory, cpuState, dos.EnvironmentVariables, dosFileManager, dosMemoryManager);
         if (_configuration.InitializeDOS is null) {
             _configuration.InitializeDOS = loader.DosInitializationNeeded;
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
             }
         }
-        InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
+        InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
         LoadFileToRun(_configuration, loader);
-        return Machine;
+        _recorderDataWriter = new RecorderDataWriter(executionFlowRecorder,
+            cpuState,
+            new MemoryDataExporter(memory, callbackHandler, _configuration,
+                _configuration.RecordedDataDirectory, _loggerService),
+            new ExecutionFlowDumper(_loggerService),
+            _loggerService,
+            _configuration.RecordedDataDirectory);
+        _gdbServer = CreateGdbServer(pauseHandler, cpuState, memory, cpu, machineBreakpoints, executionFlowRecorder, functionHandler);
+        _emulationLoop = new(loggerService,functionHandler, cpu, cpuState, timer, machineBreakpoints, dmaController, _gdbCommandHandler);
+        _memory = memory;
+        _cpuState = cpuState;
+        _callbackHandler = callbackHandler;
+        _functionHandler = functionHandler;
+        _executionFlowRecorder = executionFlowRecorder;
     }
 
-    private GdbServer? CreateGdbServer(PauseHandler pauseHandler) {
+    /// <summary>
+    /// The emulator machine.
+    /// </summary>
+    public Machine Machine { get; }
+
+    /// <inheritdoc/>
+    public void Run() {
+        _gdbServer?.StartServerAndWait();
+        _emulationLoop.Run();
+        if (_configuration.DumpDataOnExit is not false) {
+            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
+        }
+    }
+    
+    /// <summary>
+    /// Steps a single instruction for the internal UI debugger
+    /// </summary>
+    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
+    public void StepInstruction() {
+        _gdbServer?.StepInstruction();
+        IsPaused = false;
+    }
+
+    /// <inheritdoc/>
+    public void DumpEmulatorStateToDirectory(string path) {
+        new RecorderDataWriter(_executionFlowRecorder,
+                _cpuState,
+                new MemoryDataExporter(_memory, _callbackHandler, _configuration, path, _loggerService),
+                new ExecutionFlowDumper(_loggerService),
+                _loggerService,
+                path)
+            .DumpAll(_executionFlowRecorder, _functionHandler);
+    }
+
+    /// <inheritdoc/>
+    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
+
+    private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
+        ArgumentNullException.ThrowIfNull(expectedHash, nameof(expectedHash));
+        if (expectedHash.Length == 0) {
+            // No hash check
+            return;
+        }
+
+        byte[] actualHash = SHA256.HashData(file);
+
+        if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
+            string error =
+                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
+            throw new UnrecoverableException(error);
+        }
+    }
+
+    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration, IMemory memory, State cpuState, EnvironmentVariables environmentVariables,
+        DosFileManager fileManager, DosMemoryManager memoryManager) {
+        string? executableFileName = configuration.Exe;
+        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
+
+        string lowerCaseFileName = executableFileName.ToLowerInvariant();
+        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
+        if (lowerCaseFileName.EndsWith(".exe")) {
+            return new ExeLoader(memory,
+                cpuState,
+                _loggerService,
+                environmentVariables,
+                fileManager,
+                memoryManager,
+                entryPointSegment);
+        }
+
+        if (lowerCaseFileName.EndsWith(".com")) {
+            return new ComLoader(memory,
+                cpuState,
+                _loggerService,
+                environmentVariables,
+                fileManager,
+                memoryManager,
+                entryPointSegment);
+        }
+
+        return new BiosLoader(memory, cpuState, _loggerService);
+    }
+    
+    /// <summary>
+    /// Returns the appropriate <see cref="CounterActivator"/> based on the configuration.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="loggerService">The service used for logging.</param>
+    /// <param name="configuration">The emulator's configuration.</param>
+    /// <returns>The appropriate <see cref="CyclesCounterActivator"/> or <see cref="TimeCounterActivator"/></returns>
+    private static CounterActivator CreateCounterActivator(State state, ILoggerService loggerService, Configuration configuration) {
+        const long DefaultInstructionsPerSecond = 1000000L;
+        long? instructionsPerSecond = configuration.InstructionsPerSecond;
+        if (instructionsPerSecond == null && configuration.GdbPort != null) {
+            // With GDB, force to instructions per seconds as time based timers could perturb steps
+            instructionsPerSecond = DefaultInstructionsPerSecond;
+            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                loggerService.Warning("Forcing Counter to use instructions per seconds since we are in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
+            }
+        }
+        if (instructionsPerSecond != null) {
+            return new CyclesCounterActivator(state, instructionsPerSecond.Value, configuration.TimeMultiplier);
+        }
+        return new TimeCounterActivator(configuration.TimeMultiplier);
+    }
+    
+    private static void RegisterInterruptHandler(InterruptInstaller interruptInstaller, IInterruptHandler interruptHandler) => interruptInstaller.InstallInterruptHandler(interruptHandler);
+    private static void RegisterIoPortHandler(IOPortDispatcher ioPortDispatcher, IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(ioPortDispatcher);
+    
+    private GdbServer? CreateGdbServer(
+        PauseHandler pauseHandler, State cpuState, IMemory memory, Cpu cpu,
+        MachineBreakpoints machineBreakpoints, ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort == null) {
             return null;
         }
         GdbIo gdbIo = new(gdbPort.Value, _loggerService);
         GdbFormatter gdbFormatter = new();
-        var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(Machine.Cpu.State, gdbFormatter, gdbIo, _loggerService);
-        var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(Machine.Memory, gdbFormatter, gdbIo, _loggerService);
-        var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(Machine.MachineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(Machine.Memory, Machine.Cpu.State, Machine.Cpu,
+        var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(cpuState, gdbFormatter, gdbIo, _loggerService);
+        var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbFormatter, gdbIo, _loggerService);
+        var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
+        var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(memory, cpuState, cpu,
             Machine.MachineBreakpoints, _recorderDataWriter, gdbIo,
             _loggerService,
             gdbCommandBreakpointHandler.OnBreakPointReached);
-        _gdbCommandHandler = new(gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler, gdbCustomCommandsHandler,
-            Machine.Cpu.State,
+        _gdbCommandHandler = new(
+            gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler,
+            gdbCustomCommandsHandler,
+            cpuState,
             pauseHandler,
-            Machine.Cpu.ExecutionFlowRecorder,
-            Machine.Cpu.FunctionHandler,
+            executionFlowRecorder,
+            functionHandler,
             gdbIo,
             _loggerService);
         return new GdbServer(
             gdbIo,
-            Machine.Cpu.State,
+            cpuState,
             pauseHandler,
             _gdbCommandHandler,
             _loggerService,
@@ -485,7 +477,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     }
 
     private void InitializeFunctionHandlers(Configuration configuration,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, FunctionHandler cpuFunctionHandler, FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
         if (configuration.OverrideSupplier != null) {
             DictionaryUtils.AddAll(functionInformations,
                 GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment,
@@ -496,10 +488,9 @@ public sealed class ProgramExecutor : IProgramExecutor {
             return;
         }
 
-        Cpu cpu = Machine.Cpu;
         bool useCodeOverride = configuration.UseCodeOverrideOption;
-        SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
-        SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpuFunctionHandler, functionInformations, useCodeOverride);
+        SetupFunctionHandler(cpuFunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
@@ -523,6 +514,24 @@ public sealed class ProgramExecutor : IProgramExecutor {
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
+    }
+    
+    /// <inheritdoc />
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _gdbServer?.Dispose();
+                _emulationLoop.Exit();
+                Machine.Dispose();
+            }
+            _disposed = true;
+        }
     }
 
     /// <inheritdoc/>
