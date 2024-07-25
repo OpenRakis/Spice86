@@ -43,7 +43,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     // Padding at 0x12
 
     /// <summary>
-    /// Gets or sets the amount of installed conventional memory in KB.
+    /// Gets the amount of installed conventional memory in KB.
     /// </summary>
     public required ushort ConventionalMemorySizeKb { get => UInt16[0x13]; init => UInt16[0x13] = value; }
 
