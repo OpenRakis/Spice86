@@ -223,7 +223,7 @@ public class State : IDebuggableComponent {
     /// <summary>
     /// Contains the flags of the CPU. This is the flags register.
     /// </summary>
-    public Flags Flags { get; }
+    public Flags Flags { get; } = new();
 
     /// <summary>
     /// Gets or sets the value of the Overflow Flag. Set if result is too large a positive number or too small a negative number (excluding sign-bit) to fit in destination operand; cleared otherwise.
@@ -326,24 +326,18 @@ public class State : IDebuggableComponent {
     /// <summary>
     /// The CPU registers
     /// </summary>
-    public GeneralRegisters GeneralRegisters { get; }
+    public GeneralRegisters GeneralRegisters { get; } = new();
 
     /// <summary>
     /// The CPU segment registers <br/>
     /// The segment registers are registers that store segment selectors, which are used to access different parts of memory.
     /// </summary>
-    public SegmentRegisters SegmentRegisters { get; }
+    public SegmentRegisters SegmentRegisters { get; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether the CPU is running.
     /// </summary>
     public bool IsRunning { get; set; } = true;
-
-    public State(Flags flags, GeneralRegisters generalRegisters, SegmentRegisters segmentRegisters) {
-        Flags = flags;
-        SegmentRegisters = segmentRegisters;
-        GeneralRegisters = generalRegisters;
-    }
 
     /// <summary>
     /// Sets <see cref="ContinueZeroFlagValue"/> and <see cref="SegmentOverrideIndex"/> to <c>null</c>.

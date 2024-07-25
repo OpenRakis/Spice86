@@ -91,7 +91,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         PauseHandler pauseHandler = new(_loggerService);
         RecordedDataReader reader = new(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
-        State cpuState = new(new Flags(), new GeneralRegisters(), new SegmentRegisters());
+        State cpuState = new();
         IOPortDispatcher ioPortDispatcher = new(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
