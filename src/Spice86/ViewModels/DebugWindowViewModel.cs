@@ -102,12 +102,12 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     public void NewDisassemblyView() => DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
 
     [RelayCommand]
-    public void Pause() {
-        _pauseHandler.RequestPause();
+    private void Pause() {
+        _pauseHandler.RequestPause("Pause button pressed in debug window");
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void Continue() {
+    private void Continue() {
         _pauseHandler.Resume();
     }
 

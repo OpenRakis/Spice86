@@ -33,14 +33,10 @@ public class PauseHandler : IDisposable, IPauseHandler {
         _loggerService = loggerService;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether the emulator is currently paused.
-    /// </summary>
+    /// <inheritdoc />
     public bool IsPaused => _pausing;
 
-    /// <summary>
-    /// Releases the resources used by the PauseHandler.
-    /// </summary>
+    /// <inheritdoc />
     public void Dispose() {
         if (_disposed) {
             return;
@@ -50,32 +46,22 @@ public class PauseHandler : IDisposable, IPauseHandler {
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Event triggered when a pause is requested on the emulator.
-    /// This allows other parts of the application to react to pauses,
-    /// such as stopping processing or updating UI elements.
-    /// </summary>
+    /// <inheritdoc />
     public event EventHandler<EventArgs>? Pausing;
 
-    /// <summary>
-    /// Event triggered when a resume is requested on the emulator.
-    /// </summary>
+    /// <inheritdoc />
     public event EventHandler<EventArgs>? Resumed;
 
-    /// <summary>
-    /// Requests to pause the emulator.
-    /// </summary>
+    /// <inheritdoc />
     public void RequestPause(string? reason = null) {
-        _loggerService.Information("Pause requested by thread `{Thread}`: {Reason}",
+        _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke(this, EventArgs.Empty);
         _pausing = true;
         _manualResetEvent.Reset();
     }
 
-    /// <summary>
-    /// Requests to resume the emulator.
-    /// </summary>
+    /// <inheritdoc />
     public void Resume() {
         _loggerService.Information("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.Set();
@@ -83,9 +69,7 @@ public class PauseHandler : IDisposable, IPauseHandler {
         Resumed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>
-    /// Waits if the emulator is paused.
-    /// </summary>
+    /// <inheritdoc />
     public void WaitIfPaused() {
         if (!_pausing) {
             return;

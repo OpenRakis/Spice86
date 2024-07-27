@@ -264,7 +264,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(CanPause))]
     public void Pause() {
-        _pauseHandler.RequestPause();
+        _pauseHandler.RequestPause("Pause button pressed in main window");
     }
 
     [RelayCommand(CanExecute = nameof(CanPlay))]
@@ -422,6 +422,10 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (!_disposed) {
             _disposed = true;
             if (disposing) {
+                // Unsubscribe from PauseHandler events
+                _pauseHandler.Pausing -= OnPausing;
+                _pauseHandler.Resumed -= OnResumed;
+
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
 
@@ -440,10 +444,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
-
-                // Unsubscribe from PauseHandler events
-                _pauseHandler.Pausing -= OnPausing;
-                _pauseHandler.Resumed -= OnResumed;
             }
         }
     }

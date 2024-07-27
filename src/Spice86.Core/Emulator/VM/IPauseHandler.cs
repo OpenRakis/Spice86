@@ -10,11 +10,6 @@ public interface IPauseHandler {
     bool IsPaused { get; }
 
     /// <summary>
-    /// Releases the resources used by the PauseHandler.
-    /// </summary>
-    void Dispose();
-
-    /// <summary>
     /// Event triggered when a pause is requested on the emulator.
     /// This allows other parts of the application to react to pauses,
     /// such as stopping processing or updating UI elements.
