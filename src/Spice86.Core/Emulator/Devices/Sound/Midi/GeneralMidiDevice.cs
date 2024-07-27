@@ -3,6 +3,8 @@
 using MeltySynth;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 using Windows;
 
@@ -21,6 +23,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
     private readonly ManualResetEvent _fillBufferEvent = new(false);
     private readonly Thread? _playbackThread;
+    private readonly ILoggerService _loggerService;
     private volatile bool _endThread;
     private volatile uint _message;
 
@@ -30,9 +33,12 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private const string SoundFont = "2MGM.sf2";
 
     private IntPtr _midiOutHandle;
+    private readonly IPauseHandler _pauseHandler;
 
-    public GeneralMidiDevice(SoftwareMixer softwareMixer) {
+    public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService, IPauseHandler pauseHandler) {
+        _loggerService = loggerService;
         _soundChannel = new SoundChannel(softwareMixer, "General MIDI");
+        _pauseHandler = pauseHandler;
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = nameof(GeneralMidiDevice)
         };
@@ -44,10 +50,12 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     ~GeneralMidiDevice() => Dispose(false);
 
     private void StartThreadIfNeeded() {
-        if(!_disposed && !_endThread && !_threadStarted) {
-            _playbackThread?.Start();
-            _threadStarted = true;
+        if (_disposed || _endThread || _threadStarted || _playbackThread == null) {
+            return;
         }
+        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(GeneralMidiDevice));
+        _threadStarted = true;
+        _playbackThread.Start();
     }
 
     private void RenderThreadMethod()
@@ -59,17 +67,16 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
-        Span<float> data = stackalloc float[16384];
+        Span<float> buffer = stackalloc float[16384];
         Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
         while (!_endThread)
         {
-            if (!_endThread)
-            {
-                _fillBufferEvent.WaitOne(Timeout.Infinite);
-            }
-            FillBuffer(synthesizer, data);
-            _soundChannel.Render(data);
-            data.Clear();
+            _pauseHandler.WaitIfPaused();
+            _fillBufferEvent.WaitOne(Timeout.Infinite);
+            buffer.Clear();
+            FillBuffer(synthesizer, buffer);
+            _soundChannel.Render(buffer);
+            _fillBufferEvent.Reset();
         }
     }
 
@@ -80,7 +87,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     protected override void PlayShortMessage(uint message) {
-        if (OperatingSystem.IsWindows()) {
+        if (!OperatingSystem.IsWindows()) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
             StartThreadIfNeeded();
@@ -131,7 +138,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if(disposing) {
-                if(OperatingSystem.IsWindows()) {
+                if(!OperatingSystem.IsWindows()) {
                     if (_midiOutHandle != IntPtr.Zero) {
                         NativeMethods.midiOutClose(_midiOutHandle);
                         _midiOutHandle = IntPtr.Zero;

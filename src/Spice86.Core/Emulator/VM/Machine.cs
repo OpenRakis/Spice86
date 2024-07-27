@@ -262,14 +262,14 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         
         PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
+        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
-        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig, pauseHandler);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
         RegisterIoPortHandler(MidiDevice);
 
         // Services

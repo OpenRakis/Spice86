@@ -46,7 +46,7 @@ public class Program {
         ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
         if (configuration.HeadlessMode) {
-            ProgramExecutor programExecutor = new(configuration, serviceProvider.GetRequiredService<ILoggerService>(), null, serviceProvider.GetRequiredService<PauseHandler>());
+            ProgramExecutor programExecutor = new(configuration, serviceProvider.GetRequiredService<ILoggerService>(), null, serviceProvider.GetRequiredService<IPauseHandler>());
             programExecutor.Run();
         } else {
             ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();

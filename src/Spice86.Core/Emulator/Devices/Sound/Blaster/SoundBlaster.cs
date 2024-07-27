@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -138,6 +139,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private readonly DualPic _dualPic;
     private readonly IGui? _gui;
     private readonly DmaController _dmaController;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// The SoundBlaster's PCM sound channel.
@@ -166,7 +168,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="gui">The GUI. Is <c>null</c> in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
-    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig) : base(state, failOnUnhandledPort, loggerService) {
+    /// <param name="pauseHandler">The handler for the emulation pause state.</param>
+    public SoundBlaster(SoftwareMixer softwareMixer, SoundChannel opl3SoundChannel, State state, DmaController dmaController, DualPic dualPic, IGui? gui, bool failOnUnhandledPort, ILoggerService loggerService, SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
         PCMSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         IRQ = soundBlasterHardwareConfig.Irq;
@@ -174,6 +177,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _dmaController = dmaController;
         _gui = gui;
+        _pauseHandler = pauseHandler;
         _dualPic = dualPic;
         FMSynthSoundChannel = opl3SoundChannel;
         _ctMixer = new HardwareMixer(this, loggerService);
@@ -229,8 +233,9 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <inheritdoc />
     public override void WriteByte(int port, byte value) {
         if (!_playbackStarted) {
-            _playbackThread.Start();
+            _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(SoundBlaster));
             _playbackStarted = true;
+            _playbackThread.Start();
         }
         switch (port) {
             case DspPorts.DspWriteStatus:
@@ -373,6 +378,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         const int sampleRate = 48000;
 
         while (!_endPlayback) {
+            _pauseHandler.WaitIfPaused();
             _dsp.Read(buffer);
             int length = Resample(buffer, sampleRate, writeBuffer);
             PCMSoundChannel.Render(writeBuffer.AsSpan(0, length));
