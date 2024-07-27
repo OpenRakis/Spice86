@@ -308,6 +308,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             RegisterInterruptHandler(SystemClockInt1AHandler);
             RegisterInterruptHandler(Dos.DosInt20Handler);
             RegisterInterruptHandler(Dos.DosInt21Handler);
+            RegisterInterruptHandler(Dos.DosInt28Handler);
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.

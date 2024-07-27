@@ -50,6 +50,11 @@ public class Dos {
     public DosInt2fHandler DosInt2FHandler { get; }
 
     /// <summary>
+    /// Gets the INT 28h DOS services.
+    /// </summary>
+    public DosInt28Handler DosInt28Handler { get; }
+
+    /// <summary>
     /// Gets the country ID from the CountryInfo table
     /// </summary>
     public byte CurrentCountryId => DosTables.CountryInfo.Country;
@@ -117,6 +122,7 @@ public class Dos {
         DosInt20Handler = new DosInt20Handler(_memory, _cpu, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, _cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, _cpu, _loggerService);
     }
 
     internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {

@@ -108,6 +108,15 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
+        AddAction(0x63, GetLeadByteTable);
+    }
+
+    private void GetLeadByteTable() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET LEAD BYTE TABLE");
+        }
+        State.ES = 0;
+        State.BX = 0;
     }
 
     /// <summary>
