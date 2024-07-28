@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Security.Cryptography;
 
 /// <summary>
 /// Virtual device which emulates OPL3 FM sound.

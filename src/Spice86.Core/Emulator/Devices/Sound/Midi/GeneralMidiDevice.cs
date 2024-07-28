@@ -24,6 +24,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private readonly ManualResetEvent _fillBufferEvent = new(false);
     private readonly Thread? _playbackThread;
     private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
     private volatile bool _endThread;
     private volatile uint _message;
 
@@ -33,7 +34,6 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private const string SoundFont = "2MGM.sf2";
 
     private IntPtr _midiOutHandle;
-    private readonly IPauseHandler _pauseHandler;
 
     public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
@@ -87,7 +87,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     protected override void PlayShortMessage(uint message) {
-        if (!OperatingSystem.IsWindows()) {
+        if (OperatingSystem.IsWindows()) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
             StartThreadIfNeeded();
@@ -138,7 +138,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if(disposing) {
-                if(!OperatingSystem.IsWindows()) {
+                if(OperatingSystem.IsWindows()) {
                     if (_midiOutHandle != IntPtr.Zero) {
                         NativeMethods.midiOutClose(_midiOutHandle);
                         _midiOutHandle = IntPtr.Zero;
