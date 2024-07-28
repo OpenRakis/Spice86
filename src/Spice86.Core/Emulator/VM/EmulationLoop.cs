@@ -23,6 +23,7 @@ public class EmulationLoop {
     private readonly MachineBreakpoints _machineBreakpoints;
     private readonly DmaController _dmaController;
     private readonly Stopwatch _stopwatch;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance.
@@ -33,8 +34,9 @@ public class EmulationLoop {
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
+    /// <param name="pauseHandler">The emulation pause handler.</param>
     public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, MachineBreakpoints machineBreakpoints,
-        DmaController dmaController) {
+        DmaController dmaController, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
         _cfgCpu = cfgCpu;
@@ -42,6 +44,7 @@ public class EmulationLoop {
         _timer = timer;
         _machineBreakpoints = machineBreakpoints;
         _dmaController = dmaController;
+        _pauseHandler = pauseHandler;
         _stopwatch = new();
     }
 
@@ -83,6 +86,7 @@ public class EmulationLoop {
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
+            _pauseHandler.WaitIfPaused();
             _machineBreakpoints.CheckBreakPoint();
             _cpu.ExecuteNextInstruction();
             //_cfgCpu.ExecuteNext();

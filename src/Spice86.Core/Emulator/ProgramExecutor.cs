@@ -43,7 +43,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _pauseHandler = pauseHandler;
         Machine = CreateMachine(gui);
         _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController);
+        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _pauseHandler);
     }
 
     /// <summary>
