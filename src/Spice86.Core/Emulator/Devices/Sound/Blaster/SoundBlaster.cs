@@ -454,37 +454,30 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
             case Commands.SingleCycleDmaOutput8_Alt:
             case Commands.SingleCycleDmaOutput8Fifo_Alt:
                 _dsp.Begin(false, false, false);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, true);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM4:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM4, false);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, true);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM2:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM2, false);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3Ref:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, true);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.SingleCycleDmaOutputADPCM3:
                 _dsp.Begin(false, false, false, CompressionLevel.ADPCM3, false);
-                _dmaController.PerformDmaTransfers();
                 break;
 
             case Commands.AutoInitDmaOutput8:

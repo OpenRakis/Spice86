@@ -26,7 +26,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     private bool _exitDmaLoop;
     private readonly Thread _dmaThread;
     private bool _dmaThreadStarted;
-    private readonly ManualResetEvent _dmaResetEvent = new(true);
 
     private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
             ModeRegister8,
@@ -60,6 +59,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
 
     internal void StartDmaThread() {
         if (!_dmaThreadStarted) {
+            _loggerService.Information("Starting thread '{ThreadName}'", _dmaThread.Name ?? nameof(DmaController));
             _dmaThread.Start();
             _dmaThreadStarted = true;
         }
@@ -74,12 +74,8 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void DmaLoop() {
         while (!_exitDmaLoop) {
-            for (int i = 0; i < _dmaDeviceChannels.Count; i++) {
-                DmaChannel dmaChannel = _dmaDeviceChannels[i];
-                bool transferred = dmaChannel.Transfer(_memory);
-                if (!transferred) {
-                    _dmaResetEvent.WaitOne(1);
-                }
+            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
+                dmaChannel.Transfer(_memory);
             }
         }
     }
@@ -90,15 +86,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
         }
         Channels[dmaDevice.Channel].Device = dmaDevice;
         _dmaDeviceChannels.Add(Channels[dmaDevice.Channel]);
-    }
-
-    /// <summary>
-    /// Performs all pending DMA transfers for all the active DMA channels.
-    /// </summary>
-    public void PerformDmaTransfers() {
-        if (!_disposed) {
-            _dmaResetEvent.Set();
-        }
     }
 
     /// <summary>
@@ -252,7 +239,6 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
                 if (_dmaThread.IsAlive && _dmaThreadStarted) {
                     _dmaThread.Join();
                 }
-                _dmaResetEvent.Dispose();
             }
             _disposed = true;
         }
