@@ -47,16 +47,16 @@ public class PauseHandler : IDisposable, IPauseHandler {
     }
 
     /// <inheritdoc />
-    public event EventHandler<EventArgs>? Pausing;
+    public event Action? Pausing;
 
     /// <inheritdoc />
-    public event EventHandler<EventArgs>? Resumed;
+    public event Action? Resumed;
 
     /// <inheritdoc />
     public void RequestPause(string? reason = null) {
         _loggerService.Debug("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
-        Pausing?.Invoke(this, EventArgs.Empty);
+        Pausing?.Invoke();
         _pausing = true;
         _manualResetEvent.Reset();
     }
@@ -66,7 +66,7 @@ public class PauseHandler : IDisposable, IPauseHandler {
         _loggerService.Debug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.Set();
         _pausing = false;
-        Resumed?.Invoke(this, EventArgs.Empty);
+        Resumed?.Invoke();
     }
 
     /// <inheritdoc />

@@ -448,11 +448,11 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    private void OnResumed(object? sender, EventArgs e) {
+    private void OnResumed() {
         Dispatcher.UIThread.Invoke(() => IsPaused = false, DispatcherPriority.Normal);
     }
 
-    private void OnPausing(object? sender, EventArgs e) {
+    private void OnPausing() {
         Dispatcher.UIThread.Invoke(() => IsPaused = true, DispatcherPriority.Normal);
     }
 
