@@ -70,7 +70,7 @@ If there is already data there the emulator will load it first and complete it, 
   -w, --WarningLogs                  (Default: false) Enable warning level logs
   -s, --SilencedLogs                 (Default: false) Disable all logs
   -i, --InitializeDOS                (Default: true) Install DOS interrupt vectors or not.
-
+  --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --help                             Display this help screen.
   --version                          Display version information.
 ```
@@ -247,6 +247,24 @@ public class MyOverridesGlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress 
 *Remember*: You must tell Spice86 to use your assembly code overrides with the command line argument "--UseCodeOverride true" when debugging your project.
 
 Along with the mandatory path to your DOS program, passed with the --ExePath argument.
+
+## Debugger
+
+Spice86 comes with a built-in debugger that can be used to debug the emulated program. It is a simple debugger that allows you to inspect the memory, the disassembly, the registers, and the stack.
+
+### Structure viewer
+
+The structure viewer allows you to inspect the memory in a structured way. It is useful to inspect the memory as a structure, like the DOS PSP, the DOS MCB, the VGA registers, etc.
+
+First you need a C header file that describes the structures in the application. You can generate one with Ghidra or IDA. Then you can load it with the `--StructureFile` commandline argument.
+This will enable the "Structure view" button in the Memory tab of the debugger.
+
+There you enter a segment:offset address and choose the structure you want to view. The structure will be displayed in a tree view and the memory in a hex view.
+
+The display updates whenever the application is paused, so you can step through the program and see how the structure changes.
+Exporting a new C header file from Ghidra or IDA will also update the structure viewer with the new information real-time.
+
+You can also enter the Structure view by selecting a range of bytes in the Memory tab and right-clicking on it.
 
 ## Misc
 ### C Drive
