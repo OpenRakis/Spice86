@@ -6,7 +6,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Reimplementation of int28
+/// <para>Reimplementation of int28</para>
+/// <para>This is a way of letting DOS know that the application is idle and that it can perform other tasks.</para>
 /// </summary>
 public class DosInt28Handler : InterruptHandler {
     /// <summary>
