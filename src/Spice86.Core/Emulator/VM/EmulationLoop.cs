@@ -86,8 +86,8 @@ public class EmulationLoop {
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            _pauseHandler.WaitIfPaused();
             _machineBreakpoints.CheckBreakPoint();
+            _pauseHandler.WaitIfPaused();
             _cpu.ExecuteNextInstruction();
             //_cfgCpu.ExecuteNext();
             _timer.Tick();

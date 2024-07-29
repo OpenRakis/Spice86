@@ -55,7 +55,6 @@ public sealed class MachineBreakpoints {
     /// </summary>
     public void CheckBreakPoint() {
         CheckBreakPoints();
-        _pauseHandler.WaitIfPaused();
     }
 
     /// <summary>
