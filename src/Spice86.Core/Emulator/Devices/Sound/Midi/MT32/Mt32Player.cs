@@ -3,6 +3,7 @@
 using Mt32emu;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -22,9 +23,11 @@ internal sealed class Mt32Player : IDisposable {
     private readonly ManualResetEvent _fillBufferEvent = new(false);
 
     private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
 
-    public Mt32Player(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService) {
+    public Mt32Player(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
+        _pauseHandler = pauseHandler;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
@@ -48,21 +51,23 @@ internal sealed class Mt32Player : IDisposable {
     }
 
     private void StartThreadIfNeeded() {
-        if(!_disposed && !_exitRenderThread && !_threadStarted) {
-            _threadStarted = true;
-            _renderThread?.Start();
+        if (_disposed || _exitRenderThread || _threadStarted || _renderThread == null) {
+            return;
         }
+        _loggerService.Information("Starting thread '{ThreadName}'", _renderThread.Name ?? nameof(Mt32Player));
+        _threadStarted = true;
+        _renderThread.Start();
     }
 
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
-        while(!_exitRenderThread) {
-            if(!_exitRenderThread) {
-                _fillBufferEvent.WaitOne(1);
-            }
+        while (!_exitRenderThread) {
+            _pauseHandler.WaitIfPaused();
+            _fillBufferEvent.WaitOne(Timeout.Infinite);
             buffer.Clear();
             _context.Render(buffer);
             _soundChannel.Render(buffer);
+            _fillBufferEvent.Reset();
         }
     }
 

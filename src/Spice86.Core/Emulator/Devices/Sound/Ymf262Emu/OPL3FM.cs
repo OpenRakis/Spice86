@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -16,6 +16,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private readonly SoundChannel _soundChannel;
     private readonly FmSynthesizer? _synth;
+    private readonly IPauseHandler _pauseHandler;
     private int _currentAddress;
     private volatile bool _endThread;
     private readonly Thread _playbackThread;
@@ -36,7 +37,9 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public OPL3FM(SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
+    public OPL3FM(SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+        _pauseHandler = pauseHandler;
         _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
         _synth = new FmSynthesizer(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
@@ -134,6 +137,7 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
         Span<float> playBuffer = stackalloc float[length * 2];
         FillBuffer(buffer, playBuffer);
         while (!_endThread) {
+            _pauseHandler.WaitIfPaused();
             _soundChannel.Render(playBuffer);
             FillBuffer(buffer, playBuffer);
         }
@@ -145,9 +149,11 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     private void StartPlaybackThread() {
-        if(!_endThread) {
-            _playbackThread.Start();
-            _initialized = true;
+        if (_endThread) {
+            return;
         }
+        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(OPL3FM));
+        _initialized = true;
+        _playbackThread.Start();
     }
 }

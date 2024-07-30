@@ -14,9 +14,9 @@ using Spice86.Shared.Utils;
 public class GdbCommandBreakpointHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbIo _gdbIo;
-    private volatile bool _resumeEmulatorOnCommandEnd;
+    private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly MachineBreakpoints _machineBreakpoints;
-    private readonly PauseHandler _pauseHandler;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandBreakpointHandler"/> class.
@@ -25,7 +25,7 @@ public class GdbCommandBreakpointHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
-    public GdbCommandBreakpointHandler(MachineBreakpoints machineBreakpoints, PauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
+    public GdbCommandBreakpointHandler(MachineBreakpoints machineBreakpoints, IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
         _machineBreakpoints = machineBreakpoints;
         _pauseHandler = pauseHandler;
@@ -52,7 +52,6 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string ContinueCommand() {
         _resumeEmulatorOnCommandEnd = true;
-        _machineBreakpoints.PauseHandler.RequestResume();
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached
         return _gdbIo.GenerateResponse("OK");
@@ -77,7 +76,7 @@ public class GdbCommandBreakpointHandler {
             }
             return;
         }
-        _pauseHandler.RequestPause();
+        _pauseHandler.RequestPause($"Gdb breakpoint {breakPoint.BreakPointType} hit");
         _resumeEmulatorOnCommandEnd = false;
         try {
             _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));

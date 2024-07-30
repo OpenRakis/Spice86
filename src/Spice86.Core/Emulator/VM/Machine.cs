@@ -211,7 +211,8 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// Initializes a new instance
     /// </summary>
-    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData) {
+    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData, IPauseHandler pauseHandler) {
+        PauseHandler = pauseHandler;
         Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -225,7 +226,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         CpuState = cpuState;
         DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
         // Breakpoints
-        MachineBreakpoints = new(Memory, CpuState, loggerService);
+        MachineBreakpoints = new(Memory, CpuState, pauseHandler);
         IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
         CallbackHandler = new(CpuState, loggerService);
 
@@ -261,14 +262,14 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         
         PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService);
+        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
         RegisterIoPortHandler(OPL3FM);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
-        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig);
+        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig, pauseHandler);
         RegisterIoPortHandler(SoundBlaster);
         GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
         RegisterIoPortHandler(MidiDevice);
 
         // Services
@@ -307,6 +308,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             RegisterInterruptHandler(SystemClockInt1AHandler);
             RegisterInterruptHandler(Dos.DosInt20Handler);
             RegisterInterruptHandler(Dos.DosInt21Handler);
+            RegisterInterruptHandler(Dos.DosInt28Handler);
             RegisterInterruptHandler(Dos.DosInt2FHandler);
 
             // Initialize DOS.
@@ -325,6 +327,11 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
     }
+
+    /// <summary>
+    /// The pause handler for the entire machine.
+    /// </summary>
+    public IPauseHandler PauseHandler { get; }
 
     /// <summary>
     /// The mouse device hardware abstraction.
@@ -367,7 +374,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
-                MachineBreakpoints.Dispose();
             }
             _disposed = true;
         }

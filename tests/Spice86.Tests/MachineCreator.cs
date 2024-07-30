@@ -28,7 +28,7 @@ public class MachineCreator {
         };
 
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
-        ProgramExecutor programExecutor = new ProgramExecutor(configuration, loggerService, null);
+        ProgramExecutor programExecutor = new ProgramExecutor(configuration, loggerService, null, new PauseHandler(loggerService));
         Machine machine = programExecutor.Machine;
         Cpu cpu = machine.Cpu;
         cpu.ErrorOnUninitializedInterruptHandler = false;

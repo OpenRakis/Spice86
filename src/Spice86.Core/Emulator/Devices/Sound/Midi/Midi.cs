@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -39,7 +40,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     public const byte CommandAcknowledge = 0xFE;
     
     private bool _disposed;
-    
+
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
@@ -48,12 +49,13 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(SoftwareMixer softwareMixer, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    /// <param name="pauseHandler">The handler for the emulator pause state</param>
+    public Midi(SoftwareMixer softwareMixer, State state, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
         if (UseMT32 && !string.IsNullOrWhiteSpace(Mt32RomsPath)) {
-            _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, _loggerService);
+            _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, _loggerService, pauseHandler);
         } else {
-            _midiMapper = new GeneralMidiDevice(softwareMixer);
+            _midiMapper = new GeneralMidiDevice(softwareMixer, loggerService, pauseHandler);
         }
     }
 

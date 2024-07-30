@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Function;
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -14,7 +13,6 @@ using System.Diagnostics;
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
 /// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
-/// On Pause, triggers a GDB breakpoint.
 /// </summary>
 public class EmulationLoop {
     private readonly ILoggerService _loggerService;
@@ -24,18 +22,8 @@ public class EmulationLoop {
     private readonly Devices.Timer.Timer _timer;
     private readonly MachineBreakpoints _machineBreakpoints;
     private readonly DmaController _dmaController;
-    private readonly GdbCommandHandler? _gdbCommandHandler;
     private readonly Stopwatch _stopwatch;
-
-    /// <summary>
-    /// Whether the emulation is paused.
-    /// </summary>
-    public bool IsPaused { get; set; }
-
-    /// <summary>
-    /// Gets if we check for breakpoints in the emulation loop.
-    /// </summary>
-    private readonly bool _listensToBreakpoints;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance.
@@ -46,9 +34,9 @@ public class EmulationLoop {
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
-    /// <param name="gdbCommandHandler">The GDB Command Handler, used to trigger a GDB breakpoint on pause.</param>
+    /// <param name="pauseHandler">The emulation pause handler.</param>
     public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, MachineBreakpoints machineBreakpoints,
-        DmaController dmaController, GdbCommandHandler? gdbCommandHandler) {
+        DmaController dmaController, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
         _cfgCpu = cfgCpu;
@@ -56,7 +44,7 @@ public class EmulationLoop {
         _timer = timer;
         _machineBreakpoints = machineBreakpoints;
         _dmaController = dmaController;
-        _gdbCommandHandler = gdbCommandHandler;
+        _pauseHandler = pauseHandler;
         _stopwatch = new();
     }
 
@@ -85,7 +73,6 @@ public class EmulationLoop {
     /// </summary>
     internal void Exit() {
         _cpuState.IsRunning = false;
-        IsPaused = false;
     }
 
     private void StartRunLoop(FunctionHandler functionHandler) {
@@ -99,8 +86,8 @@ public class EmulationLoop {
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            PauseIfAskedTo();
             _machineBreakpoints.CheckBreakPoint();
+            _pauseHandler.WaitIfPaused();
             _cpu.ExecuteNextInstruction();
             //_cfgCpu.ExecuteNext();
             _timer.Tick();
@@ -118,27 +105,6 @@ public class EmulationLoop {
                 cyclesPerSeconds = (_cpuState.Cycles * 1000) / elapsedTimeMilliSeconds;
             }
             _loggerService.Warning("Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
-        }
-    }
-
-    private bool GenerateUnconditionalGdbBreakpoint() {
-        if (_gdbCommandHandler is null) {
-            return false;
-        }
-
-        _gdbCommandHandler.Step();
-        return true;
-    }
-
-    private void PauseIfAskedTo() {
-        if (!IsPaused) {
-            return;
-        }
-
-        if (!GenerateUnconditionalGdbBreakpoint()) {
-            while (IsPaused) {
-                Thread.Sleep(1);
-            }
         }
     }
 }

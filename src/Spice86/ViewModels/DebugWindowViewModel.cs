@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Interfaces;
 using Spice86.Shared.Diagnostics;
@@ -55,14 +56,16 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
-    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory) {
+    private readonly IPauseHandler _pauseHandler;
+
+    public DebugWindowViewModel(ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPauseStatus pauseStatus, IProgramExecutor programExecutor, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         _programExecutor = programExecutor;
         _structureViewModelFactory = structureViewModelFactory;
         _storageProvider = storageProvider;
         _textClipboard = textClipboard;
         _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
         _pauseStatus = pauseStatus;
-        IsPaused = _programExecutor.IsPaused;
+        _pauseHandler = pauseHandler;
         _pauseStatus.PropertyChanged += OnPauseStatusChanged;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
         var disassemblyVm = new DisassemblyViewModel(this, uiDispatcherTimerFactory, pauseStatus);
@@ -99,10 +102,14 @@ public partial class DebugWindowViewModel : ViewModelBase, IInternalDebugger {
     public void NewDisassemblyView() => DisassemblyViewModels.Add(new DisassemblyViewModel(this, _uiDispatcherTimerFactory, _pauseStatus));
 
     [RelayCommand]
-    public void Pause() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = true;
+    private void Pause() {
+        _pauseHandler.RequestPause("Pause button pressed in debug window");
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void Continue() => _pauseStatus.IsPaused = _programExecutor.IsPaused = IsPaused = false;
+    private void Continue() {
+        _pauseHandler.Resume();
+    }
 
     private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) => IsPaused = _pauseStatus.IsPaused;
 

@@ -22,7 +22,7 @@ public class GdbCommandHandler {
     private readonly GdbIo _gdbIo;
     private readonly Cpu _cpu;
     private readonly IMemory _memory;
-    private readonly PauseHandler _pauseHandler;
+    private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
@@ -42,7 +42,7 @@ public class GdbCommandHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
     /// <param name="gui">The emulator's UI.</param>
-    public GdbCommandHandler(IMemory memory, Cpu cpu, State state, PauseHandler pauseHandler,
+    public GdbCommandHandler(IMemory memory, Cpu cpu, State state, IPauseHandler pauseHandler,
         MachineBreakpoints machineBreakpoints, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
         FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration, IGui? gui) {
         _loggerService = loggerService;
@@ -68,7 +68,7 @@ public class GdbCommandHandler {
 
     internal void PauseEmulator() {
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
-        _pauseHandler.RequestPause();
+        _pauseHandler.RequestPause("To wait for a client to connect");
     }
 
     /// <summary>
@@ -86,7 +86,9 @@ public class GdbCommandHandler {
         }
         char first = command[0];
         string commandContent = command[1..];
-        _pauseHandler.RequestPauseAndWait();
+        if (!_pauseHandler.IsPaused) {
+            _pauseHandler.RequestPause("to process Gdb command");
+        }
         try {
             string? response = first switch {
                 (char)0x03 => _gdbCommandBreakpointHandler.Step(),
@@ -117,7 +119,7 @@ public class GdbCommandHandler {
             }
         } finally {
             if (_gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd) {
-                _pauseHandler.RequestResume();
+                _pauseHandler.Resume();
             }
         }
     }

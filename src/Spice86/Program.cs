@@ -8,8 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.VM;
 using Spice86.DependencyInjection;
 using Spice86.Infrastructure;
 using Spice86.Shared.Interfaces;
@@ -47,7 +46,7 @@ public class Program {
         ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
         if (configuration.HeadlessMode) {
-            ProgramExecutor programExecutor = new(configuration, serviceProvider.GetRequiredService<ILoggerService>(), null);
+            ProgramExecutor programExecutor = new(configuration, serviceProvider.GetRequiredService<ILoggerService>(), null, serviceProvider.GetRequiredService<IPauseHandler>());
             programExecutor.Run();
         } else {
             ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();
@@ -76,7 +75,7 @@ public class Program {
 
         serviceCollection.AddConfiguration(args);
         serviceCollection.AddLogging();
-
+        serviceCollection.AddScoped<IPauseHandler, PauseHandler>();
         serviceCollection.AddScoped<IProgramExecutorFactory, ProgramExecutorFactory>();
         serviceCollection.AddScoped<MainWindowViewModel>();
         return serviceCollection;
