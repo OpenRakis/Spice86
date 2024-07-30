@@ -55,7 +55,8 @@ public class LoggerService : ILoggerService {
         return new LoggerConfiguration()
             .Enrich.FromLogContext()
             .WriteTo.Console(outputTemplate: LogFormat)
-            .WriteTo.Debug(outputTemplate: LogFormat);
+            .WriteTo.Debug(outputTemplate: LogFormat)
+            .WriteTo.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day);
     }
 
     /// <inheritdoc/>
