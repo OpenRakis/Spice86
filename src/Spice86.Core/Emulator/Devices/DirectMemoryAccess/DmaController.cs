@@ -77,6 +77,8 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
             foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
                 dmaChannel.Transfer(_memory);
             }
+            // Help linux thread schedulers to switch to other threads. This allows the .NET debugger to work.
+            Thread.Sleep(0);
         }
     }
 
