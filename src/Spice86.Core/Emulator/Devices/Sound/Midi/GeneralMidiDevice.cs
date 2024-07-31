@@ -15,7 +15,7 @@ using OperatingSystem = System.OperatingSystem;
 /// http://midi.teragonaudio.com/tech/lowmidi.htm
 /// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
-internal sealed class GeneralMidiDevice : MidiDevice {
+public sealed class GeneralMidiDevice : MidiDevice {
     private readonly SoundChannel _soundChannel;
     private readonly Synthesizer _synthesizer;
 

@@ -11,7 +11,7 @@ using System.Linq;
 /// <summary>
 /// A MIDI device implementation for playing MIDI files on an MT-32 sound module.
 /// </summary>
-internal sealed class Mt32MidiDevice : MidiDevice {
+public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
     private readonly SoundChannel _soundChannel;
     private readonly Thread? _renderThread;

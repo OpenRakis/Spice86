@@ -34,29 +34,18 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IProgramExecutorFactory _programExecutorFactory;
     private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
-    private readonly bool _isGdbServerRunning;
     private readonly IPauseHandler _pauseHandler;
     private readonly IMessenger _messenger;
+    private readonly bool _isGdbServerRunning;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
     private bool _canUseInternalDebugger;
-
-    private IProgramExecutor? _programExecutor;
-
-    private IProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set {
-            _programExecutor = value;
-            Dispatcher.UIThread.Post(() => CanUseInternalDebugger = value is not null && !_isGdbServerRunning);
-        }
-    }
-
+    
     private ITimeMultiplier? _pit;
     private DebugWindowViewModel? _debugViewModel;
 
@@ -82,13 +71,12 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     public event EventHandler? CloseMainWindow;
 
-    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IProgramExecutorFactory programExecutorFactory, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
+    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
         ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) : base(textClipboard) {
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _messenger = messenger;
         _windowService = windowService;
         Configuration = configuration;
-        _programExecutorFactory = programExecutorFactory;
         _loggerService = loggerService;
         _structureViewModelFactory = structureViewModelFactory;
         _hostStorageProvider = hostStorageProvider;
@@ -100,6 +88,15 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _pauseHandler.Resumed += OnResumed;
     }
     
+    private IProgramExecutor? _programExecutor;
+
+    internal IProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set {
+            _programExecutor = value;
+            Dispatcher.UIThread.Post(() => CanUseInternalDebugger = value is not null && !_isGdbServerRunning);
+        }
+    }
     
     [RelayCommand]
     public void SetLogLevelToSilent() {
@@ -268,9 +265,10 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     private async Task DumpEmulatorStateToFile() {
-        if (ProgramExecutor is not null) {
-            await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
+        if (ProgramExecutor is null) {
+            return;
         }
+        await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
@@ -418,7 +416,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private string _currentLogLevel = "";
 
     private void DisposeEmulator() {
-        ProgramExecutor?.Dispose();
+        _programExecutor?.Dispose();
     }
 
     private void SetLogLevel(string logLevel) {
@@ -472,31 +470,33 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [RelayCommand(CanExecute = nameof(CanUseInternalDebugger))]
     private async Task ShowInternalDebugger() {
-        if (ProgramExecutor is not null) {
-            _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory, _pauseHandler);
-            await _windowService.ShowDebugWindow(_debugViewModel);
+        if (ProgramExecutor is null) {
+            return;
         }
+        _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory, _pauseHandler);
+        await _windowService.ShowDebugWindow(_debugViewModel);
     }
 
     private void StartProgramExecutor() {
-        (IProgramExecutor ProgramExecutor, ITimeMultiplier? Pit) viewModelEmulatorDependencies = CreateEmulator();
-        ProgramExecutor = viewModelEmulatorDependencies.ProgramExecutor;
-        _pit = viewModelEmulatorDependencies.Pit;
+        if (ProgramExecutor is null) {
+            return;
+        }
+        _pit = VisitProgramExecutor();
         PerformanceViewModel = new PerformanceViewModel(_messenger, _uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer());
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
-        ProgramExecutor?.Run();
+        ProgramExecutor.Run();
         if (_closeAppOnEmulatorExit) {
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         }
     }
     
-    private (IProgramExecutor ProgramExecutor, ITimeMultiplier? Pit) CreateEmulator() {
+    private ITimeMultiplier? VisitProgramExecutor() {
         ViewModelEmulatorDependenciesVisitor visitor = new();
-        IProgramExecutor programExecutor = _programExecutorFactory.Create(this);
-        return (programExecutor, visitor.Pit);
+        _programExecutor?.Accept(visitor);
+        return visitor.Pit;
     }
     
     private sealed class ViewModelEmulatorDependenciesVisitor : IInternalDebugger {
