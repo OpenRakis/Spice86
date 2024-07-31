@@ -20,11 +20,6 @@ public interface IProgramExecutor : IDisposable, IDebuggableComponent {
     void DumpEmulatorStateToDirectory(string path);
 
     /// <summary>
-    /// Gets whether the emulator is currently paused.
-    /// </summary>
-    bool IsPaused { get; set; }
-
-    /// <summary>
     /// Steps the current instruction.
     /// </summary>
     void StepInstruction();

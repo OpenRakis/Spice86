@@ -304,7 +304,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
-                MachineBreakpoints.Dispose();
             }
             _disposed = true;
         }

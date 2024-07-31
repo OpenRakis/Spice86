@@ -112,6 +112,19 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
+        AddAction(0x63, GetLeadByteTable);
+    }
+
+    /// <summary>
+    /// Get a pointer to the "lead byte" table, for foreign character sets.
+    /// This is a table that tells DOS which bytes are the first byte of a double-byte character.
+    /// We don't support double-byte characters (yet), so we just return 0.
+    /// </summary>
+    private void GetLeadByteTable() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET LEAD BYTE TABLE");
+        }
+        State.AX = 0;
     }
 
     /// <summary>

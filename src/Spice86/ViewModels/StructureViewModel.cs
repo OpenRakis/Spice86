@@ -9,6 +9,7 @@ using AvaloniaHex.Document;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.VM;
 using Spice86.DataTemplates;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
@@ -22,7 +23,7 @@ using Structurizer.Types;
 /// ViewModel for handling the structure view in the application. It manages the display and interaction
 /// with memory structures, including selection, filtering, and updating the view based on the selected structure.
 /// </summary>
-public partial class StructureViewModel : ViewModelBase {
+public partial class StructureViewModel : ViewModelBase, IDisposable {
     private readonly Hydrator _hydrator;
     private readonly IBinaryDocument _originalMemory;
     private readonly StructureInformation? _structureInformation;
@@ -45,19 +46,24 @@ public partial class StructureViewModel : ViewModelBase {
     [ObservableProperty]
     private IBinaryDocument _structureMemory;
 
+    private readonly IPauseHandler _pauseHandler;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="StructureViewModel" /> class.
     /// </summary>
     /// <param name="structureInformation">The structure information containing available structures.</param>
     /// <param name="hydrator">The hydrator used for creating structure members from binary data.</param>
     /// <param name="data">The binary document representing the memory to be displayed and interacted with.</param>
-    public StructureViewModel(StructureInformation structureInformation, Hydrator hydrator, IBinaryDocument data) {
+    /// <param name="pauseHandler">The pause handler for the emulator</param>
+    public StructureViewModel(StructureInformation structureInformation, Hydrator hydrator, IBinaryDocument data, IPauseHandler pauseHandler) {
         _structureInformation = structureInformation;
         _hydrator = hydrator;
         _structureMemory = data;
         _originalMemory = data;
         _availableStructures = new AvaloniaList<StructType>(structureInformation.Structs.Values);
         _isAddressableMemory = data is DataMemoryDocument;
+        _pauseHandler = pauseHandler;
+        _pauseHandler.Pausing += OnPausing;
         Source = InitializeSource();
     }
 
@@ -140,6 +146,13 @@ public partial class StructureViewModel : ViewModelBase {
     }
 
     /// <summary>
+    /// Update the view when the application is paused.
+    /// </summary>
+    private void OnPausing() {
+        Update();
+    }
+
+    /// <summary>
     /// Updates the view based on the current selection and state, such as the selected structure and memory address.
     /// It refreshes the structure members displayed according to the selected structure.
     /// </summary>
@@ -176,5 +189,14 @@ public partial class StructureViewModel : ViewModelBase {
         }
 
         return members;
+    }
+
+    /// <summary>
+    /// Disposes of the resources used by the <see cref="StructureViewModel" />.
+    /// </summary>
+    public void Dispose() {
+        _pauseHandler.Pausing -= OnPausing;
+        Source.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -6,13 +6,14 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// MPU401 MIDI interface implementation.
 /// </summary>
 public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
-    private MidiDevice _midiMapper;
+    private readonly MidiDevice _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
     /// <summary>
@@ -41,7 +42,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     public const byte CommandAcknowledge = 0xFE;
     
     private bool _disposed;
-    
+
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>

@@ -17,7 +17,7 @@ public sealed class GdbServer : IDisposable {
     private bool _disposed;
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
-    private readonly PauseHandler _pauseHandler;
+    private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
     private readonly GdbCommandHandler _gdbCommandHandler;
 
@@ -30,7 +30,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
     /// <param name="state">The CPU state.</param>
-    public GdbServer(GdbIo gdbIo, State state, PauseHandler pauseHandler, GdbCommandHandler gdbCommandHandler, ILoggerService loggerService, Configuration configuration) {
+    public GdbServer(GdbIo gdbIo, State state, IPauseHandler pauseHandler, GdbCommandHandler gdbCommandHandler, ILoggerService loggerService, Configuration configuration) {
         _gdbIo = gdbIo;
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
@@ -115,7 +115,7 @@ public sealed class GdbServer : IDisposable {
             _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
         } finally {
             _state.IsRunning = false;
-            _pauseHandler.RequestResume();
+            _pauseHandler.Resume();
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("GDB server stopped");
             }

@@ -28,17 +28,12 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     }
     
     /// <summary>
-    /// Gets or sets a value indicating whether the software mixer is paused. In paused state, the mixer will not render any sound.
-    /// </summary>
-    public bool IsPaused { get; set; }
-    
-    /// <summary>
     /// Gets the sound channels in a read-only dictionary.
     /// </summary>
     public FrozenDictionary<SoundChannel, AudioPlayer> Channels { get; private set; } = new Dictionary<SoundChannel, AudioPlayer>().ToFrozenDictionary();
 
     internal int Render(Span<float> data, SoundChannel channel) {
-        if (channel.Volume == 0 || channel.IsMuted || IsPaused) {
+        if (channel.Volume == 0 || channel.IsMuted) {
             _channels[channel].WriteSilence();
             return data.Length;
         }

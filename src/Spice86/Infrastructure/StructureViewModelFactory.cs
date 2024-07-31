@@ -3,6 +3,7 @@ namespace Spice86.Infrastructure;
 using AvaloniaHex.Document;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
@@ -22,12 +23,15 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     private StructureInformation? _structureInformation;
     private readonly Configuration _configuration;
     private readonly ILoggerService _logger;
+    private readonly IPauseHandler _pauseHandler;
 
     public event EventHandler? StructureInformationChanged;
 
-    public StructureViewModelFactory(Configuration configuration, ILoggerService logger) {
+    public StructureViewModelFactory(Configuration configuration, ILoggerService logger, IPauseHandler pauseHandler) {
         _logger = logger;
         _configuration = configuration;
+        _pauseHandler = pauseHandler;
+
         if (!TryGetHeaderFilePath(out string headerFilePath)) {
             return;
         }
@@ -46,7 +50,7 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
             throw new InvalidOperationException("Factory not initialized.");
         }
 
-        var viewModel = new StructureViewModel(_structureInformation, _hydrator, data);
+        var viewModel = new StructureViewModel(_structureInformation, _hydrator, data, _pauseHandler);
         StructureInformationChanged += viewModel.OnStructureInformationChanged;
 
         return viewModel;

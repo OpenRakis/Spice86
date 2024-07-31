@@ -78,17 +78,19 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private GdbCommandHandler? _gdbCommandHandler;
+    private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
+    /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
-    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui) {
+    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, IGui? gui) {
         _configuration = configuration;
         _loggerService = loggerService;
-        PauseHandler pauseHandler = new(_loggerService);
+        _pauseHandler = pauseHandler;
         RecordedDataReader reader = new(_configuration.RecordedDataDirectory, _loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
         State cpuState = new();
@@ -187,14 +189,16 @@ public sealed class ProgramExecutor : IProgramExecutor {
         RegisterIoPortHandler(ioPortDispatcher, pcSpeaker);
         
         SoundChannel fmSynthSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
-        OPL3FM opl3fm = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, cpuState, configuration.FailOnUnhandledPort, _loggerService);
+        OPL3FM opl3fm = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, cpuState, configuration.FailOnUnhandledPort, _loggerService, _pauseHandler);
         RegisterIoPortHandler(ioPortDispatcher, opl3fm);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         HardwareMixer hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, _loggerService);
         DmaChannel eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         Dsp dsp = new Dsp(eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma], new ADPCM2(),  new ADPCM3(), new ADPCM4());
-        SoundBlaster soundBlaster = new SoundBlaster(pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort, _loggerService, soundBlasterHardwareConfig);
+        SoundBlaster soundBlaster = new SoundBlaster(
+            pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
+            _loggerService, soundBlasterHardwareConfig, _pauseHandler);
         RegisterIoPortHandler(ioPortDispatcher, soundBlaster);
         
         GravisUltraSound gravisUltraSound = new GravisUltraSound(cpuState, configuration.FailOnUnhandledPort, _loggerService);
@@ -205,7 +209,11 @@ public sealed class ProgramExecutor : IProgramExecutor {
         if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
             midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, _loggerService);
         } else {
-            midiMapper = new GeneralMidiDevice(new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000), new SoundChannel(softwareMixer, "General MIDI"));
+            midiMapper = new GeneralMidiDevice(
+                new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000),
+                new SoundChannel(softwareMixer, "General MIDI"),
+                _loggerService,
+                pauseHandler);
         }
         Midi midiDevice = new Midi(midiMapper, cpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, _loggerService);
         RegisterIoPortHandler(ioPortDispatcher, midiDevice);
@@ -306,7 +314,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             _loggerService,
             _configuration.RecordedDataDirectory);
         _gdbServer = CreateGdbServer(pauseHandler, cpuState, memory, cpu, machineBreakpoints, executionFlowRecorder, functionHandler);
-        _emulationLoop = new(loggerService,functionHandler, cpu, cpuState, timer, machineBreakpoints, dmaController, _gdbCommandHandler);
+        _emulationLoop = new(loggerService,functionHandler, cpu, cpuState, timer, machineBreakpoints, dmaController, _pauseHandler);
         _memory = memory;
         _cpuState = cpuState;
         _callbackHandler = callbackHandler;
@@ -334,7 +342,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
     public void StepInstruction() {
         _gdbServer?.StepInstruction();
-        IsPaused = false;
+        _pauseHandler.Resume();
     }
 
     /// <inheritdoc/>
@@ -424,7 +432,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private static void RegisterIoPortHandler(IOPortDispatcher ioPortDispatcher, IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(ioPortDispatcher);
     
     private GdbServer? CreateGdbServer(
-        PauseHandler pauseHandler, State cpuState, IMemory memory, Cpu cpu,
+        IPauseHandler pauseHandler, State cpuState, IMemory memory, Cpu cpu,
         MachineBreakpoints machineBreakpoints, ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         int? gdbPort = _configuration.GdbPort;
         if (gdbPort == null) {

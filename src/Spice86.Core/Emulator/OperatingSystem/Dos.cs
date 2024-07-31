@@ -47,6 +47,11 @@ public class Dos {
     public DosInt2fHandler DosInt2FHandler { get; }
 
     /// <summary>
+    /// Gets the INT 28h DOS services.
+    /// </summary>
+    public DosInt28Handler DosInt28Handler { get; }
+
+    /// <summary>
     /// Gets the country ID from the CountryInfo table
     /// </summary>
     public byte CurrentCountryId => _countryInfo.Country;
@@ -112,6 +117,8 @@ public class Dos {
         DosInt20Handler = dosInt20Handler;
         DosInt21Handler = dosInt21Handler;
         DosInt2FHandler = dosInt2fHandler;
+        DosInt28Handler = new DosInt28Handler(_memory, _cpu, _loggerService);
+
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }

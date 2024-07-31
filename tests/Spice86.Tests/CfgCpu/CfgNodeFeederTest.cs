@@ -43,7 +43,7 @@ public class CfgNodeFeederTest {
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         _memory = new(new(), new Ram(64), new A20Gate());
         _state = new State();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(new(loggerService), new (), new(), _memory, _state);
+        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(new PauseHandler(loggerService), new(), new (), _memory, _state);
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(_memory, machineBreakpoints), new InstructionParser(_memory, _state), new PreviousInstructions(_memory));
         return new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, _state);
