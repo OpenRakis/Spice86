@@ -66,18 +66,16 @@ using GeneralRegisters = Spice86.Core.Emulator.CPU.Registers.GeneralRegisters;
 
 /// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
-    private readonly ILoggerService _loggerService;
     private bool _disposed;
+    private readonly ILoggerService _loggerService;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly RecorderDataWriter _recorderDataWriter;
     private readonly IMemory _memory;
     private readonly State _cpuState;
     private readonly CallbackHandler _callbackHandler;
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private GdbCommandHandler? _gdbCommandHandler;
     private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
@@ -306,14 +304,14 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
         InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
         LoadFileToRun(_configuration, loader);
-        _recorderDataWriter = new RecorderDataWriter(executionFlowRecorder,
+        RecorderDataWriter recorderDataWriter = new(executionFlowRecorder,
             cpuState,
             new MemoryDataExporter(memory, callbackHandler, _configuration,
                 _configuration.RecordedDataDirectory, _loggerService),
             new ExecutionFlowDumper(_loggerService),
             _loggerService,
             _configuration.RecordedDataDirectory);
-        _gdbServer = CreateGdbServer(pauseHandler, cpuState, memory, cpu, machineBreakpoints, executionFlowRecorder, functionHandler);
+        _gdbServer = CreateGdbServer(recorderDataWriter, pauseHandler, cpuState, memory, cpu, machineBreakpoints, executionFlowRecorder, functionHandler);
         _emulationLoop = new(loggerService,functionHandler, cpu, cpuState, timer, machineBreakpoints, dmaController, _pauseHandler);
         _memory = memory;
         _cpuState = cpuState;
@@ -355,9 +353,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
                 path)
             .DumpAll(_executionFlowRecorder, _functionHandler);
     }
-
-    /// <inheritdoc/>
-    public bool IsPaused { get => _emulationLoop.IsPaused; set => _emulationLoop.IsPaused = value; }
 
     private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
         ArgumentNullException.ThrowIfNull(expectedHash, nameof(expectedHash));
@@ -431,7 +426,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private static void RegisterInterruptHandler(InterruptInstaller interruptInstaller, IInterruptHandler interruptHandler) => interruptInstaller.InstallInterruptHandler(interruptHandler);
     private static void RegisterIoPortHandler(IOPortDispatcher ioPortDispatcher, IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(ioPortDispatcher);
     
-    private GdbServer? CreateGdbServer(
+    private GdbServer? CreateGdbServer(RecorderDataWriter recorderDataWriter,
         IPauseHandler pauseHandler, State cpuState, IMemory memory, Cpu cpu,
         MachineBreakpoints machineBreakpoints, ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         int? gdbPort = _configuration.GdbPort;
@@ -444,10 +439,10 @@ public sealed class ProgramExecutor : IProgramExecutor {
         var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbFormatter, gdbIo, _loggerService);
         var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
         var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(memory, cpuState, cpu,
-            Machine.MachineBreakpoints, _recorderDataWriter, gdbIo,
+            machineBreakpoints, recorderDataWriter, gdbIo,
             _loggerService,
             gdbCommandBreakpointHandler.OnBreakPointReached);
-        _gdbCommandHandler = new(
+        GdbCommandHandler gdbCommandHandler = new(
             gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler,
             gdbCustomCommandsHandler,
             cpuState,
@@ -460,7 +455,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             gdbIo,
             cpuState,
             pauseHandler,
-            _gdbCommandHandler,
+            gdbCommandHandler,
             _loggerService,
             _configuration);
     }
