@@ -55,9 +55,9 @@ public class Dos {
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
-    /// Gets the country ID from the CountryInfo table
+    /// Gets the country ID from the <see cref="CountryInfo"/> table
     /// </summary>
-    public byte CurrentCountryId => DosTables.CountryInfo.Country;
+    public byte CurrentCountryId => CountryInfo.Country;
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -85,9 +85,9 @@ public class Dos {
     public DosFileManager FileManager { get; }
 
     /// <summary>
-    /// Gets the global DOS memory structures.
+    /// Gets the current country formats and separators.
     /// </summary>
-    public DosTables DosTables { get; } = new();
+    public CountryInfo CountryInfo { get; } = new();
 
     /// <summary>
     /// Gets the current DOS master environment variables.
