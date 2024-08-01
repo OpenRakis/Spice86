@@ -37,6 +37,9 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger, IRecipi
 
     private bool _isPaused;
 
+    [ObservableProperty]
+    private bool _isVisible;
+
     public CfgCpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
         messenger.Register(this);
         _performanceMeasurer = performanceMeasurer;
@@ -127,8 +130,10 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger, IRecipi
     private string GenerateNodeText(ICfgNode node) =>
         $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
 
-    public void Visit<T>(T component) where T : IDebuggableComponent =>
+    public void Visit<T>(T component) where T : IDebuggableComponent {
         _executionContext ??= component as ExecutionContext;
+        Dispatcher.UIThread.Post(() => IsVisible = _executionContext is not null);
+    }
 
     public bool NeedsToVisitEmulator => _executionContext is null;
     public void Receive(PauseChangedMessage message) {

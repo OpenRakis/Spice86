@@ -50,7 +50,8 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-                <TabItem Header="Code flow" Content="{Binding CfgCpuViewModel}"/>
+                <TabItem Header="Code flow" IsVisible="{Binding CfgCpuViewModel.IsVisible}"
+                         Content="{Binding CfgCpuViewModel}"/>
                 <TabItem Header="Disassembly">
                     <TabControl ItemsSource="{Binding DisassemblyViewModels}">
                         <TabControl.ItemTemplate>
