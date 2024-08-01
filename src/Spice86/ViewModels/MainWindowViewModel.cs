@@ -147,7 +147,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [RelayCommand]
     private async Task SaveBitmap() {
         if (Bitmap is not null) {
-            await _hostStorageProvider.SaveBitmapFile(Bitmap);
+            await _hostStorageProvider.SaveBitmapFile(Bitmap).ConfigureAwait(false);
         }
     }
 
@@ -268,7 +268,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (ProgramExecutor is null) {
             return;
         }
-        await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor);
+        await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor).ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
@@ -474,7 +474,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             return;
         }
         _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory, _pauseHandler);
-        await _windowService.ShowDebugWindow(_debugViewModel);
+        await _windowService.ShowDebugWindow(_debugViewModel).ConfigureAwait(false);
     }
 
     private void StartProgramExecutor() {
