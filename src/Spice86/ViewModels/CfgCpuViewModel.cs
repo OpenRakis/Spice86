@@ -12,15 +12,16 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Messages;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
-public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
+public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPerformanceMeasurer _performanceMeasurer;
+    
     private ExecutionContext? _executionContext;
 
     [ObservableProperty]
@@ -40,10 +41,15 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger, IRecipi
     [ObservableProperty]
     private bool _isVisible;
 
-    public CfgCpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
-        messenger.Register(this);
+    public CfgCpuViewModel(IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
         _performanceMeasurer = performanceMeasurer;
+        pauseHandler.Pausing += OnPausing;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
+    }
+
+    private void OnPausing() {
+        _isPaused = true;
+        Graph = null;
     }
 
     partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
@@ -136,10 +142,4 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger, IRecipi
     }
 
     public bool NeedsToVisitEmulator => _executionContext is null;
-    public void Receive(PauseChangedMessage message) {
-        _isPaused = message.IsPaused;
-        if (!_isPaused) {
-            Graph = null;
-        }
-    }
 }

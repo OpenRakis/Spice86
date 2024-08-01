@@ -13,18 +13,20 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
-public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
+public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private bool _needToUpdateDisassembly = true;
     private IMemory? _memory;
     private State? _state;
     private IProgramExecutor? _programExecutor;
     private readonly IMessenger _messenger;
+    private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
 
     [ObservableProperty]
@@ -57,10 +59,11 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
-        messenger.Register(this);
-        _dispatcherTimerFactory = dispatcherTimerFactory;
+    public DisassemblyViewModel(IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
         _messenger = messenger;
+        _pauseHandler = pauseHandler;
+        _dispatcherTimerFactory = dispatcherTimerFactory;
+        pauseHandler.Pausing += OnPause;
         CanCloseTab = canCloseTab;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
@@ -74,11 +77,8 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
         }
     }
 
-    public void Receive(PauseChangedMessage message) {
-        IsPaused = message.IsPaused;
-        if (!IsPaused) {
-            return;
-        }
+    public void OnPause() {
+        IsPaused = true;
         _needToUpdateDisassembly = true;
     }
     
@@ -110,7 +110,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger, IR
         if(_memory is null || _state is null) {
             return;
         }
-        DisassemblyViewModel memoryViewModel = new(_messenger, _dispatcherTimerFactory, canCloseTab: true) {
+        DisassemblyViewModel memoryViewModel = new(_pauseHandler, _messenger, _dispatcherTimerFactory, canCloseTab: true) {
             IsPaused = IsPaused
         };
         memoryViewModel.Visit(_memory);

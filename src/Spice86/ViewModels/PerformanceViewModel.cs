@@ -7,24 +7,25 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Shared.Interfaces;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
-    private State? _state;
+public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
     private readonly IPerformanceMeasurer _performanceMeasurer;
+    private State? _state;
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
 
     private bool _isPaused;
     
-    public PerformanceViewModel(IMessenger messenger, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
-        messenger.Register(this);
+    public PerformanceViewModel(IPauseHandler pauseHandler, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer) {
         programExecutor.Accept(this);
+        pauseHandler.Pausing += () => _isPaused = true;
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
@@ -47,6 +48,4 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger, IR
 
     [ObservableProperty]
     private double _instructionsExecuted;
-
-    public void Receive(PauseChangedMessage message) => _isPaused = message.IsPaused;
 }

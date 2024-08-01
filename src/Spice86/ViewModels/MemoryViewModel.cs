@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
@@ -20,11 +21,12 @@ using Spice86.Views;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger, IRecipient<PauseChangedMessage> {
+public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger {
     private IMemory? _memory;
     private bool _needToUpdateBinaryDocument;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
+    private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
 
     [ObservableProperty]
@@ -97,8 +99,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
 
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IMessenger messenger, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
-        messenger.Register(this);
+    public MemoryViewModel(IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IUIDispatcherTimerFactory dispatcherTimerFactory, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
+        _pauseHandler = pauseHandler;
+        _pauseHandler.Pausing += OnPause;
         _messenger = messenger;
         _dispatcherTimerFactory = dispatcherTimerFactory;
         _storageProvider = storageProvider;
@@ -146,11 +149,9 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         _needToUpdateBinaryDocument = false;
     }
 
-    public void Receive(PauseChangedMessage message) {
-        IsPaused = message.IsPaused;
-        if (IsPaused) {
-            _needToUpdateBinaryDocument = true;
-        }
+    private void OnPause() {
+        IsPaused = true;
+        _needToUpdateBinaryDocument = true;
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -158,7 +159,8 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         if (_memory is null) {
             return;
         }
-        MemoryViewModel memoryViewModel = new(_messenger, _textClipboard, _dispatcherTimerFactory,
+        MemoryViewModel memoryViewModel = new(_pauseHandler, _messenger, _textClipboard,
+            _dispatcherTimerFactory,
             _storageProvider,
             _structureViewModelFactory, canCloseTab: true) {
             IsPaused = IsPaused

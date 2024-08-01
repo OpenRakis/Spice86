@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
@@ -14,7 +15,7 @@ using Spice86.Models.Debugging;
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase, IInternalDebugger, IRecipient<PauseChangedMessage> {
+public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     private State? _cpuState;
     
     [ObservableProperty]
@@ -23,12 +24,10 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger, IRecipient
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory) {
-        messenger.Register(this);
+    public CpuViewModel(IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        pauseHandler.Pausing += () => _isPaused = true;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
-    
-    public void Receive(PauseChangedMessage message) => _isPaused = message.IsPaused;
 
     private void UpdateValues(object? sender, EventArgs e) {
         if (_cpuState is not null) {

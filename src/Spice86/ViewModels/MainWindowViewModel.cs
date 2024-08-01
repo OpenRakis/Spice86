@@ -474,7 +474,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
             return;
         }
         _pit = VisitProgramExecutor();
-        PerformanceViewModel = new PerformanceViewModel(_messenger, _uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer());
+        PerformanceViewModel = new PerformanceViewModel(_pauseHandler, _uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer());
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
