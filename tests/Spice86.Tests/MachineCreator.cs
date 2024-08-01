@@ -136,18 +136,7 @@ public class MachineCreator {
         memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         Renderer renderer = new(videoState, vgaMemory);
         VgaCard vgaCard = new(gui, renderer, loggerService);
-        
-        Counter firstCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
-            Index = 0
-        };
-        Counter secondCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
-            Index = 1
-        };
-        Counter thirdCounter = new Counter(cpuState, loggerService, CreateCounterActivator(cpuState, loggerService, configuration)) {
-            Index = 2
-        };
-        
-        Timer timer = new Timer(cpuState, loggerService, dualPic, firstCounter, secondCounter, thirdCounter, configuration.FailOnUnhandledPort);
+        Timer timer = new Timer(configuration, cpuState, loggerService, dualPic);
         RegisterIoPortHandler(ioPortDispatcher, timer);
         Keyboard keyboard = new Keyboard(cpuState, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, keyboard);
@@ -322,29 +311,6 @@ public class MachineCreator {
         }
 
         return res;
-    }
-    
-    /// <summary>
-    /// Returns the appropriate <see cref="Core.Emulator.Devices.Timer.CounterActivator"/> based on the configuration.
-    /// </summary>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="loggerService">The service used for logging.</param>
-    /// <param name="configuration">The emulator's configuration.</param>
-    /// <returns>The appropriate <see cref="CyclesCounterActivator"/> or <see cref="TimeCounterActivator"/></returns>
-    private static CounterActivator CreateCounterActivator(State state, ILoggerService loggerService, Configuration configuration) {
-        const long DefaultInstructionsPerSecond = 1000000L;
-        long? instructionsPerSecond = configuration.InstructionsPerSecond;
-        if (instructionsPerSecond == null && configuration.GdbPort != null) {
-            // With GDB, force to instructions per seconds as time based timers could perturb steps
-            instructionsPerSecond = DefaultInstructionsPerSecond;
-            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                loggerService.Warning("Forcing Counter to use instructions per seconds since we are in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
-            }
-        }
-        if (instructionsPerSecond != null) {
-            return new CyclesCounterActivator(state, instructionsPerSecond.Value, configuration.TimeMultiplier);
-        }
-        return new TimeCounterActivator(configuration.TimeMultiplier);
     }
     
     private static void RegisterInterruptHandler(InterruptInstaller interruptInstaller, IInterruptHandler interruptHandler) => interruptInstaller.InstallInterruptHandler(interruptHandler);
