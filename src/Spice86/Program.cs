@@ -3,6 +3,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
+
+using CommunityToolkit.Mvvm.Messaging;
 
 using MeltySynth;
 
@@ -56,6 +59,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.DependencyInjection;
 using Spice86.Infrastructure;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -88,13 +92,12 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        ServiceCollection serviceCollection = InjectCommonServices(args);
-        //We need to build the service provider before retrieving the configuration service
-        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
-        Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
-
-        ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-        using PauseHandler pauseHandler = new(loggerService);
+        IMessenger messenger = WeakReferenceMessenger.Default;
+        ILoggerPropertyBag loggerPropertyBag = new LoggerPropertyBag();
+        ILoggerService loggerService = new LoggerService(loggerPropertyBag);
+        Configuration configuration = new CommandLineParser().ParseCommandLine(args);
+        Startup.SetLoggingLevel(loggerService, configuration);
+        IPauseHandler pauseHandler = new PauseHandler(loggerService);
         
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
@@ -165,10 +168,9 @@ public class Program {
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
             mainWindow = new();
-            serviceCollection.AddGuiInfrastructure(mainWindow);
-            serviceCollection.AddScoped<MainWindowViewModel>();
-            //We need to rebuild the service provider after adding new services to the collection
-            gui = serviceCollection.BuildServiceProvider().GetRequiredService<MainWindowViewModel>();
+            gui = new MainWindowViewModel(messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
+                new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
+                new UIDispatcherTimerFactory(), configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
         }
 
         using (gui) {
@@ -319,7 +321,7 @@ public class Program {
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
             } else if (gui != null && mainWindow != null && desktop != null) {
-               StartGraphicalUserInterface(programExecutor, desktop, gui, mainWindow, args);
+                StartGraphicalUserInterface(programExecutor, desktop, gui, mainWindow, args);
             }
         }
     }
@@ -381,16 +383,7 @@ public class Program {
         ClassicDesktopStyleApplicationLifetime desktop = SetupWithClassicDesktopLifetime(appBuilder);
         return desktop;
     }
-
-    private static ServiceCollection InjectCommonServices(string[] args) {
-        var serviceCollection = new ServiceCollection();
-
-        serviceCollection.AddConfiguration(args);
-        serviceCollection.AddLogging();
-        serviceCollection.AddScoped<IPauseHandler, PauseHandler>();
-        return serviceCollection;
-    }
-
+    
     private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace()
