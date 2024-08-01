@@ -94,7 +94,7 @@ public class Program {
         Configuration configuration = serviceProvider.GetRequiredService<Configuration>();
 
         ILoggerService loggerService = serviceProvider.GetRequiredService<ILoggerService>();
-        PauseHandler pauseHandler = new(loggerService);
+        using PauseHandler pauseHandler = new(loggerService);
         
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
@@ -313,7 +313,6 @@ public class Program {
                 loggerService,
                 configuration.RecordedDataDirectory);
             
-            
             ProgramExecutor programExecutor = new(configuration, loggerService, recorderDataWriter,
                 machineBreakpoints, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
                 pauseHandler);
@@ -321,7 +320,7 @@ public class Program {
                 programExecutor.Run();
             } else if (gui != null && mainWindow != null && desktop != null) {
                StartGraphicalUserInterface(programExecutor, desktop, gui, mainWindow, args);
-            }            
+            }
         }
     }
     
