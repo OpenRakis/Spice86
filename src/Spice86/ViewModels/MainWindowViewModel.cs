@@ -56,10 +56,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private bool _renderingTimerInitialized;
     private Thread? _emulatorThread;
     private bool _isSettingResolution;
-    private bool _closeAppOnEmulatorExit;
     private bool _isAppClosing;
 
-    private static Action? _uiUpdateMethod;
     private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
 
@@ -179,6 +177,9 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     [ObservableProperty]
     private WriteableBitmap? _bitmap;
+
+    internal event Action? InvalidateBitmap;
+
 
     internal void OnKeyDown(KeyEventArgs e) {
         KeyDown?.Invoke(this,
@@ -326,7 +327,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     }
 
     private void DrawScreen() {
-        if (_disposed || _isSettingResolution || _isAppClosing || _uiUpdateMethod is null || Bitmap is null || RenderScreen is null) {
+        if (_disposed || _isSettingResolution || _isAppClosing || Bitmap is null || RenderScreen is null) {
             return;
         }
         _drawingSemaphoreSlim?.Wait();
@@ -339,20 +340,13 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
                 _drawingSemaphoreSlim?.Release();
             }
         }
-        _uiDispatcher.Post(static () => _uiUpdateMethod.Invoke(), DispatcherPriority.Render);
-    }
-    
-    public void OnMainWindowInitialized(Action uiUpdateMethod) {
-        _uiUpdateMethod = uiUpdateMethod;
-        if(RunEmulator()) {
-            _closeAppOnEmulatorExit = true;
-        }
+        _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Render);
     }
 
-    private bool RunEmulator() {
+    internal void StartEmulator() {
         if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
             string.IsNullOrWhiteSpace(Configuration.CDrive)) {
-            return false;
+            return;
         }
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
@@ -364,8 +358,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle();
         StartEmulatorThread();
-
-        return true;
     }
 
     public void Dispose() {
@@ -488,9 +480,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
         ProgramExecutor.Run();
-        if (_closeAppOnEmulatorExit) {
-            _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
-        }
+        _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
     }
     
     private ITimeMultiplier? VisitProgramExecutor() {
