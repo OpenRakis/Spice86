@@ -1,11 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.InternalDebugger;
-
 /// <summary>
 ///   A 32 bit representation of an 18-bit color palette.
 /// </summary>
-public class ArgbPalette : IDebuggableComponent {
+public class ArgbPalette {
     private readonly uint[,,] _32BitPalette;
 
     internal byte[,] SixBytePalette { get; } = new byte[256, 3];
@@ -43,10 +41,5 @@ public class ArgbPalette : IDebuggableComponent {
             SixBytePalette[index, 1] = (byte)(value >> 8 & 0x3F);
             SixBytePalette[index, 2] = (byte)(value & 0x3F);
         }
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

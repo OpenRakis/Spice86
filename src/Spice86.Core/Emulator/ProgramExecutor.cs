@@ -2,61 +2,20 @@
 
 using Function.Dump;
 
-using MeltySynth;
-
-using Mt32emu;
-
-using Spice86.Core.Backend.Audio.PortAudio;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
-using Spice86.Core.Emulator.CPU.Registers;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Input.Joystick;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Input.Mouse;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
-using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
-using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
-using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.InterruptHandlers;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
-using Spice86.Core.Emulator.InterruptHandlers.Timer;
-using Spice86.Core.Emulator.InterruptHandlers.VGA;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -84,7 +43,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, 
+    public ProgramExecutor(Configuration configuration, ILoggerService loggerService,
         RecorderDataWriter recorderDataWriter,
         MachineBreakpoints machineBreakpoints,
         Machine machine, Dos dos,
@@ -263,11 +222,5 @@ public sealed class ProgramExecutor : IProgramExecutor {
             }
             _disposed = true;
         }
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-        Machine.Accept(emulatorDebugger);
     }
 }

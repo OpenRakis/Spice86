@@ -5,13 +5,11 @@ using Avalonia.Threading;
 using AvaloniaGraphControl;
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Memory;
@@ -19,10 +17,9 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
-public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
+public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IPerformanceMeasurer _performanceMeasurer;
-    
-    private ExecutionContext? _executionContext;
+    private readonly ExecutionContextManager _executionContextManager;
 
     [ObservableProperty]
     private int _maxNodesToDisplay = 200;
@@ -41,7 +38,9 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private bool _isVisible;
 
-    public CfgCpuViewModel(IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
+    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
+        IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
+        _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
         pauseHandler.Pausing += OnPausing;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
@@ -60,7 +59,7 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
         }
 
         await Task.Run(async () => {
-            ICfgNode? nodeRoot = _executionContext?.LastExecuted;
+            ICfgNode? nodeRoot = _executionContextManager.CurrentExecutionContext?.LastExecuted;
             if (nodeRoot is null) {
                 return;
             }
@@ -135,11 +134,4 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
 
     private string GenerateNodeText(ICfgNode node) =>
         $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        _executionContext ??= component as ExecutionContext;
-        Dispatcher.UIThread.Post(() => IsVisible = _executionContext is not null);
-    }
-
-    public bool NeedsToVisitEmulator => _executionContext is null;
 }

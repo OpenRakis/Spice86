@@ -1,38 +1,28 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
-public partial class VideoCardViewModel  : ViewModelBase, IInternalDebugger {
+public partial class VideoCardViewModel  : ViewModelBase {
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
-    private IVgaRenderer? _vgaRenderer;
-    private IVideoState? _videoState;
+    private readonly IVgaRenderer _vgaRenderer;
+    private readonly IVideoState _videoState;
     
-    public bool NeedsToVisitEmulator => _vgaRenderer is null || _videoState is null;
-    
-    public VideoCardViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory) {
+    public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        _vgaRenderer = vgaRenderer;
+        _videoState = videoState;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if(_vgaRenderer is null || _videoState is null) {
-            return;
-        }
         VisitVgaRenderer(_vgaRenderer);
         VisitVideoState(_videoState);
-    }
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        _vgaRenderer ??= component as IVgaRenderer;
-        _videoState ??= component as IVideoState;
     }
 
     private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {

@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory.Indexer;
 
 /// <summary>
@@ -201,9 +200,4 @@ public class Memory : Indexable.Indexable, IMemory {
     }
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-    }
 }

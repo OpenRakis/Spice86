@@ -3,20 +3,17 @@ namespace Spice86.ViewModels;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Messages;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private State? _cpuState;
+public partial class CpuViewModel : ViewModelBase {
+    private readonly State _cpuState;
     
     [ObservableProperty]
     private StateInfo _state = new();
@@ -24,22 +21,16 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+    public CpuViewModel(State state, IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+        _cpuState = state;
         pauseHandler.Pausing += () => _isPaused = true;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if (_cpuState is not null) {
-            VisitCpuState(_cpuState);
-        }
+        VisitCpuState(_cpuState);
     }
     
-    public bool NeedsToVisitEmulator => _cpuState is null;
-
-    public void Visit<T>(T component) where T : IDebuggableComponent =>
-        _cpuState ??= component as State;
-
     private bool _isPaused;
     
     private void VisitCpuState(State state) {

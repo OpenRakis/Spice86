@@ -11,7 +11,6 @@ using Iced.Intel;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
@@ -20,11 +19,11 @@ using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
-public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
+public partial class DisassemblyViewModel : ViewModelBase {
     private bool _needToUpdateDisassembly = true;
-    private IMemory? _memory;
-    private State? _state;
-    private IProgramExecutor? _programExecutor;
+    private readonly IMemory _memory;
+    private readonly State _state;
+    private readonly IProgramExecutor _programExecutor;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
@@ -59,12 +58,21 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
+    public DisassemblyViewModel(IProgramExecutor programExecutor, IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
         _messenger = messenger;
+        _memory = memory;
+        _state = state;
+        _programExecutor = programExecutor;
         _pauseHandler = pauseHandler;
         _dispatcherTimerFactory = dispatcherTimerFactory;
         pauseHandler.Pausing += OnPause;
         CanCloseTab = canCloseTab;
+        if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
+            GoToCsIpCommand.Execute(null);
+        }
+        if (_needToUpdateDisassembly && IsPaused) {
+            UpdateDisassembly();
+        }
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
     
@@ -77,44 +85,17 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
         }
     }
 
-    public void OnPause() {
+    private void OnPause() {
         IsPaused = true;
         _needToUpdateDisassembly = true;
-    }
-    
-    public bool NeedsToVisitEmulator => _memory is null || _state is null || _programExecutor is null;
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        switch (component) {
-            case IMemory mem:
-                _memory ??= mem;
-                break;
-            case State state: {
-                _state ??= state;
-                if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
-                    GoToCsIpCommand.Execute(null);
-                }
-                if (_needToUpdateDisassembly && IsPaused) {
-                    UpdateDisassembly();
-                }
-                break;
-            }
-            case IProgramExecutor programExecutor:
-                _programExecutor ??= programExecutor;
-                break;
-        }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        if(_memory is null || _state is null) {
-            return;
-        }
-        DisassemblyViewModel memoryViewModel = new(_pauseHandler, _messenger, _dispatcherTimerFactory, canCloseTab: true) {
+        DisassemblyViewModel memoryViewModel = new(_programExecutor, _memory, _state, _pauseHandler, _messenger,
+            _dispatcherTimerFactory, canCloseTab: true) {
             IsPaused = IsPaused
         };
-        memoryViewModel.Visit(_memory);
-        memoryViewModel.Visit(_state);
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(memoryViewModel));
     }
 
@@ -130,7 +111,7 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
-        if(_state is null || _memory is null || StartAddress is null) {
+        if(StartAddress is null) {
             return;
         }
         _needToUpdateDisassembly = false;

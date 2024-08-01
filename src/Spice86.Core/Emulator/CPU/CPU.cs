@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -30,7 +29,7 @@ using System.Collections.Frozen;
 /// Pure 8086 instructions: <br/>
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html
 /// </summary>
-public class Cpu : IInstructionExecutor, IDebuggableComponent {
+public class Cpu : IInstructionExecutor {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
@@ -1447,10 +1446,4 @@ public class Cpu : IInstructionExecutor, IDebuggableComponent {
     /// </summary>
     /// <returns>The return address string.</returns>
     public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
-    
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-        State.Accept(emulatorDebugger);
-    }
 }

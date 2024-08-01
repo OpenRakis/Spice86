@@ -101,12 +101,12 @@ public class Program {
         
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
-        State cpuState = new();
-        IOPortDispatcher ioPortDispatcher = new(cpuState, loggerService, configuration.FailOnUnhandledPort);
+        State state = new();
+        IOPortDispatcher ioPortDispatcher = new(state, loggerService, configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
         IMemory memory = new Memory(new MemoryBreakpoints(), ram, a20gate);
-        MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, cpuState);
+        MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, state);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -116,51 +116,78 @@ public class Program {
         var biosDataArea = new BiosDataArea(memory) {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(ram.Size / 1024, 0, 640)
         };
-        var dualPic = new DualPic(new Pic(loggerService), new Pic(loggerService), cpuState,
+        var dualPic = new DualPic(new Pic(loggerService), new Pic(loggerService), state,
             configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
-        CallbackHandler callbackHandler = new(cpuState, loggerService);
+        CallbackHandler callbackHandler = new(state, loggerService);
 
         InterruptVectorTable interruptVectorTable = new(memory);
-        Stack stack = new(memory, cpuState);
-        Alu8 alu8 = new(cpuState);
-        Alu16 alu16 = new(cpuState);
-        Alu32 alu32 = new(cpuState);
-        FunctionHandler functionHandler = new(memory, cpuState, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, cpuState, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
+        Stack stack = new(memory, state);
+        Alu8 alu8 = new(state);
+        Alu16 alu16 = new(state);
+        Alu32 alu32 = new(state);
+        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
+        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
         Cpu cpu  = new(interruptVectorTable, alu8, alu16, alu32, stack,
-            functionHandler, functionHandlerInExternalInterrupt, memory, cpuState,
+            functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             loggerService, executionFlowRecorder);
         
         InstructionFieldValueRetriever instructionFieldValueRetriever = new(memory);
-        ModRmExecutor modRmExecutor = new(cpuState, memory, instructionFieldValueRetriever);
+        ModRmExecutor modRmExecutor = new(state, memory, instructionFieldValueRetriever);
         InstructionExecutionHelper instructionExecutionHelper = new(
-            cpuState, memory, ioPortDispatcher,
+            state, memory, ioPortDispatcher,
             callbackHandler, interruptVectorTable, stack,
             alu8, alu16, alu32,
             instructionFieldValueRetriever, modRmExecutor, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, cpuState), new PreviousInstructions(memory));
-        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
-        CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
+        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, state), new PreviousInstructions(memory));
+        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, state);
+        CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, state, dualPic);
 
         // IO devices
-        DmaController dmaController = new(memory, cpuState, configuration.FailOnUnhandledPort, loggerService);
+        DmaController dmaController = new(memory, state, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(ioPortDispatcher, dmaController);
 
         RegisterIoPortHandler(ioPortDispatcher, dualPic);
+        
+        ArgbPalette argbPalette = new();
 
-        DacRegisters dacRegisters = new(new ArgbPalette());
+        DacRegisters dacRegisters = new(argbPalette);
         VideoState videoState = new(dacRegisters, new(
                 new(),new(),new()),
                 new(new(), new(), new(), new(), new()),
                 new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new()),
                 new(new(), new(), new(), new(), new(), new()),
                 new(new(), new(), new()));
-        VgaIoPortHandler videoInt10Handler = new(cpuState, loggerService, videoState, configuration.FailOnUnhandledPort);
+        VgaIoPortHandler videoInt10Handler = new(state, loggerService, videoState, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
+        
+        SoftwareMixer softwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
+        
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        IVideoMemory vgaMemory = new VideoMemory(videoState);
+        memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
+        Renderer vgaRenderer = new(videoState, vgaMemory);
+        
+        // the external MIDI device (external General MIDI or external Roland MT-32).
+        MidiDevice midiMapper;
+        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
+            midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
+        } else {
+            midiMapper = new GeneralMidiDevice(
+                new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000),
+                new SoundChannel(softwareMixer, "General MIDI"),
+                loggerService,
+                pauseHandler);
+        }
+        
+        Midi midiDevice = new Midi(midiMapper, state, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        RegisterIoPortHandler(ioPortDispatcher, midiDevice);
+        
+        Timer timer = new Timer(configuration, state, loggerService, dualPic);
+        RegisterIoPortHandler(ioPortDispatcher, timer);
 
         MainWindowViewModel? gui = null;
         ClassicDesktopStyleApplicationLifetime? desktop = null;
@@ -168,37 +195,31 @@ public class Program {
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
             mainWindow = new();
-            gui = new MainWindowViewModel(messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
+            gui = new MainWindowViewModel(
+                argbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
+                messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
                 new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
                 new UIDispatcherTimerFactory(), configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
         }
 
         using (gui) {
-            const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-            IVideoMemory vgaMemory = new VideoMemory(videoState);
-            memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-            Renderer renderer = new(videoState, vgaMemory);
-            VgaCard vgaCard = new(gui, renderer, loggerService);
-            Timer timer = new Timer(configuration, cpuState, loggerService, dualPic);
-            RegisterIoPortHandler(ioPortDispatcher, timer);
-            Keyboard keyboard = new Keyboard(cpuState, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
+            VgaCard vgaCard = new(gui, vgaRenderer, loggerService);
+            Keyboard keyboard = new Keyboard(state, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
             RegisterIoPortHandler(ioPortDispatcher, keyboard);
-            Mouse mouse = new Mouse(cpuState, dualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
+            Mouse mouse = new Mouse(state, dualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
             RegisterIoPortHandler(ioPortDispatcher, mouse);
-            Joystick joystick = new Joystick(cpuState, configuration.FailOnUnhandledPort, loggerService);
+            Joystick joystick = new Joystick(state, configuration.FailOnUnhandledPort, loggerService);
             RegisterIoPortHandler(ioPortDispatcher, joystick);
-            
-            SoftwareMixer softwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
             
             PcSpeaker pcSpeaker = new PcSpeaker(
                 new LatchedUInt16(),
-                new SoundChannel(softwareMixer, nameof(PcSpeaker)), cpuState,
+                new SoundChannel(softwareMixer, nameof(PcSpeaker)), state,
                 loggerService, configuration.FailOnUnhandledPort);
             
             RegisterIoPortHandler(ioPortDispatcher, pcSpeaker);
             
             SoundChannel fmSynthSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
-            OPL3FM opl3fm = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, cpuState, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
+            OPL3FM opl3fm = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, state, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
             RegisterIoPortHandler(ioPortDispatcher, opl3fm);
             var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
             SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
@@ -206,26 +227,13 @@ public class Program {
             DmaChannel eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
             Dsp dsp = new Dsp(eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma], new ADPCM2(),  new ADPCM3(), new ADPCM4());
             SoundBlaster soundBlaster = new SoundBlaster(
-                pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
+                pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, state, dmaController, dualPic, configuration.FailOnUnhandledPort,
                 loggerService, soundBlasterHardwareConfig, pauseHandler);
             RegisterIoPortHandler(ioPortDispatcher, soundBlaster);
             
-            GravisUltraSound gravisUltraSound = new GravisUltraSound(cpuState, configuration.FailOnUnhandledPort, loggerService);
+            GravisUltraSound gravisUltraSound = new GravisUltraSound(state, configuration.FailOnUnhandledPort, loggerService);
             RegisterIoPortHandler(ioPortDispatcher, gravisUltraSound);
             
-            // the external MIDI device (external General MIDI or external Roland MT-32).
-            MidiDevice midiMapper;
-            if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
-                midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
-            } else {
-                midiMapper = new GeneralMidiDevice(
-                    new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000),
-                    new SoundChannel(softwareMixer, "General MIDI"),
-                    loggerService,
-                    pauseHandler);
-            }
-            Midi midiDevice = new Midi(midiMapper, cpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
-            RegisterIoPortHandler(ioPortDispatcher, midiDevice);
 
             // Services
             // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
@@ -251,7 +259,7 @@ public class Program {
             MouseDriver mouseDriver = new MouseDriver(cpu, memory, mouse, gui, vgaFunctionality, loggerService);
             
             var keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
-            var console = new ConsoleDevice(cpuState, vgaFunctionality, keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", loggerService);
+            var console = new ConsoleDevice(state, vgaFunctionality, keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", loggerService);
             var stdAux = new CharacterDevice(DeviceAttributes.Character, "AUX", loggerService);
             var printer = new CharacterDevice(DeviceAttributes.Character, "PRN", loggerService);
             var clock = new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", loggerService);
@@ -298,17 +306,17 @@ public class Program {
             Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
                 callbackHandler, interruptInstaller,
                 assemblyRoutineInstaller, cpu,
-                cfgCpu, cpuState, dos, gravisUltraSound, ioPortDispatcher,
+                cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
                 joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
                 timerInt8Handler,
-                vgaCard, videoState, ioPortDispatcher, renderer, vgaBios, vgaRom,
+                vgaCard, videoState, ioPortDispatcher, vgaRenderer, vgaBios, vgaRom,
                 dmaController, opl3fm, softwareMixer, mouse, mouseDriver,
                 vgaFunctionality);
             
             InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             RecorderDataWriter recorderDataWriter = new(executionFlowRecorder,
-                cpuState,
+                state,
                 new MemoryDataExporter(memory, callbackHandler, configuration,
                     configuration.RecordedDataDirectory, loggerService),
                 new ExecutionFlowDumper(loggerService),

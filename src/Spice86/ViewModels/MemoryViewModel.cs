@@ -8,8 +8,6 @@ using AvaloniaHex.Editing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
@@ -21,7 +19,7 @@ using Spice86.Views;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDebugger {
+public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
     private IMemory? _memory;
     private bool _needToUpdateBinaryDocument;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
@@ -165,7 +163,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
             _structureViewModelFactory, canCloseTab: true) {
             IsPaused = IsPaused
         };
-        memoryViewModel.Visit(_memory);
         _messenger.Send(new AddViewModelMessage<MemoryViewModel>(memoryViewModel));
     }
 
@@ -250,7 +247,7 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog, IInternalDe
         IsEditingMemory = false;
     }
 
-    public void Visit<T>(T component) where T : IDebuggableComponent {
+    public void Visit<T>(T component) {
         if (component is not IMemory memory) {
             return;
         }

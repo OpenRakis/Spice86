@@ -1,29 +1,26 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
 
-public partial class SoftwareMixerViewModel : ViewModelBase, IInternalDebugger {
+public partial class SoftwareMixerViewModel : ViewModelBase {
     private readonly Dictionary<SoundChannel, SoundChannelInfo> _channelInfos = new();
-    private SoftwareMixer? _softwareMixer;
+    private readonly SoftwareMixer _softwareMixer;
     
     [ObservableProperty]
     private AvaloniaList<SoundChannelInfo> _channels = new();
     
-    public bool NeedsToVisitEmulator => _softwareMixer is null;
-    
-    public SoftwareMixerViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
+    public SoftwareMixerViewModel(SoftwareMixer softwareMixer, IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
+        _softwareMixer = softwareMixer;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
@@ -69,9 +66,5 @@ public partial class SoftwareMixerViewModel : ViewModelBase, IInternalDebugger {
         channel.IsMuted = info.IsMuted;
         channel.Volume = info.Volume;
         channel.StereoSeparation = info.StereoSeparation;
-    }
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        _softwareMixer ??= component as SoftwareMixer;
     }
 }

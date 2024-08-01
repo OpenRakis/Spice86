@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
-using Spice86.Core.Emulator.InternalDebugger;
 
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -9,7 +8,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Basic software mixer for sound channels.
 /// </summary>
-public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
+public sealed class SoftwareMixer : IDisposable {
     private readonly Dictionary<SoundChannel, AudioPlayer> _channels = new();
     private readonly AudioPlayerFactory _audioPlayerFactory;
     private bool _disposed;
@@ -96,10 +95,5 @@ public sealed class SoftwareMixer : IDisposable, IDebuggableComponent {
     /// <inheritdoc />
     public void Dispose() {
         Dispose(true);
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

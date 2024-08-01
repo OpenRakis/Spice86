@@ -1,13 +1,11 @@
 namespace Spice86.Core.Emulator;
 
-using Spice86.Core.Emulator.InternalDebugger;
-
 /// <summary>
 /// The program executor is responsible for starting and controlling the emulated program. <br/>
 /// It loads and executes a program following the given configuration in the emulator.<br/>
 /// Currently only supports DOS EXE and COM files.
 /// </summary>
-public interface IProgramExecutor : IDisposable, IDebuggableComponent {
+public interface IProgramExecutor : IDisposable {
     /// <summary>
     /// Starts the emulated program.
     /// </summary>

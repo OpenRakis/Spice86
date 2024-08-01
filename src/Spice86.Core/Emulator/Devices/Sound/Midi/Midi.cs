@@ -1,18 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
-using Mt32emu;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// MPU401 MIDI interface implementation.
 /// </summary>
-public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableComponent {
+public sealed class Midi : DefaultIOPortHandler, IDisposable {
     private readonly MidiDevice _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
 
@@ -178,10 +174,5 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable, IDebuggableCompone
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

@@ -6,7 +6,6 @@ using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 
 /// <summary>
@@ -14,7 +13,7 @@ using Spice86.Core.Emulator.IOPorts;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent {
+public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -137,10 +136,5 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     private Counter GetCounterIndexFromPortNumber(int port) {
         int counter = port & 0b11;
         return GetCounter(counter);
-    }
-
-    /// <inheritdoc />
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

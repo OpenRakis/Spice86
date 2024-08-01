@@ -15,7 +15,12 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
+using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Diagnostics;
@@ -41,13 +46,21 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IPauseHandler _pauseHandler;
     private readonly IMessenger _messenger;
     private readonly bool _isGdbServerRunning;
+    private readonly ITimeMultiplier _pit;
+    private readonly State _state;
+    private readonly IMemory _memory;
+    private readonly SoftwareMixer _softwareMixer;
+    private readonly Midi _midi;
+    private readonly IVgaRenderer _vgaRenderer;
+    private readonly VideoState _videoState;
+    private readonly ArgbPalette _argbPalette;
+    private readonly ExecutionContextManager _executionContextManager;
+    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
     private bool _canUseInternalDebugger;
     
-    private ITimeMultiplier? _pit;
-    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -67,10 +80,21 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
-    public event EventHandler? CloseMainWindow;
+    internal event EventHandler? CloseMainWindow;
 
-    public MainWindowViewModel(IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
+    public MainWindowViewModel(
+        ArgbPalette argbPalette, ITimeMultiplier pit, State state, IMemory memory, SoftwareMixer softwareMixer, Midi midi, IVgaRenderer vgaRenderer, VideoState videoState, ExecutionContextManager executionContextManager,
+        IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
         ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) : base(textClipboard) {
+        _pit = pit;
+        _argbPalette = argbPalette;
+        _state = state;
+        _memory = memory;
+        _softwareMixer = softwareMixer;
+        _midi = midi;
+        _vgaRenderer = vgaRenderer;
+        _videoState = videoState;
+        _executionContextManager = executionContextManager;
         _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
         _messenger = messenger;
         _windowService = windowService;
@@ -465,7 +489,9 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (ProgramExecutor is null) {
             return;
         }
-        _debugViewModel = new DebugWindowViewModel(_messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, ProgramExecutor, _structureViewModelFactory, _pauseHandler);
+        _debugViewModel = new DebugWindowViewModel(
+            ProgramExecutor, _state, _memory, _midi, _argbPalette, _softwareMixer, _vgaRenderer, _videoState, _executionContextManager,
+            _messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, _structureViewModelFactory, _pauseHandler);
         await _windowService.ShowDebugWindow(_debugViewModel).ConfigureAwait(false);
     }
 
@@ -473,29 +499,12 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (ProgramExecutor is null) {
             return;
         }
-        _pit = VisitProgramExecutor();
-        PerformanceViewModel = new PerformanceViewModel(_pauseHandler, _uiDispatcherTimerFactory, ProgramExecutor, new PerformanceMeasurer());
+        PerformanceViewModel = new PerformanceViewModel(_state, _pauseHandler, _uiDispatcherTimerFactory, new PerformanceMeasurer());
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
         ProgramExecutor.Run();
         _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
-    }
-    
-    private ITimeMultiplier? VisitProgramExecutor() {
-        ViewModelEmulatorDependenciesVisitor visitor = new();
-        _programExecutor?.Accept(visitor);
-        return visitor.Pit;
-    }
-    
-    private sealed class ViewModelEmulatorDependenciesVisitor : IInternalDebugger {
-        public ITimeMultiplier? Pit { get; private set; }
-
-        public void Visit<T>(T component) where T : IDebuggableComponent {
-            Pit ??= component as ITimeMultiplier;
-        }
-
-        public bool NeedsToVisitEmulator => Pit is null;
     }
 }

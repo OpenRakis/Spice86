@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
-using Spice86.Core.Emulator.InternalDebugger;
 
 using System.Diagnostics;
 
@@ -320,12 +319,6 @@ public class Renderer : IVgaRenderer {
                 return _state.DacRegisters.ArgbPalette[paletteIndex];
             }
         }
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger
-    {
-        emulatorDebugger.Visit(this);
     }
 }
 
