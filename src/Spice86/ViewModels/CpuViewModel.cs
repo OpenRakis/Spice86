@@ -24,6 +24,7 @@ public partial class CpuViewModel : ViewModelBase {
     public CpuViewModel(State state, IPauseHandler pauseHandler, IUIDispatcherTimerFactory dispatcherTimerFactory) {
         _cpuState = state;
         pauseHandler.Pausing += () => _isPaused = true;
+        _isPaused = pauseHandler.IsPaused;
         dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 

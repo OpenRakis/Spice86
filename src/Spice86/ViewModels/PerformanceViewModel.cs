@@ -23,6 +23,7 @@ public partial class PerformanceViewModel : ViewModelBase {
     public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcherTimerFactory uiDispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer) {
         pauseHandler.Pausing += () => _isPaused = true;
         _state = state;
+        _isPaused = pauseHandler.IsPaused;
         _performanceMeasurer = performanceMeasurer;
         uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }

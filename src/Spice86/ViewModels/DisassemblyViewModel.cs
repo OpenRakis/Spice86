@@ -64,6 +64,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
         _state = state;
         _programExecutor = programExecutor;
         _pauseHandler = pauseHandler;
+        _isPaused = pauseHandler.IsPaused;
         _dispatcherTimerFactory = dispatcherTimerFactory;
         pauseHandler.Pausing += OnPause;
         CanCloseTab = canCloseTab;
