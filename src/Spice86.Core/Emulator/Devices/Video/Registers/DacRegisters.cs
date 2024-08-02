@@ -13,13 +13,13 @@ public class DacRegisters {
     /// <summary>
     /// The DAC Palette, represented as a 256 * 3 array. Stores the current set of colors.
     /// </summary>
-    public byte[,] Palette => ArgbPalette.SixBytePalette;
+    public readonly byte[,] Palette = new byte[256, 3];
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    public DacRegisters(ArgbPalette argbPalette) {
-        ArgbPalette = argbPalette;
+    public DacRegisters() {
+        ArgbPalette = new ArgbPalette(Palette);
     }
 
     /// <summary>

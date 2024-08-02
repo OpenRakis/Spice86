@@ -7,18 +7,6 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 ///     Emulates the VGA CRT Controller registers.
 /// </summary>
 public sealed class CrtControllerRegisters {
-    public CrtControllerRegisters(HorizontalBlankingEndRegister horizontalBlankingEndRegister, HorizontalSyncEndRegister horizontalSyncEndRegister, OverflowRegister overflowRegister, PresetRowScanRegister presetRowScanRegister, CharacterCellHeightRegister maximumScanlineRegister, TextCursorStartRegister textCursorStartRegister, TextCursorEndRegister textCursorEndRegister, VerticalSyncEndRegister verticalSyncEndRegister, UnderlineRowScanlineRegister underlineRowScanlineRegister, CrtModeControlRegister crtModeControlRegister) {
-        HorizontalBlankingEndRegister = horizontalBlankingEndRegister;
-        HorizontalSyncEndRegister = horizontalSyncEndRegister;
-        OverflowRegister = overflowRegister;
-        PresetRowScanRegister = presetRowScanRegister;
-        MaximumScanlineRegister = maximumScanlineRegister;
-        TextCursorStartRegister = textCursorStartRegister;
-        TextCursorEndRegister = textCursorEndRegister;
-        VerticalSyncEndRegister = verticalSyncEndRegister;
-        UnderlineRowScanlineRegister = underlineRowScanlineRegister;
-        CrtModeControlRegister = crtModeControlRegister;
-    }
     private int _screenStartAddress;
     private int _textCursorLocation;
 
@@ -54,7 +42,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the End Horizontal Blanking register.
     /// </summary>
-    public HorizontalBlankingEndRegister HorizontalBlankingEndRegister { get; }
+    public HorizontalBlankingEndRegister HorizontalBlankingEndRegister { get; } = new();
 
     /// <summary>
     ///     Gets the full 6-bit value of the Horizontal Blanking End register.
@@ -72,7 +60,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the End Horizontal Retrace register.
     /// </summary>
-    public HorizontalSyncEndRegister HorizontalSyncEndRegister { get; set; }
+    public HorizontalSyncEndRegister HorizontalSyncEndRegister { get; } = new();
 
     /// <summary>
     ///     This field is the low-order eight bits of a ten-bit field that defines the total number of scan lines per
@@ -89,27 +77,27 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the Overflow register.
     /// </summary>
-    public OverflowRegister OverflowRegister { get; set; }
+    public OverflowRegister OverflowRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Preset Row Scan register.
     /// </summary>
-    public PresetRowScanRegister PresetRowScanRegister { get; set; }
+    public PresetRowScanRegister PresetRowScanRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Maximum Scan Line register.
     /// </summary>
-    public CharacterCellHeightRegister MaximumScanlineRegister { get; set; }
+    public CharacterCellHeightRegister MaximumScanlineRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Cursor Start register.
     /// </summary>
-    public TextCursorStartRegister TextCursorStartRegister { get; set; }
+    public TextCursorStartRegister TextCursorStartRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Cursor End register.
     /// </summary>
-    public TextCursorEndRegister TextCursorEndRegister { get; set; }
+    public TextCursorEndRegister TextCursorEndRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Start Address High register.
@@ -178,7 +166,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the Vertical Sync End register.
     /// </summary>
-    public VerticalSyncEndRegister VerticalSyncEndRegister { get; set; }
+    public VerticalSyncEndRegister VerticalSyncEndRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Vertical Display End register.
@@ -201,7 +189,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the Underline Location register.
     /// </summary>
-    public UnderlineRowScanlineRegister UnderlineRowScanlineRegister { get; set; }
+    public UnderlineRowScanlineRegister UnderlineRowScanlineRegister { get; } = new();
 
     /// <summary>
     ///     The Vertical Blank Start field specifies the scanline where Vertical Blank is to begin. The low-order eight
@@ -222,7 +210,7 @@ public sealed class CrtControllerRegisters {
     /// <summary>
     ///     Gets or sets the CRT Mode Control register.
     /// </summary>
-    public CrtModeControlRegister CrtModeControlRegister { get; set; }
+    public CrtModeControlRegister CrtModeControlRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Line Compare register.

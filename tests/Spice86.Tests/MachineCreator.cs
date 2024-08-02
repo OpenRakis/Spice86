@@ -1,7 +1,5 @@
 namespace Spice86.Tests;
 
-using Avalonia.Controls.ApplicationLifetimes;
-
 using MeltySynth;
 
 using Mt32emu;
@@ -30,9 +28,7 @@ using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -120,13 +116,7 @@ public class MachineCreator {
 
         RegisterIoPortHandler(ioPortDispatcher, dualPic);
 
-        DacRegisters dacRegisters = new(new ArgbPalette());
-        VideoState videoState = new(dacRegisters, new(
-                new(),new(),new()),
-                new(new(), new(), new(), new(), new()),
-                new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new()),
-                new(new(), new(), new(), new(), new(), new()),
-                new(new(), new(), new()));
+        VideoState videoState = new();
         VgaIoPortHandler videoInt10Handler = new(cpuState, loggerService, videoState, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
 

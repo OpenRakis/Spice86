@@ -7,14 +7,6 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Sequencer;
 ///     Emulates the VGA Sequencer registers.
 /// </summary>
 public class SequencerRegisters {
-    public SequencerRegisters(ResetRegister resetRegister, ClockingModeRegister clockingModeRegister, Register8 planeMaskRegister, CharacterMapSelectRegister characterMapSelectRegister, MemoryModeRegister memoryModeRegister) {
-        ResetRegister = resetRegister;
-        ClockingModeRegister = clockingModeRegister;
-        PlaneMaskRegister = planeMaskRegister;
-        CharacterMapSelectRegister = characterMapSelectRegister;
-        MemoryModeRegister = memoryModeRegister;
-    }
-    
     /// <summary>
     ///     The Sequencer Address field (bits 2− 0) contains the index value that points to the data register to be
     ///     accessed.
@@ -24,27 +16,27 @@ public class SequencerRegisters {
     /// <summary>
     ///     Gets the Reset register.
     /// </summary>
-    public ResetRegister ResetRegister { get; }
+    public ResetRegister ResetRegister { get; } = new();
 
     /// <summary>
     ///     Gets the Clocking Mode register.
     /// </summary>
-    public ClockingModeRegister ClockingModeRegister { get; }
+    public ClockingModeRegister ClockingModeRegister { get; } = new();
 
     /// <summary>
     ///     Gets the Map Mask register.
     /// </summary>
-    public Register8 PlaneMaskRegister { get; }
+    public Register8 PlaneMaskRegister { get; } = new();
 
     /// <summary>
     ///     Gets the Character Map Select register.
     /// </summary>
-    public CharacterMapSelectRegister CharacterMapSelectRegister { get; }
+    public CharacterMapSelectRegister CharacterMapSelectRegister { get; } = new();
 
     /// <summary>
     ///     Gets the Sequencer Memory Mode register.
     /// </summary>
-    public MemoryModeRegister MemoryModeRegister { get; }
+    public MemoryModeRegister MemoryModeRegister { get; } = new();
 
     /// <summary>
     ///     Returns the current value of a sequencer register.
@@ -73,6 +65,7 @@ public class SequencerRegisters {
     /// </summary>
     /// <param name="address">Which of the sequencer registers to write to</param>
     /// <param name="value">Value to write to register.</param>
+    /// <exception cref="ArgumentOutOfRangeException">When the register address is unknown.</exception>
     public void WriteRegister(SequencerRegister address, byte value) {
         switch (address) {
             case SequencerRegister.Reset:

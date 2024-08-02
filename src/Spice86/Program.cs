@@ -152,15 +152,7 @@ public class Program {
 
         RegisterIoPortHandler(ioPortDispatcher, dualPic);
         
-        ArgbPalette argbPalette = new();
-
-        DacRegisters dacRegisters = new(argbPalette);
-        VideoState videoState = new(dacRegisters, new(
-                new(),new(),new()),
-                new(new(), new(), new(), new(), new()),
-                new(new(), new(), new(), new(), new(), new(), new(), new(), new(), new()),
-                new(new(), new(), new(), new(), new(), new()),
-                new(new(), new(), new()));
+        VideoState videoState = new();
         VgaIoPortHandler videoInt10Handler = new(state, loggerService, videoState, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
         
@@ -196,7 +188,7 @@ public class Program {
             desktop = CreateDesktopApp();
             mainWindow = new();
             gui = new MainWindowViewModel(
-                argbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
+                videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
                 messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
                 new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
                 new UIDispatcherTimerFactory(), configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);

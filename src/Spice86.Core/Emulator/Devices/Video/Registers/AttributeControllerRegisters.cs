@@ -7,11 +7,11 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 ///     Emulates the VGA Attribute Controller registers.
 /// </summary>
 public sealed class AttributeControllerRegisters {
-    public AttributeControllerRegisters(AttributeControllerModeRegister attributeControllerModeRegister, ColorPlaneEnableRegister colorPlaneEnableRegister, ColorSelectRegister colorSelectRegister) {
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="AttributeControllerRegisters" /> class.
+    /// </summary>
+    public AttributeControllerRegisters() {
         InternalPalette = new byte[16];
-        AttributeControllerModeRegister = attributeControllerModeRegister;
-        ColorPlaneEnableRegister = colorPlaneEnableRegister;
-        ColorSelectRegister = colorSelectRegister;
     }
     
     /// <summary>
@@ -27,7 +27,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Attribute Mode Control register.
     /// </summary>
-    public AttributeControllerModeRegister AttributeControllerModeRegister { get; }
+    public AttributeControllerModeRegister AttributeControllerModeRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Overscan Color register LUT index.
@@ -37,7 +37,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Color Plane Enable register.
     /// </summary>
-    public ColorPlaneEnableRegister ColorPlaneEnableRegister { get; }
+    public ColorPlaneEnableRegister ColorPlaneEnableRegister { get; } = new();
 
     /// <summary>
     ///     Gets or sets the Horizontal Pixel Panning register.
@@ -47,7 +47,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Color Select register.
     /// </summary>
-    public ColorSelectRegister ColorSelectRegister { get; }
+    public ColorSelectRegister ColorSelectRegister { get; } = new();
 
     /// <summary>
     ///     Returns the current value of an attribute controller register.
