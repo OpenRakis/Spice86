@@ -29,7 +29,7 @@
     <Style>
         <Style.Resources>
             <ResourceDictionary>
-                <SolidColorBrush x:Key="HighlightColor" Color="Yellow" />
+                <Color x:Key="HighlightColor">#80FFFF00</Color>
                 <ResourceDictionary.ThemeDictionaries>
                     <ResourceDictionary x:Key="Light">
                         <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#1C1F23" />
