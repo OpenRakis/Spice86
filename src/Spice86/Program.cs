@@ -384,10 +384,12 @@ public class Program {
         return desktop;
     }
     
-    private static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
+    private static AppBuilder BuildAvaloniaApp() {
+        return AppBuilder.Configure(() => new App())
             .UsePlatformDetect()
             .LogToTrace()
             .WithInterFont();
+    }
 
     private static ClassicDesktopStyleApplicationLifetime SetupWithClassicDesktopLifetime(AppBuilder builder) {
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
