@@ -23,7 +23,6 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -282,7 +281,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     public void ShowMouseCursor() => _uiDispatcher.Post(() => ShowCursor = true);
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ShowPerformanceCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     [NotifyCanExecuteChangedFor(nameof(DumpEmulatorStateToFileCommand))]
@@ -325,11 +323,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _pauseHandler.Resume();
     }
 
-    [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
-    private void ShowPerformance() {
-        IsPerformanceVisible = !IsPerformanceVisible;
-    }
-    
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
@@ -478,12 +471,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    [ObservableProperty]
-    private PerformanceViewModel? _performanceViewModel;
-
-    [ObservableProperty]
-    private bool _isPerformanceVisible;
-
     [RelayCommand(CanExecute = nameof(CanUseInternalDebugger))]
     private async Task ShowInternalDebugger() {
         if (ProgramExecutor is null) {
@@ -499,7 +486,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (ProgramExecutor is null) {
             return;
         }
-        PerformanceViewModel = new PerformanceViewModel(_state, _pauseHandler, _uiDispatcherTimerFactory, new PerformanceMeasurer());
         _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);

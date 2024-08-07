@@ -186,12 +186,16 @@ public class Program {
         MainWindow? mainWindow = null;
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
-            mainWindow = new();
+            UIDispatcherTimerFactory uiDispatcherTimerFactory = new UIDispatcherTimerFactory();
+            PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiDispatcherTimerFactory);
+            mainWindow = new() {
+                PerformanceViewModel = performanceViewModel
+            };
             gui = new MainWindowViewModel(
                 videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
                 messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
                 new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
-                new UIDispatcherTimerFactory(), configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+                uiDispatcherTimerFactory, configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
         }
 
         using (gui) {

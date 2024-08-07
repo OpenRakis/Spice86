@@ -2,7 +2,6 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 
 using Spice86.ViewModels;
 
@@ -18,6 +17,8 @@ internal partial class MainWindow : Window {
         this.Menu.KeyDown += OnMenuKeyUp;
         this.Menu.GotFocus += OnMenuGotFocus;
     }
+
+    public PerformanceViewModel? PerformanceViewModel { get; init; }
 
     private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
         FocusOnVideoBuffer();
