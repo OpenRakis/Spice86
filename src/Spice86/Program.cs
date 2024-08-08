@@ -116,7 +116,7 @@ public class Program {
         var biosDataArea = new BiosDataArea(memory) {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(ram.Size / 1024, 0, 640)
         };
-        var dualPic = new DualPic(new Pic(loggerService), new Pic(loggerService), state,
+        var dualPic = new DualPic(state,
             configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
         CallbackHandler callbackHandler = new(state, loggerService);

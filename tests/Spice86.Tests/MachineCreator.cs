@@ -93,7 +93,7 @@ public class MachineCreator {
         var biosDataArea = new BiosDataArea(memory) {
             ConventionalMemorySizeKb = (ushort)Math.Clamp(ram.Size / 1024, 0, 640)
         };
-        var dualPic = new DualPic(new Pic(loggerService), new Pic(loggerService), cpuState,
+        var dualPic = new DualPic(cpuState,
             configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
         CallbackHandler callbackHandler = new(cpuState, loggerService);
