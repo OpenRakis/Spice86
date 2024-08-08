@@ -38,7 +38,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IUIDispatcherTimerFactory _uiDispatcherTimerFactory;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IWindowService _windowService;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
@@ -83,7 +82,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     public MainWindowViewModel(
         ArgbPalette argbPalette, ITimeMultiplier pit, State state, IMemory memory, SoftwareMixer softwareMixer, Midi midi, IVgaRenderer vgaRenderer, VideoState videoState, ExecutionContextManager executionContextManager,
-        IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, IUIDispatcherTimerFactory uiDispatcherTimerFactory, Configuration configuration,
+        IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, Configuration configuration,
         ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) : base(textClipboard) {
         _pit = pit;
         _argbPalette = argbPalette;
@@ -102,7 +101,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _structureViewModelFactory = structureViewModelFactory;
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
-        _uiDispatcherTimerFactory = uiDispatcherTimerFactory;
         _isGdbServerRunning = configuration.GdbPort is not null;
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPausing;
@@ -478,7 +476,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
         _debugViewModel = new DebugWindowViewModel(
             ProgramExecutor, _state, _memory, _midi, _argbPalette, _softwareMixer, _vgaRenderer, _videoState, _executionContextManager,
-            _messenger, _textClipboard, _hostStorageProvider, _uiDispatcherTimerFactory, _structureViewModelFactory, _pauseHandler);
+            _messenger, _textClipboard, _hostStorageProvider, _uiDispatcher, _structureViewModelFactory, _pauseHandler);
         await _windowService.ShowDebugWindow(_debugViewModel).ConfigureAwait(false);
     }
 

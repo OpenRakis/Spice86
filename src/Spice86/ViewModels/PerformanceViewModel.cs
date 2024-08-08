@@ -20,12 +20,12 @@ public partial class PerformanceViewModel : ViewModelBase {
 
     private bool _isPaused;
     
-    public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
+    public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         pauseHandler.Pausing += () => _isPaused = true;
         _state = state;
         _isPaused = pauseHandler.IsPaused;
         _performanceMeasurer = new PerformanceMeasurer();
-        uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {

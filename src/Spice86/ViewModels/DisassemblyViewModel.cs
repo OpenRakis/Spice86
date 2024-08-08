@@ -26,7 +26,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private readonly IProgramExecutor _programExecutor;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcherTimerFactory _dispatcherTimerFactory;
+    private readonly IUIDispatcher _uiDispatcher;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -58,14 +58,14 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IProgramExecutor programExecutor, IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcherTimerFactory dispatcherTimerFactory, bool canCloseTab = false) {
+    public DisassemblyViewModel(IProgramExecutor programExecutor, IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher, bool canCloseTab = false) {
         _messenger = messenger;
         _memory = memory;
         _state = state;
         _programExecutor = programExecutor;
         _pauseHandler = pauseHandler;
         _isPaused = pauseHandler.IsPaused;
-        _dispatcherTimerFactory = dispatcherTimerFactory;
+        _uiDispatcher = uiDispatcher;
         pauseHandler.Pausing += OnPause;
         CanCloseTab = canCloseTab;
         if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
@@ -74,7 +74,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
         if (_needToUpdateDisassembly && IsPaused) {
             UpdateDisassembly();
         }
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
     
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
@@ -94,7 +94,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
         DisassemblyViewModel memoryViewModel = new(_programExecutor, _memory, _state, _pauseHandler, _messenger,
-            _dispatcherTimerFactory, canCloseTab: true) {
+            _uiDispatcher, canCloseTab: true) {
             IsPaused = IsPaused
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(memoryViewModel));

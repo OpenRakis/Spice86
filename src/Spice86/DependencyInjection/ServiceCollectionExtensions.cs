@@ -38,7 +38,6 @@ public static class ServiceCollectionExtensions {
         serviceCollection.AddSingleton<IAvaloniaKeyScanCodeConverter, AvaloniaKeyScanCodeConverter>();
         serviceCollection.AddSingleton<IWindowService, WindowService>();
         serviceCollection.AddSingleton<IUIDispatcher, UIDispatcher>(_ => new UIDispatcher(Dispatcher.UIThread));
-        serviceCollection.AddSingleton<IUIDispatcherTimerFactory, UIDispatcherTimerFactory>();
         serviceCollection.AddSingleton<IStorageProvider>(_ => mainWindow.StorageProvider);
         serviceCollection.AddSingleton<IHostStorageProvider, HostStorageProvider>();
         serviceCollection.AddSingleton<ITextClipboard>(_ => new TextClipboard(mainWindow.Clipboard));

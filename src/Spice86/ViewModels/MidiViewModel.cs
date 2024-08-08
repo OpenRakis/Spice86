@@ -14,9 +14,9 @@ public partial class MidiViewModel : ViewModelBase {
 
     private readonly Midi _externalMidiDevice;
 
-    public MidiViewModel(Midi externalMidiDevice, IUIDispatcherTimerFactory dispatcherTimerFactory) {
+    public MidiViewModel(Midi externalMidiDevice, IUIDispatcher uiDispatcher) {
         _externalMidiDevice = externalMidiDevice;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

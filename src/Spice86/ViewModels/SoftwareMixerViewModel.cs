@@ -19,9 +19,9 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     [ObservableProperty]
     private AvaloniaList<SoundChannelInfo> _channels = new();
     
-    public SoftwareMixerViewModel(SoftwareMixer softwareMixer, IUIDispatcherTimerFactory uiDispatcherTimerFactory) {
+    public SoftwareMixerViewModel(SoftwareMixer softwareMixer, IUIDispatcher uiDispatcher) {
         _softwareMixer = softwareMixer;
-        uiDispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
