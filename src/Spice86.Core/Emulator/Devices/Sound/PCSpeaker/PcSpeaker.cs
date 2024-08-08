@@ -37,14 +37,13 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of <see cref="PcSpeaker"/>
     /// </summary>
-    /// <param name="frequencyRegister">The PC Speaker's latched frequency register</param>
     /// <param name="pcSpeakerSoundChannel">The software mixer's sound channel for the IBM PC Speaker.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(LatchedUInt16 frequencyRegister, SoundChannel pcSpeakerSoundChannel, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public PcSpeaker(SoundChannel pcSpeakerSoundChannel, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = pcSpeakerSoundChannel;
-        _frequencyRegister = frequencyRegister;
+        _frequencyRegister = new();
         _frequencyRegister.ValueChanged += FrequencyChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
     }

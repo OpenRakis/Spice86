@@ -138,7 +138,6 @@ public class MachineCreator {
         SoftwareMixer softwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
         
         PcSpeaker pcSpeaker = new PcSpeaker(
-            new LatchedUInt16(),
             new SoundChannel(softwareMixer, nameof(PcSpeaker)), cpuState,
             loggerService, configuration.FailOnUnhandledPort);
         

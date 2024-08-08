@@ -208,7 +208,6 @@ public class Program {
             RegisterIoPortHandler(ioPortDispatcher, joystick);
             
             PcSpeaker pcSpeaker = new PcSpeaker(
-                new LatchedUInt16(),
                 new SoundChannel(softwareMixer, nameof(PcSpeaker)), state,
                 loggerService, configuration.FailOnUnhandledPort);
             
