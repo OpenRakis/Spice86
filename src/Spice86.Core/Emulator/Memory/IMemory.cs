@@ -13,11 +13,6 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     public IMemoryDevice Ram { get; }
 
     /// <summary>
-    /// Manages memory breakpoints
-    /// </summary>
-    MemoryBreakpoints MemoryBreakpoints { get; }
-
-    /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
     A20Gate A20Gate { get; }

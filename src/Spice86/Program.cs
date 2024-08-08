@@ -104,9 +104,10 @@ public class Program {
         State state = new();
         IOPortDispatcher ioPortDispatcher = new(state, loggerService, configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
-        A20Gate a20gate = new(configuration.A20Gate);
-        IMemory memory = new Memory(new MemoryBreakpoints(), ram, a20gate);
-        MachineBreakpoints machineBreakpoints = new(pauseHandler, memory, state);
+        A20Gate a20Gate = new(configuration.A20Gate);
+        MemoryBreakpoints memoryBreakpoints = new();
+        Memory memory = new(memoryBreakpoints, ram, a20Gate);
+        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, state);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -198,7 +199,7 @@ public class Program {
 
         using (gui) {
             VgaCard vgaCard = new(gui, vgaRenderer, loggerService);
-            Keyboard keyboard = new Keyboard(state, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
+            Keyboard keyboard = new Keyboard(state, a20Gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
             RegisterIoPortHandler(ioPortDispatcher, keyboard);
             Mouse mouse = new Mouse(state, dualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
             RegisterIoPortHandler(ioPortDispatcher, mouse);
@@ -244,7 +245,7 @@ public class Program {
 
             BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(memory, cpu, loggerService);
             SystemBiosInt12Handler systemBiosInt12Handler = new SystemBiosInt12Handler(memory, cpu, biosDataArea, loggerService);
-            SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, cpu, a20gate, loggerService);
+            SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, cpu, a20Gate, loggerService);
             KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService, biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
             SystemClockInt1AHandler systemClockInt1AHandler = new SystemClockInt1AHandler(memory, cpu, loggerService, timerInt8Handler);

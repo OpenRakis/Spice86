@@ -38,14 +38,18 @@ public sealed class MachineBreakpoints {
     /// </summary>
     private readonly IPauseHandler _pauseHandler;
 
+    private readonly MemoryBreakpoints _memoryBreakpoints;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
+    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
     /// <param name="memory">The IBM PC memory bus</param>
     /// <param name="state">The CPU state</param>
-    public MachineBreakpoints(IPauseHandler pauseHandler, IMemory memory, State state) {
+    public MachineBreakpoints(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, IMemory memory, State state) {
         _state = state;
+        _memoryBreakpoints = memoryBreakpoints;
         _memory = memory;
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
@@ -86,7 +90,7 @@ public sealed class MachineBreakpoints {
         } else if (breakPointType == BreakPointType.MACHINE_STOP) {
             _machineStopBreakPoint = breakPoint;
         } else {
-            _memory.MemoryBreakpoints.ToggleBreakPoint(breakPoint, on);
+            _memoryBreakpoints.ToggleBreakPoint(breakPoint, on);
         }
     }
 

@@ -9,8 +9,7 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
-    /// <inheritdoc/>
-    public MemoryBreakpoints MemoryBreakpoints { get; }
+    private readonly MemoryBreakpoints _memoryBreakpoints;
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -22,11 +21,11 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>
-    /// <param name="memoryBreakpoints">The class that manages breakpoints based on memory access.</param>
+    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
     public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate) {
-        MemoryBreakpoints = memoryBreakpoints;
+        _memoryBreakpoints = memoryBreakpoints;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = baseMemory;
@@ -71,13 +70,13 @@ public class Memory : Indexable.Indexable, IMemory {
     public byte this[uint address] {
         get {
             address = A20Gate.TransformAddress(address);
-            MemoryBreakpoints.MonitorReadAccess(address);
+            _memoryBreakpoints.MonitorReadAccess(address);
             return _memoryDevices[address].Read(address);
         }
         set {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
-            MemoryBreakpoints.MonitorWriteAccess(address);
+            _memoryBreakpoints.MonitorWriteAccess(address);
             _memoryDevices[address].Write(address, value);
         }
     }
@@ -106,7 +105,7 @@ public class Memory : Indexable.Indexable, IMemory {
             if (address < device.StartAddress || address + length > device.EndAddress) {
                 continue;
             }
-            MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
+            _memoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
             return device.Device.GetSpan(address, length);
         }
 

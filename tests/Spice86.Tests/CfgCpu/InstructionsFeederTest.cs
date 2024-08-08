@@ -26,13 +26,14 @@ public class InstructionsFeederTest {
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
-    private readonly Memory _memory = new(new(), new Ram(64), new A20Gate());
+    private static readonly MemoryBreakpoints MemoryBreakpoints = new();
+    private readonly Memory _memory = new(MemoryBreakpoints, new Ram(64), new A20Gate());
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         State state = new();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(new PauseHandler(loggerService), _memory, state);
+        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(MemoryBreakpoints, new PauseHandler(loggerService), _memory, state);
         return new InstructionsFeeder(new CurrentInstructions(_memory, machineBreakpoints), new InstructionParser(_memory, state), new PreviousInstructions(_memory));
     }
 

@@ -82,8 +82,9 @@ public class MachineCreator {
         IOPortDispatcher ioPortDispatcher = new(cpuState, loggerService, configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
-        IMemory memory = new Memory(new MemoryBreakpoints(), ram, a20gate);
-        MachineBreakpoints machineBreakpoints = new(pauseHandler, memory, cpuState);
+        MemoryBreakpoints memoryBreakpoints = new();
+        IMemory memory = new Memory(memoryBreakpoints, ram, a20gate);
+        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, cpuState);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
