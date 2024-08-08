@@ -36,8 +36,8 @@ public sealed class GeneralMidiDevice : MidiDevice {
 
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice(Synthesizer synthesizer, SoundChannel generalMidiSoundChannel, ILoggerService loggerService,  IPauseHandler pauseHandler) {
-        _synthesizer = synthesizer;
+    public GeneralMidiDevice(SoundChannel generalMidiSoundChannel, ILoggerService loggerService,  IPauseHandler pauseHandler) {
+        _synthesizer = new Synthesizer(new SoundFont(SoundFont), 48000);
         _pauseHandler = pauseHandler;
         _loggerService = loggerService;
         _soundChannel = generalMidiSoundChannel;

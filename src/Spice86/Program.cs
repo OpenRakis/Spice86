@@ -166,10 +166,9 @@ public class Program {
         // the external MIDI device (external General MIDI or external Roland MT-32).
         MidiDevice midiMapper;
         if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
-            midiMapper = new Mt32MidiDevice(new Mt32Context(), new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
+            midiMapper = new Mt32MidiDevice(new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
         } else {
             midiMapper = new GeneralMidiDevice(
-                new Synthesizer(new SoundFont(GeneralMidiDevice.SoundFont), 48000),
                 new SoundChannel(softwareMixer, "General MIDI"),
                 loggerService,
                 pauseHandler);
