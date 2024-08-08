@@ -214,7 +214,7 @@ public class Program {
             RegisterIoPortHandler(ioPortDispatcher, pcSpeaker);
             
             SoundChannel fmSynthSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
-            OPL3FM opl3fm = new OPL3FM(new FmSynthesizer(48000), fmSynthSoundChannel, state, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
+            OPL3FM opl3fm = new OPL3FM(fmSynthSoundChannel, state, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
             RegisterIoPortHandler(ioPortDispatcher, opl3fm);
             var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
             SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
