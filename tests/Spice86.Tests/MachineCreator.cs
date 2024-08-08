@@ -176,7 +176,7 @@ public class MachineCreator {
         // Services
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
         MemoryAsmWriter memoryAsmWriter = new(memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
-        InterruptInstaller interruptInstaller = new InterruptInstaller(new InterruptVectorTable(memory), memoryAsmWriter, cpu.FunctionHandler);
+        InterruptInstaller interruptInstaller = new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
         AssemblyRoutineInstaller assemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
 
         VgaRom vgaRom = new VgaRom();
