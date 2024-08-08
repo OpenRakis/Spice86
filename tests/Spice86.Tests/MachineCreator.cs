@@ -83,7 +83,7 @@ public class MachineCreator {
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
         IMemory memory = new Memory(new MemoryBreakpoints(), ram, a20gate);
-        MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, cpuState);
+        MachineBreakpoints machineBreakpoints = new(pauseHandler, memory, cpuState);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -135,7 +135,7 @@ public class MachineCreator {
         Joystick joystick = new Joystick(cpuState, configuration.FailOnUnhandledPort, loggerService);
         RegisterIoPortHandler(ioPortDispatcher, joystick);
         
-        SoftwareMixer softwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
+        SoftwareMixer softwareMixer = new(loggerService);
         
         PcSpeaker pcSpeaker = new PcSpeaker(
             new SoundChannel(softwareMixer, nameof(PcSpeaker)), cpuState,

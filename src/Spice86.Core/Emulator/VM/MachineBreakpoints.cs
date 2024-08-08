@@ -42,15 +42,13 @@ public sealed class MachineBreakpoints {
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
-    /// <param name="cycleBreakPoints">Holds breakpoints based on CPU cycles.</param>
-    /// <param name="executionBreakPoints">Holds breakpoints based on the current instruction to be executed by the CPU.</param>
     /// <param name="memory">The IBM PC memory bus</param>
     /// <param name="state">The CPU state</param>
-    public MachineBreakpoints(IPauseHandler pauseHandler, BreakPointHolder cycleBreakPoints, BreakPointHolder executionBreakPoints, IMemory memory, State state) {
+    public MachineBreakpoints(IPauseHandler pauseHandler, IMemory memory, State state) {
         _state = state;
         _memory = memory;
-        _cycleBreakPoints = cycleBreakPoints;
-        _executionBreakPoints = executionBreakPoints;
+        _cycleBreakPoints = new();
+        _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
     }
 

@@ -106,7 +106,7 @@ public class Program {
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
         IMemory memory = new Memory(new MemoryBreakpoints(), ram, a20gate);
-        MachineBreakpoints machineBreakpoints = new(pauseHandler, new BreakPointHolder(), new BreakPointHolder(), memory, state);
+        MachineBreakpoints machineBreakpoints = new(pauseHandler, memory, state);
         
         bool initializeResetVector = configuration.InitializeDOS is true;
         if (initializeResetVector) {
@@ -156,7 +156,7 @@ public class Program {
         VgaIoPortHandler videoInt10Handler = new(state, loggerService, videoState, configuration.FailOnUnhandledPort);
         RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
         
-        SoftwareMixer softwareMixer = new(new  AudioPlayerFactory(new PortAudioPlayerFactory(loggerService)));
+        SoftwareMixer softwareMixer = new(loggerService);
         
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
         IVideoMemory vgaMemory = new VideoMemory(videoState);

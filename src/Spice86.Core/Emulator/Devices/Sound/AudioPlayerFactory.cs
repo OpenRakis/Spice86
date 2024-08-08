@@ -14,9 +14,9 @@ public class AudioPlayerFactory {
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioPlayerFactory"/> class.
     /// </summary>
-    /// <param name="portAudioPlayerFactory">The audio player factory for Linux Desktop, Windows, and macOS.</param>
-    public AudioPlayerFactory(PortAudioPlayerFactory portAudioPlayerFactory) {
-        _portAudioPlayerFactory = portAudioPlayerFactory;
+    /// <param name="loggerService">The logger service.</param>
+    public AudioPlayerFactory(ILoggerService loggerService) {
+        _portAudioPlayerFactory = new(loggerService);
     }
 
     /// <summary>

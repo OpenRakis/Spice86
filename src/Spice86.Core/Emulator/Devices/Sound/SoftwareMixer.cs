@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Backend.Audio;
+using Spice86.Shared.Interfaces;
 
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -16,9 +17,9 @@ public sealed class SoftwareMixer : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="SoftwareMixer"/> class.
     /// </summary>
-    /// <param name="audioPlayerFactory">The factory for creating an audio player for each new sound channel.</param>
-    public SoftwareMixer(AudioPlayerFactory audioPlayerFactory) {
-        _audioPlayerFactory = audioPlayerFactory;
+    /// <param name="loggerService">The logger service.</param>
+    public SoftwareMixer(ILoggerService loggerService) {
+        _audioPlayerFactory = new(loggerService);
     }
 
     internal void Register(SoundChannel soundChannel) {
