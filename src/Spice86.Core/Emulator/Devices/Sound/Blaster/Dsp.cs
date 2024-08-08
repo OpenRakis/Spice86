@@ -19,13 +19,10 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
     /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
-    /// <param name="adpcm2">The 2-bit ADPCM decoder.</param>
-    /// <param name="adpcm3">The 3-bit ADPCM decoder.</param>
-    /// <param name="adpcm4">The 4-bit ADPCM decoder.</param>
-    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, ADPCM2 adpcm2, ADPCM3 adpcm3, ADPCM4 adpcm4) {
-        _adpcm2 = adpcm2;
-        _adpcm3 = adpcm3;
-        _adpcm4 = adpcm4;
+    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel) {
+        _adpcm2 = new();
+        _adpcm3 = new();
+        _adpcm4 = new();
         dmaChannel8 = eightBitDmaChannel;
         dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;
