@@ -193,9 +193,8 @@ public class Program {
             };
             gui = new MainWindowViewModel(
                 videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
-                messenger, new WindowService(), new AvaloniaKeyScanCodeConverter(),
-                uiDispatcher, new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
-                configuration, loggerService, new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+                messenger, uiDispatcher, new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
+                configuration, loggerService, pauseHandler);
         }
 
         using (gui) {

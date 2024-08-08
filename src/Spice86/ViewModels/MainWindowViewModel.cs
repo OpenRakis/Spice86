@@ -82,8 +82,8 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
 
     public MainWindowViewModel(
         ArgbPalette argbPalette, ITimeMultiplier pit, State state, IMemory memory, SoftwareMixer softwareMixer, Midi midi, IVgaRenderer vgaRenderer, VideoState videoState, ExecutionContextManager executionContextManager,
-        IMessenger messenger, IWindowService windowService, IAvaloniaKeyScanCodeConverter avaloniaKeyScanCodeConverter, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, Configuration configuration,
-        ILoggerService loggerService, IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) : base(textClipboard) {
+        IMessenger messenger, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, Configuration configuration,
+        ILoggerService loggerService, IPauseHandler pauseHandler) : base(textClipboard) {
         _pit = pit;
         _argbPalette = argbPalette;
         _state = state;
@@ -93,12 +93,12 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
         _executionContextManager = executionContextManager;
-        _avaloniaKeyScanCodeConverter = avaloniaKeyScanCodeConverter;
+        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         _messenger = messenger;
-        _windowService = windowService;
+        _windowService = new WindowService();
         Configuration = configuration;
         _loggerService = loggerService;
-        _structureViewModelFactory = structureViewModelFactory;
+        _structureViewModelFactory = new StructureViewModelFactory(configuration, loggerService, pauseHandler);
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _isGdbServerRunning = configuration.GdbPort is not null;
