@@ -251,27 +251,10 @@ public class Program {
             SystemClockInt1AHandler systemClockInt1AHandler = new SystemClockInt1AHandler(memory, cpu, loggerService, timerInt8Handler);
 
             MouseDriver mouseDriver = new MouseDriver(cpu, memory, mouse, gui, vgaFunctionality, loggerService);
-            
-            var keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
-            var console = new ConsoleDevice(state, vgaFunctionality, keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", loggerService);
-            var stdAux = new CharacterDevice(DeviceAttributes.Character, "AUX", loggerService);
-            var printer = new CharacterDevice(DeviceAttributes.Character, "PRN", loggerService);
-            var clock = new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", loggerService);
-            var hdd = new BlockDevice(DeviceAttributes.FatDevice, 1);
-            CountryInfo countryInfo = new();
-            DosPathResolver dosPathResolver = new(configuration.CDrive, configuration.Exe);
-            DosFileManager dosFileManager = new DosFileManager(memory, dosPathResolver, loggerService, printer, stdAux);
-            DosMemoryManager dosMemoryManager = new DosMemoryManager(memory, loggerService);
-            DosInt20Handler dosInt20Handler = new DosInt20Handler(memory, cpu, loggerService);
-            DosInt21Handler dosInt21Handler = new DosInt21Handler(
-                memory, cpu, interruptVectorTable, countryInfo, stdAux, printer, console, clock, hdd, dosMemoryManager,
-                dosFileManager, keyboardInt16Handler, vgaFunctionality, loggerService);
-            DosInt2fHandler dosInt2FHandler = new DosInt2fHandler(memory, cpu, loggerService);
-            Dos dos = new Dos(memory, cpu, new(),
-                console, stdAux, printer, clock, hdd,
+
+            Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+                configuration.Exe, configuration.Ems,
                 new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
-                configuration.Ems, configuration.InitializeDOS is not false,
-                dosFileManager, dosMemoryManager, dosInt20Handler, dosInt21Handler, dosInt2FHandler,
                 loggerService);
             
             if (configuration.InitializeDOS is not false) {
@@ -284,9 +267,10 @@ public class Program {
                 RegisterInterruptHandler(interruptInstaller, systemBiosInt15Handler);
                 RegisterInterruptHandler(interruptInstaller, keyboardInt16Handler);
                 RegisterInterruptHandler(interruptInstaller, systemClockInt1AHandler);
-                RegisterInterruptHandler(interruptInstaller, dosInt20Handler);
-                RegisterInterruptHandler(interruptInstaller, dosInt21Handler);
-                RegisterInterruptHandler(interruptInstaller, dosInt2FHandler);
+                RegisterInterruptHandler(interruptInstaller, dos.DosInt20Handler);
+                RegisterInterruptHandler(interruptInstaller, dos.DosInt21Handler);
+                RegisterInterruptHandler(interruptInstaller, dos.DosInt2FHandler);
+                RegisterInterruptHandler(interruptInstaller, dos.DosInt28Handler);
                 
                 var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
                 RegisterInterruptHandler(interruptInstaller, mouseInt33Handler);

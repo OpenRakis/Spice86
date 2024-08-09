@@ -28,7 +28,9 @@ using System.Text;
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly IMemory _memory;
-    private readonly Cpu _cpu;
+    private readonly State _state;
+    private readonly IVgaFunctionality _vgaFunctionality;
+    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
 
     /// <summary>
@@ -54,14 +56,12 @@ public class Dos {
     /// <summary>
     /// Gets the country ID from the CountryInfo table
     /// </summary>
-    public byte CurrentCountryId => _countryInfo.Country;
-    
-    private readonly List<IVirtualDevice> _devices = new();
+    public byte CurrentCountryId => CountryInfo.Country;
 
     /// <summary>
     /// Gets the list of virtual devices.
     /// </summary>
-    public IList<IVirtualDevice> Devices => _devices;
+    public readonly List<IVirtualDevice> Devices = new();
 
     /// <summary>
     /// Gets or sets the current clock device.
@@ -84,87 +84,81 @@ public class Dos {
     public DosFileManager FileManager { get; }
 
     /// <summary>
+    /// Gets the global DOS memory structures.
+    /// </summary>
+    public CountryInfo CountryInfo { get; } = new();
+
+    /// <summary>
     /// Gets the current DOS master environment variables.
     /// </summary>
-    public EnvironmentVariables EnvironmentVariables { get; } = new();
+    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
 
-    private readonly CountryInfo _countryInfo;
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
+    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(IMemory memory, Cpu cpu,
-        CountryInfo countryInfo, ConsoleDevice con, CharacterDevice aux, CharacterDevice prn,
-        CharacterDevice clock, BlockDevice hdd,
-        IDictionary<string, string> envVars, bool enableEms,bool initializeDosMemoryStructures,
-        DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, DosInt20Handler dosInt20Handler,
-        DosInt21Handler dosInt21Handler, DosInt2fHandler dosInt2fHandler, ILoggerService loggerService) {
-        _countryInfo = countryInfo;
+    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
+    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
+        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
-        _cpu = cpu;
-        AddDefaultDevices(con, aux, prn, clock, hdd);
-        FileManager = dosFileManager;
-        MemoryManager = dosMemoryManager;
-        DosInt20Handler = dosInt20Handler;
-        DosInt21Handler = dosInt21Handler;
-        DosInt2FHandler = dosInt2fHandler;
-        DosInt28Handler = new DosInt28Handler(_memory, _cpu, _loggerService);
-
+        _state = cpu.State;
+        _vgaFunctionality = vgaFunctionality;
+        _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
+        AddDefaultDevices();
+        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
+        MemoryManager = new DosMemoryManager(_memory, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, cpu, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        if (!initializeDosMemoryStructures) {
-            return;
-        }
         OpenDefaultFileHandles();
-        SetEnvironmentVariables(envVars);
 
-        if (!enableEms) {
-            return;
+        if (enableEms) {
+            Ems = new(_memory, cpu, _loggerService);
         }
-        Ems = new ExpandedMemoryManager(_memory, _cpu, _loggerService);
-        var device = new CharacterDevice(DeviceAttributes.Ioctl, ExpandedMemoryManager.EmsIdentifier, _loggerService);
-        AddDevice(device, ExpandedMemoryManager.DosDeviceSegment, 0x0000);
-    }
 
-    private void SetEnvironmentVariables(IDictionary<string, string> envVars) {
-        foreach ((string key, string value) in envVars) {
-            EnvironmentVariables[key] = value;
+        foreach (KeyValuePair<string, string> envVar in envVars) {
+            EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
     }
 
     private void OpenDefaultFileHandles() {
-        if (_devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
             FileManager.OpenDevice(con, "r", "STDIN");
             FileManager.OpenDevice(con, "w", "STDOUT");
             FileManager.OpenDevice(con, "w", "STDERR");
         }
 
-        if (_devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
             FileManager.OpenDevice(aux, "rw", "STDAUX");
         }
 
-        if (_devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
             FileManager.OpenDevice(prn, "w", "STDPRN");
         }
     }
 
-    private void AddDefaultDevices(ConsoleDevice con, CharacterDevice aux, CharacterDevice prn, CharacterDevice clock, BlockDevice hdd) {
-        AddDevice(con);
-        AddDevice(aux);
-        AddDevice(prn);
-        AddDevice(clock);
-        AddDevice(hdd);
+    private void AddDefaultDevices() {
+        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
+        AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
     }
 
     /// <summary>

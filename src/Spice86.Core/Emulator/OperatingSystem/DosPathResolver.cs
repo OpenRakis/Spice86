@@ -11,7 +11,7 @@ using System.Text;
 /// <summary>
 /// Translates DOS filepaths to host file paths, and vice-versa.
 /// </summary>
-public class DosPathResolver {
+internal class DosPathResolver {
     internal const char VolumeSeparatorChar = ':';
     internal const char DirectorySeparatorChar = '\\';
     internal const char AltDirectorySeparatorChar = '/';

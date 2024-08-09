@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 /// <summary>
 /// Block devices are things like hard drives, floppy drives, etc.
 /// </summary>
-public class BlockDevice : VirtualDeviceBase {
+internal class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// The number of units (disks) that this device has.
     /// </summary>

@@ -38,7 +38,7 @@ public class DosFileManager {
     /// </summary>
     public OpenFile?[] OpenFiles { get; } = new OpenFile[MaxOpenFiles];
 
-    private readonly List<CharacterDevice> _dosCharacterDevices = new();
+    private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
     static DosFileManager() {
         FileOpenMode.Add(0x00, "r");
@@ -50,14 +50,15 @@ public class DosFileManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="dosPathResolver">The class responsible for finding DOS files and folders on the host file system of mounted folders.</param>
+    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
+    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosFileManager(IMemory memory, DosPathResolver dosPathResolver, ILoggerService loggerService, CharacterDevice printer, CharacterDevice stdAux) {
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    public DosFileManager(IMemory memory, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
-        _dosPathResolver = dosPathResolver;
+        _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;
-        _dosCharacterDevices.Add(printer);
-        _dosCharacterDevices.Add(stdAux);
+        _dosVirtualDevices = dosVirtualDevices;
     }
 
     /// <summary>
@@ -159,7 +160,7 @@ public class DosFileManager {
         dta.Drive = DefaultDrive;
         dta.EntryCountWithinSearchResults = 0;
 
-        if (_dosCharacterDevices.SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
+        if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
             if(!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes)) {
                 return status;
             }
@@ -384,7 +385,7 @@ public class DosFileManager {
     public DosFileOperationResult OpenFile(string fileName, byte accessMode) {
         string openMode = FileOpenMode[accessMode];
 
-        CharacterDevice? device = _dosCharacterDevices.FirstOrDefault(device => device.Name == fileName);
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);

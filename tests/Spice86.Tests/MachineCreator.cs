@@ -8,7 +8,6 @@ using System;
 
 using NSubstitute;
 
-using Spice86.Core.Backend.Audio.PortAudio;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -36,7 +35,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -44,12 +42,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -196,26 +189,9 @@ public class MachineCreator {
 
         MouseDriver mouseDriver = new MouseDriver(cpu, memory, mouse, gui, vgaFunctionality, loggerService);
         
-        var keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
-        var console = new ConsoleDevice(cpuState, vgaFunctionality, keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", loggerService);
-        var stdAux = new CharacterDevice(DeviceAttributes.Character, "AUX", loggerService);
-        var printer = new CharacterDevice(DeviceAttributes.Character, "PRN", loggerService);
-        var clock = new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", loggerService);
-        var hdd = new BlockDevice(DeviceAttributes.FatDevice, 1);
-        CountryInfo countryInfo = new();
-        DosPathResolver dosPathResolver = new(configuration.CDrive, configuration.Exe);
-        DosFileManager dosFileManager = new DosFileManager(memory, dosPathResolver, loggerService, printer, stdAux);
-        DosMemoryManager dosMemoryManager = new DosMemoryManager(memory, loggerService);
-        DosInt20Handler dosInt20Handler = new DosInt20Handler(memory, cpu, loggerService);
-        DosInt21Handler dosInt21Handler = new DosInt21Handler(
-            memory, cpu, interruptVectorTable, countryInfo, stdAux, printer, console, clock, hdd, dosMemoryManager,
-            dosFileManager, keyboardInt16Handler, vgaFunctionality, loggerService);
-        DosInt2fHandler dosInt2FHandler = new DosInt2fHandler(memory, cpu, loggerService);
-        Core.Emulator.OperatingSystem.Dos dos = new(memory, cpu, new(),
-            console, stdAux, printer, clock, hdd,
+        Core.Emulator.OperatingSystem.Dos dos = new Core.Emulator.OperatingSystem.Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+            configuration.Exe, configuration.Ems,
             new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
-            configuration.Ems, configuration.InitializeDOS is not false,
-            dosFileManager, dosMemoryManager, dosInt20Handler, dosInt21Handler, dosInt2FHandler,
             loggerService);
         
         if (configuration.InitializeDOS is not false) {
@@ -228,9 +204,10 @@ public class MachineCreator {
             RegisterInterruptHandler(interruptInstaller, systemBiosInt15Handler);
             RegisterInterruptHandler(interruptInstaller, keyboardInt16Handler);
             RegisterInterruptHandler(interruptInstaller, systemClockInt1AHandler);
-            RegisterInterruptHandler(interruptInstaller, dosInt20Handler);
-            RegisterInterruptHandler(interruptInstaller, dosInt21Handler);
-            RegisterInterruptHandler(interruptInstaller, dosInt2FHandler);
+            RegisterInterruptHandler(interruptInstaller, dos.DosInt20Handler);
+            RegisterInterruptHandler(interruptInstaller, dos.DosInt21Handler);
+            RegisterInterruptHandler(interruptInstaller, dos.DosInt2FHandler);
+            RegisterInterruptHandler(interruptInstaller, dos.DosInt28Handler);
             
             var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
             RegisterInterruptHandler(interruptInstaller, mouseInt33Handler);
