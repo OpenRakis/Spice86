@@ -21,8 +21,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
-using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 
@@ -44,9 +42,13 @@ public class CfgNodeFeederTest {
         MemoryBreakpoints memoryBreakpoints = new();
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
+        IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(_state, loggerService, failOnUnhandledPort: true);
+        CallbackHandler callbackHandler = new(_state, loggerService);
         MachineBreakpoints machineBreakpoints = new MachineBreakpoints(memoryBreakpoints, new PauseHandler(loggerService), _memory, _state);
+        InstructionExecutionHelper instructionExecutionHelper = new(_state, _memory, ioPortDispatcher, callbackHandler, loggerService);
+        ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(_memory, machineBreakpoints), new InstructionParser(_memory, _state), new PreviousInstructions(_memory));
+        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, _memory, _state);
         return new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, _state);
     }
 

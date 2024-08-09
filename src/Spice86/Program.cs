@@ -119,13 +119,12 @@ public class Program {
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             loggerService, executionFlowRecorder);
         
-        InstructionFieldValueRetriever instructionFieldValueRetriever = new(memory);
         InstructionExecutionHelper instructionExecutionHelper = new(
             state, memory, ioPortDispatcher,
             callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, state), new PreviousInstructions(memory));
+        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, memory, state);
         CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, state);
         CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, state, dualPic);
 

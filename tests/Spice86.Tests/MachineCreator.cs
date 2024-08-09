@@ -220,7 +220,7 @@ public class MachineCreator {
             callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, cpuState), new PreviousInstructions(memory));
+        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, memory, cpuState);
         CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
         Core.Emulator.CPU.CfgCpu.CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
         
