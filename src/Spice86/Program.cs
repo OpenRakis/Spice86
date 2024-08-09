@@ -104,12 +104,9 @@ public class Program {
 
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, state);
-        Alu8 alu8 = new(state);
-        Alu16 alu16 = new(state);
-        Alu32 alu32 = new(state);
         FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
-        Cpu cpu  = new(interruptVectorTable, alu8, alu16, alu32, stack,
+        Cpu cpu  = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             loggerService, executionFlowRecorder);

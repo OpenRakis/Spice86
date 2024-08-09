@@ -84,12 +84,9 @@ public class MachineCreator {
 
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, cpuState);
-        Alu8 alu8 = new(cpuState);
-        Alu16 alu16 = new(cpuState);
-        Alu32 alu32 = new(cpuState);
         FunctionHandler functionHandler = new(memory, cpuState, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, cpuState, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
-        Cpu cpu  = new(interruptVectorTable, alu8, alu16, alu32, stack,
+        Cpu cpu  = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, cpuState,
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             loggerService, executionFlowRecorder);

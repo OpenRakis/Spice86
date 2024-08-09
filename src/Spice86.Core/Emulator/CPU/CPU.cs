@@ -84,7 +84,7 @@ public class Cpu : IInstructionExecutor {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(InterruptVectorTable interruptVectorTable, Alu8 alu8, Alu16 alu16, Alu32 alu32,
+    public Cpu(InterruptVectorTable interruptVectorTable,
         Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
         IMemory memory, State state, DualPic dualPic,
         IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
@@ -98,15 +98,15 @@ public class Cpu : IInstructionExecutor {
         MachineBreakpoints = machineBreakpoints;
         ExecutionFlowRecorder = executionFlowRecorder;
         InterruptVectorTable = interruptVectorTable;
-        _alu8 = alu8;
+        _alu8 = new(state);
         Stack = stack;
         FunctionHandler = functionHandler;
         FunctionHandlerInExternalInterrupt = functionHandlerInExternalInterrupt;
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8(alu8, this, _memory, _modRM);
-        _instructions16 = new Instructions16(alu16, this, _memory, _modRM);
-        _instructions32 = new Instructions32(alu32, this, _memory, _modRM);
+        _instructions8 = new Instructions8(_alu8, this, _memory, _modRM);
+        _instructions16 = new Instructions16(state, this, _memory, _modRM);
+        _instructions32 = new Instructions32(state, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
