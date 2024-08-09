@@ -204,9 +204,7 @@ public class Program {
             InterruptInstaller interruptInstaller = new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
             AssemblyRoutineInstaller assemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
 
-            VgaRom vgaRom = new VgaRom();
-            memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, vgaRom.Size, vgaRom);
-            VgaFunctionality vgaFunctionality = new VgaFunctionality(interruptVectorTable, memory, ioPortDispatcher, biosDataArea, vgaRom,  configuration.InitializeDOS is true);
+            VgaFunctionality vgaFunctionality = new VgaFunctionality(interruptVectorTable, memory, ioPortDispatcher, biosDataArea,  configuration.InitializeDOS is true);
             VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
 
             TimerInt8Handler timerInt8Handler = new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
@@ -257,7 +255,7 @@ public class Program {
                 joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
                 timerInt8Handler,
-                vgaCard, videoState, ioPortDispatcher, vgaRenderer, vgaBios, vgaRom,
+                vgaCard, videoState, ioPortDispatcher, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
                 dmaController, opl3fm, softwareMixer, mouse, mouseDriver,
                 vgaFunctionality);
             
