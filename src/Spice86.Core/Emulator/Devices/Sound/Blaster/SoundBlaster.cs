@@ -160,10 +160,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
     /// <param name="pcmSoundChannel">The software's mixer sound channel the SoundBlaster's PCM.</param>
-    /// <param name="hardwareMixer">The Sound Blaster hardware mixer.</param>
-    /// <param name="dsp">The digital signal processor.</param>
-    /// <param name="eightByteDmaChannel">The 8-bit DMA channel for DMA transfers of PCM data.</param>
-    /// <param name="opl3SoundChannel">The sound channel registered by the SoundBlaster's OPL3 FM Chip.</param>
+    /// <param name="fmSynthSoundChannel">The sound channel registered by the SoundBlaster's OPL3 FM Chip.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
@@ -171,8 +168,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
-    public SoundBlaster(SoundChannel pcmSoundChannel, HardwareMixer hardwareMixer, Dsp dsp,
-        DmaChannel eightByteDmaChannel, SoundChannel opl3SoundChannel, State state, DmaController dmaController,
+    public SoundBlaster(SoundChannel pcmSoundChannel, SoundChannel fmSynthSoundChannel, State state, DmaController dmaController,
         DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
@@ -183,10 +179,10 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _pauseHandler = pauseHandler;
         _dmaController = dmaController;
         _dualPic = dualPic;
-        FMSynthSoundChannel = opl3SoundChannel;
-        _ctMixer = hardwareMixer;
-        _eightByteDmaChannel = eightByteDmaChannel;
-        _dsp = dsp;
+        FMSynthSoundChannel = fmSynthSoundChannel;
+        _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, loggerService);
+        _eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
+        _dsp = new Dsp(_eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
         _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
         _dmaController.SetupDmaDeviceChannel(this);
         _playbackThread = new Thread(AudioPlayback) {

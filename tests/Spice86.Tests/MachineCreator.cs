@@ -128,11 +128,8 @@ public class MachineCreator {
         opl3fm.InitPortHandlers(ioPortDispatcher);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
-        HardwareMixer hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, loggerService);
-        DmaChannel eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
-        Dsp dsp = new Dsp(eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
         SoundBlaster soundBlaster = new SoundBlaster(
-            pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
+            pcmSoundChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
         soundBlaster.InitPortHandlers(ioPortDispatcher);
         
