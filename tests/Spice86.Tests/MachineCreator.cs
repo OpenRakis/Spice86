@@ -1,9 +1,5 @@
 namespace Spice86.Tests;
 
-using MeltySynth;
-
-using Mt32emu;
-
 using System;
 
 using NSubstitute;
@@ -219,13 +215,9 @@ public class MachineCreator {
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
         
-        InstructionFieldValueRetriever instructionFieldValueRetriever = new(memory);
-        ModRmExecutor modRmExecutor = new(cpuState, memory, instructionFieldValueRetriever);
         InstructionExecutionHelper instructionExecutionHelper = new(
             cpuState, memory, ioPortDispatcher,
-            callbackHandler, interruptVectorTable, stack,
-            alu8, alu16, alu32,
-            instructionFieldValueRetriever, modRmExecutor, loggerService);
+            callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, cpuState), new PreviousInstructions(memory));

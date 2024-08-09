@@ -24,21 +24,19 @@ public class InstructionExecutionHelper {
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
-        CallbackHandler callbackHandler, InterruptVectorTable interruptVectorTable,
-        Stack stack, Alu8 alu8, Alu16 alu16, Alu32 alu32, InstructionFieldValueRetriever instructionFieldValueRetriever, ModRmExecutor modRmExecutor,
-        ILoggerService loggerService) {
+        CallbackHandler callbackHandler, ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
         Memory = memory;
-        InterruptVectorTable = interruptVectorTable;
-        Stack = stack;
-        Alu8 = alu8;
-        Alu16 = alu16;
-        Alu32 = alu32;
+        InterruptVectorTable = new(memory);
+        Stack = new Stack(memory, state);
+        Alu8 = new(state);
+        Alu16 = new(state);
+        Alu32 = new(state);
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
-        InstructionFieldValueRetriever = instructionFieldValueRetriever;
-        ModRm = modRmExecutor;
+        InstructionFieldValueRetriever = new(memory);
+        ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
     public State State { get; }
     public IMemory Memory{ get; }

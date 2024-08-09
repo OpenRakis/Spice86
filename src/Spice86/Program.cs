@@ -6,14 +6,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
-
-using MeltySynth;
-
-using Microsoft.Extensions.DependencyInjection;
-
-using Mt32emu;
-
-using Spice86.Core.Backend.Audio.PortAudio;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -34,7 +26,6 @@ using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -42,7 +33,6 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -52,12 +42,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.DependencyInjection;
 using Spice86.Infrastructure;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
@@ -135,12 +120,9 @@ public class Program {
             loggerService, executionFlowRecorder);
         
         InstructionFieldValueRetriever instructionFieldValueRetriever = new(memory);
-        ModRmExecutor modRmExecutor = new(state, memory, instructionFieldValueRetriever);
         InstructionExecutionHelper instructionExecutionHelper = new(
             state, memory, ioPortDispatcher,
-            callbackHandler, interruptVectorTable, stack,
-            alu8, alu16, alu32,
-            instructionFieldValueRetriever, modRmExecutor, loggerService);
+            callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
         NodeLinker nodeLinker = new();
         InstructionsFeeder instructionsFeeder = new(new CurrentInstructions(memory, machineBreakpoints), new InstructionParser(memory, state), new PreviousInstructions(memory));
