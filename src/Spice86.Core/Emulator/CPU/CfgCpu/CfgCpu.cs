@@ -7,7 +7,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 
 public class CfgCpu : IInstructionExecutor {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
@@ -17,16 +22,16 @@ public class CfgCpu : IInstructionExecutor {
 
     private readonly CfgNodeFeeder _cfgNodeFeeder;
 
-    public CfgCpu(InstructionExecutionHelper instructionExecutionHelper,
-        ExecutionContextManager executionContextManager,
-        CfgNodeFeeder cfgNodeFeeder,
-        State state, DualPic dualPic) {
+    public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
+        DualPic dualPic, MachineBreakpoints machineBreakpoints, ILoggerService loggerService) {
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
         _state = state;
         _dualPic = dualPic;
-        _instructionExecutionHelper = instructionExecutionHelper;
-        _cfgNodeFeeder = cfgNodeFeeder;
-        _executionContextManager = executionContextManager;
+        _executionContextManager = new(machineBreakpoints);
+        _cfgNodeFeeder = new(memory, state, machineBreakpoints);
     }
+    
+    public ExecutionContextManager ExecutionContextManager => _executionContextManager;
 
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
     

@@ -117,12 +117,7 @@ public class Program {
             dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
             loggerService, executionFlowRecorder);
         
-        InstructionExecutionHelper instructionExecutionHelper = new(
-            state, memory, ioPortDispatcher,
-            callbackHandler, loggerService);
-        ExecutionContextManager executionContextManager = new(machineBreakpoints);
-        CfgNodeFeeder cfgNodeFeeder = new(memory, state, machineBreakpoints);
-        CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, state, dualPic);
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
 
         // IO devices
         DmaController dmaController = new(memory, state, configuration.FailOnUnhandledPort, loggerService);
@@ -169,7 +164,7 @@ public class Program {
                 PerformanceViewModel = performanceViewModel
             };
             gui = new MainWindowViewModel(
-                videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, executionContextManager,
+                videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, cfgCpu.ExecutionContextManager,
                 messenger, uiDispatcher, new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
                 configuration, loggerService, pauseHandler);
         }
@@ -205,7 +200,6 @@ public class Program {
             GravisUltraSound gravisUltraSound = new GravisUltraSound(state, configuration.FailOnUnhandledPort, loggerService);
             RegisterIoPortHandler(ioPortDispatcher, gravisUltraSound);
             
-
             // Services
             // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
             MemoryAsmWriter memoryAsmWriter = new(memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);

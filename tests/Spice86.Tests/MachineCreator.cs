@@ -7,9 +7,6 @@ using NSubstitute;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -213,13 +210,8 @@ public class MachineCreator {
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
         
-        InstructionExecutionHelper instructionExecutionHelper = new(
-            cpuState, memory, ioPortDispatcher,
-            callbackHandler, loggerService);
-        ExecutionContextManager executionContextManager = new(machineBreakpoints);
-        CfgNodeFeeder cfgNodeFeeder = new(memory, cpuState, machineBreakpoints);
-        Core.Emulator.CPU.CfgCpu.CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
-        
+        Core.Emulator.CPU.CfgCpu.CfgCpu cfgCpu = new(memory, cpuState, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
+
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
             callbackHandler, interruptInstaller,
             assemblyRoutineInstaller, cpu,
