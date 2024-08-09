@@ -12,8 +12,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -123,9 +121,7 @@ public class Program {
             state, memory, ioPortDispatcher,
             callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
-        NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, memory, state);
-        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, state);
+        CfgNodeFeeder cfgNodeFeeder = new(memory, state, machineBreakpoints);
         CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, state, dualPic);
 
         // IO devices

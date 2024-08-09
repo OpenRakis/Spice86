@@ -10,8 +10,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
-using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -219,9 +217,7 @@ public class MachineCreator {
             cpuState, memory, ioPortDispatcher,
             callbackHandler, loggerService);
         ExecutionContextManager executionContextManager = new(machineBreakpoints);
-        NodeLinker nodeLinker = new();
-        InstructionsFeeder instructionsFeeder = new(machineBreakpoints, memory, cpuState);
-        CfgNodeFeeder cfgNodeFeeder = new(instructionsFeeder, new([nodeLinker, instructionsFeeder]), nodeLinker, cpuState);
+        CfgNodeFeeder cfgNodeFeeder = new(memory, cpuState, machineBreakpoints);
         Core.Emulator.CPU.CfgCpu.CfgCpu cfgCpu = new(instructionExecutionHelper, executionContextManager, cfgNodeFeeder, cpuState, dualPic);
         
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,

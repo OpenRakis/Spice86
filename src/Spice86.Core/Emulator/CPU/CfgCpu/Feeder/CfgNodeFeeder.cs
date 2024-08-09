@@ -20,14 +20,14 @@ using System.Linq;
 public class CfgNodeFeeder {
     private readonly State _state;
     private readonly InstructionsFeeder _instructionsFeeder;
-    private readonly NodeLinker _nodeLinker;
+    private readonly NodeLinker _nodeLinker = new();
     private readonly DiscriminatorReducer _discriminatorReducer;
 
-    public CfgNodeFeeder(InstructionsFeeder instructionsFeeder, DiscriminatorReducer discriminatorReducer, NodeLinker nodeLinker,  State state) {
+    public CfgNodeFeeder(IMemory memory, State state, MachineBreakpoints machineBreakpoints) {
         _state = state;
-        _nodeLinker = nodeLinker;
-        _instructionsFeeder = instructionsFeeder;
-        _discriminatorReducer = discriminatorReducer;
+        _instructionsFeeder = new(machineBreakpoints, memory, state);
+        _discriminatorReducer = new(new List<IInstructionReplacer<CfgInstruction>>()
+            { _nodeLinker, _instructionsFeeder });
     }
 
     private CfgInstruction CurrentNodeFromInstructionFeeder =>
