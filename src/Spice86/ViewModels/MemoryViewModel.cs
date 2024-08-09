@@ -29,8 +29,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
     [ObservableProperty]
     private DataMemoryDocument? _dataMemoryDocument;
 
-    public bool NeedsToVisitEmulator => _memory is null;
-
     private uint? _startAddress = 0;
 
     [NotifyCanExecuteChangedFor(nameof(UpdateBinaryDocumentCommand))]
