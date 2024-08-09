@@ -1,6 +1,5 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using System.Linq;
