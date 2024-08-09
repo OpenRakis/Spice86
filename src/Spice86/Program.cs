@@ -10,8 +10,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -26,7 +24,6 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -120,14 +117,15 @@ public class Program {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
 
         // IO devices
+        dualPic.InitPortHandlers(ioPortDispatcher);
         DmaController dmaController = new(memory, state, configuration.FailOnUnhandledPort, loggerService);
-        RegisterIoPortHandler(ioPortDispatcher, dmaController);
+        dmaController.InitPortHandlers(ioPortDispatcher);
 
-        RegisterIoPortHandler(ioPortDispatcher, dualPic);
+        
         
         VideoState videoState = new();
         VgaIoPortHandler videoInt10Handler = new(state, loggerService, videoState, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(ioPortDispatcher, videoInt10Handler);
+        videoInt10Handler.InitPortHandlers(ioPortDispatcher);
         
         SoftwareMixer softwareMixer = new(loggerService);
         
@@ -148,10 +146,10 @@ public class Program {
         }
         
         Midi midiDevice = new Midi(midiMapper, state, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
-        RegisterIoPortHandler(ioPortDispatcher, midiDevice);
+        midiDevice.InitPortHandlers(ioPortDispatcher);
         
         Timer timer = new Timer(configuration, state, loggerService, dualPic);
-        RegisterIoPortHandler(ioPortDispatcher, timer);
+        timer.InitPortHandlers(ioPortDispatcher);
 
         MainWindowViewModel? gui = null;
         ClassicDesktopStyleApplicationLifetime? desktop = null;
@@ -172,21 +170,21 @@ public class Program {
         using (gui) {
             VgaCard vgaCard = new(gui, vgaRenderer, loggerService);
             Keyboard keyboard = new Keyboard(state, a20Gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
-            RegisterIoPortHandler(ioPortDispatcher, keyboard);
+            keyboard.InitPortHandlers(ioPortDispatcher);
             Mouse mouse = new Mouse(state, dualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-            RegisterIoPortHandler(ioPortDispatcher, mouse);
+            mouse.InitPortHandlers(ioPortDispatcher);
             Joystick joystick = new Joystick(state, configuration.FailOnUnhandledPort, loggerService);
-            RegisterIoPortHandler(ioPortDispatcher, joystick);
+            joystick.InitPortHandlers(ioPortDispatcher);
             
             PcSpeaker pcSpeaker = new PcSpeaker(
                 new SoundChannel(softwareMixer, nameof(PcSpeaker)), state,
                 loggerService, configuration.FailOnUnhandledPort);
             
-            RegisterIoPortHandler(ioPortDispatcher, pcSpeaker);
+            pcSpeaker.InitPortHandlers(ioPortDispatcher);
             
             SoundChannel fmSynthSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
             OPL3FM opl3fm = new OPL3FM(fmSynthSoundChannel, state, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
-            RegisterIoPortHandler(ioPortDispatcher, opl3fm);
+            opl3fm.InitPortHandlers(ioPortDispatcher);
             var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
             SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
             HardwareMixer hardwareMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, loggerService);
@@ -195,10 +193,10 @@ public class Program {
             SoundBlaster soundBlaster = new SoundBlaster(
                 pcmSoundChannel, hardwareMixer, dsp, eightByteDmaChannel, fmSynthSoundChannel, state, dmaController, dualPic, configuration.FailOnUnhandledPort,
                 loggerService, soundBlasterHardwareConfig, pauseHandler);
-            RegisterIoPortHandler(ioPortDispatcher, soundBlaster);
+            soundBlaster.InitPortHandlers(ioPortDispatcher);
             
             GravisUltraSound gravisUltraSound = new GravisUltraSound(state, configuration.FailOnUnhandledPort, loggerService);
-            RegisterIoPortHandler(ioPortDispatcher, gravisUltraSound);
+            gravisUltraSound.InitPortHandlers(ioPortDispatcher);
             
             // Services
             // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
@@ -230,24 +228,24 @@ public class Program {
             
             if (configuration.InitializeDOS is not false) {
                 // Register the interrupt handlers
-                RegisterInterruptHandler(interruptInstaller, vgaBios);
-                RegisterInterruptHandler(interruptInstaller, timerInt8Handler);
-                RegisterInterruptHandler(interruptInstaller, biosKeyboardInt9Handler);
-                RegisterInterruptHandler(interruptInstaller, biosEquipmentDeterminationInt11Handler);
-                RegisterInterruptHandler(interruptInstaller, systemBiosInt12Handler);
-                RegisterInterruptHandler(interruptInstaller, systemBiosInt15Handler);
-                RegisterInterruptHandler(interruptInstaller, keyboardInt16Handler);
-                RegisterInterruptHandler(interruptInstaller, systemClockInt1AHandler);
-                RegisterInterruptHandler(interruptInstaller, dos.DosInt20Handler);
-                RegisterInterruptHandler(interruptInstaller, dos.DosInt21Handler);
-                RegisterInterruptHandler(interruptInstaller, dos.DosInt2FHandler);
-                RegisterInterruptHandler(interruptInstaller, dos.DosInt28Handler);
+                interruptInstaller.InstallInterruptHandler(vgaBios);
+                interruptInstaller.InstallInterruptHandler(timerInt8Handler);
+                interruptInstaller.InstallInterruptHandler(biosKeyboardInt9Handler);
+                interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
+                interruptInstaller.InstallInterruptHandler(systemBiosInt12Handler);
+                interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
+                interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
+                interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
+                interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
+                interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
+                interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
+                interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
                 
                 var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
-                RegisterInterruptHandler(interruptInstaller, mouseInt33Handler);
+                interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
                 var mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
-                RegisterInterruptHandler(interruptInstaller, mouseIrq12Handler);
+                interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
 
                 SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver);
                 mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
@@ -301,9 +299,6 @@ public class Program {
 
         return res;
     }
-    
-    private static void RegisterInterruptHandler(InterruptInstaller interruptInstaller, IInterruptHandler interruptHandler) => interruptInstaller.InstallInterruptHandler(interruptHandler);
-    private static void RegisterIoPortHandler(IOPortDispatcher ioPortDispatcher, IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(ioPortDispatcher);
 
     private static void InitializeFunctionHandlers(Configuration configuration, Machine machine, ILoggerService loggerService,
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations, FunctionHandler cpuFunctionHandler, FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
