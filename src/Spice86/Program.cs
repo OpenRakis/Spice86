@@ -34,7 +34,6 @@ using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
@@ -129,18 +128,7 @@ public class Program {
         memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
         Renderer vgaRenderer = new(videoState, vgaMemory);
         
-        // the external MIDI device (external General MIDI or external Roland MT-32).
-        MidiDevice midiMapper;
-        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
-            midiMapper = new Mt32MidiDevice(new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
-        } else {
-            midiMapper = new GeneralMidiDevice(
-                new SoundChannel(softwareMixer, "General MIDI"),
-                loggerService,
-                pauseHandler);
-        }
-        
-        Midi midiDevice = new Midi(midiMapper, state, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        Midi midiDevice = new Midi(softwareMixer, state, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         midiDevice.InitPortHandlers(ioPortDispatcher);
         
         Timer timer = new Timer(configuration, state, loggerService, dualPic);

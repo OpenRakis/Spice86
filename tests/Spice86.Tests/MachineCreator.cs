@@ -15,7 +15,6 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Video;
@@ -136,17 +135,7 @@ public class MachineCreator {
         GravisUltraSound gravisUltraSound = new GravisUltraSound(cpuState, configuration.FailOnUnhandledPort, loggerService);
         gravisUltraSound.InitPortHandlers(ioPortDispatcher);
         
-        // the external MIDI device (external General MIDI or external Roland MT-32).
-        MidiDevice midiMapper;
-        if (!string.IsNullOrWhiteSpace(configuration.Mt32RomsPath) && File.Exists(configuration.Mt32RomsPath)) {
-            midiMapper = new Mt32MidiDevice(new SoundChannel(softwareMixer, "MT-32"), configuration.Mt32RomsPath, loggerService);
-        } else {
-            midiMapper = new GeneralMidiDevice(
-                new SoundChannel(softwareMixer, "General MIDI"),
-                loggerService,
-                pauseHandler);
-        }
-        Midi midiDevice = new Midi(midiMapper, cpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
+        Midi midiDevice = new Midi(softwareMixer, cpuState, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         midiDevice.InitPortHandlers(ioPortDispatcher);
 
         // Services
