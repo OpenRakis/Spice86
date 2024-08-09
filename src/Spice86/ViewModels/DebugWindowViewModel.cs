@@ -60,7 +60,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         IProgramExecutor programExecutor, State cpuState, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger,
-        ITextClipboard textClipboard, IHostStorageProvider storageProvider, IUIDispatcher uiDispatcher,
+        ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
@@ -68,16 +68,16 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
-        DisassemblyViewModel disassemblyVm = new(programExecutor, memory, cpuState, pauseHandler, messenger, uiDispatcher);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
+        DisassemblyViewModel disassemblyVm = new(programExecutor, memory, cpuState, pauseHandler, messenger);
         DisassemblyViewModels.Add(disassemblyVm);
-        PaletteViewModel = new(argbPalette, uiDispatcher);
-        SoftwareMixerViewModel = new(softwareMixer, uiDispatcher);
-        VideoCardViewModel = new(vgaRenderer, videoState, uiDispatcher);
-        CpuViewModel = new(cpuState, pauseHandler, uiDispatcher);
-        MidiViewModel = new(externalMidiDevice, uiDispatcher);
-        MemoryViewModels.Add(new(pauseHandler, messenger, textClipboard, uiDispatcher, storageProvider, structureViewModelFactory));
-        CfgCpuViewModel = new(executionContextManager, pauseHandler, uiDispatcher, new PerformanceMeasurer());
+        PaletteViewModel = new(argbPalette);
+        SoftwareMixerViewModel = new(softwareMixer);
+        VideoCardViewModel = new(vgaRenderer, videoState);
+        CpuViewModel = new(cpuState, pauseHandler);
+        MidiViewModel = new(externalMidiDevice);
+        MemoryViewModels.Add(new(pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
+        CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

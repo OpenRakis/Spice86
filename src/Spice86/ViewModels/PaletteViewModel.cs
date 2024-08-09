@@ -14,14 +14,14 @@ using Spice86.Shared.Emulator.Video;
 public partial class PaletteViewModel : ViewModelBase {
     private readonly ArgbPalette _argbPalette;
     
-    public PaletteViewModel(ArgbPalette argbPalette, IUIDispatcher uiDispatcher) {
+    public PaletteViewModel(ArgbPalette argbPalette) {
         _argbPalette = argbPalette;
-        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
         Dispatcher.UIThread.Post(() => {
             for (int i = 0; i < 256; i++) {
                 _palette.Add(new (){Fill = new SolidColorBrush()});
             }
         });
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

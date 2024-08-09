@@ -151,14 +151,13 @@ public class Program {
         MainWindow? mainWindow = null;
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
-            UIDispatcher uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiDispatcher);
+            PerformanceViewModel performanceViewModel = new(state, pauseHandler);
             mainWindow = new() {
                 PerformanceViewModel = performanceViewModel
             };
             gui = new MainWindowViewModel(
                 videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, cfgCpu.ExecutionContextManager,
-                messenger, uiDispatcher, new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
+                messenger, new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
                 configuration, loggerService, pauseHandler);
         }
 

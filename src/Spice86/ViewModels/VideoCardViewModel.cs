@@ -14,10 +14,10 @@ public partial class VideoCardViewModel  : ViewModelBase {
     private readonly IVgaRenderer _vgaRenderer;
     private readonly IVideoState _videoState;
     
-    public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState, IUIDispatcher uiDispatcher) {
+    public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState) {
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
-        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {

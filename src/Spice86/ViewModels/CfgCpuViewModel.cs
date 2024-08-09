@@ -38,13 +38,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
     [ObservableProperty]
     private bool _isVisible;
 
-    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
-        IUIDispatcher uiDispatcher, IPerformanceMeasurer performanceMeasurer) {
+    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler, IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
         pauseHandler.Pausing += OnPausing;
         _isPaused = pauseHandler.IsPaused;
-        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
 
     private void OnPausing() {

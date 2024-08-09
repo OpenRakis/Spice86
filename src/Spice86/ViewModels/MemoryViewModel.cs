@@ -25,7 +25,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcher _uiDispatcher;
 
     [ObservableProperty]
     private DataMemoryDocument? _dataMemoryDocument;
@@ -97,18 +96,17 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
 
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IUIDispatcher uiDispatcher, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
+    public MemoryViewModel(IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPause;
         _isPaused = pauseHandler.IsPaused;
         _messenger = messenger;
-        _uiDispatcher = uiDispatcher;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
         StartAddress = startAddress;
         EndAddress = endAddress;
         CanCloseTab = canCloseTab;
-        uiDispatcher.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     /// <summary>
@@ -159,7 +157,6 @@ public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
             return;
         }
         MemoryViewModel memoryViewModel = new(_pauseHandler, _messenger, _textClipboard,
-            _uiDispatcher,
             _storageProvider,
             _structureViewModelFactory, canCloseTab: true) {
             IsPaused = IsPaused

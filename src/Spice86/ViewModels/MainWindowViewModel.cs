@@ -476,7 +476,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
         _debugViewModel = new DebugWindowViewModel(
             ProgramExecutor, _state, _memory, _midi, _argbPalette, _softwareMixer, _vgaRenderer, _videoState, _executionContextManager,
-            _messenger, _textClipboard, _hostStorageProvider, _uiDispatcher, _structureViewModelFactory, _pauseHandler);
+            _messenger, _textClipboard, _hostStorageProvider, _structureViewModelFactory, _pauseHandler);
         await _windowService.ShowDebugWindow(_debugViewModel).ConfigureAwait(false);
     }
 
