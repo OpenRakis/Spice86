@@ -1,22 +1,16 @@
 namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public interface IMemory : IIndexable, IByteReaderWriter, IDebuggableComponent {
+public interface IMemory : IIndexable, IByteReaderWriter {
     /// <summary>
     /// Underlying RAM for the memory bus
     /// </summary>
     public IMemoryDevice Ram { get; }
-
-    /// <summary>
-    /// Manages memory breakpoints
-    /// </summary>
-    MemoryBreakpoints MemoryBreakpoints { get; }
 
     /// <summary>
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.

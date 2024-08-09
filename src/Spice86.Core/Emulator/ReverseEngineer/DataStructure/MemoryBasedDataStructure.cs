@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// Represents a memory base structure with a base address.
 /// </summary>
 public class MemoryBasedDataStructure : AbstractMemoryBasedDataStructure {
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

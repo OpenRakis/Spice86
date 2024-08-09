@@ -26,18 +26,18 @@ public class ParsingContext : ModRmParsingContext {
         HasOperandSize32 = ComputeHasOperandSize32(prefixes);
     }
 
-    private int? ComputeSegmentOverrideIndex(List<InstructionPrefix> prefixes) {
+    private static int? ComputeSegmentOverrideIndex(List<InstructionPrefix> prefixes) {
         SegmentOverrideInstructionPrefix? overridePrefix =
             prefixes.OfType<SegmentOverrideInstructionPrefix>().FirstOrDefault();
         return overridePrefix?.SegmentRegisterIndexValue;
     }
 
-    private BitWidth ComputeAddressSize(List<InstructionPrefix> prefixes) {
+    private static BitWidth ComputeAddressSize(List<InstructionPrefix> prefixes) {
         AddressSize32Prefix? addressSize32Prefix = prefixes.OfType<AddressSize32Prefix>().FirstOrDefault();
         return addressSize32Prefix == null ? BitWidth.WORD_16 : BitWidth.DWORD_32;
     }
 
-    private bool ComputeHasOperandSize32(IList<InstructionPrefix> prefixes) {
-        return prefixes.Where(p => p is OperandSize32Prefix).Any();
+    private static bool ComputeHasOperandSize32(IList<InstructionPrefix> prefixes) {
+        return prefixes.Any(p => p is OperandSize32Prefix);
     }
 }

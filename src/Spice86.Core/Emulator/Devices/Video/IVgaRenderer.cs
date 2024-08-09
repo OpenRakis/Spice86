@@ -1,11 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Spice86.Core.Emulator.InternalDebugger;
-
 /// <summary>
 ///     Represents a VGA renderer.
 /// </summary>
-public interface IVgaRenderer : IDebuggableComponent {
+public interface IVgaRenderer {
     /// <summary>
     ///     Calculate the current width required to render.
     /// </summary>

@@ -28,11 +28,13 @@ public class JumpDispatcher {
     }
 
     /// <summary>
-    /// Initializes the JumpDispatcher with an initial target function.
+    /// Creates a new temporary JumpDispatcher instance for the <see cref="CSharpOverrideHelper"/>
     /// </summary>
-    /// <param name="initialTarget">The initial target function.</param>
-    public JumpDispatcher(Func<int, Action> initialTarget) {
-        _jumpStack.Push(initialTarget);
+    /// <param name="initialTarget">The initial target <see cref="Func{TResult}"/></param>
+    internal JumpDispatcher CreateNew(Func<int, Action> initialTarget) {
+        JumpDispatcher newInstance = new();
+        newInstance._jumpStack.Push(initialTarget);
+        return newInstance;
     }
 
     /// <summary>

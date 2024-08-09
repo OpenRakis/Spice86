@@ -3,12 +3,11 @@ namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions32 : Instructions16Or32 {
-
     private readonly Alu32 _alu32;
     
-    public Instructions32(Cpu cpu, Memory.IMemory memory, ModRM modRm) :
+    public Instructions32(State state, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
         base(cpu, memory, modRm) {
-        _alu32 = new Alu32(cpu.State);
+        _alu32 = new(state);
     }
 
     private UInt32RegistersIndexer UInt32Registers => State.GeneralRegisters.UInt32;

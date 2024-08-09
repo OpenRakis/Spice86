@@ -28,20 +28,23 @@ public sealed class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private bool _disposed;
 
+    /// <summary>
+    /// The sound channel used for the OPL3 FM synth.
+    /// </summary>
     public SoundChannel SoundChannel => _soundChannel;
 
     /// <summary>
     /// Initializes a new instance of the OPL3 FM synth chip.
     /// </summary>
-    /// <param name="softwareMixer">The emulator's software mixer for all sound channels.</param>
+    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL3 FM Synth chip.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
-    public OPL3FM(SoftwareMixer softwareMixer, State state, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+    public OPL3FM(SoundChannel fmSynthSoundChannel, State state, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         _pauseHandler = pauseHandler;
-        _soundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
-        _synth = new FmSynthesizer(48000);
+        _soundChannel = fmSynthSoundChannel;
+        _synth = new(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
             Name = nameof(OPL3FM)
         };

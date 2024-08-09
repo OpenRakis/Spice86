@@ -14,7 +14,7 @@ public class AudioPlayerFactory {
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioPlayerFactory"/> class.
     /// </summary>
-    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="loggerService">The logger service.</param>
     public AudioPlayerFactory(ILoggerService loggerService) {
         _portAudioPlayerFactory = new(loggerService);
     }

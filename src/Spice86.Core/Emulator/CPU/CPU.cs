@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -30,7 +29,7 @@ using System.Collections.Frozen;
 /// Pure 8086 instructions: <br/>
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html
 /// </summary>
-public class Cpu : IDebuggableComponent {
+public class Cpu : IInstructionExecutor {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 
@@ -85,7 +84,11 @@ public class Cpu : IDebuggableComponent {
 
     public InterruptVectorTable InterruptVectorTable { get; }
 
-    public Cpu(IMemory memory, State state, DualPic dualPic, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints, ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder, bool recordData) {
+    public Cpu(InterruptVectorTable interruptVectorTable,
+        Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
+        IMemory memory, State state, DualPic dualPic,
+        IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
+        ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder) {
         _loggerService = loggerService;
         _memory = memory;
         State = state;
@@ -93,22 +96,23 @@ public class Cpu : IDebuggableComponent {
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
         MachineBreakpoints = machineBreakpoints;
-        InterruptVectorTable = new(_memory);
-        _alu8 = new Alu8(state);
-        Stack = new Stack(_memory, state);
         ExecutionFlowRecorder = executionFlowRecorder;
-        FunctionHandler = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
-        FunctionHandlerInExternalInterrupt = new FunctionHandler(_memory, state, ExecutionFlowRecorder, _loggerService, recordData);
+        InterruptVectorTable = interruptVectorTable;
+        _alu8 = new(state);
+        Stack = stack;
+        FunctionHandler = functionHandler;
+        FunctionHandlerInExternalInterrupt = functionHandlerInExternalInterrupt;
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8(this, _memory, _modRM);
-        _instructions16 = new Instructions16(this, _memory, _modRM);
-        _instructions32 = new Instructions32(this, _memory, _modRM);
+        _instructions8 = new Instructions8(_alu8, this, _memory, _modRM);
+        _instructions16 = new Instructions16(state, this, _memory, _modRM);
+        _instructions32 = new Instructions32(state, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
         AddressSize = 16;
     }
 
-    public void ExecuteNextInstruction() {
+    /// <inheritdoc />
+    public void ExecuteNext() {
         _internalIp = State.IP;
 
         _loggerService.LoggerPropertyBag.CsIp = new(State.CS, State.IP);
@@ -1442,10 +1446,4 @@ public class Cpu : IDebuggableComponent {
     /// </summary>
     /// <returns>The return address string.</returns>
     public string PeekReturn() => SegmentedAddress.ToString(FunctionHandlerInUse.PeekReturnAddressOnMachineStackForCurrentFunction());
-    
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-        State.Accept(emulatorDebugger);
-    }
 }

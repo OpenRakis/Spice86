@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>
@@ -15,12 +16,12 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : AbstractMe
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machine">The emulator machine.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="segmentRegisters">The CPU segment registers.</param>
     /// <param name="segmentRegisterIndex">The index of the CPU segment register that stores the segmented base address.</param>
-
-    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(Machine machine, uint segmentRegisterIndex) : base(machine.Memory) {
+    public MemoryBasedDataStructureWithSegmentRegisterBaseAddress(IByteReaderWriter memory, SegmentRegisters segmentRegisters, uint segmentRegisterIndex) : base(memory) {
         _segmentRegisterIndex = segmentRegisterIndex;
-        _segmentRegisters = machine.CpuState.SegmentRegisters;
+        _segmentRegisters = segmentRegisters;
     }
 
     /// <inheritdoc />

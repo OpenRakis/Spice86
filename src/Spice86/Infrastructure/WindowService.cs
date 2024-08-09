@@ -48,3 +48,19 @@ public class WindowService : IWindowService {
         });
     }
 }
+
+/// <summary>
+/// Service used for showing the debug window.
+/// </summary>
+public interface IWindowService {
+    /// <summary>
+    /// Shows the debug window.
+    /// </summary>
+    /// <param name="viewModel">The <see cref="DebugWindowViewModel"/> used as DataContext in case the window needs to be created.</param>
+    Task ShowDebugWindow(DebugWindowViewModel viewModel);
+    
+    /// <summary>
+    /// Close the debug window.
+    /// </summary>
+    void CloseDebugWindow();
+}

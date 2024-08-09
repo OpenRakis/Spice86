@@ -4,9 +4,9 @@ using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions8 : Instructions {
     private readonly Alu8 _alu8;
-    public Instructions8(Cpu cpu, Memory.IMemory memory, ModRM modRm) :
+    public Instructions8(Alu8 alu8, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
         base(cpu, memory, modRm) {
-        _alu8 = new Alu8(cpu.State);
+        _alu8 = alu8;
     }
 
     public override void AddRmReg() {

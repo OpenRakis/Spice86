@@ -24,7 +24,7 @@ public class A20Gate {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="enabled">Whether the 20th address line is enabled on emulator startup.</param>
-    public A20Gate(bool enabled) {
+    public A20Gate(bool enabled = true) {
         IsEnabled = enabled;
     }
 

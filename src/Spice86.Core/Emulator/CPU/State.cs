@@ -6,7 +6,6 @@ using Spice86.Shared.Emulator.Memory;
 using System.Text;
 
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.InternalDebugger;
 
 /// <summary>
 /// Represents the state of the CPU Registers and Flags.
@@ -34,7 +33,7 @@ using Spice86.Core.Emulator.InternalDebugger;
 /// </para>
 /// Each of these registers can be accessed as a whole (32 bits), or in parts as AX/BX/CX/DX (lower 16 bits), AH/BH/CH/DH (high 8 bits of the 16-bit register), and AL/BL/CL/DL (low 8 bits of the 16-bit register).
 /// </summary>
-public class State : IDebuggableComponent {
+public class State {
     /// <summary>
     /// Gets or sets the second byte (high byte) in the general purpose EAX register
     /// <para>
@@ -391,10 +390,5 @@ public class State : IDebuggableComponent {
     /// <returns>All the CPU registers dumped into a string</returns>
     public override string ToString() {
         return DumpedRegFlags;
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

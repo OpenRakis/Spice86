@@ -6,7 +6,6 @@ using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 
 /// <summary>
@@ -14,7 +13,7 @@ using Spice86.Core.Emulator.IOPorts;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent {
+public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -31,13 +30,36 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Timer(Configuration configuration, State state, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        for (int i = 0; i < _counters.Length; i++) {
-            _counters[i] = new Counter(state,
-                _loggerService,
-                i, counterConfigurator.InstanciateCounterActivator(state));
+        for(int i = 0; i < _counters.Length; i++) {
+            _counters[i] = new Counter(state, loggerService, CreateCounterActivator(state, loggerService, configuration)) {
+                Index = i
+            };
         }
+    }
+    
+    /// <summary>
+    /// Returns the appropriate <see cref="CounterActivator"/> based on the configuration.
+    /// </summary>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="loggerService">The service used for logging.</param>
+    /// <param name="configuration">The emulator's configuration.</param>
+    /// <returns>The appropriate <see cref="CyclesCounterActivator"/> or <see cref="TimeCounterActivator"/></returns>
+    private static CounterActivator CreateCounterActivator(State state, ILoggerService loggerService, Configuration configuration) {
+        const long DefaultInstructionsPerSecond = 1000000L;
+        long? instructionsPerSecond = configuration.InstructionsPerSecond;
+        if (instructionsPerSecond == null && configuration.GdbPort != null) {
+            // With GDB, force to instructions per seconds as time based timers could perturb steps
+            instructionsPerSecond = DefaultInstructionsPerSecond;
+            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                loggerService.Warning("Forcing Counter to use instructions per seconds since we are in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
+            }
+        }
+        if (instructionsPerSecond != null) {
+            return new CyclesCounterActivator(state, instructionsPerSecond.Value, configuration.TimeMultiplier);
+        }
+        return new TimeCounterActivator(configuration.TimeMultiplier);
     }
 
     /// <inheritdoc cref="ITimeMultiplier" />
@@ -114,10 +136,5 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     private Counter GetCounterIndexFromPortNumber(int port) {
         int counter = port & 0b11;
         return GetCounter(counter);
-    }
-
-    /// <inheritdoc />
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

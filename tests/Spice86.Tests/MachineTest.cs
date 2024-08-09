@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 
@@ -303,7 +304,7 @@ public class MachineTest {
     [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0100000000000010, true, true)] // count > size is undefined
     public void TestShld16(ushort destination, ushort source, byte count, ushort expected, bool cf, bool of) {
         // Arrange
-        var state = new State {
+        var state = new State() {
             CarryFlag = true,
             OverflowFlag = true
         };

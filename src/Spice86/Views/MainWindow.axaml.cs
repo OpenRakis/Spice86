@@ -2,7 +2,6 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 
 using Spice86.ViewModels;
 
@@ -18,6 +17,8 @@ internal partial class MainWindow : Window {
         this.Menu.KeyDown += OnMenuKeyUp;
         this.Menu.GotFocus += OnMenuGotFocus;
     }
+
+    public PerformanceViewModel? PerformanceViewModel { get; init; }
 
     private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
         FocusOnVideoBuffer();
@@ -44,11 +45,12 @@ internal partial class MainWindow : Window {
             return;
         }
         mainVm.CloseMainWindow += (_, _) => Close();
-        mainVm.OnMainWindowInitialized(Image.InvalidateVisual);
+        mainVm.InvalidateBitmap += Image.InvalidateVisual;
         Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
         Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);
         Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, Image);
         FocusOnVideoBuffer();
+        mainVm.StartEmulator();
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {

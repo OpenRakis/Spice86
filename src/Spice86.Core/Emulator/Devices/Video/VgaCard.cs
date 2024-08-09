@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
@@ -11,7 +10,7 @@ using System.Diagnostics;
 /// <summary>
 ///     Thin interface between renderer and gui.
 /// </summary>
-public class VgaCard : IDebuggableComponent {
+public class VgaCard {
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
@@ -59,10 +58,5 @@ public class VgaCard : IDebuggableComponent {
             return;
         }
         _renderer.Render(buffer);
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

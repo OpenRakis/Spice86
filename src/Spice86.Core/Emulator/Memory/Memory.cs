@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory.Indexer;
 
 /// <summary>
@@ -10,8 +9,7 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
-    /// <inheritdoc/>
-    public MemoryBreakpoints MemoryBreakpoints { get; } = new();
+    private readonly MemoryBreakpoints _memoryBreakpoints;
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -23,15 +21,17 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>
+    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
-    /// <param name="is20ThAddressLineSilenced">whether the A20 gate is silenced.</param>
-    public Memory(IMemoryDevice baseMemory, bool is20ThAddressLineSilenced) {
+    /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
+    public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate) {
+        _memoryBreakpoints = memoryBreakpoints;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
-        Ram = new Ram(memorySize);
+        Ram = baseMemory;
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
-        A20Gate = new(is20ThAddressLineSilenced);
+        A20Gate = a20gate;
     }
 
     /// <summary>
@@ -70,13 +70,13 @@ public class Memory : Indexable.Indexable, IMemory {
     public byte this[uint address] {
         get {
             address = A20Gate.TransformAddress(address);
-            MemoryBreakpoints.MonitorReadAccess(address);
+            _memoryBreakpoints.MonitorReadAccess(address);
             return _memoryDevices[address].Read(address);
         }
         set {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
-            MemoryBreakpoints.MonitorWriteAccess(address);
+            _memoryBreakpoints.MonitorWriteAccess(address);
             _memoryDevices[address].Write(address, value);
         }
     }
@@ -105,7 +105,7 @@ public class Memory : Indexable.Indexable, IMemory {
             if (address < device.StartAddress || address + length > device.EndAddress) {
                 continue;
             }
-            MemoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
+            _memoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
             return device.Device.GetSpan(address, length);
         }
 
@@ -199,9 +199,4 @@ public class Memory : Indexable.Indexable, IMemory {
     }
 
     private record DeviceRegistration(uint StartAddress, uint EndAddress, IMemoryDevice Device);
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-    }
 }

@@ -28,7 +28,6 @@ using System.Text;
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
     private readonly IMemory _memory;
-    private readonly Cpu _cpu;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
@@ -57,7 +56,7 @@ public class Dos {
     /// <summary>
     /// Gets the country ID from the CountryInfo table
     /// </summary>
-    public byte CurrentCountryId => DosTables.CountryInfo.Country;
+    public byte CurrentCountryId => CountryInfo.Country;
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -87,7 +86,7 @@ public class Dos {
     /// <summary>
     /// Gets the global DOS memory structures.
     /// </summary>
-    public DosTables DosTables { get; } = new();
+    public CountryInfo CountryInfo { get; } = new();
 
     /// <summary>
     /// Gets the current DOS master environment variables.
@@ -109,36 +108,34 @@ public class Dos {
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
-    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService) {
+    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
+        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
-        _cpu = cpu;
         _state = cpu.State;
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
         FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, _cpu, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, _cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, _cpu, _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, _cpu, _loggerService);
-    }
-
-    internal void Initialize(IBlasterEnvVarProvider blasterEnvVarProvider, State state, bool enableEms) {
+        DosInt20Handler = new DosInt20Handler(_memory, cpu, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
-        SetEnvironmentVariables(blasterEnvVarProvider);
 
         if (enableEms) {
-            Ems = new(_memory, _cpu, this, _loggerService);
+            Ems = new(_memory, cpu, _loggerService);
+        }
+
+        foreach (KeyValuePair<string, string> envVar in envVars) {
+            EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
     }
-
-    private void SetEnvironmentVariables(IBlasterEnvVarProvider blasterEnvVarProvider) => EnvironmentVariables["BLASTER"] = blasterEnvVarProvider.BlasterString;
 
     private void OpenDefaultFileHandles() {
         if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {

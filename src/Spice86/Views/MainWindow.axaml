@@ -4,10 +4,12 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
+		xmlns:local="clr-namespace:Spice86;assembly=Spice86"
 		xmlns:views="clr-namespace:Spice86.Views"
 		xmlns:userControls="clr-namespace:Spice86.UserControls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
+		x:Name="Main"
 		Icon="/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
 		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
@@ -15,6 +17,9 @@
 		Height="768"
 		WindowStartupLocation="CenterScreen"
 		CanResize="True">
+	<Window.DataTemplates>
+		<local:ViewLocator />
+	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
 		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
@@ -26,7 +31,6 @@
 		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
 			<MenuItem Header="Debug">
 				<MenuItem Header="Internal debugger" IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding ShowInternalDebuggerCommand}" />
-				<MenuItem Header="Performance" IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding ShowPerformanceCommand}" />
 				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
 					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
 					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
@@ -66,8 +70,8 @@
 			<NumericUpDown Focusable="False" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
 			<Button Focusable="False" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 		</WrapPanel>
-		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal" IsVisible="{Binding IsPerformanceVisible}">
-			<views:PerformanceView DataContext="{Binding PerformanceViewModel}" />
+		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
+			<ContentPresenter Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 		</WrapPanel>
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
@@ -94,7 +98,7 @@
 		</Border>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
-				<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.Column="0" />
+				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" Grid.Row="0" Grid.Column="0" />
 				<Button Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2" Command="{Binding ShowInternalDebuggerCommand}" />
 			</Grid>
 		</WrapPanel>

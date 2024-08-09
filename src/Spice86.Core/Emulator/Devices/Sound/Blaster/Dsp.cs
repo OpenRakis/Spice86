@@ -10,20 +10,23 @@ using System.Threading;
 /// Emulates the Sound Blaster 16 DSP.
 /// </summary>
 public sealed class Dsp : IDisposable {
-    private readonly IRequestInterrupt _soundCard;
+    private readonly ADPCM2 _adpcm2;
+    private readonly ADPCM3 _adpcm3;
+    private readonly ADPCM4 _adpcm4;
 
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
     /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
     /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
-    /// <param name="soundCard">The host sound-card, used to raise interrupts.</param>
-    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel, IRequestInterrupt soundCard) {
+    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel) {
+        _adpcm2 = new();
+        _adpcm3 = new();
+        _adpcm4 = new();
         dmaChannel8 = eightBitDmaChannel;
         dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;
         BlockTransferSize = 65536;
-        _soundCard = soundCard;
     }
 
     /// <summary>
@@ -34,7 +37,7 @@ public sealed class Dsp : IDisposable {
     /// <summary>
     /// Occurs when a buffer has been transferred in auto-initialize mode.
     /// </summary>
-    private void OnAutoInitBufferComplete() => _soundCard.RaiseInterruptRequest();
+    public event Action? OnAutoInitBufferComplete;
 
     /// <summary>
     /// Gets or sets the DSP's sample rate.
@@ -85,9 +88,9 @@ public sealed class Dsp : IDisposable {
         decodeRemainderOffset = -1;
 
         decoder = compressionLevel switch {
-            CompressionLevel.ADPCM2 => new ADPCM2(),
-            CompressionLevel.ADPCM3 => new ADPCM3(),
-            CompressionLevel.ADPCM4 => new ADPCM4(),
+            CompressionLevel.ADPCM2 => _adpcm2,
+            CompressionLevel.ADPCM3 => _adpcm3,
+            CompressionLevel.ADPCM4 => _adpcm4,
             _ => null,
         };
 
@@ -193,7 +196,7 @@ public sealed class Dsp : IDisposable {
             autoInitTotal += actualCount;
             if (autoInitTotal >= BlockTransferSize) {
                 autoInitTotal -= BlockTransferSize;
-                OnAutoInitBufferComplete();
+                OnAutoInitBufferComplete?.Invoke();
             }
         }
 

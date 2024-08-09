@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
-public partial class ViewModelBaseWithErrorDialog : ViewModelBase {
+public abstract partial class ViewModelBaseWithErrorDialog : ViewModelBase {
     protected readonly ITextClipboard _textClipboard;
     
     protected ViewModelBaseWithErrorDialog(ITextClipboard textClipboard) => _textClipboard = textClipboard;

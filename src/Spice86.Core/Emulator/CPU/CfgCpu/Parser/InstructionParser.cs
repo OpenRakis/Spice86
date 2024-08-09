@@ -168,8 +168,8 @@ public class InstructionParser : BaseInstructionParser {
         return res;
     }
 
-    private bool HasOperandSize32(IList<InstructionPrefix> prefixes) {
-        return prefixes.Where(p => p is OperandSize32Prefix).Any();
+    private static bool HasOperandSize32(IList<InstructionPrefix> prefixes) {
+        return prefixes.Any(p => p is OperandSize32Prefix);
     }
 
     private CfgInstruction ParseCfgInstruction(ParsingContext context) {

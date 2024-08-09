@@ -11,12 +11,12 @@ public sealed class MachineBreakpoints {
     /// <summary>
     /// A holder for cycle breakpoints.
     /// </summary>
-    private readonly BreakPointHolder _cycleBreakPoints = new();
+    private readonly BreakPointHolder _cycleBreakPoints;
 
     /// <summary>
     /// A holder for execution breakpoints.
     /// </summary>
-    private readonly BreakPointHolder _executionBreakPoints = new();
+    private readonly BreakPointHolder _executionBreakPoints;
 
     /// <summary>
     /// The memory bus.
@@ -38,15 +38,21 @@ public sealed class MachineBreakpoints {
     /// </summary>
     private readonly IPauseHandler _pauseHandler;
 
+    private readonly MemoryBreakpoints _memoryBreakpoints;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
     /// </summary>
-    /// <param name="memory">The memory bus</param>
-    /// <param name="state">The CPU state</param>
+    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
-    public MachineBreakpoints(IMemory memory, State state, IPauseHandler pauseHandler) {
+    /// <param name="memory">The IBM PC memory bus</param>
+    /// <param name="state">The CPU state</param>
+    public MachineBreakpoints(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, IMemory memory, State state) {
         _state = state;
+        _memoryBreakpoints = memoryBreakpoints;
         _memory = memory;
+        _cycleBreakPoints = new();
+        _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
     }
 
@@ -84,7 +90,7 @@ public sealed class MachineBreakpoints {
         } else if (breakPointType == BreakPointType.MACHINE_STOP) {
             _machineStopBreakPoint = breakPoint;
         } else {
-            _memory.MemoryBreakpoints.ToggleBreakPoint(breakPoint, on);
+            _memoryBreakpoints.ToggleBreakPoint(breakPoint, on);
         }
     }
 

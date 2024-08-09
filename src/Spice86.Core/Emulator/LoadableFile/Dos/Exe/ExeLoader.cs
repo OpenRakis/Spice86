@@ -26,8 +26,8 @@ public class ExeLoader : DosFileLoader {
     /// Initializes a new instance of the <see cref="ExeLoader"/> class with the specified machine, logger service, and starting segment.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="state">The CPU's state registers.</param>
+    /// <param name="loggerService">The logger service to use for logging.</param>
     /// <param name="environmentVariables">The master environment block, from the DOS kernel.</param>
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>

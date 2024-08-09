@@ -1,20 +1,19 @@
 namespace Spice86.Core.Emulator.Devices.Video.Registers;
 
-using Spice86.Core.Emulator.InternalDebugger;
-
 using System.Diagnostics;
 
 /// <summary>
 /// Represents the registers of the video DAC.
 /// </summary>
-public class DacRegisters : IDebuggableComponent {
+public class DacRegisters {
+    private int _indexRegister;
+    private byte _internalIndex;
+    private int _tripletCounter;
+
     /// <summary>
     /// The DAC Palette, represented as a 256 * 3 array. Stores the current set of colors.
     /// </summary>
     public readonly byte[,] Palette = new byte[256, 3];
-    private int _indexRegister;
-    private byte _internalIndex;
-    private int _tripletCounter;
 
     /// <summary>
     /// Initializes a new instance.
@@ -98,10 +97,4 @@ public class DacRegisters : IDebuggableComponent {
     ///     Converts the internal palette to an array of ARGB values.
     /// </summary>
     public ArgbPalette ArgbPalette { get; }
-
-    /// <inheritdoc />
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-        ArgbPalette.Accept(emulatorDebugger);
-    }
 }
