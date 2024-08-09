@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Core.Emulator.Memory;
 
 using System.Diagnostics;
 
@@ -17,9 +18,11 @@ public class Renderer : IVgaRenderer {
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
-    public Renderer(IVideoState state, IVideoMemory memory) {
+    public Renderer(IMemory memory, IVideoState state) {
         _state = state;
-        _memory = memory;
+        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        _memory = new VideoMemory(_state);
+        memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
     /// <inheritdoc />

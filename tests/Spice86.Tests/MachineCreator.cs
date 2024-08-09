@@ -100,10 +100,7 @@ public class MachineCreator {
         videoInt10Handler.InitPortHandlers(ioPortDispatcher);
 
         IGui? gui = null;
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        IVideoMemory vgaMemory = new VideoMemory(videoState);
-        memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        Renderer renderer = new(videoState, vgaMemory);
+        Renderer renderer = new(memory, videoState);
         VgaCard vgaCard = new(gui, renderer, loggerService);
         Timer timer = new Timer(configuration, cpuState, loggerService, dualPic);
         timer.InitPortHandlers(ioPortDispatcher);

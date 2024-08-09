@@ -123,10 +123,7 @@ public class Program {
         
         SoftwareMixer softwareMixer = new(loggerService);
         
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        IVideoMemory vgaMemory = new VideoMemory(videoState);
-        memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        Renderer vgaRenderer = new(videoState, vgaMemory);
+        Renderer vgaRenderer = new(memory, videoState);
         
         Midi midiDevice = new Midi(softwareMixer, state, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
         midiDevice.InitPortHandlers(ioPortDispatcher);
