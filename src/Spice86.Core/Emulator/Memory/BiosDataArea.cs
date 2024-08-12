@@ -16,8 +16,9 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// Initializes a new instance.
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
-    public BiosDataArea(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0))
-    {
+    /// <param name="conventionalMemorySizeKb">The size of conventional memory for DOS applications, in kilobytes.</param>
+    public BiosDataArea(IByteReaderWriter byteReaderWriter, ushort conventionalMemorySizeKb) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0)) {
+        ConventionalMemorySizeKb = conventionalMemorySizeKb;
     }
 
     /// <summary>
@@ -45,7 +46,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// <summary>
     /// Gets the amount of installed conventional memory in KB.
     /// </summary>
-    public required ushort ConventionalMemorySizeKb { get => UInt16[0x13]; init => UInt16[0x13] = value; }
+    public ushort ConventionalMemorySizeKb { get => UInt16[0x13]; init => UInt16[0x13] = value; }
 
     // Padding at 0x15
 

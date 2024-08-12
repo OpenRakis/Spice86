@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.Indexer;
 /// <summary>
 /// Represents the memory bus of the IBM PC.
 /// </summary>
-public class Memory : Indexable.Indexable, IMemory {
+public sealed class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
@@ -24,7 +24,8 @@ public class Memory : Indexable.Indexable, IMemory {
     /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
-    public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate) {
+    /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
+    public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate, bool initializeResetVector = false) {
         _memoryBreakpoints = memoryBreakpoints;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
@@ -32,6 +33,10 @@ public class Memory : Indexable.Indexable, IMemory {
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = a20gate;
+        if (initializeResetVector) {
+            // Put HLT instruction at the reset address
+            UInt16[0xF000, 0xFFF0] = 0xF4;
+        }
     }
 
     /// <summary>

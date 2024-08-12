@@ -65,22 +65,13 @@ public class MachineCreator {
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20gate = new(configuration.A20Gate);
         MemoryBreakpoints memoryBreakpoints = new();
-        IMemory memory = new Memory(memoryBreakpoints, ram, a20gate);
+        IMemory memory = new Memory(memoryBreakpoints, ram, a20gate, initializeResetVector: configuration.InitializeDOS is true);
         MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, cpuState);
-        
-        bool initializeResetVector = configuration.InitializeDOS is true;
-        if (initializeResetVector) {
-            // Put HLT instruction at the reset address
-            memory.UInt16[0xF000, 0xFFF0] = 0xF4;
-        }
-        var biosDataArea = new BiosDataArea(memory) {
-            ConventionalMemorySizeKb = (ushort)Math.Clamp(ram.Size / 1024, 0, 640)
-        };
-        var dualPic = new DualPic(cpuState,
-            configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+
+        var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
+        var dualPic = new DualPic(cpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
         CallbackHandler callbackHandler = new(cpuState, loggerService);
-
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, cpuState);
         FunctionHandler functionHandler = new(memory, cpuState, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
@@ -257,5 +248,4 @@ public class MachineCreator {
         functionHandler.FunctionInformations = functionInformations;
         functionHandler.UseCodeOverride = useCodeOverride;
     }
-
 }
