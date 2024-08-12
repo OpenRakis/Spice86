@@ -197,7 +197,7 @@ public class Program {
                 joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
                 timerInt8Handler,
-                vgaCard, videoState, ioPortDispatcher, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
+                vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
                 dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
                 vgaFunctionality);
             

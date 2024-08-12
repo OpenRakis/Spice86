@@ -168,7 +168,7 @@ public class MachineCreator {
             joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
             timerInt8Handler,
-            vgaCard, videoState, ioPortDispatcher, renderer, vgaBios, vgaFunctionality.VgaRom,
+            vgaCard, videoState, videoInt10Handler, renderer, vgaBios, vgaFunctionality.VgaRom,
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality);
         
