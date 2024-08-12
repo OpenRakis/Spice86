@@ -19,13 +19,15 @@ public class GravisUltraSound : DefaultIOPortHandler {
     /// Initializes a new instance of the Gravis Ultrasound sound card.
     /// </summary>
     /// <param name="state">The CPU state.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GravisUltraSound(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public GravisUltraSound(State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
+        ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        InitPortHandlers(ioPortDispatcher);
     }
 
-    /// <inheritdoc/>
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MixControlRegister, this);
         ioPortDispatcher.AddIOPortHandler(ReadDataOrTriggerStatus, this);
 

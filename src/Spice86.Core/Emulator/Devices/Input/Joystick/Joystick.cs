@@ -16,13 +16,15 @@ public class Joystick : DefaultIOPortHandler {
     /// Initializes a new instance of the <see cref="Joystick"/>
     /// </summary>
     /// <param name="state">The CPU state.</param>
+    /// <param name="ioPortDispatcher"></param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Joystick(State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public Joystick(State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
+        ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        InitPortHandlers(ioPortDispatcher);
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+   private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(JoystickPositionAndStatus, this);
     }
 

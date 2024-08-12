@@ -44,12 +44,14 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
     /// <param name="softwareMixer">The emulator's sound mixer.</param>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="pauseHandler">The class that reacts to and notifies about emulation pause/resume events</param>
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(SoftwareMixer softwareMixer, State state, IPauseHandler pauseHandler, string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public Midi(SoftwareMixer softwareMixer, State state, IOPortDispatcher ioPortDispatcher, IPauseHandler pauseHandler,
+        string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
         // the external MIDI device (external General MIDI or external Roland MT-32).
         if (!string.IsNullOrWhiteSpace(Mt32RomsPath) && File.Exists(Mt32RomsPath)) {
@@ -57,6 +59,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         } else {
             _midiMapper = new GeneralMidiDevice(softwareMixer, loggerService, pauseHandler);
         }
+        InitPortHandlers(ioPortDispatcher);
     }
 
     /// <summary>
@@ -134,8 +137,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         };
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(Data, this);
         ioPortDispatcher.AddIOPortHandler(Command, this);
     }

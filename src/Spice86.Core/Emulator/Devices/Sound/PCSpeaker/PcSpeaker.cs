@@ -38,14 +38,17 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of <see cref="PcSpeaker"/>
     /// </summary>
     /// <param name="softwareMixer">The software mixer for sound channels.</param>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(SoftwareMixer softwareMixer, State state, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public PcSpeaker(SoftwareMixer softwareMixer, State state, IOPortDispatcher ioPortDispatcher,
+        ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
         _frequencyRegister = new();
         _frequencyRegister.ValueChanged += FrequencyChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
+        InitPortHandlers(ioPortDispatcher);
     }
 
     /// <summary>
@@ -191,8 +194,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         return value;
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
     }
 

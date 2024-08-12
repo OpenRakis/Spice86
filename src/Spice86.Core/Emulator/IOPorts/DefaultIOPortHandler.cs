@@ -55,13 +55,6 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     }
 
     /// <summary>
-    /// Initialize the port handlers.
-    /// </summary>
-    /// <param name="ioPortDispatcher">The I/O port dispatcher.</param>
-    public virtual void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-    }
-
-    /// <summary>
     /// Updates the <see cref="LastPortRead"/> for the internal UI debugger.
     /// </summary>
     /// <param name="port">The port number</param>

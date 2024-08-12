@@ -19,7 +19,7 @@ using System.Threading;
 /// Sound blaster implementation. <br/>
 /// http://www.fysnet.net/detectsb.htm
 /// </summary>
-public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt,
+public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt,
     IBlasterEnvVarProvider, IDisposable {
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
@@ -139,7 +139,6 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     private BlasterState _blasterState;
     private bool _playbackStarted;
     private readonly DualPic _dualPic;
-    private readonly DmaController _dmaController;
     private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
@@ -165,8 +164,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="ioPortDispatcher"></param>
-    /// <param name="softwareMixer"></param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
+    /// <param name="softwareMixer">The emulator's sound mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
@@ -182,20 +181,19 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _pauseHandler = pauseHandler;
-        _dmaController = dmaController;
         _dualPic = dualPic;
         _eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
         _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
-        _dmaController.SetupDmaDeviceChannel(this);
+        dmaController.SetupDmaDeviceChannel(this);
         _playbackThread = new Thread(AudioPlayback) {
             Name = nameof(SoundBlaster),
         };
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
         FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
-        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, failOnUnhandledPort, loggerService, pauseHandler);
-        Opl3Fm.InitPortHandlers(ioPortDispatcher);
+        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService, pauseHandler);
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
+        InitPortHandlers(ioPortDispatcher);
     }
 
     /// <summary>
@@ -344,8 +342,7 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         }
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(DSP_READ_STATUS, this);
         ioPortDispatcher.AddIOPortHandler(DSP_WRITE_STATUS, this);

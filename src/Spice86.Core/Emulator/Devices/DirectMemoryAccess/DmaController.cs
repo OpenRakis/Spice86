@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public sealed class DmaController : DefaultIOPortHandler, IDisposable {
+public class DmaController : DefaultIOPortHandler, IDisposable {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
@@ -41,9 +41,11 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DmaController(IMemory memory, State state, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+    public DmaController(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
+        ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _memory = memory;
         for (int i = 0; i < 8; i++) {
             DmaChannel channel = new DmaChannel();
@@ -55,6 +57,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
         _dmaThread = new Thread(DmaLoop) {
             Name = "DMAThread"
         };
+        InitPortHandlers(ioPortDispatcher);
     }
 
     internal void StartDmaThread() {
@@ -117,8 +120,7 @@ public sealed class DmaController : DefaultIOPortHandler, IDisposable {
         }
     }
 
-    /// <inheritdoc/>
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         foreach (int value in OutputPorts) {
             ioPortDispatcher.AddIOPortHandler(value, this);
         }

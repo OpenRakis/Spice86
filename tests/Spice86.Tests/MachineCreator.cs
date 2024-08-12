@@ -68,7 +68,7 @@ public class MachineCreator {
         MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, cpuState);
 
         var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(cpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+        var dualPic = new DualPic(cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
         CallbackHandler callbackHandler = new(cpuState, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -81,45 +81,33 @@ public class MachineCreator {
             loggerService, executionFlowRecorder);
         
         // IO devices
-        dualPic.InitPortHandlers(ioPortDispatcher);
-        DmaController dmaController = new(memory, cpuState, configuration.FailOnUnhandledPort, loggerService);
-        dmaController.InitPortHandlers(ioPortDispatcher);
+        DmaController dmaController = new(memory, cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         VideoState videoState = new();
-        VgaIoPortHandler videoInt10Handler = new(cpuState, loggerService, videoState, configuration.FailOnUnhandledPort);
-        videoInt10Handler.InitPortHandlers(ioPortDispatcher);
+        VgaIoPortHandler videoInt10Handler = new(cpuState, ioPortDispatcher, loggerService, videoState, configuration.FailOnUnhandledPort);
 
         IGui? gui = null;
         Renderer renderer = new(memory, videoState);
         VgaCard vgaCard = new(gui, renderer, loggerService);
-        Timer timer = new Timer(configuration, cpuState, loggerService, dualPic);
-        timer.InitPortHandlers(ioPortDispatcher);
-        Keyboard keyboard = new Keyboard(cpuState, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
-        keyboard.InitPortHandlers(ioPortDispatcher);
+        Timer timer = new Timer(configuration, cpuState, ioPortDispatcher, loggerService, dualPic);
+        Keyboard keyboard = new Keyboard(cpuState, ioPortDispatcher, a20gate, dualPic, loggerService, gui, configuration.FailOnUnhandledPort);
         Mouse mouse = new Mouse(cpuState, dualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        mouse.InitPortHandlers(ioPortDispatcher);
-        Joystick joystick = new Joystick(cpuState, configuration.FailOnUnhandledPort, loggerService);
-        joystick.InitPortHandlers(ioPortDispatcher);
+        Joystick joystick = new Joystick(cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
         SoftwareMixer softwareMixer = new(loggerService);
         
         PcSpeaker pcSpeaker = new PcSpeaker(
-            softwareMixer, cpuState,
+            softwareMixer, cpuState, ioPortDispatcher,
             loggerService, configuration.FailOnUnhandledPort);
-        
-        pcSpeaker.InitPortHandlers(ioPortDispatcher);
         
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundBlaster soundBlaster = new SoundBlaster(
             ioPortDispatcher, softwareMixer, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
-        soundBlaster.InitPortHandlers(ioPortDispatcher);
         
-        GravisUltraSound gravisUltraSound = new GravisUltraSound(cpuState, configuration.FailOnUnhandledPort, loggerService);
-        gravisUltraSound.InitPortHandlers(ioPortDispatcher);
+        GravisUltraSound gravisUltraSound = new GravisUltraSound(cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
-        Midi midiDevice = new Midi(softwareMixer, cpuState, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
-        midiDevice.InitPortHandlers(ioPortDispatcher);
+        Midi midiDevice = new Midi(softwareMixer, cpuState, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
 
         // Services
         // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)

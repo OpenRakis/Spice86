@@ -5,12 +5,6 @@
 /// </summary>
 public interface IIOPortHandler {
     /// <summary>
-    /// Initializes the port handlers with an IOPortDispatcher object.
-    /// </summary>
-    /// <param name="ioPortDispatcher">The IOPortDispatcher object used to dispatch port accesses.</param>
-    void InitPortHandlers(IOPortDispatcher ioPortDispatcher);
-
-    /// <summary>
     /// Reads a single byte from the specified I/O port.
     /// </summary>
     /// <param name="port">The port number to read from.</param>

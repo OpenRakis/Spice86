@@ -30,13 +30,15 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
-    public Timer(Configuration configuration, State state, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
+    public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
+        ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         for(int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state, loggerService, CreateCounterActivator(state, loggerService, configuration)) {
                 Index = i
             };
         }
+        InitPortHandlers(ioPortDispatcher);
     }
     
     /// <summary>
@@ -94,8 +96,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         return base.ReadByte(port);
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(ModeCommandeRegister, this);
         ioPortDispatcher.AddIOPortHandler(CounterRegisterZero, this);
         ioPortDispatcher.AddIOPortHandler(CounterRegisterOne, this);

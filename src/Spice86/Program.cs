@@ -87,7 +87,7 @@ public class Program {
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: configuration.InitializeDOS is true);
         MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, state);
         var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(state, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
+        var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -102,41 +102,30 @@ public class Program {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
 
         // IO devices
-        dualPic.InitPortHandlers(ioPortDispatcher);
-        DmaController dmaController = new(memory, state, configuration.FailOnUnhandledPort, loggerService);
-        dmaController.InitPortHandlers(ioPortDispatcher);
+        DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
-        Joystick joystick = new Joystick(state, configuration.FailOnUnhandledPort, loggerService);
-        joystick.InitPortHandlers(ioPortDispatcher);
+        Joystick joystick = new Joystick(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
         VideoState videoState = new();
-        VgaIoPortHandler videoInt10Handler = new(state, loggerService, videoState, configuration.FailOnUnhandledPort);
-        videoInt10Handler.InitPortHandlers(ioPortDispatcher);
+        VgaIoPortHandler videoInt10Handler = new(state, ioPortDispatcher, loggerService, videoState, configuration.FailOnUnhandledPort);
         Renderer vgaRenderer = new(memory, videoState);
         
         SoftwareMixer softwareMixer = new(loggerService);
-        Midi midiDevice = new Midi(softwareMixer, state, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
-        midiDevice.InitPortHandlers(ioPortDispatcher);
+        Midi midiDevice = new Midi(softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService);
             
-        PcSpeaker pcSpeaker = new PcSpeaker(
-            softwareMixer, state,
-            loggerService, configuration.FailOnUnhandledPort);
-        pcSpeaker.InitPortHandlers(ioPortDispatcher);
+        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, ioPortDispatcher, loggerService, configuration.FailOnUnhandledPort);
         
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
         SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaController, dualPic, configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
-        soundBlaster.InitPortHandlers(ioPortDispatcher);
             
-        GravisUltraSound gravisUltraSound = new GravisUltraSound(state, configuration.FailOnUnhandledPort, loggerService);
-        gravisUltraSound.InitPortHandlers(ioPortDispatcher);
+        GravisUltraSound gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
         VgaFunctionality vgaFunctionality = new VgaFunctionality(interruptVectorTable, memory, ioPortDispatcher, biosDataArea,
             bootUpInTextMode: configuration.InitializeDOS is true);
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
         
-        Timer timer = new Timer(configuration, state, loggerService, dualPic);
-        timer.InitPortHandlers(ioPortDispatcher);
+        Timer timer = new Timer(configuration, state, ioPortDispatcher, loggerService, dualPic);
         TimerInt8Handler timerInt8Handler = new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(memory, cpu, loggerService);
@@ -161,11 +150,9 @@ public class Program {
         
         using (mainWindowViewModel) {
             VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
-            Keyboard keyboard = new Keyboard(state, a20Gate, dualPic, loggerService, mainWindowViewModel, configuration.FailOnUnhandledPort);
-            keyboard.InitPortHandlers(ioPortDispatcher);
+            Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService, mainWindowViewModel, configuration.FailOnUnhandledPort);
             BiosKeyboardInt9Handler biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(memory, cpu, dualPic, keyboard, biosDataArea, loggerService);
             Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-            mouse.InitPortHandlers(ioPortDispatcher);
             
             MouseDriver mouseDriver = new MouseDriver(cpu, memory, mouse, mainWindowViewModel, vgaFunctionality, loggerService);
 
