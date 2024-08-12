@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -150,6 +151,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// The SoundBlaster's OPL3 FM sound channel.
     /// </summary>
     public SoundChannel FMSynthSoundChannel { get; }
+    
+    /// <summary>
+    /// The internal FM synth chip for music.
+    /// </summary>
+    public OPL3FM Opl3Fm { get; }
 
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
@@ -159,8 +165,8 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
     /// </summary>
-    /// <param name="pcmSoundChannel">The software's mixer sound channel the SoundBlaster's PCM.</param>
-    /// <param name="fmSynthSoundChannel">The sound channel registered by the SoundBlaster's OPL3 FM Chip.</param>
+    /// <param name="ioPortDispatcher"></param>
+    /// <param name="softwareMixer"></param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
@@ -168,19 +174,16 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
-    public SoundBlaster(SoundChannel pcmSoundChannel, SoundChannel fmSynthSoundChannel, State state, DmaController dmaController,
+    public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state, DmaController dmaController,
         DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
         SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
-        PCMSoundChannel = pcmSoundChannel;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
         _pauseHandler = pauseHandler;
         _dmaController = dmaController;
         _dualPic = dualPic;
-        FMSynthSoundChannel = fmSynthSoundChannel;
-        _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, pcmSoundChannel, fmSynthSoundChannel, loggerService);
         _eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
         _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
@@ -188,6 +191,11 @@ public sealed class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice
         _playbackThread = new Thread(AudioPlayback) {
             Name = nameof(SoundBlaster),
         };
+        PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
+        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, failOnUnhandledPort, loggerService, pauseHandler);
+        Opl3Fm.InitPortHandlers(ioPortDispatcher);
+        _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
     }
 
     /// <summary>

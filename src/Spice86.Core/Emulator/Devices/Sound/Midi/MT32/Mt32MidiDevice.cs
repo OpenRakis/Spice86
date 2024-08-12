@@ -28,13 +28,13 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
-    /// <param name="mt32SoundChannel">The software mixer's sound channel for the MT-32.</param>
+    /// <param name="softwareMixer">The software mixer for sund channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoundChannel mt32SoundChannel, string romsPath, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService) {
+        _soundChannel = softwareMixer.CreateChannel(nameof(Mt32MidiDevice));
         _context = new();
-        _soundChannel = mt32SoundChannel;
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }

@@ -16,7 +16,6 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
@@ -105,18 +104,14 @@ public class MachineCreator {
         SoftwareMixer softwareMixer = new(loggerService);
         
         PcSpeaker pcSpeaker = new PcSpeaker(
-            new SoundChannel(softwareMixer, nameof(PcSpeaker)), cpuState,
+            softwareMixer, cpuState,
             loggerService, configuration.FailOnUnhandledPort);
         
         pcSpeaker.InitPortHandlers(ioPortDispatcher);
         
-        SoundChannel fmSynthSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster OPL3 FM Synth");
-        OPL3FM opl3fm = new OPL3FM(fmSynthSoundChannel, cpuState, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
-        opl3fm.InitPortHandlers(ioPortDispatcher);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
-        SoundChannel pcmSoundChannel = new SoundChannel(softwareMixer, "SoundBlaster PCM");
         SoundBlaster soundBlaster = new SoundBlaster(
-            pcmSoundChannel, fmSynthSoundChannel, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
+            ioPortDispatcher, softwareMixer, cpuState, dmaController, dualPic, configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
         soundBlaster.InitPortHandlers(ioPortDispatcher);
         
@@ -186,7 +181,7 @@ public class MachineCreator {
             dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
             timerInt8Handler,
             vgaCard, videoState, ioPortDispatcher, renderer, vgaBios, vgaFunctionality.VgaRom,
-            dmaController, opl3fm, softwareMixer, mouse, mouseDriver,
+            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality);
         
         InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);

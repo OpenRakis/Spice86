@@ -16,7 +16,7 @@ using OperatingSystem = System.OperatingSystem;
 /// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
-    private readonly SoundChannel _soundChannel;
+    private readonly SoundChannel? _soundChannel;
     private readonly Synthesizer _synthesizer;
 
     private bool _disposed;
@@ -36,11 +36,19 @@ public sealed class GeneralMidiDevice : MidiDevice {
 
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice(SoundChannel generalMidiSoundChannel, ILoggerService loggerService,  IPauseHandler pauseHandler) {
+    /// <summary>
+    /// Initializes a new instance of <see cref="GeneralMidiDevice"/>.
+    /// </summary>
+    /// <param name="softwareMixer">The software mixer for sound channels.</param>
+    /// <param name="loggerService">The service used to log messages.</param>
+    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
+    public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService,  IPauseHandler pauseHandler) {
         _synthesizer = new Synthesizer(new SoundFont(SoundFont), 48000);
         _pauseHandler = pauseHandler;
         _loggerService = loggerService;
-        _soundChannel = generalMidiSoundChannel;
+        if (!OperatingSystem.IsWindows()) {
+            _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
+        }
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = nameof(GeneralMidiDevice)
         };
@@ -75,7 +83,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
             buffer.Clear();
 
             FillBuffer(_synthesizer, buffer);
-            _soundChannel.Render(buffer);
+            _soundChannel?.Render(buffer);
             _fillBufferEvent.Reset();
         }
     }

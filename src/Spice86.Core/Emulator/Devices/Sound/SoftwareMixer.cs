@@ -22,6 +22,11 @@ public sealed class SoftwareMixer : IDisposable {
         _audioPlayerFactory = new(loggerService);
     }
 
+    internal SoundChannel CreateChannel(string name) {
+        SoundChannel soundChannel = new(this, name);
+        return soundChannel;
+    }
+
     internal void Register(SoundChannel soundChannel) {
         _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(sampleRate: 48000, framesPerBuffer: 2048));
         Channels = _channels.ToFrozenDictionary();
