@@ -181,12 +181,12 @@ public class Program {
                 new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
                 loggerService);
             
-            // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
-            MemoryAsmWriter memoryAsmWriter = new(memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
-            InterruptInstaller interruptInstaller = new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
-            AssemblyRoutineInstaller assemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
-
             if (configuration.InitializeDOS is not false) {
+                // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
+                MemoryAsmWriter memoryAsmWriter = new(memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
+                InterruptInstaller interruptInstaller = new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
+                AssemblyRoutineInstaller assemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
+
                 // Register the interrupt handlers
                 interruptInstaller.InstallInterruptHandler(vgaBios);
                 interruptInstaller.InstallInterruptHandler(timerInt8Handler);
@@ -211,8 +211,7 @@ public class Program {
                 mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
             }
             Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
-                callbackHandler, interruptInstaller,
-                assemblyRoutineInstaller, cpu,
+                callbackHandler, cpu,
                 cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
                 joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,

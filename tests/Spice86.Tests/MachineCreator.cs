@@ -180,8 +180,7 @@ public class MachineCreator {
         Core.Emulator.CPU.CfgCpu.CfgCpu cfgCpu = new(memory, cpuState, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
-            callbackHandler, interruptInstaller,
-            assemblyRoutineInstaller, cpu,
+            callbackHandler, cpu,
             cfgCpu, cpuState, dos, gravisUltraSound, ioPortDispatcher,
             joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,

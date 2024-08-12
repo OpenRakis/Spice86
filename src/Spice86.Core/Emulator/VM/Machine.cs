@@ -51,10 +51,6 @@ public sealed class Machine : IDisposable {
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
 
-    private InterruptInstaller InterruptInstaller { get; }
-
-    private AssemblyRoutineInstaller AssemblyRoutineInstaller { get; }
-
     /// <summary>
     /// The emulated CPU.
     /// </summary>
@@ -223,13 +219,11 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
-    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, InterruptInstaller interruptInstaller, AssemblyRoutineInstaller assemblyRoutineInstaller, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, MachineBreakpoints machineBreakpoints, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, OPL3FM opl3FM, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions) {
+    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, MachineBreakpoints machineBreakpoints, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, OPL3FM opl3FM, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
         CallbackHandler = callbackHandler;
-        InterruptInstaller = interruptInstaller;
-        AssemblyRoutineInstaller = assemblyRoutineInstaller;
         Cpu = cpu;
         CfgCpu = cfgCpu;
         CpuState = cpuState;
