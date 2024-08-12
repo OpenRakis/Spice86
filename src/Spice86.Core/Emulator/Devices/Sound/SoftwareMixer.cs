@@ -3,8 +3,8 @@
 using Spice86.Core.Backend.Audio;
 using Spice86.Shared.Interfaces;
 
-using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Basic software mixer for sound channels.
@@ -29,13 +29,13 @@ public sealed class SoftwareMixer : IDisposable {
 
     internal void Register(SoundChannel soundChannel) {
         _channels.Add(soundChannel, _audioPlayerFactory.CreatePlayer(sampleRate: 48000, framesPerBuffer: 2048));
-        Channels = _channels.ToFrozenDictionary();
+        Channels = _channels.AsReadOnly();
     }
     
     /// <summary>
     /// Gets the sound channels in a read-only dictionary.
     /// </summary>
-    public FrozenDictionary<SoundChannel, AudioPlayer> Channels { get; private set; } = new Dictionary<SoundChannel, AudioPlayer>().ToFrozenDictionary();
+    public IReadOnlyDictionary<SoundChannel, AudioPlayer> Channels { get; private set; } = new Dictionary<SoundChannel, AudioPlayer>().AsReadOnly();
 
     internal int Render(Span<float> data, SoundChannel channel) {
         if (channel.Volume == 0 || channel.IsMuted) {
