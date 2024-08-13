@@ -23,7 +23,6 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
-		<converters:NullToDoubleConverter x:Key="NullToDoubleConverter" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -72,7 +71,7 @@
 			<Button Focusable="False" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
 			<Button Focusable="False" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
 			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
-			<NumericUpDown Focusable="False" Margin="5,0,0,0" Text="{Binding TimeMultiplier, FallbackValue=1, Converter={StaticResource NullToDoubleConverter}}" Minimum="1" />
+			<NumericUpDown Focusable="False" Margin="5,0,0,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
 			<Button Focusable="False" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
 		</WrapPanel>
 		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
@@ -104,7 +103,8 @@
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" Grid.Row="0" Grid.Column="0" />
-				<Button Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2">
+				<Button Background="{Binding Background, ElementName=ErrorDialog}"
+				        Grid.Column="0" Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2">
 					<i:Interaction.Behaviors>
 						<b:ShowInternalDebuggerBehavior />
 					</i:Interaction.Behaviors>
