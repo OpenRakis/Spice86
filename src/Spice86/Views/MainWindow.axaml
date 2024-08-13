@@ -22,7 +22,7 @@
 		<local:ViewLocator />
 	</Window.DataTemplates>
 	<Window.Resources>
-		<converters:CountToBooleanConverter x:Key="CountToBooleanConverter" />
+		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
@@ -97,10 +97,12 @@
 			<WrapPanel Orientation="Horizontal">
 				<TextBlock Text="{Binding StatusMessage}" />
 				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}" IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource CountToBooleanConverter}, ConverterParameter=0}" />
+				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
+				           IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
 			</WrapPanel>
 		</Border>
-		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
+		           IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" Grid.Row="0" Grid.Column="0" />
 				<Button Background="{Binding Background, ElementName=ErrorDialog}"
