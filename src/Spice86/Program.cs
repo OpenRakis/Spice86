@@ -206,7 +206,7 @@ public class Program {
             
             InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
-            ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, state,
+            using ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, state,
                 dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
                 loggerService);
             if (configuration.HeadlessMode) {
