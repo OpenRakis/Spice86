@@ -20,7 +20,7 @@ public sealed class EmulatorBreakpointsManager {
     /// </summary>
     /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
-    /// <param name="state">The CPU state</param>
+    /// <param name="state">The CPU registers and flags.</param>
     public EmulatorBreakpointsManager(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, State state) {
         _state = state;
         _memoryBreakpoints = memoryBreakpoints;
