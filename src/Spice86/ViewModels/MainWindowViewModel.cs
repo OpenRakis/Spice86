@@ -39,7 +39,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     [ObservableProperty]
     private bool _canUseInternalDebugger;
     
-
     [ObservableProperty]
     private Configuration _configuration;
 
@@ -73,6 +72,7 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Resumed += OnResumed;
+        TimeMultiplier = Configuration.TimeMultiplier;
     }
     
     private IProgramExecutor? _programExecutor;
@@ -441,7 +441,6 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         if (ProgramExecutor is null) {
             return;
         }
-        TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
         ProgramExecutor.Run();

@@ -16,9 +16,4 @@ public interface IProgramExecutor : IDisposable {
     /// </summary>
     /// <param name="path">The directory used for dumping the emulator state.</param>
     void DumpEmulatorStateToDirectory(string path);
-
-    /// <summary>
-    /// Steps the current instruction.
-    /// </summary>
-    void StepInstruction();
 }

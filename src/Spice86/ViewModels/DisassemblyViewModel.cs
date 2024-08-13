@@ -34,7 +34,6 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
     
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
@@ -96,9 +95,6 @@ public partial class DisassemblyViewModel : ViewModelBase {
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));
     }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void StepInstruction() => _programExecutor?.StepInstruction();
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void GoToCsIp() {

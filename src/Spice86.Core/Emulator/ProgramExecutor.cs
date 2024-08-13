@@ -33,7 +33,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly CallbackHandler _callbackHandler;
     private readonly FunctionHandler _functionHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _cpuState;
     private readonly DmaController _dmaController;
@@ -61,7 +60,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
-        _pauseHandler = pauseHandler;
         _dmaController = dmaController;
         _memory = memory;
         _cpuState = state;
@@ -72,7 +70,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
             emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, _memory, cpu, _cpuState, _callbackHandler, _functionHandler,
-                _executionFlowRecorder, emulatorBreakpointsManager, _pauseHandler, _loggerService);
+                _executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, _memory, _cpuState, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
         if (configuration.InitializeDOS is null) {
@@ -94,15 +92,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
         if (_configuration.DumpDataOnExit is not false) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
-    }
-    
-    /// <summary>
-    /// Steps a single instruction for the internal UI debugger
-    /// </summary>
-    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
-    public void StepInstruction() {
-        _gdbServer?.StepInstruction();
-        _pauseHandler.Resume();
     }
 
     /// <inheritdoc/>

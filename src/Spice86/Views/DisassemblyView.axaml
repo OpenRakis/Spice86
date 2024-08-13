@@ -19,13 +19,8 @@
         <Grid
             DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            ColumnDefinitions="Auto,Auto">
-            <Button Grid.Column="0"
-                Margin="5"
-                Command="{Binding StepInstructionCommand}"
-                Content="Step instruction" />
-            <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto">
+            VerticalAlignment="Top">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto">
                 <Button Grid.Column="0"
                     Command="{Binding NewDisassemblyViewCommand}"
                     Content="New Disassembly View"
