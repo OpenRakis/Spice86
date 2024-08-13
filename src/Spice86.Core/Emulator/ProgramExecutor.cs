@@ -36,6 +36,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _cpuState;
+    private readonly DmaController _dmaController;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -61,13 +62,14 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _configuration = configuration;
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
+        _dmaController = dmaController;
         _memory = memory;
         _cpuState = state;
         _callbackHandler = callbackHandler;
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
-        _emulationLoop = new(_loggerService, _functionHandler, cpu, _cpuState, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler);
+        _emulationLoop = new EmulationLoop(_loggerService, _functionHandler, cpu, _cpuState, timer,
+            emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, _memory, cpu, _cpuState, _callbackHandler, _functionHandler,
                 _executionFlowRecorder, emulatorBreakpointsManager, _pauseHandler, _loggerService);
@@ -85,7 +87,10 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <inheritdoc/>
     public void Run() {
         _gdbServer?.StartServerAndWait();
+        _dmaController.StartDmaThread();
         _emulationLoop.Run();
+        _dmaController.StopDmaThread();
+
         if (_configuration.DumpDataOnExit is not false) {
             DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
@@ -157,7 +162,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return new BiosLoader(memory, cpuState, _loggerService);
     }
     
-    private GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
+    private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (configuration.GdbPort is null) {
             return null;

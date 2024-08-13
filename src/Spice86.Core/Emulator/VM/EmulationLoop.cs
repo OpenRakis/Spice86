@@ -14,7 +14,6 @@ using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
-/// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
 public class EmulationLoop {
@@ -24,7 +23,6 @@ public class EmulationLoop {
     private readonly State _cpuState;
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly DmaController _dmaController;
     private readonly Stopwatch _stopwatch;
     private readonly IPauseHandler _pauseHandler;
 
@@ -42,17 +40,14 @@ public class EmulationLoop {
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
-    /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController, IPauseHandler pauseHandler) {
+    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _dmaController = dmaController;
         _pauseHandler = pauseHandler;
         _stopwatch = new();
     }
@@ -87,9 +82,7 @@ public class EmulationLoop {
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
-        _dmaController.StartDmaThread();
         RunLoop();
-        _dmaController.StopDmaThread();
     }
 
     private void RunLoop() {
