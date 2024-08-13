@@ -39,11 +39,11 @@ using Spice86.Shared.Utils;
 using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 public class MachineCreator {
-    public ProgramExecutor CreateProgramExecutorFromBinName(string binName, bool recordData = false) {
+    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorFromBinName(string binName, bool recordData = false) {
         return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin", recordData);
     }
 
-    public ProgramExecutor CreateProgramExecutorForBin(string binPath, bool recordData = false) {
+    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorForBin(string binPath, bool recordData = false) {
         Configuration configuration = new Configuration {
             // making sure int8 is not going to be triggered during the tests
             InstructionsPerSecond = 10000000,
@@ -174,12 +174,12 @@ public class MachineCreator {
         
         InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
         
-        ProgramExecutor programExecutor = new(configuration, loggerService,
-            emulatorBreakpointsManager, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
-            pauseHandler);
+        ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, cpuState,
+            dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
+            loggerService);
         cpu.ErrorOnUninitializedInterruptHandler = false;
         cpuState.Flags.IsDOSBoxCompatible = false;
-        return programExecutor;
+        return (machine, programExecutor);
     }
     
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(

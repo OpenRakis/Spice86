@@ -24,19 +24,18 @@ using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
 
-    private ProgramExecutor CreateDummyProgramExecutor() {
-        ProgramExecutor res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
-        Machine machine = res.Machine;
+    private (Machine Machine, ProgramExecutor ProgramExecutor) CreateDummyProgramExecutor() {
+        (Machine Machine, ProgramExecutor ProgramExecutor) res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
         // Setup stack
-        machine.Cpu.State.SS = 0;
-        machine.Cpu.State.SP = 100;
+        res.Machine.Cpu.State.SS = 0;
+        res.Machine.Cpu.State.SP = 100;
         return res;
     }
 
     [Fact]
     void TestJumpReturns() {
-        using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
-        Machine machine = programExecutor.Machine;
+        (Machine Machine, ProgramExecutor ProgramExecutor) res = CreateDummyProgramExecutor();
+        using Machine machine = res.Machine;
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(machine.Memory, machine.CpuState, machine.Cpu,
                 machine.Cpu.Stack, machine.DualPic, machine.Timer,
@@ -50,8 +49,8 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     void TestSimpleCallsJumps() {
-        using ProgramExecutor programExecutor = CreateDummyProgramExecutor();
-        Machine machine = programExecutor.Machine;
+        (Machine createdMachine, ProgramExecutor ProgramExecutor) = CreateDummyProgramExecutor();
+        using Machine machine = createdMachine;
         SimpleCallsJumps callsJumps =
             new SimpleCallsJumps(machine.Memory, machine.CpuState, machine.Cpu,
                 machine.Cpu.Stack, machine.DualPic, machine.Timer,

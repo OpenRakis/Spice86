@@ -28,8 +28,7 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
-        Machine machine = programExecutor.Machine;
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", true);
         State state = machine.CpuState;
         EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         int triggers = 0;
@@ -53,8 +52,7 @@ public class MachineTest {
 
     [Fact]
     public void TestMemoryBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add");
-        Machine machine = programExecutor.Machine;
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add");
         EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         IMemory memory = machine.Memory;
 
@@ -360,20 +358,20 @@ public class MachineTest {
         return machine;
     }
 
-    private ProgramExecutor CreateProgramExecutor(string binName, bool recordData = false) {
+    private (Machine Machine, ProgramExecutor programExecutor) CreateProgramExecutor(string binName, bool recordData = false) {
         return new MachineCreator().CreateProgramExecutorFromBinName(binName, recordData);
     }
 
     [AssertionMethod]
     private Machine Execute(string binName) {
-        using ProgramExecutor programExecutor = CreateProgramExecutor(binName);
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor(binName);
         // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
-        programExecutor.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 100000L,
+        machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 100000L,
             (breakpoint) => {
                 Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong.");
             }, true), true);
         programExecutor.Run();
-        return programExecutor.Machine;
+        return machine;
     }
 
     private byte[] GetExpected(string binName) {

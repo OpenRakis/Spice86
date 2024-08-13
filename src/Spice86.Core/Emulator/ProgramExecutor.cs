@@ -4,6 +4,8 @@ using Function.Dump;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -39,32 +41,35 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    /// <param name="loggerService">The logging service to use. Provided via DI.</param>
     /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
-    /// <param name="machine">The dumb service container that centralizes emulator devices.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated x86 CPU.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="dmaController">The Intel 8237 DMA Controller.</param>
+    /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    public ProgramExecutor(Configuration configuration, ILoggerService loggerService,
+    /// <param name="loggerService">The logging service to use. Provided via DI.</param>
+    public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        Machine machine, Dos dos,
+        IMemory memory, Cpu cpu, State state, DmaController dmaController, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
-        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler) {
+        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
-        Machine = machine;
-        _memory = Machine.Memory;
-        _cpuState = Machine.CpuState;
+        _memory = memory;
+        _cpuState = state;
         _callbackHandler = callbackHandler;
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
-        _emulationLoop = new(_loggerService, _functionHandler, Machine.Cpu, _cpuState, Machine.Timer,
-            emulatorBreakpointsManager, Machine.DmaController, pauseHandler);
+        _emulationLoop = new(_loggerService, _functionHandler, cpu, _cpuState, timer,
+            emulatorBreakpointsManager, dmaController, pauseHandler);
         if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(configuration, _memory, Machine.Cpu, _cpuState, _callbackHandler, _functionHandler,
+            _gdbServer = CreateGdbServer(configuration, _memory, cpu, _cpuState, _callbackHandler, _functionHandler,
                 _executionFlowRecorder, emulatorBreakpointsManager, _pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, _memory, _cpuState, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
@@ -76,11 +81,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
         LoadFileToRun(configuration, loader);
     }
-
-    /// <summary>
-    /// The emulator machine.
-    /// </summary>
-    public Machine Machine { get; }
 
     /// <inheritdoc/>
     public void Run() {
@@ -194,7 +194,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
             if (disposing) {
                 _gdbServer?.Dispose();
                 _emulationLoop.Exit();
-                Machine.Dispose();
             }
             _disposed = true;
         }

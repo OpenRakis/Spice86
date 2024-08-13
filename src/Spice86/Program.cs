@@ -194,7 +194,7 @@ public class Program {
                 SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver);
                 mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
             }
-            Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
+            using Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
                 callbackHandler, cpu,
                 cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
                 joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
@@ -206,9 +206,9 @@ public class Program {
             
             InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
-            ProgramExecutor programExecutor = new(configuration, loggerService,
-                emulatorBreakpointsManager, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
-                pauseHandler);
+            ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, state,
+                dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
+                loggerService);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
             } else if (mainWindowViewModel != null && mainWindow != null && desktop != null
