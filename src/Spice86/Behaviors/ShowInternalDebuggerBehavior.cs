@@ -28,7 +28,11 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
     
     private object? _debugWindowDataContext;
 
-    private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
+    /// <summary>
+    /// Command implementation for buttons, for which an attached behavior doesn't work.
+    /// </summary>
+    /// <exception cref="PlatformNotSupportedException">The platform is not <see cref="IClassicDesktopStyleApplicationLifetime"/></exception>
+    internal void ShowInternalDebugger() {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime) {
             throw new PlatformNotSupportedException("This behavior is only supported on Desktop platforms.");
         }
@@ -47,6 +51,10 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
             _debugWindowDataContext = debugWindow.DataContext;
             debugWindow.Show();
         }
+    }
+
+    private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
+        ShowInternalDebugger();
     }
 
     private static bool TryShowDebugWindow(IReadOnlyList<Window> windows, [NotNullWhen(true)] out DebugWindow? debugWindow) {

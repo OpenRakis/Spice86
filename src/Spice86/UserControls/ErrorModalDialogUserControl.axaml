@@ -7,9 +7,11 @@
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.UserControls.ErrorModalDialogUserControl"
-             x:DataType="viewModels:ViewModelBaseWithErrorDialog">
+             xmlns:b="clr-namespace:Spice86.Behaviors"
+             x:DataType="viewModels:ViewModelWithErrorDialog">
     <UserControl.Resources>
         <converters:ClassToTypeStringConverter x:Key="ClassToTypeStringConverter" />
+        <b:ShowInternalDebuggerBehavior x:Key="ShowInternalDebuggerBehavior" />
     </UserControl.Resources>
     <dialogHostAvalonia:DialogHost
         CloseOnClickAway="False"
@@ -18,7 +20,7 @@
             <Grid>
                 <Border Background="{StaticResource SystemChromeBlackHighColor}" Opacity="0.5" />
                 <WrapPanel Background="{Binding $parent[Window].Background}" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto">
+                    <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto, Auto">
                         <Label Grid.Row="0" HorizontalAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Content="An unhandled exception occured" />
                         <WrapPanel Grid.Column="0" Orientation="Vertical" Grid.Row="1" Grid.ColumnSpan="3">
                             <Grid RowDefinitions="Auto,*" ColumnDefinitions="Auto,*">
@@ -39,6 +41,7 @@
                             </Expander>
                         </WrapPanel>
                         <Button Content="OK" Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="2" Command="{Binding ClearDialog}" />
+                        <Button Content="Debug..." Margin="5" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Grid.Row="2" Grid.Column="3" Command="{Binding ShowInternalDebugger}" CommandParameter="{StaticResource ShowInternalDebuggerBehavior}" />
                     </Grid>
                 </WrapPanel>
             </Grid>

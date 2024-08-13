@@ -26,7 +26,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;

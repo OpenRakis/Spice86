@@ -19,7 +19,7 @@ using Spice86.Views;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-public partial class MemoryViewModel : ViewModelBaseWithErrorDialog {
+public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private IMemory? _memory;
     private bool _needToUpdateBinaryDocument;
     private readonly IStructureViewModelFactory _structureViewModelFactory;

@@ -103,15 +103,7 @@
 		</Border>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
 		           IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
-			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
-				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" Grid.Row="0" Grid.Column="0" />
-				<Button Background="{Binding Background, ElementName=ErrorDialog}"
-				        Grid.Column="0" Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2">
-					<i:Interaction.Behaviors>
-						<b:ShowInternalDebuggerBehavior />
-					</i:Interaction.Behaviors>
-				</Button>
-			</Grid>
+				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />
 		</WrapPanel>
 	</Grid>
 </Window>
