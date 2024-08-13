@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
@@ -136,16 +137,18 @@ public class Program {
         MainWindowViewModel? mainWindowViewModel = null;
         ClassicDesktopStyleApplicationLifetime? desktop = null;
         MainWindow? mainWindow = null;
+        ITextClipboard? textClipboard = null;
+        IHostStorageProvider? hostStorageProvider = null;
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
             PerformanceViewModel performanceViewModel = new(state, pauseHandler);
             mainWindow = new() {
                 PerformanceViewModel = performanceViewModel
             };
+            textClipboard = new TextClipboard(mainWindow.Clipboard);
+            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider);
             mainWindowViewModel = new MainWindowViewModel(
-                videoState.DacRegisters.ArgbPalette, timer, state, memory, softwareMixer, midiDevice, vgaRenderer, videoState, cfgCpu.ExecutionContextManager,
-                messenger, new UIDispatcher(Dispatcher.UIThread), new HostStorageProvider(mainWindow.StorageProvider), new TextClipboard(mainWindow.Clipboard),
-                configuration, loggerService, pauseHandler);
+                timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration, loggerService, pauseHandler);
         }
         
         using (mainWindowViewModel) {
@@ -215,10 +218,23 @@ public class Program {
                 pauseHandler);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
-            } else if (mainWindowViewModel != null && mainWindow != null && desktop != null) {
+            } else if (mainWindowViewModel != null && mainWindow != null && desktop != null
+                    && textClipboard != null && hostStorageProvider != null) {
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.MainWindow = mainWindow;
                 mainWindowViewModel.ProgramExecutor = programExecutor;
+                DebugWindowViewModel debugWindowViewModel = new DebugWindowViewModel(programExecutor, state, memory,
+                    midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
+                    cfgCpu.ExecutionContextManager, messenger, textClipboard, hostStorageProvider,
+                    new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+                desktop.Startup += (_, _) => {
+                    // DebugWindow is not shown. Therefore, the instance is not used.
+                    // But with the alternative ctor it will be in the OwnedWindows collection.
+                    // This is for the ShowInternalDebuggerBehavior.
+                    _ = new DebugWindow(owner: mainWindow) {
+                        DataContext = debugWindowViewModel
+                    };
+                };
                 desktop.Start(args);
             }
         }

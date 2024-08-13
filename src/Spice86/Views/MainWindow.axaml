@@ -5,7 +5,8 @@
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:converters="clr-namespace:Spice86.Converters"
 		xmlns:local="clr-namespace:Spice86;assembly=Spice86"
-		xmlns:views="clr-namespace:Spice86.Views"
+		xmlns:b="clr-namespace:Spice86.Behaviors"
+		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 		xmlns:userControls="clr-namespace:Spice86.UserControls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
@@ -30,15 +31,19 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
 			<MenuItem Header="Debug">
-				<MenuItem Header="Internal debugger" IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding ShowInternalDebuggerCommand}" />
+				<MenuItem Header="Internal debugger" IsEnabled="{Binding IsEmulatorRunning}">
+					<i:Interaction.Behaviors>
+						<b:ShowInternalDebuggerBehavior />
+					</i:Interaction.Behaviors>
+				</MenuItem>
 				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
-					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
-					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
-					<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
-					<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
-					<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
-					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
-					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
+				<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
+				<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
+				<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
+				<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
+				<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
+				<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
+				<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 				</MenuItem>
 				<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
 			</MenuItem>
@@ -99,7 +104,11 @@
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" Grid.Row="0" Grid.Column="0" />
-				<Button Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2" Command="{Binding ShowInternalDebuggerCommand}" />
+				<Button Content="Debug..." Grid.Row="1" Grid.ColumnSpan="2">
+					<i:Interaction.Behaviors>
+						<b:ShowInternalDebuggerBehavior />
+					</i:Interaction.Behaviors>
+				</Button>
 			</Grid>
 		</WrapPanel>
 	</Grid>

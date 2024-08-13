@@ -9,18 +9,11 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 
 using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
@@ -39,24 +32,11 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
-    private readonly IWindowService _windowService;
-    private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IMessenger _messenger;
     private readonly bool _isGdbServerRunning;
     private readonly ITimeMultiplier _pit;
-    private readonly State _state;
-    private readonly IMemory _memory;
-    private readonly SoftwareMixer _softwareMixer;
-    private readonly Midi _midi;
-    private readonly IVgaRenderer _vgaRenderer;
-    private readonly VideoState _videoState;
-    private readonly ArgbPalette _argbPalette;
-    private readonly ExecutionContextManager _executionContextManager;
-    private DebugWindowViewModel? _debugViewModel;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ShowInternalDebuggerCommand))]
     private bool _canUseInternalDebugger;
     
 
@@ -81,24 +61,12 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        ArgbPalette argbPalette, ITimeMultiplier pit, State state, IMemory memory, SoftwareMixer softwareMixer, Midi midi, IVgaRenderer vgaRenderer, VideoState videoState, ExecutionContextManager executionContextManager,
-        IMessenger messenger, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard, Configuration configuration,
-        ILoggerService loggerService, IPauseHandler pauseHandler) : base(textClipboard) {
+        ITimeMultiplier pit, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
+        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler) : base(textClipboard) {
         _pit = pit;
-        _argbPalette = argbPalette;
-        _state = state;
-        _memory = memory;
-        _softwareMixer = softwareMixer;
-        _midi = midi;
-        _vgaRenderer = vgaRenderer;
-        _videoState = videoState;
-        _executionContextManager = executionContextManager;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
-        _messenger = messenger;
-        _windowService = new WindowService();
         Configuration = configuration;
         _loggerService = loggerService;
-        _structureViewModelFactory = new StructureViewModelFactory(configuration, loggerService, pauseHandler);
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
         _isGdbServerRunning = configuration.GdbPort is not null;
@@ -469,22 +437,10 @@ public sealed partial class MainWindowViewModel : ViewModelBaseWithErrorDialog, 
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanUseInternalDebugger))]
-    private async Task ShowInternalDebugger() {
-        if (ProgramExecutor is null) {
-            return;
-        }
-        _debugViewModel = new DebugWindowViewModel(
-            ProgramExecutor, _state, _memory, _midi, _argbPalette, _softwareMixer, _vgaRenderer, _videoState, _executionContextManager,
-            _messenger, _textClipboard, _hostStorageProvider, _structureViewModelFactory, _pauseHandler);
-        await _windowService.ShowDebugWindow(_debugViewModel).ConfigureAwait(false);
-    }
-
     private void StartProgramExecutor() {
         if (ProgramExecutor is null) {
             return;
         }
-        _windowService.CloseDebugWindow();
         TimeMultiplier = Configuration.TimeMultiplier;
         _uiDispatcher.Post(() => IsEmulatorRunning = true);
         _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
