@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.Function.Dump;
 using System.Text.Json;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -11,7 +13,6 @@ using Spice86.Shared.Interfaces;
 public class RecorderDataWriter : RecordedDataIoHandler {
     private readonly ILoggerService _loggerService;
     private readonly State _state;
-    private readonly ExecutionFlowDumper _executionFlowDumper;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private readonly MemoryDataExporter _memoryDataExporter;
 
@@ -19,17 +20,17 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="memoryDataExporter">The class used to export memory contents to a file.</param>
-    /// <param name="executionFlowDumper">The class that reads and dumps execution flow to a file.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions.</param>
+    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="dumpDirectory">Where to dump the data.</param>
-    public RecorderDataWriter(ExecutionFlowRecorder executionFlowRecorder, State state, MemoryDataExporter memoryDataExporter, ExecutionFlowDumper executionFlowDumper, ILoggerService loggerService, string dumpDirectory) : base(dumpDirectory) {
+    /// <param name="loggerService">The logger service implementation.</param>
+    public RecorderDataWriter(IMemory memory, State state, CallbackHandler callbackHandler, Configuration configuration, ExecutionFlowRecorder executionFlowRecorder, string dumpDirectory, ILoggerService loggerService) : base(dumpDirectory) {
         _loggerService = loggerService;
         _executionFlowRecorder = executionFlowRecorder;
         _state = state;
-        _memoryDataExporter = memoryDataExporter;
-        _executionFlowDumper = executionFlowDumper;
+        _memoryDataExporter = new(memory, callbackHandler, configuration, dumpDirectory, loggerService);
     }
 
     /// <summary>
@@ -46,8 +47,9 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Dumps the Ghidra symbols to the file system.
     /// </summary>
-    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) =>
+    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
         new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionHandler, SymbolsFile);
+    }
 
     /// <summary>
     /// Dumps the CPU registers to the file system.
@@ -62,10 +64,12 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// Dumps the machine's memory to the file system.
     /// </summary>
     /// <param name="suffix">The suffix to add to the file name.</param>
-    public void DumpMemory(string suffix) => _memoryDataExporter.DumpMemory(suffix);
+    public void DumpMemory(string suffix) {
+        _memoryDataExporter.DumpMemory(suffix);
+    }
 
     /// <summary>
     /// Dumps the execution flow data to the file system.
     /// </summary>
-    private void DumpExecutionFlow() => _executionFlowDumper.Dump(_executionFlowRecorder, ExecutionFlowFile);
+    private void DumpExecutionFlow() => new ExecutionFlowDumper(_loggerService).Dump(_executionFlowRecorder, ExecutionFlowFile);
 }

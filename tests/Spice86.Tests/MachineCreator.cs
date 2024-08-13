@@ -173,15 +173,8 @@ public class MachineCreator {
             vgaFunctionality);
         
         InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
-        RecorderDataWriter recorderDataWriter = new(executionFlowRecorder,
-            cpuState,
-            new MemoryDataExporter(memory, callbackHandler, configuration,
-                configuration.RecordedDataDirectory, loggerService),
-            new ExecutionFlowDumper(loggerService),
-            loggerService,
-            configuration.RecordedDataDirectory);
         
-        ProgramExecutor programExecutor = new(configuration, loggerService, recorderDataWriter,
+        ProgramExecutor programExecutor = new(configuration, loggerService,
             machineBreakpoints, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
             pauseHandler);
         cpu.ErrorOnUninitializedInterruptHandler = false;

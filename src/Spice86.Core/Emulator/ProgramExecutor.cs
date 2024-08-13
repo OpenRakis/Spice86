@@ -27,6 +27,7 @@ using GeneralRegisters = Spice86.Core.Emulator.CPU.Registers.GeneralRegisters;
 public sealed class ProgramExecutor : IProgramExecutor {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
+    private readonly Dos _dos;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
@@ -42,15 +43,21 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
+    /// <param name="machineBreakpoints">The class that manages machine code execution breakpoints.</param>
+    /// <param name="machine">The dumb service container that centralizes emulator devices.</param>
+    /// <param name="dos">The DOS kernel.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     public ProgramExecutor(Configuration configuration, ILoggerService loggerService,
-        RecorderDataWriter recorderDataWriter,
         MachineBreakpoints machineBreakpoints,
         Machine machine, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler) {
         _configuration = configuration;
         _loggerService = loggerService;
+        _dos = dos;
         _pauseHandler = pauseHandler;
         Machine = machine;
         _memory = Machine.Memory;
@@ -61,8 +68,8 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _emulationLoop = new(_loggerService, _functionHandler, Machine.Cpu, _cpuState, Machine.Timer,
             machineBreakpoints, Machine.DmaController, pauseHandler);
         if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(recorderDataWriter, pauseHandler, _cpuState, _memory, Machine.Cpu,
-                machineBreakpoints, _executionFlowRecorder, _functionHandler);
+            _gdbServer = CreateGdbServer(configuration, _memory, Machine.Cpu, _cpuState, _callbackHandler, _functionHandler,
+                _executionFlowRecorder, machineBreakpoints, _pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, _memory, _cpuState, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
         if (configuration.InitializeDOS is null) {
@@ -72,7 +79,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
             }
         }
         LoadFileToRun(configuration, loader);
-
     }
 
     /// <summary>
@@ -100,12 +106,12 @@ public sealed class ProgramExecutor : IProgramExecutor {
 
     /// <inheritdoc/>
     public void DumpEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(_executionFlowRecorder,
+        new RecorderDataWriter(_memory,
                 _cpuState,
-                new MemoryDataExporter(_memory, _callbackHandler, _configuration, path, _loggerService),
-                new ExecutionFlowDumper(_loggerService),
-                _loggerService,
-                path)
+                _callbackHandler,
+                _configuration,
+                _executionFlowRecorder,
+               path, _loggerService)
             .DumpAll(_executionFlowRecorder, _functionHandler);
     }
 
@@ -155,38 +161,12 @@ public sealed class ProgramExecutor : IProgramExecutor {
         return new BiosLoader(memory, cpuState, _loggerService);
     }
     
-    private GdbServer? CreateGdbServer(RecorderDataWriter recorderDataWriter,
-        IPauseHandler pauseHandler, State cpuState, IMemory memory, Cpu cpu,
-        MachineBreakpoints machineBreakpoints, ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
-        int? gdbPort = _configuration.GdbPort;
-        if (gdbPort == null) {
+    private GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
+        ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        if (configuration.GdbPort is null) {
             return null;
         }
-        GdbIo gdbIo = new(gdbPort.Value, _loggerService);
-        GdbFormatter gdbFormatter = new();
-        var gdbCommandRegisterHandler = new GdbCommandRegisterHandler(cpuState, gdbFormatter, gdbIo, _loggerService);
-        var gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbFormatter, gdbIo, _loggerService);
-        var gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        var gdbCustomCommandsHandler = new GdbCustomCommandsHandler(memory, cpuState, cpu,
-            machineBreakpoints, recorderDataWriter, gdbIo,
-            _loggerService,
-            gdbCommandBreakpointHandler.OnBreakPointReached);
-        GdbCommandHandler gdbCommandHandler = new(
-            gdbCommandBreakpointHandler, gdbCommandMemoryHandler, gdbCommandRegisterHandler,
-            gdbCustomCommandsHandler,
-            cpuState,
-            pauseHandler,
-            executionFlowRecorder,
-            functionHandler,
-            gdbIo,
-            _loggerService);
-        return new GdbServer(
-            gdbIo,
-            cpuState,
-            pauseHandler,
-            gdbCommandHandler,
-            _loggerService,
-            _configuration);
+        return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, machineBreakpoints, pauseHandler, loggerService);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {

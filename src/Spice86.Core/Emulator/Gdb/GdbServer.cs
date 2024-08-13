@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
@@ -11,32 +14,44 @@ public sealed class GdbServer : IDisposable {
     private readonly ILoggerService _loggerService;
     private EventWaitHandle? _waitFirstConnectionHandle;
     private readonly Configuration _configuration;
-    private readonly GdbIo _gdbIo;
-
-    private bool _acceptedConnection;
     private bool _disposed;
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
+    private GdbIo? _gdbIo;
+    private readonly Cpu _cpu;
     private readonly IPauseHandler _pauseHandler;
+    private readonly IMemory _memory;
     private readonly State _state;
-    private readonly GdbCommandHandler _gdbCommandHandler;
+    private readonly CallbackHandler _callbackHandler;
+    private readonly ExecutionFlowRecorder _executionFlowRecorder;
+    private readonly FunctionHandler _functionHandler;
+    private readonly MachineBreakpoints _machineBreakpoints;
+    private GdbCommandHandler? _gdbCommandHandler;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
     /// </summary>
-    /// <param name="gdbIo">The class used to establish the GDB connection.</param>
-    /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
-    /// <param name="gdbCommandHandler">The class that answers to custom GDB commands.</param>
-    /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
-    public GdbServer(GdbIo gdbIo, State state, IPauseHandler pauseHandler, GdbCommandHandler gdbCommandHandler, ILoggerService loggerService, Configuration configuration) {
-        _gdbIo = gdbIo;
+    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="machineBreakpoints">The class that handles breakpoints.</param>
+    /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
+    /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
+    public GdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
+        _functionHandler = functionHandler;
+        _cpu = cpu;
         _state = state;
+        _memory = memory;
+        _callbackHandler = callbackHandler;
+        _executionFlowRecorder = executionFlowRecorder;
+        _machineBreakpoints = machineBreakpoints;
         _configuration = configuration;
-        _gdbCommandHandler = gdbCommandHandler;
     }
 
     /// <inheritdoc />
@@ -55,7 +70,7 @@ public sealed class GdbServer : IDisposable {
             if (disposing) {
                 // Prevent it from restarting when the connection is killed
                 _isRunning = false;
-                _gdbIo.Dispose();
+                _gdbIo?.Dispose();
                 // Release lock if called before the first connection to gdb server has been done
                 _waitFirstConnectionHandle?.Set();
                 _waitFirstConnectionHandle?.Dispose();
@@ -72,12 +87,19 @@ public sealed class GdbServer : IDisposable {
     /// <param name="gdbIo">The GdbIo instance used to communicate with the GDB client.</param>
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
-        _gdbCommandHandler.PauseEmulator();
+        GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
+            _memory, _cpu, _state, _pauseHandler, _machineBreakpoints,
+            _callbackHandler, _executionFlowRecorder, _functionHandler,
+            gdbIo,
+            _loggerService,
+            _configuration);
+        gdbCommandHandler.PauseEmulator();
         OnConnect();
-        while (_gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
+        _gdbCommandHandler = gdbCommandHandler;
+        while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
             if (!string.IsNullOrWhiteSpace(command)) {
-                _gdbCommandHandler.RunCommand(command);
+                gdbCommandHandler.RunCommand(command);
             }
         }
         _loggerService.Verbose("Client disconnected");
@@ -97,12 +119,11 @@ public sealed class GdbServer : IDisposable {
         try {
             while (_isRunning) {
                 try {
-                    if (_acceptedConnection) {
-                        continue;
-                    }
+                    using GdbIo gdbIo = new GdbIo(port, _loggerService);
                     // Make GdbIo available for Dispose
-                    AcceptOneConnection(_gdbIo);
-                    _acceptedConnection = true;
+                    _gdbIo = gdbIo;
+                    AcceptOneConnection(gdbIo);
+                    _gdbIo = null;
                 } catch (IOException e) {
                     if (_isRunning) {
                         _loggerService.Error(e, "Error in the GDB server, restarting it...");
@@ -142,7 +163,7 @@ public sealed class GdbServer : IDisposable {
         _gdbServerThread?.Start();
         // wait for thread to start and the initial connection to be made
         _waitFirstConnectionHandle.WaitOne();
-        // Remove the handle so that we don't wait anymore
+        // Remove the handle so that no wait
         _waitFirstConnectionHandle.Dispose();
         _waitFirstConnectionHandle = null;
     }
@@ -150,10 +171,14 @@ public sealed class GdbServer : IDisposable {
     /// <summary>
     /// Sets the auto-reset event for the initial connection.
     /// </summary>
-    private void OnConnect() => _waitFirstConnectionHandle?.Set();
+    private void OnConnect() {
+        _waitFirstConnectionHandle?.Set();
+    }
 
     /// <summary>
     /// Executes a single CPU instruction.
     /// </summary>
-    public void StepInstruction() => _gdbCommandHandler.Step();
+    public void StepInstruction() {
+        _gdbCommandHandler?.Step();
+    }
 }

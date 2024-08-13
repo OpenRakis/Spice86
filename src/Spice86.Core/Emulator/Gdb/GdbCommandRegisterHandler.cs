@@ -13,7 +13,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class GdbCommandRegisterHandler {
     private readonly ILoggerService _loggerService;
-    private readonly GdbFormatter _gdbFormatter;
+    private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly State _state;
 
@@ -21,12 +21,10 @@ public class GdbCommandRegisterHandler {
     /// Initializes a new instance of the GdbCommandRegisterHandler class
     /// </summary>
     /// <param name="state">The CPU state.</param>
-    /// <param name="gdbFormatter">The GdbFormatter class that formats values in a way compatible with GDB.</param>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
     /// <param name="loggerService">The ILoggerService implementation.</param>
-    public GdbCommandRegisterHandler(State state, GdbFormatter gdbFormatter, GdbIo gdbIo, ILoggerService loggerService) {
+    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _gdbFormatter = gdbFormatter;
         _state = state;
         _gdbIo = gdbIo;
     }

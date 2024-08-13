@@ -205,15 +205,8 @@ public class Program {
                 vgaFunctionality);
             
             InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
-            RecorderDataWriter recorderDataWriter = new(executionFlowRecorder,
-                state,
-                new MemoryDataExporter(memory, callbackHandler, configuration,
-                    configuration.RecordedDataDirectory, loggerService),
-                new ExecutionFlowDumper(loggerService),
-                loggerService,
-                configuration.RecordedDataDirectory);
             
-            ProgramExecutor programExecutor = new(configuration, loggerService, recorderDataWriter,
+            ProgramExecutor programExecutor = new(configuration, loggerService,
                 machineBreakpoints, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
                 pauseHandler);
             if (configuration.HeadlessMode) {
