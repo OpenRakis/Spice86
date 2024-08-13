@@ -21,13 +21,10 @@ using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
 
-using GeneralRegisters = Spice86.Core.Emulator.CPU.Registers.GeneralRegisters;
-
 /// <inheritdoc cref="IProgramExecutor"/>
 public sealed class ProgramExecutor : IProgramExecutor {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
-    private readonly Dos _dos;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
@@ -57,7 +54,6 @@ public sealed class ProgramExecutor : IProgramExecutor {
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler) {
         _configuration = configuration;
         _loggerService = loggerService;
-        _dos = dos;
         _pauseHandler = pauseHandler;
         Machine = machine;
         _memory = Machine.Memory;
