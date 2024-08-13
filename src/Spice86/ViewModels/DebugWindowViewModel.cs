@@ -68,6 +68,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Pausing += () => IsPaused = true;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
         DisassemblyViewModel disassemblyVm = new(programExecutor, memory, cpuState, pauseHandler, messenger);
         DisassemblyViewModels.Add(disassemblyVm);
