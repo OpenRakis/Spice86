@@ -86,7 +86,7 @@ public class Program {
         A20Gate a20Gate = new(configuration.A20Gate);
         MemoryBreakpoints memoryBreakpoints = new();
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: configuration.InitializeDOS is true);
-        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, state);
+        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, state);
         var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
         var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 

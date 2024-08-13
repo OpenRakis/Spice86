@@ -38,7 +38,7 @@ public class CfgNodeFeederTest {
         MemoryBreakpoints memoryBreakpoints = new();
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(memoryBreakpoints, new PauseHandler(loggerService), _memory, _state);
+        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(memoryBreakpoints, new PauseHandler(loggerService), _state);
         return new(_memory, _state, machineBreakpoints);
     }
 

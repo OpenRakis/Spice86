@@ -19,11 +19,6 @@ public sealed class MachineBreakpoints {
     private readonly BreakPointHolder _executionBreakPoints;
 
     /// <summary>
-    /// The memory bus.
-    /// </summary>
-    private readonly IMemory _memory;
-
-    /// <summary>
     /// The CPU State.
     /// </summary>
     private readonly State _state;
@@ -45,12 +40,10 @@ public sealed class MachineBreakpoints {
     /// </summary>
     /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
-    /// <param name="memory">The IBM PC memory bus</param>
     /// <param name="state">The CPU state</param>
-    public MachineBreakpoints(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, IMemory memory, State state) {
+    public MachineBreakpoints(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, State state) {
         _state = state;
         _memoryBreakpoints = memoryBreakpoints;
-        _memory = memory;
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
         _pauseHandler = pauseHandler;

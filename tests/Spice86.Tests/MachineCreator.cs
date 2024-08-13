@@ -65,7 +65,7 @@ public class MachineCreator {
         A20Gate a20gate = new(configuration.A20Gate);
         MemoryBreakpoints memoryBreakpoints = new();
         IMemory memory = new Memory(memoryBreakpoints, ram, a20gate, initializeResetVector: configuration.InitializeDOS is true);
-        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, memory, cpuState);
+        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, cpuState);
 
         var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
         var dualPic = new DualPic(cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
