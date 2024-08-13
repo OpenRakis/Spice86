@@ -46,7 +46,7 @@ public class Cpu : IInstructionExecutor {
 
     private readonly Alu8 _alu8;
 
-    internal MachineBreakpoints MachineBreakpoints { get; }
+    internal EmulatorBreakpointsManager EmulatorBreakpointsManager { get; }
     private readonly CallbackHandler _callbackHandler;
     private readonly Instructions8 _instructions8;
     private readonly Instructions16 _instructions16;
@@ -87,7 +87,7 @@ public class Cpu : IInstructionExecutor {
     public Cpu(InterruptVectorTable interruptVectorTable,
         Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
         IMemory memory, State state, DualPic dualPic,
-        IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
+        IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder) {
         _loggerService = loggerService;
         _memory = memory;
@@ -95,7 +95,7 @@ public class Cpu : IInstructionExecutor {
         DualPic = dualPic;
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
-        MachineBreakpoints = machineBreakpoints;
+        EmulatorBreakpointsManager = emulatorBreakpointsManager;
         ExecutionFlowRecorder = executionFlowRecorder;
         InterruptVectorTable = interruptVectorTable;
         _alu8 = new(state);
@@ -191,25 +191,25 @@ public class Cpu : IInstructionExecutor {
 
     public uint NextUint32() {
         uint res = _memory.UInt32[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 1));
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 2));
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 3));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, (ushort)(_internalIp + 1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, (ushort)(_internalIp + 2));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, (ushort)(_internalIp + 3));
         _internalIp += 4;
         return res;
     }
 
     public ushort NextUint16() {
         ushort res = _memory.UInt16[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, (ushort)(_internalIp + 1));
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, (ushort)(_internalIp + 1));
         _internalIp += 2;
         return res;
     }
 
     public byte NextUint8() {
         byte res = _memory.UInt8[InternalIpPhysicalAddress];
-        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, MachineBreakpoints, State.CS, _internalIp);
+        ExecutionFlowRecorder.RegisterExecutableByte(_memory, State, EmulatorBreakpointsManager, State.CS, _internalIp);
         _internalIp++;
         return res;
     }

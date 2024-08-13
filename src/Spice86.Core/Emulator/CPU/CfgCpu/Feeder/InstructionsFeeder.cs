@@ -19,8 +19,8 @@ public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
     private readonly CurrentInstructions _currentInstructions;
     private readonly PreviousInstructions _previousInstructions;
 
-    public InstructionsFeeder(MachineBreakpoints machineBreakpoints, IMemory memory, State cpuState) {
-        _currentInstructions = new(memory, machineBreakpoints);
+    public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState) {
+        _currentInstructions = new(memory, emulatorBreakpointsManager);
         _instructionParser = new(memory, cpuState);
         _previousInstructions = new(memory);
     }

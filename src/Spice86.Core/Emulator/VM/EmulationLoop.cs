@@ -23,7 +23,7 @@ public class EmulationLoop {
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
     private readonly Timer _timer;
-    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly DmaController _dmaController;
     private readonly Stopwatch _stopwatch;
     private readonly IPauseHandler _pauseHandler;
@@ -41,17 +41,17 @@ public class EmulationLoop {
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
-    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
+    /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, MachineBreakpoints machineBreakpoints,
+    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
         DmaController dmaController, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
         _timer = timer;
-        _machineBreakpoints = machineBreakpoints;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _dmaController = dmaController;
         _pauseHandler = pauseHandler;
         _stopwatch = new();
@@ -72,7 +72,7 @@ public class EmulationLoop {
         } catch (Exception e) {
             throw new InvalidVMOperationException(_cpuState, e);
         }
-        _machineBreakpoints.OnMachineStop();
+        _emulatorBreakpointsManager.OnMachineStop();
         _functionHandler.Ret(CallType.MACHINE);
     }
 
@@ -95,7 +95,7 @@ public class EmulationLoop {
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            _machineBreakpoints.CheckBreakPoint();
+            _emulatorBreakpointsManager.CheckBreakPoint();
             _pauseHandler.WaitIfPaused();
             _cpu.ExecuteNext();
             _timer.Tick();

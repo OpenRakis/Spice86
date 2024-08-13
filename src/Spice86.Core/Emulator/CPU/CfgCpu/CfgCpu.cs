@@ -23,12 +23,12 @@ public class CfgCpu : IInstructionExecutor {
     private readonly CfgNodeFeeder _cfgNodeFeeder;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
-        DualPic dualPic, MachineBreakpoints machineBreakpoints, ILoggerService loggerService) {
+        DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, ILoggerService loggerService) {
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
         _state = state;
         _dualPic = dualPic;
-        _executionContextManager = new(machineBreakpoints);
-        _cfgNodeFeeder = new(memory, state, machineBreakpoints);
+        _executionContextManager = new(emulatorBreakpointsManager);
+        _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager);
     }
     
     public ExecutionContextManager ExecutionContextManager => _executionContextManager;

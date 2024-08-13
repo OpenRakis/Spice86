@@ -38,8 +38,8 @@ public class CfgNodeFeederTest {
         MemoryBreakpoints memoryBreakpoints = new();
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(memoryBreakpoints, new PauseHandler(loggerService), _state);
-        return new(_memory, _state, machineBreakpoints);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(memoryBreakpoints, new PauseHandler(loggerService), _state);
+        return new(_memory, _state, emulatorBreakpointsManager);
     }
 
     private void WriteMovReg16(SegmentedAddress address, byte opcode, ushort value) {

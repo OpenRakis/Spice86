@@ -12,7 +12,7 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
     private readonly IMemory _memory;
-    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     /// <summary>
     /// Instruction currently known to be in memory at a given address.
@@ -28,9 +28,9 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
     private readonly Dictionary<SegmentedAddress, List<AddressBreakPoint>> _breakpointsForInstruction =
         new Dictionary<SegmentedAddress, List<AddressBreakPoint>>();
 
-    public CurrentInstructions(IMemory memory, MachineBreakpoints machineBreakpoints) {
+    public CurrentInstructions(IMemory memory, EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _memory = memory;
-        _machineBreakpoints = machineBreakpoints;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
 
     public CfgInstruction? GetAtAddress(SegmentedAddress address) {
@@ -68,7 +68,7 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, byteAddress,
                 b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
             breakpoints.Add(breakPoint);
-            _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         }
     }
 
@@ -93,7 +93,7 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
             IList<AddressBreakPoint> breakpoints = _breakpointsForInstruction[instructionAddress];
             _breakpointsForInstruction.Remove(instructionAddress);
             foreach (AddressBreakPoint breakPoint in breakpoints) {
-                _machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+                _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, false);
             }
         }
 

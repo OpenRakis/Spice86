@@ -30,8 +30,8 @@ public class InstructionsFeederTest {
         _memory.Memset8(0, 0, 64);
         ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
         State state = new();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(MemoryBreakpoints, new PauseHandler(loggerService), state);
-        return new InstructionsFeeder(machineBreakpoints, _memory, state);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(MemoryBreakpoints, new PauseHandler(loggerService), state);
+        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

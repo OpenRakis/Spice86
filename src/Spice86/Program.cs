@@ -86,7 +86,7 @@ public class Program {
         A20Gate a20Gate = new(configuration.A20Gate);
         MemoryBreakpoints memoryBreakpoints = new();
         Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: configuration.InitializeDOS is true);
-        MachineBreakpoints machineBreakpoints = new(memoryBreakpoints, pauseHandler, state);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(memoryBreakpoints, pauseHandler, state);
         var biosDataArea = new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
         var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
 
@@ -97,10 +97,10 @@ public class Program {
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService, configuration.DumpDataOnExit is not false);
         Cpu cpu  = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, machineBreakpoints,
+            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
         
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, machineBreakpoints, loggerService);
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, loggerService);
 
         // IO devices
         DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
@@ -197,7 +197,7 @@ public class Program {
             Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler, biosKeyboardInt9Handler,
                 callbackHandler, cpu,
                 cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-                joystick, keyboard, keyboardInt16Handler, machineBreakpoints, memory, midiDevice, pcSpeaker,
+                joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
                 timerInt8Handler,
                 vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
@@ -207,7 +207,7 @@ public class Program {
             InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
             ProgramExecutor programExecutor = new(configuration, loggerService,
-                machineBreakpoints, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
+                emulatorBreakpointsManager, machine, dos, callbackHandler, functionHandler, executionFlowRecorder,
                 pauseHandler);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();

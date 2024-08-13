@@ -58,7 +58,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The class that manages software breakpoints.
     /// </summary>
-    protected readonly MachineBreakpoints _machineBreakpoints;
+    protected readonly EmulatorBreakpointsManager EmulatorBreakpointsManager;
     /// <summary>
     /// The service used for logging.
     /// </summary>
@@ -344,11 +344,11 @@ public class CSharpOverrideHelper {
     /// <param name="timer">The IBM PC Timer device</param>
     /// <param name="executionFlowRecorder">The class that records machine code flow</param>
     /// <param name="callbackHandler">The class that registers callback instructions definitions</param>
-    /// <param name="machineBreakpoints">The class that manages software breakpoints</param>
+    /// <param name="emulatorBreakpointsManager">The class that manages software breakpoints</param>
     /// <param name="configuration">The emulator configuration.</param>
     public CSharpOverrideHelper(IMemory memory, State state, Cpu cpu,
         Stack stack, DualPic dualPic, Timer timer,
-        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, MachineBreakpoints machineBreakpoints,
+        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) {
         _cpu = cpu;
@@ -359,7 +359,7 @@ public class CSharpOverrideHelper {
         _timer = timer;
         _executionFlowRecorder = executionFlowRecorder;
         _callbackHandler = callbackHandler;
-        _machineBreakpoints = machineBreakpoints;
+        EmulatorBreakpointsManager = emulatorBreakpointsManager;
         _loggerService = loggerService;
         Configuration = configuration;
         _functionInformations = functionInformations;
@@ -652,7 +652,7 @@ public class CSharpOverrideHelper {
                 offset),
             _ => renamedOverride.Invoke().Invoke()
             , false);
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -669,7 +669,7 @@ public class CSharpOverrideHelper {
                 offset),
             _ => action.Invoke()
             , false);
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -684,7 +684,7 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(segment, offset),
             _ => action.Invoke()
             , false);
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     /// <summary>
@@ -715,7 +715,7 @@ public class CSharpOverrideHelper {
     /// <param name="endAddress">The end address of the executable area.</param>
     public void DefineExecutableArea(uint startAddress, uint endAddress) {
         for (uint address = startAddress; address <= endAddress; address++) {
-            _executionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.MachineBreakpoints, address);
+            _executionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.EmulatorBreakpointsManager, address);
         }
     }
 

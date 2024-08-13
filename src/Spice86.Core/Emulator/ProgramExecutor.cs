@@ -43,7 +43,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="loggerService">The logging service to use. Provided via DI.</param>
-    /// <param name="machineBreakpoints">The class that manages machine code execution breakpoints.</param>
+    /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
     /// <param name="machine">The dumb service container that centralizes emulator devices.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
@@ -51,7 +51,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     public ProgramExecutor(Configuration configuration, ILoggerService loggerService,
-        MachineBreakpoints machineBreakpoints,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
         Machine machine, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler) {
@@ -66,10 +66,10 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
         _emulationLoop = new(_loggerService, _functionHandler, Machine.Cpu, _cpuState, Machine.Timer,
-            machineBreakpoints, Machine.DmaController, pauseHandler);
+            emulatorBreakpointsManager, Machine.DmaController, pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, _memory, Machine.Cpu, _cpuState, _callbackHandler, _functionHandler,
-                _executionFlowRecorder, machineBreakpoints, _pauseHandler, _loggerService);
+                _executionFlowRecorder, emulatorBreakpointsManager, _pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, _memory, _cpuState, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
         if (configuration.InitializeDOS is null) {
@@ -162,11 +162,11 @@ public sealed class ProgramExecutor : IProgramExecutor {
     }
     
     private GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
-        ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (configuration.GdbPort is null) {
             return null;
         }
-        return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, machineBreakpoints, pauseHandler, loggerService);
+        return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {

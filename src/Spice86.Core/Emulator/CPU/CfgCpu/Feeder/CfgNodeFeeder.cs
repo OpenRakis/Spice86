@@ -23,9 +23,9 @@ public class CfgNodeFeeder {
     private readonly NodeLinker _nodeLinker = new();
     private readonly DiscriminatorReducer _discriminatorReducer;
 
-    public CfgNodeFeeder(IMemory memory, State state, MachineBreakpoints machineBreakpoints) {
+    public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _state = state;
-        _instructionsFeeder = new(machineBreakpoints, memory, state);
+        _instructionsFeeder = new(emulatorBreakpointsManager, memory, state);
         _discriminatorReducer = new(new List<IInstructionReplacer<CfgInstruction>>()
             { _nodeLinker, _instructionsFeeder });
     }
