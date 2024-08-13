@@ -24,9 +24,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
 
     [ObservableProperty]
-    private DateTime? _lastUpdate;
-
-    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     private bool _isPaused;
 
@@ -69,7 +66,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => IsPaused = true;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Normal, UpdateValues);
         DisassemblyViewModel disassemblyVm = new(programExecutor, memory, cpuState, pauseHandler, messenger);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette);
@@ -79,10 +75,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MidiViewModel = new(externalMidiDevice);
         MemoryViewModels.Add(new(pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
-    }
-
-    private void UpdateValues(object? sender, EventArgs e) {
-        
     }
 
     [RelayCommand]
@@ -95,11 +87,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
         _pauseHandler.Resume();
     }
 
-    [RelayCommand]
-    private void ForceUpdate() {
-        
-    }
-    
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
     public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
     public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
