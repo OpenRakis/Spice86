@@ -73,7 +73,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         VideoCardViewModel = new(vgaRenderer, videoState);
         CpuViewModel = new(cpuState, pauseHandler);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModels.Add(new(pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
+        MemoryViewModels.Add(new(memory, pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
     }
 

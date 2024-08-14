@@ -20,8 +20,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 public partial class MemoryViewModel : ViewModelWithErrorDialog {
-    private IMemory? _memory;
-    private bool _needToUpdateBinaryDocument;
+    private readonly IMemory _memory;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -43,14 +42,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<MemoryViewModel>(this));
 
-    private bool GetIsMemoryRangeValid() {
-        if (_memory is null) {
-            return false;
-        }
-
-        return StartAddress <= (EndAddress ?? _memory.Length)
-            && EndAddress >= (StartAddress ?? 0);
-    }
+    private bool GetIsMemoryRangeValid() =>
+        StartAddress <= (EndAddress ?? _memory.Length)
+        && EndAddress >= (StartAddress ?? 0);
 
     public uint? StartAddress {
         get => _startAddress;
@@ -94,8 +88,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
+    public MemoryViewModel(IMemory memory, IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
         _pauseHandler = pauseHandler;
+        _memory = memory;
         _pauseHandler.Pausing += OnPause;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => IsPaused = false;
@@ -105,7 +100,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         StartAddress = startAddress;
         EndAddress = endAddress;
         CanCloseTab = canCloseTab;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        if (EndAddress is 0) {
+            EndAddress = _memory.Length;
+        }
+        IsMemoryRangeValid = GetIsMemoryRangeValid();
+        TryUpdateHeaderAndMemoryDocument();
     }
 
     /// <summary>
@@ -137,35 +136,22 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         structureWindow.Show();
     }
     
-    private void UpdateValues(object? sender, EventArgs e) {
-        if (!_needToUpdateBinaryDocument) {
-            return;
-        }
-        UpdateBinaryDocument();
-        _needToUpdateBinaryDocument = false;
-    }
-
     private void OnPause() {
         IsPaused = true;
-        _needToUpdateBinaryDocument = true;
+        UpdateBinaryDocument();
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewMemoryView() {
-        if (_memory is null) {
-            return;
-        }
-        MemoryViewModel memoryViewModel = new(_pauseHandler, _messenger, _textClipboard,
+        MemoryViewModel memoryViewModel = new(_memory, _pauseHandler, _messenger, _textClipboard,
             _storageProvider,
-            _structureViewModelFactory, canCloseTab: true) {
-            IsPaused = IsPaused
-        };
+            _structureViewModelFactory, canCloseTab: true);
         _messenger.Send(new AddViewModelMessage<MemoryViewModel>(memoryViewModel));
     }
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private void UpdateBinaryDocument() {
-        if (_memory is null || StartAddress is null || EndAddress is null) {
+        if (StartAddress is null || EndAddress is null) {
             return;
         }
         DataMemoryDocument = new DataMemoryDocument(_memory, StartAddress.Value, EndAddress.Value);
@@ -178,7 +164,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {
-        if (_memory is not null && StartAddress is not null && EndAddress is not null) {
+        if (StartAddress is not null && EndAddress is not null) {
             await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress.Value, EndAddress.Value - StartAddress.Value));
         }
     }
@@ -195,7 +181,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void EditMemory() {
         IsEditingMemory = true;
-        if (_memory is not null && MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
+        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
             MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue?.Length ?? sizeof(ushort))));
         }
     }
@@ -236,26 +222,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void ApplyMemoryEdit() {
         if (!TryParseMemoryAddress(MemoryEditAddress, out uint? address) ||
             MemoryEditValue is null ||
-            _memory is null ||
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
         DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
         IsEditingMemory = false;
-    }
-
-    public void Visit<T>(T component) {
-        if (component is not IMemory memory) {
-            return;
-        }
-
-        if (_memory is null) {
-            _memory = memory;
-            if (EndAddress is 0) {
-                EndAddress = _memory.Length;
-            }
-        }
-        IsMemoryRangeValid = GetIsMemoryRangeValid();
-        TryUpdateHeaderAndMemoryDocument();
     }
 }
