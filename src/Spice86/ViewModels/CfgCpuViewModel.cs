@@ -21,41 +21,36 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IPerformanceMeasurer _performanceMeasurer;
     private readonly ExecutionContextManager _executionContextManager;
 
-    [ObservableProperty]
-    private int _maxNodesToDisplay = 200;
+    [ObservableProperty] private int _maxNodesToDisplay = 200;
 
-    [ObservableProperty]
-    private Graph? _graph;
+    [ObservableProperty] private Graph? _graph;
 
-    [ObservableProperty]
-    private long _numberOfNodes;
+    [ObservableProperty] private long _numberOfNodes;
 
-    [ObservableProperty]
-    private long _averageNodeTime;
+    [ObservableProperty] private long _averageNodeTime;
 
-    private bool _isPaused;
+    [ObservableProperty] private bool _isVisible;
 
-    [ObservableProperty]
-    private bool _isVisible;
-
-    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler, IPerformanceMeasurer performanceMeasurer) {
+    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
+        IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
         pauseHandler.Pausing += OnPausing;
-        pauseHandler.Resumed += () => _isPaused = false;
-        _isPaused = pauseHandler.IsPaused;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }
 
     private void OnPausing() {
-        _isPaused = true;
         Graph = null;
+        // This example uses an async Task-based method and discards the Task when calling from a non-async method.
+        // If this method fails, it will not crash the process.
+        // Instead, it will fire the TaskScheduler.UnobservedTaskException event.
+        // See https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
+        _ = UpdateCurrentGraphAsync();
     }
 
     partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
 
-    private async void UpdateCurrentGraph(object? sender, EventArgs e) {
-        if (!_isPaused || Graph is not null) {
+    private async Task UpdateCurrentGraphAsync() {
+        if (Graph is not null) {
             return;
         }
 
@@ -64,7 +59,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
             if (nodeRoot is null) {
                 return;
             }
-            
+
             long localNumberOfNodes = 0;
             Graph currentGraph = new();
             Queue<ICfgNode> queue = new();
@@ -77,6 +72,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 if (visitedNodes.Contains(node)) {
                     continue;
                 }
+
                 visitedNodes.Add(node);
                 stopwatch.Restart();
                 foreach (ICfgNode successor in node.Successors) {
@@ -85,20 +81,24 @@ public partial class CfgCpuViewModel : ViewModelBase {
                         currentGraph.Edges.Add(CreateEdge(node, successor));
                         existingEdges.Add(edgeKey);
                     }
+
                     if (!visitedNodes.Contains(successor)) {
                         queue.Enqueue(successor);
                     }
                 }
+
                 foreach (ICfgNode predecessor in node.Predecessors) {
                     (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
                     if (!existingEdges.Contains(edgeKey)) {
                         currentGraph.Edges.Add(CreateEdge(predecessor, node));
                         existingEdges.Add(edgeKey);
                     }
+
                     if (!visitedNodes.Contains(predecessor)) {
                         queue.Enqueue(predecessor);
                     }
                 }
+
                 stopwatch.Stop();
                 _performanceMeasurer.UpdateValue(stopwatch.ElapsedMilliseconds);
                 localNumberOfNodes++;
@@ -116,23 +116,31 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
         string label = string.Empty;
-        if (node is CfgInstruction cfgInstruction) {
-            SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment, (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
-            if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
-                // Not direct successor, jump or call
-                label = "not contiguous";
+        switch (node) {
+            case CfgInstruction cfgInstruction: {
+                SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
+                    (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
+                if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
+                    // Not direct successor, jump or call
+                    label = "not contiguous";
+                }
+
+                break;
+            }
+            case DiscriminatedNode discriminatedNode: {
+                Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator
+                    .FirstOrDefault(x => x.Value == successor).Key;
+                label = discriminator.ToString();
+                break;
             }
         }
-        if (node is DiscriminatedNode discriminatedNode) {
-            Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator.FirstOrDefault(x => x.Value == successor).Key;
-            label = discriminator.ToString();
-        }
+
         return new Edge(GenerateNodeText(node), GenerateNodeText(successor), label);
     }
 
-    private (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor)
+    private static (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor)
         => (node.Id, successor.Id);
 
-    private string GenerateNodeText(ICfgNode node) =>
+    private static string GenerateNodeText(ICfgNode node) =>
         $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
 }
