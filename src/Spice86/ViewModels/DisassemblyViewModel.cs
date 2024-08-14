@@ -20,7 +20,6 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel : ViewModelBase {
-    private bool _needToUpdateDisassembly = true;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IMessenger _messenger;
@@ -60,31 +59,25 @@ public partial class DisassemblyViewModel : ViewModelBase {
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
-        _isPaused = pauseHandler.IsPaused;
+        IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += OnPause;
         pauseHandler.Resumed += () => IsPaused = false;
         CanCloseTab = canCloseTab;
-        if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
-            GoToCsIpCommand.Execute(null);
-        }
-        if (_needToUpdateDisassembly && IsPaused) {
-            UpdateDisassembly();
-        }
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
     
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
-
-    private void UpdateValues(object? sender, EventArgs e) {
-        if (_needToUpdateDisassembly && IsPaused) {
-            UpdateDisassembly();
-        }
-    }
-
+    
     private void OnPause() {
         IsPaused = true;
-        _needToUpdateDisassembly = true;
+        if (StartAddress is not null) {
+            return;
+        }
+
+        StartAddress = _state.IpPhysicalAddress;
+        if (GoToCsIpCommand.CanExecute(null)) {
+            GoToCsIpCommand.Execute(null);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -97,17 +90,17 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void GoToCsIp() {
-        StartAddress = _state?.IpPhysicalAddress;
-        _needToUpdateDisassembly = true;
-        UpdateDisassemblyCommand.Execute(null);
+        StartAddress = _state.IpPhysicalAddress;
+        if (UpdateDisassemblyCommand.CanExecute(null)) {
+            UpdateDisassemblyCommand.Execute(null);
+        }
     }
-    
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
         if(StartAddress is null) {
             return;
         }
-        _needToUpdateDisassembly = false;
         CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
         Decoder decoder = InitializeDecoder(codeReader, StartAddress.Value);
         try {

@@ -2,6 +2,8 @@
 
 using AvaloniaHex.Document;
 
+using JetBrains.Annotations;
+
 using Spice86.Core.Emulator.Memory;
 
 using System.Collections;
@@ -33,6 +35,7 @@ public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
         return location.CompareTo(EnclosingRange.Start) >= 0 && location.CompareTo(EnclosingRange.End) < 0;
     }
 
+    [MustDisposeResource]
     public BitRangeUnion.Enumerator GetEnumerator() {
         var bitRangeUnion = new BitRangeUnion();
         bitRangeUnion.Add(new BitRange(_startAddress, _endAddress));
@@ -53,6 +56,7 @@ public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
         }
     }
 
+    [MustDisposeResource]
     IEnumerator IEnumerable.GetEnumerator() {
         return ((IEnumerable<BitRange>)this).GetEnumerator();
     }
