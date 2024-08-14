@@ -173,9 +173,12 @@ public class MachineCreator {
             vgaFunctionality);
         
         InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
+
+        EmulatorStateSerializer emulatorStateSerializer = new(configuration, memory, cpuState, callbackHandler,
+            executionFlowRecorder, functionHandler, loggerService);
         
-        ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, cpuState,
-            dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
+        ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, emulatorStateSerializer, memory, cpu, cpuState,
+            dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, screenPresenter: null,
             loggerService);
         cpu.ErrorOnUninitializedInterruptHandler = false;
         cpuState.Flags.IsDOSBoxCompatible = false;

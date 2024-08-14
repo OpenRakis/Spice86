@@ -25,6 +25,7 @@ public partial class CpuViewModel : ViewModelBase {
         _cpuState = state;
         pauseHandler.Pausing += () => _isPaused = true;
         _isPaused = pauseHandler.IsPaused;
+        pauseHandler.Resumed += () => _isPaused = false;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 

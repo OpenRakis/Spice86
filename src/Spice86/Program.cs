@@ -134,6 +134,8 @@ public class Program {
         SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, cpu, a20Gate, loggerService);
         SystemClockInt1AHandler systemClockInt1AHandler = new SystemClockInt1AHandler(memory, cpu, loggerService, timerInt8Handler);
         
+        EmulatorStateSerializer emulatorStateSerializer = new(configuration, memory, state, callbackHandler, executionFlowRecorder, functionHandler, loggerService);
+        
         MainWindowViewModel? mainWindowViewModel = null;
         ClassicDesktopStyleApplicationLifetime? desktop = null;
         MainWindow? mainWindow = null;
@@ -146,7 +148,7 @@ public class Program {
                 PerformanceViewModel = performanceViewModel
             };
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider);
+            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration, emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
                 timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration, loggerService, pauseHandler);
         }
@@ -204,10 +206,11 @@ public class Program {
                 dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
                 vgaFunctionality);
             
-            InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
+            InitializeFunctionHandlers(configuration, machine,  loggerService,
+                reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
-            using ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, memory, cpu, state,
-                dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
+            using ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, emulatorStateSerializer, memory, cpu, state,
+                dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, mainWindowViewModel,
                 loggerService);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
@@ -215,8 +218,7 @@ public class Program {
                     && textClipboard != null && hostStorageProvider != null) {
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.MainWindow = mainWindow;
-                mainWindowViewModel.ProgramExecutor = programExecutor;
-                DebugWindowViewModel debugWindowViewModel = new DebugWindowViewModel(programExecutor, state, memory,
+                DebugWindowViewModel debugWindowViewModel = new DebugWindowViewModel(state, memory,
                     midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                     cfgCpu.ExecutionContextManager, messenger, textClipboard, hostStorageProvider,
                     new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);

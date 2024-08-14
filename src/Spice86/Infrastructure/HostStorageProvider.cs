@@ -5,12 +5,19 @@ using Avalonia.Platform.Storage;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Function.Dump;
 
 /// <inheritdoc cref="IHostStorageProvider" />
 public class HostStorageProvider : IHostStorageProvider {
     private readonly IStorageProvider _storageProvider;
+    private readonly Configuration _configuration;
+    private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
-    public HostStorageProvider(IStorageProvider storageProvider) => _storageProvider = storageProvider;
+    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer) {
+        _storageProvider = storageProvider;
+        _configuration = configuration;
+        _emulatorStateSerializer = emulatorStateSerializer;
+    }
 
     /// <inheritdoc />
     public bool CanPickFolder => _storageProvider.CanPickFolder;
@@ -70,20 +77,21 @@ public class HostStorageProvider : IHostStorageProvider {
         }
     }
 
-    public async Task DumpEmulatorStateToFile(Configuration configuration, IProgramExecutor programExecutor) {
+    public async Task DumpEmulatorStateToFile() {
         if (CanSave && CanPickFolder) {
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(configuration.RecordedDataDirectory)
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
             };
-            if (!Directory.Exists(configuration.RecordedDataDirectory)) {
+            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
                 options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
-
-            Uri? dir = (await OpenFolderPickerAsync(options)).FirstOrDefault()?.Path;
-            if (!string.IsNullOrWhiteSpace(dir?.AbsolutePath)) {
-                programExecutor.DumpEmulatorStateToDirectory(dir.AbsolutePath);
+            IReadOnlyList<IStorageFolder> dirs = await OpenFolderPickerAsync(options);
+            IStorageFolder? directory = dirs.Count > 0 ? dirs[0] : null;
+            Uri? directoryPath = directory?.Path;
+            if (!string.IsNullOrWhiteSpace(directoryPath?.AbsolutePath)) {
+                _emulatorStateSerializer.SerializeEmulatorStateToDirectory(directoryPath.AbsolutePath);
             }
         }
     }
@@ -146,14 +154,12 @@ public interface IHostStorageProvider {
     Task SaveBitmapFile(WriteableBitmap bitmap);
 
     /// <summary>
-    /// Spanws the file picker to save the emulator state to a file.
+    /// Spawns the file picker to save the emulator state to a file.
     /// </summary>
-    /// <param name="configuration">The emulator configuration, used for RecordedDataDirectory path property.</param>
-    /// <param name="programExecutor">The emulated program's executor, to save the emulator dump and other reverse-engineering information.</param>
-    Task DumpEmulatorStateToFile(Configuration configuration, IProgramExecutor programExecutor);
+    Task DumpEmulatorStateToFile();
 
     /// <summary>
-    /// Spanws the file picker to save a binary file.
+    /// Spawns the file picker to save a binary file.
     /// </summary>
     /// <param name="bytes">The binary content of the file.</param>
     /// <returns>The operation as an awaitable Task.</returns>

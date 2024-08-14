@@ -25,9 +25,6 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if (_softwareMixer is null) {
-            return;
-        }
         UpdateChannels(_softwareMixer);
     }
 

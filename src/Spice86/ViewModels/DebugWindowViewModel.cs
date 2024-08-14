@@ -53,8 +53,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(
-        IProgramExecutor programExecutor, State cpuState, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(State cpuState, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
@@ -67,7 +66,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => IsPaused = true;
         pauseHandler.Resumed += () => IsPaused = false;
-        DisassemblyViewModel disassemblyVm = new(programExecutor, memory, cpuState, pauseHandler, messenger);
+        DisassemblyViewModel disassemblyVm = new(memory, cpuState, pauseHandler, messenger);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette);
         SoftwareMixerViewModel = new(softwareMixer);

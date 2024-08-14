@@ -23,7 +23,6 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private bool _needToUpdateDisassembly = true;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly IProgramExecutor _programExecutor;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
 
@@ -56,14 +55,14 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IProgramExecutor programExecutor, IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, bool canCloseTab = false) {
+    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, bool canCloseTab = false) {
         _messenger = messenger;
         _memory = memory;
         _state = state;
-        _programExecutor = programExecutor;
         _pauseHandler = pauseHandler;
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += OnPause;
+        pauseHandler.Resumed += () => IsPaused = false;
         CanCloseTab = canCloseTab;
         if (GoToCsIpCommand.CanExecute(null) && StartAddress is null) {
             GoToCsIpCommand.Execute(null);
@@ -90,7 +89,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_programExecutor, _memory, _state, _pauseHandler, _messenger, canCloseTab: true) {
+        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _messenger, canCloseTab: true) {
             IsPaused = IsPaused
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));

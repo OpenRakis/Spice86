@@ -3,6 +3,7 @@ namespace Spice86.Views;
 using Avalonia.Controls;
 using Avalonia.Input;
 
+using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
 using System;

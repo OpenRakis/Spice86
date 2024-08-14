@@ -35,7 +35,6 @@ public static class ServiceCollectionExtensions {
 
     public static void AddGuiInfrastructure(this IServiceCollection serviceCollection, TopLevel mainWindow) {
         serviceCollection.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-        serviceCollection.AddSingleton<IAvaloniaKeyScanCodeConverter, AvaloniaKeyScanCodeConverter>();
         serviceCollection.AddSingleton<IUIDispatcher, UIDispatcher>(_ => new UIDispatcher(Dispatcher.UIThread));
         serviceCollection.AddSingleton<IStorageProvider>(_ => mainWindow.StorageProvider);
         serviceCollection.AddSingleton<IHostStorageProvider, HostStorageProvider>();

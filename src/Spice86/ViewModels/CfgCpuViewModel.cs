@@ -42,6 +42,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
         pauseHandler.Pausing += OnPausing;
+        pauseHandler.Resumed += () => _isPaused = false;
         _isPaused = pauseHandler.IsPaused;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
     }

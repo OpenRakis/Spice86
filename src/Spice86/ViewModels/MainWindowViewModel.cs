@@ -13,7 +13,6 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
@@ -26,14 +25,13 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui, IScreenPresenter, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly IAvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
+    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
-    private readonly bool _isGdbServerRunning;
     private readonly ITimeMultiplier _pit;
 
     [ObservableProperty]
@@ -68,58 +66,34 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _uiDispatcher = uiDispatcher;
-        _isGdbServerRunning = configuration.GdbPort is not null;
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
-    }
-    
-    private IProgramExecutor? _programExecutor;
-
-    internal IProgramExecutor? ProgramExecutor {
-        get => _programExecutor;
-        set {
-            _programExecutor = value;
-            Dispatcher.UIThread.Post(() => CanUseInternalDebugger = value is not null && !_isGdbServerRunning);
-        }
+        CanUseInternalDebugger = configuration.GdbPort is null;
     }
     
     [RelayCommand]
-    public void SetLogLevelToSilent() {
-        SetLogLevel("Silent");
-    }
+    public void SetLogLevelToSilent() => SetLogLevel("Silent");
 
     [RelayCommand]
-    public void SetLogLevelToVerbose() {
-        SetLogLevel("Verbose");
-    }
+    public void SetLogLevelToVerbose() => SetLogLevel("Verbose");
 
     [RelayCommand]
-    public void SetLogLevelToDebug() {
-        SetLogLevel("Debug");
-    }
+    public void SetLogLevelToDebug() => SetLogLevel("Debug");
 
     [RelayCommand]
-    public void SetLogLevelToInformation() {
-        SetLogLevel("Information");
-    }
+    public void SetLogLevelToInformation() => SetLogLevel("Information");
 
     [RelayCommand]
-    public void SetLogLevelToWarning() {
-        SetLogLevel("Warning");
-    }
+    public void SetLogLevelToWarning() => SetLogLevel("Warning");
 
     [RelayCommand]
-    public void SetLogLevelToError() {
-        SetLogLevel("Error");
-    }
+    public void SetLogLevelToError() => SetLogLevel("Error");
 
     [RelayCommand]
-    public void SetLogLevelToFatal() {
-        SetLogLevel("Fatal");
-    }
-    
+    public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
@@ -254,16 +228,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     private async Task DumpEmulatorStateToFile() {
-        if (ProgramExecutor is null) {
-            return;
-        }
-        await _hostStorageProvider.DumpEmulatorStateToFile(Configuration, ProgramExecutor).ConfigureAwait(false);
+        //TODO: refactor this
+        await _hostStorageProvider.DumpEmulatorStateToFile().ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
-    public void Pause() {
-        _pauseHandler.RequestPause("Pause button pressed in main window");
-    }
+    public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
 
@@ -285,20 +255,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     [RelayCommand(CanExecute = nameof(CanPlay))]
-    public void Play() {
-        _pauseHandler.Resume();
-    }
+    public void Play() => _pauseHandler.Resume();
 
     [RelayCommand]
     public void ResetTimeMultiplier() => TimeMultiplier = Configuration.TimeMultiplier;
 
-    private bool CanPause() {
-        return IsEmulatorRunning && !IsPaused;
-    }
+    private bool CanPause() => IsEmulatorRunning && !IsPaused;
 
-    private bool CanPlay() {
-        return IsEmulatorRunning && IsPaused;
-    }
+    private bool CanPlay() => IsEmulatorRunning && IsPaused;
 
     private void InitializeRenderingTimer() {
         if (_renderingTimerInitialized) {
@@ -371,7 +335,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
 
-                DisposeEmulator();
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
                 }
@@ -379,21 +342,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private void OnResumed() {
-        Dispatcher.UIThread.Invoke(() => IsPaused = false, DispatcherPriority.Normal);
-    }
+    private void OnResumed() => Dispatcher.UIThread.Invoke(() => IsPaused = false, DispatcherPriority.Normal);
 
-    private void OnPausing() {
-        Dispatcher.UIThread.Invoke(() => IsPaused = true, DispatcherPriority.Normal);
-    }
-    
+    private void OnPausing() => Dispatcher.UIThread.Invoke(() => IsPaused = true, DispatcherPriority.Normal);
+
     [ObservableProperty]
     private string _currentLogLevel = "";
-
-    private void DisposeEmulator() {
-        _programExecutor?.Dispose();
-    }
-
+    
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
@@ -410,6 +365,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _emulatorThread = new Thread(EmulatorThread) {
             Name = "Emulator"
         };
+        _uiDispatcher.Post(() => IsEmulatorRunning = true);
+        _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
         _emulatorThread.Start();
     }
 
@@ -420,30 +377,21 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         });
     }
 
+    public event Action? UserInterfaceInitialized;
+
     private void EmulatorThread() {
         try {
-            try {
-                StartProgramExecutor();
-            } catch (Exception e) {
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error(e, "An error occurred during execution");
-                }
-                OnEmulatorErrorOccured(e);
+            UserInterfaceInitialized?.Invoke();
+            _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
+        } catch (Exception e) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(e, "An error occurred during execution");
             }
+            OnEmulatorErrorOccured(e);
         } finally {
             _uiDispatcher.Post(() => IsEmulatorRunning = false);
             _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
-    }
-
-    private void StartProgramExecutor() {
-        if (ProgramExecutor is null) {
-            return;
-        }
-        _uiDispatcher.Post(() => IsEmulatorRunning = true);
-        _uiDispatcher.Post(() => StatusMessage = "Emulator started.");
-        ProgramExecutor.Run();
-        _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
     }
 }

@@ -2,6 +2,8 @@
 
 using Function.Dump;
 
+using Serilog.Events;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -23,25 +25,24 @@ using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
 
-/// <inheritdoc cref="IProgramExecutor"/>
-public sealed class ProgramExecutor : IProgramExecutor {
+/// <summary>
+/// The class that is responsible for executing a program in the emulator. Only supports COM, EXE, and BIOS files.
+/// </summary>
+public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly CallbackHandler _callbackHandler;
-    private readonly FunctionHandler _functionHandler;
-    private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private readonly IMemory _memory;
-    private readonly State _cpuState;
     private readonly DmaController _dmaController;
+    private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
     /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
+    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated x86 CPU.</param>
     /// <param name="state">The CPU registers and flags.</param>
@@ -52,37 +53,40 @@ public sealed class ProgramExecutor : IProgramExecutor {
     /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    /// <param name="loggerService">The logging service to use. Provided via DI.</param>
+    /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
-        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
         IMemory memory, Cpu cpu, State state, DmaController dmaController, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
-        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _dmaController = dmaController;
-        _memory = memory;
-        _cpuState = state;
-        _callbackHandler = callbackHandler;
-        _functionHandler = functionHandler;
-        _executionFlowRecorder = executionFlowRecorder;
-        _emulationLoop = new EmulationLoop(_loggerService, _functionHandler, cpu, _cpuState, timer,
+        _emulatorStateSerializer = emulatorStateSerializer;
+        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
             emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(configuration, _memory, cpu, _cpuState, _callbackHandler, _functionHandler,
-                _executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
+            _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
+                executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
-        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, _memory, _cpuState, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
+        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, memory, state, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
         if (configuration.InitializeDOS is null) {
             configuration.InitializeDOS = loader.DosInitializationNeeded;
-            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
             }
+        }
+
+        if (screenPresenter is not null) {
+            screenPresenter.UserInterfaceInitialized += Run;
         }
         LoadFileToRun(configuration, loader);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Starts the loaded program.
+    /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
         _dmaController.StartDmaThread();
@@ -90,19 +94,8 @@ public sealed class ProgramExecutor : IProgramExecutor {
         _dmaController.StopDmaThread();
 
         if (_configuration.DumpDataOnExit is not false) {
-            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
+            _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
-    }
-
-    /// <inheritdoc/>
-    public void DumpEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(_memory,
-                _cpuState,
-                _callbackHandler,
-                _configuration,
-                _executionFlowRecorder,
-               path, _loggerService)
-            .DumpAll(_executionFlowRecorder, _functionHandler);
     }
 
     private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
@@ -176,7 +169,7 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IDisposable" />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);

@@ -22,6 +22,7 @@ public partial class PerformanceViewModel : ViewModelBase {
     
     public PerformanceViewModel(State state, IPauseHandler pauseHandler) {
         pauseHandler.Pausing += () => _isPaused = true;
+        pauseHandler.Resumed += () => _isPaused = false;
         _state = state;
         _isPaused = pauseHandler.IsPaused;
         _performanceMeasurer = new PerformanceMeasurer();

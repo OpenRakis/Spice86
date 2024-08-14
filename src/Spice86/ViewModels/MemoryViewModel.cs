@@ -97,7 +97,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public MemoryViewModel(IPauseHandler pauseHandler, IMessenger messenger, ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory, bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPause;
-        _isPaused = pauseHandler.IsPaused;
+        IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Resumed += () => IsPaused = false;
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
