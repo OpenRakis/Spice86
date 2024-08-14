@@ -4,8 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
+    xmlns:local="clr-namespace:Spice86"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
@@ -19,30 +19,7 @@
         <vm:DebugWindowViewModel />
     </Design.DataContext>
     <Window.DataTemplates>
-        <DataTemplate DataType="{x:Type vm:CpuViewModel}">
-            <views:CpuView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-            <views:MemoryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-            <views:DisassemblyView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
-            <views:VideoCardView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:PaletteViewModel}">
-            <views:PaletteView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MidiViewModel}">
-            <views:MidiView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
-            <views:SoftwareMixerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:CfgCpuViewModel}">
-            <views:CfgCpuView />
-        </DataTemplate>
+        <local:ViewLocator />
     </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid

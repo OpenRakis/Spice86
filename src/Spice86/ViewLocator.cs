@@ -10,6 +10,12 @@ using System;
 internal sealed class ViewLocator : IDataTemplate {
     public bool SupportsRecycling => false;
 
+    /// <summary>
+    /// Takes a ViewModel and returns a new instance of the corresponding View.
+    /// This is supported by the convention that the View is named the same as the ViewModel with "View" instead of "ViewModel".
+    /// </summary>
+    /// <param name="data">The ViewModel we search the view for.</param>
+    /// <returns>The corresponding View, or a TextBlock with the "Not Found" message if a match wasn't found.</returns>
     public Control Build(object? data) {
         string? name = data?.GetType().FullName?.Replace("ViewModel", "View");
         if (string.IsNullOrWhiteSpace(name)) {
