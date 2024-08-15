@@ -40,10 +40,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     private void OnPausing() {
         Graph = null;
-        // This example uses an async Task-based method and discards the Task when calling from a non-async method.
+        // This call of an async method from a sync method uses the async method and discards the Task.
         // If this method fails, it will not crash the process.
         // Instead, it will fire the TaskScheduler.UnobservedTaskException event.
         // See https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
+        // The alternative, making this event handler 'async void' would crash the process in case of an exception,
+        // unless a try/catch is put over the *entire* code of the sync method.
         _ = UpdateCurrentGraphAsync();
     }
 
