@@ -71,7 +71,6 @@
         </PackageReference>
         <PackageReference Include="Iced" Version="1.21.0" />
         <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
             <PrivateAssets>all</PrivateAssets>
