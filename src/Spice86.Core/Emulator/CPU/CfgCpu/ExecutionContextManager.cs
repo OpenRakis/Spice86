@@ -6,8 +6,8 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 public class ExecutionContextManager {
-    private EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private IDictionary<uint, ExecutionContext> _executionContextEntryPoints = new Dictionary<uint, ExecutionContext>();
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly Dictionary<uint, ExecutionContext> _executionContextEntryPoints = new();
     
     public ExecutionContextManager(EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
