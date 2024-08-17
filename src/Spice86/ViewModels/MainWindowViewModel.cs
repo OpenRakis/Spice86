@@ -371,6 +371,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     private void OnEmulatorErrorOccured(Exception e) {
+        _pauseHandler.RequestPause("Inspect emulator error");
         _uiDispatcher.Post(() => {
             StatusMessage = "Emulator crashed.";
             ShowError(e);
