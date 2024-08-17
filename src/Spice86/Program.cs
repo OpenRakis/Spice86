@@ -72,8 +72,7 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         IMessenger messenger = WeakReferenceMessenger.Default;
-        ILoggerPropertyBag loggerPropertyBag = new LoggerPropertyBag();
-        ILoggerService loggerService = new LoggerService(loggerPropertyBag);
+        ILoggerService loggerService = new LoggerService();
         Configuration configuration = new CommandLineParser().ParseCommandLine(args);
         Startup.SetLoggingLevel(loggerService, configuration);
         IPauseHandler pauseHandler = new PauseHandler(loggerService);

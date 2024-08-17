@@ -34,7 +34,7 @@ public class CfgNodeFeederTest {
     private State _state = new();
 
     private CfgNodeFeeder CreateCfgNodeFeeder() {
-        ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
         MemoryBreakpoints memoryBreakpoints = new();
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
         _state = new State();

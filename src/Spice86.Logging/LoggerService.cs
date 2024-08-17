@@ -29,9 +29,8 @@ public class LoggerService : ILoggerService {
     /// <summary>
     /// Initializes a new instance of the <see cref="LoggerService"/> class.
     /// </summary>
-    /// <param name="loggerPropertyBag">The logger property bag.</param>
-    public LoggerService(ILoggerPropertyBag loggerPropertyBag) {
-        LoggerPropertyBag = loggerPropertyBag;
+    public LoggerService() {
+        LoggerPropertyBag = new LoggerPropertyBag();
         _loggerConfiguration = CreateLoggerConfiguration();
         _loggerConfiguration
             .MinimumLevel.ControlledBy(LogLevelSwitch);
@@ -61,7 +60,7 @@ public class LoggerService : ILoggerService {
 
     /// <inheritdoc/>
     public ILoggerService WithLogLevel(LogEventLevel minimumLevel) {
-        var logger = new LoggerService(LoggerPropertyBag) {LogLevelSwitch = new LoggingLevelSwitch(minimumLevel)};
+        var logger = new LoggerService() {LogLevelSwitch = new LoggingLevelSwitch(minimumLevel)};
         logger._loggerConfiguration.MinimumLevel.ControlledBy(new LoggingLevelSwitch(minimumLevel));
         return logger;
     }

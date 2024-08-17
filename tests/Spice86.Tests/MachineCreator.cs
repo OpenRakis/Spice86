@@ -54,7 +54,7 @@ public class MachineCreator {
             DumpDataOnExit = recordData
         };
 
-        ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
         PauseHandler pauseHandler = new(loggerService);
         
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);

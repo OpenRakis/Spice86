@@ -28,7 +28,7 @@ public class InstructionsFeederTest {
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);
-        ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
+        ILoggerService loggerService = Substitute.For<LoggerService>();
         State state = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(MemoryBreakpoints, new PauseHandler(loggerService), state);
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state);
