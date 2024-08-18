@@ -71,9 +71,8 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        IMessenger messenger = WeakReferenceMessenger.Default;
         ILoggerService loggerService = new LoggerService();
-        Configuration configuration = new CommandLineParser().ParseCommandLine(args);
+        Configuration configuration = CommandLineParser.ParseCommandLine(args);
         Startup.SetLoggingLevel(loggerService, configuration);
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
         
@@ -217,6 +216,7 @@ public class Program {
                     && textClipboard != null && hostStorageProvider != null) {
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.MainWindow = mainWindow;
+                IMessenger messenger = WeakReferenceMessenger.Default;
                 DebugWindowViewModel debugWindowViewModel = new DebugWindowViewModel(state, memory,
                     midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                     cfgCpu.ExecutionContextManager, messenger, textClipboard, hostStorageProvider,

@@ -12,11 +12,17 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-
-/// <inheritdoc cref="ICommandLineParser" />
-public class CommandLineParser : ICommandLineParser {
-    /// <inheritdoc />
-    public Configuration ParseCommandLine(string[] args) {
+/// <summary>
+/// Parses the command line options to create a <see cref="Configuration"/>.
+/// </summary>
+public static class CommandLineParser {
+    /// <summary>
+    /// Parses the command line into a <see cref="Configuration"/> object.
+    /// </summary>
+    /// <param name="args">The application command line arguments</param>
+    /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
+    /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
+    public static Configuration ParseCommandLine(string[] args) {
         string[] reducedArgs = ProcessArgs(args, out string exeArgs);
 
         ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(reducedArgs);
