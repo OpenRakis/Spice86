@@ -129,7 +129,7 @@ public class Dos {
         OpenDefaultFileHandles();
 
         if (enableEms) {
-            Ems = new(_memory, cpu, _loggerService);
+            Ems = new(_memory, cpu, this, _loggerService);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
