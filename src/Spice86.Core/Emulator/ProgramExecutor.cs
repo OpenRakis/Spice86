@@ -6,7 +6,6 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
@@ -34,7 +33,6 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly DmaController _dmaController;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
     /// <summary>
@@ -46,7 +44,6 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated x86 CPU.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="dmaController">The Intel 8237 DMA Controller.</param>
     /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
@@ -57,12 +54,11 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, Cpu cpu, State state, DmaController dmaController, Timer timer, Dos dos,
+        IMemory memory, Cpu cpu, State state, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
-        _dmaController = dmaController;
         _emulatorStateSerializer = emulatorStateSerializer;
         _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
             emulatorBreakpointsManager, pauseHandler);
@@ -89,9 +85,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         _gdbServer?.StartServerAndWait();
-        _dmaController.StartDmaThread();
         _emulationLoop.Run();
-        _dmaController.StopDmaThread();
 
         if (_configuration.DumpDataOnExit is not false) {
             _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_configuration.RecordedDataDirectory);

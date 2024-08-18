@@ -31,7 +31,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -81,7 +80,7 @@ public class MachineCreator {
             loggerService, executionFlowRecorder);
         
         // IO devices
-        DmaController dmaController = new(memory, cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
+        using DmaController dmaController = new(memory, cpuState, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         VideoState videoState = new();
         VgaIoPortHandler videoInt10Handler = new(cpuState, ioPortDispatcher, loggerService, videoState, configuration.FailOnUnhandledPort);
@@ -178,7 +177,7 @@ public class MachineCreator {
             executionFlowRecorder, functionHandler, loggerService);
         
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, emulatorStateSerializer, memory, cpu, cpuState,
-            dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, screenPresenter: null,
+            timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, screenPresenter: null,
             loggerService);
         cpu.ErrorOnUninitializedInterruptHandler = false;
         cpuState.Flags.IsDOSBoxCompatible = false;

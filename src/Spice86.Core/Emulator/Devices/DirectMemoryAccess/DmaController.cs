@@ -60,16 +60,12 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
         InitPortHandlers(ioPortDispatcher);
     }
 
-    internal void StartDmaThread() {
+    private void StartDmaThreadIfNeeded() {
         if (!_dmaThreadStarted) {
             _loggerService.Information("Starting thread '{ThreadName}'", _dmaThread.Name ?? nameof(DmaController));
             _dmaThread.Start();
             _dmaThreadStarted = true;
         }
-    }
-    
-    internal void StopDmaThread() {
-        _exitDmaLoop = true;
     }
 
     /// <summary>
@@ -101,12 +97,12 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Gets the input ports for the DMA controller.
     /// </summary>
-    public FrozenSet<int> InputPorts => AllPorts.ToFrozenSet();
+    public IReadOnlyList<int> InputPorts => AllPorts.AsReadOnly();
 
     /// <summary>
     /// Gets the output ports for the DMA controller.
     /// </summary>
-    public FrozenSet<int> OutputPorts {
+    public IReadOnlyList<int> OutputPorts {
         get {
             List<int> ports = new List<int>(AllPorts)
             {
@@ -116,7 +112,7 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
                 MaskRegister16
             };
 
-            return ports.ToFrozenSet();
+            return ports.AsReadOnly();
         }
     }
 
@@ -128,16 +124,19 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc/>
     public override byte ReadByte(int port) {
+        StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
     public override ushort ReadWord(int port) {
+        StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
     public override void WriteByte(int port, byte value) {
+        StartDmaThreadIfNeeded();
         switch (port) {
             case ModeRegister8:
                 SetChannelMode(_channels[value & 3], value);
@@ -163,6 +162,7 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc/>
     public override void WriteWord(int port, ushort value) {
+        StartDmaThreadIfNeeded();
         int index = Array.IndexOf(AllPorts, port);
 
         switch (index % 3) {

@@ -102,7 +102,7 @@ public class Program {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, loggerService);
 
         // IO devices
-        DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
+        using DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
         Joystick joystick = new Joystick(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
@@ -209,7 +209,7 @@ public class Program {
                 reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
             using ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, emulatorStateSerializer, memory, cpu, state,
-                dmaController, timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, mainWindowViewModel,
+                 timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, mainWindowViewModel,
                 loggerService);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
