@@ -23,60 +23,54 @@
         <local:ViewLocator />
     </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
-        <Grid
-            Grid.Row="1"
-            RowDefinitions="*,Auto">
-            <TabControl Grid.Row="0">
-                <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-                <TabItem Header="Code flow" IsVisible="{Binding CfgCpuViewModel.IsVisible}"
-                         Content="{Binding CfgCpuViewModel}"/>
-                <TabItem Header="Disassembly">
-                    <TabControl ItemsSource="{Binding DisassemblyViewModels}">
-                        <TabControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-                                <TabItem Header="{Binding Header}">
-                                    <ContentPresenter Content="{Binding}"/>
-                                </TabItem>
-                            </DataTemplate>
-                        </TabControl.ItemTemplate>
-                    </TabControl>
-                </TabItem>
-                <TabItem Header="Memory">
-                    <TabControl ItemsSource="{Binding MemoryViewModels}">
-                        <TabControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-                                <TabItem Header="{Binding Header}">
-                                    <ContentPresenter Content="{Binding}"/>
-                                </TabItem>
-                            </DataTemplate>
-                        </TabControl.ItemTemplate>
-                    </TabControl>
-                </TabItem>
-                <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
-                <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
-                <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
-                <TabItem Header="Software Mixer" Content="{Binding SoftwareMixerViewModel}" />
-            </TabControl>
-            <Border Grid.Row="1">
-                <WrapPanel Orientation="Horizontal" TextBlock.TextAlignment="Left">
-                    <Button
-                        Margin="5,0,0,0"
-                        Command="{Binding PauseCommand}"
-                        IsVisible="{Binding !IsPaused}">
-                        <Button.Content>
-                            <fluent:SymbolIcon Symbol="Pause" />
-                        </Button.Content>
-                    </Button>
-                    <Button
-                        Margin="5,0,0,0"
-                        Command="{Binding ContinueCommand}"
-                        IsVisible="{Binding IsPaused}">
-                        <Button.Content>
-                            <fluent:SymbolIcon Symbol="Play" />
-                        </Button.Content>
-                    </Button>
-                </WrapPanel>
-            </Border>
-        </Grid>
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+            <Button
+                Margin="5,0,0,0"
+                Command="{Binding PauseCommand}"
+                IsVisible="{Binding !IsPaused}">
+                <Button.Content>
+                    <fluent:SymbolIcon Symbol="Pause" />
+                </Button.Content>
+            </Button>
+            <Button
+                Margin="5,0,0,0"
+                Command="{Binding ContinueCommand}"
+                IsVisible="{Binding IsPaused}">
+                <Button.Content>
+                    <fluent:SymbolIcon Symbol="Play" />
+                </Button.Content>
+            </Button>
+        </StackPanel>
+        <TabControl Grid.Row="1">
+            <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
+            <TabItem Header="Code flow" IsVisible="{Binding CfgCpuViewModel.IsVisible}"
+                     Content="{Binding CfgCpuViewModel}"/>
+            <TabItem Header="Disassembly">
+                <TabControl ItemsSource="{Binding DisassemblyViewModels}">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+                            <TabItem Header="{Binding Header}">
+                                <ContentPresenter Content="{Binding}"/>
+                            </TabItem>
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                </TabControl>
+            </TabItem>
+            <TabItem Header="Memory">
+                <TabControl ItemsSource="{Binding MemoryViewModels}">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+                            <TabItem Header="{Binding Header}">
+                                <ContentPresenter Content="{Binding}"/>
+                            </TabItem>
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                </TabControl>
+            </TabItem>
+            <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
+            <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
+            <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
+            <TabItem Header="Software Mixer" Content="{Binding SoftwareMixerViewModel}" />
+        </TabControl>
     </Grid>
 </Window>
