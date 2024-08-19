@@ -6,6 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:Spice86.ViewModels"
     xmlns:local="clr-namespace:Spice86"
+    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
@@ -61,13 +62,19 @@
                     <Button
                         Margin="5,0,0,0"
                         Command="{Binding PauseCommand}"
-                        Content="Pause"
-                        IsVisible="{Binding !IsPaused}" />
+                        IsVisible="{Binding !IsPaused}">
+                        <Button.Content>
+                            <fluent:SymbolIcon Symbol="Pause" />
+                        </Button.Content>
+                    </Button>
                     <Button
                         Margin="5,0,0,0"
                         Command="{Binding ContinueCommand}"
-                        Content="Continue"
-                        IsVisible="{Binding IsPaused}" />
+                        IsVisible="{Binding IsPaused}">
+                        <Button.Content>
+                            <fluent:SymbolIcon Symbol="Play" />
+                        </Button.Content>
+                    </Button>
                 </WrapPanel>
             </Border>
         </Grid>
