@@ -9,6 +9,7 @@
 		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 		xmlns:userControls="clr-namespace:Spice86.UserControls"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+		xmlns:controls="clr-namespace:Spice86.Controls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Assets/Spice86.ico"
@@ -119,14 +120,20 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Grid.Row="2">
-			<WrapPanel Orientation="Horizontal">
+		<controls:StatusBar VerticalAlignment="Bottom" Grid.Row="2">
+			<controls:StatusBarItem>
 				<TextBlock Text="{Binding StatusMessage}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding AsmOverrideStatus}" />
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
 				           IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
-			</WrapPanel>
-		</Border>
+			</controls:StatusBarItem>
+		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
 		           IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />
