@@ -16,31 +16,29 @@
             IsVisible="{Binding !IsPaused}"
             Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
             TextWrapping="Wrap" />
-        <Grid
+        <WrapPanel Orientation="Horizontal"
             DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
             VerticalAlignment="Top">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto">
-                <Button Grid.Column="0"
+                <Button
                     Command="{Binding NewDisassemblyViewCommand}"
                     Content="New Disassembly View"
                     IsEnabled="{Binding IsPaused}" />
-                <Button Grid.Column="1"
+                <Button
                     Command="{Binding CloseTabCommand}"
                     Content="Close View"
                     IsEnabled="{Binding CanCloseTab}"/>
-                <StackPanel Grid.Column="2" Orientation="Vertical">
+                <StackPanel Orientation="Vertical">
                     <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
                     <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
                 </StackPanel>
-                <StackPanel Grid.Column="3" Orientation="Vertical">
+                <StackPanel Orientation="Vertical">
                     <Label HorizontalAlignment="Center" Content="Start Address" />
                     <TextBox Text="{Binding StartAddress}" />
                     <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
                 </StackPanel>
-                <Button Grid.Column="4" Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
-            </Grid>
-        </Grid>
+                <Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
+        </WrapPanel>
         <DataGrid
             DockPanel.Dock="Bottom"
             AutoGenerateColumns="False"
