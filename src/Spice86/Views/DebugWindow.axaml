@@ -12,9 +12,12 @@
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
     ShowInTaskbar="True"
+    CanResize="True"
     Title="Spice86 Debug Window"
-    Width="800"
-    Height="600"
+    MinWidth="1024"
+    MinHeight="768"
+    Width="1024"
+    Height="768"
     Icon="/Assets/Debug.ico"
     mc:Ignorable="d">
     <Design.DataContext>
