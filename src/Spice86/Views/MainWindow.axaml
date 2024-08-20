@@ -36,7 +36,7 @@
 				<MenuItem IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem.Header>
 						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="CodeBlock" />
+							<fluent:SymbolIcon Symbol="Glance" />
 							<Label Content="Internal Debugger" />
 						</StackPanel>
 					</MenuItem.Header>
@@ -47,7 +47,7 @@
 				<MenuItem>
 					<MenuItem.Header>
 						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="Text" />
+							<fluent:SymbolIcon Symbol="Info" />
 							<Label Content="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}" />
 						</StackPanel>
 					</MenuItem.Header>
