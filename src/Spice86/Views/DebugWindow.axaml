@@ -42,7 +42,7 @@
                 </Button.Content>
             </Button>
         </StackPanel>
-        <TabControl Grid.Row="1">
+        <TabControl TabStripPlacement="Left" Grid.Row="1">
             <controls:HotKeyTabItem HotKeyManager.HotKey="F1" Header="CPU (F1)" Content="{Binding CpuViewModel}" />
             <controls:HotKeyTabItem HotKeyManager.HotKey="F2" Header="Code flow (F2)"
                                     Content="{Binding CfgCpuViewModel}"/>
