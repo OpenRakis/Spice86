@@ -28,8 +28,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private long _averageNodeTime;
 
-    [ObservableProperty] private bool _isVisible;
-
     public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
         IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;

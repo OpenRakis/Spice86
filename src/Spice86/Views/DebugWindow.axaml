@@ -7,6 +7,7 @@
     xmlns:vm="using:Spice86.ViewModels"
     xmlns:local="clr-namespace:Spice86"
     xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+    xmlns:controls="clr-namespace:Spice86.Controls"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
@@ -42,10 +43,10 @@
             </Button>
         </StackPanel>
         <TabControl Grid.Row="1">
-            <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-            <TabItem Header="Code flow" IsVisible="{Binding CfgCpuViewModel.IsVisible}"
-                     Content="{Binding CfgCpuViewModel}"/>
-            <TabItem Header="Disassembly">
+            <controls:HotKeyTabItem HotKeyManager.HotKey="F1" Header="CPU (F1)" Content="{Binding CpuViewModel}" />
+            <controls:HotKeyTabItem HotKeyManager.HotKey="F2" Header="Code flow (F2)"
+                                    Content="{Binding CfgCpuViewModel}"/>
+            <controls:HotKeyTabItem HotKeyManager.HotKey="F3" Header="Disassembly (F3)">
                 <TabControl ItemsSource="{Binding DisassemblyViewModels}">
                     <TabControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -55,8 +56,8 @@
                         </DataTemplate>
                     </TabControl.ItemTemplate>
                 </TabControl>
-            </TabItem>
-            <TabItem Header="Memory">
+            </controls:HotKeyTabItem>
+            <controls:HotKeyTabItem Header="Memory (F4)" HotKeyManager.HotKey="F4">
                 <TabControl ItemsSource="{Binding MemoryViewModels}">
                     <TabControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
@@ -66,11 +67,15 @@
                         </DataTemplate>
                     </TabControl.ItemTemplate>
                 </TabControl>
-            </TabItem>
-            <TabItem Header="Video Card" Content="{Binding VideoCardViewModel}" />
-            <TabItem Header="Color Palette" Content="{Binding PaletteViewModel}" />
-            <TabItem Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
-            <TabItem Header="Software Mixer" Content="{Binding SoftwareMixerViewModel}" />
+            </controls:HotKeyTabItem>
+            <controls:HotKeyTabItem HotKeyManager.HotKey="F5" Header="Devices (F5)">
+                <TabControl>
+                    <controls:HotKeyTabItem HotKeyManager.HotKey="F6" Header="Video Card (F6)" Content="{Binding VideoCardViewModel}" />
+                    <controls:HotKeyTabItem HotKeyManager.HotKey="F7" Header="Color Palette (F7)" Content="{Binding PaletteViewModel}" />
+                    <controls:HotKeyTabItem HotKeyManager.HotKey="F8" Header="General MIDI / MT-32 (F8)" Content="{Binding MidiViewModel}" />
+                    <controls:HotKeyTabItem HotKeyManager.HotKey="F9" Header="Software Mixer (F9)" Content="{Binding SoftwareMixerViewModel}" />
+                </TabControl>
+            </controls:HotKeyTabItem>
         </TabControl>
     </Grid>
 </Window>
