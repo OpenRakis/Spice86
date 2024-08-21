@@ -61,9 +61,11 @@
                     </avaloniaHex:HexEditor.ContextMenu>
                 </avaloniaHex:HexEditor>
             </Grid>
+            <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+                    IsVisible="{Binding IsEditingMemory}"/>
             <dialogHost:DialogHost
-                Grid.Row="0"
-                Grid.RowSpan="2"
+                Grid.Row="0" Grid.RowSpan="2"
+                Background="{Binding $parent[Window].Background}"
                 CloseOnClickAway="False"
                 IsOpen="{Binding IsEditingMemory}">
                 <dialogHost:DialogHost.DialogContent>
@@ -84,6 +86,7 @@
                             <TextBox
                                 Grid.Row="0"
                                 Grid.Column="1"
+                                FontFamily="RobotoMonoFont"
                                 Text="{Binding MemoryEditAddress}"
                                 Watermark="linear or segmented address" />
                             <Label
@@ -93,7 +96,7 @@
                             <TextBox
                                 Grid.Row="1"
                                 Grid.Column="1"
-                                FontFamily="Cascadia Code,JetBrains Mono,Monospace,monospace"
+                                FontFamily="RobotoMonoFont"
                                 Text="{Binding MemoryEditValue}"
                                 Watermark="hexadecimal format" />
                         </Grid>
@@ -113,6 +116,7 @@
                     </Grid>
                 </dialogHost:DialogHost.DialogContent>
             </dialogHost:DialogHost>
+            
             <userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
         </Grid>
     </ScrollViewer>
