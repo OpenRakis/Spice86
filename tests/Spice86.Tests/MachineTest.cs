@@ -27,7 +27,7 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add", true);
+        ProgramExecutor programExecutor = CreateProgramExecutor("add", false, true);
         Machine machine = programExecutor.Machine;
         State state = machine.CpuState;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
@@ -52,7 +52,7 @@ public class MachineTest {
 
     [Fact]
     public void TestMemoryBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add");
+        ProgramExecutor programExecutor = CreateProgramExecutor("add", false, false);
         Machine machine = programExecutor.Machine;
         MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
         IMemory memory = machine.Memory;
@@ -289,7 +289,13 @@ public class MachineTest {
         expected[0x05] = 0x00;
         TestOneBin("selfmodifyinstructions", expected);
     }
-    
+    [Fact]
+    public void TestExternalInt() {
+        byte[] expected = new byte[6];
+        expected[0x00] = 0x01;
+        TestOneBin("externalint", expected, 0xFFFFFFF, true);
+    }
+
     [Theory]
     [InlineData(0b0011110000000000, 0b0010000000000001, 0, 0b0011110000000000, true, true)] // result is same as dest, flags unaffected
     [InlineData(0b0000000000000001, 0b0000000000000000, 1, 0b0000000000000010, false, false)] // shift one bit 
@@ -352,22 +358,22 @@ public class MachineTest {
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, byte[] expected) {
-        Machine machine = Execute(binName);
+    private Machine TestOneBin(string binName, byte[] expected, long maxCycles=100000L, bool enablePit = false) {
+        Machine machine = Execute(binName, maxCycles, enablePit);
         IMemory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length);
         return machine;
     }
 
-    private ProgramExecutor CreateProgramExecutor(string binName, bool recordData = false) {
-        return new MachineCreator().CreateProgramExecutorFromBinName(binName, recordData);
+    private ProgramExecutor CreateProgramExecutor(string binName, bool enablePit, bool recordData) {
+        return new MachineCreator().CreateProgramExecutorFromBinName(binName, enablePit, recordData);
     }
 
     [AssertionMethod]
-    private Machine Execute(string binName) {
-        using ProgramExecutor programExecutor = CreateProgramExecutor(binName);
+    private Machine Execute(string binName, long maxCycles, bool enablePit) {
+        using ProgramExecutor programExecutor = CreateProgramExecutor(binName, enablePit, false);
         // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
-        programExecutor.Machine.MachineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 100000L,
+        programExecutor.Machine.MachineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
             (breakpoint) => {
                 Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong.");
             }, true), true);
