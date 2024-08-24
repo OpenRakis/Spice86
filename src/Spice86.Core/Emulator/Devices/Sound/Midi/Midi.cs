@@ -54,7 +54,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
         string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
         // the external MIDI device (external General MIDI or external Roland MT-32).
-        if (!string.IsNullOrWhiteSpace(Mt32RomsPath) && File.Exists(Mt32RomsPath)) {
+        if (!string.IsNullOrWhiteSpace(Mt32RomsPath) && (Directory.Exists(Mt32RomsPath) || File.Exists(Mt32RomsPath))) {
             _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, loggerService);
         } else {
             _midiMapper = new GeneralMidiDevice(softwareMixer, loggerService, pauseHandler);
