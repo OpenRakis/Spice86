@@ -127,7 +127,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
     /// </summary>
     public void ReadCharacterFromStdAux() {
-        IVirtualDevice? aux = _dos.Devices.FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
+        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
@@ -144,7 +144,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
     public void WriteCharacterToStdAux() {
-        IVirtualDevice? aux = _dos.Devices.FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
+        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
@@ -159,7 +159,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the printer device.
     /// </summary>
     public void PrinterOutput() {
-        IVirtualDevice? prn = _dos.Devices.FirstOrDefault(x => x is CharacterDevice { Name: "PRN" });
+        IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
         if (prn is not CharacterDevice printer) {
             return;
         }
