@@ -34,10 +34,11 @@ public class Counter {
     /// <param name="state">The CPU state</param>
     /// <param name="loggerService">The logger service implementation</param>
     /// <param name="activator">The activator for the counter</param>
-    public Counter(State state, ILoggerService loggerService, CounterActivator activator) {
+    public Counter(State state, ILoggerService loggerService, int index, CounterActivator activator) {
         _loggerService = loggerService;
         _state = state;
         Activator = activator;
+        Index = index;
 
         // Default is 18.2 times per second
         UpdateDesiredFreqency(18);
@@ -51,7 +52,7 @@ public class Counter {
     /// <summary>
     /// Gets the index of the counter.
     /// </summary>
-    public required int Index { get; init; }
+    public int Index { get; init; }
 
     /// <summary>
     /// Gets or sets the mode of operation for the counter.
@@ -62,8 +63,7 @@ public class Counter {
     /// Gets or sets the latch value for the counter.
     /// </summary>
     public ushort? Latch { get; set; } = null;
-
-
+    
     /// <summary>
     /// Gets or sets the read/write policy for the counter.
     /// <br/>
