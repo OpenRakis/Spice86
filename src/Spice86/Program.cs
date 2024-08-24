@@ -119,8 +119,9 @@ public class Program {
             loggerService, soundBlasterHardwareConfig, pauseHandler);
             
         GravisUltraSound gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-        
-        VgaFunctionality vgaFunctionality = new VgaFunctionality(interruptVectorTable, memory, ioPortDispatcher, biosDataArea,
+
+        VgaRom vgaRom = new();
+        VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
         
@@ -203,7 +204,7 @@ public class Program {
                 joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
                 dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler, timer,
                 timerInt8Handler,
-                vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
+                vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaRom,
                 dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
                 vgaFunctionality, pauseHandler);
             

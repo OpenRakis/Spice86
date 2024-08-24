@@ -17,32 +17,28 @@ public class VgaFunctionality : IVgaFunctionality {
     private readonly BiosDataArea _biosDataArea;
     private readonly IIOPortHandler _ioPortDispatcher;
     private readonly IIndexable _memory;
+    private readonly VgaRom _vgaRom;
     private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
     /// </summary>
-    /// <param name="interruptVectorTable">The interrupt vector table wrapper.</param>
     /// <param name="memory">The emulator memory.</param>
+    /// <param name="interruptVectorTable">The class that wraps reads and writes to the interrupt vector table.</param>
     /// <param name="ioPortDispatcher">The IOPortDispatcher, used to read from or write to VGA ports.</param>
     /// <param name="biosDataArea">The global BIOS variables.</param>
+    /// <param name="vgaRom">The VGA ROM, so we can access the IBM fonts.</param>
     /// <param name="bootUpInTextMode">Whether we begin with mode 0x03.</param>
-    public VgaFunctionality(InterruptVectorTable interruptVectorTable, IMemory memory, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, bool bootUpInTextMode) {
+    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
+        _vgaRom = vgaRom;
         _interruptVectorTable = interruptVectorTable;
-        VgaRom = new VgaRom();
-        memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
         if(bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
     }
-
-    /// <summary>
-    /// References the IBM fonts.
-    /// </summary>
-    public VgaRom VgaRom { get; }
 
     /// <inheritdoc />
     public void WriteString(string text) {
@@ -259,18 +255,18 @@ public class VgaFunctionality : IVgaFunctionality {
         ushort characterHeight = SetBiosDataArea(modeId, flags, vgaMode);
 
         // Set the 0x1F and 0x43 interrupt vectors to the font addresses.
-        SetInterruptVectorAddress(0x1F, VgaRom.VgaFont8Address2.Segment, VgaRom.VgaFont8Address2.Offset);
+        SetInterruptVectorAddress(0x1F, _vgaRom.VgaFont8Address2.Segment, _vgaRom.VgaFont8Address2.Offset);
 
         SegmentedAddress address;
         switch (characterHeight) {
             case 8:
-                address = VgaRom.VgaFont8Address;
+                address = _vgaRom.VgaFont8Address;
                 break;
             case 14:
-                address = VgaRom.VgaFont14Address;
+                address = _vgaRom.VgaFont14Address;
                 break;
             case 16:
-                address = VgaRom.VgaFont16Address;
+                address = _vgaRom.VgaFont16Address;
                 break;
             default:
                 return;
@@ -285,12 +281,12 @@ public class VgaFunctionality : IVgaFunctionality {
         SegmentedAddress address = fontNumber switch {
             0x00 => GetInterruptVectorAddress(0x1F),
             0x01 => GetInterruptVectorAddress(0x43),
-            0x02 => VgaRom.VgaFont14Address,
-            0x03 => VgaRom.VgaFont8Address,
-            0x04 => VgaRom.VgaFont8Address2,
-            0x05 => VgaRom.VgaFont14Address,
-            0x06 => VgaRom.VgaFont16Address,
-            0x07 => VgaRom.VgaFont16Address,
+            0x02 => _vgaRom.VgaFont14Address,
+            0x03 => _vgaRom.VgaFont8Address,
+            0x04 => _vgaRom.VgaFont8Address2,
+            0x05 => _vgaRom.VgaFont14Address,
+            0x06 => _vgaRom.VgaFont16Address,
+            0x07 => _vgaRom.VgaFont16Address,
             _ => throw new NotSupportedException($"{fontNumber} is not a valid font number")
         };
         return address;
@@ -347,19 +343,19 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public void LoadGraphicsRom8X16Font(byte rowSpecifier, byte userSpecifiedRows) {
-        SegmentedAddress address = VgaRom.VgaFont16Address;
+        SegmentedAddress address = _vgaRom.VgaFont16Address;
         LoadGraphicsFont(address.Segment, address.Offset, 16, rowSpecifier, userSpecifiedRows);
     }
 
     /// <inheritdoc />
     public void LoadRom8X8Font(byte rowSpecifier, byte userSpecifiedRows) {
-        SegmentedAddress address = VgaRom.VgaFont8Address;
+        SegmentedAddress address = _vgaRom.VgaFont8Address;
         LoadGraphicsFont(address.Segment, address.Offset, 8, rowSpecifier, userSpecifiedRows);
     }
 
     /// <inheritdoc />
     public void LoadRom8X14Font(byte rowSpecifier, byte userSpecifiedRows) {
-        SegmentedAddress address = VgaRom.VgaFont14Address;
+        SegmentedAddress address = _vgaRom.VgaFont14Address;
         LoadGraphicsFont(address.Segment, address.Offset, 14, rowSpecifier, userSpecifiedRows);
     }
 
