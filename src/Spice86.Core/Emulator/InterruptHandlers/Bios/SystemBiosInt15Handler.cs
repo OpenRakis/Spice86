@@ -19,9 +19,14 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
+    /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, A20Gate a20Gate, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, A20Gate a20Gate, bool initializeResetVector, ILoggerService loggerService) : base(memory, cpu, loggerService) {
         _a20Gate = a20Gate;
+        if (initializeResetVector) {
+            // Put HLT instruction at the reset address
+            memory.UInt16[0xF000, 0xFFF0] = 0xF4;
+        }
         FillDispatchTable();
     }
 
