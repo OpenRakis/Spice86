@@ -33,10 +33,6 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         RegisterMapping(0, memorySize, Ram);
         (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = a20gate;
-        if (initializeResetVector) {
-            // Put HLT instruction at the reset address
-            UInt16[0xF000, 0xFFF0] = 0xF4;
-        }
     }
 
     /// <summary>
