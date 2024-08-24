@@ -24,22 +24,6 @@ using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 /// </summary>
 public class CSharpOverrideHelper {
     /// <summary>
-    /// The CPU registers and flags.
-    /// </summary>
-    protected readonly State _state;
-    /// <summary>
-    /// The CPU stack.
-    /// </summary>
-    protected readonly Stack _stack;
-    /// <summary>
-    /// The emulated CPU.
-    /// </summary>
-    protected readonly Cpu _cpu;
-    /// <summary>
-    /// The memory bus of the IBM PC.
-    /// </summary>
-    protected readonly IMemory _memory;
-    /// <summary>
     /// The two programmable interrupt controllers.
     /// </summary>
     protected readonly DualPic _dualPic;
@@ -72,7 +56,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu => _cpu;
+    public Cpu Cpu { get; }
 
     /// <summary>
     /// The emulator machine.
@@ -82,7 +66,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The memory bus of the IBM PC.
     /// </summary>
-    public IMemory Memory => _memory;
+    public IMemory Memory { get; }
 
     /// <summary>
     /// Gets the 8-bit indexer of the memory bus.
@@ -102,12 +86,12 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
-    public Stack Stack => _stack;
+    public Stack Stack { get; }
 
     /// <summary>
     /// Gets the state of the CPU.
     /// </summary>
-    public State State => _state;
+    public State State { get; }
 
     /// <summary>
     /// Arithmetic-logic unit for 8 bit operations
@@ -335,7 +319,6 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
     /// <param name="machine">The emulator machine.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="memory">The memory bus</param>
     /// <param name="state">The CPU registers and flags</param>
     /// <param name="cpu">The emulated CPU</param>
@@ -345,16 +328,17 @@ public class CSharpOverrideHelper {
     /// <param name="executionFlowRecorder">The class that records machine code flow</param>
     /// <param name="callbackHandler">The class that registers callback instructions definitions</param>
     /// <param name="emulatorBreakpointsManager">The class that manages software breakpoints</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
     public CSharpOverrideHelper(IMemory memory, State state, Cpu cpu,
         Stack stack, DualPic dualPic, Timer timer,
         ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) {
-        _cpu = cpu;
-        _memory = memory;
-        _state = state;
-        _stack = stack;
+        Cpu = cpu;
+        Memory = memory;
+        State = state;
+        Stack = stack;
         _dualPic = dualPic;
         _timer = timer;
         _executionFlowRecorder = executionFlowRecorder;
