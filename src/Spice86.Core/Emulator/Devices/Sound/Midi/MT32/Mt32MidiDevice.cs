@@ -15,7 +15,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
     private readonly SoundChannel _soundChannel;
     private readonly Thread? _renderThread;
-    private readonly ManualResetEvent _fillBufferEvent = new(false);
 
     private bool _threadStarted;
     private bool _exitRenderThread;
@@ -60,7 +59,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
         StartThreadIfNeeded();
         if (!_disposed && !_exitRenderThread) {
             _context.PlayMessage(message);
-            RaiseFillBufferEvent();
         }
     }
 
@@ -69,7 +67,6 @@ public sealed class Mt32MidiDevice : MidiDevice {
         StartThreadIfNeeded();
         if (!_disposed && !_exitRenderThread) {
             _context.PlaySysex(data);
-            RaiseFillBufferEvent();
         }
     }
 
@@ -84,19 +81,9 @@ public sealed class Mt32MidiDevice : MidiDevice {
     private void RenderThreadMethod() {
         Span<float> buffer = stackalloc float[128];
         while (!_exitRenderThread) {
-            if (!_exitRenderThread) {
-                _fillBufferEvent.WaitOne(1);
-            }
-
             buffer.Clear();
             _context.Render(buffer);
             _soundChannel.Render(buffer);
-        }
-    }
-
-    private void RaiseFillBufferEvent() {
-        if (!_disposed && !_exitRenderThread) {
-            _fillBufferEvent.Set();
         }
     }
 
@@ -130,12 +117,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
         if (!_disposed) {
             if (disposing) {
                 _exitRenderThread = true;
-                _fillBufferEvent.Set();
                 if (_renderThread?.IsAlive == true) {
                     _renderThread.Join();
                 }
                 _context.Dispose();
-                _fillBufferEvent.Dispose();
             }
             _disposed = true;
         }
