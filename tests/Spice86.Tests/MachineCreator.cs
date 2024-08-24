@@ -38,19 +38,21 @@ using Spice86.Shared.Utils;
 using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 public class MachineCreator {
-    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorFromBinName(string binName, bool recordData = false) {
-        return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin", recordData);
+    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorFromBinName(string binName,  bool enablePit, bool recordData = false) {
+        return CreateProgramExecutorForBin($"Resources/cpuTests/{binName}.bin", enablePit, recordData);
     }
 
-    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorForBin(string binPath, bool recordData = false) {
+    public (Machine Machine, ProgramExecutor ProgramExecutor) CreateProgramExecutorForBin(string binPath, bool enablePit, bool recordData = false) {
         Configuration configuration = new Configuration {
             // making sure int8 is not going to be triggered during the tests
-            InstructionsPerSecond = 10000000,
             Exe = binPath,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = Array.Empty<byte>(),
             InitializeDOS = false,
-            DumpDataOnExit = recordData
+            DumpDataOnExit = recordData,
+            TimeMultiplier = enablePit ? 1 : 0,
+            // Use instructions per second based timer for predictability if timer is enabled
+            InstructionsPerSecond = enablePit ? 100000 : null
         };
 
         ILoggerService loggerService = Substitute.For<ILoggerService>();

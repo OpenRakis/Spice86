@@ -60,7 +60,7 @@
         <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.1.1.1" />
         <PackageReference Include="bodong.PropertyModels" Version="11.1.1.1" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
-        <PackageReference Include="DialogHost.Avalonia" Version="0.7.9"/>
+        <PackageReference Include="DialogHost.Avalonia" Version="0.8.1" />
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -25,7 +25,7 @@ public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
 
     private (Machine Machine, ProgramExecutor ProgramExecutor) CreateDummyProgramExecutor() {
-        (Machine Machine, ProgramExecutor ProgramExecutor) res =  new MachineCreator().CreateProgramExecutorFromBinName("add");
+        (Machine Machine, ProgramExecutor ProgramExecutor) res =  new MachineCreator().CreateProgramExecutorFromBinName("add", false, false);
         // Setup stack
         res.Machine.Cpu.State.SS = 0;
         res.Machine.Cpu.State.SP = 100;

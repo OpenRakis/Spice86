@@ -14,7 +14,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 
@@ -28,7 +27,7 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", true);
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", false, true);
         State state = machine.CpuState;
         EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         int triggers = 0;
@@ -52,7 +51,7 @@ public class MachineTest {
 
     [Fact]
     public void TestMemoryBreakpoints() {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add");
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", false);
         EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         IMemory memory = machine.Memory;
 
@@ -288,7 +287,13 @@ public class MachineTest {
         expected[0x05] = 0x00;
         TestOneBin("selfmodifyinstructions", expected);
     }
-    
+    [Fact]
+    public void TestExternalInt() {
+        byte[] expected = new byte[6];
+        expected[0x00] = 0x01;
+        TestOneBin("externalint", expected, 0xFFFFFFF, true);
+    }
+
     [Theory]
     [InlineData(0b0011110000000000, 0b0010000000000001, 0, 0b0011110000000000, true, true)] // result is same as dest, flags unaffected
     [InlineData(0b0000000000000001, 0b0000000000000000, 1, 0b0000000000000010, false, false)] // shift one bit 
@@ -351,25 +356,23 @@ public class MachineTest {
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, byte[] expected) {
-        Machine machine = Execute(binName);
+    private Machine TestOneBin(string binName, byte[] expected, long maxCycles=100000L, bool enablePit = false) {
+        Machine machine = Execute(binName, maxCycles, enablePit);
         IMemory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length);
         return machine;
     }
 
-    private (Machine Machine, ProgramExecutor programExecutor) CreateProgramExecutor(string binName, bool recordData = false) {
-        return new MachineCreator().CreateProgramExecutorFromBinName(binName, recordData);
+    private (Machine Machine, ProgramExecutor programExecutor) CreateProgramExecutor(string binName, bool enablePit, bool recordData = false) {
+        return new MachineCreator().CreateProgramExecutorFromBinName(binName, enablePit, recordData);
     }
 
     [AssertionMethod]
-    private Machine Execute(string binName) {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor(binName);
+    private Machine Execute(string binName, long maxCycles, bool enablePit) {
+        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor(binName, enablePit, recordData: false);
         // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
-        machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 100000L,
-            (breakpoint) => {
-                Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong.");
-            }, true), true);
+        machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
+            (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
         programExecutor.Run();
         return machine;
     }
