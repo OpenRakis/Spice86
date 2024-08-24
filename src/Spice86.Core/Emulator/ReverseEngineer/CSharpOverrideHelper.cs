@@ -319,31 +319,20 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
     /// <param name="machine">The emulator machine.</param>
-    /// <param name="memory">The memory bus</param>
-    /// <param name="state">The CPU registers and flags</param>
-    /// <param name="cpu">The emulated CPU</param>
-    /// <param name="stack">The CPU stack</param>
-    /// <param name="dualPic">The two programmable interrupt controllers</param>
-    /// <param name="timer">The IBM PC Timer device</param>
-    /// <param name="executionFlowRecorder">The class that records machine code flow</param>
-    /// <param name="callbackHandler">The class that registers callback instructions definitions</param>
-    /// <param name="emulatorBreakpointsManager">The class that manages software breakpoints</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
-    public CSharpOverrideHelper(IMemory memory, State state, Cpu cpu,
-        Stack stack, DualPic dualPic, Timer timer,
-        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+    public CSharpOverrideHelper(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) {
-        Cpu = cpu;
-        Memory = memory;
-        State = state;
-        Stack = stack;
-        _dualPic = dualPic;
-        _timer = timer;
-        _executionFlowRecorder = executionFlowRecorder;
-        _callbackHandler = callbackHandler;
-        EmulatorBreakpointsManager = emulatorBreakpointsManager;
+        Machine = machine;
+        Cpu = machine.Cpu;
+        Memory = machine.Memory;
+        State = machine.CpuState;
+        Stack = Cpu.Stack;
+        _dualPic = machine.DualPic;
+        _timer = machine.Timer;
+        _executionFlowRecorder = Cpu.ExecutionFlowRecorder;
+        _callbackHandler = machine.CallbackHandler;
+        EmulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         _loggerService = loggerService;
         Configuration = configuration;
         _functionInformations = functionInformations;

@@ -37,9 +37,7 @@ public class CSharpOverrideHelperTest {
         (Machine Machine, ProgramExecutor ProgramExecutor) res = CreateDummyProgramExecutor();
         using Machine machine = res.Machine;
         RecursiveJumps recursiveJumps =
-            new RecursiveJumps(machine.Memory, machine.CpuState, machine.Cpu,
-                machine.Cpu.Stack, machine.DualPic, machine.Timer,
-                machine.Cpu.ExecutionFlowRecorder, machine.CallbackHandler, machine.EmulatorBreakpointsManager, new Dictionary<SegmentedAddress, FunctionInformation>(),
+            new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
                 machine,
                 _loggerServiceMock, new Configuration());
         recursiveJumps.JumpTarget1(0);
@@ -52,10 +50,7 @@ public class CSharpOverrideHelperTest {
         (Machine createdMachine, ProgramExecutor ProgramExecutor) = CreateDummyProgramExecutor();
         using Machine machine = createdMachine;
         SimpleCallsJumps callsJumps =
-            new SimpleCallsJumps(machine.Memory, machine.CpuState, machine.Cpu,
-                machine.Cpu.Stack, machine.DualPic, machine.Timer,
-                machine.Cpu.ExecutionFlowRecorder, machine.CallbackHandler, machine.EmulatorBreakpointsManager,
-                new Dictionary<SegmentedAddress, FunctionInformation>(),
+            new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
                 machine,
                 _loggerServiceMock, new Configuration());
         callsJumps.Entry_1000_0000_10000();
@@ -71,12 +66,8 @@ class RecursiveJumps : CSharpOverrideHelper {
     public int NumberOfCallsTo1 { get; set; }
     public int NumberOfCallsTo2 { get; set; }
 
-    public RecursiveJumps(IMemory memory, State state, Cpu cpu,
-        Stack stack, DualPic dualPic, Timer timer,
-        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(
-        memory, state, cpu, stack, dualPic, timer, executionFlowRecorder, callbackHandler, emulatorBreakpointsManager, functionInformations, machine, loggerService, new()) {
+    public RecursiveJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -112,12 +103,8 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public int FarCalled1FromStack { get; set; }
     public int FarCalled2FromStack { get; set; }
 
-    public SimpleCallsJumps(IMemory memory, State state, Cpu cpu,
-        Stack stack, DualPic dualPic, Timer timer,
-        ExecutionFlowRecorder executionFlowRecorder, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(
-        memory, state, cpu, stack, dualPic, timer, executionFlowRecorder, callbackHandler, emulatorBreakpointsManager, functionInformations, machine, loggerService, new()) {
+    public SimpleCallsJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
     }
