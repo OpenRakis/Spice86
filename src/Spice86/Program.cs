@@ -205,13 +205,13 @@ public class Program {
                 timerInt8Handler,
                 vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaFunctionality.VgaRom,
                 dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
-                vgaFunctionality);
+                vgaFunctionality, pauseHandler);
             
             InitializeFunctionHandlers(configuration, machine,  loggerService,
                 reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
             
             using ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager, emulatorStateSerializer, memory, cpu, state,
-                 timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, mainWindowViewModel,
+                timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler, mainWindowViewModel,
                 loggerService);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();

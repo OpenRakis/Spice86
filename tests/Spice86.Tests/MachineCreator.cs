@@ -174,7 +174,7 @@ public class MachineCreator {
             timerInt8Handler,
             vgaCard, videoState, videoInt10Handler, renderer, vgaBios, vgaFunctionality.VgaRom,
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
-            vgaFunctionality);
+            vgaFunctionality, pauseHandler);
         
         InitializeFunctionHandlers(configuration, machine,  loggerService, reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
 
