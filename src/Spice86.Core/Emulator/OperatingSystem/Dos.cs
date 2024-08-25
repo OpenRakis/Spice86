@@ -4,8 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -14,12 +12,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
-using Spice86.Core.Emulator.Memory.Indexable;
 
-using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -109,7 +104,7 @@ public class Dos {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = cpu.State;
@@ -126,14 +121,16 @@ public class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        OpenDefaultFileHandles();
+        if (initializeDos) {
+            OpenDefaultFileHandles();
 
-        if (enableEms) {
-            Ems = new(_memory, cpu, this, _loggerService);
-        }
+            if (enableEms) {
+                Ems = new(_memory, cpu, this, _loggerService);
+            }
 
-        foreach (KeyValuePair<string, string> envVar in envVars) {
-            EnvironmentVariables.Add(envVar.Key, envVar.Value);
+            foreach (KeyValuePair<string, string> envVar in envVars) {
+                EnvironmentVariables.Add(envVar.Key, envVar.Value);
+            }
         }
     }
 

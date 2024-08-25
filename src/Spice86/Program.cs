@@ -162,7 +162,7 @@ public class Program {
 
             KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService, biosKeyboardInt9Handler.BiosKeyboardBuffer);
             Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-                configuration.Exe, configuration.Ems,
+                configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
                 new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
                 loggerService);
             

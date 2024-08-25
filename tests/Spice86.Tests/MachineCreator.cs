@@ -133,7 +133,7 @@ public class MachineCreator {
         MouseDriver mouseDriver = new MouseDriver(cpu, memory, mouse, gui, vgaFunctionality, loggerService);
         
         Core.Emulator.OperatingSystem.Dos dos = new Core.Emulator.OperatingSystem.Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-            configuration.Exe, configuration.Ems,
+            configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
             new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
         
