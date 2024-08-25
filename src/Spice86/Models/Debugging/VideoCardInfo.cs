@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
+using Spice86.Core.Emulator.Devices.Video.Registers.General;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.ViewModels;
 
@@ -12,7 +13,7 @@ public partial class VideoCardInfo : ObservableObject {
     private byte _generalMiscellaneousOutputRegister;
 
     [ObservableProperty]
-    private ClockSelect _generalClockSelect;
+    private MiscellaneousOutput.ClockSelectValue _generalClockSelect;
 
     [ObservableProperty]
     private bool _generalEnableRam;
@@ -21,13 +22,13 @@ public partial class VideoCardInfo : ObservableObject {
     private int _generalVerticalSize;
 
     [ObservableProperty]
-    private Polarity _generalHorizontalSyncPolarity;
+    private MiscellaneousOutput.PolarityValue _generalHorizontalSyncPolarity;
 
     [ObservableProperty]
-    private Polarity _generalVerticalSyncPolarity;
+    private MiscellaneousOutput.PolarityValue _generalVerticalSyncPolarity;
 
     [ObservableProperty]
-    private IoAddressSelect _generalIoAddressSelect;
+    private MiscellaneousOutput.IoAddressSelectValue _generalIoAddressSelect;
 
     [ObservableProperty]
     private bool _generalOddPageSelect;
