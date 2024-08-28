@@ -101,7 +101,7 @@ public class Program {
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, loggerService);
 
         // IO devices
-        using DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
+        DmaController dmaController = new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
         Joystick joystick = new Joystick(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
         
@@ -134,23 +134,16 @@ public class Program {
         SystemClockInt1AHandler systemClockInt1AHandler = new SystemClockInt1AHandler(memory, cpu, loggerService, timerInt8Handler);
         
         EmulatorStateSerializer emulatorStateSerializer = new(configuration, memory, state, callbackHandler, executionFlowRecorder, functionHandler, loggerService);
-        
-        MainWindowViewModel? mainWindowViewModel = null;
-        ClassicDesktopStyleApplicationLifetime? desktop = null;
-        MainWindow? mainWindow = null;
-        ITextClipboard? textClipboard = null;
-        IHostStorageProvider? hostStorageProvider = null;
-        if (!configuration.HeadlessMode) {
-            desktop = CreateDesktopApp();
-            PerformanceViewModel performanceViewModel = new(state, pauseHandler);
-            mainWindow = new() {
-                PerformanceViewModel = performanceViewModel
-            };
-            textClipboard = new TextClipboard(mainWindow.Clipboard);
-            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration, emulatorStateSerializer);
-            mainWindowViewModel = new MainWindowViewModel(
-                timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration, loggerService, pauseHandler);
-        }
+
+        ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();
+        PerformanceViewModel performanceViewModel = new(state, pauseHandler);
+        MainWindow mainWindow = new() {
+            PerformanceViewModel = performanceViewModel
+        };
+        ITextClipboard textClipboard = new TextClipboard(mainWindow.Clipboard);
+        IHostStorageProvider hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration, emulatorStateSerializer);
+        MainWindowViewModel? mainWindowViewModel = configuration.HeadlessMode ? null : new MainWindowViewModel(
+            timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration, loggerService, pauseHandler);
         
         using (mainWindowViewModel) {
             VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
@@ -163,7 +156,7 @@ public class Program {
             KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService, biosKeyboardInt9Handler.BiosKeyboardBuffer);
             Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
                 configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
-                new Dictionary<string, string>() { { "BLASTER", soundBlaster.BlasterString } },
+                new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
                 loggerService);
             
             if (configuration.InitializeDOS is not false) {
@@ -216,8 +209,7 @@ public class Program {
                 loggerService);
             if (configuration.HeadlessMode) {
                 programExecutor.Run();
-            } else if (mainWindowViewModel != null && mainWindow != null && desktop != null
-                    && textClipboard != null && hostStorageProvider != null) {
+            } else {
                 mainWindow.DataContext = mainWindowViewModel;
                 desktop.MainWindow = mainWindow;
                 IMessenger messenger = WeakReferenceMessenger.Default;
