@@ -24,9 +24,10 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.ReverseEngineer;
 
 /// <summary>
-/// Centralizes classes instances that should live while the CPU is running.
+/// Centralizes many useful emulator devices and components for machine code overrides.
 /// </summary>
 public sealed class Machine : IDisposable {
     private bool _disposed;
