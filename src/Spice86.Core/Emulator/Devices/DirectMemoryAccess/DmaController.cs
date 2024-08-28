@@ -40,7 +40,7 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of the <see cref="DmaController"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
