@@ -101,8 +101,11 @@ public class Dos {
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
+    /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
+    /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
@@ -121,16 +124,18 @@ public class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        if (initializeDos) {
-            OpenDefaultFileHandles();
+        if (!initializeDos) {
+            return;
+        }
 
-            if (enableEms) {
-                Ems = new(_memory, cpu, this, _loggerService);
-            }
+        OpenDefaultFileHandles();
 
-            foreach (KeyValuePair<string, string> envVar in envVars) {
-                EnvironmentVariables.Add(envVar.Key, envVar.Value);
-            }
+        if (enableEms) {
+            Ems = new(_memory, cpu, this, _loggerService);
+        }
+
+        foreach (KeyValuePair<string, string> envVar in envVars) {
+            EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
     }
 
