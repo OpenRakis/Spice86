@@ -14,18 +14,13 @@ using System.Collections.Generic;
 using Xunit;
 using NSubstitute;
 
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
-using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
 
-    private (Machine Machine, ProgramExecutor ProgramExecutor) CreateDummyProgramExecutor() {
-        (Machine Machine, ProgramExecutor ProgramExecutor) res =  new MachineCreator().CreateProgramExecutorFromBinName("add", false, false);
+    private Spice86DependencyInjection CreateDummyProgramExecutor() {
+        Spice86DependencyInjection res =  new Spice86Creator().CreateSpice86ForBinName("add", false, false);
         // Setup stack
         res.Machine.Cpu.State.SS = 0;
         res.Machine.Cpu.State.SP = 100;
@@ -34,8 +29,8 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     void TestJumpReturns() {
-        (Machine Machine, ProgramExecutor ProgramExecutor) res = CreateDummyProgramExecutor();
-        using Machine machine = res.Machine;
+        using Spice86DependencyInjection res = CreateDummyProgramExecutor();
+        Machine machine = res.Machine;
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
                 machine,
@@ -47,11 +42,10 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     void TestSimpleCallsJumps() {
-        (Machine createdMachine, ProgramExecutor ProgramExecutor) = CreateDummyProgramExecutor();
-        using Machine machine = createdMachine;
+        using Spice86DependencyInjection spice86DependencyInjection = CreateDummyProgramExecutor();
         SimpleCallsJumps callsJumps =
             new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
-                machine,
+                spice86DependencyInjection.Machine,
                 _loggerServiceMock, new Configuration());
         callsJumps.Entry_1000_0000_10000();
         Assert.Equal(1, callsJumps.NearCalled);

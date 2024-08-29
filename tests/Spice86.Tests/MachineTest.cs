@@ -27,9 +27,11 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", false, true);
-        State state = machine.CpuState;
-        EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
+        using Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection("add", false, true);
+        State state = spice86DependencyInjection.Machine.CpuState;
+        Machine machine = spice86DependencyInjection.Machine;
+        ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         int triggers = 0;
         emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
             Assert.Equal(10, state.Cycles);
@@ -51,9 +53,9 @@ public class MachineTest {
 
     [Fact]
     public void TestMemoryBreakpoints() {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor("add", false);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
-        IMemory memory = machine.Memory;
+        using Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection("add", false);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
+        IMemory memory = spice86DependencyInjection.Machine.Memory;
 
         // simple read
         // 2 reads, but breakpoint is removed after first
@@ -357,27 +359,28 @@ public class MachineTest {
 
     [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected, long maxCycles=100000L, bool enablePit = false) {
-        Machine machine = Execute(binName, maxCycles, enablePit);
+        using Spice86DependencyInjection spice86DependencyInjection = Execute(binName, maxCycles, enablePit);
+        Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length);
         return machine;
     }
 
-    private (Machine Machine, ProgramExecutor programExecutor) CreateProgramExecutor(string binName, bool enablePit, bool recordData = false) {
-        return new MachineCreator().CreateProgramExecutorFromBinName(binName, enablePit, recordData);
+    private static Spice86DependencyInjection CreateSpice86DependencyInjection(string binName, bool enablePit, bool recordData = false) {
+        return new Spice86Creator().CreateSpice86ForBinName(binName, enablePit, recordData);
     }
 
     [AssertionMethod]
-    private Machine Execute(string binName, long maxCycles, bool enablePit) {
-        (Machine machine, ProgramExecutor programExecutor) = CreateProgramExecutor(binName, enablePit, recordData: false);
+    private static Spice86DependencyInjection Execute(string binName, long maxCycles, bool enablePit) {
+        Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection(binName, enablePit, recordData: false);
         // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
-        machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
+        spice86DependencyInjection.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
             (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
-        programExecutor.Run();
-        return machine;
+        spice86DependencyInjection.ProgramExecutor.Run();
+        return spice86DependencyInjection;
     }
 
-    private byte[] GetExpected(string binName) {
+    private static byte[] GetExpected(string binName) {
         string resPath = $"Resources/cpuTests/res/{binName}.bin";
         return File.ReadAllBytes(resPath);
     }

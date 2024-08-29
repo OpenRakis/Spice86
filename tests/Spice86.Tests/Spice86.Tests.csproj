@@ -43,6 +43,7 @@
   <ItemGroup>
 	<ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj" />
 	<ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj" />
+	<ProjectReference Include="..\..\src\Spice86\Spice86.csproj" />
   </ItemGroup>
 
   <ItemGroup>

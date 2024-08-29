@@ -51,12 +51,12 @@ using Spice86.Views;
 /// </summary>
 public class Spice86DependencyInjection : IDisposable {
     private readonly Configuration _configuration;
-    private readonly ClassicDesktopStyleApplicationLifetime _desktop;
-    private readonly Machine _machine;
-    private readonly ProgramExecutor _programExecutor;
+    private readonly ClassicDesktopStyleApplicationLifetime? _desktop;
+    public Machine Machine { get; }
+    public ProgramExecutor ProgramExecutor { get; }
     private readonly MainWindowViewModel? _mainWindowViewModel;
     private bool _disposed;
-    
+
     public Spice86DependencyInjection(ILoggerService loggerService, Configuration configuration) {
         SetLoggingLevel(loggerService, configuration);
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
@@ -140,102 +140,113 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(configuration, memory, state, callbackHandler,
             executionFlowRecorder, functionHandler, loggerService);
 
-        ClassicDesktopStyleApplicationLifetime desktop = CreateDesktopApp();
-        PerformanceViewModel performanceViewModel = new(state, pauseHandler);
-        MainWindow mainWindow = new() {
-            PerformanceViewModel = performanceViewModel
-        };
-        ITextClipboard textClipboard = new TextClipboard(mainWindow.Clipboard);
-        IHostStorageProvider hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
-            emulatorStateSerializer);
-        MainWindowViewModel? mainWindowViewModel = configuration.HeadlessMode
-            ? null
-            : new MainWindowViewModel(
+        MainWindowViewModel? mainWindowViewModel = null;
+        MainWindow? mainWindow = null;
+        ClassicDesktopStyleApplicationLifetime? desktop = null;
+        ITextClipboard? textClipboard = null;
+        IHostStorageProvider? hostStorageProvider = null;
+
+        if (!configuration.HeadlessMode) {
+            desktop = CreateDesktopApp();
+            PerformanceViewModel performanceViewModel = new(state, pauseHandler);
+            mainWindow = new() {
+                PerformanceViewModel = performanceViewModel
+            };
+            textClipboard = new TextClipboard(mainWindow.Clipboard);
+            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
+                emulatorStateSerializer);
+            mainWindowViewModel = new MainWindowViewModel(
                 timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler);
+        }
 
-            VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
-            Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-                mainWindowViewModel, configuration.FailOnUnhandledPort);
-            BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-                new BiosKeyboardInt9Handler(memory, cpu, dualPic, keyboard, biosDataArea, loggerService);
-            Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, configuration.Mouse, loggerService,
-                configuration.FailOnUnhandledPort);
+        VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
+        Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+            mainWindowViewModel, configuration.FailOnUnhandledPort);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
+            new BiosKeyboardInt9Handler(memory, cpu, dualPic, keyboard, biosDataArea, loggerService);
+        Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, configuration.Mouse, loggerService,
+            configuration.FailOnUnhandledPort);
 
-            MouseDriver mouseDriver =
-                new MouseDriver(cpu, memory, mouse, mainWindowViewModel, vgaFunctionality, loggerService);
+        MouseDriver mouseDriver =
+            new MouseDriver(cpu, memory, mouse, mainWindowViewModel, vgaFunctionality, loggerService);
 
-            KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService,
-                biosKeyboardInt9Handler.BiosKeyboardBuffer);
-            Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-                configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
-                new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-                loggerService);
-            
-            Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
-                biosKeyboardInt9Handler,
-                callbackHandler, cpu,
-                cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-                joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
-                dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler,
-                timer,
-                timerInt8Handler,
-                vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaRom,
-                dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
-                vgaFunctionality, pauseHandler);
+        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService,
+            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+        Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+            configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
+            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            loggerService);
 
-            InitializeFunctionHandlers(configuration, machine, loggerService,
-                reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
+        Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
+            biosKeyboardInt9Handler,
+            callbackHandler, cpu,
+            cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
+            joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
+            dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler,
+            timer,
+            timerInt8Handler,
+            vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaRom,
+            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            vgaFunctionality, pauseHandler);
 
-            ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-                emulatorStateSerializer, memory, cpu, state,
-                timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
-                mainWindowViewModel,
-                loggerService);
+        InitializeFunctionHandlers(configuration, machine, loggerService,
+            reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
 
-            if (configuration.InitializeDOS is not false) {
-                // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
-                MemoryAsmWriter memoryAsmWriter = new(memory,
-                    new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
-                InterruptInstaller interruptInstaller =
-                    new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
-                AssemblyRoutineInstaller assemblyRoutineInstaller =
-                    new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
+        ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
+            emulatorStateSerializer, memory, cpu, state,
+            timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
+            mainWindowViewModel,
+            loggerService);
 
-                // Register the interrupt handlers
-                interruptInstaller.InstallInterruptHandler(vgaBios);
-                interruptInstaller.InstallInterruptHandler(timerInt8Handler);
-                interruptInstaller.InstallInterruptHandler(biosKeyboardInt9Handler);
-                interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
-                interruptInstaller.InstallInterruptHandler(systemBiosInt12Handler);
-                interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
-                interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
-                interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
-                interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
-                interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
-                interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
-                interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
-                if (dos.Ems is not null) {
-                    interruptInstaller.InstallInterruptHandler(dos.Ems);
-                }
+        if (configuration.InitializeDOS is not false) {
+            // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
+            MemoryAsmWriter memoryAsmWriter = new(memory,
+                new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
+            InterruptInstaller interruptInstaller =
+                new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
+            AssemblyRoutineInstaller assemblyRoutineInstaller =
+                new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
 
-                var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
-                interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
-
-                var mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
-                interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
-
-                SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver);
-                mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
+            // Register the interrupt handlers
+            interruptInstaller.InstallInterruptHandler(vgaBios);
+            interruptInstaller.InstallInterruptHandler(timerInt8Handler);
+            interruptInstaller.InstallInterruptHandler(biosKeyboardInt9Handler);
+            interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
+            interruptInstaller.InstallInterruptHandler(systemBiosInt12Handler);
+            interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
+            interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
+            interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
+            if (dos.Ems is not null) {
+                interruptInstaller.InstallInterruptHandler(dos.Ems);
             }
 
-            mainWindow.DataContext = mainWindowViewModel;
-            desktop.MainWindow = mainWindow;
+            var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
+            interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
+
+            var mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
+            interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
+
+            SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver);
+            mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
+        }
+
+        DebugWindowViewModel? debugWindowViewModel = null;
+        if (textClipboard != null && hostStorageProvider != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            DebugWindowViewModel debugWindowViewModel = new DebugWindowViewModel(state, memory,
+            debugWindowViewModel = new DebugWindowViewModel(state, memory,
                 midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                 cfgCpu.ExecutionContextManager, messenger, textClipboard, hostStorageProvider,
                 new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+        }
+
+        if (desktop != null && mainWindow != null) {
+            mainWindow.DataContext = mainWindowViewModel;
+            desktop.MainWindow = mainWindow;
             desktop.Startup += (_, _) => {
                 // DebugWindow is not shown. Therefore, the instance is not used.
                 // But with the alternative ctor it will be in the OwnedWindows collection.
@@ -244,21 +255,23 @@ public class Spice86DependencyInjection : IDisposable {
                     DataContext = debugWindowViewModel
                 };
             };
+        }
 
-            _machine = machine;
-            _programExecutor = programExecutor;
-            _configuration = configuration;
-            _desktop = desktop;
-            _mainWindowViewModel = mainWindowViewModel;
+        Machine = machine;
+        ProgramExecutor = programExecutor;
+        _configuration = configuration;
+        _desktop = desktop;
+        _mainWindowViewModel = mainWindowViewModel;
     }
 
     public void Start() {
         if (_configuration.HeadlessMode) {
-            _programExecutor.Run();
+            ProgramExecutor.Run();
         } else {
-            _desktop.Start(Environment.GetCommandLineArgs());
+            _desktop?.Start(Environment.GetCommandLineArgs());
         }
     }
+
     private static void SetLoggingLevel(ILoggerService loggerService, Configuration configuration) {
         if (configuration.SilencedLogs) {
             loggerService.AreLogsSilenced = true;
@@ -281,15 +294,17 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in configuration.OverrideSupplier
-                .GenerateFunctionInformations(loggerService, configuration, configuration.ProgramEntryPointSegment, machine)) {
+            .GenerateFunctionInformations(loggerService, configuration, configuration.ProgramEntryPointSegment, machine)) {
             res.Add(element.Key, element.Value);
         }
 
         return res;
     }
 
-    private static void InitializeFunctionHandlers(Configuration configuration, Machine machine, ILoggerService loggerService,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, FunctionHandler cpuFunctionHandler, FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
+    private static void InitializeFunctionHandlers(Configuration configuration, Machine machine,
+        ILoggerService loggerService,
+        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, FunctionHandler cpuFunctionHandler,
+        FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
         if (configuration.OverrideSupplier != null) {
             DictionaryUtils.AddAll(functionInformations,
                 GenerateFunctionInformations(loggerService, configuration,
@@ -304,7 +319,7 @@ public class Spice86DependencyInjection : IDisposable {
         SetupFunctionHandler(cpuFunctionHandler, functionInformations, useCodeOverride);
         SetupFunctionHandler(cpuFunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
     }
-    
+
     private static void SetupFunctionHandler(FunctionHandler functionHandler,
         IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
         functionHandler.FunctionInformations = functionInformations;
@@ -322,7 +337,7 @@ public class Spice86DependencyInjection : IDisposable {
         appBuilder.SetupWithLifetime(desktop);
         return desktop;
     }
-    
+
     /// <inheritdoc cref="IDisposable" />
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -333,11 +348,12 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _programExecutor.Dispose();
-                _machine.Dispose();
+                ProgramExecutor.Dispose();
+                Machine.Dispose();
                 _mainWindowViewModel?.Dispose();
-                _desktop.Dispose();
+                _desktop?.Dispose();
             }
+
             _disposed = true;
         }
     }
