@@ -390,12 +390,4 @@ public class MachineTest {
         byte[] actual = memory.ReadRam();
         actual[start..end].Should().BeEquivalentTo(expected[start..end]);
     }
-
-    private string HexValueWithFlagsB(byte value) {
-        return ConvertUtils.ToHex8(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
-    }
-
-    private string HexValueWithFlagsW(ushort value) {
-        return ConvertUtils.ToHex16(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
-    }
 }
