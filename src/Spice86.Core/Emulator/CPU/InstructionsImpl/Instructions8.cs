@@ -1,13 +1,113 @@
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 
 public class Instructions8 : Instructions {
     private readonly Alu8 _alu8;
-    public Instructions8(Alu8 alu8, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
+    public Instructions8(State state, Cpu cpu, Memory.IMemory memory, ModRM modRm) :
         base(cpu, memory, modRm) {
-        _alu8 = alu8;
+        _alu8 = new Alu8(state);
     }
+    
+    public void Aam(byte v2) {
+        byte v1 = State.AL;
+        if (v2 == 0) {
+            throw new CpuDivisionErrorException("Division by zero");
+        }
+
+        byte result = (byte)(v1 % v2);
+        State.AH = (byte)(v1 / v2);
+        State.AL = result;
+        _alu8.UpdateFlags(result);
+    }
+
+    public void Aad(byte v2) {
+        State.AL = (byte)(State.AL + (State.AH * v2));
+        State.AH = 0;
+        State.Flags.FlagRegister = 0;
+        _alu8.UpdateFlags(State.AL);
+    }
+
+    public void Aas() {
+        bool finalAuxillaryFlag = false;
+        bool finalCarryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AX = (ushort)(State.AX - 6);
+            State.AH = (byte)(State.AH - 1);
+            finalAuxillaryFlag = true;
+            finalCarryFlag = true;
+        }
+
+        State.AL = (byte)(State.AL & 0x0F);
+        // Undocumented behaviour
+        _alu8.UpdateFlags(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
+
+    public void Daa() {
+        byte initialAL = State.AL;
+        bool initialCF = State.CarryFlag;
+        bool finalAuxillaryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AL = (byte)(State.AL + 6);
+            finalAuxillaryFlag = true;
+        }
+
+        bool finalCarryFlag;
+        if (initialAL > 0x99 || initialCF) {
+            State.AL = (byte)(State.AL + 0x60);
+            finalCarryFlag = true;
+        } else {
+            finalCarryFlag = false;
+        }
+
+        // Undocumented behaviour
+        _alu8.UpdateFlags(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
+
+    public void Das() {
+        byte initialAL = State.AL;
+        bool initialCF = State.CarryFlag;
+        bool finalAuxillaryFlag = false;
+        bool finalCarryFlag = false;
+        State.CarryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AL = (byte)(State.AL - 6);
+            finalCarryFlag = State.CarryFlag || initialCF;
+            finalAuxillaryFlag = true;
+        }
+
+        if (initialAL > 0x99 || initialCF) {
+            State.AL = (byte)(State.AL - 0x60);
+            finalCarryFlag = true;
+        }
+
+        // Undocumented behaviour
+        _alu8.UpdateFlags(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
+
+    public void Aaa() {
+        bool finalAuxillaryFlag = false;
+        bool finalCarryFlag = false;
+        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
+            State.AX = (ushort)(State.AX + 0x106);
+            finalAuxillaryFlag = true;
+            finalCarryFlag = true;
+        }
+
+        State.AL = (byte)(State.AL & 0x0F);
+        // Undocumented behaviour
+        _alu8.UpdateFlags(State.AL);
+        State.AuxiliaryFlag = finalAuxillaryFlag;
+        State.CarryFlag = finalCarryFlag;
+    }
+
 
     public override void AddRmReg() {
         // ADD rmb rb

@@ -44,8 +44,6 @@ public class Cpu : IInstructionExecutor {
 
     private readonly ModRM _modRM;
 
-    private readonly Alu8 _alu8;
-
     internal EmulatorBreakpointsManager EmulatorBreakpointsManager { get; }
     private readonly CallbackHandler _callbackHandler;
     private readonly Instructions8 _instructions8;
@@ -98,13 +96,12 @@ public class Cpu : IInstructionExecutor {
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
         ExecutionFlowRecorder = executionFlowRecorder;
         InterruptVectorTable = interruptVectorTable;
-        _alu8 = new(state);
         Stack = stack;
         FunctionHandler = functionHandler;
         FunctionHandlerInExternalInterrupt = functionHandlerInExternalInterrupt;
         FunctionHandlerInUse = FunctionHandler;
         _modRM = new ModRM(_memory, this, state);
-        _instructions8 = new Instructions8(_alu8, this, _memory, _modRM);
+        _instructions8 = new Instructions8(state, this, _memory, _modRM);
         _instructions16 = new Instructions16(state, this, _memory, _modRM);
         _instructions32 = new Instructions32(state, this, _memory, _modRM);
         _instructions16Or32 = _instructions16;
@@ -463,7 +460,7 @@ public class Cpu : IInstructionExecutor {
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
             case 0x27:
-                Daa();
+                _instructions8.Daa();
                 break;
             case 0x28:
                 _instructions8.SubRmReg();
@@ -487,7 +484,7 @@ public class Cpu : IInstructionExecutor {
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
             case 0x2F:
-                Das();
+                _instructions8.Das();
                 break;
             case 0x30:
                 _instructions8.XorRmReg();
@@ -511,7 +508,7 @@ public class Cpu : IInstructionExecutor {
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
             case 0x37:
-                Aaa();
+                _instructions8.Aaa();
                 break;
             case 0x38:
                 _instructions8.CmpRmReg();
@@ -535,7 +532,7 @@ public class Cpu : IInstructionExecutor {
                 HandleInvalidOpcodeBecausePrefix(opcode);
                 break;
             case 0x3F:
-                Aas();
+                _instructions8.Aas();
                 break;
             case 0x40:
             case 0x41:
@@ -865,11 +862,11 @@ public class Cpu : IInstructionExecutor {
 
             case 0xD4:
                 // AAM ib
-                Aam(NextUint8());
+                _instructions8.Aam(NextUint8());
                 break;
             case 0xD5:
                 // AAD ib
-                Aad(NextUint8());
+                _instructions8.Aad(NextUint8());
                 break;
             case 0xD6:
                 _instructions8.Salc();
@@ -1079,104 +1076,6 @@ public class Cpu : IInstructionExecutor {
                 _instructions16Or32.Grp5();
                 break;
         }
-    }
-
-    public void Aam(byte v2) {
-        byte v1 = State.AL;
-        if (v2 == 0) {
-            throw new CpuDivisionErrorException("Division by zero");
-        }
-
-        byte result = (byte)(v1 % v2);
-        State.AH = (byte)(v1 / v2);
-        State.AL = result;
-        _alu8.UpdateFlags(result);
-    }
-
-    public void Aad(byte v2) {
-        State.AL = (byte)(State.AL + (State.AH * v2));
-        State.AH = 0;
-        State.Flags.FlagRegister = 0;
-        _alu8.UpdateFlags(State.AL);
-    }
-
-    public void Aas() {
-        bool finalAuxillaryFlag = false;
-        bool finalCarryFlag = false;
-        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-            State.AX = (ushort)(State.AX - 6);
-            State.AH = (byte)(State.AH - 1);
-            finalAuxillaryFlag = true;
-            finalCarryFlag = true;
-        }
-
-        State.AL = (byte)(State.AL & 0x0F);
-        // Undocumented behaviour
-        _alu8.UpdateFlags(State.AL);
-        State.AuxiliaryFlag = finalAuxillaryFlag;
-        State.CarryFlag = finalCarryFlag;
-    }
-
-    public void Daa() {
-        byte initialAL = State.AL;
-        bool initialCF = State.CarryFlag;
-        bool finalAuxillaryFlag = false;
-        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-            State.AL = (byte)(State.AL + 6);
-            finalAuxillaryFlag = true;
-        }
-
-        bool finalCarryFlag;
-        if (initialAL > 0x99 || initialCF) {
-            State.AL = (byte)(State.AL + 0x60);
-            finalCarryFlag = true;
-        } else {
-            finalCarryFlag = false;
-        }
-
-        // Undocumented behaviour
-        _alu8.UpdateFlags(State.AL);
-        State.AuxiliaryFlag = finalAuxillaryFlag;
-        State.CarryFlag = finalCarryFlag;
-    }
-
-    public void Das() {
-        byte initialAL = State.AL;
-        bool initialCF = State.CarryFlag;
-        bool finalAuxillaryFlag = false;
-        bool finalCarryFlag = false;
-        State.CarryFlag = false;
-        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-            State.AL = (byte)(State.AL - 6);
-            finalCarryFlag = State.CarryFlag || initialCF;
-            finalAuxillaryFlag = true;
-        }
-
-        if (initialAL > 0x99 || initialCF) {
-            State.AL = (byte)(State.AL - 0x60);
-            finalCarryFlag = true;
-        }
-
-        // Undocumented behaviour
-        _alu8.UpdateFlags(State.AL);
-        State.AuxiliaryFlag = finalAuxillaryFlag;
-        State.CarryFlag = finalCarryFlag;
-    }
-
-    public void Aaa() {
-        bool finalAuxillaryFlag = false;
-        bool finalCarryFlag = false;
-        if ((State.AL & 0x0F) > 9 || State.AuxiliaryFlag) {
-            State.AX = (ushort)(State.AX + 0x106);
-            finalAuxillaryFlag = true;
-            finalCarryFlag = true;
-        }
-
-        State.AL = (byte)(State.AL & 0x0F);
-        // Undocumented behaviour
-        _alu8.UpdateFlags(State.AL);
-        State.AuxiliaryFlag = finalAuxillaryFlag;
-        State.CarryFlag = finalCarryFlag;
     }
 
     public void FarCallWithReturnIpNextInstruction(ushort targetCS, ushort targetIP) {
