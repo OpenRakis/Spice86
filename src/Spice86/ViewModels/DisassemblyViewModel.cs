@@ -134,7 +134,6 @@ public partial class DisassemblyViewModel : ViewModelBase {
             long instructionAddress = codeMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
-                StringRepresentation = instruction.ToString(),
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
                 Length = instruction.Length,
@@ -150,6 +149,8 @@ public partial class DisassemblyViewModel : ViewModelBase {
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             };
+            instructionInfo.StringRepresentation =
+                $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == state.IpPhysicalAddress) {
                 instructionInfo.IsCsIp = true;
             }
