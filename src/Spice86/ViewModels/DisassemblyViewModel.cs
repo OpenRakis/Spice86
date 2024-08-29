@@ -24,6 +24,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private readonly State _state;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
+    private readonly ITextClipboard _textClipboard;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -35,6 +36,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -54,8 +56,10 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, bool canCloseTab = false) {
+    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger,
+            ITextClipboard textClipboard, bool canCloseTab = false) {
         _messenger = messenger;
+        _textClipboard = textClipboard;
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
@@ -82,7 +86,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _messenger, canCloseTab: true) {
+        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _messenger, _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));
@@ -93,6 +97,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
         StartAddress = _state.IpPhysicalAddress;
         if (UpdateDisassemblyCommand.CanExecute(null)) {
             UpdateDisassemblyCommand.Execute(null);
+            SelectedInstruction = Instructions.FirstOrDefault();
         }
     }
 
@@ -109,6 +114,16 @@ public partial class DisassemblyViewModel : ViewModelBase {
             emulatedMemoryStream.Dispose();
         }
     }
+    
+    [ObservableProperty]
+    private CpuInstructionInfo? _selectedInstruction;
+    
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    public async Task CopyLine() {
+        if (SelectedInstruction is not null) {
+            await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation).ConfigureAwait(false);
+        }
+    }
 
     private void DecodeInstructions(State state, IMemory memory, CodeMemoryStream codeMemoryStream,
         Decoder decoder, uint startAddress) {
@@ -119,6 +134,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
             long instructionAddress = codeMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
+                StringRepresentation = instruction.ToString(),
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
                 Length = instruction.Length,

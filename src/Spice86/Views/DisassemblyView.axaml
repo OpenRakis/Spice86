@@ -46,6 +46,8 @@
             CanUserResizeColumns="True"
             CanUserSortColumns="False"
             IsReadOnly="True"
+            SelectionMode="Extended"
+            SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
             IsVisible="{Binding IsPaused}"
             ItemsSource="{Binding Instructions}">
             <TextElement.FontFamily>
@@ -67,6 +69,11 @@
                 <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
                 <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
             </DataGrid.Columns>
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
         </DataGrid>
     </DockPanel>
 </UserControl>
