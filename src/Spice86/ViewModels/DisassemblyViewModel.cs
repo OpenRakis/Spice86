@@ -13,6 +13,7 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
@@ -25,6 +26,8 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITextClipboard _textClipboard;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly IUIDispatcher _uiDispatcher;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -37,6 +40,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -56,16 +60,18 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger,
-            ITextClipboard textClipboard, bool canCloseTab = false) {
+    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
+        IMessenger messenger, ITextClipboard textClipboard, EmulatorBreakpointsManager emulatorBreakpointsManager, bool canCloseTab = false) {
         _messenger = messenger;
+        _uiDispatcher = uiDispatcher;
         _textClipboard = textClipboard;
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += OnPause;
-        pauseHandler.Resumed += () => IsPaused = false;
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         CanCloseTab = canCloseTab;
     }
     
@@ -73,20 +79,31 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
     
     private void OnPause() {
-        IsPaused = true;
-        if (StartAddress is not null) {
-            return;
-        }
+        _uiDispatcher.Post(() => {
+            IsPaused = true;
+            if (StartAddress is not null) {
+                if (UpdateDisassemblyCommand.CanExecute(null)) {
+                    UpdateDisassemblyCommand.Execute(null);
+                }
+            } else if (GoToCsIpCommand.CanExecute(null)) {
+                StartAddress = _state.IpPhysicalAddress;
+                GoToCsIpCommand.Execute(null);
+            }
+        });
+    }
 
-        StartAddress = _state.IpPhysicalAddress;
-        if (GoToCsIpCommand.CanExecute(null)) {
-            GoToCsIpCommand.Execute(null);
-        }
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void StepInto() {
+        void OnStepBreakPointReached(BreakPoint breakPoint) => _uiDispatcher.Post(() => _pauseHandler.RequestPause("DisassemblyViewModel Step into button command"));
+        BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnStepBreakPointReached, true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakPoint, true);
+        _uiDispatcher.Post(() => _pauseHandler.Resume());
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _messenger, _textClipboard, canCloseTab: true) {
+        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _uiDispatcher, _messenger, _textClipboard,
+            _emulatorBreakpointsManager, canCloseTab: true) {
             IsPaused = IsPaused
         };
         _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));
@@ -106,31 +123,29 @@ public partial class DisassemblyViewModel : ViewModelBase {
         if(StartAddress is null) {
             return;
         }
-        CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
-        Decoder decoder = InitializeDecoder(codeReader, StartAddress.Value);
-        try {
-            DecodeInstructions(_state, _memory, emulatedMemoryStream, decoder, StartAddress.Value);
-        } finally {
-            emulatedMemoryStream.Dispose();
-        }
+        List<CpuInstructionInfo> instructions = DecodeInstructions(_state, _memory, StartAddress.Value, NumberOfInstructionsShown);
+        Instructions.Clear();
+        Instructions.AddRange(instructions);
     }
     
     [ObservableProperty]
     private CpuInstructionInfo? _selectedInstruction;
     
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public async Task CopyLine() {
+    private async Task CopyLine() {
         if (SelectedInstruction is not null) {
             await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation).ConfigureAwait(false);
         }
     }
 
-    private void DecodeInstructions(State state, IMemory memory, CodeMemoryStream codeMemoryStream,
-        Decoder decoder, uint startAddress) {
+    private static List<CpuInstructionInfo> DecodeInstructions(State state, IMemory memory, uint startAddress, int numberOfInstructionsShown) {
+        CodeReader codeReader = CreateCodeReader(memory, out CodeMemoryStream emulatedMemoryStream);
+        using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
+        Decoder decoder = InitializeDecoder(codeReader, startAddress);
         int byteOffset = 0;
         codeMemoryStream.Position = startAddress;
         var instructions = new List<CpuInstructionInfo>();
-        while (instructions.Count < NumberOfInstructionsShown) {
+        while (instructions.Count < numberOfInstructionsShown) {
             long instructionAddress = codeMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
@@ -157,14 +172,12 @@ public partial class DisassemblyViewModel : ViewModelBase {
             instructions.Add(instructionInfo);
             byteOffset += instruction.Length;
         }
-        Instructions.Clear();
-        Instructions.AddRange(instructions);
+        return instructions;
     }
-
-    private Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
+    
+    private static Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
         Decoder decoder = Decoder.Create(16, codeReader, currentIp,
             DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
-        Instructions.Clear();
         return decoder;
     }
 

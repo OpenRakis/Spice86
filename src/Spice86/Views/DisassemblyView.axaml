@@ -16,7 +16,7 @@
             IsVisible="{Binding !IsPaused}"
             Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
             TextWrapping="Wrap" />
-        <WrapPanel Orientation="Horizontal"
+        <StackPanel Orientation="Horizontal"
             DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
             VerticalAlignment="Top">
@@ -38,42 +38,47 @@
                     <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
                 </StackPanel>
                 <Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
-        </WrapPanel>
-        <DataGrid
-            DockPanel.Dock="Bottom"
-            AutoGenerateColumns="False"
-            CanUserReorderColumns="True"
-            CanUserResizeColumns="True"
-            CanUserSortColumns="False"
-            IsReadOnly="True"
-            SelectionMode="Extended"
-            SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
-            IsVisible="{Binding IsPaused}"
-            ItemsSource="{Binding Instructions}">
-            <TextElement.FontFamily>
-                <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-            </TextElement.FontFamily>
-            <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding Address}" Header="Address" />
-                <DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
-                <DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
-                <DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="Disassembly (MASM)" />
-                <DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
-                <DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
-                <DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
-                <DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
-                <DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-                <DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
-                <DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
-                <DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
-                <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
-                <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
-            </DataGrid.Columns>
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-        </DataGrid>
+        </StackPanel>
+        <Grid DockPanel.Dock="Bottom" IsVisible="{Binding IsPaused}" RowDefinitions="Auto,*">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="Step into" Command="{Binding StepIntoCommand}" />
+            </StackPanel>
+            <DataGrid
+                Grid.Row="1"
+                AutoGenerateColumns="False"
+                CanUserReorderColumns="True"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="False"
+                IsReadOnly="True"
+                SelectionMode="Extended"
+                SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
+                IsVisible="{Binding IsPaused}"
+                ItemsSource="{Binding Instructions}">
+                <TextElement.FontFamily>
+                    <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                </TextElement.FontFamily>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding Address}" Header="Address" />
+                    <DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
+                    <DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="Disassembly (MASM)" />
+                    <DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
+                    <DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
+                    <DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
+                    <DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
+                    <DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
+                    <DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
+                    <DataGridTextColumn Binding="{Binding Length}" Header="Length" />
+                    <DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
+                </DataGrid.Columns>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+            </DataGrid>
+        </Grid>
     </DockPanel>
 </UserControl>

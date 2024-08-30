@@ -243,7 +243,8 @@ public class Spice86DependencyInjection : IDisposable {
             debugWindowViewModel = new DebugWindowViewModel(state, memory,
                 midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                 cfgCpu.ExecutionContextManager, messenger, uiThreadDispatcher, textClipboard, hostStorageProvider,
-                new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+                emulatorBreakpointsManager, new StructureViewModelFactory(configuration, loggerService, pauseHandler),
+                pauseHandler);
         }
 
         if (desktop != null && mainWindow != null) {

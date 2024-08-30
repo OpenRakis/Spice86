@@ -20,7 +20,7 @@
     </UserControl.Resources>
     <ScrollViewer>
         <Grid RowDefinitions="Auto,*">
-            <WrapPanel Orientation="Horizontal" Grid.Row="0">
+            <StackPanel Orientation="Horizontal" Grid.Row="0">
                 <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
                 <Button Command="{Binding StartMemorySearchCommand}" Content="Search..." />
                 <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
@@ -40,7 +40,7 @@
                 </UniformGrid>
                 <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
                 <Button IsVisible="{Binding IsStructureInfoPresent}" Command="{Binding ShowStructureView}" Content="Structure view" />
-            </WrapPanel>
+            </StackPanel>
             <Grid Grid.Row="1">
                 <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
                 <avaloniaHex:HexEditor
