@@ -55,7 +55,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     public DebugWindowViewModel(State cpuState, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
-        ExecutionContextManager executionContextManager, IMessenger messenger,
+        ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
@@ -73,7 +73,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         VideoCardViewModel = new(vgaRenderer, videoState);
         CpuViewModel = new(cpuState, pauseHandler);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModels.Add(new(memory, pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
+        MemoryViewModels.Add(new(memory, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
     }
 
