@@ -23,11 +23,13 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <summary>
     ///     Create a new VGA I/O port handler.
     /// </summary>
-    /// <param name="state">The CPU state.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="videoState">Represents the state of the video card.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public VgaIoPortHandler(State state, ILoggerService loggerService, IVideoState videoState, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+        IVideoState videoState, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;
@@ -36,6 +38,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _crtRegisters = videoState.CrtControllerRegisters;
         _generalRegisters = videoState.GeneralRegisters;
         _dacRegisters = videoState.DacRegisters;
+        InitPortHandlers(ioPortDispatcher);
     }
 
     private static IEnumerable<int> HandledPorts =>
@@ -71,8 +74,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
             Ports.CgaColorSelect
         };
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         foreach (int port in HandledPorts) {
             ioPortDispatcher.AddIOPortHandler(port, this);
         }

@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -29,32 +27,29 @@ public class GdbCustomCommandsHandler {
     private readonly GdbIo _gdbIo;
     private readonly Cpu _cpu;
     private readonly State _state;
-    private readonly IGui? _gui;
     private readonly IMemory _memory;
-    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly Action<BreakPoint> _onBreakpointReached;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
-    /// <param name="gdbIo">The GDB I/O handler.</param>
-    /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
-    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
     /// <param name="configuration">The emulator configuration.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, MachineBreakpoints machineBreakpoints, GdbIo gdbIo, IGui? gui, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    /// <param name="gdbIo">The GDB I/O handler.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
+    /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
+    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
         _state = cpu.State;
         _memory = memory;
-        _machineBreakpoints = machineBreakpoints;
-        _gui = gui;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _cpu = cpu;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
@@ -90,7 +85,7 @@ public class GdbCustomCommandsHandler {
             long currentCycles = _state.Cycles;
             long cyclesBreak = currentCycles + cyclesToWait;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
-            _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
             }
@@ -109,7 +104,7 @@ public class GdbCustomCommandsHandler {
             uint cs = ConvertUtils.ParseHex32(args[1]);
             uint ip = ConvertUtils.ParseHex32(args[2]);
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
-            _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
             }
@@ -123,7 +118,7 @@ public class GdbCustomCommandsHandler {
 
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
         }

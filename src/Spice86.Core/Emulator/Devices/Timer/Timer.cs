@@ -6,7 +6,6 @@ using System.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.IOPorts;
 
 /// <summary>
@@ -14,7 +13,7 @@ using Spice86.Core.Emulator.IOPorts;
 /// Triggers interrupt 8 on the CPU via the PIC.<br/>
 /// https://k.lse.epita.fr/internals/8254_controller.html
 /// </summary>
-public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent {
+public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
@@ -31,13 +30,16 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
-    public Timer(State state, ILoggerService loggerService, DualPic dualPic, CounterConfigurator counterConfigurator, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
+        ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
+        CounterConfiguratorFactory counterConfiguratorFactory = new(configuration, loggerService);
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
                 _loggerService,
-                i, counterConfigurator.InstanciateCounterActivator(state));
+                i, counterConfiguratorFactory.InstanciateCounterActivator(state));
         }
+        InitPortHandlers(ioPortDispatcher);
     }
 
     /// <inheritdoc cref="ITimeMultiplier" />
@@ -72,8 +74,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
         return base.ReadByte(port);
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(ModeCommandeRegister, this);
         ioPortDispatcher.AddIOPortHandler(CounterRegisterZero, this);
         ioPortDispatcher.AddIOPortHandler(CounterRegisterOne, this);
@@ -114,10 +115,5 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier, IDebuggableComponent
     private Counter GetCounterIndexFromPortNumber(int port) {
         int counter = port & 0b11;
         return GetCounter(counter);
-    }
-
-    /// <inheritdoc />
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
     }
 }

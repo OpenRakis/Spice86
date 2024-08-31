@@ -5,8 +5,6 @@ using System;
 /// Emulates the snare drum OPL operator.
 /// </summary>
 internal sealed class SnareDrum : Operator {
-    private readonly Random _random = new();
-
     /// <summary>
     /// Initializes a new instance of the SnareDrum operator.
     /// </summary>
@@ -36,7 +34,7 @@ internal sealed class SnareDrum : Operator {
         }
 
         double operatorOutput = GetOutput(modulator, Phase, waveIndex);
-        double noise = _random.NextDouble() * Envelope;
+        double noise = Random.Shared.NextDouble() * Envelope;
 
         if (operatorOutput / Envelope is not 1 and not (-1))
         {

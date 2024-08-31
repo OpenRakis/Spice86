@@ -16,7 +16,6 @@ public interface IOverrideSupplier {
     /// <param name="configuration">The configuration.</param>
     /// <param name="programStartAddress">The start address of the program.</param>
     /// <param name="machine">The emulator machine.</param>
-    /// <param name="loggerService"></param>
     /// <returns>A dictionary containing the generated function information overrides.</returns>
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
         ILoggerService loggerService,

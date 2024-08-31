@@ -32,17 +32,20 @@ public class DualPic : DefaultIOPortHandler {
     /// Initializes a new instance of the <see cref="DualPic"/> class.
     /// </summary>
     /// <param name="state">The CPU state.</param>
+    /// <param name="ioPortDispatcher"></param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="preventAnyInterrupts">Whether we mask all interrupts on startup. Done if we start a BIOS instead of DOS.</param>
-    public DualPic(State state, bool failOnUnhandledPort, bool preventAnyInterrupts, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
-        _pic1 = new Pic(loggerService);
-        _pic2 = new Pic(loggerService);
+    /// <param name="loggerService">The logger service implementation.</param>
+    public DualPic(State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, bool preventAnyInterrupts,
+        ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        _pic1 = new(loggerService);
+        _pic2 = new(loggerService);
         Initialize();
         // Bios will take care of enabling interrupts (or not)
         if(preventAnyInterrupts) {
             MaskAllInterrupts();
         }
+        InitPortHandlers(ioPortDispatcher);
     }
 
     /// <summary>
@@ -133,8 +136,7 @@ public class DualPic : DefaultIOPortHandler {
         }
     }
 
-    /// <inheritdoc />
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(MasterCommand, this);
         ioPortDispatcher.AddIOPortHandler(MasterData, this);
         ioPortDispatcher.AddIOPortHandler(SlaveCommand, this);

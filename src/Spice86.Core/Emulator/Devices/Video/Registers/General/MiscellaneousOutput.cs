@@ -4,6 +4,23 @@ namespace Spice86.Core.Emulator.Devices.Video.Registers.General;
 ///     Emulates the Miscellaneous Output register.
 /// </summary>
 public class MiscellaneousOutput : Register8 {
+    public enum ClockSelectValue {
+        Use25175Khz,
+        Use28322Khz,
+        External,
+        Reserved
+    }
+    
+    public enum IoAddressSelectValue {
+        Monochrome,
+        Color
+    }
+    
+    public enum PolarityValue {
+        Negative,
+        Positive
+    }
+    
     /// <summary>
     ///     The I/O Address Select field (bit 0) selects the CRT controller addresses. When set to 0, this bit sets the
     ///     CRT controller addresses to hex 03Bx and the address for the Input Status Register 1 to hex 03BA for
@@ -11,9 +28,9 @@ public class MiscellaneousOutput : Register8 {
     ///     and the Input Status Register 1 address to hex 03DA for compatibility with the color/graphics adapter. The write
     ///     addresses to the Feature Control register are affected in the same manner.
     /// </summary>
-    public IoAddressSelect IoAddressSelect {
-        get => GetBit(0) ? IoAddressSelect.Color : IoAddressSelect.Monochrome;
-        set => SetBit(0, value == IoAddressSelect.Color);
+    public IoAddressSelectValue IoAddressSelect {
+        get => GetBit(0) ? IoAddressSelectValue.Color : IoAddressSelectValue.Monochrome;
+        set => SetBit(0, value == IoAddressSelectValue.Color);
     }
 
     /// <summary>
@@ -29,8 +46,8 @@ public class MiscellaneousOutput : Register8 {
     ///     clock is driven through the auxiliary video extension. The input clock should be kept between 14.3 MHz and
     ///     28.4 MHz.
     /// </summary>
-    public ClockSelect ClockSelect {
-        get => (ClockSelect)GetBits(3, 2);
+    public ClockSelectValue ClockSelect {
+        get => (ClockSelectValue)GetBits(3, 2);
         set => SetBits(3, 2, (byte)value);
     }
 
@@ -48,27 +65,27 @@ public class MiscellaneousOutput : Register8 {
     ///     When set to 0, the Horizontal Sync Polarity field (bit 6) selects a positive ‘horizontal retrace’ signal. Bits 7
     ///     and 6 select the vertical size
     /// </summary>
-    public Polarity HorizontalSyncPolarity {
-        get => GetBit(6) ? Polarity.Negative : Polarity.Positive;
-        set => SetBit(6, value == Polarity.Negative);
+    public PolarityValue HorizontalSyncPolarity {
+        get => GetBit(6) ? PolarityValue.Negative : PolarityValue.Positive;
+        set => SetBit(6, value == PolarityValue.Negative);
     }
 
     /// <summary>
     ///     When set to 0, the Vertical Sync Polarity field (bit 7) selects a positive ‘vertical retrace’ signal. This bit
     ///     works with bit 6 to determine the vertical size.
     /// </summary>
-    public Polarity VerticalSyncPolarity {
-        get => GetBit(7) ? Polarity.Negative : Polarity.Positive;
-        set => SetBit(7, value == Polarity.Negative);
+    public PolarityValue VerticalSyncPolarity {
+        get => GetBit(7) ? PolarityValue.Negative : PolarityValue.Positive;
+        set => SetBit(7, value == PolarityValue.Negative);
     }
 
     /// <summary>
     ///     Vertical size in scanLines based on the HorizontalSyncPolarity and VerticalSyncPolarity
     /// </summary>
     public int VerticalSize => HorizontalSyncPolarity switch {
-        Polarity.Negative when VerticalSyncPolarity == Polarity.Positive => 400,
-        Polarity.Positive when VerticalSyncPolarity == Polarity.Negative => 350,
-        Polarity.Negative when VerticalSyncPolarity == Polarity.Negative => 480,
+        PolarityValue.Negative when VerticalSyncPolarity == PolarityValue.Positive => 400,
+        PolarityValue.Positive when VerticalSyncPolarity == PolarityValue.Negative => 350,
+        PolarityValue.Negative when VerticalSyncPolarity == PolarityValue.Negative => 480,
         _ => 0
     };
 }

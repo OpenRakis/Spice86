@@ -65,6 +65,7 @@ public class SequencerRegisters {
     /// </summary>
     /// <param name="address">Which of the sequencer registers to write to</param>
     /// <param name="value">Value to write to register.</param>
+    /// <exception cref="ArgumentOutOfRangeException">When the register address is unknown.</exception>
     public void WriteRegister(SequencerRegister address, byte value) {
         switch (address) {
             case SequencerRegister.Reset:

@@ -1,35 +1,36 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
-using Spice86.Shared.Interfaces;
+using Spice86.Shared.Diagnostics;
 
 using System;
 
-public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
-    private State? _state;
-    private readonly IPerformanceMeasurer _performanceMeasurer;
-    private readonly IPauseStatus _pauseStatus;
+public partial class PerformanceViewModel : ViewModelBase {
+    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly State _state;
 
     [ObservableProperty]
     private double _averageInstructionsPerSecond;
+
+    private bool _isPaused;
     
-    public PerformanceViewModel(IUIDispatcherTimerFactory uiDispatcherTimerFactory, IDebuggableComponent programExecutor, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) : base() {
-        _pauseStatus = pauseStatus;
-        programExecutor.Accept(this);
-        _performanceMeasurer = performanceMeasurer;
-        uiDispatcherTimerFactory.StartNew(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
+    public PerformanceViewModel(State state, IPauseHandler pauseHandler) {
+        pauseHandler.Pausing += () => _isPaused = true;
+        pauseHandler.Resumed += () => _isPaused = false;
+        _state = state;
+        _isPaused = pauseHandler.IsPaused;
+        _performanceMeasurer = new PerformanceMeasurer();
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
-        if (_state is null || _pauseStatus.IsPaused) {
+        if (_isPaused) {
             return;
         }
 
@@ -38,13 +39,6 @@ public partial class PerformanceViewModel : ViewModelBase, IInternalDebugger {
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
     }
 
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        _state ??= component as State;
-    }
-
-    public bool NeedsToVisitEmulator => _state is null;
-
     [ObservableProperty]
     private double _instructionsExecuted;
-
 }

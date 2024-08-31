@@ -54,6 +54,7 @@
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.3" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.1.3" />
+        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.1.0" />
         <PackageReference Include="AvaloniaGraphControl" Version="0.6.1"/>
         <PackageReference Include="AvaloniaHex" Version="0.1.3" />
         <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.1.1.1" />
@@ -68,10 +69,9 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Iced" Version="1.21.0"/>
+        <PackageReference Include="Iced" Version="1.21.0" />
         <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0"/>
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -86,12 +86,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj"/>
-        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+        <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
 </Project>

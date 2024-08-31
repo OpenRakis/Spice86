@@ -3,6 +3,7 @@ namespace Spice86.Views;
 using Avalonia;
 using Avalonia.Controls;
 
+using Spice86.Messages;
 using Spice86.Models;
 using Spice86.ViewModels;
 

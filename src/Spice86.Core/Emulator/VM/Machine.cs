@@ -1,13 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -15,12 +13,8 @@ using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
@@ -30,13 +24,12 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.ReverseEngineer;
 
 /// <summary>
-/// Centralizes classes instances that should live while the CPU is running.
+/// Centralizes many useful emulator devices and components for machine code overrides.
 /// </summary>
-public sealed class Machine : IDisposable, IDebuggableComponent {
+public sealed class Machine : IDisposable {
     private bool _disposed;
 
     /// <summary>
@@ -58,10 +51,6 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Handles all the callbacks, most notably interrupts.
     /// </summary>
     public CallbackHandler CallbackHandler { get; }
-
-    private InterruptInstaller InterruptInstaller { get; }
-
-    private AssemblyRoutineInstaller AssemblyRoutineInstaller { get; }
 
     /// <summary>
     /// The emulated CPU.
@@ -111,7 +100,7 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// <summary>
     /// Contains all the breakpoints
     /// </summary>
-    public MachineBreakpoints MachineBreakpoints { get; }
+    public EmulatorBreakpointsManager EmulatorBreakpointsManager { get; }
 
     /// <summary>
     /// The memory bus.
@@ -207,132 +196,12 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// The internal software mixer for all sound channels.
     /// </summary>
     public SoftwareMixer SoftwareMixer { get; }
-
+    
     /// <summary>
-    /// Initializes a new instance
+    /// The size of the conventional memory in kilobytes.
     /// </summary>
-    public Machine(IGui? gui, State cpuState, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService, CounterConfigurator counterConfigurator, ExecutionFlowRecorder executionFlowRecorder, Configuration configuration, bool recordData, IPauseHandler pauseHandler) {
-        PauseHandler = pauseHandler;
-        Memory = new Memory(new Ram(A20Gate.EndOfHighMemoryArea), configuration.A20Gate);
-        bool initializeResetVector = configuration.InitializeDOS is true;
-        if (initializeResetVector) {
-            // Put HLT instruction at the reset address
-            Memory.UInt16[0xF000, 0xFFF0] = 0xF4;
-        }
-        IoPortDispatcher = ioPortDispatcher;
-        BiosDataArea = new BiosDataArea(Memory) {
-            ConventionalMemorySizeKb = (ushort)Math.Clamp(Memory.Ram.Size / 1024, 0, 640) // max 640k conventional memory
-        };
-        CpuState = cpuState;
-        DualPic = new(CpuState, configuration.FailOnUnhandledPort, configuration.InitializeDOS is false, loggerService);
-        // Breakpoints
-        MachineBreakpoints = new(Memory, CpuState, pauseHandler);
-        IoPortDispatcher = new IOPortDispatcher(CpuState, loggerService, configuration.FailOnUnhandledPort);
-        CallbackHandler = new(CpuState, loggerService);
-
-        Cpu = new Cpu(Memory, CpuState, DualPic, IoPortDispatcher, CallbackHandler, MachineBreakpoints, loggerService, executionFlowRecorder, recordData);
-        CfgCpu = new CfgCpu(Memory, CpuState, IoPortDispatcher, CallbackHandler, DualPic, MachineBreakpoints, loggerService);
-
-        // IO devices
-        DmaController = new DmaController(Memory, CpuState, configuration.FailOnUnhandledPort, loggerService);
-        RegisterIoPortHandler(DmaController);
-
-        RegisterIoPortHandler(DualPic);
-
-        VgaRegisters = new VideoState();
-        VgaIoPortHandler = new VgaIoPortHandler(CpuState, loggerService, VgaRegisters, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(VgaIoPortHandler);
-
-        const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        IVideoMemory vgaMemory = new VideoMemory(VgaRegisters);
-        Memory.RegisterMapping(videoBaseAddress, vgaMemory.Size, vgaMemory);
-        VgaRenderer = new Renderer(VgaRegisters, vgaMemory);
-        VgaCard = new VgaCard(gui, VgaRenderer, loggerService);
-
-        Timer = new Timer(CpuState, loggerService, DualPic, counterConfigurator, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(Timer);
-        Keyboard = new Keyboard(CpuState, Memory.A20Gate, DualPic, loggerService, gui, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(Keyboard);
-        MouseDevice = new Mouse(CpuState, DualPic, gui, configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(MouseDevice);
-        Joystick = new Joystick(CpuState, configuration.FailOnUnhandledPort, loggerService);
-        RegisterIoPortHandler(Joystick);
-        
-        SoftwareMixer = new(new AudioPlayerFactory(loggerService));
-        
-        PcSpeaker = new PcSpeaker(SoftwareMixer, CpuState, loggerService, configuration.FailOnUnhandledPort);
-        RegisterIoPortHandler(PcSpeaker);
-        OPL3FM = new OPL3FM(SoftwareMixer, CpuState, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
-        RegisterIoPortHandler(OPL3FM);
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
-        SoundBlaster = new SoundBlaster(SoftwareMixer, OPL3FM.SoundChannel, CpuState, DmaController, DualPic, gui, configuration.FailOnUnhandledPort, loggerService, soundBlasterHardwareConfig, pauseHandler);
-        RegisterIoPortHandler(SoundBlaster);
-        GravisUltraSound = new GravisUltraSound(CpuState, configuration.FailOnUnhandledPort, loggerService);
-        RegisterIoPortHandler(GravisUltraSound);
-        MidiDevice = new Midi(SoftwareMixer, CpuState, configuration.Mt32RomsPath, configuration.FailOnUnhandledPort, loggerService, pauseHandler);
-        RegisterIoPortHandler(MidiDevice);
-
-        // Services
-        // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
-        MemoryAsmWriter memoryAsmWriter = new(Memory, new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), CallbackHandler);
-        InterruptInstaller = new InterruptInstaller(new InterruptVectorTable(Memory), memoryAsmWriter, Cpu.FunctionHandler);
-        AssemblyRoutineInstaller = new AssemblyRoutineInstaller(memoryAsmWriter, Cpu.FunctionHandler);
-
-        VgaRom = new VgaRom();
-        Memory.RegisterMapping(MemoryMap.VideoBiosSegment << 4, VgaRom.Size, VgaRom);
-        VgaFunctions = new VgaFunctionality(Memory, IoPortDispatcher, BiosDataArea, VgaRom,  configuration.InitializeDOS is true);
-        VideoInt10Handler = new VgaBios(Memory, Cpu, VgaFunctions, BiosDataArea, loggerService);
-
-        TimerInt8Handler = new TimerInt8Handler(Memory, Cpu, DualPic, Timer, BiosDataArea, loggerService);
-        BiosKeyboardInt9Handler = new BiosKeyboardInt9Handler(Memory, Cpu, DualPic, Keyboard, BiosDataArea, loggerService);
-
-        BiosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(Memory, Cpu, loggerService);
-        SystemBiosInt12Handler = new SystemBiosInt12Handler(Memory, Cpu, BiosDataArea, loggerService);
-        SystemBiosInt15Handler = new SystemBiosInt15Handler(Memory, Cpu, Memory.A20Gate, loggerService);
-        KeyboardInt16Handler = new KeyboardInt16Handler(Memory, Cpu, loggerService, BiosKeyboardInt9Handler.BiosKeyboardBuffer);
-
-        SystemClockInt1AHandler = new SystemClockInt1AHandler(Memory, Cpu, loggerService, TimerInt8Handler);
-
-        MouseDriver = new MouseDriver(Cpu, Memory, MouseDevice, gui, VgaFunctions, loggerService);
-        Dos = new Dos(Memory, Cpu, KeyboardInt16Handler, VgaFunctions, configuration.CDrive, configuration.Exe, loggerService);
-
-        if (configuration.InitializeDOS is not false) {
-            // Register the interrupt handlers
-            RegisterInterruptHandler(VideoInt10Handler);
-            RegisterInterruptHandler(TimerInt8Handler);
-            RegisterInterruptHandler(BiosKeyboardInt9Handler);
-            RegisterInterruptHandler(BiosEquipmentDeterminationInt11Handler);
-            RegisterInterruptHandler(SystemBiosInt12Handler);
-            RegisterInterruptHandler(SystemBiosInt15Handler);
-            RegisterInterruptHandler(KeyboardInt16Handler);
-            RegisterInterruptHandler(SystemClockInt1AHandler);
-            RegisterInterruptHandler(Dos.DosInt20Handler);
-            RegisterInterruptHandler(Dos.DosInt21Handler);
-            RegisterInterruptHandler(Dos.DosInt28Handler);
-            RegisterInterruptHandler(Dos.DosInt2FHandler);
-
-            // Initialize DOS.
-            Dos.Initialize(SoundBlaster, CpuState, configuration.Ems);
-            if (Dos.Ems is not null) {
-                RegisterInterruptHandler(Dos.Ems);
-            }
-
-            var mouseInt33Handler = new MouseInt33Handler(Memory, Cpu, loggerService, MouseDriver);
-            RegisterInterruptHandler(mouseInt33Handler);
-
-            var mouseIrq12Handler = new BiosMouseInt74Handler(DualPic, Memory);
-            RegisterInterruptHandler(mouseIrq12Handler);
-
-            SegmentedAddress mouseDriverAddress = AssemblyRoutineInstaller.InstallAssemblyRoutine(MouseDriver);
-            mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
-        }
-    }
-
-    /// <summary>
-    /// The pause handler for the entire machine.
-    /// </summary>
-    public IPauseHandler PauseHandler { get; }
-
+    public const uint ConventionalMemorySizeKb = 640;
+    
     /// <summary>
     /// The mouse device hardware abstraction.
     /// </summary>
@@ -347,19 +216,54 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
     /// Defines all VGA high level functions, such as writing text to the screen.
     /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
+    
+    /// <summary>
+    /// The pause handler for the emulation thread
+    /// </summary>
+    public IPauseHandler PauseHandler { get; }
 
     /// <summary>
-    /// Registers an interrupt handler
+    /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
-    /// <param name="interruptHandler">The interrupt handler to install.</param>
-    public void RegisterInterruptHandler(IInterruptHandler interruptHandler) => InterruptInstaller.InstallInterruptHandler(interruptHandler);
-
-    /// <summary>
-    /// Registers a I/O port handler, such as a sound card.
-    /// </summary>
-    /// <param name="ioPortHandler">The I/O port handler.</param>
-    /// <exception cref="ArgumentException"></exception>
-    public void RegisterIoPortHandler(IIOPortHandler ioPortHandler) => ioPortHandler.InitPortHandlers(IoPortDispatcher);
+    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, OPL3FM opl3FM, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions, IPauseHandler pauseHandler) {
+        BiosDataArea = biosDataArea;
+        BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
+        BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
+        CallbackHandler = callbackHandler;
+        Cpu = cpu;
+        CfgCpu = cfgCpu;
+        CpuState = cpuState;
+        Dos = dos;
+        GravisUltraSound = gravisUltraSound;
+        IoPortDispatcher = ioPortDispatcher;
+        Joystick = joystick;
+        Keyboard = keyboard;
+        KeyboardInt16Handler = keyboardInt16Handler;
+        EmulatorBreakpointsManager = emulatorBreakpointsManager;
+        Memory = memory;
+        MidiDevice = midiDevice;
+        PcSpeaker = pcSpeaker;
+        DualPic = dualPic;
+        SoundBlaster = soundBlaster;
+        SystemBiosInt12Handler = systemBiosInt12Handler;
+        SystemBiosInt15Handler = systemBiosInt15Handler;
+        SystemClockInt1AHandler = systemClockInt1AHandler;
+        Timer = timer;
+        TimerInt8Handler = timerInt8Handler;
+        VgaCard = vgaCard;
+        VgaRegisters = vgaRegisters;
+        VgaIoPortHandler = vgaIoPortHandler;
+        VgaRenderer = vgaRenderer;
+        VideoInt10Handler = videoInt10Handler;
+        VgaRom = vgaRom;
+        DmaController = dmaController;
+        OPL3FM = opl3FM;
+        SoftwareMixer = softwareMixer;
+        MouseDevice = mouseDevice;
+        MouseDriver = mouseDriver;
+        VgaFunctions = vgaFunctions;
+        PauseHandler = pauseHandler;
+    }
 
     /// <summary>
     /// Releases all resources.
@@ -384,17 +288,5 @@ public sealed class Machine : IDisposable, IDebuggableComponent {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
-    }
-
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        Memory.Accept(emulatorDebugger);
-        CfgCpu.Accept(emulatorDebugger);
-        VgaCard.Accept(emulatorDebugger);
-        VgaRenderer.Accept(emulatorDebugger);
-        VgaRegisters.Accept(emulatorDebugger);
-        MidiDevice.Accept(emulatorDebugger);
-        SoftwareMixer.Accept(emulatorDebugger);
-        Timer.Accept(emulatorDebugger);
     }
 }

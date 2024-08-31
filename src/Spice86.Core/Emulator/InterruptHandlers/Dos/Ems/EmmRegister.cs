@@ -33,16 +33,16 @@ public class EmmRegister : IMemoryDevice {
 
     /// <inheritdoc />
     public byte Read(uint address) {
-        return PhysicalPage.PageMemory.Read(address - Offset);
+        return PhysicalPage.Read(address - Offset);
     }
 
     /// <inheritdoc />
     public void Write(uint address, byte value) {
-        PhysicalPage.PageMemory.Write(address - Offset, value);
+        PhysicalPage.Write(address - Offset, value);
     }
 
     /// <inheritdoc />
     public Span<byte> GetSpan(int address, int length) {
-        return PhysicalPage.PageMemory.GetSpan((int)(address - Offset), length);
+        return PhysicalPage.GetSpan((int)(address - Offset), length);
     }
 }

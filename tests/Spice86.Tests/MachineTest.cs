@@ -27,21 +27,22 @@ public class MachineTest {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add", false, true);
-        Machine machine = programExecutor.Machine;
-        State state = machine.CpuState;
-        MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
+        using Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection("add", false, true);
+        State state = spice86DependencyInjection.Machine.CpuState;
+        Machine machine = spice86DependencyInjection.Machine;
+        ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         int triggers = 0;
-        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, 10, breakpoint => {
             Assert.Equal(10, state.Cycles);
             triggers++;
         }, true), true);
         // Address of cycle 10 to test multiple breakpoints
-        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, 0xF001C, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, 0xF001C, breakpoint => {
             Assert.Equal(0xF001C, (int)state.IpPhysicalAddress);
             triggers++;
         }, true), true);
-        machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
             Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
             Assert.False(machine.CpuState.IsRunning);
             triggers++;
@@ -52,65 +53,64 @@ public class MachineTest {
 
     [Fact]
     public void TestMemoryBreakpoints() {
-        ProgramExecutor programExecutor = CreateProgramExecutor("add", false, false);
-        Machine machine = programExecutor.Machine;
-        MachineBreakpoints machineBreakpoints = machine.MachineBreakpoints;
-        IMemory memory = machine.Memory;
+        using Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection("add", false);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
+        IMemory memory = spice86DependencyInjection.Machine.Memory;
 
         // simple read
         // 2 reads, but breakpoint is removed after first
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.READ, 0, 1, true, () => {
             _ = memory.UInt8[0];
             _ = memory.UInt8[0];
         });
 
         // simple write
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 0, 1, true, () => {
             memory.UInt8[0] = 0;
         });
 
         // read / write with remove
         int readWrite0Triggered = 0;
         AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
-        machineBreakpoints.ToggleBreakPoint(readWrite0, true);
+        emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, true);
         _ =  memory.UInt8[0];
         memory.UInt8[0] = 0;
-        machineBreakpoints.ToggleBreakPoint(readWrite0, false);
+        emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, false);
         // Should not trigger
         _ =  memory.UInt8[0];
         Assert.Equal(2, readWrite0Triggered);
 
         // Memset
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 5, 1, true, () => {
             memory.Memset8(0, 0, 6);
             // Should not trigger for this
             memory.Memset8(0, 0, 5);
             memory.Memset8(6, 0, 5);
         });
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 5, 1, true, () => {
             memory.Memset8(5, 0, 5);
         });
 
         // GetData
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.READ, 5, 1, true, () => {
             memory.GetSpan(5, 10);
             // Should not trigger for this
             memory.GetSpan(0, 5);
             memory.GetSpan(6, 5);
         });
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.READ, 5, 1, true, () => {
             memory.GetSpan(0, 6);
         });
 
         // LoadData
         byte[] data = new byte[] { 1, 2, 3 };
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 5, 1, true, () => {
             memory.LoadData(5, data);
             // Should not trigger for this
             memory.LoadData(2, data);
             memory.LoadData(6, data);
         });
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 5, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 5, 1, true, () => {
             memory.LoadData(3, data);
         });
         // Bonus test for search
@@ -119,37 +119,37 @@ public class MachineTest {
         Assert.Equal(3, (int)address!);
 
         //MemCopy
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 10, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 10, 1, true, () => {
             memory.MemCopy(0, 10, 10);
             // Should not trigger for this
             memory.MemCopy(0, 20, 10);
         });
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 0, 1, true, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.READ, 0, 1, true, () => {
             memory.MemCopy(0, 10, 10);
             // Should not trigger for this
             memory.MemCopy(1, 10, 10);
         });
 
         // Long reads
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.READ, 1, 2, false, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.READ, 1, 2, false, () => {
             _ = memory.UInt16[0];
             _ = memory.UInt32[0];
         });
 
         // Long writes
-        AssertAddressMemoryBreakPoint(machineBreakpoints, BreakPointType.WRITE, 1, 2, false, () => {
+        AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.WRITE, 1, 2, false, () => {
             memory.UInt16[0] = 0;
             memory.UInt32[0] = 0;
         });
     }
 
     [AssertionMethod]
-    private void AssertAddressMemoryBreakPoint(MachineBreakpoints machineBreakpoints, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
+    private void AssertAddressMemoryBreakPoint(EmulatorBreakpointsManager emulatorBreakpointsManager, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
         AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
-        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         action.Invoke();
-        machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, false);
         Assert.Equal(expectedTriggers, count);
     }
 
@@ -309,7 +309,7 @@ public class MachineTest {
     [InlineData(0b0011110000000000, 0b0010000000000001, 17, 0b0100000000000010, true, true)] // count > size is undefined
     public void TestShld16(ushort destination, ushort source, byte count, ushort expected, bool cf, bool of) {
         // Arrange
-        var state = new State {
+        var state = new State() {
             CarryFlag = true,
             OverflowFlag = true
         };
@@ -359,29 +359,28 @@ public class MachineTest {
 
     [AssertionMethod]
     private Machine TestOneBin(string binName, byte[] expected, long maxCycles=100000L, bool enablePit = false) {
-        Machine machine = Execute(binName, maxCycles, enablePit);
+        using Spice86DependencyInjection spice86DependencyInjection = Execute(binName, maxCycles, enablePit);
+        Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length);
         return machine;
     }
 
-    private ProgramExecutor CreateProgramExecutor(string binName, bool enablePit, bool recordData) {
-        return new MachineCreator().CreateProgramExecutorFromBinName(binName, enablePit, recordData);
+    private static Spice86DependencyInjection CreateSpice86DependencyInjection(string binName, bool enablePit, bool recordData = false) {
+        return new Spice86Creator().CreateSpice86ForBinName(binName, enablePit, recordData);
     }
 
     [AssertionMethod]
-    private Machine Execute(string binName, long maxCycles, bool enablePit) {
-        using ProgramExecutor programExecutor = CreateProgramExecutor(binName, enablePit, false);
+    private static Spice86DependencyInjection Execute(string binName, long maxCycles, bool enablePit) {
+        Spice86DependencyInjection spice86DependencyInjection = CreateSpice86DependencyInjection(binName, enablePit, recordData: false);
         // Add a breakpoint after a million cycles to ensure no infinite loop can lock the tests
-        programExecutor.Machine.MachineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
-            (breakpoint) => {
-                Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong.");
-            }, true), true);
-        programExecutor.Run();
-        return programExecutor.Machine;
+        spice86DependencyInjection.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CYCLES, maxCycles,
+            (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
+        spice86DependencyInjection.ProgramExecutor.Run();
+        return spice86DependencyInjection;
     }
 
-    private byte[] GetExpected(string binName) {
+    private static byte[] GetExpected(string binName) {
         string resPath = $"Resources/cpuTests/res/{binName}.bin";
         return File.ReadAllBytes(resPath);
     }
@@ -390,13 +389,5 @@ public class MachineTest {
     private void CompareMemoryWithExpected(IMemory memory, byte[] expected, int start, int end) {
         byte[] actual = memory.ReadRam();
         actual[start..end].Should().BeEquivalentTo(expected[start..end]);
-    }
-
-    private string HexValueWithFlagsB(byte value) {
-        return ConvertUtils.ToHex8(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
-    }
-
-    private string HexValueWithFlagsW(ushort value) {
-        return ConvertUtils.ToHex16(value) + " (if flags=" + Flags.DumpFlags(value) + ")";
     }
 }

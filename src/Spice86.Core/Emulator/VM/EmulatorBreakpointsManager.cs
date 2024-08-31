@@ -5,57 +5,34 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
-/// A class for managing breakpoints in the machine.
+/// A class for managing breakpoints in the emulator.
 /// </summary>
-public sealed class MachineBreakpoints {
-    /// <summary>
-    /// A holder for cycle breakpoints.
-    /// </summary>
-    private readonly BreakPointHolder _cycleBreakPoints = new();
-
-    /// <summary>
-    /// A holder for execution breakpoints.
-    /// </summary>
-    private readonly BreakPointHolder _executionBreakPoints = new();
-
-    /// <summary>
-    /// The memory bus.
-    /// </summary>
-    private readonly IMemory _memory;
-
-    /// <summary>
-    /// The CPU State.
-    /// </summary>
+public sealed class EmulatorBreakpointsManager {
+    private readonly BreakPointHolder _cycleBreakPoints;
+    private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
-
-    /// <summary>
-    /// The machine stop breakpoint.
-    /// </summary>
+    private readonly IPauseHandler _pauseHandler;
+    private readonly MemoryBreakpoints _memoryBreakpoints;
     private BreakPoint? _machineStopBreakPoint;
 
     /// <summary>
-    /// The pause handler for the machine.
+    /// Initializes a new instance of the <see cref="EmulatorBreakpointsManager"/> class.
     /// </summary>
-    private readonly IPauseHandler _pauseHandler;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MachineBreakpoints"/> class.
-    /// </summary>
-    /// <param name="memory">The memory bus</param>
-    /// <param name="state">The CPU state</param>
+    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
-    public MachineBreakpoints(IMemory memory, State state, IPauseHandler pauseHandler) {
+    /// <param name="state">The CPU registers and flags.</param>
+    public EmulatorBreakpointsManager(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, State state) {
         _state = state;
-        _memory = memory;
+        _memoryBreakpoints = memoryBreakpoints;
+        _cycleBreakPoints = new();
+        _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
     }
 
     /// <summary>
     /// Checks the current breakpoints.
     /// </summary>
-    public void CheckBreakPoint() {
-        CheckBreakPoints();
-    }
+    public void CheckBreakPoint() => CheckBreakPoints();
 
     /// <summary>
     /// Called when the machine stops.
@@ -77,14 +54,19 @@ public sealed class MachineBreakpoints {
             return;
         }
         BreakPointType? breakPointType = breakPoint.BreakPointType;
-        if (breakPointType == BreakPointType.EXECUTION) {
-            _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
-        } else if (breakPointType == BreakPointType.CYCLES) {
-            _cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
-        } else if (breakPointType == BreakPointType.MACHINE_STOP) {
-            _machineStopBreakPoint = breakPoint;
-        } else {
-            _memory.MemoryBreakpoints.ToggleBreakPoint(breakPoint, on);
+        switch (breakPointType) {
+            case BreakPointType.EXECUTION:
+                _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.CYCLES:
+                _cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.MACHINE_STOP:
+                _machineStopBreakPoint = breakPoint;
+                break;
+            default:
+                _memoryBreakpoints.ToggleBreakPoint(breakPoint, on);
+                break;
         }
     }
 

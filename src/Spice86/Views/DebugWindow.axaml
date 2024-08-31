@@ -4,8 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:views="clr-namespace:Spice86.Views"
     xmlns:vm="using:Spice86.ViewModels"
+    xmlns:local="clr-namespace:Spice86"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
@@ -19,30 +19,7 @@
         <vm:DebugWindowViewModel />
     </Design.DataContext>
     <Window.DataTemplates>
-        <DataTemplate DataType="{x:Type vm:CpuViewModel}">
-            <views:CpuView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-            <views:MemoryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-            <views:DisassemblyView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:VideoCardViewModel}">
-            <views:VideoCardView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:PaletteViewModel}">
-            <views:PaletteView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:MidiViewModel}">
-            <views:MidiView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SoftwareMixerViewModel}">
-            <views:SoftwareMixerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:CfgCpuViewModel}">
-            <views:CfgCpuView />
-        </DataTemplate>
+        <local:ViewLocator />
     </Window.DataTemplates>
     <Grid RowDefinitions="Auto,*">
         <Grid
@@ -50,7 +27,8 @@
             RowDefinitions="*,Auto">
             <TabControl Grid.Row="0">
                 <TabItem Header="CPU" Content="{Binding CpuViewModel}" />
-                <TabItem Header="Code flow" Content="{Binding CfgCpuViewModel}"/>
+                <TabItem Header="Code flow" IsVisible="{Binding CfgCpuViewModel.IsVisible}"
+                         Content="{Binding CfgCpuViewModel}"/>
                 <TabItem Header="Disassembly">
                     <TabControl ItemsSource="{Binding DisassemblyViewModels}">
                         <TabControl.ItemTemplate>
@@ -80,16 +58,6 @@
             </TabControl>
             <Border Grid.Row="1">
                 <WrapPanel Orientation="Horizontal" TextBlock.TextAlignment="Left">
-                    <TextBlock
-                        Margin="0,0,5,0"
-                        VerticalAlignment="Bottom"
-                        HorizontalAlignment="Center"
-                        Text="{Binding LastUpdate, StringFormat='Last update: {0}'}" />
-                    <Button
-                        Margin="5,0,0,0"
-                        VerticalAlignment="Bottom"
-                        Command="{Binding ForceUpdateCommand}"
-                        Content="Force Refresh" />
                     <Button
                         Margin="5,0,0,0"
                         Command="{Binding PauseCommand}"

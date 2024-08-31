@@ -40,7 +40,7 @@ public interface ICfgNode {
     /// <summary>
     /// Execute this node
     /// </summary>
-    /// <param name="context">InstructionExecutionContext instance providing access to the outside</param>
+    /// <param name="helper">InstructionExecutionHelper instance providing access to the outside</param>
     public void Execute(InstructionExecutionHelper helper);
 
 }

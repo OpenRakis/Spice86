@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.VM;
 using Spice86.DataTemplates;
 using Spice86.MemoryWrappers;
+using Spice86.Messages;
 using Spice86.Models;
 using Spice86.Shared.Emulator.Memory;
 

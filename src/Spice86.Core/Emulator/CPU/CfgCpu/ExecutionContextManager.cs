@@ -6,11 +6,11 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 public class ExecutionContextManager {
-    private MachineBreakpoints _machineBreakpoints;
-    private IDictionary<uint, ExecutionContext> _executionContextEntryPoints = new Dictionary<uint, ExecutionContext>();
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly Dictionary<uint, ExecutionContext> _executionContextEntryPoints = new();
     
-    public ExecutionContextManager(MachineBreakpoints machineBreakpoints) {
-        _machineBreakpoints = machineBreakpoints;
+    public ExecutionContextManager(EmulatorBreakpointsManager emulatorBreakpointsManager) {
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         // Initial context at init
         CurrentExecutionContext = new();
         InitialExecutionContext = CurrentExecutionContext;
@@ -33,7 +33,7 @@ public class ExecutionContextManager {
         CurrentExecutionContext = executionContext;
         if (expectedReturnAddress != null) {
             // breakpoint that deletes itself on reach. Should be triggered when the return address is reached and before it starts execution.
-            _machineBreakpoints.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, expectedReturnAddress.Value.ToPhysical(), (breakpoint) => {
+            _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, expectedReturnAddress.Value.ToPhysical(), (_) => {
                 // Restore previous execution context
                 CurrentExecutionContext = previousExecutionContext;
             }, true), true);

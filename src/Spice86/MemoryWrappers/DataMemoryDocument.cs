@@ -17,7 +17,7 @@ public class DataMemoryDocument : IBinaryDocument {
         _startAddress = startAddress;
         _endAddress = endAddress;
         _memory = memory;
-        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress - _startAddress);
+        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress + 1 - _startAddress);
     }
 
     public event Action<Exception>? MemoryReadInvalidOperation;

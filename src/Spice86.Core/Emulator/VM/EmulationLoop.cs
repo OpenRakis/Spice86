@@ -5,45 +5,49 @@ using Spice86.Core.Emulator.Function;
 
 namespace Spice86.Core.Emulator.VM;
 
-using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
+using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
+
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
-/// Also, calls the DMA Controller once in order to start the DMA thread loop for DMA transfers. <br/>
+/// On Pause, triggers a GDB breakpoint.
 /// </summary>
 public class EmulationLoop {
     private readonly ILoggerService _loggerService;
-    private readonly Cpu _cpu;
-    private readonly CfgCpu _cfgCpu;
+    private readonly IInstructionExecutor _cpu;
+    private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
-    private readonly Devices.Timer.Timer _timer;
-    private readonly MachineBreakpoints _machineBreakpoints;
-    private readonly DmaController _dmaController;
+    private readonly Timer _timer;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly Stopwatch _stopwatch;
     private readonly IPauseHandler _pauseHandler;
+
+    /// <summary>
+    /// Whether the emulation is paused.
+    /// </summary>
+    public bool IsPaused { get; set; }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
-    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
-    /// <param name="dmaController">The DMA Controller, to start the DMA loop thread.</param>
+    /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService, Cpu cpu, CfgCpu cfgCpu, State cpuState, Devices.Timer.Timer timer, MachineBreakpoints machineBreakpoints,
-        DmaController dmaController, IPauseHandler pauseHandler) {
+    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _cpu = cpu;
-        _cfgCpu = cfgCpu;
+        _functionHandler = functionHandler;
         _cpuState = cpuState;
         _timer = timer;
-        _machineBreakpoints = machineBreakpoints;
-        _dmaController = dmaController;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _stopwatch = new();
     }
@@ -53,19 +57,18 @@ public class EmulationLoop {
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
     public void Run() {
-        FunctionHandler functionHandler = _cpu.FunctionHandler;
         try {
-            StartRunLoop(functionHandler);
+            StartRunLoop(_functionHandler);
         } catch (HaltRequestedException) {
             // Actually a signal generated code requested Exit
             return;
-        } catch (InvalidVMOperationException e) {
+        } catch (InvalidVMOperationException) {
             throw;
         } catch (Exception e) {
             throw new InvalidVMOperationException(_cpuState, e);
         }
-        _machineBreakpoints.OnMachineStop();
-        functionHandler.Ret(CallType.MACHINE);
+        _emulatorBreakpointsManager.OnMachineStop();
+        _functionHandler.Ret(CallType.MACHINE);
     }
 
     /// <summary>
@@ -73,23 +76,21 @@ public class EmulationLoop {
     /// </summary>
     internal void Exit() {
         _cpuState.IsRunning = false;
+        IsPaused = false;
     }
 
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
-        _dmaController.StartDmaThread();
         RunLoop();
-        _dmaController.StopDmaThread();
     }
 
     private void RunLoop() {
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            _machineBreakpoints.CheckBreakPoint();
+            _emulatorBreakpointsManager.CheckBreakPoint();
             _pauseHandler.WaitIfPaused();
-            _cpu.ExecuteNextInstruction();
-            //_cfgCpu.ExecuteNext();
+            _cpu.ExecuteNext();
             _timer.Tick();
         }
         _stopwatch.Stop();

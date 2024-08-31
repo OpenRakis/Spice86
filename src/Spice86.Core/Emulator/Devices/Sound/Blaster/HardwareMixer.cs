@@ -6,8 +6,8 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Represents the SoundBlaster hardware mixer, also known as 'CTMixer'.
 /// </summary>
-public sealed class HardwareMixer {
-    private readonly SoundBlaster _blaster;
+public class HardwareMixer {
+    private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
     private readonly SoundChannel _pcmSoundChannel;
     private readonly SoundChannel _opl3fmSoundChannel;
@@ -15,13 +15,15 @@ public sealed class HardwareMixer {
     /// <summary>
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class with the specified SoundBlaster instance.
     /// </summary>
-    /// <param name="blaster">The SoundBlaster instance to use for the mixer.</param>
+    /// <param name="soundBlasterHardwareConfig">The SoundBlaster IRQs, and DMA information.</param>
+    /// <param name="opl3fmSoundChannel">The sound channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
-    public HardwareMixer(SoundBlaster blaster, ILoggerService loggerService) {
-        _blaster = blaster;
+    /// <param name="pcmSoundChannel">The sound channel for sound effects.</param>
+    public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig, SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel, ILoggerService loggerService) {
         _logger = loggerService;
-        _pcmSoundChannel = blaster.PCMSoundChannel;
-        _opl3fmSoundChannel = blaster.FMSynthSoundChannel;
+        _blasterHardwareConfig = soundBlasterHardwareConfig;
+        _pcmSoundChannel = pcmSoundChannel;
+        _opl3fmSoundChannel = opl3fmSoundChannel;
     }
 
     /// <summary>
@@ -57,7 +59,7 @@ public sealed class HardwareMixer {
 
     /// <summary>
     /// Write data to the <see cref="CurrentAddress"/> of the hardware mixer. <br/>
-    /// For example, the FM volume register is written to when the address is 0x26.
+    /// For example, the FM volume register is written to when the address is <c>0x26</c>.
     /// </summary>
     /// <param name="value">The value to apply.</param>
     public void Write(byte value) {
@@ -76,11 +78,11 @@ public sealed class HardwareMixer {
     }
 
     /// <summary>
-    /// Returns the byte value for the IRQ mixer register based on the current IRQ value of the SoundBlaster instance.
+    /// Returns the byte value for the IRQ mixer register based on the current IRQ value of the SoundBlaster hardware.
     /// </summary>
     /// <returns>The byte value for the IRQ mixer register.</returns>
     private byte GetIRQByte() {
-        return _blaster.IRQ switch {
+        return _blasterHardwareConfig.Irq switch {
             2 => 1 << 0,
             5 => 1 << 1,
             7 => 1 << 2,
@@ -90,8 +92,8 @@ public sealed class HardwareMixer {
     }
 
     /// <summary>
-    /// Returns the byte value for the DMA mixer register based on the current DMA value of the SoundBlaster instance.
+    /// Returns the byte value for the DMA mixer register based on the current DMA value of the SoundBlaster hardware.
     /// </summary>
     /// <returns>The byte value for the DMA mixer register.</returns>
-    private byte GetDMAByte() => (byte)(1 << _blaster.DMA);
+    private byte GetDMAByte() => (byte)(1 << _blasterHardwareConfig.HighDma);
 }

@@ -15,8 +15,9 @@ using OperatingSystem = System.OperatingSystem;
 /// http://midi.teragonaudio.com/tech/lowmidi.htm
 /// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
-internal sealed class GeneralMidiDevice : MidiDevice {
-    private readonly SoundChannel _soundChannel;
+public sealed class GeneralMidiDevice : MidiDevice {
+    private readonly SoundChannel? _soundChannel;
+    private readonly Synthesizer _synthesizer;
 
     private bool _disposed;
     private bool _threadStarted;
@@ -29,16 +30,25 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     private volatile uint _message;
 
     /// <summary>
-    /// The soundfont file name we use for all General MIDI preset sounds.
+    /// The file name of the soundfont we load and use for all General MIDI preset sounds.
     /// </summary>
-    private const string SoundFont = "2MGM.sf2";
+    public const string SoundFont = "2MGM.sf2";
 
     private IntPtr _midiOutHandle;
 
-    public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService, IPauseHandler pauseHandler) {
-        _loggerService = loggerService;
-        _soundChannel = new SoundChannel(softwareMixer, "General MIDI");
+    /// <summary>
+    /// Initializes a new instance of <see cref="GeneralMidiDevice"/>.
+    /// </summary>
+    /// <param name="softwareMixer">The software mixer for sound channels.</param>
+    /// <param name="loggerService">The service used to log messages.</param>
+    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
+    public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService,  IPauseHandler pauseHandler) {
+        _synthesizer = new Synthesizer(new SoundFont(SoundFont), 48000);
         _pauseHandler = pauseHandler;
+        _loggerService = loggerService;
+        if (!OperatingSystem.IsWindows()) {
+            _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
+        }
         _playbackThread = new Thread(RenderThreadMethod) {
             Name = nameof(GeneralMidiDevice)
         };
@@ -58,30 +68,27 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         _playbackThread.Start();
     }
 
-    private void RenderThreadMethod()
-    {
-        if (!File.Exists(SoundFont))
-        {
+    private void RenderThreadMethod() {
+        if (!File.Exists(SoundFont)) {
             return;
         }
+
         // General MIDI needs a large buffer to store preset PCM data of musical instruments.
         // Too small and it's garbled.
         // Too large and we can't render in time, therefore there is only silence.
         Span<float> buffer = stackalloc float[16384];
-        Synthesizer synthesizer = new(new SoundFont(SoundFont), 48000);
-        while (!_endThread)
-        {
+        while (!_endThread) {
             _pauseHandler.WaitIfPaused();
             _fillBufferEvent.WaitOne(Timeout.Infinite);
             buffer.Clear();
-            FillBuffer(synthesizer, buffer);
-            _soundChannel.Render(buffer);
+
+            FillBuffer(_synthesizer, buffer);
+            _soundChannel?.Render(buffer);
             _fillBufferEvent.Reset();
         }
     }
 
-    private void FillBuffer(Synthesizer synthesizer, Span<float> data)
-    {
+    private void FillBuffer(Synthesizer synthesizer, Span<float> data) {
         ExtractAndProcessMidiMessage(_message, synthesizer);
         synthesizer.RenderInterleaved(data);
     }
@@ -97,7 +104,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
     }
 
     private void WakeUpRenderThread() {
-        if(!_disposed && !_endThread) {
+        if (!_disposed && !_endThread) {
             _fillBufferEvent.Set();
         }
     }
@@ -114,7 +121,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
         // Extract second data byte from the high word, low-order byte
         byte data2 = bytes[2];
 
-        byte command = (byte) (midiStatus & 0xF0);
+        byte command = (byte)(midiStatus & 0xF0);
 
         if (command is < 0x80 or > 0xE0) {
             return;
@@ -122,7 +129,7 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
         // it's a voice message
         // find the channel by masking off all but the low 4 bits
-        byte channel = (byte) (midiStatus & 0x0F);
+        byte channel = (byte)(midiStatus & 0x0F);
 
         synthesizer.ProcessMidiMessage(channel, command, data1, data2);
     }
@@ -137,20 +144,23 @@ internal sealed class GeneralMidiDevice : MidiDevice {
 
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
-            if(disposing) {
-                if(OperatingSystem.IsWindows()) {
+            if (disposing) {
+                if (OperatingSystem.IsWindows()) {
                     if (_midiOutHandle != IntPtr.Zero) {
                         NativeMethods.midiOutClose(_midiOutHandle);
                         _midiOutHandle = IntPtr.Zero;
                     }
                 }
+
                 _endThread = true;
                 _fillBufferEvent.Set();
-                if(_playbackThread?.IsAlive == true) {
+                if (_playbackThread?.IsAlive == true) {
                     _playbackThread.Join();
                 }
+
                 _fillBufferEvent.Dispose();
             }
+
             _disposed = true;
         }
     }

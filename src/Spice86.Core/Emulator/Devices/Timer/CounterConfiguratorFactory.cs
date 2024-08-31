@@ -6,12 +6,12 @@ namespace Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 
-public class CounterConfigurator {
+public class CounterConfiguratorFactory {
     private readonly ILoggerService _loggerService;
     private const long DefaultInstructionsPerSecond = 1000000L;
     private readonly Configuration _configuration;
 
-    public CounterConfigurator(Configuration configuration, ILoggerService loggerService) {
+    public CounterConfiguratorFactory(Configuration configuration, ILoggerService loggerService) {
         _loggerService = loggerService;
         _configuration = configuration;
     }

@@ -13,8 +13,8 @@ using System.Linq;
 /// Handles coherency between the memory and the graph of instructions executed by the CPU.
 /// Next node to execute is normally the next node from the graph but several checks are done to make sure it is really it:
 ///  - The node is not null (otherwise it is taken from memory)
-///  - If the node is an assembly node, it is the same as what is currently in memory, otherwise it means self modifying code is beeing detected
-///  - If self modifying code is beeing detected, Discriminator node is beeing injected instead.
+///  - If the node is an assembly node, it is the same as what is currently in memory, otherwise it means self modifying code is being detected
+///  - If self modifying code is being detected, Discriminator node is being injected instead.
 /// Once the node to execute is determined, it is linked to the previously executed node in the execution context if possible.
 /// </summary>
 public class CfgNodeFeeder {
@@ -23,9 +23,9 @@ public class CfgNodeFeeder {
     private readonly NodeLinker _nodeLinker = new();
     private readonly DiscriminatorReducer _discriminatorReducer;
 
-    public CfgNodeFeeder(IMemory memory, State state, MachineBreakpoints machineBreakpoints) {
+    public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _state = state;
-        _instructionsFeeder = new(machineBreakpoints, memory, state);
+        _instructionsFeeder = new(emulatorBreakpointsManager, memory, state);
         _discriminatorReducer = new(new List<IInstructionReplacer<CfgInstruction>>()
             { _nodeLinker, _instructionsFeeder });
     }
@@ -69,9 +69,9 @@ public class CfgNodeFeeder {
 
     private ICfgNode CreateDiscriminatedNode(CfgInstruction instruction1, CfgInstruction instruction2) {
         IList<CfgInstruction> reducedInstructions =
-            _discriminatorReducer.ReduceAll(new List<CfgInstruction>() { instruction1, instruction2 });
+            _discriminatorReducer.ReduceAll([instruction1, instruction2]);
         if (reducedInstructions.Count == 1) {
-            return reducedInstructions.First();
+            return reducedInstructions[0];
         }
 
         DiscriminatedNode res = new DiscriminatedNode(instruction1.Address);

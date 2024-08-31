@@ -7,9 +7,6 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     INT 12h handler. Reports how many kb of base memory is installed.
 /// </summary>
-/// <summary>
-///     INT 12h handler. Reports how many kb of base memory is installed.
-/// </summary>
 public class SystemBiosInt12Handler : InterruptHandler {
     private readonly BiosDataArea _biosDataArea;
 

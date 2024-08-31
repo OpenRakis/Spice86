@@ -13,7 +13,7 @@ public sealed class AttributeControllerRegisters {
     public AttributeControllerRegisters() {
         InternalPalette = new byte[16];
     }
-
+    
     /// <summary>
     /// Gets or sets the address register.
     /// </summary>
@@ -22,7 +22,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets the internal palette.
     /// </summary>
-    public byte[] InternalPalette { get; set; }
+    public byte[] InternalPalette { get; }
 
     /// <summary>
     ///     Gets or sets the Attribute Mode Control register.
@@ -47,7 +47,7 @@ public sealed class AttributeControllerRegisters {
     /// <summary>
     ///     Gets or sets the Color Select register.
     /// </summary>
-    public ColorSelectRegister ColorSelectRegister { get; set; } = new();
+    public ColorSelectRegister ColorSelectRegister { get; } = new();
 
     /// <summary>
     ///     Returns the current value of an attribute controller register.

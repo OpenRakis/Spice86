@@ -6,66 +6,61 @@ using AvaloniaGraphControl;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Infrastructure;
-using Spice86.Interfaces;
-using Spice86.Shared.Diagnostics;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
-public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPerformanceMeasurer? _performanceMeasurer = new PerformanceMeasurer();
-    private ExecutionContext? ExecutionContext { get; set; }
+public partial class CfgCpuViewModel : ViewModelBase {
+    private readonly IPerformanceMeasurer _performanceMeasurer;
+    private readonly ExecutionContextManager _executionContextManager;
 
-    [ObservableProperty]
-    private int _maxNodesToDisplay = 200;
+    [ObservableProperty] private int _maxNodesToDisplay = 200;
 
-    [ObservableProperty]
-    private Graph? _graph;
+    [ObservableProperty] private Graph? _graph;
 
-    [ObservableProperty]
-    private long _numberOfNodes = 0;
+    [ObservableProperty] private long _numberOfNodes;
 
-    [ObservableProperty]
-    private long _averageNodeTime = 0;
+    [ObservableProperty] private long _averageNodeTime;
 
-    private readonly IPauseStatus? _pauseStatus;
+    [ObservableProperty] private bool _isVisible;
 
-    public CfgCpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPerformanceMeasurer performanceMeasurer, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
-        _pauseStatus.PropertyChanged += (sender, args) => {
-            if (args.PropertyName == nameof(IPauseStatus.IsPaused) && !_pauseStatus.IsPaused) {
-                Graph = null;
-            }
-        };
+    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
+        IPerformanceMeasurer performanceMeasurer) {
+        _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateCurrentGraph);
+        pauseHandler.Pausing += OnPausing;
     }
 
-    partial void OnMaxNodesToDisplayChanging(int value) {
+    private void OnPausing() {
         Graph = null;
+        // This call of an async method from a sync method uses the async method and discards the Task.
+        // If this method fails, it will not crash the process.
+        // Instead, it will fire the TaskScheduler.UnobservedTaskException event.
+        // See https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
+        // The alternative, making this event handler 'async void' would crash the process in case of an exception,
+        // unless a try/catch is put over the *entire* code of the sync method.
+        _ = UpdateCurrentGraphAsync();
     }
 
-    private async void UpdateCurrentGraph(object? sender, EventArgs e) {
-        if (_pauseStatus?.IsPaused is false or null) {
-            return;
-        }
+    partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
+
+    private async Task UpdateCurrentGraphAsync() {
         if (Graph is not null) {
             return;
         }
 
         await Task.Run(async () => {
-            ICfgNode? nodeRoot = ExecutionContext?.LastExecuted;
+            ICfgNode? nodeRoot = _executionContextManager.CurrentExecutionContext?.LastExecuted;
             if (nodeRoot is null) {
                 return;
             }
-            
+
             long localNumberOfNodes = 0;
             Graph currentGraph = new();
             Queue<ICfgNode> queue = new();
@@ -78,34 +73,39 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
                 if (visitedNodes.Contains(node)) {
                     continue;
                 }
+
                 visitedNodes.Add(node);
                 stopwatch.Restart();
                 foreach (ICfgNode successor in node.Successors) {
-                    var edgeKey = GenerateEdgeKey(node, successor);
+                    (int, int) edgeKey = GenerateEdgeKey(node, successor);
                     if (!existingEdges.Contains(edgeKey)) {
                         currentGraph.Edges.Add(CreateEdge(node, successor));
                         existingEdges.Add(edgeKey);
                     }
+
                     if (!visitedNodes.Contains(successor)) {
                         queue.Enqueue(successor);
                     }
                 }
+
                 foreach (ICfgNode predecessor in node.Predecessors) {
-                    var edgeKey = GenerateEdgeKey(predecessor, node);
+                    (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
                     if (!existingEdges.Contains(edgeKey)) {
                         currentGraph.Edges.Add(CreateEdge(predecessor, node));
                         existingEdges.Add(edgeKey);
                     }
+
                     if (!visitedNodes.Contains(predecessor)) {
                         queue.Enqueue(predecessor);
                     }
                 }
+
                 stopwatch.Stop();
-                _performanceMeasurer?.UpdateValue(stopwatch.ElapsedMilliseconds);
+                _performanceMeasurer.UpdateValue(stopwatch.ElapsedMilliseconds);
                 localNumberOfNodes++;
             }
 
-            long averageNodeTime = _performanceMeasurer is not null ? _performanceMeasurer.ValuePerMillisecond : 0;
+            long averageNodeTime = _performanceMeasurer.ValuePerMillisecond;
 
             await Dispatcher.UIThread.InvokeAsync(() => {
                 Graph = currentGraph;
@@ -117,31 +117,31 @@ public partial class CfgCpuViewModel : ViewModelBase, IInternalDebugger {
 
     private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
         string label = string.Empty;
-        if (node is CfgInstruction cfgInstruction) {
-            SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment, (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
-            if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
-                // Not direct successor, jump or call
-                label = "not contiguous";
+        switch (node) {
+            case CfgInstruction cfgInstruction: {
+                SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
+                    (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
+                if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
+                    // Not direct successor, jump or call
+                    label = "not contiguous";
+                }
+
+                break;
+            }
+            case DiscriminatedNode discriminatedNode: {
+                Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator
+                    .FirstOrDefault(x => x.Value == successor).Key;
+                label = discriminator.ToString();
+                break;
             }
         }
-        if (node is DiscriminatedNode discriminatedNode) {
-            Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator.FirstOrDefault(x => x.Value == successor).Key;
-            label = discriminator.ToString();
-        }
+
         return new Edge(GenerateNodeText(node), GenerateNodeText(successor), label);
     }
 
-    private (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor) {
-        return (node.Id, successor.Id);
-    }
+    private static (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor)
+        => (node.Id, successor.Id);
 
-    private string GenerateNodeText(ICfgNode node) {
-        return $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
-    }
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        ExecutionContext ??= component as ExecutionContext;
-    }
-
-    public bool NeedsToVisitEmulator => ExecutionContext is null;
+    private static string GenerateNodeText(ICfgNode node) =>
+        $"{node.Address} / {node.Id} {Environment.NewLine} {node.GetType().Name}";
 }

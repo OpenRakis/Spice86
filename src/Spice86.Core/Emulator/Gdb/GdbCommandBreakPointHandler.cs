@@ -15,7 +15,7 @@ public class GdbCommandBreakpointHandler {
     private readonly ILoggerService _loggerService;
     private readonly GdbIo _gdbIo;
     private volatile bool _resumeEmulatorOnCommandEnd = true;
-    private readonly MachineBreakpoints _machineBreakpoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
@@ -24,10 +24,10 @@ public class GdbCommandBreakpointHandler {
     /// <param name="pauseHandler">The class responsible for pausing/resuming emulation via GDB commands.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
-    public GdbCommandBreakpointHandler(MachineBreakpoints machineBreakpoints, IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
+    /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    public GdbCommandBreakpointHandler(EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _machineBreakpoints = machineBreakpoints;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _gdbIo = gdbIo;
     }
@@ -39,7 +39,7 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
         }
@@ -136,7 +136,7 @@ public class GdbCommandBreakpointHandler {
         if (breakPoint == null) {
             return _gdbIo.GenerateResponse("");
         }
-        _machineBreakpoints.ToggleBreakPoint(breakPoint, false);
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, false);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint removed@!\n{@BreakPoint}", breakPoint);
         }
@@ -152,7 +152,7 @@ public class GdbCommandBreakpointHandler {
 
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnBreakPointReached, true);
-        _machineBreakpoints.ToggleBreakPoint(stepBreakPoint, true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for st@ep!\n{@StepBreakPoint}", stepBreakPoint);
         }

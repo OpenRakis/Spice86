@@ -14,14 +14,11 @@ using System.Linq;
 /// </summary>
 public class GdbCommandHandler {
     private readonly ILoggerService _loggerService;
-    private bool _isConnected = true;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
     private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
     private readonly GdbCustomCommandsHandler _gdbCustomCommandsHandler;
     private readonly GdbIo _gdbIo;
-    private readonly Cpu _cpu;
-    private readonly IMemory _memory;
     private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
     private readonly FunctionHandler _functionHandler;
@@ -34,29 +31,26 @@ public class GdbCommandHandler {
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
-    /// <param name="machineBreakpoints">The class used to store and retrieve breakpoints.</param>
+    /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
     /// <param name="callbackHandler">The class that stores callbacks as machine code instructions and is responsible for calling our C# handlers.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="functionHandler">The class that handles function calls at the machine code level.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
-    /// <param name="gui">The emulator's UI.</param>
     public GdbCommandHandler(IMemory memory, Cpu cpu, State state, IPauseHandler pauseHandler,
-        MachineBreakpoints machineBreakpoints, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
-        FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration, IGui? gui) {
+        EmulatorBreakpointsManager emulatorBreakpointsManager, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
+        FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
-        _cpu = cpu;
         _state = state;
-        _memory = memory;
         _gdbIo = gdbIo;
         _functionHandler = functionHandler;
         _executionFlowRecorder = executionFlowRecorder;
         _pauseHandler = pauseHandler;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
-        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(_memory, gdbIo, _loggerService);
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(machineBreakpoints, pauseHandler, gdbIo, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, _memory, _cpu, callbackHandler, executionFlowRecorder, machineBreakpoints, gdbIo, gui,
+        _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
+        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService);
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, memory, cpu, callbackHandler, executionFlowRecorder, emulatorBreakpointsManager, gdbIo,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
@@ -64,7 +58,7 @@ public class GdbCommandHandler {
     /// <summary>
     /// Are we connected to the GDB client or not.
     /// </summary>
-    public bool IsConnected => _isConnected;
+    public bool IsConnected { get; private set; } = true;
 
     internal void PauseEmulator() {
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = false;
@@ -125,7 +119,7 @@ public class GdbCommandHandler {
     }
 
     private string Detach() {
-        _isConnected = false;
+        IsConnected = false;
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = true;
         return _gdbIo.GenerateResponse("");
     }

@@ -5,17 +5,15 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus _pauseStatus;
-    private State? _cpuState;
+public partial class CpuViewModel : ViewModelBase {
+    private readonly State _cpuState;
     
     [ObservableProperty]
     private StateInfo _state = new();
@@ -23,34 +21,25 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
-        _pauseStatus = pauseStatus;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+    public CpuViewModel(State state, IPauseHandler pauseHandler) {
+        _cpuState = state;
+        pauseHandler.Pausing += () => _isPaused = true;
+        _isPaused = pauseHandler.IsPaused;
+        pauseHandler.Resumed += () => _isPaused = false;
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        if (_cpuState is not null) {
-            VisitCpuState(_cpuState);
-        }
+        VisitCpuState(_cpuState);
     }
     
-    public bool NeedsToVisitEmulator => _cpuState is null;
-
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        _cpuState ??= component as State;
-    }
-    
-    private bool IsPaused => _pauseStatus.IsPaused;
+    private bool _isPaused;
     
     private void VisitCpuState(State state) {
-        if (!IsPaused) {
-            UpdateCpuState(state);
-        }
+        UpdateCpuState(state);
 
-        if (IsPaused) {
-            State.PropertyChanged -= OnStatePropertyChanged;
+        if (_isPaused) {
             State.PropertyChanged += OnStatePropertyChanged;
-            Flags.PropertyChanged -= OnStatePropertyChanged;
             Flags.PropertyChanged += OnStatePropertyChanged;
         } else {
             State.PropertyChanged -= OnStatePropertyChanged;
@@ -60,12 +49,12 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         return;
 
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !IsPaused) {
+            if (sender is null || e.PropertyName == null || !_isPaused) {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
             PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
-            if (propertyInfo is not null && originalPropertyInfo is not null) {
+            if (propertyInfo is not null && originalPropertyInfo is not null && originalPropertyInfo.CanWrite) {
                 originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
             }
         }
@@ -102,6 +91,7 @@ public partial class CpuViewModel : ViewModelBase, IInternalDebugger {
         State.GS = state.GS;
         State.SS = state.SS;
         State.IP = state.IP;
+        State.Cycles = state.Cycles;
         State.IpPhysicalAddress = state.IpPhysicalAddress;
         State.StackPhysicalAddress = state.StackPhysicalAddress;
         State.SegmentOverrideIndex = state.SegmentOverrideIndex;

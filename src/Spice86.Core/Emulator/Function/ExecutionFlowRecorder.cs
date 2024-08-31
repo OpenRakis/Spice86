@@ -154,15 +154,15 @@ public class ExecutionFlowRecorder {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="machineBreakpoints">The class used to store breakpoints.</param>
+    /// <param name="emulatorBreakpointsManager">The class used to store breakpoints.</param>
     /// <param name="cs">The value of the CS register, for the segment.</param>
     /// <param name="ip">The value of the IP register, for the offset.</param>
-    public void RegisterExecutableByte(IMemory memory, State state, MachineBreakpoints machineBreakpoints, ushort cs, ushort ip) {
+    public void RegisterExecutableByte(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager, ushort cs, ushort ip) {
         // Note: this is not enough, instructions modified before they are discovered are not counted as rewritten.
         // If we saved the coverage to reload it each time, we would get a different picture of the rewritten code but that would come with other issues.
         // Code modified before being ever executed is arguably not self modifying code. 
         uint address = MemoryUtils.ToPhysicalAddress(cs, ip);
-        RegisterExecutableByteModificationBreakPoint(memory, state, machineBreakpoints, address);
+        RegisterExecutableByteModificationBreakPoint(memory, state, emulatorBreakpointsManager, address);
     }
 
     /// <summary>
@@ -173,9 +173,9 @@ public class ExecutionFlowRecorder {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="machineBreakpoints">The class that stores emulation breakpoints.</param>
+    /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="physicalAddress">The address to set the breakpoint at.</param>
-    public void RegisterExecutableByteModificationBreakPoint(IMemory memory, State state, MachineBreakpoints machineBreakpoints, uint physicalAddress) {
+    public void RegisterExecutableByteModificationBreakPoint(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager, uint physicalAddress) {
         if (!_executableCodeAreasEncountered.Add(physicalAddress)) {
             return;
         }
@@ -183,7 +183,7 @@ public class ExecutionFlowRecorder {
         AddressBreakPoint? breakPoint;
         breakPoint = GenerateBreakPoint(memory, state, physicalAddress);
 
-        machineBreakpoints.ToggleBreakPoint(breakPoint, true);
+        emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     private AddressBreakPoint GenerateBreakPoint(IMemory memory, State state, uint physicalAddress) {

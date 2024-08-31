@@ -5,7 +5,6 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
@@ -24,14 +23,15 @@ public class InstructionsFeederTest {
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
-    private readonly Memory _memory = new(new Ram(64), is20ThAddressLineSilenced: false);
+    private static readonly MemoryBreakpoints MemoryBreakpoints = new();
+    private readonly Memory _memory = new(MemoryBreakpoints, new Ram(64), new A20Gate());
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);
-        ILoggerService loggerService = Substitute.For<LoggerService>(new LoggerPropertyBag());
+        ILoggerService loggerService = Substitute.For<LoggerService>();
         State state = new();
-        MachineBreakpoints machineBreakpoints = new MachineBreakpoints(_memory, state, new PauseHandler(loggerService));
-        return new InstructionsFeeder(machineBreakpoints, _memory, state);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(MemoryBreakpoints, new PauseHandler(loggerService), state);
+        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

@@ -5,8 +5,6 @@ using System;
 /// Emulates the highhat OPL operator.
 /// </summary>
 internal sealed class HighHat : TopCymbal {
-    private readonly Random _random = new();
-
     /// <summary>
     /// Initializes a new instance of the HighHat class.
     /// </summary>
@@ -28,7 +26,7 @@ internal sealed class HighHat : TopCymbal {
         double topCymbalOperatorPhase = Opl.TopCymbalOperator.Phase * PhaseMultiplierTable[Opl.TopCymbalOperator.Mult];
         double operatorOutput = GetOperatorOutput(modulator, topCymbalOperatorPhase);
         if (operatorOutput == 0) {
-            operatorOutput = _random.NextDouble() * Envelope;
+            operatorOutput = Random.Shared.NextDouble() * Envelope;
         }
 
         return operatorOutput;

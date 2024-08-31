@@ -5,29 +5,25 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Iced.Intel;
 
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InternalDebugger;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Interfaces;
 using Spice86.MemoryWrappers;
+using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
-using System.Collections.Specialized;
-using System.ComponentModel;
-
-public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
-    private readonly IPauseStatus _pauseStatus;
-    private readonly DebugWindowViewModel _debugWindowViewModel;
-    private bool _needToUpdateDisassembly = true;
-    private IMemory? _memory;
-    private State? _state;
-    private IProgramExecutor? _programExecutor;
+public partial class DisassemblyViewModel : ViewModelBase {
+    private readonly IMemory _memory;
+    private readonly State _state;
+    private readonly IMessenger _messenger;
+    private readonly IPauseHandler _pauseHandler;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -36,14 +32,10 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     private AvaloniaList<CpuInstructionInfo> _instructions = new();
     
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StepInstructionCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     private bool _isPaused;
-
-    [ObservableProperty]
-    private bool _isGdbServerAvailable;
 
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
@@ -62,88 +54,53 @@ public partial class DisassemblyViewModel : ViewModelBase, IInternalDebugger {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(DebugWindowViewModel debugWindowViewModel, IUIDispatcherTimerFactory dispatcherTimerFactory, IPauseStatus pauseStatus) {
-        _debugWindowViewModel = debugWindowViewModel;
-        _pauseStatus = pauseStatus;
-        IsPaused = pauseStatus.IsPaused;
-        _pauseStatus.PropertyChanged += OnPauseStatusChanged;
-        dispatcherTimerFactory.StartNew(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        UpdateCanCloseTabProperty();
-        debugWindowViewModel.DisassemblyViewModels.CollectionChanged += OnDebugViewModelCollectionChanged;
-    }
-
-    private void UpdateCanCloseTabProperty() {
-        CanCloseTab = _debugWindowViewModel.DisassemblyViewModels.Count > 1;
-    }
-    
-    private void OnDebugViewModelCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-        UpdateCanCloseTabProperty();
+    public DisassemblyViewModel(IMemory memory, State state, IPauseHandler pauseHandler, IMessenger messenger, bool canCloseTab = false) {
+        _messenger = messenger;
+        _memory = memory;
+        _state = state;
+        _pauseHandler = pauseHandler;
+        IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Pausing += OnPause;
+        pauseHandler.Resumed += () => IsPaused = false;
+        CanCloseTab = canCloseTab;
     }
     
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _debugWindowViewModel.CloseTab(this);
-        UpdateCanCloseTabProperty();
-    }
-
-    private void UpdateValues(object? sender, EventArgs e) {
-        if (_needToUpdateDisassembly && IsPaused) {
-            UpdateDisassembly();
-        }
-    }
-
-    private void OnPauseStatusChanged(object? sender, PropertyChangedEventArgs e) {
-        IsPaused = _pauseStatus.IsPaused;
-        UpdateCanCloseTabProperty();
-        if (!IsPaused) {
+    private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
+    
+    private void OnPause() {
+        IsPaused = true;
+        if (StartAddress is not null) {
             return;
         }
-        _needToUpdateDisassembly = true;
-        StartAddress ??= _state?.IpPhysicalAddress;
-    }
-    
-    public bool NeedsToVisitEmulator => _memory is null || _state is null || _programExecutor is null;
 
-    public void Visit<T>(T component) where T : IDebuggableComponent {
-        switch (component) {
-            case IMemory mem:
-                _memory ??= mem;
-                break;
-            case State state: {
-                _state ??= state;
-                if (_needToUpdateDisassembly && IsPaused) {
-                    UpdateDisassembly();
-                }
-                break;
-            }
-            case IProgramExecutor programExecutor:
-                _programExecutor ??= programExecutor;
-                IsGdbServerAvailable = programExecutor.IsGdbCommandHandlerAvailable;
-                break;
+        StartAddress = _state.IpPhysicalAddress;
+        if (GoToCsIpCommand.CanExecute(null)) {
+            GoToCsIpCommand.Execute(null);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void NewDisassemblyView() {
-        _debugWindowViewModel.NewDisassemblyViewCommand.Execute(null);
+    private void NewDisassemblyView() {
+        DisassemblyViewModel disassemblyViewModel = new(_memory, _state, _pauseHandler, _messenger, canCloseTab: true) {
+            IsPaused = IsPaused
+        };
+        _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void StepInstruction() => _programExecutor?.StepInstruction();
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    public void GoToCsIp() {
-        StartAddress = _state?.IpPhysicalAddress;
-        _needToUpdateDisassembly = true;
-        UpdateDisassemblyCommand.Execute(null);
+    private void GoToCsIp() {
+        StartAddress = _state.IpPhysicalAddress;
+        if (UpdateDisassemblyCommand.CanExecute(null)) {
+            UpdateDisassemblyCommand.Execute(null);
+        }
     }
-    
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void UpdateDisassembly() {
-        if(_state is null || _memory is null || StartAddress is null) {
+        if(StartAddress is null) {
             return;
         }
-        _needToUpdateDisassembly = false;
         CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
         Decoder decoder = InitializeDecoder(codeReader, StartAddress.Value);
         try {

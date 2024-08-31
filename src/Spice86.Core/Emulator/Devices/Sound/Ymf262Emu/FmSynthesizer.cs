@@ -15,8 +15,8 @@ public sealed class FmSynthesizer {
 
     internal readonly int[] Registers = new int[0x200];
     internal readonly HighHat? HighHatOperator;
-    internal readonly SnareDrum? SnareDrumOperator;
-    internal readonly Operator? TomTomOperator;
+    private readonly SnareDrum? SnareDrumOperator;
+    private readonly Operator? TomTomOperator;
     internal readonly TopCymbal? TopCymbalOperator;
     internal int Nts, Dam, Dvb, Ryt, Bd, Sd, Tom, Tc, Hh, IsOpl3Mode, Connectionsel;
     internal int VibratoIndex, TremoloIndex;

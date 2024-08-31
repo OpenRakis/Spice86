@@ -3,8 +3,6 @@ namespace Spice86.Core.Emulator.IOPorts;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -29,11 +27,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
-
-    /// <inheritdoc/>
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-    }
-
+    
     /// <inheritdoc/>
     public override byte ReadByte(int port) {
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {

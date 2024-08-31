@@ -2,100 +2,93 @@
 
 using Function.Dump;
 
+using Serilog.Events;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
-using Spice86.Core.Emulator.InternalDebugger;
-using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.LoadableFile.Dos.Com;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
 
-/// <inheritdoc cref="IProgramExecutor"/>
-public sealed class ProgramExecutor : IProgramExecutor {
-    private readonly ILoggerService _loggerService;
+/// <summary>
+/// The class that is responsible for executing a program in the emulator. Only supports COM, EXE, and BIOS files.
+/// </summary>
+public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
+    private readonly ILoggerService _loggerService;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly IPauseHandler _pauseHandler;
+    private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    /// <param name="loggerService">The logging service to use. Provided via DI.</param>
-    /// <param name="gui">The GUI to use for user actions. Can be null for headless mode or unit tests.</param>
+    /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
+    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="cpu">The emulated x86 CPU.</param>
+    /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="timer">The programmable interval timer.</param>
+    /// <param name="dos">The DOS kernel.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
+    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    public ProgramExecutor(Configuration configuration, ILoggerService loggerService, IGui? gui, IPauseHandler pauseHandler) {
+    /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="loggerService">The logging service to use.</param>
+    public ProgramExecutor(Configuration configuration,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
+        IMemory memory, Cpu cpu, State state, Timer timer, Dos dos,
+        CallbackHandler callbackHandler, FunctionHandler functionHandler,
+        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
-        _pauseHandler = pauseHandler;
-        Machine = CreateMachine(gui);
-        _gdbServer = CreateGdbServer(gui);
-        _emulationLoop = new(loggerService, Machine.Cpu, Machine.CfgCpu, Machine.CpuState, Machine.Timer, Machine.MachineBreakpoints, Machine.DmaController, _pauseHandler);
+        _emulatorStateSerializer = emulatorStateSerializer;
+        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
+            emulatorBreakpointsManager, pauseHandler);
+        if (configuration.GdbPort.HasValue) {
+            _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
+                executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
+        }
+        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, memory, state, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
+        if (configuration.InitializeDOS is null) {
+            configuration.InitializeDOS = loader.DosInitializationNeeded;
+            if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
+            }
+        }
+
+        if (screenPresenter is not null) {
+            screenPresenter.UserInterfaceInitialized += Run;
+        }
+        LoadFileToRun(configuration, loader);
     }
 
     /// <summary>
-    /// The emulator machine.
+    /// Starts the loaded program.
     /// </summary>
-    public Machine Machine { get; private set; }
-
-    /// <inheritdoc/>
     public void Run() {
         _gdbServer?.StartServerAndWait();
         _emulationLoop.Run();
+
         if (_configuration.DumpDataOnExit is not false) {
-            DumpEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
-        }
-    }
-
-    /// <inheritdoc/>
-    public bool IsGdbCommandHandlerAvailable => _gdbServer?.IsGdbCommandHandlerAvailable is true;
-
-    /// <summary>
-    /// Steps a single instruction for the internal UI debugger
-    /// </summary>
-    /// <remarks>Depends on the presence of the GDBServer and GDBCommandHandler</remarks>
-    public void StepInstruction() {
-        _gdbServer?.StepInstruction();
-        _pauseHandler.Resume();
-    }
-
-    /// <inheritdoc/>
-    public void DumpEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(Machine.Memory,
-                Machine.Cpu.State, Machine.CallbackHandler, _configuration,
-                Machine.Cpu.ExecutionFlowRecorder,
-                path, _loggerService)
-            .DumpAll(Machine.Cpu.ExecutionFlowRecorder, Machine.Cpu.FunctionHandler);
-    }
-
-    /// <inheritdoc />
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if (!_disposed) {
-            if (disposing) {
-                _gdbServer?.Dispose();
-                _emulationLoop.Exit();
-                Machine.Dispose();
-            }
-            _disposed = true;
+            _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
     }
 
@@ -115,103 +108,42 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration) {
+    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration, IMemory memory, State cpuState, EnvironmentVariables environmentVariables,
+        DosFileManager fileManager, DosMemoryManager memoryManager) {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string lowerCaseFileName = executableFileName.ToLowerInvariant();
-        ushort entryPointSegment = (ushort)configuration.ProgramEntryPointSegment;
+        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
         if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(Machine.Memory,
-                Machine.Cpu.State,
+            return new ExeLoader(memory,
+                cpuState,
                 _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
+                environmentVariables,
+                fileManager,
+                memoryManager,
                 entryPointSegment);
         }
 
         if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(Machine.Memory,
-                Machine.Cpu.State,
+            return new ComLoader(memory,
+                cpuState,
                 _loggerService,
-                Machine.Dos.EnvironmentVariables,
-                Machine.Dos.FileManager,
-                Machine.Dos.MemoryManager,
+                environmentVariables,
+                fileManager,
+                memoryManager,
                 entryPointSegment);
         }
 
-        return new BiosLoader(Machine.Memory, Machine.Cpu.State, _loggerService);
+        return new BiosLoader(memory, cpuState, _loggerService);
     }
-
-    private Machine CreateMachine(IGui? gui) {
-        CounterConfigurator counterConfigurator = new CounterConfigurator(_configuration, _loggerService);
-        RecordedDataReader reader = new RecordedDataReader(_configuration.RecordedDataDirectory, _loggerService);
-        ExecutionFlowRecorder executionFlowRecorder = reader.ReadExecutionFlowRecorderFromFileOrCreate(_configuration.DumpDataOnExit is not false);
-        State cpuState = new();
-        IOPortDispatcher ioPortDispatcher = new IOPortDispatcher(cpuState, _loggerService, _configuration.FailOnUnhandledPort);
-        Machine = new Machine(gui, cpuState, ioPortDispatcher, _loggerService, counterConfigurator, executionFlowRecorder, _configuration, _configuration.DumpDataOnExit is not false, _pauseHandler);
-        ExecutableFileLoader loader = CreateExecutableFileLoader(_configuration);
-        if (_configuration.InitializeDOS is null) {
-            _configuration.InitializeDOS = loader.DosInitializationNeeded;
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", _configuration.InitializeDOS);
-            }
+    
+    private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
+        ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        if (configuration.GdbPort is null) {
+            return null;
         }
-        InitializeFunctionHandlers(_configuration, reader.ReadGhidraSymbolsFromFileOrCreate());
-        LoadFileToRun(_configuration, loader);
-        return Machine;
-    }
-
-    private GdbServer? CreateGdbServer(IGui? gui) {
-        int? gdbPort = _configuration.GdbPort;
-        if (gdbPort != null) {
-            return new GdbServer(Machine.Memory, Machine.Cpu,
-                Machine.Cpu.State, Machine.CallbackHandler, Machine.Cpu.FunctionHandler,
-                Machine.Cpu.ExecutionFlowRecorder,
-                Machine.MachineBreakpoints,
-                _pauseHandler,
-                _loggerService,
-                _configuration,
-                gui);
-        }
-
-        return null;
-    }
-
-    private Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        IOverrideSupplier? supplier, ushort entryPointSegment, Machine machine) {
-        Dictionary<SegmentedAddress, FunctionInformation> res = new();
-        if (supplier != null) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Override supplied: {OverrideSupplier}", supplier);
-            }
-
-            foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in supplier
-                    .GenerateFunctionInformations(_loggerService, _configuration, entryPointSegment, machine)) {
-                res.Add(element.Key, element.Value);
-            }
-        }
-
-        return res;
-    }
-
-    private void InitializeFunctionHandlers(Configuration configuration,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
-        if (configuration.OverrideSupplier != null) {
-            DictionaryUtils.AddAll(functionInformations,
-                GenerateFunctionInformations(configuration.OverrideSupplier, configuration.ProgramEntryPointSegment,
-                    Machine));
-        }
-
-        if (functionInformations.Count == 0) {
-            return;
-        }
-
-        Cpu cpu = Machine.Cpu;
-        bool useCodeOverride = configuration.UseCodeOverrideOption;
-        SetupFunctionHandler(cpu.FunctionHandler, functionInformations, useCodeOverride);
-        SetupFunctionHandler(cpu.FunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
+        return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
@@ -231,15 +163,20 @@ public sealed class ProgramExecutor : IProgramExecutor {
         }
     }
 
-    private static void SetupFunctionHandler(FunctionHandler functionHandler,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
-        functionHandler.FunctionInformations = functionInformations;
-        functionHandler.UseCodeOverride = useCodeOverride;
+    /// <inheritdoc cref="IDisposable" />
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
-    /// <inheritdoc/>
-    public void Accept<T>(T emulatorDebugger) where T : IInternalDebugger {
-        emulatorDebugger.Visit(this);
-        Machine.Accept(emulatorDebugger);
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _gdbServer?.Dispose();
+                _emulationLoop.Exit();
+            }
+            _disposed = true;
+        }
     }
 }

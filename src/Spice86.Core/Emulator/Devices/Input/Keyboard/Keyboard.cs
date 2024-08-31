@@ -11,7 +11,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Basic implementation of a keyboard
 /// </summary>
-public class Keyboard : DefaultIOPortHandler {
+public sealed class Keyboard : DefaultIOPortHandler {
     private readonly IGui? _gui;
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
@@ -35,12 +35,14 @@ public class Keyboard : DefaultIOPortHandler {
     /// Initializes a new instance of the <see cref="Keyboard"/> class.
     /// </summary>
     /// <param name="state">The CPU state.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="a20Gate">The class that controls whether the CPU's 20th address line is enabled.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public Keyboard(State state, A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Keyboard(State state, IOPortDispatcher ioPortDispatcher, A20Gate a20Gate, DualPic dualPic,
+        ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;
@@ -48,6 +50,7 @@ public class Keyboard : DefaultIOPortHandler {
             _gui.KeyUp += OnKeyUp;
             _gui.KeyDown += OnKeyDown;
         }
+        InitPortHandlers(ioPortDispatcher);
     }
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
@@ -103,8 +106,7 @@ public class Keyboard : DefaultIOPortHandler {
         }
     }
 
-    /// <inheritdoc/>
-    public override void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.Data, this);
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.StatusRegister, this);
     }
