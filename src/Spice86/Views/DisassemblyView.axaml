@@ -11,11 +11,6 @@
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
     </UserControl.Resources>
     <DockPanel>
-        <TextBlock
-            DockPanel.Dock="Top"
-            IsVisible="{Binding !IsPaused}"
-            Text="Disassembly is only available if the emulator is paused, as it can be wrong otherwise. Also, updating it constantly while the emulator is running would make the UI unresponsive."
-            TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal"
             DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
@@ -28,18 +23,18 @@
                     Command="{Binding CloseTabCommand}"
                     Content="Close View"
                     IsEnabled="{Binding CanCloseTab}"/>
-                <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
                     <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
                     <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
                 </StackPanel>
-                <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
                     <Label HorizontalAlignment="Center" Content="Start Address" />
                     <TextBox Text="{Binding StartAddress}" />
                     <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
                 </StackPanel>
                 <Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
         </StackPanel>
-        <Grid DockPanel.Dock="Bottom" IsVisible="{Binding IsPaused}" RowDefinitions="Auto,*">
+        <Grid DockPanel.Dock="Bottom" IsVisible="{Binding IsPaused}" RowDefinitions="Auto,*" IsEnabled="{Binding IsPaused}">
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Content="Step into" Command="{Binding StepIntoCommand}" />
             </StackPanel>

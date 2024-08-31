@@ -23,6 +23,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
     IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
 
+    private readonly IMessenger _messenger;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     private bool _isPaused;
@@ -62,6 +64,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
+        _messenger = messenger;
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => IsPaused = true;
@@ -80,12 +83,11 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [RelayCommand]
     private void Pause() {
         _pauseHandler.RequestPause("Pause button pressed in debug window");
+        _messenger.Send(new UpdateViewMessage());
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void Continue() {
-        _pauseHandler.Resume();
-    }
+    private void Continue() => _pauseHandler.Resume();
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
     public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
