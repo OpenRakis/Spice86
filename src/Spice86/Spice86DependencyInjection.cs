@@ -124,7 +124,8 @@ public class Spice86DependencyInjection : IDisposable {
             bootUpInTextMode: configuration.InitializeDOS is true);
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
 
-        Timer timer = new Timer(configuration, state, ioPortDispatcher, loggerService, dualPic);
+        Timer timer = new Timer(configuration, state, ioPortDispatcher,
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 

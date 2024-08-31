@@ -31,13 +31,13 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
     public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
-        ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
+        CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        CounterConfiguratorFactory counterConfiguratorFactory = new(configuration, loggerService);
+        
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
                 _loggerService,
-                i, counterConfiguratorFactory.InstanciateCounterActivator(state));
+                i, counterConfiguratorFactory.InstanciateCounterActivator());
         }
         InitPortHandlers(ioPortDispatcher);
     }
@@ -52,6 +52,12 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         }
     }
 
+    /// <summary>
+    /// Gets the counter at the specified index.
+    /// </summary>
+    /// <param name="counterIndex">The index of the counter to retrieve</param>
+    /// <returns>A reference to the counter</returns>
+    /// <exception cref="InvalidCounterIndexException">The index was out of range.</exception>
     public Counter GetCounter(int counterIndex) {
         if (counterIndex > _counters.Length || counterIndex < 0) {
             throw new InvalidCounterIndexException(_state, counterIndex);
@@ -59,6 +65,9 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         return _counters[counterIndex];
     }
 
+    /// <summary>
+    /// Gets the number of ticks in the first counter.
+    /// </summary>
     public long NumberOfTicks => _counters[0].Ticks;
 
     /// <inheritdoc />
@@ -104,6 +113,9 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     }
 
 
+    /// <summary>
+    /// If the counter is activated, triggers the interrupt request
+    /// </summary>
     public void Tick() {
         if (_counters[0].ProcessActivation()) {
             _dualPic.ProcessInterruptRequest(0);

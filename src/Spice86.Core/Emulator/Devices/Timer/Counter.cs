@@ -33,6 +33,7 @@ public class Counter {
     /// </summary>
     /// <param name="state">The CPU state</param>
     /// <param name="loggerService">The logger service implementation</param>
+    /// <param name="index">The index of the counter in the counter array.</param>
     /// <param name="activator">The activator for the counter</param>
     public Counter(State state, ILoggerService loggerService, int index, CounterActivator activator) {
         _loggerService = loggerService;
@@ -192,6 +193,10 @@ public class Counter {
         return Lsb(value);
     }
 
+    /// <summary>
+    /// Updates the frequency of activation based on the desired frequency
+    /// </summary>
+    /// <param name="desiredFrequency">The desired frequency of activation</param>
     public void UpdateDesiredFreqency(long desiredFrequency) {
         Activator.Frequency = desiredFrequency;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {

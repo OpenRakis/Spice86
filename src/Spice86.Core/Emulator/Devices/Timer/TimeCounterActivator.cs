@@ -1,4 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Timer;
+
+using Spice86.Core.Emulator.VM;
+
 /// <summary>
 /// Counter activator based on real system time
 /// </summary>
@@ -6,9 +9,14 @@ public class TimeCounterActivator : CounterActivator {
     private long _lastActivationTime = System.Diagnostics.Stopwatch.GetTimestamp();
     private long _timeBetweenTicks;
     private long _ticks = 0;
-    public TimeCounterActivator(double multiplier) : base(multiplier) {
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TimeCounterActivator"/> class.
+    /// </summary>
+    public TimeCounterActivator(IPauseHandler pauseHandler, double multiplier) : base(pauseHandler, multiplier) {
     }
 
+    /// <inheritdoc />
     public override bool IsActivated {
         get {
             _ticks++;
@@ -29,6 +37,7 @@ public class TimeCounterActivator : CounterActivator {
         }
     }
 
+    /// <inheritdoc />
     protected override void UpdateNonZeroFrequency(double desiredFrequency) {
         _timeBetweenTicks = (long)(System.Diagnostics.Stopwatch.Frequency / desiredFrequency);
     }
