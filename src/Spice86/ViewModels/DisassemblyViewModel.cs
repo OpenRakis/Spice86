@@ -26,9 +26,11 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IInstructionExecutor _cpu;
 
-    [ObservableProperty] private string _header = "Disassembly View";
+    [ObservableProperty]
+    private string _header = "Disassembly View";
 
-    [ObservableProperty] private AvaloniaList<CpuInstructionInfo> _instructions = new();
+    [ObservableProperty]
+    private AvaloniaList<CpuInstructionInfo> _instructions = new();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
@@ -103,7 +105,8 @@ public partial class DisassemblyViewModel : ViewModelBase {
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    [ObservableProperty] private CpuInstructionInfo? _selectedInstruction;
+    [ObservableProperty]
+    private CpuInstructionInfo? _selectedInstruction;
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {

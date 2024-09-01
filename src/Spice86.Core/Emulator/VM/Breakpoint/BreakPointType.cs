@@ -12,7 +12,7 @@ public enum BreakPointType {
 
     /// <summary>
     /// CPU breakpoint triggered when the number of cycles executed by the CPU reach the number
-    /// specified in the breakpoint address.
+    /// specified in the breakpoint.
     /// </summary>
     CYCLES,
 
