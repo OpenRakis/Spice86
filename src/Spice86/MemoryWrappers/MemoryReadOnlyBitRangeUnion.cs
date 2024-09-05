@@ -4,13 +4,12 @@ using AvaloniaHex.Document;
 
 using JetBrains.Annotations;
 
-using Spice86.Core.Emulator.Memory;
-
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 
-public class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
+/// <inheritdoc/>
+internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     private readonly uint _startAddress;
     private readonly uint _endAddress;
 
