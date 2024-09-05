@@ -129,6 +129,10 @@ public class Stack {
         _memory.UInt32[_state.StackPhysicalAddress] = value;
     }
 
+    /// <summary>
+    /// Pops a number of bytes from the stack (that is, decrements the stack pointer), without returning any value
+    /// </summary>
+    /// <param name="numberOfBytesToPop">The number of bytes to pop. The Stack Pointer Register will be decremented by this value</param>
     public void Discard(int numberOfBytesToPop) {
         _state.SP = (ushort)(numberOfBytesToPop + _state.SP);
     }
