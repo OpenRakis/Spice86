@@ -130,9 +130,9 @@ public class Stack {
     }
 
     /// <summary>
-    /// Pops a number of bytes from the stack (that is, decrements the stack pointer), without returning any value
+    /// Pops a number of bytes from the stack (that is, increment the stack pointer), without returning any value
     /// </summary>
-    /// <param name="numberOfBytesToPop">The number of bytes to pop. The Stack Pointer Register will be decremented by this value</param>
+    /// <param name="numberOfBytesToPop">The number of bytes to pop. The Stack Pointer Register will be incremented by this value</param>
     public void Discard(int numberOfBytesToPop) {
         _state.SP = (ushort)(numberOfBytesToPop + _state.SP);
     }
@@ -168,7 +168,7 @@ public class Stack {
             if (i == PhysicalAddress) {
                 sb.Append('*');
             }
-            sb.Append("[0x").AppendFormat("{0:X6}", i).Append("] 0x").AppendFormat("{0:X4}", _memory.UInt16[i]).AppendLine();
+            sb.Append("[0x").Append($"{i:X6}").Append("] 0x").Append($"{_memory.UInt16[i]:X4}").AppendLine();
         }
         return sb.ToString();
     }
