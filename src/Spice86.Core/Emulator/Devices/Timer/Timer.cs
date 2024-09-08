@@ -37,12 +37,12 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
                 _loggerService,
-                i, counterConfiguratorFactory.InstanciateCounterActivator());
+                i, counterConfiguratorFactory.InstantiateCounterActivator());
         }
         InitPortHandlers(ioPortDispatcher);
     }
 
-    /// <inheritdoc cref="ITimeMultiplier" />
+    /// <inheritdoc cref="ITimeMultiplier.SetTimeMultiplier(double)" />
     public void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));

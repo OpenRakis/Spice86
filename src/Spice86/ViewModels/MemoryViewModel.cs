@@ -102,7 +102,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     public async Task CopySelection() {
         if (SelectionRange is not null && StartAddress is not null) {
-            byte[] memoryBytes = _memory.GetData(
+            byte[] memoryBytes = _memory.ReadRam(
                 (uint)(StartAddress.Value + SelectionRange.Value.Start.ByteIndex),
                 (uint)SelectionRange.Value.ByteLength);
             string hexRepresentation = ConvertUtils.ByteArrayToHexString(memoryBytes);
@@ -181,12 +181,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
                 searchLength = (int)(AddressOFoundOccurence.Value - 1);
             }
             if(SearchDataType == MemorySearchDataType.Binary && ConvertUtils.TryParseHexToByteArray(MemorySearchValue, out byte[]? searchBytes)) {
-                AddressOFoundOccurence = await Task.Run(
-                    () =>_memory.SearchValue(searchStartAddress, searchLength, searchBytes), token).ConfigureAwait(false);
+                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token).ConfigureAwait(false);
             } else if(SearchDataType == MemorySearchDataType.Ascii) {
                 searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
-                AddressOFoundOccurence = await Task.Run(
-                    () => _memory.SearchValue(searchStartAddress, searchLength, searchBytes), token).ConfigureAwait(false);
+                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token).ConfigureAwait(false);
             }
         } finally {
             await _uiDispatcher.InvokeAsync(() => {
@@ -195,7 +193,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             });
         }
     }
-    
+
+    private async Task<uint?> PerformMemorySearchAsync(uint searchStartAddress, int searchLength, byte[] searchBytes, CancellationToken token) =>
+        await Task.Run(
+            () =>_memory.SearchValue(searchStartAddress, searchLength, searchBytes), token).ConfigureAwait(false);
+
     [RelayCommand(CanExecute = nameof(IsAddressOfFoundOccurrenceValid))]
     private void GoToFoundOccurence() {
         if (AddressOFoundOccurence is not null && NewMemoryViewCommand.CanExecute(null)) {
@@ -307,7 +309,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {
         if (StartAddress is not null && EndAddress is not null) {
-            await _storageProvider.SaveBinaryFile(_memory.GetData(StartAddress.Value, EndAddress.Value - StartAddress.Value));
+            await _storageProvider.SaveBinaryFile(_memory.ReadRam(EndAddress.Value - StartAddress.Value, StartAddress.Value));
         }
     }
 
@@ -324,7 +326,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void EditMemory() {
         IsEditingMemory = true;
         if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
-            MemoryEditValue = Convert.ToHexString(_memory.GetData(memoryEditAddressValue.Value, (uint)(MemoryEditValue?.Length ?? sizeof(ushort))));
+            MemoryEditValue = Convert.ToHexString(_memory.ReadRam((uint)(MemoryEditValue?.Length ?? sizeof(ushort)), memoryEditAddressValue.Value));
         }
     }
 
