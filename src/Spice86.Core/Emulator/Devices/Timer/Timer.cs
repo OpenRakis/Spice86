@@ -37,7 +37,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Counter(state,
                 _loggerService,
-                i, counterConfiguratorFactory.InstanciateCounterActivator());
+                i, counterConfiguratorFactory.InstantiateCounterActivator());
         }
         InitPortHandlers(ioPortDispatcher);
     }

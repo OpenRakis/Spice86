@@ -30,7 +30,7 @@ public class CounterConfiguratorFactory {
     /// <summary>
     /// Creates a new instance of one of the implementations of <see cref="CounterActivator"/> class based on the emulator configuration.
     /// </summary>
-    public CounterActivator InstanciateCounterActivator() {
+    public CounterActivator InstantiateCounterActivator() {
         long? instructionsPerSecond = _configuration.InstructionsPerSecond;
         if (instructionsPerSecond == null && _configuration.GdbPort != null) {
             // With GDB, force to instructions per seconds as time based timers could perturbate steps
