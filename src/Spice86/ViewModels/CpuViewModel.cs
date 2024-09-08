@@ -21,11 +21,11 @@ public partial class CpuViewModel : ViewModelBase {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(State state, IPauseHandler pauseHandler) {
+    public CpuViewModel(State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
-        pauseHandler.Pausing += () => _isPaused = true;
+        pauseHandler.Pausing += () => uiDispatcher.Post(() => _isPaused = true);
         _isPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => _isPaused = false;
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 

@@ -230,7 +230,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _memory = memory;
         _pauseHandler.Pausing += OnPause;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => IsPaused = false;
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
@@ -274,8 +274,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
     
     private void OnPause() {
-        IsPaused = true;
-        UpdateBinaryDocument();
+        _uiDispatcher.Post(() => {
+            IsPaused = true;
+            UpdateBinaryDocument();
+        });
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]

@@ -20,9 +20,9 @@ public partial class PerformanceViewModel : ViewModelBase {
 
     private bool _isPaused;
     
-    public PerformanceViewModel(State state, IPauseHandler pauseHandler) {
-        pauseHandler.Pausing += () => _isPaused = true;
-        pauseHandler.Resumed += () => _isPaused = false;
+    public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+        pauseHandler.Pausing += () => uiDispatcher.Post(() => _isPaused = true);
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         _state = state;
         _isPaused = pauseHandler.IsPaused;
         _performanceMeasurer = new PerformanceMeasurer();
