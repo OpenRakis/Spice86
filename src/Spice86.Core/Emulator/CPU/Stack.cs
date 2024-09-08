@@ -168,7 +168,7 @@ public class Stack {
             if (i == PhysicalAddress) {
                 sb.Append('*');
             }
-            sb.Append("[0x").Append($"{i:X6}").Append("] 0x").Append($"{_memory.UInt16[i]:X4}").AppendLine();
+            sb.AppendLine($"[0x{i:X6}] 0x{_memory.UInt16[i]:X4}");
         }
         return sb.ToString();
     }
