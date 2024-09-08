@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Spice86.Controls">
 
     <Design.PreviewWith>
         <Border Padding="20">
@@ -13,7 +14,8 @@
     <Style Selector="Button.hyperlink">
         <Setter Property="Template">
             <ControlTemplate>
-                <TextBlock Text="{TemplateBinding Content}" Foreground="{DynamicResource HyperlinkButtonForeground }" TextDecorations="Underline">
+                <TextBlock Text="{TemplateBinding Content}" Foreground="{DynamicResource HyperlinkButtonForeground }"
+                           TextDecorations="Underline">
                     <TextBlock.Styles>
                         <Style Selector="TextBlock:pointerover">
                             <Setter Property="Foreground" Value="{DynamicResource HyperlinkButtonOverForeground }" />

@@ -124,7 +124,8 @@ public class Spice86DependencyInjection : IDisposable {
             bootUpInTextMode: configuration.InitializeDOS is true);
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
 
-        Timer timer = new Timer(configuration, state, ioPortDispatcher, loggerService, dualPic);
+        Timer timer = new Timer(configuration, state, ioPortDispatcher,
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 
@@ -145,9 +146,11 @@ public class Spice86DependencyInjection : IDisposable {
         ClassicDesktopStyleApplicationLifetime? desktop = null;
         ITextClipboard? textClipboard = null;
         IHostStorageProvider? hostStorageProvider = null;
+        IUIDispatcher? uiThreadDispatcher = null;
 
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
+            uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
             PerformanceViewModel performanceViewModel = new(state, pauseHandler);
             mainWindow = new() {
                 PerformanceViewModel = performanceViewModel
@@ -156,7 +159,7 @@ public class Spice86DependencyInjection : IDisposable {
             hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
-                timer, new UIDispatcher(Dispatcher.UIThread), hostStorageProvider, textClipboard, configuration,
+                timer, uiThreadDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler);
         }
 
@@ -236,12 +239,13 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         DebugWindowViewModel? debugWindowViewModel = null;
-        if (textClipboard != null && hostStorageProvider != null) {
+        if (textClipboard != null && hostStorageProvider != null && uiThreadDispatcher != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            debugWindowViewModel = new DebugWindowViewModel(state, memory,
+            debugWindowViewModel = new DebugWindowViewModel(cpu, state, memory,
                 midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
-                cfgCpu.ExecutionContextManager, messenger, textClipboard, hostStorageProvider,
-                new StructureViewModelFactory(configuration, loggerService, pauseHandler), pauseHandler);
+                cfgCpu.ExecutionContextManager, messenger, uiThreadDispatcher, textClipboard, hostStorageProvider, 
+                new StructureViewModelFactory(configuration, loggerService, pauseHandler),
+                pauseHandler);
         }
 
         if (desktop != null && mainWindow != null) {

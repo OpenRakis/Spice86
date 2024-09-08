@@ -23,6 +23,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
     IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
 
+    private readonly IMessenger _messenger;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     private bool _isPaused;
@@ -53,39 +55,36 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(State cpuState, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
-        ExecutionContextManager executionContextManager, IMessenger messenger,
+        ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
+        _messenger = messenger;
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => IsPaused = true;
         pauseHandler.Resumed += () => IsPaused = false;
-        DisassemblyViewModel disassemblyVm = new(memory, cpuState, pauseHandler, messenger);
+        DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, pauseHandler, uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
         CpuViewModel = new(cpuState, pauseHandler);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModels.Add(new(memory, pauseHandler, messenger, textClipboard, storageProvider, structureViewModelFactory));
+        MemoryViewModels.Add(new(memory, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
     }
 
     [RelayCommand]
-    private void Pause() {
-        _pauseHandler.RequestPause("Pause button pressed in debug window");
-    }
+    private void Pause() => _pauseHandler.RequestPause("Pause button pressed in debug window");
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void Continue() {
-        _pauseHandler.Resume();
-    }
+    private void Continue() => _pauseHandler.Resume();
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
     public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
