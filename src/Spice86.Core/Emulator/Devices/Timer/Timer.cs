@@ -42,7 +42,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         InitPortHandlers(ioPortDispatcher);
     }
 
-    /// <inheritdoc cref="ITimeMultiplier" />
+    /// <inheritdoc cref="ITimeMultiplier.SetTimeMultiplier(double)" />
     public void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
