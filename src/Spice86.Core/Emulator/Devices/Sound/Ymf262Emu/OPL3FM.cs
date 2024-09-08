@@ -15,7 +15,8 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer2Mask = 0xA0;
 
     private readonly SoundChannel _soundChannel;
-    private readonly FmSynthesizer? _synth;
+    //TODO: replace it with nukedOpl3.
+    private readonly dynamic? _synth;
     private readonly IPauseHandler _pauseHandler;
     private int _currentAddress;
     private volatile bool _endThread;
@@ -45,7 +46,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     public OPL3FM(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         _pauseHandler = pauseHandler;
         _soundChannel = fmSynthSoundChannel;
-        _synth = new(48000);
+        //_synth = new(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
             Name = nameof(OPL3FM)
         };
@@ -148,7 +149,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
-        _synth?.GetData(buffer);
+        //_synth?.GetData(buffer);
         ChannelAdapter.MonoToStereo(buffer, playBuffer);
     }
 
