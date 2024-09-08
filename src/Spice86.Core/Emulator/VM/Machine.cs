@@ -192,9 +192,9 @@ public sealed class Machine : IDisposable {
     public DmaController DmaController { get; }
 
     /// <summary>
-    /// The OPL3 FM Synth chip.
+    /// The OPL2 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public OPL2FM OPL2FM { get; }
 
     /// <summary>
     /// The internal software mixer for all sound channels.
@@ -260,7 +260,7 @@ public sealed class Machine : IDisposable {
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
         DmaController dmaController,
-        OPL3FM opl3FM,
+        OPL2FM opl2FM,
         SoftwareMixer softwareMixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
@@ -298,7 +298,7 @@ public sealed class Machine : IDisposable {
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
         DmaController = dmaController;
-        OPL3FM = opl3FM;
+        OPL2FM = opl2FM;
         SoftwareMixer = softwareMixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
@@ -315,7 +315,7 @@ public sealed class Machine : IDisposable {
             if (disposing) {
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
-                OPL3FM.Dispose();
+                OPL2FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
             }
