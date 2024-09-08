@@ -151,7 +151,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
             uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            PerformanceViewModel performanceViewModel = new(state, pauseHandler);
+            PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiThreadDispatcher);
             mainWindow = new() {
                 PerformanceViewModel = performanceViewModel
             };

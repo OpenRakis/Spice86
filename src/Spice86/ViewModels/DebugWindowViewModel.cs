@@ -67,14 +67,14 @@ public partial class DebugWindowViewModel : ViewModelBase,
         _messenger = messenger;
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += () => IsPaused = true;
-        pauseHandler.Resumed += () => IsPaused = false;
+        pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
+        pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, pauseHandler, uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
-        PaletteViewModel = new(argbPalette);
+        PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
-        CpuViewModel = new(cpuState, pauseHandler);
+        CpuViewModel = new(cpuState, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
         MemoryViewModels.Add(new(memory, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
