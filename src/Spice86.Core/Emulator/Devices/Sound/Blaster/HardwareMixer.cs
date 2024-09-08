@@ -10,20 +10,20 @@ public class HardwareMixer {
     private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
     private readonly SoundChannel _pcmSoundChannel;
-    private readonly SoundChannel _opl3fmSoundChannel;
+    private readonly SoundChannel _opl2fmSoundChannel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class with the specified SoundBlaster instance.
     /// </summary>
     /// <param name="soundBlasterHardwareConfig">The SoundBlaster IRQs, and DMA information.</param>
-    /// <param name="opl3fmSoundChannel">The sound channel for FM synth music.</param>
+    /// <param name="opl2fmSoundChannel">The sound channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
     /// <param name="pcmSoundChannel">The sound channel for sound effects.</param>
-    public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig, SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel, ILoggerService loggerService) {
+    public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig, SoundChannel pcmSoundChannel, SoundChannel opl2fmSoundChannel, ILoggerService loggerService) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;
         _pcmSoundChannel = pcmSoundChannel;
-        _opl3fmSoundChannel = opl3fmSoundChannel;
+        _opl2fmSoundChannel = opl2fmSoundChannel;
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class HardwareMixer {
                 _pcmSoundChannel.Volume = percentScaledValue;
                 break;
             case 0x26:  /* FM Volume (SBPRO) */
-                _opl3fmSoundChannel.Volume = percentScaledValue;
+                _opl2fmSoundChannel.Volume = percentScaledValue;
                 break;
             default:
                 if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
