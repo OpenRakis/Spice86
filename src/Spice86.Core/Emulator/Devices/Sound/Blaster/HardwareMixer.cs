@@ -10,7 +10,7 @@ public class HardwareMixer {
     private readonly SoundBlasterHardwareConfig _blasterHardwareConfig;
     private readonly ILoggerService _logger;
     private readonly SoundChannel _pcmSoundChannel;
-    private readonly SoundChannel _opl3fmSoundChannel;
+    private readonly SoundChannel _opl2fmSoundChannel;
 
     // Mixer volume registers (0-31 range)
     private readonly byte[] _masterVolume = new byte[2] { 31, 31 }; // Left, Right
@@ -44,16 +44,14 @@ public class HardwareMixer {
     /// Initializes a new instance of the <see cref="HardwareMixer"/> class
     /// </summary>
     /// <param name="soundBlasterHardwareConfig">The SoundBlaster IRQs, and DMA information.</param>
-    /// <param name="pcmSoundChannel">The sound channel for sound effects.</param>
-    /// <param name="opl3fmSoundChannel">The sound channel for FM synth music.</param>
+    /// <param name="opl2fmSoundChannel">The sound channel for FM synth music.</param>
     /// <param name="loggerService">The service used for logging.</param>
-    public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig,
-        SoundChannel pcmSoundChannel, SoundChannel opl3fmSoundChannel,
-        ILoggerService loggerService) {
+    /// <param name="pcmSoundChannel">The sound channel for sound effects.</param>
+    public HardwareMixer(SoundBlasterHardwareConfig soundBlasterHardwareConfig, SoundChannel pcmSoundChannel, SoundChannel opl2fmSoundChannel, ILoggerService loggerService) {
         _logger = loggerService;
         _blasterHardwareConfig = soundBlasterHardwareConfig;
         _pcmSoundChannel = pcmSoundChannel;
-        _opl3fmSoundChannel = opl3fmSoundChannel;
+        _opl2fmSoundChannel = opl2fmSoundChannel;
     }
 
     /// <summary>
@@ -571,7 +569,7 @@ public class HardwareMixer {
 
         float fmLeft = CalculatePercentage(_fmVolume[0]) * masterLeft;
         float fmRight = CalculatePercentage(_fmVolume[1]) * masterRight;
-        _opl3fmSoundChannel.Volume = (int)((fmLeft + fmRight) * 50); // Average and scale to 0-100
+        _opl2fmSoundChannel.Volume = (int)((fmLeft + fmRight) * 50); // Average and scale to 0-100
     }
 
     private static float CalculatePercentage(byte volume) {
