@@ -8,12 +8,15 @@
 		xmlns:b="clr-namespace:Spice86.Behaviors"
 		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 		xmlns:userControls="clr-namespace:Spice86.UserControls"
+		xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+		xmlns:controls="clr-namespace:Spice86.Controls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
-		x:Name="Main"
 		Icon="/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
 		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
+		MinWidth="1024"
+		MinHeight="768"
 		Width="1024"
 		Height="768"
 		WindowStartupLocation="CenterScreen"
@@ -30,29 +33,48 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
 			<MenuItem Header="Debug">
-				<MenuItem Header="Internal debugger" IsEnabled="{Binding IsEmulatorRunning}">
+				<MenuItem IsEnabled="{Binding IsEmulatorRunning}">
+					<MenuItem.Header>
+						<StackPanel Orientation="Horizontal">
+							<fluent:SymbolIcon Symbol="Glance" />
+							<Label Content="Internal Debugger" />
+						</StackPanel>
+					</MenuItem.Header>
 					<i:Interaction.Behaviors>
 						<b:ShowInternalDebuggerBehavior />
 					</i:Interaction.Behaviors>
 				</MenuItem>
-				<MenuItem Header="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}">
-				<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
-				<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
-				<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
-				<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
-				<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
-				<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
-				<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
+				<MenuItem>
+					<MenuItem.Header>
+						<StackPanel Orientation="Horizontal">
+							<fluent:SymbolIcon Symbol="Info" />
+							<Label Content="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}" />
+						</StackPanel>
+					</MenuItem.Header>
+					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
+					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
+					<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
+					<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
+					<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
+					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
+					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 				</MenuItem>
-				<MenuItem Header="Dump emulator state to directory..." IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}" />
-			</MenuItem>
+				<MenuItem IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
+					<MenuItem.Header>
+						<StackPanel Orientation="Horizontal">
+							<fluent:SymbolIcon Symbol="Document" />
+							<Label Content="Dump emulator state to directory..." />
+						</StackPanel>
+					</MenuItem.Header>
+				</MenuItem>
+				</MenuItem>
 			<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 				<MenuItem>
 					<MenuItem.Header>
-						<Grid ColumnDefinitions="Auto,Auto">
-							<Label Grid.Column="0" Content="Scale" HorizontalContentAlignment="Center" />
-							<NumericUpDown Grid.Column="1" Text="{Binding Scale}" Margin="5,0,0,0" />
-						</Grid>
+						<StackPanel Orientation="Horizontal">
+							<Label Content="Scale" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
+							<NumericUpDown Text="{Binding Scale}" Margin="5,0,0,0" />
+						</StackPanel>
 					</MenuItem.Header>
 				</MenuItem>
 				<MenuItem>
@@ -62,21 +84,28 @@
 				</MenuItem>
 				<MenuItem Command="{Binding SaveBitmapCommand}">
 					<MenuItem.Header>
-						<Label Content="Save Bitmap" />
+						<StackPanel Orientation="Horizontal">
+							<fluent:SymbolIcon Symbol="Image" />
+							<Label Content="Save Bitmap" />
+						</StackPanel>
 					</MenuItem.Header>
 				</MenuItem>
 			</MenuItem>
 		</Menu>
-		<WrapPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-			<Button Focusable="False" Content="Pause︎" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}" />
-			<Button Focusable="False" Content="Continue" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}" />
+		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+			<Button Focusable="False" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}">
+				<fluent:SymbolIcon Symbol="Pause" />
+			</Button>
+			<Button Focusable="False" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}">
+				<fluent:SymbolIcon Symbol="Play" />
+			</Button>
 			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
 			<NumericUpDown Focusable="False" Margin="5,0,0,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
-			<Button Focusable="False" Margin="5,0,0,0" Content="Reset" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}" />
-		</WrapPanel>
-		<WrapPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
-			<ContentPresenter Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
-		</WrapPanel>
+			<Button Focusable="False" Margin="5,0,0,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
+				<fluent:SymbolIcon Symbol="ArrowReset" />
+			</Button>
+		</StackPanel>
+		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
@@ -93,14 +122,20 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<Border Grid.Row="2">
-			<WrapPanel Orientation="Horizontal">
+		<controls:StatusBar VerticalAlignment="Bottom" Grid.Row="2">
+			<controls:StatusBarItem>
 				<TextBlock Text="{Binding StatusMessage}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding AsmOverrideStatus}" />
-				<TextBlock Margin="5,0,0,0" Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding AsmOverrideStatus}" />
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
 				           IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
-			</WrapPanel>
-		</Border>
+			</controls:StatusBarItem>
+		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
 		           IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />

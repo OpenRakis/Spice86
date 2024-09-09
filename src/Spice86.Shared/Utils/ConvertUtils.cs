@@ -2,6 +2,7 @@
 
 using Spice86.Shared.Emulator.Memory;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -91,6 +92,8 @@ public static partial class ConvertUtils {
         return (uint)((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
     }
     
+    private const int HexadecimalByteDigitLength = 2;
+    
     /// <summary>
     /// Converts a hexadecimal string to a byte array.
     /// </summary>
@@ -99,11 +102,35 @@ public static partial class ConvertUtils {
     public static byte[] HexToByteArray(string valueString) {
         byte[] res = new byte[valueString.Length / 2];
         for (int i = 0; i < valueString.Length; i += 2) {
-            string hex = valueString.Substring(i, 2);
-            res[i / 2] = byte.Parse(hex, NumberStyles.HexNumber);
+            string hex = valueString.Substring(i, HexadecimalByteDigitLength);
+            res[i / HexadecimalByteDigitLength] = byte.Parse(hex, NumberStyles.HexNumber);
         }
 
         return res;
+    }
+    
+    /// <summary>
+    /// Tries to convert a hexadecimal string to a byte array.
+    /// </summary>
+    /// <param name="valueString">The hexadecimal string to convert.</param>
+    /// <param name="bytes">The byte array representation of the hexadecimal string.</param>
+    /// <returns><c>False</c> if the conversion fails, <c>True</c> otherwise</returns>
+    public static bool TryParseHexToByteArray(string valueString, [NotNullWhen(true)] out byte[]? bytes) {
+        byte[] result = new byte[valueString.Length / 2];
+        for (int i = 0; i < valueString.Length; i += HexadecimalByteDigitLength) {
+            if(i + HexadecimalByteDigitLength > valueString.Length) {
+                bytes = null;
+                return false;
+            }
+            string hex = valueString.Substring(i, HexadecimalByteDigitLength);
+            if (!byte.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b)) {
+                bytes = null;
+                return false;
+            }
+            result[i / 2] = b;
+        }
+        bytes = result;
+        return true;
     }
 
     /// <summary> Sign extend value considering it is a 16 bit value </summary>

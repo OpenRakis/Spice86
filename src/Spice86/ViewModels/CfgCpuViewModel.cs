@@ -28,8 +28,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private long _averageNodeTime;
 
-    [ObservableProperty] private bool _isVisible;
-
     public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
         IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
@@ -54,7 +52,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         if (Graph is not null) {
             return;
         }
-
+        
         await Task.Run(async () => {
             ICfgNode? nodeRoot = _executionContextManager.CurrentExecutionContext?.LastExecuted;
             if (nodeRoot is null) {

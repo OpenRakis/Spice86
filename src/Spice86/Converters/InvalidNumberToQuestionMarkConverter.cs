@@ -11,8 +11,7 @@ using System.Globalization;
 internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
     /// <inheritdoc/>
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        switch (value)
-        {
+        switch (value) {
             case null:
             case long l when l == -1:
             case int i when i == -1:
@@ -30,12 +29,10 @@ internal class InvalidNumberToQuestionMarkConverter : IValueConverter {
 
     /// <inheritdoc/>
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        if (value is string str && str == "?") {
-            return -1;
-        }
-        if (value is string longStr && long.TryParse(longStr, out long longValue)) {
-            return longValue;
-        }
-        return null;
+        return value switch {
+            string and "?" => -1,
+            string longStr when long.TryParse(longStr, out long longValue) => longValue,
+            _ => null
+        };
     }
 }

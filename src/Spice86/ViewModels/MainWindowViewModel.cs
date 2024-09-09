@@ -342,9 +342,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private void OnResumed() => Dispatcher.UIThread.Invoke(() => IsPaused = false, DispatcherPriority.Normal);
+    private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Normal);
 
-    private void OnPausing() => Dispatcher.UIThread.Invoke(() => IsPaused = true, DispatcherPriority.Normal);
+    private void OnPausing() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Normal);
 
     [ObservableProperty]
     private string _currentLogLevel = "";
