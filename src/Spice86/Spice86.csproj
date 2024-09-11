@@ -71,7 +71,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.253" />
+        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.258" />
         <PackageReference Include="Iced" Version="1.21.0" />
         <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
