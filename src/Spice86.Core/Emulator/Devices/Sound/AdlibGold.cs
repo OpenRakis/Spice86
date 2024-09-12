@@ -27,9 +27,12 @@ public sealed class AdlibGold  {
 
     public void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
 
-    private void Process(short[] input, uint framesRemaining, AudioFrame output) {
-        for (var index = 0; framesRemaining-- > 0; index++) {
-            AudioFrame frame = new(output.AsSpan());
+    private void Process(Span<short> input, uint frames, Span<float> output) {
+        uint framesRemaining = frames;
+        int index = 0;
+        while(framesRemaining-- > 0) {
+            Span<short> inputPart = input.Slice(index, 2);
+            AudioFrame frame = new AudioFrame(inputPart.Cast<short, float>());
             AudioFrame wet = _surroundProcessor.Process(frame);
 
             // Additional wet signal level boost to make the emulated
@@ -41,6 +44,7 @@ public sealed class AdlibGold  {
 
             output[index] = frame.Left;
             output[index + 1] = frame.Right;
+            index += 2;
         }
     }
 
