@@ -41,6 +41,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -379,9 +380,11 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler,
             timer,
             timerInt8Handler,
-            vgaCard, videoState, vgaIoPortHandler,
-            vgaRenderer, vgaBios, vgaRom,
-            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            vgaCard, videoState, vgaIoPortHandler, vgaRenderer, vgaBios, vgaRom,
+            dmaController, new Opl(
+                state, timer, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService,
+                new AdlibGold(loggerService), OplMode.Opl3),
+            softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
