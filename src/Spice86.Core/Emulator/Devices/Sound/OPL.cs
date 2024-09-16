@@ -1,9 +1,14 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Spice86.Core.Emulator.CPU;
+
 using System.Runtime.InteropServices;
 
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Interfaces;
 
 public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
@@ -105,9 +110,9 @@ public class OplTimer {
 }
 
 public class Chip {
-    private Machine _machine;
-    public Chip(Machine machine) {
-        _machine = machine;
+    private Timer _timer;
+    public Chip(Timer timer) {
+        _timer = timer;
         Timer0 = new(80);
         Timer1 = new(320);
     }
@@ -126,11 +131,11 @@ public class Chip {
         // LOG(LOG_MISC,LOG_ERROR)("write adlib timer %X %X",reg,val);
         switch (reg) {
             case 0x02:
-                Timer0.Update(TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds);
+                Timer0.Update(TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds);
                 Timer0.SetCounter(val);
                 return true;
             case 0x03:
-                Timer1.Update(TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds);
+                Timer1.Update(TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds);
                 Timer1.SetCounter(val);
                 return true;
             case 0x04:
@@ -139,7 +144,7 @@ public class Chip {
                     Timer0.Reset();
                     Timer1.Reset();
                 } else {
-                    double time = TimeSpan.FromTicks(_machine.Timer.NumberOfTicks).TotalMilliseconds;
+                    double time = TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds;
                     if ((val & 0x1) > 0) {
                         Timer0.Start(time);
                     } else {
@@ -163,7 +168,7 @@ public class Chip {
     /// Read the current timer state, will use current double
     /// </summary>
     public byte Read() {
-        TimeSpan time = TimeSpan.FromTicks(_machine.Timer.NumberOfTicks);
+        TimeSpan time = TimeSpan.FromTicks(_timer.NumberOfTicks);
         byte ret = 0;
 
         // Overflow won't be set if a channel is masked
@@ -179,7 +184,10 @@ public class Chip {
     }
 }
 
-public class Opl {
+/// <summary>
+/// The OPL3 / OPL2 / Adlib Gold OPL chip emulation class.
+/// </summary>
+public class Opl : DefaultIOPortHandler {
     public const byte DefaultVolumeValue = 0xff;
 
     //public MixerChannel Channel { get; private set; } = new();
@@ -200,6 +208,8 @@ public class Opl {
     private byte _mem;
 
     private AdlibGold _adlibGold;
+    
+    private OplMode _oplMode;
 
     // Playback related
     private double _lastRenderedMs = 0.0;
@@ -208,8 +218,7 @@ public class Opl {
     // Last selected address in the chip for the different modes
 
     private const int DefaultVolume = 0xff;
-
-
+    
     [StructLayout(LayoutKind.Explicit)]
     private struct Reg {
         [FieldOffset(0)]
@@ -226,11 +235,38 @@ public class Opl {
 
     private Control _ctrl = new();
 
-    public Opl(AdlibGold adlibGold, OplMode mode) {
-        _adlibGold = adlibGold;
-    }
+    private bool _dualOpl = false;
 
-    private void AdlibGoldControlWrite(byte val) {
+    public Opl(State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, AdlibGold adlibGold, OplMode oplMode) : base(state, failOnUnhandledPort, loggerService) {
+        _adlibGold = adlibGold;
+        _oplMode = oplMode;
+        InitPortHandlers(ioPortDispatcher);
+    }
+    
+   private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
+       ioPortDispatcher.AddIOPortHandler(0x388, this);
+       ioPortDispatcher.AddIOPortHandler(0x38b, this);
+       if (_dualOpl) {
+           //Read/Write
+           ioPortDispatcher.AddIOPortHandler(0x220, this);
+           //Read/Write
+           ioPortDispatcher.AddIOPortHandler(0x223, this);
+       }
+       //Read/Write
+       ioPortDispatcher.AddIOPortHandler(0x228, this);
+       //Write
+       ioPortDispatcher.AddIOPortHandler(0x229, this);
+   }
+
+   public override byte ReadByte(int port) {
+       return base.ReadByte(port);
+   }
+
+   public override void WriteByte(int port, byte value) {
+       base.WriteByte(port, value);
+   }
+
+   private void AdlibGoldControlWrite(byte val) {
         switch (_ctrl.Index) {
             case 0x04:
                 _adlibGold.StereoControlWrite((byte)StereoProcessorControlReg.VolumeLeft,
