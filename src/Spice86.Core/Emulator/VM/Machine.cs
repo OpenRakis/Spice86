@@ -10,12 +10,10 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -191,7 +189,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public Opl OPL { get; }
     
     /// <summary>
     /// The internal software mixer for all sound channels.
@@ -226,7 +224,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
-    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, OPL3FM opl3FM, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions, IPauseHandler pauseHandler) {
+    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, Opl opl, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions, IPauseHandler pauseHandler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -258,7 +256,7 @@ public sealed class Machine : IDisposable {
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
         DmaController = dmaController;
-        OPL3FM = opl3FM;
+        OPL = opl;
         SoftwareMixer = softwareMixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
@@ -275,7 +273,7 @@ public sealed class Machine : IDisposable {
             if (disposing) {
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
-                OPL3FM.Dispose();
+                //OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
             }
