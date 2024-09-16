@@ -471,9 +471,11 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler,
             timer,
             timerInt8Handler,
-            vgaCard, videoState, vgaIoPortHandler,
-            vgaRenderer, vgaBios, vgaRom,
-            dmaController, soundBlaster.Opl2Fm, softwareMixer, mouse, mouseDriver,
+            vgaCard, videoState, vgaIoPortHandler, vgaRenderer, vgaBios, vgaRom,
+            dmaController, new Opl(
+                state, timer, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService,
+                new AdlibGold(loggerService), OplMode.Opl3),
+            softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

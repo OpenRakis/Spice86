@@ -66,4 +66,7 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Emulator\Devices\Sound\Ymf262Emu\" />
+  </ItemGroup>
 </Project>
