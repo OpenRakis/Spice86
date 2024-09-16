@@ -166,11 +166,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The SoundBlaster's OPL3 FM sound channel.
     /// </summary>
     public SoundChannel FMSynthSoundChannel { get; }
-    
-    /// <summary>
-    /// The internal FM synth chip for music.
-    /// </summary>
-    public OPL3FM Opl3Fm { get; }
 
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
@@ -204,7 +199,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
         FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
-        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService, pauseHandler);
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
@@ -380,8 +374,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
+        //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
+        //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(IGNORE_PORT, this);
         ioPortDispatcher.AddIOPortHandler(MPU401_DATA_PORT, this);
         ioPortDispatcher.AddIOPortHandler(MPU401_STATUS_COMMAND_PORT, this);
