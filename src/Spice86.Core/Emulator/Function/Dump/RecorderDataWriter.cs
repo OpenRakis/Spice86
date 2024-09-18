@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
+using Serilog.Events;
+
 using System.Text.Json;
 
 using Spice86.Core.Emulator.CPU;
@@ -36,19 +38,21 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Dumps all recorded data to their respective files.
     /// </summary>
-    public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
-        _loggerService.Verbose("Dumping all data to {DumpDirectory}", DumpDirectory);
+    public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Dumping all data to {DumpDirectory}", DumpDirectory);
+        }
         DumpCpuRegisters("");
         DumpMemory("");
-        DumpGhidraSymbols(executionFlowRecorder, functionHandler);
+        DumpGhidraSymbols(executionFlowRecorder, functionCatalogue);
         DumpExecutionFlow();
     }
 
     /// <summary>
     /// Dumps the Ghidra symbols to the file system.
     /// </summary>
-    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
-        new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionHandler, SymbolsFile);
+    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
+        new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionCatalogue, SymbolsFile);
     }
 
     /// <summary>

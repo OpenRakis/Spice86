@@ -5,9 +5,14 @@ using JetBrains.Annotations;
 using Serilog;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.IO;
@@ -158,7 +163,29 @@ public class MachineTest
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestSegpr(bool enableCfgCpu)
     {
-        TestOneBin("segpr", enableCfgCpu);
+        Machine machine = TestOneBin("segpr", enableCfgCpu);
+        if (enableCfgCpu) {
+            // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
+            CfgInstruction? divBy0HandlerEntry = currentInstructions.GetAtAddress(new(0xF000, 0x1100));
+            CfgInstruction? divBy0HandlerIret = currentInstructions.GetAtAddress(new(0xF000, 0x1111));
+            CfgInstruction? divBy0NextInstruction = currentInstructions.GetAtAddress(new(0xF000, 0x0065));
+            Assert.NotNull(divBy0);
+            Assert.NotNull(divBy0HandlerEntry);
+            Assert.NotNull(divBy0HandlerIret);
+            Assert.NotNull(divBy0NextInstruction);
+            // Check that the int handler is linked to the division by 0 as a normal successor
+            Assert.Contains(divBy0HandlerEntry, divBy0.Successors);
+            Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.Normal]);
+            // Check that the instruction next to the div by 0 to which the handler returned to  is linked to the division by 0 as a regular "Call to return" link.
+            // Side-note, normally, div by 0 int handler should return to the div instruction. However, here the handler edits the call stack making it return to the next instruction which is how a regular function call in a high level language would behave
+            Assert.Contains(divBy0NextInstruction, divBy0.Successors);
+            Assert.Contains(divBy0NextInstruction, divBy0.SuccessorsPerType[InstructionSuccessorType.CallToReturn]);
+            // Check that IRET is normally connected to the return target
+            Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.Successors);
+            Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
+        }
     }
 
     [Theory]
@@ -191,7 +218,20 @@ public class MachineTest
         expected[0x01] = 0x00;
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
-        TestOneBin("selfmodifyvalue", expected, enableCfgCpu);
+        Machine machine = TestOneBin("selfmodifyvalue", expected, enableCfgCpu);
+        if (enableCfgCpu) {
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x008));
+            Assert.NotNull(instruction);
+            if (instruction is MovRegImm16 movAxModifiedImm) {
+                InstructionField<ushort> immField = movAxModifiedImm.ValueField;
+                // Code should have been modified so instruction should use memory and not stored value
+                Assert.False(immField.UseValue);
+                Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
+            } else {
+                Assert.Fail("Should have been MOV AX, xxx");
+            }
+        }
     }
 
     [Theory]

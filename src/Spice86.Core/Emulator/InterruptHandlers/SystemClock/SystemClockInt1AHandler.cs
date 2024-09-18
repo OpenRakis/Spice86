@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.Memory;
@@ -16,10 +17,13 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="timerHandler">The timer interrupt handler.</param>
-    public SystemClockInt1AHandler(IMemory memory, Cpu cpu, ILoggerService loggerService, TimerInt8Handler timerHandler) : base(memory, cpu, loggerService) {
+    public SystemClockInt1AHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, TimerInt8Handler timerHandler)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _timerHandler = timerHandler;
         AddAction(0x00, SetSystemClockCounter);
         AddAction(0x01, GetSystemClockCounter);

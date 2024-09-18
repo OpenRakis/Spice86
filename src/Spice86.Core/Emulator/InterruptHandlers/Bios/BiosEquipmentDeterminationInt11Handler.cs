@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -13,9 +13,12 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation</param>
-    public BiosEquipmentDeterminationInt11Handler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public BiosEquipmentDeterminationInt11Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
     }
 
     /// <inheritdoc />
