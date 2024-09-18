@@ -2,9 +2,10 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 
-public class CallFarImm16 : InstructionWithSegmentedAddressField {
+public class CallFarImm16 : InstructionWithSegmentedAddressField, CallInstruction {
     public CallFarImm16(
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,

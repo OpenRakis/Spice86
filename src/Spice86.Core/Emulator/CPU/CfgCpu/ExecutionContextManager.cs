@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class ExecutionContextManager : InstructionReplacer {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly Dictionary<SegmentedAddress, ISet<ICfgNode>> _executionContextEntryPoints = new();
+    private readonly Dictionary<SegmentedAddress, ISet<CfgInstruction>> _executionContextEntryPoints = new();
     private readonly CfgNodeFeeder _cfgNodeFeeder;
     private int _currentDepth;
 
@@ -44,16 +44,16 @@ public class ExecutionContextManager : InstructionReplacer {
 
     private void RegisterCurrentInstructionAsEntryPoint(SegmentedAddress entryAddress) {
         // Register a new entry point
-        ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
-        if (!_executionContextEntryPoints.TryGetValue(entryAddress, out ISet<ICfgNode>? nodes)) {
-            nodes = new HashSet<ICfgNode>();
+        CfgInstruction toExecute = _cfgNodeFeeder.CurrentNodeFromInstructionFeeder;
+        if (!_executionContextEntryPoints.TryGetValue(entryAddress, out ISet<CfgInstruction>? nodes)) {
+            nodes = new HashSet<CfgInstruction>();
             _executionContextEntryPoints.Add(entryAddress, nodes);
         }
         nodes.Add(toExecute);
     }
 
     public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        if (_executionContextEntryPoints.TryGetValue(instruction.Address, out ISet<ICfgNode>? entriesAtAddress) 
+        if (_executionContextEntryPoints.TryGetValue(instruction.Address, out ISet<CfgInstruction>? entriesAtAddress) 
             && entriesAtAddress.Remove(old)) {
             entriesAtAddress.Add(instruction);
         }

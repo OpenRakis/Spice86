@@ -320,7 +320,12 @@ public class State {
     /// <summary>
     /// The physical address of the stack in memory
     /// </summary>
-    public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
+    public uint StackPhysicalAddress => StackSegmentedAddress.ToPhysical();
+    /// <summary>
+    /// The segmented address representation of the stack address in memory
+    /// </summary>
+    public SegmentedAddress StackSegmentedAddress => new SegmentedAddress(SS, SP);
+
 
     /// <summary>
     /// The CPU registers
