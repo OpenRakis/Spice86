@@ -296,7 +296,7 @@ public class Spice86DependencyInjection : IDisposable {
             return res;
         }
 
-        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
             loggerService.Verbose("Override supplied: {OverrideSupplier}", configuration.OverrideSupplier);
         }
 

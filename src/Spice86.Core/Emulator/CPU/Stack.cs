@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Text;
@@ -79,7 +80,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public ushort Pop16() {
-        ushort res = _memory.UInt16[_state.StackPhysicalAddress];
+        ushort res = _memory.UInt16[PhysicalAddress];
         _state.SP = (ushort)(_state.SP + 2);
         return res;
     }
@@ -90,7 +91,7 @@ public class Stack {
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void Push16(ushort value) {
         _state.SP = (ushort)(_state.SP - 2);
-        _memory.UInt16[_state.StackPhysicalAddress] = value;
+        _memory.UInt16[PhysicalAddress] = value;
     }
 
     /// <summary>
@@ -115,7 +116,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value popped from the stack.</returns>
     public uint Pop32() {
-        uint res = _memory.UInt32[_state.StackPhysicalAddress];
+        uint res = _memory.UInt32[PhysicalAddress];
         _state.SP = (ushort)(_state.SP + 4);
         return res;
     }
@@ -126,7 +127,44 @@ public class Stack {
     /// <param name="value">The value to store onto the stack.</param>
     public void Push32(uint value) {
         _state.SP = (ushort)(_state.SP - 4);
-        _memory.UInt32[_state.StackPhysicalAddress] = value;
+        _memory.UInt32[PhysicalAddress] = value;
+    }
+    
+    /// <summary>
+    /// Peeks a SegmentedAddress value from the stack
+    /// </summary>
+    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <returns>The value in memory.</returns>
+    public SegmentedAddress PeekSegmentedAddress(int index) {
+        return _memory.SegmentedAddress[(uint)(PhysicalAddress + index)];
+    }
+
+    /// <summary>
+    /// Pokes a SegmentedAddress value on the stack
+    /// </summary>
+    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="value">The value to store in memory.</param>
+    public void PokeSegmentedAddress(int index, SegmentedAddress value) {
+        _memory.SegmentedAddress[(uint)(PhysicalAddress + index)] = value;
+    }
+
+    /// <summary>
+    /// Pops a SegmentedAddress value from the stack
+    /// </summary>
+    /// <returns>The value retrieved from the stack, therefore read from memory</returns>
+    public SegmentedAddress PopSegmentedAddress() {
+        SegmentedAddress res = _memory.SegmentedAddress[PhysicalAddress];
+        _state.SP = (ushort)(_state.SP + 4);
+        return res;
+    }
+
+    /// <summary>
+    /// Pushes a SegmentedAddress value on the stack
+    /// </summary>
+    /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
+    public void PushSegmentedAddress(SegmentedAddress value) {
+        _state.SP = (ushort)(_state.SP - 4);
+        _memory.SegmentedAddress[PhysicalAddress] = value;
     }
 
     /// <summary>

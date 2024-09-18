@@ -316,11 +316,24 @@ public class State {
     /// <summary>
     /// The segmented address representation of the instruction pointer in memory
     /// </summary>
-    public SegmentedAddress IpSegmentedAddress => new SegmentedAddress(CS, IP);
+    public SegmentedAddress IpSegmentedAddress {
+        get { 
+            return new SegmentedAddress(CS, IP);
+        }
+        set {
+            IP = value.Offset;
+            CS = value.Segment;
+        }
+    }
     /// <summary>
     /// The physical address of the stack in memory
     /// </summary>
-    public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
+    public uint StackPhysicalAddress => StackSegmentedAddress.ToPhysical();
+    /// <summary>
+    /// The segmented address representation of the stack address in memory
+    /// </summary>
+    public SegmentedAddress StackSegmentedAddress => new SegmentedAddress(SS, SP);
+
 
     /// <summary>
     /// The CPU registers
