@@ -11,7 +11,7 @@ using Spice86.Shared.Interfaces;
 public class EmulatorStateSerializer {
     private readonly State _state;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private readonly FunctionHandler _functionHandler;
+    private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
 
     private readonly MemoryDataExporter _memoryDataExporter;
@@ -20,11 +20,11 @@ public class EmulatorStateSerializer {
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
     public EmulatorStateSerializer(MemoryDataExporter memoryDataExporter, State state,
-        ExecutionFlowRecorder executionFlowRecorder, FunctionHandler cpuFunctionHandler, ILoggerService loggerService) {
+        ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
         _state = state;
         _memoryDataExporter = memoryDataExporter;
         _executionFlowRecorder = executionFlowRecorder;
-        _functionHandler = cpuFunctionHandler;
+        _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
     }
     
@@ -39,6 +39,6 @@ public class EmulatorStateSerializer {
                 _executionFlowRecorder,
                 _memoryDataExporter,
                 path, _loggerService)
-            .DumpAll(_executionFlowRecorder, _functionHandler);
+            .DumpAll(_executionFlowRecorder, _functionCatalogue);
     }
 }

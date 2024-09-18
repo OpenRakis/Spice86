@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
@@ -19,10 +20,13 @@ public class MouseInt33Handler : InterruptHandler {
     ///     Create a new instance of the mouse interrupt handler.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger</param>
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
-    public MouseInt33Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, IMouseDriver mouseDriver) : base(memory, cpu, loggerService) {
+    public MouseInt33Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, IMouseDriver mouseDriver)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
     }

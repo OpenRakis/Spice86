@@ -14,9 +14,9 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler {
     /// <summary>
-    /// The emulator CPU.
+    /// Call flow handler provider
     /// </summary>
-    protected readonly Cpu Cpu;
+    protected readonly IFunctionHandlerProvider FunctionHandlerProvider;
 
     /// <summary>
     /// The memory bus.
@@ -37,12 +37,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(cpu.State, loggerService) {
+    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService) : base(state, loggerService) {
         Memory = memory;
-        Cpu = cpu;
-        Stack = cpu.Stack;
+        FunctionHandlerProvider = functionHandlerProvider;
+        Stack = stack;
     }
 
     /// <inheritdoc />
@@ -79,7 +81,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <inheritdoc />
     public override void Run(int index) {
         // By default Log the CS:IP of the caller which is more useful in most situations
-        SegmentedAddress? csIp = Cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
+        SegmentedAddress? csIp = FunctionHandlerProvider.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
         LoggerService.LoggerPropertyBag.CsIp = csIp ?? LoggerService.LoggerPropertyBag.CsIp;
         base.Run(index);
     }

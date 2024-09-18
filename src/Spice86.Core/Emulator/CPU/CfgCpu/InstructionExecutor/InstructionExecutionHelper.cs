@@ -22,12 +22,14 @@ using Spice86.Shared.Utils;
 public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
     private readonly BreakPointHolder _interruptBreakPoints;
+    private readonly ExecutionContextManager _executionContextManager;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
         CallbackHandler callbackHandler,
         BreakPointHolder interruptBreakPoints,
+        ExecutionContextManager executionContextManager,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -40,6 +42,7 @@ public class InstructionExecutionHelper {
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
         _interruptBreakPoints = interruptBreakPoints;
+        _executionContextManager = executionContextManager;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -57,6 +60,8 @@ public class InstructionExecutionHelper {
     public UInt16RegistersIndexer UInt16Registers => State.GeneralRegisters.UInt16;
     public UInt32RegistersIndexer UInt32Registers => State.GeneralRegisters.UInt32;
     public UInt16RegistersIndexer SegmentRegisters => State.SegmentRegisters.UInt16;
+    private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
+
     public ICfgNode? NextNode { get; set; }
     
     public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
@@ -108,32 +113,28 @@ public class InstructionExecutionHelper {
 
     public void NearCall(CfgInstruction instruction, ushort returnIP, ushort callIP) {
         Stack.Push16(returnIP);
-        HandleCall(instruction, CallType.NEAR, State.CS, returnIP, State.CS, callIP);
+        HandleCall(instruction, CallType.NEAR, new SegmentedAddress(State.CS, returnIP),  new SegmentedAddress(State.CS, callIP));
     }
 
-    public void FarCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort targetCS, ushort targetIP) {
+    public void FarCallWithReturnIpNextInstruction(CfgInstruction instruction, SegmentedAddress target) {
         MoveIpToEndOfInstruction(instruction);
-        FarCall(instruction, State.CS, State.IP, targetCS, targetIP);
+        FarCall(instruction, State.IpSegmentedAddress, target);
     }
 
     public void FarCall(CfgInstruction instruction,
-        ushort returnCS,
-        ushort returnIP,
-        ushort targetCS,
-        ushort targetIP) {
-        Stack.Push16(returnCS);
-        Stack.Push16(returnIP);
-        HandleCall(instruction, CallType.FAR, returnCS, returnIP, targetCS, targetIP);
+        SegmentedAddress returnAddress,
+        SegmentedAddress target) {
+        Stack.PushSegmentedAddress(returnAddress);
+        HandleCall(instruction, CallType.FAR, returnAddress, target);
     }
 
     public void HandleCall(CfgInstruction instruction,
         CallType callType,
-        ushort returnCS,
-        ushort returnIP,
-        ushort targetCS,
-        ushort targetIP) {
-        State.CS = targetCS;
-        State.IP = targetIP;
+        SegmentedAddress returnAddress,
+        SegmentedAddress target) {
+        State.CS = target.Segment;
+        State.IP = target.Offset;
+        CurrentFunctionHandler.Call(callType, target, returnAddress, instruction);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
@@ -148,7 +149,8 @@ public class InstructionExecutionHelper {
     }
 
     public void HandleInterruptCall(CfgInstruction instruction, byte vectorNumber) {
-        DoInterrupt(vectorNumber);
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
@@ -161,30 +163,30 @@ public class InstructionExecutionHelper {
         }
         SegmentedAddress expectedReturn = State.IpSegmentedAddress;
         Stack.Push16(State.Flags.FlagRegister16);
-        Stack.Push16(State.CS);
-        Stack.Push16(State.IP);
+        Stack.PushSegmentedAddress(expectedReturn);
         State.InterruptFlag = false;
         State.IP = target.Offset;
         State.CS = target.Segment;
         return (target, expectedReturn);
     }
     
-    public void HandleInterruptRet(CfgInstruction instruction) {
-        State.IP = Stack.Pop16();
-        State.CS = Stack.Pop16();
+    public void HandleInterruptRet(IRetInstruction instruction) {
+        CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
+        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
         State.Flags.FlagRegister = Stack.Pop16();
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
-    public void HandleNearRet(CfgInstruction instruction, int numberOfBytesToPop = 0) {
+    public void HandleNearRet(IRetInstruction instruction, int numberOfBytesToPop = 0) {
+        CurrentFunctionHandler.Ret(CallType.NEAR, instruction);
         State.IP = Stack.Pop16();
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
-    public void HandleFarRet(CfgInstruction instruction, int numberOfBytesToPop = 0) {
-        State.IP = Stack.Pop16();
-        State.CS = Stack.Pop16();
+    public void HandleFarRet(IRetInstruction instruction, int numberOfBytesToPop = 0) {
+        CurrentFunctionHandler.Ret(CallType.FAR, instruction);
+        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
@@ -193,12 +195,13 @@ public class InstructionExecutionHelper {
         State.IP = (ushort)(State.IP + instruction.Length);
     }
 
-    public ICfgNode? GetSuccessorAtCsIp(CfgInstruction instruction) {
+    public ICfgNode? GetSuccessorAtCsIp(ICfgInstruction instruction) {
         instruction.SuccessorsPerAddress.TryGetValue(State.IpSegmentedAddress, out ICfgNode? res);
         return res;
     }
 
-    public void SetNextNodeToSuccessorAtCsIp(CfgInstruction instruction) {
+    public void SetNextNodeToSuccessorAtCsIp(ICfgInstruction instruction) {
+        _loggerService.LoggerPropertyBag.CsIp = State.IpSegmentedAddress;
         NextNode = GetSuccessorAtCsIp(instruction);
     }
 
