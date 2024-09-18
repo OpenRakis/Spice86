@@ -27,10 +27,10 @@ public class GhidraSymbolsDumper {
     /// Dumps function information and labels to a file.
     /// </summary>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string destinationFilePath) {
-        ICollection<FunctionInformation> functionInformationsValues = functionHandler.FunctionInformations.Values;
+    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, string destinationFilePath) {
+        ICollection<FunctionInformation> functionInformationsValues = functionCatalogue.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();

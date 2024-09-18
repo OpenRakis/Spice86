@@ -1,13 +1,30 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.Function;
+using Spice86.Shared.Emulator.Memory;
 
 public class ExecutionContext {
 
-    public ExecutionContext(int depth) {
+    public ExecutionContext(SegmentedAddress entryPoint, int depth, FunctionHandler functionHandler) {
+        EntryPoint = entryPoint;
         Depth = depth;
+        FunctionHandler = functionHandler;
     }
 
+    /// <summary>
+    /// Where the context started
+    /// </summary>
+    public SegmentedAddress EntryPoint { get; }
+    
+    /// <summary>
+    /// Function handler tracking the functions for thi context
+    /// </summary>
+    public FunctionHandler FunctionHandler { get; }
+
+    /// <summary>
+    /// Depth at with this context was created.
+    /// </summary>
     public int Depth { get; }
 
     /// <summary>

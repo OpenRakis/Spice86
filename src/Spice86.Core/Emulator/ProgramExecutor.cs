@@ -1,15 +1,12 @@
 ﻿namespace Spice86.Core.Emulator;
 
-using Function.Dump;
-
 using Serilog.Events;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
@@ -45,13 +42,14 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="instructionExecutor">The CPU instance.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
-    /// <param name="cpu">The emulated x86 CPU.</param>
-    /// <param name="cfgCpu">The emulated x86 CPU, CFG version.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
+    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
@@ -59,9 +57,9 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, MemoryDataExporter memoryDataExporter, Cpu cpu, CfgCpu cfgCpu,
-        State state, Timer timer, Dos dos,
-        FunctionHandler functionHandler,
+        IMemory memory, IFunctionHandlerProvider functionHandlerProvider, IInstructionExecutor instructionExecutor, 
+        MemoryDataExporter memoryDataExporter, State state, Timer timer, Dos dos,
+        FunctionHandler functionHandler, FunctionCatalogue functionCatalogue,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
         IScreenPresenter? screenPresenter, DmaController dmaController,
         ILoggerService loggerService) {
@@ -70,13 +68,13 @@ public sealed class ProgramExecutor : IDisposable {
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
         _emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, configuration.CfgCpu ? cfgCpu : cpu,
+            functionHandler, instructionExecutor,
             state, timer, emulatorBreakpointsManager,
             dmaController,
             pauseHandler);
         if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, cpu,
-                state, functionHandler,
+            _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
+                state, functionCatalogue,
                 executionFlowRecorder,
                 emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
@@ -159,15 +157,15 @@ public sealed class ProgramExecutor : IDisposable {
     }
     
     private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
-        MemoryDataExporter memoryDataExporter, Cpu cpu, State state,
-        FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder,
+        MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
+        FunctionCatalogue functionCatalogue, ExecutionFlowRecorder executionFlowRecorder,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (configuration.GdbPort is null) {
             return null;
         }
-        return new GdbServer(configuration, memory, memoryDataExporter, cpu,
-            state, functionHandler, executionFlowRecorder,
+        return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,
+                functionCatalogue, executionFlowRecorder,
             emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
@@ -175,7 +173,7 @@ public sealed class ProgramExecutor : IDisposable {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Loading file {FileName} with loader {LoaderType}", executableFileName,
                 loader.GetType());
         }

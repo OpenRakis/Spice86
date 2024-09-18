@@ -1,9 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -18,12 +20,15 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="keyboard">The keyboard controller.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public BiosKeyboardInt9Handler(IMemory memory, Cpu cpu, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public BiosKeyboardInt9Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _keyboard = keyboard;
         _dualPic = dualPic;
         BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
@@ -46,7 +51,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
         byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
 
-        if(LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
         }
 
