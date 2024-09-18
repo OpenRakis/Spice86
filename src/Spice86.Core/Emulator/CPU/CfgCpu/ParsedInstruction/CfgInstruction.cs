@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
@@ -10,7 +11,7 @@ using System.Linq;
 /// <summary>
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
-public abstract class CfgInstruction : CfgNode {
+public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
         opcodeField, new List<InstructionPrefix>()) {
     }
@@ -48,6 +49,15 @@ public abstract class CfgInstruction : CfgNode {
     /// Cache of Successors property per address. Maintenance is complex with self modifying code and is done by the InstructionLinker
     /// </summary>
     public Dictionary<SegmentedAddress, ICfgNode> SuccessorsPerAddress { get; private set; } = new();
+
+    /// <summary>
+    /// Successors per link type
+    /// This allows to represent the link between a call instruction and the effective return address.
+    /// This is present for all instructions since most of them can trigger CPU faults (and interrupt calls)
+    /// </summary>
+    public Dictionary<InstructionSuccessorType, ISet<ICfgNode>> SuccessorsPerType { get; } = new();
+
+    public bool ReturnWasToOneOfCaller;
 
     public override void UpdateSuccessorCache() {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);

@@ -64,7 +64,7 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
+        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cfgCpu, state, timer,
             emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,

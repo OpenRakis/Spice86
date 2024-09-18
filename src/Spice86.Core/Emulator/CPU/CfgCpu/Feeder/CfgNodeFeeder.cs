@@ -30,7 +30,7 @@ public class CfgNodeFeeder {
         _discriminatorReducer = new(replacerRegistry);
     }
 
-    private CfgInstruction CurrentNodeFromInstructionFeeder =>
+    public CfgInstruction CurrentNodeFromInstructionFeeder =>
         _instructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
 
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
@@ -85,7 +85,6 @@ public class CfgNodeFeeder {
             _nodeLinker.InsertIntermediatePredecessor(reducedInstruction, res);
         }
 
-        res.UpdateSuccessorCache();
         return res;
     }
 }

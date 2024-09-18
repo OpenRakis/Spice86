@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.CallFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -24,12 +25,12 @@ public class CfgCpu : IInstructionExecutor {
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, ILoggerService loggerService) {
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
         _state = state;
         _dualPic = dualPic;
         
         _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
-        _executionContextManager = new(emulatorBreakpointsManager, _cfgNodeFeeder, _replacerRegistry);
+        _executionContextManager = new(memory, state, emulatorBreakpointsManager, _cfgNodeFeeder, _replacerRegistry, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, _executionContextManager, loggerService);
     }
     
     public ExecutionContextManager ExecutionContextManager => _executionContextManager;
@@ -63,6 +64,7 @@ public class CfgCpu : IInstructionExecutor {
     /// </summary>
     public void SignalEntry() {
         _executionContextManager.SignalNewExecutionContext(_state.IpSegmentedAddress, null);
+        _executionContextManager.CurrentExecutionContext.CallFlowHandler.Call(CallType.MACHINE, _state.IpSegmentedAddress, null, null);
     }
     
     private void HandleExternalInterrupt() {
@@ -77,5 +79,6 @@ public class CfgCpu : IInstructionExecutor {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
+        _executionContextManager.CurrentExecutionContext.CallFlowHandler.Call(CallType.INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
     }
 }
