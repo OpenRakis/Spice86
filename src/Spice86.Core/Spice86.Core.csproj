@@ -48,7 +48,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.0" />
+		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.1" />
 		<PackageReference Include="JetBrains.Annotations" Version="2024.2.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
