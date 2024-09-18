@@ -18,17 +18,18 @@ public class CfgCpu : IInstructionExecutor {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
-    private readonly ExecutionContextManager _executionContextManager;
-
     private readonly CfgNodeFeeder _cfgNodeFeeder;
+    private readonly ExecutionContextManager _executionContextManager;
+    private readonly InstructionReplacerRegistry _replacerRegistry = new();
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, ILoggerService loggerService) {
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
         _state = state;
         _dualPic = dualPic;
-        _executionContextManager = new(emulatorBreakpointsManager);
-        _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager);
+        
+        _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
+        _executionContextManager = new(emulatorBreakpointsManager, _cfgNodeFeeder, _replacerRegistry);
     }
     
     public ExecutionContextManager ExecutionContextManager => _executionContextManager;
@@ -55,6 +56,13 @@ public class CfgCpu : IInstructionExecutor {
         CurrentExecutionContext.LastExecuted = toExecute;
         CurrentExecutionContext.NodeToExecuteNextAccordingToGraph = nextToExecute;
         HandleExternalInterrupt();
+    }
+
+    /// <summary>
+    /// Signal to the cfg cpu that we are at the entry point of the program
+    /// </summary>
+    public void SignalEntry() {
+        _executionContextManager.SignalNewExecutionContext(_state.IpSegmentedAddress, null);
     }
     
     private void HandleExternalInterrupt() {

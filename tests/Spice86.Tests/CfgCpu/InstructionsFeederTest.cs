@@ -25,13 +25,16 @@ public class InstructionsFeederTest {
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
     private static readonly MemoryBreakpoints MemoryBreakpoints = new();
     private readonly Memory _memory = new(MemoryBreakpoints, new Ram(64), new A20Gate());
+    private InstructionReplacerRegistry _instructionReplacer = new();
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         _memory.Memset8(0, 0, 64);
+        _instructionReplacer = new();
         ILoggerService loggerService = Substitute.For<LoggerService>();
         State state = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(MemoryBreakpoints, new PauseHandler(loggerService), state);
-        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state);
+        
+        return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {
@@ -151,7 +154,7 @@ public class InstructionsFeederTest {
 
         // Act
         CfgInstruction newInstruction = CreateReplacementInstruction();
-        instructionsFeeder.ReplaceInstruction(old, newInstruction);
+        _instructionReplacer.ReplaceInstruction(old, newInstruction);
         CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
         // Assert
@@ -167,7 +170,7 @@ public class InstructionsFeederTest {
 
         // Act
         CfgInstruction newInstruction = CreateReplacementInstruction();
-        instructionsFeeder.ReplaceInstruction(old, newInstruction);
+        _instructionReplacer.ReplaceInstruction(old, newInstruction);
         WriteMovAx(ZeroAddress);
         CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
 
@@ -184,7 +187,7 @@ public class InstructionsFeederTest {
 
         // Act
         CfgInstruction newInstruction = CreateReplacementInstruction();
-        instructionsFeeder.ReplaceInstruction(old, newInstruction);
+        _instructionReplacer.ReplaceInstruction(old, newInstruction);
         WriteMovAx(ZeroAddress);
         instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
         WriteJumpNear(ZeroAddress);

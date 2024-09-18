@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.Memory;
 /// Cache of current instructions in memory.
 /// Cache coherency is managed by breakpoints, as soon as an instruction is written in memory it is evicted.
 /// </summary>
-public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
+public class CurrentInstructions : InstructionReplacer {
     private readonly IMemory _memory;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
@@ -18,17 +18,16 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
     /// Instruction currently known to be in memory at a given address.
     /// Memory write breakpoints invalidate this cache when CPU writes there.
     /// </summary>
-    private readonly Dictionary<SegmentedAddress, CfgInstruction> _currentInstructionAtAddress =
-        new Dictionary<SegmentedAddress, CfgInstruction>();
+    private readonly Dictionary<SegmentedAddress, CfgInstruction> _currentInstructionAtAddress = new();
 
 
     /// <summary>
     /// Breakpoints that have been installed to monitor instruction at a given address. So that we can reset them when we want.
     /// </summary>
-    private readonly Dictionary<SegmentedAddress, List<AddressBreakPoint>> _breakpointsForInstruction =
-        new Dictionary<SegmentedAddress, List<AddressBreakPoint>>();
+    private readonly Dictionary<SegmentedAddress, List<AddressBreakPoint>> _breakpointsForInstruction = new();
 
-    public CurrentInstructions(IMemory memory, EmulatorBreakpointsManager emulatorBreakpointsManager) {
+    public CurrentInstructions(IMemory memory, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        InstructionReplacerRegistry replacerRegistry) : base(replacerRegistry) {
         _memory = memory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
@@ -38,7 +37,7 @@ public class CurrentInstructions : IInstructionReplacer<CfgInstruction> {
         return res;
     }
 
-    public void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
+    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
         SegmentedAddress instructionAddress = instruction.Address;
         if (_currentInstructionAtAddress.ContainsKey(instructionAddress)) {
             ClearCurrentInstruction(old);
