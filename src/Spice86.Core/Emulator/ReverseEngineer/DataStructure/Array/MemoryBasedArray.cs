@@ -8,7 +8,7 @@ using System.Collections;
 /// An abstract generic class that represents a memory-based array data structure with a base address.
 /// </summary>
 /// <typeparam name="T">The type of elements in the array.</typeparam>
-public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IEnumerable<T>, IList<T> {
+public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IList<T> {
     private readonly int _length;
 
     /// <summary>

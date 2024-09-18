@@ -7,8 +7,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Shared.Emulator.Memory;
 
-public class NodeLinker : IInstructionReplacer<ICfgNode> {
+public class NodeLinker : InstructionReplacer {
     private readonly NodeToString _nodeToString = new();
+
+    public NodeLinker(InstructionReplacerRegistry replacerRegistry) : base(replacerRegistry) {
+    }
 
     /// <summary>
     /// Ensure current and next are linked together.
@@ -27,7 +30,7 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
-            AttachCurrentToNext(current, next);
+            AttachToNext(current, next);
             return;
         }
 
@@ -54,7 +57,7 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
             Dictionary<Discriminator, CfgInstruction> successors = current.SuccessorsPerDiscriminator;
             if (!successors.TryGetValue(nextCfgInstruction.Discriminator, out CfgInstruction? shouldBeNextOrNull)) {
                 // New link discovered, create it
-                AttachCurrentToNext(current, next);
+                AttachToNext(current, next);
                 return;
             }
             if (!ReferenceEquals(shouldBeNextOrNull, next)) {
@@ -65,20 +68,21 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
         }
     }
 
-    public void AttachCurrentToNext(ICfgNode current, ICfgNode next) {
-        LinkCurrentToNext(current, next);
+    public void AttachToNext(ICfgNode current, ICfgNode next) {
+        LinkToNext(current, next);
         current.UpdateSuccessorCache();
     }
 
-    private void LinkCurrentToNext(ICfgNode current, ICfgNode next) {
+    private void LinkToNext(ICfgNode current, ICfgNode next) {
         current.Successors.Add(next);
         next.Predecessors.Add(current);
     }
 
-    public void ReplaceInstruction(ICfgNode old, ICfgNode instruction) {
+    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
+        // Unlinks old from the graph and links instruction instead, effectively replacing it
         InsertIntermediatePredecessor(old, instruction);
         foreach (ICfgNode successor in old.Successors) {
-            LinkCurrentToNext(instruction, successor);
+            LinkToNext(instruction, successor);
             successor.Predecessors.Remove(old);
             old.Successors.Remove(successor);
         }
@@ -89,12 +93,14 @@ public class NodeLinker : IInstructionReplacer<ICfgNode> {
 
     public void InsertIntermediatePredecessor(ICfgNode current, ICfgNode newPredecessor) {
         foreach (ICfgNode predecessor in current.Predecessors) {
-            LinkCurrentToNext(predecessor, newPredecessor);
+            // Replace current with new in the predecessors successors (:
+            LinkToNext(predecessor, newPredecessor);
             predecessor.Successors.Remove(current);
             predecessor.UpdateSuccessorCache();
         }
+        // Make new the only predecessor of current
         current.Predecessors.Clear();
-        LinkCurrentToNext(newPredecessor, current);
+        LinkToNext(newPredecessor, current);
         newPredecessor.UpdateSuccessorCache();
     }
 }
