@@ -61,7 +61,7 @@
         <PackageReference Include="bodong.PropertyModels" Version="11.1.1.1" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
         <PackageReference Include="DialogHost.Avalonia" Version="0.8.1" />
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
         <PackageReference Include="DialogHost.Avalonia" Version="0.8.1" />
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
             <PrivateAssets>all</PrivateAssets>
