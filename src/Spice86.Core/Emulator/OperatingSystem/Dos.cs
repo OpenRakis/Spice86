@@ -171,7 +171,7 @@ public class Dos {
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
+        DosInt21Handler = new DosInt21Handler(_memory, this, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
