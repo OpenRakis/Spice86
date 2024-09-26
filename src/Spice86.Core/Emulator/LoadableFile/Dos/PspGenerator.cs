@@ -19,7 +19,7 @@ public class PspGenerator {
     private readonly DosFileManager _dosFileManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PspGenerator"/> class with the specified <see cref="Machine"/> object.
+    /// Initializes a new instance of the <see cref="PspGenerator"/>
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="environmentVariables">The master environment block from the DOS kernel.</param>
