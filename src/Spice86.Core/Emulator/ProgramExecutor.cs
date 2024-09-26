@@ -11,13 +11,9 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile.Bios;
-using Spice86.Core.Emulator.LoadableFile.Dos.Com;
-using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
@@ -36,6 +32,9 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
+    private readonly DosInt21Handler _dosInt21Handler;
+    private readonly State _state;
+    private readonly IMemory _memory;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -48,20 +47,23 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="cfgCpu">The emulated x86 CPU, CFG version.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="timer">The programmable interval timer.</param>
-    /// <param name="dos">The DOS kernel.</param>
+    /// <param name="dosInt21Handler">The DOS handler used for loading a DOS executable (.COM or .EXE).</param>
     /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
+    /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
+        IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, DosInt21Handler dosInt21Handler,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
+        _dosInt21Handler = dosInt21Handler;
+        _state = state;
+        _memory = memory;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
         _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
@@ -70,18 +72,11 @@ public sealed class ProgramExecutor : IDisposable {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
                 executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
-        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, memory, state, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
-        if (configuration.InitializeDOS is null) {
-            configuration.InitializeDOS = loader.DosInitializationNeeded;
-            if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
-            }
-        }
 
         if (screenPresenter is not null) {
             screenPresenter.UserInterfaceInitialized += Run;
         }
-        LoadFileToRun(configuration, loader);
+        CheckFileToRun(configuration);
     }
 
     /// <summary>
@@ -92,6 +87,16 @@ public sealed class ProgramExecutor : IDisposable {
             _gdbServer?.StartServerAndWait();
         } else if (_configuration.Debug) {
             _pauseHandler.RequestPause("Starting the emulated program paused was requested");
+        }
+        if (string.IsNullOrWhiteSpace(_configuration.Exe)) {
+            throw new UnrecoverableException("No file to execute");
+        }
+        string fileExtension = Path.GetExtension(_configuration.Exe).ToLowerInvariant();
+        if(fileExtension is ".com" or ".exe") {
+            _dosInt21Handler.LoadHostFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment,
+                isCom: fileExtension is ".com");
+        } else {
+            new BiosLoader(_memory, _state, _configuration.Exe, _loggerService).LoadHostFile();
         }
         _emulationLoop.Run();
 
@@ -111,39 +116,13 @@ public sealed class ProgramExecutor : IDisposable {
 
         if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
             string error =
-                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
+                $"""
+                 File does not match the expected SHA256 checksum, cannot execute it.
+                 Expected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.
+                 Got {ConvertUtils.ByteArrayToHexString(actualHash)}
+                 """;
             throw new UnrecoverableException(error);
         }
-    }
-
-    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration, IMemory memory, State cpuState, EnvironmentVariables environmentVariables,
-        DosFileManager fileManager, DosMemoryManager memoryManager) {
-        string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
-
-        string lowerCaseFileName = executableFileName.ToLowerInvariant();
-        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
-        if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(memory,
-                cpuState,
-                _loggerService,
-                environmentVariables,
-                fileManager,
-                memoryManager,
-                entryPointSegment);
-        }
-
-        if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(memory,
-                cpuState,
-                _loggerService,
-                environmentVariables,
-                fileManager,
-                memoryManager,
-                entryPointSegment);
-        }
-
-        return new BiosLoader(memory, cpuState, _loggerService);
     }
     
     private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
@@ -154,20 +133,18 @@ public sealed class ProgramExecutor : IDisposable {
         return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
-    private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
-        string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
+    private void CheckFileToRun(Configuration configuration) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(configuration.Exe);
 
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Loading file {FileName} with loader {LoaderType}", executableFileName,
-                loader.GetType());
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Checking file {FileName}", configuration.Exe);
         }
 
         try {
-            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
+            byte[] fileContent = File.ReadAllBytes(configuration.Exe);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
-            throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
+            throw new UnrecoverableException($"Failed to read file {configuration.Exe}", e);
         }
     }
 
