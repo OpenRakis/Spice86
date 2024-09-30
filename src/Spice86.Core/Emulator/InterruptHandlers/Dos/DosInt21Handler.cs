@@ -88,6 +88,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
         AddAction(0x33, GetSetControlBreak);
+        AddAction(0x34, GetInDosFlag);
         AddAction(0x35, GetInterruptVector);
         AddAction(0x36, GetFreeDiskSpace);
         AddAction(0x38, () => SetCountryCode(true));
@@ -676,6 +677,13 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Returns the current value of the IN DOS flag in the BX register.
+    /// </summary>
+    public void GetInDosFlag() {
+        //State.ES 
+    }
+
+    /// <summary>
     /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
     /// </summary>
     public void GetTime() {
@@ -730,16 +738,52 @@ public class DosInt21Handler : InterruptHandler {
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error.
+    /// TODO: This needs the DOS Swappable Area, and a lot of other DOS globals (current drive, current folder, ...)
     /// </returns>
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void LoadAndOrExecuteProgram(bool calledFromVm) {
         bool success = false;
+        byte typeOfLoadByte = State.AL;
+        if (!Enum.IsDefined(typeof(TypeOfLoad), typeOfLoadByte)) {
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
         TypeOfLoad typeOfLoad = (TypeOfLoad)State.AL;
         string programName = GetZeroTerminatedStringAtDsDx();
+        string? fullHostPath = _dosFileManager.TryGetFullHostPathFromDos(programName);
+        
+        if(string.IsNullOrWhiteSpace(fullHostPath) || !File.Exists(fullHostPath)) {
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
         
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("LOAD AND/OR EXECUTE PROGRAM {TypeOfLoad}, {ProgramName}", typeOfLoad, programName);
+        }
+
+        bool isComFile = string.Equals(Path.GetExtension(programName).ToLowerInvariant(), ".com", StringComparison.OrdinalIgnoreCase);
+        
+        switch (typeOfLoad) {
+            case TypeOfLoad.LoadAndExecute:
+                if (isComFile) {
+                    LoadAndExecComFile(fullHostPath, "", 0x1000);
+                } else {
+                    LoadAndExecExeFile(fullHostPath, "", 0x1000);
+                }
+                success = true;
+                break;
+            case TypeOfLoad.LoadOnly:
+                // Not implemented
+                success = false;
+                break;
+            case TypeOfLoad.LoadOverlay:
+                // Not implemented
+                success = false;
+                break;
+            default:
+                SetCarryFlag(false, calledFromVm);
+                return;
         }
         SetCarryFlag(success, calledFromVm);
     }
@@ -1108,7 +1152,7 @@ public class DosInt21Handler : InterruptHandler {
     
     private const ushort ComOffset = 0x100;
 
-    internal void LoadEXEFile(string hostFile, string? arguments, ushort startSegment) {
+    internal void LoadAndExecExeFile(string hostFile, string? arguments, ushort startSegment) {
         byte[] exe = File.ReadAllBytes(hostFile);
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("Exe size: {ExeSize}", exe.Length);
@@ -1186,7 +1230,7 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
     
-    internal void LoadCOMFile(string hostFile, string? arguments, ushort startSegment) {
+    internal void LoadAndExecComFile(string hostFile, string? arguments, ushort startSegment) {
         new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(startSegment, arguments);
         byte[] com = File.ReadAllBytes(hostFile);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, ComOffset);
