@@ -131,12 +131,12 @@ public class Dos {
         DosInt28Handler = new DosInt28Handler(_memory, cpu, 
             _loggerService);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
-        }
-
         if (!initializeDos) {
             return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
