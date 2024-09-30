@@ -92,11 +92,16 @@ public sealed class ProgramExecutor : IDisposable {
             throw new UnrecoverableException("No file to execute");
         }
         string fileExtension = Path.GetExtension(_configuration.Exe).ToLowerInvariant();
-        if(fileExtension is ".com" or ".exe") {
-            _dosInt21Handler.LoadHostFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment,
-                isCom: fileExtension is ".com");
-        } else {
-            new BiosLoader(_memory, _state, _configuration.Exe, _loggerService).LoadHostFile();
+        switch (fileExtension) {
+            case ".exe":
+                _dosInt21Handler.LoadEXEFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment);
+                break;
+            case ".com":
+                _dosInt21Handler.LoadCOMFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment);
+                break;
+            default:
+                new BiosLoader(_memory, _state, _configuration.Exe, _loggerService).LoadHostFile();
+                break;
         }
         _emulationLoop.Run();
 
