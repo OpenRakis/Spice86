@@ -120,12 +120,13 @@ public class Dos {
         DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
-        }
 
         if (!initializeDos) {
             return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
