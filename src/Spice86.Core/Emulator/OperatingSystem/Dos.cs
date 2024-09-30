@@ -29,6 +29,11 @@ public class Dos {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public uint ErrorCode { get; set; }
+
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
