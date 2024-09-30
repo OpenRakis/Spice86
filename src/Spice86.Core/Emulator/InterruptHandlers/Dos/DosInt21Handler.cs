@@ -1128,7 +1128,7 @@ public class DosInt21Handler : InterruptHandler {
     
     private const ushort ComOffset = 0x100;
 
-    private void LoadHostFileAsExe(string hostFile, string? arguments, ushort startSegment) {
+    internal void LoadEXEFile(string hostFile, string? arguments, ushort startSegment) {
         byte[] exe = File.ReadAllBytes(hostFile);
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("Exe size: {ExeSize}", exe.Length);
@@ -1206,7 +1206,7 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
     
-    private void LoadHostFileAsCom(string hostFile, string? arguments, ushort startSegment) {
+    internal void LoadCOMFile(string hostFile, string? arguments, ushort startSegment) {
         new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(startSegment, arguments);
         byte[] com = File.ReadAllBytes(hostFile);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, ComOffset);
@@ -1217,13 +1217,5 @@ public class DosInt21Handler : InterruptHandler {
         State.ES = startSegment;
         SetEntryPoint(startSegment, ComOffset);
         State.InterruptFlag = true;
-    }
-
-    internal void LoadHostFile(string hostFile, string? arguments, ushort startSegment, bool isCom) {
-        if (isCom) {
-            LoadHostFileAsCom(hostFile, arguments, startSegment);
-        } else {
-            LoadHostFileAsExe(hostFile, arguments, startSegment);
-        }
     }
 }
