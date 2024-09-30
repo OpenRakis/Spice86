@@ -31,6 +31,7 @@ using System.Security.Cryptography;
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
@@ -62,6 +63,7 @@ public sealed class ProgramExecutor : IDisposable {
         _configuration = configuration;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
+        _pauseHandler = pauseHandler;
         _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
             emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
@@ -86,7 +88,11 @@ public sealed class ProgramExecutor : IDisposable {
     /// Starts the loaded program.
     /// </summary>
     public void Run() {
-        _gdbServer?.StartServerAndWait();
+        if (_gdbServer is not null) {
+            _gdbServer?.StartServerAndWait();
+        } else if (_configuration.Debug) {
+            _pauseHandler.RequestPause("Starting the emulated program paused was requested");
+        }
         _emulationLoop.Run();
 
         if (_configuration.DumpDataOnExit is not false) {
