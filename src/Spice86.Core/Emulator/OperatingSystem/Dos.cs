@@ -34,6 +34,11 @@ public class Dos {
     private readonly EmulationLoopRecalls _emulationLoopRecalls;
 
     /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public ErrorCode ErrorCode { get; set; }
+
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -62,6 +67,9 @@ public class Dos {
     /// Gets the INT 28h DOS services.
     /// </summary>
     public DosInt28Handler DosInt28Handler { get; }
+
+    public DosTables DosTables { get; }
+    public CountryId CurrentCountryId => DosTables.CountryInfo.CountryId;
 
     /// <summary>
     /// The class that handles DOS drives, as a sorted dictionnary.
@@ -92,11 +100,6 @@ public class Dos {
     /// Gets the DOS file manager.
     /// </summary>
     public DosFileManager FileManager { get; }
-
-    /// <summary>
-    /// Gets the global DOS memory structures.
-    /// </summary>
-    public CountryInfo CountryInfo { get; } = new();
 
     /// <summary>
     /// Gets the current DOS master environment variables.
@@ -169,10 +172,14 @@ public class Dos {
 
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
+        DosTables = new(memory);
+
+        FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
+            _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, this, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, CountryInfo, dosStringDecoder,
+            keyboardInt16Handler, DosTables.CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);

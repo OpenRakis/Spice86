@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
-/// Representation of an EXE file as a MemoryBasedDataStructure
+/// Representation of an EXE file as it is stored on disk, loaded into memory.
 /// </summary>
 public class ExeFile : MemoryBasedDataStructure {
     /// <summary>
