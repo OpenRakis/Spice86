@@ -120,7 +120,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
         AddAction(0x4A, () => ModifyMemoryBlock(true));
-        AddAction(0x4B, () => LoadAndOrExecute(true));
+        AddAction(0x4B, () => LoadAndOrExecuteProgram(true));
         AddAction(0x4C, QuitWithExitCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
@@ -881,6 +881,37 @@ public class DosInt21Handler : InterruptHandler {
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+    }
+
+    private enum TypeOfLoad : byte {
+        LoadAndExecute = 0,
+        LoadOnly = 1,
+        LoadOverlay = 2
+    }
+    
+    /// <summary>
+    /// Load and or execute a program.
+    /// AL = 0: Load and execute. <br/>
+    /// AL = 1: Load only. <br/>
+    /// AL = 2: Load overlay. <br/>
+    /// DS:DX: ASCIIZ program name with extension. <br/>
+    /// ES:BX: EXEC Parameter block. <br/>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// </summary>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
+    public void LoadAndOrExecuteProgram(bool calledFromVm) {
+        bool success = false;
+        TypeOfLoad typeOfLoad = (TypeOfLoad)State.AL;
+        string programName = Memory.GetZeroTerminatedString(MemoryUtils.
+            ToPhysicalAddress(State.DS, State.DX), maxLength: 255);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("LOAD AND/OR EXECUTE PROGRAM {TypeOfLoad}, {ProgramName}", typeOfLoad, programName);
+        }
+        SetCarryFlag(success, calledFromVm);
     }
 
     /// <summary>
