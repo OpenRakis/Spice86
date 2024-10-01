@@ -53,6 +53,7 @@
                     <OnPlatform Default="{StaticResource RobotoMonoFont}" />
                 </TextElement.FontFamily>
                 <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Has Breakpoint ?" />
                     <DataGridTextColumn Binding="{Binding Address}" Header="Address" />
                     <DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
                     <DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
@@ -71,6 +72,7 @@
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
+                        <MenuItem Header="Address BreakPoint here" Command="{Binding CreateAddressBreakpointHereCommand}" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>
