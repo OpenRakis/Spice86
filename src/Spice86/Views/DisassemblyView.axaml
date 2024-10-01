@@ -72,7 +72,8 @@
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
-                        <MenuItem Header="Address BreakPoint here" Command="{Binding CreateAddressBreakpointHereCommand}" />
+                        <MenuItem Header="Create address BreakPoint here" IsVisible="{Binding !SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding CreateAddressBreakpointHereCommand}" />
+                        <MenuItem Header="Remove address BreakPoint here" IsVisible="{Binding SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding RemoveAddressBreakpointHereCommand}" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>

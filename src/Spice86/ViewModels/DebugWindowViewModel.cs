@@ -53,6 +53,9 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
+    [ObservableProperty]
+    private StatusMessageViewModel _statusMessageViewModel;
+
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, IMemory memory, Midi externalMidiDevice,
@@ -65,6 +68,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
+        StatusMessageViewModel = new(_messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
