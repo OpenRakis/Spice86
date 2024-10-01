@@ -8,6 +8,7 @@
     xmlns:local="clr-namespace:Spice86"
     xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
     xmlns:controls="clr-namespace:Spice86.Controls"
+    xmlns:views="clr-namespace:Spice86.Views"
     x:CompileBindings="True"
     x:DataType="vm:DebugWindowViewModel"
     WindowStartupLocation="CenterOwner"
@@ -26,7 +27,7 @@
     <Window.DataTemplates>
         <local:ViewLocator />
     </Window.DataTemplates>
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*,Auto">
         <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
             <Button
                 Margin="5,0,0,0"
@@ -80,5 +81,6 @@
                 </TabControl>
             </controls:HotKeyTabItem>
         </TabControl>
+        <views:StatusMessageView Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" DataContext="{Binding StatusMessageViewModel}" />
     </Grid>
 </Window>

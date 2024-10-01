@@ -159,19 +159,30 @@ public partial class DisassemblyViewModel : ViewModelBase {
         return instructions;
     }
     
-    /// <summary>
-    /// Handles a breakpoint being hit.
-    /// </summary>
-    /// <param name="breakPoint">The <see cref="BreakPoint"/> object representing the breakpoint that was hit.</param>
-    private void OnBreakPointReached(BreakPoint breakPoint) =>
-        _pauseHandler.RequestPause($"breakpoint {breakPoint.BreakPointType} hit");
+    private void OnBreakPointReached(BreakPoint breakPoint) {
+        string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
+        _pauseHandler.RequestPause(message);
+        _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+    }
+    
+    [RelayCommand]
+    private void RemoveAddressBreakpointHere() {
+        if (SelectedInstruction?.BreakPoint is null) {
+            return;
+        }
+        _emulatorBreakpointsManager.ToggleBreakPoint(SelectedInstruction.BreakPoint, false);
+        SelectedInstruction.BreakPoint = null;
+        SelectedInstruction.HasBreakpoint = false;
+    }
 
     [RelayCommand]
     private void CreateAddressBreakpointHere() {
         if (SelectedInstruction is null) {
             return;
         }
-        AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached, false);
+        AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached,
+            isRemovedOnTrigger: false);
+        SelectedInstruction.BreakPoint = breakPoint;
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         SelectedInstruction.HasBreakpoint = true;
     }
