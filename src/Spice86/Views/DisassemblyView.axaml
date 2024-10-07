@@ -9,12 +9,14 @@
              x:DataType="viewModels:DisassemblyViewModel">
     <UserControl.Resources>
         <converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
+        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
     </UserControl.Resources>
     <DockPanel>
         <StackPanel Orientation="Horizontal"
             DockPanel.Dock="Top" IsVisible="{Binding IsPaused}"
             HorizontalAlignment="Center"
             VerticalAlignment="Top">
+            <StackPanel Orientation="Vertical">
                 <Button
                     Command="{Binding NewDisassemblyViewCommand}"
                     Content="New Disassembly View"
@@ -23,23 +25,32 @@
                     Command="{Binding CloseTabCommand}"
                     Content="Close View"
                     IsEnabled="{Binding CanCloseTab}"/>
-                <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-                    <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-                    <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
-                </StackPanel>
-                <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-                    <Label HorizontalAlignment="Center" Content="Start Address" />
-                    <TextBox Text="{Binding StartAddress}" />
-                    <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
-                </StackPanel>
-                <Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
-        </StackPanel>
-        <Grid DockPanel.Dock="Bottom" IsVisible="{Binding IsPaused}" RowDefinitions="Auto,*" IsEnabled="{Binding IsPaused}">
-            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="Step into" Command="{Binding StepIntoCommand}" />
             </StackPanel>
-            <DataGrid
-                Grid.Row="1"
+            <Button Content="Step into" Command="{Binding StepIntoCommand}" />
+            <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+                <Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
+                <NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
+            </StackPanel>
+            <StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+                <RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
+                <RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
+                <Label HorizontalAlignment="Center" Content="Start Address" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
+                        Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
+                            Converter={StaticResource SegmentedAddressConverter}}"
+                        Watermark="segment:offset" />
+                    <TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
+                             Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
+                        Watermark="linear address"/>
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
+                <Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
+            </StackPanel>
+        </StackPanel>
+        <DataGrid DockPanel.Dock="Bottom"
                 AutoGenerateColumns="False"
                 CanUserReorderColumns="True"
                 CanUserResizeColumns="True"
@@ -77,6 +88,5 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>
-        </Grid>
     </DockPanel>
 </UserControl>
