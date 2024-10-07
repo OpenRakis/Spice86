@@ -16,6 +16,7 @@ using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel : ViewModelBase {
@@ -42,19 +43,28 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
     private bool _isPaused;
 
-    [ObservableProperty] private int _numberOfInstructionsShown = 50;
+    [ObservableProperty]
+    private int _numberOfInstructionsShown = 50;
+
+    [ObservableProperty]
+    private bool _isUsingLinearAddressing = true;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
+    private SegmentedAddress? _segmentedStartAddress;
 
     private uint? _startAddress;
 
     public uint? StartAddress {
         get => _startAddress;
         set {
-            Header = value is null ? "" : $"0x{value:X}";
             SetProperty(ref _startAddress, value);
+            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
         }
     }
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
     public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
@@ -72,6 +82,11 @@ public partial class DisassemblyViewModel : ViewModelBase {
         pauseHandler.Pausing += () => _uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         CanCloseTab = canCloseTab;
+        UpdateDisassembly();
+    }
+
+    private void UpdateHeader(uint? address) {
+        Header = address is null ? "" : $"0x{address:X}";
     }
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
@@ -95,17 +110,34 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void GoToCsIp() {
         StartAddress = _state.IpPhysicalAddress;
+        SegmentedStartAddress = new(_state.CS, _state.IP);
         UpdateDisassembly();
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private uint? GetStartAddress() {
+        return IsUsingLinearAddressing switch {
+            true => StartAddress,
+            false => SegmentedStartAddress is null
+                ? null
+                : MemoryUtils.ToPhysicalAddress(SegmentedStartAddress.Value.Segment,
+                    SegmentedStartAddress.Value.Offset),
+        };
+    }
+
+    private bool CanExecuteUpdateDisassembly() {
+        return IsPaused && GetStartAddress() is not null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private void UpdateDisassembly() {
-        if (StartAddress is null) {
+        uint? startAddress = GetStartAddress();
+        if (startAddress is null) {
             return;
         }
 
-        Instructions = new(DecodeInstructions(_state, _memory, StartAddress.Value, NumberOfInstructionsShown));
+        Instructions = new(DecodeInstructions(_state, _memory, startAddress.Value, NumberOfInstructionsShown));
         SelectedInstruction = Instructions.FirstOrDefault();
+        UpdateHeader(SelectedInstruction?.Address);
     }
 
     [ObservableProperty]
@@ -114,7 +146,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {
         if (SelectedInstruction is not null) {
-            await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation).ConfigureAwait(false);
+            await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation);
         }
     }
 
