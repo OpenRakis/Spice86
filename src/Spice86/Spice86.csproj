@@ -78,4 +78,17 @@
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <AvaloniaXaml Update="Views\CpuStackView.axaml">
+        <SubType>Designer</SubType>
+      </AvaloniaXaml>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Views\CpuStackView.axaml.cs">
+        <SubType>Code</SubType>
+        <DependentUpon>CpuStackView.axaml</DependentUpon>
+      </Compile>
+    </ItemGroup>
 </Project>

@@ -58,7 +58,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -78,7 +78,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
-        CpuViewModel = new(cpuState, pauseHandler, uiDispatcher);
+        CpuViewModel = new(cpuState, stack, memory, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
         MemoryViewModels.Add(new(memory, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
