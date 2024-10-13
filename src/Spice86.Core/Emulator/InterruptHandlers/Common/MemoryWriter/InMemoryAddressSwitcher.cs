@@ -29,7 +29,7 @@ public class InMemoryAddressSwitcher {
     public SegmentedAddress? DefaultAddress { get; set; }
 
     /// <summary>
-    /// Sets the segmented address. PhysicalLocation needs to be initialized before calling this method.
+    /// Sets the segmented address. <see cref="PhysicalLocation"/> needs to be initialized before calling this method.
     /// </summary>
     /// <param name="segment">Segment</param>
     /// <param name="offset">Offset</param>
