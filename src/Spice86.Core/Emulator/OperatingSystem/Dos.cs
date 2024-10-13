@@ -29,6 +29,11 @@ public class Dos {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public uint ErrorCode { get; set; }
+
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -120,12 +125,13 @@ public class Dos {
         DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
-        }
 
         if (!initializeDos) {
             return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
