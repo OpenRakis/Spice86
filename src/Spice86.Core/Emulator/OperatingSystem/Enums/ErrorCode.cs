@@ -3,8 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 /// <summary>
 /// Defines error codes for MS-DOS operations.
 /// </summary>
-public enum ErrorCode : byte
-{
+public enum ErrorCode : byte {
     /// <summary>
     /// No error occurred during the operation.
     /// </summary>
@@ -103,5 +102,15 @@ public enum ErrorCode : byte
     /// <summary>
     /// No more files match the criteria
     /// </summary>
-    NoMoreMatchingFiles
+    NoMoreMatchingFiles,
+
+    /// <summary>
+    /// File, or a part of the file, is locked
+    /// </summary>
+    LockViolation = 0x33,
+
+    /// <summary>
+    /// File already exists in the directory
+    /// </summary>
+    FileAlreadyExists = 0x80,
 }
