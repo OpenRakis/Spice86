@@ -9,7 +9,7 @@ public class DosFileControlBlock : MemoryBasedDataStructure {
     }
 
     /// <summary>
-    /// Gets or sets the drive letter. 0=default, 1=drive A, 2=drive B, etc.
+    /// Gets or sets the drive letter. 0=default drive (when unopened, or A), 1=drive A (when unopened, or B), 2=drive B (when unopened, or C), etc.
     /// </summary>
     public byte Drive { get => UInt8[0x0]; set => UInt8[0x0] = value; }
 

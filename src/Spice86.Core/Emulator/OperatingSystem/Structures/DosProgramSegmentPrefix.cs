@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -42,74 +43,78 @@ public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
     /// <summary>
     /// CP/M like exit point for INT 0x20. (machine code: 0xCD, 0x20). Old way to exit the program.
     /// </summary>
-    public byte[] Exit { get => GetData(0, 2); set { LoadData(0, value); } }
+    public UInt8Array Exit => GetUInt8Array(0x0, 2);
 
     /// <summary>
     /// Segment of first byte beyond the end of the program image. Reserved.
     /// </summary>
-    public ushort NextSegment { get => UInt16[2]; set => UInt16[2] = value; }
+    public ushort NextSegment { get => UInt16[0x2]; set => UInt16[0x2] = value; }
 
     /// <summary>
-    /// (reserved)
+    /// Reserved
     /// </summary>
-    public byte Reserved { get => UInt8[4]; set => UInt8[4] = value; }
+    public byte Reserved { get => UInt8[0x4]; set => UInt8[0x4] = value; }
 
     /// <summary>
     /// Far call to DOS INT 0x21 dispatcher. Obsolete.
     /// </summary>
-    public byte FarCall { get => UInt8[5]; set => UInt8[5] = value; }
+    public byte FarCall { get => UInt8[0x5]; set => UInt8[0x5] = value; }
+
+    public uint CpmServiceRequestAddress { get => UInt32[0x6]; set => UInt32[0x6] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x22 vector.
     /// </summary>
-    public uint TerminateAddress { get => UInt32[6]; set => UInt32[6] = value; }
+    public uint TerminateAddress { get => UInt32[0x0A]; set => UInt32[0x0A] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x23 vector.
     /// </summary>
-    public uint BreakAddress { get => UInt32[10]; set => UInt32[10] = value; }
+    public uint BreakAddress { get => UInt32[0x0E]; set => UInt32[0x0E] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x24 vector.
     /// </summary>
-    public uint CriticalErrorAddress { get => UInt32[14]; set => UInt32[14] = value; }
+    public uint CriticalErrorAddress { get => UInt32[0x12]; set => UInt32[0x12] = value; }
 
     /// <summary>
     /// Segment of PSP of parent program.
     /// </summary>
-    public ushort ParentProgramSegmentPrefix { get => UInt16[18]; set => UInt16[18] = value; }
+    public ushort ParentProgramSegmentPrefix { get => UInt16[0x16]; set => UInt16[0x16] = value; }
 
-    public byte[] Files { get => GetData(20, 20); set { LoadData(20, value); } }
+    public UInt8Array Files => GetUInt8Array(0x18, 20);
 
-    public ushort EnvironmentTableSegment { get => UInt16[40]; set => UInt16[40] = value; }
+    public ushort EnvironmentTableSegment { get => UInt16[0x2C]; set => UInt16[0x2C] = value; }
 
-    public uint StackPointer { get => UInt32[42]; set => UInt32[42] = value; }
+    public uint StackPointer { get => UInt32[0x2E]; set => UInt32[0x2E] = value; }
 
-    public ushort MaximumOpenFiles { get => UInt16[46]; set => UInt16[46] = value; }
+    public ushort MaximumOpenFiles { get => UInt16[0x32]; set => UInt16[0x32] = value; }
 
-    public uint FileTableAddress { get => UInt32[48]; set => UInt32[48] = value; }
+    public uint FileTableAddress { get => UInt32[0x34]; set => UInt32[0x34] = value; }
 
-    public uint PreviousPspAddress { get => UInt32[52]; set => UInt32[52] = value; }
+    public uint PreviousPspAddress { get => UInt32[0x38]; set => UInt32[0x38] = value; }
 
-    public byte InterimFlag { get => UInt8[56]; set => UInt8[56] = value; }
+    public byte InterimFlag { get => UInt8[0x3C]; set => UInt8[0x3C] = value; }
 
-    public byte TrueNameFlag { get => UInt8[57]; set => UInt8[57] = value; }
+    public byte TrueNameFlag { get => UInt8[0x3D]; set => UInt8[0x3D] = value; }
 
-    public ushort NNFlags { get => UInt16[58]; set => UInt16[58] = value; }
+    public ushort NNFlags { get => UInt16[0x3E]; set => UInt16[0x3E] = value; }
 
-    public byte DosVersionMajor { get => UInt8[60]; set => UInt8[60] = value; }
+    public byte DosVersionMajor { get => UInt8[0x40]; set => UInt8[0x40] = value; }
 
-    public byte DosVersionMinor { get => UInt8[61]; set => UInt8[61] = value; }
+    public byte DosVersionMinor { get => UInt8[0x41]; set => UInt8[0x41] = value; }
 
-    public byte[] Unused { get => GetData(62, 14); set { LoadData(62, value); } }
+    public UInt8Array Unused => GetUInt8Array(0x42, 14);
 
-    public byte[] Service { get => GetData(76, 3); set { LoadData(76, value); } }
+    public UInt8Array Service => GetUInt8Array(0x50, 3);
 
-    public byte[] Unused2 { get => GetData(79, 9); set { LoadData(79, value); } }
+    public UInt8Array Unused2 => GetUInt8Array(0x53, 9);
 
-    public byte[] FirstFileControlBlock { get => GetData(88, 16); set { LoadData(88, value); } }
+    public UInt8Array FirstFileControlBlock => GetUInt8Array(0x5C, 16);
 
-    public byte[] SecondFileControlBlock { get => GetData(104, 16); set { LoadData(104, value); } }
+    public UInt8Array SecondFileControlBlock => GetUInt8Array(0x6C, 16);
 
-    public byte[] Unused3 { get => GetData(120, 4); set { LoadData(120, value); } }
+    public UInt8Array Unused3 => GetUInt8Array(0x7C, 4);
+
+    public DosCommandTail DosCommandTail => new (ByteReaderWriter, BaseAddress + 0x80);
 }
