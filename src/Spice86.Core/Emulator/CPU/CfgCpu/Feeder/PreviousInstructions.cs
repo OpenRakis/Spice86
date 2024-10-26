@@ -7,7 +7,7 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>
 /// Cache of previous instructions that existed in a memory address at a time.
 /// </summary>
-public class PreviousInstructions : IInstructionReplacer<CfgInstruction> {
+public class PreviousInstructions : InstructionReplacer {
     private readonly MemoryInstructionMatcher _memoryInstructionMatcher;
 
     /// <summary>
@@ -15,7 +15,8 @@ public class PreviousInstructions : IInstructionReplacer<CfgInstruction> {
     /// </summary>
     private readonly Dictionary<SegmentedAddress, HashSet<CfgInstruction>> _previousInstructionsAtAddress = new();
 
-    public PreviousInstructions(IMemory memory) {
+    public PreviousInstructions(IMemory memory, InstructionReplacerRegistry replacerRegistry) : base(
+        replacerRegistry) {
         _memoryInstructionMatcher = new MemoryInstructionMatcher(memory);
     }
 
@@ -28,7 +29,7 @@ public class PreviousInstructions : IInstructionReplacer<CfgInstruction> {
         return null;
     }
 
-    public void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
+    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
         SegmentedAddress instructionAddress = instruction.Address;
 
         if (_previousInstructionsAtAddress.TryGetValue(instructionAddress,

@@ -41,25 +41,25 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.4">
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.0" />
+		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
 		<PackageReference Include="JetBrains.Annotations" Version="2024.2.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Roslynator.Analyzers" Version="4.12.4">
+		<PackageReference Include="Roslynator.Analyzers" Version="4.12.8">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.4">
+		<PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.8">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Serilog" Version="4.0.1" />
+		<PackageReference Include="Serilog" Version="4.0.2" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
 		<PackageReference Include="SerilogAnalyzer" Version="0.15.0">
@@ -74,7 +74,7 @@
 		<PackageReference Include="System.IO" Version="4.3.0" />
 		<PackageReference Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
 		<PackageReference Include="System.Memory" Version="4.5.5" />
-		<PackageReference Include="System.Memory.Data" Version="8.0.0" />
+		<PackageReference Include="System.Memory.Data" Version="8.0.1" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
 		<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->

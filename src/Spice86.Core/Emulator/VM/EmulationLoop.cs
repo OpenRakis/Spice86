@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Function;
 
 namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
 
@@ -87,6 +88,9 @@ public class EmulationLoop {
 
     private void RunLoop() {
         _stopwatch.Start();
+        if (_cpu is CfgCpu cfgCpu) {
+            cfgCpu.SignalEntry();
+        }
         while (_cpuState.IsRunning) {
             _emulatorBreakpointsManager.CheckBreakPoint();
             _pauseHandler.WaitIfPaused();

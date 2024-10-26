@@ -8,10 +8,16 @@ using Spice86.Core.Emulator.Function;
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration {
     /// <summary>
-    /// Gets or sets whether the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.
+    /// Gets if the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.
     /// </summary>
     [Option(nameof(A20Gate), Default = false, Required = false, HelpText = "Whether the 20th address line is silenced. Used for legacy 8086 programs.")]
     public bool A20Gate { get; init; }
+    
+    /// <summary>
+    /// Gets if the program will be paused on startup. If <see cref="GdbPort"/> is set, the program will be paused anyway.
+    /// </summary>
+    [Option(nameof(Debug), Default = false, Required = false, HelpText = "Gets if the program will be paused on startup.")]
+    public bool Debug { get; init; }
 
     /// <summary> Path to C drive, default is exe parent. </summary>
     [Option('c', nameof(CDrive), Default = null, Required = false, HelpText = "Path to C drive, default is exe parent")]

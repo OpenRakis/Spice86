@@ -14,15 +14,16 @@ using Spice86.Shared.Utils;
 /// If an instruction is modified and then put back in its original version, it is the original instance of the parsed instruction that will be returned for the address
 /// Instructions can be replaced in the cache (see method ReplaceInstruction)
 /// </summary>
-public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
+public class InstructionsFeeder {
     private readonly InstructionParser _instructionParser;
     private readonly CurrentInstructions _currentInstructions;
     private readonly PreviousInstructions _previousInstructions;
 
-    public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState) {
-        _currentInstructions = new(memory, emulatorBreakpointsManager);
+    public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
+        InstructionReplacerRegistry replacerRegistry) {
+        _currentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
         _instructionParser = new(memory, cpuState);
-        _previousInstructions = new(memory);
+        _previousInstructions = new(memory, replacerRegistry);
     }
 
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
@@ -47,10 +48,5 @@ public class InstructionsFeeder : IInstructionReplacer<CfgInstruction> {
         _currentInstructions.SetAsCurrent(parsed);
         _previousInstructions.AddInstructionInPrevious(parsed);
         return parsed;
-    }
-
-    public void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        _currentInstructions.ReplaceInstruction(old, instruction);
-        _previousInstructions.ReplaceInstruction(old, instruction);
     }
 }

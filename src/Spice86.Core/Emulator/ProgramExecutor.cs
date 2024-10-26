@@ -6,6 +6,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
@@ -30,6 +31,7 @@ using System.Security.Cryptography;
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
+    private readonly IPauseHandler _pauseHandler;
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
@@ -43,6 +45,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated x86 CPU.</param>
+    /// <param name="cfgCpu">The emulated x86 CPU, CFG version.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
@@ -54,12 +57,13 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, Cpu cpu, State state, Timer timer, Dos dos,
+        IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
+        _pauseHandler = pauseHandler;
         _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
             emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
@@ -84,7 +88,11 @@ public sealed class ProgramExecutor : IDisposable {
     /// Starts the loaded program.
     /// </summary>
     public void Run() {
-        _gdbServer?.StartServerAndWait();
+        if (_gdbServer is not null) {
+            _gdbServer?.StartServerAndWait();
+        } else if (_configuration.Debug) {
+            _pauseHandler.RequestPause("Starting the emulated program paused was requested");
+        }
         _emulationLoop.Run();
 
         if (_configuration.DumpDataOnExit is not false) {

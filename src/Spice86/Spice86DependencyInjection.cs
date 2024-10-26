@@ -197,7 +197,7 @@ public class Spice86DependencyInjection : IDisposable {
             reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, cpu, state,
+            emulatorStateSerializer, memory, cpu, cfgCpu, state,
             timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
             mainWindowViewModel,
             loggerService);

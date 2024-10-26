@@ -1,13 +1,12 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-
-using System.Linq;
 
 /// <summary>
 /// Handles coherency between the memory and the graph of instructions executed by the CPU.
@@ -20,14 +19,15 @@ using System.Linq;
 public class CfgNodeFeeder {
     private readonly State _state;
     private readonly InstructionsFeeder _instructionsFeeder;
-    private readonly NodeLinker _nodeLinker = new();
+    private readonly NodeLinker _nodeLinker;
     private readonly DiscriminatorReducer _discriminatorReducer;
 
-    public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager) {
+    public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        InstructionReplacerRegistry replacerRegistry) {
         _state = state;
-        _instructionsFeeder = new(emulatorBreakpointsManager, memory, state);
-        _discriminatorReducer = new(new List<IInstructionReplacer<CfgInstruction>>()
-            { _nodeLinker, _instructionsFeeder });
+        _instructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
+        _nodeLinker = new(replacerRegistry);
+        _discriminatorReducer = new(replacerRegistry);
     }
 
     private CfgInstruction CurrentNodeFromInstructionFeeder =>
@@ -59,6 +59,11 @@ public class CfgNodeFeeder {
         if (ReferenceEquals(fromMemory, currentFromGraph)) {
             // Instruction is assembly and Graph agrees with memory. Nominal case.
             return currentFromGraph;
+        }
+
+        if (fromMemory.Address != currentFromGraph.Address) {
+            // should never happen
+            throw new UnhandledCfgDiscrepancyException("Nodes from memory and from graph don't have the same address. This should never happen.");
         }
 
         // Graph and memory are not aligned ... Need to inject Node with discriminator
