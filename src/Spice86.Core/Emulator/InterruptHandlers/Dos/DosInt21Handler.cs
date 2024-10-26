@@ -721,12 +721,6 @@ public class DosInt21Handler : InterruptHandler {
             State.BX = 0;
         }
     }
-
-    private enum TypeOfLoad : byte {
-        LoadAndExecute = 0,
-        LoadOnly = 1,
-        LoadOverlay = 2
-    }
     
     /// <summary>
     /// Load and or execute a program.
@@ -745,11 +739,12 @@ public class DosInt21Handler : InterruptHandler {
     public void LoadAndOrExecuteProgram(bool calledFromVm) {
         bool success = false;
         byte typeOfLoadByte = State.AL;
-        if (!Enum.IsDefined(typeof(TypeOfLoad), typeOfLoadByte)) {
+        if (!Enum.IsDefined(typeof(DosExecOperation), typeOfLoadByte)) {
             SetCarryFlag(false, calledFromVm);
             return;
         }
-        TypeOfLoad typeOfLoad = (TypeOfLoad)State.AL;
+        DosExecParameterBlock dosExecParameterBlock = new DosExecParameterBlock(Memory, MemoryUtils.ToPhysicalAddress(State.ES, State.BX));
+        DosExecOperation dosExecOperation = (DosExecOperation)State.AL;
         string programName = GetZeroTerminatedStringAtDsDx();
         string? fullHostPath = _dosFileManager.TryGetFullHostPathFromDos(programName);
         
@@ -759,13 +754,13 @@ public class DosInt21Handler : InterruptHandler {
         }
         
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("LOAD AND/OR EXECUTE PROGRAM {TypeOfLoad}, {ProgramName}", typeOfLoad, programName);
+            LoggerService.Verbose("LOAD AND/OR EXECUTE PROGRAM {DosExecOperation}, {ProgramName}", dosExecOperation, programName);
         }
 
         bool isComFile = string.Equals(Path.GetExtension(programName).ToLowerInvariant(), ".com", StringComparison.OrdinalIgnoreCase);
         
-        switch (typeOfLoad) {
-            case TypeOfLoad.LoadAndExecute:
+        switch (dosExecOperation) {
+            case DosExecOperation.LoadAndExecute:
                 if (isComFile) {
                     LoadAndExecComFile(fullHostPath, "", 0x1000);
                 } else {
@@ -773,11 +768,11 @@ public class DosInt21Handler : InterruptHandler {
                 }
                 success = true;
                 break;
-            case TypeOfLoad.LoadOnly:
+            case DosExecOperation.LoadOnly:
                 // Not implemented
                 success = false;
                 break;
-            case TypeOfLoad.LoadOverlay:
+            case DosExecOperation.LoadOverlay:
                 // Not implemented
                 success = false;
                 break;
