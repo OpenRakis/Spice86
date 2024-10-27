@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 

@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -10,6 +8,8 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System.Collections.Immutable;
 
 using Xunit;
 

@@ -2,19 +2,18 @@ using Spice86.Core.CLI;
 
 namespace Spice86.Tests;
 
-using Spice86.Core.Emulator;
+using NSubstitute;
+
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
 
 using Xunit;
-using NSubstitute;
-
-using Spice86.Shared.Emulator.Memory;
 
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();

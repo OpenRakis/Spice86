@@ -1,11 +1,11 @@
 namespace Spice86.Tests;
 
-using System;
-
 using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
+
+using System;
 
 public class Spice86Creator {
     public Spice86DependencyInjection CreateSpice86ForBinName(string binName,  bool enablePit, bool recordData = false) {
