@@ -6,6 +6,7 @@
 		<Nullable>enable</Nullable>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
 		<Using Remove="System.Linq" />
