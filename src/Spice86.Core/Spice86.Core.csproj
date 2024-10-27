@@ -40,13 +40,6 @@
 		<AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
 		<AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
 	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
