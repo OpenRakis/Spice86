@@ -13,7 +13,6 @@
             <controls:GroupBox Header="Ports">
                 <pgc:PropertyGrid
                     DataContext="{CompiledBinding Midi}"
-                    ShowStyle="Alphabetic"
                     ShowTitle="False">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
