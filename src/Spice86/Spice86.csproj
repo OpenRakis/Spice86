@@ -29,7 +29,7 @@
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
-    <!-- set by DotNet.ReproducibleBuilds -->
+    <!-- Source Link configuration -->
     <PropertyGroup>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -52,35 +52,18 @@
         <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.10" />
         <PackageReference Include="Avalonia.Desktop" Version="11.1.4" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.3" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.4" />
         <PackageReference Include="Avalonia.Fonts.Inter" Version="11.1.4" />
-        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.1.0.4" />
+        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.1.0.5" />
         <PackageReference Include="AvaloniaGraphControl" Version="0.6.1" />
-        <PackageReference Include="AvaloniaHex" Version="0.1.3" />
-        <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.1.1.1" />
-        <PackageReference Include="bodong.PropertyModels" Version="11.1.1.1" />
+        <PackageReference Include="AvaloniaHex" Version="0.1.4" />
+        <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.1.4.2" />
+        <PackageReference Include="bodong.PropertyModels" Version="11.1.4.2" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
         <PackageReference Include="DialogHost.Avalonia" Version="0.8.1" />
-        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.259" />
+        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.262" />
         <PackageReference Include="Iced" Version="1.21.0" />
         <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-        <PackageReference Include="Roslynator.Analyzers" Version="4.12.8">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.8">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="Semi.Avalonia" Version="11.1.0.4" />
         <PackageReference Include="Semi.Avalonia.DataGrid" Version="11.1.0.4" />
         <PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10" />

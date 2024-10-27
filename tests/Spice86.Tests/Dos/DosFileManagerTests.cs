@@ -1,16 +1,17 @@
 ﻿namespace Spice86.Tests.Dos;
 
-using Spice86.Core.Emulator.OperatingSystem;
-
-using Xunit;
+using FluentAssertions;
 
 using NSubstitute;
-using FluentAssertions;
-using Spice86.Core.Emulator.Memory;
+
 using Spice86.Core.CLI;
-using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Interfaces;
+
+using Xunit;
 
 public class DosFileManagerTests {
     private static readonly string MountPoint = Path.GetFullPath(@"Resources\MountPoint");

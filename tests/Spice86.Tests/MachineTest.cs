@@ -6,16 +6,17 @@ using JetBrains.Annotations;
 
 using Serilog;
 
+using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Utils;
+
 using System;
 using System.IO;
 
 using Xunit;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Utils;
 
 public class MachineTest {
     static MachineTest() {

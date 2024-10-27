@@ -1,7 +1,5 @@
 ﻿namespace Bufdio.Spice86;
 
-using System.Collections.Generic;
-
 using Bufdio.Spice86.Bindings.PortAudio;
 using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
@@ -9,6 +7,7 @@ using Bufdio.Spice86.Utilities;
 using Bufdio.Spice86.Utilities.Extensions;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Provides functionalities to retrieve, configure and manage current PortAudio environment

@@ -1,8 +1,8 @@
-using System.Collections.Immutable;
-
 using JetBrains.Annotations;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+
+using System.Collections.Immutable;
 
 using Xunit;
 

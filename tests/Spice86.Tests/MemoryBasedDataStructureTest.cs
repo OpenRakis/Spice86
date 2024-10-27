@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Memory;
 
-using System;
 using System.Collections.Generic;
 
 using Xunit;

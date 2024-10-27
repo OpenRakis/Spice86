@@ -1,11 +1,10 @@
 ﻿namespace Bufdio.Spice86.Bindings.PortAudio;
 
-using System;
-using System.Runtime.InteropServices;
-
 using Bufdio.Spice86.Bindings.PortAudio.Enums;
 using Bufdio.Spice86.Utilities;
 
+using System;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 /// <summary>

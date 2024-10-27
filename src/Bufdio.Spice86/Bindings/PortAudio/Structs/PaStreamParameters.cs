@@ -1,9 +1,9 @@
 namespace Bufdio.Spice86.Bindings.PortAudio.Structs;
 
+using Bufdio.Spice86.Bindings.PortAudio.Enums;
+
 using System;
 using System.Runtime.InteropServices;
-
-using Bufdio.Spice86.Bindings.PortAudio.Enums;
 
 [StructLayout(LayoutKind.Sequential)]
 internal readonly record struct PaStreamParameters

@@ -4,8 +4,6 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Serilog.Events;
-
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Shared.Interfaces;
 
