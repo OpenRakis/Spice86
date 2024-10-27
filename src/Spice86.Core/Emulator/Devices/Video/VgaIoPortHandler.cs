@@ -318,6 +318,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                     _loggerService.Debug("[{Port:X4}] Write to CRT register {Register}: {Value:X2} {Explained}", port, _crtRegisters.AddressRegister, value, _crtRegisters.AddressRegister.Explain(value));
                 }
+                if (_crtRegisters.AddressRegister == CrtControllerRegister.StartAddressHigh && value != _crtRegisters.ScreenStartAddressHigh) {
+                    _loggerService.Verbose("Setting Video display to 0x{Value:X4}", (_graphicsRegisters.MiscellaneousGraphicsRegister.BaseAddress + _crtRegisters.ScreenStartAddress) >> 4);
+                }
                 _crtRegisters.WriteRegister(_crtRegisters.AddressRegister, value);
 
                 break;

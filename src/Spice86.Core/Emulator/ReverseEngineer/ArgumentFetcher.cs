@@ -96,6 +96,11 @@ public class ArgumentFetcher {
         arg3 = _stack.Peek16(12);
     }
 
+    public void Get(out uint arg1, out uint arg2) {
+        arg1 = _stack.Peek32(4);
+        arg2 = _stack.Peek32(8);
+    }
+
     private string GetStringFromDsPointer(ushort offset) {
         uint address = MemoryUtils.ToPhysicalAddress(_state.DS, offset);
         return _memory.GetZeroTerminatedString(address, int.MaxValue);

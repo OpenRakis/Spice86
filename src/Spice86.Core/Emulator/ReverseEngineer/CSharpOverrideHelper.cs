@@ -17,6 +17,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+
 using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 /// <summary>
@@ -27,22 +28,27 @@ public class CSharpOverrideHelper {
     /// The two programmable interrupt controllers.
     /// </summary>
     protected readonly DualPic _dualPic;
+
     /// <summary>
     /// The execution flow recorder.
     /// </summary>
     protected readonly ExecutionFlowRecorder _executionFlowRecorder;
+
     /// <summary>
     /// The class that stores callback instructions definitions.
     /// </summary>
     protected readonly CallbackHandler _callbackHandler;
+
     /// <summary>
     /// The IBM PC timer device.
     /// </summary>
     protected readonly Timer _timer;
+
     /// <summary>
     /// The class that manages software breakpoints.
     /// </summary>
     protected readonly EmulatorBreakpointsManager EmulatorBreakpointsManager;
+
     /// <summary>
     /// The service used for logging.
     /// </summary>
@@ -555,6 +561,7 @@ public class CSharpOverrideHelper {
                 out FunctionInformation? functionInformation)) {
             return null;
         }
+
         return functionInformation.FunctionOverride;
     }
 
@@ -661,6 +668,21 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Executes the specified action when the byte at the specified segment and offset is written to.
+    /// </summary>
+    /// <param name="segment">The segment of the memory location to watch.</param>
+    /// <param name="offset">The offset of the memory location to watch.</param>
+    /// <param name="action">The action to execute when the memory location is written to.</param>
+    public void DoOnMemoryRead(ushort segment, ushort offset, Action action) {
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.READ,
+            MemoryUtils.ToPhysicalAddress(segment, offset),
+            _ => action.Invoke()
+            , false);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+    }
+
+    /// <summary>
     /// Checks if the vtable contains the expected segment and offset values.
     /// </summary>
     /// <param name="segmentRegisterIndex">The index of the segment register to use.</param>
@@ -748,7 +770,7 @@ public class CSharpOverrideHelper {
     public void Interrupt(byte vectorNumber) {
         _callbackHandler.RunFromOverriden(vectorNumber);
     }
-    
+
     /// <summary>
     /// Defines C# functions for provided interrupt handlers so that when overriden code generates an interrupt, an override for it is found and executed.
     /// Does not currently handle mouse code which has more than a callback + iret.
@@ -763,6 +785,7 @@ public class CSharpOverrideHelper {
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
                     _callbackHandler.RunFromOverriden(callback);
+
                     return InterruptRet();
                 }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
         }
@@ -780,6 +803,7 @@ public class CSharpOverrideHelper {
     /// <exception cref="HaltRequestedException">The exception throw in order to exit the program.</exception>
     protected void Exit() {
         _loggerService.Verbose("Program requested exit. Terminating now");
+
         throw new HaltRequestedException();
     }
 }
