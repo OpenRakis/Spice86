@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+			 x:Class="Spice86.Views.BreakpointsView"
+			 x:DataType="viewModels:BreakpointsViewModel">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+			<Button Content="Create..." Command="{Binding CreateCommand}" Margin="5"/>
+			<Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
+			<Button Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
+		</StackPanel>
+		<DataGrid Grid.Row="1"
+				ItemsSource="{Binding Breakpoints}"
+				SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
+				AutoGenerateColumns="False"
+				CanUserReorderColumns="True"
+				CanUserResizeColumns="True"
+				CanUserSortColumns="False"
+				IsReadOnly="True"
+				SelectionMode="Extended">
+			<DataGrid.Columns>
+				<DataGridCheckBoxColumn Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
+				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
+				<DataGridTextColumn Binding="{Binding Type}" Header="Type" />
+			</DataGrid.Columns>
+		</DataGrid>
+	</Grid>
+</UserControl>

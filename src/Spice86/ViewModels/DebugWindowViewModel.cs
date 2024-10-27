@@ -56,6 +56,9 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [ObservableProperty]
     private StatusMessageViewModel _statusMessageViewModel;
 
+    [ObservableProperty]
+    private BreakpointsViewModel _breakpointsViewModel;
+
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
@@ -68,12 +71,13 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
+        BreakpointsViewModel = new(emulatorBreakpointsManager);
         StatusMessageViewModel = new(_messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, emulatorBreakpointsManager, pauseHandler, uiDispatcher, messenger, textClipboard);
+        DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, BreakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);

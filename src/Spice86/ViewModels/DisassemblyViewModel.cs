@@ -27,7 +27,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private readonly ITextClipboard _textClipboard;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IInstructionExecutor _cpu;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly BreakpointsViewModel _breakpointsViewModel;
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -67,11 +67,11 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
-        IMessenger messenger, ITextClipboard textClipboard,
-        bool canCloseTab = false) {
+    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state,
+        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
+        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) {
         _cpu = cpu;
-        _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _breakpointsViewModel = breakpointsViewModel;
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
         _textClipboard = textClipboard;
@@ -100,7 +100,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _emulatorBreakpointsManager, _pauseHandler, _uiDispatcher, _messenger,
+        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
@@ -162,7 +162,6 @@ public partial class DisassemblyViewModel : ViewModelBase {
             long instructionAddress = codeMemoryStream.Position;
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
-                HasBreakpoint = _emulatorBreakpointsManager.IsAddressBreakpointAt(instructionAddress),
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
                 Length = instruction.Length,
@@ -178,6 +177,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             };
+            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasBreakpoint(instructionInfo);
             instructionInfo.StringRepresentation =
                 $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == state.IpPhysicalAddress) {
@@ -199,12 +199,9 @@ public partial class DisassemblyViewModel : ViewModelBase {
     
     [RelayCommand]
     private void RemoveAddressBreakpointHere() {
-        if (SelectedInstruction?.BreakPoint is null) {
-            return;
+        if (SelectedInstruction is not null) {
+            _breakpointsViewModel.RemoveBreakpoint(SelectedInstruction);
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(SelectedInstruction.BreakPoint, false);
-        SelectedInstruction.BreakPoint = null;
-        SelectedInstruction.HasBreakpoint = false;
     }
 
     [RelayCommand]
@@ -214,8 +211,7 @@ public partial class DisassemblyViewModel : ViewModelBase {
         }
         AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached,
             isRemovedOnTrigger: false);
-        SelectedInstruction.BreakPoint = breakPoint;
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+        _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
         SelectedInstruction.HasBreakpoint = true;
     }
 
