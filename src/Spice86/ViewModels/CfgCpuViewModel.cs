@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using AvaloniaGraphControl;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -32,18 +33,13 @@ public partial class CfgCpuViewModel : ViewModelBase {
         IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
-        pauseHandler.Pausing += OnPausing;
+        pauseHandler.Pausing += () => UpdateGraphCommand.Execute(null);
     }
 
-    private void OnPausing() {
+    [RelayCommand]
+    private async Task UpdateGraph() {
         Graph = null;
-        // This call of an async method from a sync method uses the async method and discards the Task.
-        // If this method fails, it will not crash the process.
-        // Instead, it will fire the TaskScheduler.UnobservedTaskException event.
-        // See https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
-        // The alternative, making this event handler 'async void' would crash the process in case of an exception,
-        // unless a try/catch is put over the *entire* code of the sync method.
-        _ = UpdateCurrentGraphAsync();
+        await UpdateCurrentGraphAsync();
     }
 
     partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
