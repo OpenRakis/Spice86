@@ -1,10 +1,10 @@
 ﻿namespace Bufdio.Spice86.Utilities.Extensions;
 
-using System.Runtime.InteropServices;
-
 using Bufdio.Spice86.Bindings.PortAudio;
 using Bufdio.Spice86.Bindings.PortAudio.Structs;
 using Bufdio.Spice86.Exceptions;
+
+using System.Runtime.InteropServices;
 
 internal static class PortAudioExtensions {
     public static bool PaIsError(this int code) {
