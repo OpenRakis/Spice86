@@ -12,7 +12,6 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 		<StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-			<Button Content="Create..." Command="{Binding CreateCommand}" Margin="5"/>
 			<Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
 			<Button Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
 		</StackPanel>
@@ -23,8 +22,7 @@
 				CanUserReorderColumns="True"
 				CanUserResizeColumns="True"
 				CanUserSortColumns="False"
-				IsReadOnly="True"
-				SelectionMode="Extended">
+				IsReadOnly="True">
 			<DataGrid.Columns>
 				<DataGridCheckBoxColumn Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />

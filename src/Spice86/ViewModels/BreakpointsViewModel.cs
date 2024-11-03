@@ -3,6 +3,7 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
@@ -12,13 +13,14 @@ using System.Collections.ObjectModel;
 
 public partial class BreakpointsViewModel : ViewModelBase {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly IPauseHandler _pauseHandler;
+    private readonly IMemory _memory;
 
-    public BreakpointsViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager) {
+    public BreakpointsViewModel(IPauseHandler pauseHandler, IMemory memory, EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _memory = memory;
+        _pauseHandler = pauseHandler;
     }
-
-    [ObservableProperty]
-    private bool _showBreakpointCreationDialog = false;
     
     [ObservableProperty]
     private ObservableCollection<BreakpointViewModel> _breakpoints = new();
@@ -38,14 +40,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private BreakpointViewModel? _selectedBreakpoint;
 
     internal void AddAddressBreakpoint(AddressBreakPoint addressBreakPoint) {
-        var breakpointViewModel = new BreakpointViewModel(_emulatorBreakpointsManager, addressBreakPoint);
+        var breakpointViewModel = new BreakpointViewModel( _emulatorBreakpointsManager, addressBreakPoint);
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
-    }
-
-    [RelayCommand]
-    private void Create() {
-        ShowBreakpointCreationDialog = true;
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
@@ -54,7 +51,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(RemoveBreakpointCanExecute))]
     private void RemoveBreakpoint() {
         if (SelectedBreakpoint is not null) {
-            Breakpoints.Remove(SelectedBreakpoint);
+            DeleteBreakpoint(SelectedBreakpoint);
         }
     }
 
@@ -65,8 +62,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
     internal void RemoveBreakpoint(CpuInstructionInfo selectedInstruction) {
         BreakpointViewModel? breakpoint = Breakpoints.FirstOrDefault(x => x.IsFor(selectedInstruction));
         if (breakpoint is not null) {
-            breakpoint.Disable();
-            Breakpoints.Remove(breakpoint);
+            DeleteBreakpoint(breakpoint);
         }
+    }
+
+    private void DeleteBreakpoint(BreakpointViewModel breakpoint) {
+        breakpoint.Disable();
+        Breakpoints.Remove(breakpoint);
     }
 }

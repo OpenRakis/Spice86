@@ -9,21 +9,13 @@
              x:DataType="viewModels:StatusMessageViewModel">
     <controls:StatusBar>
         <controls:StatusBarItem>
-            <StackPanel Orientation="Horizontal">
-                <ComboBox SelectedItem="{Binding Message, Mode=TwoWay}" ItemsSource="{Binding PreviousMessages}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock>
-                                <Run Text="{Binding Time}" />
-                                <Run Text=": " />
-                                <Run Text="{Binding Origin}" />
-                                <Run Text=" - " />
-                                <Run Text="{Binding Message}" />
-                            </TextBlock>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-            </StackPanel>
+            <TextBlock DataContext="{Binding Message}">
+                <Run Text="{Binding Time}" />
+                <Run Text=": " />
+                <Run Text="{Binding Origin}" />
+                <Run Text=" - " />
+                <Run Text="{Binding Message}" />
+            </TextBlock>
         </controls:StatusBarItem>
     </controls:StatusBar>
 </UserControl>
