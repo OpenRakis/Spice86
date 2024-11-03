@@ -15,6 +15,7 @@ using System.Reflection;
 
 public partial class CpuViewModel : ViewModelBase {
     private readonly State _cpuState;
+    private readonly IMemory _memory;
     
     [ObservableProperty]
     private StateInfo _state = new();
@@ -24,6 +25,7 @@ public partial class CpuViewModel : ViewModelBase {
 
     public CpuViewModel(State state, Stack stack, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
+        _memory = memory;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => _isPaused = true);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
@@ -47,8 +49,6 @@ public partial class CpuViewModel : ViewModelBase {
             Flags.PropertyChanged -= OnStatePropertyChanged;
         }
 
-        return;
-
         void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
             if (sender is null || e.PropertyName == null || !_isPaused) {
                 return;
@@ -60,6 +60,16 @@ public partial class CpuViewModel : ViewModelBase {
             }
         }
     }
+
+    [ObservableProperty]
+    private string? _esiString;
+
+    [ObservableProperty]
+    private string? _ediString;
+
+    [ObservableProperty]
+    private string? _espString;
+
     private void UpdateCpuState(State state) {
         State.AH = state.AH;
         State.AL = state.AL;
@@ -92,6 +102,9 @@ public partial class CpuViewModel : ViewModelBase {
         State.GS = state.GS;
         State.SS = state.SS;
         State.IP = state.IP;
+        EspString = _memory.GetZeroTerminatedString(State.ESP, 32);
+        EsiString = _memory.GetZeroTerminatedString(State.ESI, 32);
+        EdiString = _memory.GetZeroTerminatedString(State.EDI, 32);
         State.Cycles = state.Cycles;
         State.IpPhysicalAddress = state.IpPhysicalAddress;
         State.StackPhysicalAddress = state.StackPhysicalAddress;
