@@ -1,14 +1,10 @@
 namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
-
-using System;
 
 public partial class BreakpointViewModel : ViewModelBase {
     private readonly BreakPoint _breakPoint;
@@ -39,13 +35,11 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
     }
 
-    [RelayCommand]
     public void Enable() {
         _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: true);
         IsEnabled = true;
     }
 
-    [RelayCommand]
     public void Disable() {
         _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: false);
         IsEnabled = false;

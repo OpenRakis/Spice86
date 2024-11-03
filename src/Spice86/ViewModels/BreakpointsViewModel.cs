@@ -3,23 +3,17 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 
-using System;
 using System.Collections.ObjectModel;
 
 public partial class BreakpointsViewModel : ViewModelBase {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly IPauseHandler _pauseHandler;
-    private readonly IMemory _memory;
 
-    public BreakpointsViewModel(IPauseHandler pauseHandler, IMemory memory, EmulatorBreakpointsManager emulatorBreakpointsManager) {
+    public BreakpointsViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _memory = memory;
-        _pauseHandler = pauseHandler;
     }
     
     [ObservableProperty]
@@ -43,6 +37,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         var breakpointViewModel = new BreakpointViewModel( _emulatorBreakpointsManager, addressBreakPoint);
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
+        SelectedBreakpoint.Enable();
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
