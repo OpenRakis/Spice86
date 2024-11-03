@@ -194,7 +194,9 @@ public partial class DisassemblyViewModel : ViewModelBase {
     private void OnBreakPointReached(BreakPoint breakPoint) {
         string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
         _pauseHandler.RequestPause(message);
-        _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+        _uiDispatcher.Post(() => {
+            _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+        });
     }
     
     [RelayCommand]
