@@ -9,7 +9,7 @@
              x:Class="Spice86.Views.CpuView"
              x:DataType="viewModels:CpuViewModel">
     <ScrollViewer>
-        <Grid ColumnDefinitions="Auto,Auto,*">
+        <Grid ColumnDefinitions="*,*">
             <controls:GroupBox Grid.Column="0" Header="Registers and misc">
                 <pgc:PropertyGrid
                     DataContext="{CompiledBinding State}"
@@ -28,9 +28,6 @@
                     </TextElement.FontFamily>
                 </pgc:PropertyGrid>
             </controls:GroupBox>
-			<controls:GroupBox Grid.Column="2" Header="Stack">
-				<ContentControl Content="{Binding Stack}" />
-			</controls:GroupBox>
         </Grid>
     </ScrollViewer>
 </UserControl>

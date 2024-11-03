@@ -22,16 +22,12 @@ public partial class CpuViewModel : ViewModelBase {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    [ObservableProperty]
-    private CpuStackViewModel _stack;
-
     public CpuViewModel(State state, Stack stack, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => _isPaused = true);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
-        Stack = new CpuStackViewModel(stack, memory, pauseHandler, uiDispatcher);
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
