@@ -28,6 +28,24 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly IPauseHandler _pauseHandler;
     private readonly IInstructionExecutor _cpu;
     private readonly BreakpointsViewModel _breakpointsViewModel;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+
+    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state,
+        BreakpointsViewModel breakpointsViewModel, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
+        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
+        _cpu = cpu;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _breakpointsViewModel = breakpointsViewModel;
+        _messenger = messenger;
+        _memory = memory;
+        _state = state;
+        _pauseHandler = pauseHandler;
+        IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Pausing += () => _uiDispatcher.Post(() => IsPaused = true);
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
+        CanCloseTab = canCloseTab;
+        UpdateDisassembly();
+    }
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -41,6 +59,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StepOverCommand))]
     private bool _isPaused;
 
     [ObservableProperty]
@@ -96,28 +115,31 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state,
-        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
-        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
-        _cpu = cpu;
-        _breakpointsViewModel = breakpointsViewModel;
-        _messenger = messenger;
-        _memory = memory;
-        _state = state;
-        _pauseHandler = pauseHandler;
-        IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += () => _uiDispatcher.Post(() => IsPaused = true);
-        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
-        CanCloseTab = canCloseTab;
-        UpdateDisassembly();
-    }
-
     private void UpdateHeader(uint? address) {
         Header = address is null ? "" : $"0x{address:X}";
     }
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void StepOver() {
+        if(SelectedInstruction is null) {
+            return;
+        }
+        var nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
+        var addressBreakpoint = new AddressBreakPoint(
+            BreakPointType.EXECUTION,
+            nextInstructionAddressInListing,
+            (breakpoint) => {
+                OnBreakPointReached(breakpoint);
+                _uiDispatcher.Post(GoToCsIp);
+            },
+            isRemovedOnTrigger: true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(addressBreakpoint, on: true);
+        _pauseHandler.Resume();
+    }
+
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
@@ -127,7 +149,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger,
+        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _breakpointsViewModel, _emulatorBreakpointsManager, _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
@@ -223,6 +245,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+            UpdateDisassembly();
         });
     }
     

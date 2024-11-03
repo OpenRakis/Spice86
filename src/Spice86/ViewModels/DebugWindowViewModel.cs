@@ -77,7 +77,10 @@ public partial class DebugWindowViewModel : ViewModelBase,
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, BreakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard);
+        DisassemblyViewModel disassemblyVm = new(
+            cpu, memory, cpuState, 
+            BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
+            uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);

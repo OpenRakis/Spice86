@@ -129,6 +129,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+            TryUpdateHeaderAndMemoryDocument();
         });
     }
 

@@ -14,47 +14,50 @@
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
-		<StackPanel Orientation="Horizontal"
-			Grid.Row="0" IsVisible="{Binding IsPaused}"
-			HorizontalAlignment="Center"
-			VerticalAlignment="Top">
-			<StackPanel Orientation="Vertical">
-				<Button
-					Command="{Binding NewDisassemblyViewCommand}"
-					Content="New Disassembly View"
-					IsEnabled="{Binding IsPaused}" />
-				<Button
-					Command="{Binding CloseTabCommand}"
-					Content="Close View"
-					IsEnabled="{Binding CanCloseTab}"/>
-			</StackPanel>
-			<StackPanel Orientation="Vertical">
-				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" IsEnabled="{Binding IsPaused}" Content="Breakpoint..." />
-				<Button Content="Step into" Command="{Binding StepIntoCommand}" />
-			</StackPanel>
-			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-				<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
-			</StackPanel>
-			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-				<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
-				<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
-				<Label HorizontalAlignment="Center" Content="Start Address" />
-				<StackPanel Orientation="Horizontal">
-					<TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
-						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
-							Converter={StaticResource SegmentedAddressConverter}}"
-						Watermark="segment:offset" />
-					<TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
-						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
-						Watermark="linear address"/>
+		<Viewbox Grid.Row="0">
+			<StackPanel Orientation="Horizontal"
+				IsVisible="{Binding IsPaused}"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Top">
+				<StackPanel Orientation="Vertical">
+					<Button
+						Command="{Binding NewDisassemblyViewCommand}"
+						Content="New Disassembly View"
+						IsEnabled="{Binding IsPaused}" />
+					<Button
+						Command="{Binding CloseTabCommand}"
+						Content="Close View"
+						IsEnabled="{Binding CanCloseTab}"/>
 				</StackPanel>
-			</StackPanel>
-			<StackPanel Orientation="Vertical">
-				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
-				<Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
-			</StackPanel>
-		</StackPanel>
+				<StackPanel Orientation="Vertical">
+					<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" IsEnabled="{Binding IsPaused}" Content="Breakpoint..." />
+					<Button Content="Step into" Command="{Binding StepIntoCommand}" />
+					<Button Content="Step over" Command="{Binding StepOverCommand}" />
+				</StackPanel>
+				<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+					<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
+					<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
+				</StackPanel>
+				<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+					<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
+					<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
+					<Label HorizontalAlignment="Center" Content="Start Address" />
+					<StackPanel Orientation="Horizontal">
+						<TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
+							Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
+							Converter={StaticResource SegmentedAddressConverter}}"
+							Watermark="segment:offset" />
+						<TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
+							Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
+							Watermark="linear address"/>
+					</StackPanel>
+				</StackPanel>
+				<StackPanel Orientation="Vertical">
+					<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
+					<Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
+				</StackPanel>
+			</StackPanel>	
+		</Viewbox>
 		<DataGrid Grid.Row="1"
 				AutoGenerateColumns="False"
 				CanUserReorderColumns="True"
