@@ -1,7 +1,5 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Collections;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 

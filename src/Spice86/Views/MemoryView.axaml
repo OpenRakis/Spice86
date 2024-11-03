@@ -222,12 +222,16 @@
 								VerticalContentAlignment="Center"
 								HorizontalContentAlignment="Left"
 								Content="Memory Address to break on:" />
-							<TextBox
+							<StackPanel
 								Grid.Row="0"
 								Grid.Column="1"
-								FontFamily="RobotoMonoFont"
-								Text="{Binding BreakpointAddress}"
-								Watermark="linear or segmented address" />
+								Orientation="Vertical">
+								<TextBox
+									FontFamily="RobotoMonoFont"
+									Text="{Binding BreakpointAddress}"
+									Watermark="linear or segmented address" />
+								<TextBlock>Linear or segmented address</TextBlock>
+							</StackPanel>
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"

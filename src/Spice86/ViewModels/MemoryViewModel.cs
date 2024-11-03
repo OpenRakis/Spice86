@@ -8,6 +8,7 @@ using AvaloniaHex.Editing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -17,7 +18,6 @@ using Spice86.Messages;
 using Spice86.Shared.Utils;
 using Spice86.Views;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
@@ -26,7 +26,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcher _uiDispatcher;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
     public enum MemorySearchDataType {
@@ -272,9 +271,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     public MemoryViewModel(IMemory memory, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
-        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
+        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(uiDispatcher, textClipboard) {
         _pauseHandler = pauseHandler;
-        _uiDispatcher = uiDispatcher;
         _breakpointsViewModel = breakpointsViewModel;
         _memory = memory;
         _pauseHandler.Pausing += OnPause;
@@ -379,35 +377,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out ulong? memoryEditAddressValue)) {
             MemoryEditValue = Convert.ToHexString(_memory.ReadRam((uint)(MemoryEditValue?.Length ?? sizeof(ushort)), (uint)memoryEditAddressValue.Value));
         }
-    }
-
-    private bool TryParseMemoryAddress(string? memoryAddress, [NotNullWhen(true)] out ulong? address) {
-        if (string.IsNullOrWhiteSpace(memoryAddress)) {
-            address = null;
-            return false;
-        }
-
-        try {
-            if (memoryAddress.Contains(':')) {
-                string[] split = memoryAddress.Split(":");
-                if (split.Length > 1 &&
-                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
-                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
-                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
-
-                    return true;
-                }
-            } else if (ulong.TryParse(memoryAddress, CultureInfo.InvariantCulture, out ulong value)) {
-                address = value;
-
-                return true;
-            }
-        } catch (Exception e) {
-            _uiDispatcher.Post(() => ShowError(e));
-        }
-        address = null;
-
-        return false;
     }
 
     [RelayCommand]

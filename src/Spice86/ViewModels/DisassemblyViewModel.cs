@@ -19,13 +19,13 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-public partial class DisassemblyViewModel : ViewModelBase {
+using System.Globalization;
+
+public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly ITextClipboard _textClipboard;
-    private readonly IUIDispatcher _uiDispatcher;
     private readonly IInstructionExecutor _cpu;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
@@ -42,6 +42,35 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
     private bool _isPaused;
+
+    [ObservableProperty]
+    private bool _creatingExecutionBreakpoint;
+
+    [ObservableProperty]
+    private string? _breakpointAddress;
+
+    [RelayCommand]
+    private void BeginCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = true;
+        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP).ToString(CultureInfo.InvariantCulture);
+    }
+
+    [RelayCommand]
+    private void CancelCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = false;
+    }
+
+    [RelayCommand]
+    private void ConfirmCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = false;
+        if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
+            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
+            AddressBreakPoint addressBreakPoint = new(BreakPointType.EXECUTION,
+                (long)breakpointAddressValue, OnBreakPointReached, false);
+            _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
+        }
+
+    }
 
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
@@ -69,12 +98,10 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
-        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) {
+        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
         _cpu = cpu;
         _breakpointsViewModel = breakpointsViewModel;
         _messenger = messenger;
-        _uiDispatcher = uiDispatcher;
-        _textClipboard = textClipboard;
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
