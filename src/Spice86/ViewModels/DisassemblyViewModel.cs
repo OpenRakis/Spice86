@@ -250,14 +250,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
     
     [RelayCommand]
-    private void RemoveAddressBreakpointHere() {
-        if (SelectedInstruction is not null) {
-            _breakpointsViewModel.RemoveBreakpoint(SelectedInstruction);
+    private void RemoveExecutionBreakpointHere() {
+        if (SelectedInstruction is null) {
+            return;
         }
+        _breakpointsViewModel.RemoveBreakpoint(SelectedInstruction);
+        SelectedInstruction.HasBreakpoint = false;
     }
 
     [RelayCommand]
-    private void CreateAddressBreakpointHere() {
+    private void CreateExecutionBreakpointHere() {
         if (SelectedInstruction is null) {
             return;
         }
