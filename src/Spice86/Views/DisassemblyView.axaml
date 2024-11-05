@@ -94,6 +94,7 @@
 					<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
 					<MenuItem Header="Create address Breakpoint here" Command="{Binding CreateExecutionBreakpointHereCommand}" />
 					<MenuItem Header="Remove address BreakPoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
 				</ContextMenu>
 			</DataGrid.ContextMenu>
 			<DataGrid.Styles>

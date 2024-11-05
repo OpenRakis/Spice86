@@ -221,11 +221,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                 IsStackInstruction = instruction.IsStackInstruction,
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                SegmentedAddress =
-                    ConvertUtils.ToSegmentedAddressRepresentation(state.CS, (ushort)(state.IP + byteOffset)),
                 FlowControl = instruction.FlowControl,
                 Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
             };
+            instructionInfo.SegmentedAddress = new(state.CS, (ushort)(state.IP + byteOffset));
             instructionInfo.HasBreakpoint = _breakpointsViewModel.HasBreakpoint(instructionInfo);
             instructionInfo.StringRepresentation =
                 $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
@@ -247,6 +246,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
             UpdateDisassembly();
         });
+    }
+
+    [RelayCommand]
+    private void MoveCsIpHere() {
+        if (SelectedInstruction is null) {
+            return;
+        }
+        _state.CS = SelectedInstruction.SegmentedAddress.Segment;
+        _state.IP = SelectedInstruction.SegmentedAddress.Offset;
+        UpdateDisassembly();
     }
     
     [RelayCommand]
