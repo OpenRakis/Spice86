@@ -41,10 +41,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _state = state;
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += () => _uiDispatcher.Post(() => IsPaused = true);
+        pauseHandler.Pausing += OnPausing;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         CanCloseTab = canCloseTab;
-        UpdateDisassembly();
+    }
+
+    private void OnPausing() {
+        _uiDispatcher.Post(() => {
+            IsPaused = true;
+            if(Instructions.Count == 0 && GoToCsIpCommand.CanExecute(null)) {
+                GoToCsIpCommand.Execute(null);
+            }
+        });
     }
 
     [ObservableProperty]
@@ -244,7 +252,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
-            UpdateDisassembly();
+            if (UpdateDisassemblyCommand.CanExecute(null)) {
+                UpdateDisassemblyCommand.Execute(null);
+            }
         });
     }
 
@@ -255,7 +265,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
         _state.CS = SelectedInstruction.SegmentedAddress.Segment;
         _state.IP = SelectedInstruction.SegmentedAddress.Offset;
-        UpdateDisassembly();
+        if (UpdateDisassemblyCommand.CanExecute(null)) {
+            UpdateDisassemblyCommand.Execute(null);
+        }
     }
     
     [RelayCommand]
