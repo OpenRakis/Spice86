@@ -14,90 +14,98 @@
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
-		<Viewbox Grid.Row="0">
-			<StackPanel Orientation="Horizontal"
-				IsVisible="{Binding IsPaused}"
-				HorizontalAlignment="Center"
-				VerticalAlignment="Top">
-				<StackPanel Orientation="Vertical">
-					<Button
-						Command="{Binding NewDisassemblyViewCommand}"
-						Content="New Disassembly View"
-						IsEnabled="{Binding IsPaused}" />
-					<Button
-						Command="{Binding CloseTabCommand}"
-						Content="Close View"
-						IsEnabled="{Binding CanCloseTab}"/>
+		<StackPanel Grid.Row="0"
+			ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+			Orientation="Horizontal"
+			IsVisible="{Binding IsPaused}"
+			HorizontalAlignment="Left"
+			VerticalAlignment="Top">
+			<StackPanel Orientation="Vertical">
+				<Button
+					Command="{Binding NewDisassemblyViewCommand}"
+					Content="New Disassembly View"
+					IsEnabled="{Binding IsPaused}" />
+				<Button
+					Command="{Binding CloseTabCommand}"
+					Content="Close View"
+					IsEnabled="{Binding CanCloseTab}"/>
+			</StackPanel>
+			<StackPanel Orientation="Vertical">
+				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" IsEnabled="{Binding IsPaused}" Content="Breakpoint..." />
+				<Button Content="Step into" Command="{Binding StepIntoCommand}" />
+				<Button Content="Step over" Command="{Binding StepOverCommand}" />
+			</StackPanel>
+			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
+				<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
+			</StackPanel>
+			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+				<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
+				<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
+				<Label HorizontalAlignment="Center" Content="Start Address" />
+				<StackPanel Orientation="Horizontal">
+					<TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
+						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
+						Converter={StaticResource SegmentedAddressConverter}}"
+						Watermark="segment:offset" />
+					<TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
+						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
+						Watermark="linear address"/>
 				</StackPanel>
-				<StackPanel Orientation="Vertical">
-					<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" IsEnabled="{Binding IsPaused}" Content="Breakpoint..." />
-					<Button Content="Step into" Command="{Binding StepIntoCommand}" />
-					<Button Content="Step over" Command="{Binding StepOverCommand}" />
-				</StackPanel>
-				<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-					<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-					<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
-				</StackPanel>
-				<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
-					<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
-					<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
-					<Label HorizontalAlignment="Center" Content="Start Address" />
-					<StackPanel Orientation="Horizontal">
-						<TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
-							Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
-							Converter={StaticResource SegmentedAddressConverter}}"
-							Watermark="segment:offset" />
-						<TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
-							Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
-							Watermark="linear address"/>
-					</StackPanel>
-				</StackPanel>
-				<StackPanel Orientation="Vertical">
-					<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
-					<Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
-				</StackPanel>
-			</StackPanel>	
-		</Viewbox>
-		<DataGrid Grid.Row="1"
-				AutoGenerateColumns="False"
-				CanUserReorderColumns="True"
-				CanUserResizeColumns="True"
-				CanUserSortColumns="False"
-				IsReadOnly="True"
-				SelectionMode="Extended"
-				SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
-				IsVisible="{Binding IsPaused}"
-				ItemsSource="{Binding Instructions}">
-				<TextElement.FontFamily>
-					<OnPlatform Default="{StaticResource RobotoMonoFont}" />
-				</TextElement.FontFamily>
-				<DataGrid.Columns>
-					<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Has Breakpoint ?" />
-					<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
-					<DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="Based on CS:IP" />
-					<DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is at CS:IP?" />
-					<DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="Disassembly (MASM)" />
-					<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
-					<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
-					<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
-					<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
-					<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-					<DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
-					<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
-					<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
-					<DataGridTextColumn Binding="{Binding Length}" Header="Length" />
-					<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
-				</DataGrid.Columns>
-				<DataGrid.ContextMenu>
-					<ContextMenu>
-						<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
-						<MenuItem Header="Create address BreakPoint here" IsVisible="{Binding !SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding CreateAddressBreakpointHereCommand}" />
-						<MenuItem Header="Remove address BreakPoint here" IsVisible="{Binding SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding RemoveAddressBreakpointHereCommand}" />
-					</ContextMenu>
-				</DataGrid.ContextMenu>
-			</DataGrid>
+			</StackPanel>
+			<StackPanel Orientation="Vertical">
+				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
+				<Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
+			</StackPanel>
+		</StackPanel>	
+		<DataGrid
+			Grid.Row="1"
+			AutoGenerateColumns="False"
+			CanUserReorderColumns="True"
+			CanUserResizeColumns="True"
+			CanUserSortColumns="False"
+			IsReadOnly="True"
+			ColumnWidth="Auto"
+			SelectionMode="Extended"
+			SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
+			IsVisible="{Binding IsPaused}"
+			ItemsSource="{Binding Instructions}">
+			<TextElement.FontFamily>
+				<OnPlatform Default="{StaticResource RobotoMonoFont}" />
+			</TextElement.FontFamily>
+			<DataGrid.Columns>
+				<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Breakpoint" />
+				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
+				<DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="CS:IP+offset" />
+				<DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is CS:IP" />
+				<DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="MASM" />
+				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
+				<DataGridTextColumn Binding="{Binding Length}" Header="Length" />
+				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
+				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
+				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
+				<DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
+				<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
+				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
+				<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
+				<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
+			</DataGrid.Columns>
+			<DataGrid.ContextMenu>
+				<ContextMenu>
+					<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
+					<MenuItem Header="Create address BreakPoint here" IsVisible="{Binding !SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding CreateAddressBreakpointHereCommand}" />
+					<MenuItem Header="Remove address BreakPoint here" IsVisible="{Binding SelectedInstruction.HasBreakpoint, FallbackValue=False}" Command="{Binding RemoveAddressBreakpointHereCommand}" />
+				</ContextMenu>
+			</DataGrid.ContextMenu>
+			<DataGrid.Styles>
+				<Style Selector="DataGridColumnHeader">
+					<Setter Property="Padding" Value="0" />
+					<Setter Property="Margin" Value="0" />
+				</Style>
+			</DataGrid.Styles>
+		</DataGrid>
 		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-					IsVisible="{Binding CreatingExecutionBreakpoint}"/>
+			IsVisible="{Binding CreatingExecutionBreakpoint}"/>
 		<dialogHost:DialogHost
 			Grid.Row="0" Grid.RowSpan="2"
 			Background="{Binding $parent[Window].Background}"
