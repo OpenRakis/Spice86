@@ -95,13 +95,4 @@ public class BreakPointHolder {
             TriggerMatchingBreakPoints(address);
         }
     }
-
-    /// <summary>
-    /// Determines whether there is an address breakpoint at the specified address.
-    /// </summary>
-    /// <param name="instructionAddress">The memory address to check.</param>
-    /// <returns>Whether there is an address breakpoint at the specified address.</returns>
-    public bool IsAddressBreakpointAt(long instructionAddress) {
-        return _addressBreakPoints.ContainsKey(instructionAddress);
-    }
 }
