@@ -67,12 +67,11 @@
 			IsReadOnly="True"
 			ColumnWidth="Auto"
 			SelectionMode="Extended"
+			FontSize="12"
+			FontFamily="{StaticResource ResourceKey=RobotoMonoFont}"
 			SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
 			IsVisible="{Binding IsPaused}"
 			ItemsSource="{Binding Instructions}">
-			<TextElement.FontFamily>
-				<OnPlatform Default="{StaticResource RobotoMonoFont}" />
-			</TextElement.FontFamily>
 			<DataGrid.Columns>
 				<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Breakpoint" />
 				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
