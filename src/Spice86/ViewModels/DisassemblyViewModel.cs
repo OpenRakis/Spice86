@@ -270,8 +270,11 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             UpdateDisassemblyCommand.Execute(null);
         }
     }
-    
-    [RelayCommand]
+
+    private bool RemoveExecutionBreakpointHereCanExecute() =>
+        SelectedInstruction is not null && _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+
+    [RelayCommand(CanExecute = nameof(RemoveExecutionBreakpointHereCanExecute))]
     private void RemoveExecutionBreakpointHere() {
         if (SelectedInstruction is null) {
             return;
@@ -280,7 +283,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
     }
 
-    [RelayCommand]
+    private bool CreateExecutionBreakpointHereCanExecute() =>
+        SelectedInstruction is not null && !_breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+    
+    [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]
     private void CreateExecutionBreakpointHere() {
         if (SelectedInstruction is null) {
             return;

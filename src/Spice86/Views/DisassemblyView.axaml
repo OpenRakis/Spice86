@@ -90,8 +90,8 @@
 			<DataGrid.ContextMenu>
 				<ContextMenu>
 					<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
-					<MenuItem Header="Create address Breakpoint here" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-					<MenuItem Header="Remove address BreakPoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Create execution breakpoint here" Command="{Binding CreateExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Remove execution breakPoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
 					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
 				</ContextMenu>
 			</DataGrid.ContextMenu>
