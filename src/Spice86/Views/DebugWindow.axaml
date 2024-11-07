@@ -47,10 +47,36 @@
 			</Button>
 		</StackPanel>
 		<TabControl TabStripPlacement="Left" Grid.Row="1">
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F1" Header="CPU (F1)" Content="{Binding CpuViewModel}" />
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F2" Header="Code flow (F2)"
-									Content="{Binding CfgCpuViewModel}"/>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F3" Header="Disassembly (F3)">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F1" Content="{Binding CpuViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="CPU (F1)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F2"
+				Content="{Binding CfgCpuViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Code Flow (F2)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F3">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Disassembly (F3)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
 				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
 					<TabControl.ItemTemplate>
 						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -61,7 +87,15 @@
 					</TabControl.ItemTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem Header="Memory (F4)" HotKeyManager.HotKey="F4">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F4">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Memory (F4)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
 				<TabControl ItemsSource="{Binding MemoryViewModels}">
 					<TabControl.ItemTemplate>
 						<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
@@ -72,7 +106,15 @@
 					</TabControl.ItemTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F5" Header="Devices (F5)">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F5">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Devices (F5)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
 				<TabControl>
 					<controls:HotKeyTabItem HotKeyManager.HotKey="F6" Header="Video Card (F6)" Content="{Binding VideoCardViewModel}" />
 					<controls:HotKeyTabItem HotKeyManager.HotKey="F7" Header="Color Palette (F7)" Content="{Binding PaletteViewModel}" />
@@ -80,7 +122,16 @@
 					<controls:HotKeyTabItem HotKeyManager.HotKey="F9" Header="Software Mixer (F9)" Content="{Binding SoftwareMixerViewModel}" />
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F10" Header="Breakpoints (F10)" Content="{Binding BreakpointsViewModel}" />
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F10" Content="{Binding BreakpointsViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Breakpoints (F10)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
 		</TabControl>
 		<views:StatusMessageView Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" DataContext="{Binding StatusMessageViewModel}" />
 	</Grid>
