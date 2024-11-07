@@ -50,18 +50,20 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
     }
 
-    internal bool HasBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.Any(x => x.IsFor(instructionInfo));
+    internal void RemoveUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
+        DeleteBreakpoint(Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo) && x is
+            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION }));
     }
 
-    internal void RemoveBreakpoint(CpuInstructionInfo selectedInstruction) {
-        BreakpointViewModel? breakpoint = Breakpoints.FirstOrDefault(x => x.IsFor(selectedInstruction));
-        if (breakpoint is not null) {
-            DeleteBreakpoint(breakpoint);
+    internal bool HasUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
+        return Breakpoints.Any(x => x.IsFor(instructionInfo) && x is
+            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION });
+    }
+
+    private void DeleteBreakpoint(BreakpointViewModel? breakpoint) {
+        if (breakpoint is null) {
+            return;
         }
-    }
-
-    private void DeleteBreakpoint(BreakpointViewModel breakpoint) {
         breakpoint.Disable();
         Breakpoints.Remove(breakpoint);
     }

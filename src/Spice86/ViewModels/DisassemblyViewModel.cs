@@ -234,7 +234,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                 Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"
             };
             instructionInfo.SegmentedAddress = new(state.CS, (ushort)(state.IP + byteOffset));
-            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasBreakpoint(instructionInfo);
+            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(instructionInfo);
             instructionInfo.StringRepresentation =
                 $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == state.IpPhysicalAddress) {
@@ -276,8 +276,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (SelectedInstruction is null) {
             return;
         }
-        _breakpointsViewModel.RemoveBreakpoint(SelectedInstruction);
-        SelectedInstruction.HasBreakpoint = false;
+        _breakpointsViewModel.RemoveUserExecutionBreakpoint(SelectedInstruction);
+        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
     }
 
     [RelayCommand]
@@ -288,7 +288,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached,
             isRemovedOnTrigger: false);
         _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
-        SelectedInstruction.HasBreakpoint = true;
+        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
     }
 
     private static Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {

@@ -17,7 +17,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         Address = breakPoint.Address;
     }
 
-    public string Type => _breakPoint.BreakPointType.ToString();
+    public BreakPointType Type => _breakPoint.BreakPointType;
 
     //Can't get out of sync since GDB can't be used at the same tiem as the internal debugger
     [ObservableProperty]
