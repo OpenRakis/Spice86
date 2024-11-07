@@ -221,6 +221,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
+                AddressInformation = $"{instructionAddress} (0x{state.CS:x4}:{(ushort)(state.IP + byteOffset):X4})",
                 Length = instruction.Length,
                 IP16 = instruction.IP16,
                 IP32 = instruction.IP32,
@@ -230,7 +231,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 FlowControl = instruction.FlowControl,
-                Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
+                Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"
             };
             instructionInfo.SegmentedAddress = new(state.CS, (ushort)(state.IP + byteOffset));
             instructionInfo.HasBreakpoint = _breakpointsViewModel.HasBreakpoint(instructionInfo);

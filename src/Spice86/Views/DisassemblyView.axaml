@@ -74,12 +74,10 @@
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
 				<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Breakpoint" />
-				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
-				<DataGridTextColumn Binding="{Binding SegmentedAddress}" Header="CS:IP+offset" />
+				<DataGridTextColumn Binding="{Binding AddressInformation}" Header="Address (CS:IP+offset)" />
 				<DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is CS:IP" />
 				<DataGridTextColumn Binding="{Binding Converter={StaticResource InstructionToStringConverter}}" Header="MASM" />
-				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes" />
-				<DataGridTextColumn Binding="{Binding Length}" Header="Length" />
+				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)" />
 				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
 				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
 				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />

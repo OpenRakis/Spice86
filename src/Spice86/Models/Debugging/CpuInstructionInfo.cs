@@ -12,6 +12,7 @@ public partial class CpuInstructionInfo : ObservableObject {
     [ObservableProperty] private bool _hasBreakpoint;
     [ObservableProperty] private bool _isCsIp;
     [ObservableProperty] private uint _address;
+    [ObservableProperty] private string? _addressInformation;
     [ObservableProperty] private SegmentedAddress _segmentedAddress;
     [ObservableProperty] private ushort _IP16;
     [ObservableProperty] private uint _IP32;
