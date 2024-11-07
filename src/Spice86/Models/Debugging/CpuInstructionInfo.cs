@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Iced.Intel;
 
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class CpuInstructionInfo : ObservableObject {
