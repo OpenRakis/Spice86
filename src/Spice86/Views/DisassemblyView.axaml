@@ -55,7 +55,7 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical">
 				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
-				<Button Content="Update" HotKey="Enter" IsDefault="True" Command="{Binding UpdateDisassemblyCommand}" />
+				<Button Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
 			</StackPanel>
 		</StackPanel>	
 		<DataGrid

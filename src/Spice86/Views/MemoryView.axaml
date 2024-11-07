@@ -39,7 +39,7 @@
 					<Label Content="End" />
 					<NumericUpDown Value="{Binding EndAddress}" />
 				</UniformGrid>
-				<Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+				<Button IsVisible="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
 				<Button IsVisible="{Binding IsStructureInfoPresent}" Command="{Binding ShowStructureView}" Content="Structure view" />
 			</StackPanel>
 			<Grid Grid.Row="1">
