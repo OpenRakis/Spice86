@@ -2,10 +2,6 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <WarningsAsErrors>nullable</WarningsAsErrors>
-        <ImplicitUsings>enable</ImplicitUsings>
         <EnablePackageValidation>true</EnablePackageValidation>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
