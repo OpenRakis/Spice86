@@ -1,17 +1,14 @@
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.Function;
-
 namespace Spice86.Core.Emulator.VM;
 
+using Spice86.Core.Emulator.CPU;
+using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
+using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Gdb;
 using Spice86.Shared.Interfaces;
-
+using Spice86.Shared.Diagnostics;
 using System.Diagnostics;
 
-using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
@@ -24,8 +21,9 @@ public class EmulationLoop {
     private readonly State _cpuState;
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly Stopwatch _stopwatch;
     private readonly IPauseHandler _pauseHandler;
+    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly Stopwatch _stopwatch;
 
     /// <summary>
     /// Whether the emulation is paused.
@@ -50,6 +48,7 @@ public class EmulationLoop {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
+        _performanceMeasurer = new PerformanceMeasurer();
         _stopwatch = new();
     }
 
@@ -87,14 +86,15 @@ public class EmulationLoop {
     }
 
     private void RunLoop() {
-        _stopwatch.Start();
         if (_cpu is CfgCpu cfgCpu) {
             cfgCpu.SignalEntry();
         }
+        _stopwatch.Start();
         while (_cpuState.IsRunning) {
             _emulatorBreakpointsManager.CheckBreakPoint();
             _pauseHandler.WaitIfPaused();
             _cpu.ExecuteNext();
+            _performanceMeasurer.UpdateValue(_cpuState.Cycles);
             _timer.Tick();
         }
         _stopwatch.Stop();
@@ -103,13 +103,11 @@ public class EmulationLoop {
 
     private void OutputPerfStats() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            long elapsedTimeMilliSeconds = _stopwatch.ElapsedMilliseconds;
-            long cycles = _cpuState.Cycles;
-            long cyclesPerSeconds = 0;
-            if (elapsedTimeMilliSeconds > 0) {
-                cyclesPerSeconds = (_cpuState.Cycles * 1000) / elapsedTimeMilliSeconds;
-            }
-            _loggerService.Warning("Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.", cycles, elapsedTimeMilliSeconds, cyclesPerSeconds);
+            long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
+            long elapsedTimeInMilliseconds = _stopwatch.ElapsedMilliseconds;
+            _loggerService.Warning(
+                "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
+                _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }
     }
 }
