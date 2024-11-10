@@ -33,6 +33,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
+    private readonly PerformanceViewModel _performanceViewModel;
 
     [ObservableProperty]
     private bool _canUseInternalDebugger;
@@ -59,8 +60,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     public MainWindowViewModel(
         ITimeMultiplier pit, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
-        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler) : base(textClipboard) {
+        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel) : base(textClipboard) {
         _pit = pit;
+        _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
@@ -71,8 +73,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         CanUseInternalDebugger = configuration.GdbPort is null;
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
     }
-    
+
+    private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
+        SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
+    }
+
     [RelayCommand]
     public void SetLogLevelToSilent() => SetLogLevel("Silent");
 
@@ -228,14 +235,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     private async Task DumpEmulatorStateToFile() {
-        //TODO: refactor this
         await _hostStorageProvider.DumpEmulatorStateToFile().ConfigureAwait(false);
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
-    private void SetMainTitle() => MainTitle = $"{nameof(Spice86)} {Configuration.Exe}";
+    private void SetMainTitle(double instructionsPerMillisecond) {
+        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
+    }
 
     [ObservableProperty]
     private string? _mainTitle;
@@ -303,7 +311,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             _ => "ASM code overrides: none."
         };
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-        SetMainTitle();
+        SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
         StartEmulatorThread();
     }
 
