@@ -44,7 +44,7 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
         _lastTimeInMilliseconds = newTimeInMilliseconds;
         long valueDelta = newMeasure - _measure;
         _measure = newMeasure;
-        ValuePerMillisecond = valueDelta / Math.Max(millisecondsDelta, 1);
+        ValuePerMillisecond = valueDelta / millisecondsDelta;
         AverageValuePerSecond = ApproxRollingAverage(AverageValuePerSecond, ValuePerSecond, _sampledMetricsCount++);
     }
 
