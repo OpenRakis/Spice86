@@ -242,7 +242,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public void Pause() => _pauseHandler.RequestPause("Pause button pressed in main window");
 
     private void SetMainTitle(double instructionsPerMillisecond) {
-        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - {instructionsPerMillisecond:N0} cycles/ms";
+        MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}";
     }
 
     [ObservableProperty]
