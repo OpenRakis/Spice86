@@ -58,9 +58,8 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
         AverageValuePerSecond = 0;
     }
 
-    private bool IsLastMeasurementExpired(long newTimeInMilliseconds) {
-        return (TimeSpan.FromTicks(newTimeInMilliseconds) - TimeSpan.FromTicks(_firstMeasureTimeInMilliseconds)).TotalSeconds >= WindowSizeInSeconds;
-    }
+    private bool IsLastMeasurementExpired(long newTimeInMilliseconds) =>
+        newTimeInMilliseconds - _firstMeasureTimeInMilliseconds > WindowSizeInSeconds * 1000;
 
     private static long ApproxRollingAverage(long measureAverage, long valuePerSecond, long sampledMetricsCount) {
         measureAverage -= measureAverage / Math.Max(sampledMetricsCount, 1);
