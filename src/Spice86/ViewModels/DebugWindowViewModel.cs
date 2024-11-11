@@ -13,11 +13,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Memory;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
@@ -65,6 +67,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
@@ -78,7 +81,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
-            cpu, memory, cpuState, 
+            cpu, memory, cpuState, functionsInformation.ToDictionary(x => x.Key.ToPhysical(), x => x.Value),
             BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);

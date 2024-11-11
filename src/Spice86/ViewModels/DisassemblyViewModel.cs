@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Iced.Intel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -29,11 +30,23 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly IInstructionExecutor _cpu;
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
 
-    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state,
-        BreakpointsViewModel breakpointsViewModel, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
-        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
+    public DisassemblyViewModel(
+        IInstructionExecutor cpu, IMemory memory, State state,
+        IDictionary<uint, FunctionInformation> functionsInformation,
+        BreakpointsViewModel breakpointsViewModel, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
+        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
+        : base(uiDispatcher, textClipboard) {
         _cpu = cpu;
+        _functionsInformation = functionsInformation;
+        Functions = new(functionsInformation
+            .Select(x => new FunctionInfo() {
+                Name = x.Value.Name,
+                Address = x.Key,
+        }).OrderBy(x => x.Address));
+        AreFunctionInformationProvided = functionsInformation.Count > 0;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _breakpointsViewModel = breakpointsViewModel;
         _messenger = messenger;
@@ -45,6 +58,26 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         CanCloseTab = canCloseTab;
     }
+
+    [ObservableProperty]
+    private bool _areFunctionInformationProvided;
+
+    private FunctionInfo? _selectedFunction;
+
+    public FunctionInfo? SelectedFunction {
+        get => _selectedFunction;
+        set {
+            _selectedFunction = value;
+            OnPropertyChanged(nameof(SelectedFunction));
+            if (value is not null) {
+                uint address = value.Address;
+                GoToAddress(address);
+            }
+        }
+    }
+
+    [ObservableProperty]
+    private AvaloniaList<FunctionInfo> _functions = new();
 
     private void OnPausing() {
         _uiDispatcher.Post(() => {
@@ -96,7 +129,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                 (long)breakpointAddressValue, OnBreakPointReached, false);
             _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
         }
-
     }
 
     [ObservableProperty]
@@ -157,7 +189,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _breakpointsViewModel, _emulatorBreakpointsManager, _pauseHandler, _uiDispatcher, _messenger,
+        DisassemblyViewModel disassemblyViewModel = new(
+            _cpu, _memory, _state, _functionsInformation, 
+            _breakpointsViewModel, _emulatorBreakpointsManager, _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
@@ -166,9 +200,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void GoToCsIp() {
-        StartAddress = _state.IpPhysicalAddress;
         SegmentedStartAddress = new(_state.CS, _state.IP);
+        GoToAddress(_state.IpPhysicalAddress);
+    }
+
+    private void GoToAddress(uint address) {
+        StartAddress = address;
         UpdateDisassembly();
+        SelectedInstruction = Instructions.FirstOrDefault();
     }
 
     private uint? GetStartAddress() {
@@ -197,8 +236,21 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         UpdateHeader(SelectedInstruction?.Address);
     }
 
-    [ObservableProperty]
     private CpuInstructionInfo? _selectedInstruction;
+
+    public CpuInstructionInfo? SelectedInstruction {
+        get => _selectedInstruction;
+        set {
+            if (value is not null &&
+                _functionsInformation.TryGetValue(value.Address, 
+                    out FunctionInformation? functionInformation)) {
+                _selectedFunction = Functions.First(x => x.Address == value.Address);
+                OnPropertyChanged(nameof(SelectedFunction));
+            }
+            _selectedInstruction = value;
+            OnPropertyChanged(nameof(SelectedInstruction));
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {

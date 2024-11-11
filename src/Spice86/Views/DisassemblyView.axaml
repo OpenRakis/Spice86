@@ -55,8 +55,16 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical">
 				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
-				<Button Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
+				<Label
+					IsVisible="{Binding AreFunctionInformationProvided}">
+					Go to function:
+				</Label>
+				<ComboBox
+					IsVisible="{Binding AreFunctionInformationProvided}"
+					ItemsSource="{Binding Functions}"
+					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 			</StackPanel>
+			<Button Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
 		</StackPanel>	
 		<DataGrid
 			Grid.Row="1"
