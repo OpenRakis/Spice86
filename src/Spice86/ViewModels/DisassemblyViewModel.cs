@@ -241,10 +241,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public CpuInstructionInfo? SelectedInstruction {
         get => _selectedInstruction;
         set {
-            if (value is not null &&
-                _functionsInformation.TryGetValue(value.Address, 
-                    out FunctionInformation? functionInformation)) {
-                _selectedFunction = Functions.First(x => x.Address == value.Address);
+            if (value is not null) {
+                _selectedFunction = Functions.
+                    FirstOrDefault(x => x.Address == value.Address);
                 OnPropertyChanged(nameof(SelectedFunction));
             }
             _selectedInstruction = value;

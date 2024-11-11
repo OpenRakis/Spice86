@@ -76,7 +76,7 @@
 			SelectionMode="Extended"
 			FontSize="12"
 			FontFamily="{StaticResource ResourceKey=RobotoMonoFont}"
-			SelectedItem="{Binding SelectedInstruction, Mode=TwoWay}"
+			SelectedItem="{Binding SelectedInstruction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 			IsVisible="{Binding IsPaused}"
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
