@@ -253,6 +253,118 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if (SelectedInstruction is not null) {
             await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation);
         }
@@ -272,6 +384,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
+                FunctionName = Functions.FirstOrDefault(x => x.Address == instructionAddress)?.Name,
                 AddressInformation = $"{instructionAddress} (0x{state.CS:x4}:{(ushort)(state.IP + byteOffset):X4})",
                 Length = instruction.Length,
                 IP16 = instruction.IP16,
