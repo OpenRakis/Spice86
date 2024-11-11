@@ -14,13 +14,12 @@
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
-		<StackPanel Grid.Row="0"
+		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
 			ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-			Orientation="Horizontal"
 			IsVisible="{Binding IsPaused}"
 			HorizontalAlignment="Left"
 			VerticalAlignment="Top">
-			<StackPanel Orientation="Vertical">
+			<StackPanel Orientation="Vertical" Grid.Column="0">
 				<Button
 					Command="{Binding NewDisassemblyViewCommand}"
 					Content="New Disassembly View"
@@ -30,16 +29,16 @@
 					Content="Close View"
 					IsEnabled="{Binding CanCloseTab}"/>
 			</StackPanel>
-			<StackPanel Orientation="Vertical">
-				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" IsEnabled="{Binding IsPaused}" Content="Breakpoint..." />
+			<StackPanel Orientation="Vertical" Grid.Column="1">
+				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" Content="Breakpoint..." />
 				<Button Content="Step into" Command="{Binding StepIntoCommand}" />
 				<Button Content="Step over" Command="{Binding StepOverCommand}" />
 			</StackPanel>
-			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+			<StackPanel Orientation="Vertical" Grid.Column="2">
 				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
 				<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
 			</StackPanel>
-			<StackPanel Orientation="Vertical" IsEnabled="{Binding IsPaused}">
+			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
 				<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
 				<Label HorizontalAlignment="Center" Content="Start Address" />
@@ -53,7 +52,7 @@
 						Watermark="linear address"/>
 				</StackPanel>
 			</StackPanel>
-			<StackPanel Orientation="Vertical">
+			<StackPanel Orientation="Vertical" Grid.Column="4">
 				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
 				<Label
 					IsVisible="{Binding AreFunctionInformationProvided}">
@@ -64,8 +63,8 @@
 					ItemsSource="{Binding Functions}"
 					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 			</StackPanel>
-			<Button Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
-		</StackPanel>	
+			<Button Grid.Column="5" Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
+		</Grid>	
 		<DataGrid
 			Grid.Row="1"
 			AutoGenerateColumns="False"
