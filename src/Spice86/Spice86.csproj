@@ -1,81 +1,71 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <WarningsAsErrors>nullable</WarningsAsErrors>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <EnablePackageValidation>true</EnablePackageValidation>
-        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-        <NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
-        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-        <ApplicationManifest>app.manifest</ApplicationManifest>
-        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    </PropertyGroup>
-    <!-- Properties geared towards NuGet -->
-    <PropertyGroup>
-        <NoWarn>CS1591</NoWarn>
-        <PackageId>Spice86</PackageId>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <version>7.0.0</version>
-        <PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
-        <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <Description>Reverse engineer and rewrite real mode DOS programs</Description>
-        <PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
-        <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-    </PropertyGroup>
-
-    <!-- Source Link configuration -->
-    <PropertyGroup>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <Content Include="libportaudio.dll">
-            <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-            <Pack>True</Pack>
-        </Content>
-    </ItemGroup>
-
-    <!-- Package references -->
-    <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.1.4" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.1.4" />
-        <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.1.0.1" />
-        <PackageReference Include="Avalonia.Controls.TreeDataGrid" Version="11.0.10" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.1.4" />
-        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.1.4" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.1.4" />
-        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.1.0.5" />
-        <PackageReference Include="AvaloniaGraphControl" Version="0.6.1" />
-        <PackageReference Include="AvaloniaHex" Version="0.1.4" />
-        <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.1.4.2" />
-        <PackageReference Include="bodong.PropertyModels" Version="11.1.4.2" />
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-        <PackageReference Include="DialogHost.Avalonia" Version="0.8.1" />
-        <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="1.1.262" />
-        <PackageReference Include="Iced" Version="1.21.0" />
-        <PackageReference Include="JvE.Structurizer" Version="1.0.1" />
-        <PackageReference Include="Semi.Avalonia" Version="11.1.0.4" />
-        <PackageReference Include="Semi.Avalonia.DataGrid" Version="11.1.0.4" />
-        <PackageReference Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <AvaloniaResource Include="Assets\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
-        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-    </ItemGroup>
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <!-- Properties geared towards NuGet -->
+  <PropertyGroup>
+    <NoWarn>CS1591</NoWarn>
+    <PackageId>Spice86</PackageId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <version>7.0.0</version>
+    <PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
+    <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Description>Reverse engineer and rewrite real mode DOS programs</Description>
+    <PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
+    <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+  <!-- Source Link configuration -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="libportaudio.dll">
+      <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Pack>True</Pack>
+    </Content>
+  </ItemGroup>
+  <!-- Package references -->
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
+    <PackageReference Include="Avalonia.Controls.PanAndZoom" />
+    <PackageReference Include="Avalonia.Controls.TreeDataGrid" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Xaml.Behaviors" />
+    <PackageReference Include="AvaloniaGraphControl" />
+    <PackageReference Include="AvaloniaHex" />
+    <PackageReference Include="bodong.Avalonia.PropertyGrid" />
+    <PackageReference Include="bodong.PropertyModels" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="DialogHost.Avalonia" />
+    <PackageReference Include="FluentIcons.Avalonia.Fluent" />
+    <PackageReference Include="Iced" />
+    <PackageReference Include="JvE.Structurizer" />
+    <PackageReference Include="Semi.Avalonia" />
+    <PackageReference Include="Semi.Avalonia.DataGrid" />
+    <PackageReference Include="Semi.Avalonia.TreeDataGrid" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+    <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+    <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+  </ItemGroup>
 </Project>

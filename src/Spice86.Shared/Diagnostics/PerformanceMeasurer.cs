@@ -22,7 +22,7 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
     /// </summary>
     public PerformanceMeasurer() => _lastTimeInMilliseconds = GetCurrentTime();
 
-    private long _firstMeasureTimeInTicks = 0;
+    private long _firstMeasureTimeInMilliseconds = 0;
 
     private const int WindowSizeInSeconds = 30;
 
@@ -31,20 +31,35 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
     /// <inheritdoc />
     public void UpdateValue(long newMeasure) {
         long newTimeInMilliseconds = GetCurrentTime();
-        if (_firstMeasureTimeInTicks == 0) {
-            _firstMeasureTimeInTicks = newTimeInMilliseconds;
-        } else if((TimeSpan.FromTicks(newTimeInMilliseconds) - TimeSpan.FromTicks(_firstMeasureTimeInTicks)).TotalSeconds >= WindowSizeInSeconds) {
-            _firstMeasureTimeInTicks = newTimeInMilliseconds;
-            _sampledMetricsCount = 0;
-            AverageValuePerSecond = 0;
+        if (IsFirstMeasurement()) {
+            _firstMeasureTimeInMilliseconds = newTimeInMilliseconds;
+        } else if (IsLastMeasurementExpired(newTimeInMilliseconds)) {
+            ResetMetrics(newTimeInMilliseconds);
         }
+
         long millisecondsDelta = newTimeInMilliseconds - _lastTimeInMilliseconds;
+        if (millisecondsDelta == 0) {
+            return;
+        }
         _lastTimeInMilliseconds = newTimeInMilliseconds;
         long valueDelta = newMeasure - _measure;
         _measure = newMeasure;
-        ValuePerMillisecond = valueDelta / Math.Max(millisecondsDelta, 1);
+        ValuePerMillisecond = valueDelta / millisecondsDelta;
         AverageValuePerSecond = ApproxRollingAverage(AverageValuePerSecond, ValuePerSecond, _sampledMetricsCount++);
     }
+
+    private bool IsFirstMeasurement() {
+        return _firstMeasureTimeInMilliseconds == 0;
+    }
+
+    private void ResetMetrics(long newTimeInMilliseconds) {
+        _firstMeasureTimeInMilliseconds = newTimeInMilliseconds;
+        _sampledMetricsCount = 0;
+        AverageValuePerSecond = 0;
+    }
+
+    private bool IsLastMeasurementExpired(long newTimeInMilliseconds) =>
+        newTimeInMilliseconds - _firstMeasureTimeInMilliseconds > WindowSizeInSeconds * 1000;
 
     private static long ApproxRollingAverage(long measureAverage, long valuePerSecond, long sampledMetricsCount) {
         measureAverage -= measureAverage / Math.Max(sampledMetricsCount, 1);

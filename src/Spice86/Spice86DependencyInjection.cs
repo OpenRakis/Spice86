@@ -160,7 +160,7 @@ public class Spice86DependencyInjection : IDisposable {
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiThreadDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler);
+                loggerService, pauseHandler, performanceViewModel);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
