@@ -34,10 +34,10 @@
 	<PackageReference Include="System.Memory.Data" />
 	<PackageReference Include="System.Text.Encoding.CodePages" />
 	<PackageReference Include="CommandLineParser" />
-	<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
-	<PackageReference Include="Mt32emu.net" />
 	<PackageReference Include="MeltySynth" />
 	<PackageReference Include="Morris.Moxy" />
+	<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
+	<PackageReference Include="Mt32emu.net" />
   </ItemGroup>
   <ItemGroup>
 	<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
