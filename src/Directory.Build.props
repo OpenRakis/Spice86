@@ -1,8 +1,29 @@
 <Project>
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<EnablePackageValidation>true</EnablePackageValidation>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<NoWarn>$(NoWarn);NU1507</NoWarn>
+	</PropertyGroup>
+	<!-- Source Link configuration -->
+	<PropertyGroup>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+	<!-- Nuget package info-->
+	<PropertyGroup>
+		<Version>7.0.0</Version>
+		<PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
+		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
+		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
+		<Description>Reverse engineer and rewrite real mode dos programs</Description>
+		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 </Project>

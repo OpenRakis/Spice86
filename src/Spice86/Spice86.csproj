@@ -1,37 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <EnablePackageValidation>true</EnablePackageValidation>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <!-- Properties geared towards NuGet -->
   <PropertyGroup>
-    <NoWarn>CS1591</NoWarn>
     <PackageId>Spice86</PackageId>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <version>7.0.0</version>
-    <PackageReleaseNotes>Some breaking API changes (SegmentRegisters.cs), WIP new CFG_CPU, addtionnal memory/disasm views to the internal debugger, replaced UI DI framework with Microsoft.DI.</PackageReleaseNotes>
-    <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <Description>Reverse engineer and rewrite real mode DOS programs</Description>
-    <PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
-    <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
-  <!-- Source Link configuration -->
-  <PropertyGroup>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="libportaudio.dll">
-      <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
+      <PackagePath>lib\net9.0\libportaudio.dll</PackagePath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Pack>True</Pack>
     </Content>
