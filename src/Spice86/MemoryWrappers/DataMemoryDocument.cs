@@ -9,7 +9,6 @@ public sealed class DataMemoryDocument : IBinaryDocument {
     private readonly IMemory _memory;
     private readonly uint _startAddress;
     private readonly uint _endAddress;
-    private bool _disposed;
 
     public DataMemoryDocument(IMemory memory, uint startAddress, uint endAddress) {
         IsReadOnly = false;
