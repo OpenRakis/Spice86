@@ -12,6 +12,7 @@
 	<UserControl.Resources>
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -81,8 +82,14 @@
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
 				<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Breakpoint" />
-				<DataGridTextColumn Binding="{Binding AddressInformation}" Header="Address (CS:IP+offset)" />
-				<DataGridCheckBoxColumn Binding="{Binding IsCsIp}" Header="Is CS:IP" />
+				<DataGridTextColumn
+					Binding="{Binding Address}">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight" Value="{ReflectionBinding IsCsIp, Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 				<DataGridTextColumn MaxWidth="300"
 					Binding="{Binding Converter={StaticResource InstructionToStringConverter}}"
 					Header="MASM" />
