@@ -13,6 +13,7 @@
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
+		<converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -81,12 +82,17 @@
 			IsVisible="{Binding IsPaused}"
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn Binding="{Binding HasBreakpoint}" Header="Breakpoint" />
 				<DataGridTextColumn
 					Binding="{Binding Address}">
 					<DataGridTextColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight" Value="{ReflectionBinding IsCsIp, Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="Background"
+								Value="{ReflectionBinding HasBreakpoint,
+								Converter={StaticResource BoolToBrushConverter},
+								ConverterParameter={}}" />
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>

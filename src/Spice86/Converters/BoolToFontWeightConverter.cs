@@ -6,7 +6,6 @@ using Avalonia.Media;
 
 using System;
 using System.Globalization;
-using System.Reflection;
 
 internal class BoolToFontWeightConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
