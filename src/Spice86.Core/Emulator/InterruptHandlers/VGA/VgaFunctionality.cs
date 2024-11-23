@@ -792,9 +792,9 @@ public class VgaFunctionality : IVgaFunctionality {
         return new SegmentedAddress(_interruptVectorTable[vector]);
     }
 
-    private int MemCmp(IReadOnlyList<byte> bytes, ushort segment, ushort offset, int length) {
+    private int MemCmp(ReadOnlySpan<byte> bytes, ushort segment, ushort offset, int length) {
         int i = 0;
-        while (length-- > 0 && i < bytes.Count) {
+        while (length-- > 0 && i < bytes.Length) {
             int difference = bytes[i] - _memory.UInt8[segment, offset];
             if (difference != 0) {
                 return difference < 0 ? -1 : 1;
@@ -1245,7 +1245,7 @@ public class VgaFunctionality : IVgaFunctionality {
         WriteByteToIoPort(value, VgaPort.AttributeAddress);
     }
 
-    private void WriteToDac(IReadOnlyList<byte> palette, byte startIndex, int count) {
+    private void WriteToDac(ReadOnlySpan<byte> palette, byte startIndex, int count) {
         WriteByteToIoPort(startIndex, VgaPort.DacAddressWriteIndex);
         int i = 0;
         while (count > 0) {
@@ -1333,26 +1333,26 @@ public class VgaFunctionality : IVgaFunctionality {
         WriteToMiscellaneousOutput(miscellaneousRegisterValue);
     }
 
-    private void SetCrtControllerRegisters(VgaPort crtControllerPort, IReadOnlyList<byte> videoModeCrtControllerRegisterValues) {
+    private void SetCrtControllerRegisters(VgaPort crtControllerPort, ReadOnlySpan<byte> videoModeCrtControllerRegisterValues) {
         for (byte i = 0; i <= 0x18; i++) {
             WriteToCrtController(crtControllerPort, i, videoModeCrtControllerRegisterValues[i]);
         }
     }
 
-    private void SetGraphicsControllerRegisters(IReadOnlyList<byte> videoModeGraphicsControllerRegisterValues) {
-        for (byte i = 0; i < videoModeGraphicsControllerRegisterValues.Count; i++) {
+    private void SetGraphicsControllerRegisters(ReadOnlySpan<byte> videoModeGraphicsControllerRegisterValues) {
+        for (byte i = 0; i < videoModeGraphicsControllerRegisterValues.Length; i++) {
             WriteToGraphicsController(i, videoModeGraphicsControllerRegisterValues[i]);
         }
     }
 
-    private void SetSequencerRegisters(IReadOnlyList<byte> videoModeSequencerRegisterValues) {
-        for (byte i = 0; i < videoModeSequencerRegisterValues.Count; i++) {
+    private void SetSequencerRegisters(ReadOnlySpan<byte> videoModeSequencerRegisterValues) {
+        for (byte i = 0; i < videoModeSequencerRegisterValues.Length; i++) {
             WriteToSequencer(i, videoModeSequencerRegisterValues[i]);
         }
     }
 
-    private void SetAttributeControllerRegisters(IReadOnlyList<byte> videoModeAttributeControllerRegisterValues) {
-        for (byte i = 0; i < videoModeAttributeControllerRegisterValues.Count; i++) {
+    private void SetAttributeControllerRegisters(ReadOnlySpan<byte> videoModeAttributeControllerRegisterValues) {
+        for (byte i = 0; i < videoModeAttributeControllerRegisterValues.Length; i++) {
             WriteToAttributeController(i, videoModeAttributeControllerRegisterValues[i]);
         }
     }

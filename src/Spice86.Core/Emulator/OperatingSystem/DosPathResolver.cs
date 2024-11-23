@@ -41,7 +41,7 @@ internal class DosPathResolver {
     /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
         //0 = default drive
-        if (driveNumber == 0 && _driveMap.Any()) {
+        if (driveNumber == 0 && _driveMap.Count > 0) {
             MountedFolder mountedFolder = _driveMap[_currentDrive];
             currentDir = mountedFolder.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();

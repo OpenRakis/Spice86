@@ -32,7 +32,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
-    private readonly IList<IVirtualDevice> _devices;
+    private readonly List<IVirtualDevice> _devices;
     private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
