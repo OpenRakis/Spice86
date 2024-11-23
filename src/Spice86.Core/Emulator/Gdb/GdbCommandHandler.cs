@@ -135,12 +135,12 @@ public class GdbCommandHandler {
 
     private Tuple<string, object> ParseSupportedQuery(string item) {
         Tuple<string, object> res;
-        if (item.EndsWith("+")) {
+        if (item.EndsWith('+')) {
             res = Tuple.Create(item[0..^1], (object)true);
-        } else if (item.EndsWith("-")) {
+        } else if (item.EndsWith('-')) {
             res = Tuple.Create(item[0..^1], (object)false);
         } else {
-            string[] split = item.Split("=");
+            string[] split = item.Split('=');
             res = Tuple.Create(split[0], new object());
             if (split.Length == 2) {
                 res = Tuple.Create(split[0], (object)split[1]);
@@ -171,12 +171,12 @@ public class GdbCommandHandler {
             return _gdbIo.GenerateResponse("");
         }
 
-        if (command.StartsWith("L")) {
+        if (command.StartsWith('L')) {
             string nextthread = command[4..];
             return _gdbIo.GenerateResponse($"qM011{nextthread}00000001");
         }
 
-        if (command.StartsWith("P")) {
+        if (command.StartsWith('P')) {
             return _gdbIo.GenerateResponse("");
         }
 

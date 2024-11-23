@@ -142,7 +142,7 @@ public class VideoMemory : IVideoMemory {
         }
     }
 
-    private void HandleWriteMode1(Register8 planeEnable, IReadOnlyList<bool> writePlane, uint offset) {
+    private void HandleWriteMode1(Register8 planeEnable, ReadOnlySpan<bool> writePlane, uint offset) {
         // Foreach plane
         for (int plane = 0; plane < 4; plane++) {
             if (planeEnable[plane] && writePlane[plane]) {
@@ -151,7 +151,8 @@ public class VideoMemory : IVideoMemory {
         }
     }
 
-    private void HandleWriteMode0(byte value, Register8 planeEnable, IReadOnlyList<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
+    private void HandleWriteMode0(byte value, Register8 planeEnable,
+        ReadOnlySpan<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
         Debug.Assert(offset < 0x10000);
         if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
             value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);

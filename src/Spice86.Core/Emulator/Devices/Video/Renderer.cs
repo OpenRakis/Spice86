@@ -10,7 +10,7 @@ using System.Diagnostics;
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
-    private readonly IVideoMemory _memory;
+    private readonly VideoMemory _memory;
     private readonly IVideoState _state;
 
     /// <summary>
@@ -194,7 +194,10 @@ public class Renderer : IVgaRenderer {
         return memoryWidthMode;
     }
 
-    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(MemoryWidth memoryWidthMode, int memoryAddressCounter, bool scanLineBit0ForAddressBit13, int scanline, bool scanLineBit0ForAddressBit14, IReadOnlyList<bool> planesEnabled) {
+    private (byte plane0, byte plane1, byte plane2, byte plane3) ReadVideoMemory(
+        MemoryWidth memoryWidthMode, int memoryAddressCounter,
+        bool scanLineBit0ForAddressBit13, int scanline,
+        bool scanLineBit0ForAddressBit14, ReadOnlySpan<bool> planesEnabled) {
         // Convert logical address to physical address.
         ushort physicalAddress = memoryWidthMode switch {
             MemoryWidth.Byte => (ushort)memoryAddressCounter,
