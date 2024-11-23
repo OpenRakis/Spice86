@@ -1,204 +1,276 @@
 <UserControl
-    x:Class="Spice86.Views.MemoryView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:converters="clr-namespace:Spice86.Converters"
-    xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
-    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-    xmlns:userControls="clr-namespace:Spice86.UserControls"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
-    x:CompileBindings="True"
-    x:DataType="viewModels:MemoryViewModel"
-    mc:Ignorable="d">
-    <UserControl.Resources>
-        <converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
-    </UserControl.Resources>
-    <ScrollViewer>
-        <Grid RowDefinitions="Auto,*">
-            <StackPanel Orientation="Horizontal" Grid.Row="0">
-                <Button Command="{Binding EditMemoryCommand}" Content="Edit..." />
-                <Button Command="{Binding StartMemorySearchCommand}" Content="Search..." />
-                <Button Command="{Binding DumpMemoryCommand}" Content="Dump..." />
-                <Button
-                    Command="{Binding NewMemoryViewCommand}"
-                    Content="New Memory View"
-                    IsEnabled="{Binding IsPaused}" />
-                <Button
-                    Command="{Binding CloseTabCommand}"
-                    Content="Close View"
-                    IsEnabled="{Binding CanCloseTab}" />
-                <UniformGrid>
-                    <Label Content="Start" />
-                    <NumericUpDown Value="{Binding StartAddress}" />
-                    <Label Content="End" />
-                    <NumericUpDown Value="{Binding EndAddress}" />
-                </UniformGrid>
-                <Button IsVisible="{Binding IsPaused}" HotKey="Enter" IsDefault="True" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
-                <Button IsVisible="{Binding IsStructureInfoPresent}" Command="{Binding ShowStructureView}" Content="Structure view" />
-            </StackPanel>
-            <Grid Grid.Row="1">
-                <TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
-                <avaloniaHex:HexEditor
-                    x:Name="HexViewer"
-                    Width="800"
-                    Document="{Binding DataMemoryDocument}"
-                    IsVisible="{Binding IsPaused}">
-                    <TextElement.FontFamily>
-                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                    </TextElement.FontFamily>
-                    <avaloniaHex:HexEditor.Columns>
-                        <rendering:OffsetColumn />
-                        <rendering:HexColumn />
-                        <rendering:AsciiColumn />
-                    </avaloniaHex:HexEditor.Columns>
-                    <avaloniaHex:HexEditor.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Copy selection" Command="{Binding CopySelectionCommand}"/>
-                            <MenuItem
-                                IsEnabled="{Binding IsStructureInfoPresent}"
-                                Header="Open in structure viewer"
-                                Command="{Binding ShowStructureView}" />
-                        </ContextMenu>
-                    </avaloniaHex:HexEditor.ContextMenu>
-                </avaloniaHex:HexEditor>
-            </Grid>
-            <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-                       IsVisible="{Binding IsSearchingMemory}"/>
-            <dialogHost:DialogHost
-                Grid.Row="0" Grid.RowSpan="2"
-                Background="{Binding $parent[Window].Background}"
-                CloseOnClickAway="True"
-                IsOpen="{Binding IsSearchingMemory}">
-                <dialogHost:DialogHost.DialogContent>
-                    <Grid RowDefinitions="Auto,Auto,*,Auto"
-                          ColumnDefinitions="Auto,*">
-                        <Label
-                            Grid.Row="0"
-                            Grid.Column="0"
-                            Grid.ColumnSpan="2"
-                            HorizontalAlignment="Center"
-                            Content="Search memory"
-                            FontWeight="Bold" />
-                        <Label Grid.Column="0" Grid.Row="1"
-                               Content="Data type:" />
-                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
-                            <RadioButton GroupName="SearchDataType" Content="Binary"
-                                         IsChecked="{Binding SearchDataTypeIsBinary}"
-                                         Command="{Binding SetSearchDataTypeToBinaryCommand}" />
-                            <RadioButton GroupName="SearchDataType" Content="ASCII"
-                                         IsChecked="{Binding SearchDataTypeIsAscii}"
-                                         Command="{Binding SetSearchDataTypeToAsciiCommand}" />
-                        </StackPanel>
-                        <Grid
-                            Grid.Column="0"
-                            Grid.ColumnSpan="2"
-                            Grid.Row="2"
-                            ColumnDefinitions="Auto,*"
-                            RowDefinitions="Auto,Auto">
-                            <Label
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Content="Memory value" />
-                            <TextBox
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                FontFamily="RobotoMonoFont"
-                                Text="{Binding MemorySearchValue}"
-                                Watermark="bytes in hexadecimal format, or ASCII string" />
-                            <Label
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Content="Address of found occurence:" />
-                            <TextBlock
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-                                Text="{Binding AddressOFoundOccurence, Converter={StaticResource InvalidNumberToQuestionMarkConverter}}" />
-                        </Grid>
-                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
-                            <Button Command="{Binding FirstOccurrenceCommand}"
-                                    IsEnabled="{Binding !IsBusy}"
-                                    Content="Find first"/>
-                            <Button
-                                Command="{Binding NextOccurrenceCommand}"
-                                IsEnabled="{Binding !IsBusy}"
-                                Content="Find next" />
-                            <Button
-                                Command="{Binding PreviousOccurrenceCommand}"
-                                IsEnabled="{Binding !IsBusy}"
-                                Content="Find previous" />
-                            <Button
-                                IsEnabled="{Binding IsAddressOfFoundOccurrenceValid}"
-                                Command="{Binding GoToFoundOccurenceCommand}" Content="Open in new view" />
-                            <Button IsVisible="{Binding IsBusy}"
-                                    Command="{Binding SearchMemoryCancelCommand}"
-                                    Content="Cancel current search" />
-                        </StackPanel>
-                    </Grid>
-                </dialogHost:DialogHost.DialogContent>
-            </dialogHost:DialogHost>
-            <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-                    IsVisible="{Binding IsEditingMemory}"/>
-            <dialogHost:DialogHost
-                Grid.Row="0" Grid.RowSpan="2"
-                Background="{Binding $parent[Window].Background}"
-                CloseOnClickAway="False"
-                IsOpen="{Binding IsEditingMemory}">
-                <dialogHost:DialogHost.DialogContent>
-                    <Grid RowDefinitions="Auto,*,Auto">
-                        <Label
-                            Grid.Row="0"
-                            HorizontalAlignment="Center"
-                            Content="Edit memory"
-                            FontWeight="Bold" />
-                        <Grid
-                            Grid.Row="1"
-                            ColumnDefinitions="Auto,*"
-                            RowDefinitions="Auto,Auto">
-                            <Label
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Content="Memory Address:" />
-                            <TextBox
-                                Grid.Row="0"
-                                Grid.Column="1"
-                                FontFamily="RobotoMonoFont"
-                                Text="{Binding MemoryEditAddress}"
-                                Watermark="linear or segmented address" />
-                            <Label
-                                Grid.Row="1"
-                                Grid.Column="0"
-                                Content="Bytes:" />
-                            <TextBox
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                FontFamily="RobotoMonoFont"
-                                Text="{Binding MemoryEditValue}"
-                                Watermark="hexadecimal format" />
-                        </Grid>
-                        <StackPanel
-                            Grid.Row="2"
-                            HorizontalAlignment="Right"
-                            Orientation="Horizontal">
-                            <Button
-                                Command="{Binding ApplyMemoryEditCommand}"
-                                Content="OK"
-                                IsDefault="True" />
-                            <Button
-                                Command="{Binding CancelMemoryEditCommand}"
-                                Content="Cancel"
-                                IsCancel="True" />
-                        </StackPanel>
-                    </Grid>
-                </dialogHost:DialogHost.DialogContent>
-            </dialogHost:DialogHost>
-            
-            <userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
-        </Grid>
-    </ScrollViewer>
+	x:Class="Spice86.Views.MemoryView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:converters="clr-namespace:Spice86.Converters"
+	xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+	xmlns:userControls="clr-namespace:Spice86.UserControls"
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	x:CompileBindings="True"
+	x:DataType="viewModels:MemoryViewModel"
+	mc:Ignorable="d">
+	<UserControl.Resources>
+		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
+	</UserControl.Resources>
+	<ScrollViewer>
+		<Grid RowDefinitions="Auto,*">
+			<StackPanel Orientation="Horizontal" Grid.Row="0"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Top"
+				ScrollViewer.HorizontalScrollBarVisibility="Hidden">
+				<Button VerticalAlignment="Top" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
+				<Button VerticalAlignment="Top" Command="{Binding EditMemoryCommand}" Content="Edit..." />
+				<Button VerticalAlignment="Top" Command="{Binding DumpMemoryCommand}" Content="Dump..." />
+				<StackPanel Orientation="Vertical">
+					<Button Command="{Binding BeginCreateMemoryBreakpointCommand}" Content="Breakpoint..." />
+					<Button IsVisible="{Binding IsStructureInfoPresent}"
+						Command="{Binding ShowStructureView}"
+						Content="Structure view" />
+				</StackPanel>
+				<StackPanel Orientation="Vertical">
+					<Button
+						Command="{Binding NewMemoryViewCommand}"
+						Content="New Memory View"
+						IsEnabled="{Binding IsPaused}" />
+					<Button
+						Command="{Binding CloseTabCommand}"
+						Content="Close View"
+						IsEnabled="{Binding CanCloseTab}" />
+				</StackPanel>
+				<UniformGrid>
+					<Label Content="Start" />
+					<NumericUpDown Value="{Binding StartAddress}" />
+					<Label Content="End" />
+					<NumericUpDown Value="{Binding EndAddress}" />
+				</UniformGrid>
+				<Button IsVisible="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+			</StackPanel>
+			<Grid Grid.Row="1">
+				<TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
+				<avaloniaHex:HexEditor
+					x:Name="HexViewer"
+					Width="800"
+					Document="{Binding DataMemoryDocument}"
+					IsVisible="{Binding IsPaused}">
+					<TextElement.FontFamily>
+						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
+					</TextElement.FontFamily>
+					<avaloniaHex:HexEditor.Columns>
+						<rendering:OffsetColumn />
+						<rendering:HexColumn />
+						<rendering:AsciiColumn />
+					</avaloniaHex:HexEditor.Columns>
+					<avaloniaHex:HexEditor.ContextMenu>
+						<ContextMenu>
+							<MenuItem Header="Copy selection" Command="{Binding CopySelectionCommand}"/>
+							<MenuItem
+								IsEnabled="{Binding IsStructureInfoPresent}"
+								Header="Open in structure viewer"
+								Command="{Binding ShowStructureView}" />
+						</ContextMenu>
+					</avaloniaHex:HexEditor.ContextMenu>
+				</avaloniaHex:HexEditor>
+			</Grid>
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+					   IsVisible="{Binding IsSearchingMemory}"/>
+			<dialogHost:DialogHost
+				Grid.Row="0" Grid.RowSpan="2"
+				Background="{Binding $parent[Window].Background}"
+				CloseOnClickAway="True"
+				IsOpen="{Binding IsSearchingMemory}">
+				<dialogHost:DialogHost.DialogContent>
+					<Grid RowDefinitions="Auto,Auto,*,Auto"
+						  ColumnDefinitions="Auto,*">
+						<Label
+							Grid.Row="0"
+							Grid.Column="0"
+							Grid.ColumnSpan="2"
+							HorizontalAlignment="Center"
+							Content="Search memory"
+							FontWeight="Bold" />
+						<Label Grid.Column="0" Grid.Row="1"
+							   Content="Data type:" />
+						<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+							<RadioButton GroupName="SearchDataType" Content="Binary"
+										 IsChecked="{Binding SearchDataTypeIsBinary}"
+										 Command="{Binding SetSearchDataTypeToBinaryCommand}" />
+							<RadioButton GroupName="SearchDataType" Content="ASCII"
+										 IsChecked="{Binding SearchDataTypeIsAscii}"
+										 Command="{Binding SetSearchDataTypeToAsciiCommand}" />
+						</StackPanel>
+						<Grid
+							Grid.Column="0"
+							Grid.ColumnSpan="2"
+							Grid.Row="2"
+							ColumnDefinitions="Auto,*"
+							RowDefinitions="Auto,Auto">
+							<Label
+								Grid.Row="0"
+								Grid.Column="0"
+								Content="Memory value" />
+							<TextBox
+								Grid.Row="0"
+								Grid.Column="1"
+								FontFamily="RobotoMonoFont"
+								Text="{Binding MemorySearchValue}"
+								Watermark="bytes in hexadecimal format, or ASCII string" />
+							<Label
+								Grid.Row="1"
+								Grid.Column="0"
+								Content="Address of found occurence:" />
+							<TextBlock
+								Grid.Row="1"
+								Grid.Column="1"
+								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
+								Text="{Binding AddressOFoundOccurence, Converter={StaticResource InvalidNumberToQuestionMarkConverter}}" />
+						</Grid>
+						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
+							<Button Command="{Binding FirstOccurrenceCommand}"
+									IsEnabled="{Binding !IsBusy}"
+									Content="Find first"/>
+							<Button
+								Command="{Binding NextOccurrenceCommand}"
+								IsEnabled="{Binding !IsBusy}"
+								Content="Find next" />
+							<Button
+								Command="{Binding PreviousOccurrenceCommand}"
+								IsEnabled="{Binding !IsBusy}"
+								Content="Find previous" />
+							<Button
+								IsEnabled="{Binding IsAddressOfFoundOccurrenceValid}"
+								Command="{Binding GoToFoundOccurenceCommand}" Content="Open in new view" />
+							<Button IsVisible="{Binding IsBusy}"
+									Command="{Binding SearchMemoryCancelCommand}"
+									Content="Cancel current search" />
+						</StackPanel>
+					</Grid>
+				</dialogHost:DialogHost.DialogContent>
+			</dialogHost:DialogHost>
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+					IsVisible="{Binding IsEditingMemory}"/>
+			<dialogHost:DialogHost
+				Grid.Row="0" Grid.RowSpan="2"
+				Background="{Binding $parent[Window].Background}"
+				CloseOnClickAway="False"
+				IsOpen="{Binding IsEditingMemory}">
+				<dialogHost:DialogHost.DialogContent>
+					<Grid RowDefinitions="Auto,*,Auto">
+						<Label
+							Grid.Row="0"
+							HorizontalAlignment="Center"
+							Content="Edit memory"
+							FontWeight="Bold" />
+						<Grid
+							Grid.Row="1"
+							ColumnDefinitions="Auto,*"
+							RowDefinitions="Auto,Auto">
+							<Label
+								Grid.Row="0"
+								Grid.Column="0"
+								Content="Memory Address:" />
+							<TextBox
+								Grid.Row="0"
+								Grid.Column="1"
+								FontFamily="RobotoMonoFont"
+								Text="{Binding MemoryEditAddress}"
+								Watermark="linear or segmented address" />
+							<Label
+								Grid.Row="1"
+								Grid.Column="0"
+								Content="Bytes:" />
+							<TextBox
+								Grid.Row="1"
+								Grid.Column="1"
+								FontFamily="RobotoMonoFont"
+								Text="{Binding MemoryEditValue}"
+								Watermark="hexadecimal format" />
+						</Grid>
+						<StackPanel
+							Grid.Row="2"
+							HorizontalAlignment="Right"
+							Orientation="Horizontal">
+							<Button
+								Command="{Binding ApplyMemoryEditCommand}"
+								Content="OK"
+								IsDefault="True" />
+							<Button
+								Command="{Binding CancelMemoryEditCommand}"
+								Content="Cancel"
+								IsCancel="True" />
+						</StackPanel>
+					</Grid>
+				</dialogHost:DialogHost.DialogContent>
+			</dialogHost:DialogHost>
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+					IsVisible="{Binding CreatingMemoryBreakpoint}"/>
+			<dialogHost:DialogHost
+				Grid.Row="0" Grid.RowSpan="2"
+				Background="{Binding $parent[Window].Background}"
+				CloseOnClickAway="False"
+				IsOpen="{Binding CreatingMemoryBreakpoint}">
+				<dialogHost:DialogHost.DialogContent>
+					<Grid RowDefinitions="Auto,*,Auto">
+						<Label
+							Grid.Row="0"
+							HorizontalAlignment="Center"
+							Content="Creating memory breakpoint"
+							FontWeight="Bold" />
+						<Grid
+							Grid.Row="1"
+							ColumnDefinitions="Auto,*"
+							RowDefinitions="Auto,Auto">
+							<Label
+								Grid.Row="0"
+								Grid.Column="0"
+								VerticalContentAlignment="Center"
+								HorizontalContentAlignment="Left"
+								Content="Memory Address to break on:" />
+							<StackPanel
+								Grid.Row="0"
+								Grid.Column="1"
+								Orientation="Vertical">
+								<TextBox
+									FontFamily="RobotoMonoFont"
+									Text="{Binding BreakpointAddress}"
+									Watermark="linear or segmented address" />
+								<TextBlock>Linear or segmented address</TextBlock>
+							</StackPanel>
+							<Label
+								Grid.Row="1"
+								Grid.Column="0"
+								VerticalContentAlignment="Center"
+								HorizontalContentAlignment="Left"
+								Content="Access type:" />
+							<ComboBox
+								Grid.Row="1"
+								Grid.Column="1"
+								SelectedItem="{Binding SelectedBreakpointType}"
+								ItemsSource="{Binding BreakpointTypes, Mode=OneTime}" />
+						</Grid>
+						<StackPanel
+							Grid.Row="2"
+							HorizontalAlignment="Right"
+							Orientation="Horizontal">
+							<Button
+								Command="{Binding ConfirmCreateMemoryBreakpointCommand}"
+								Content="OK"
+								IsDefault="True" />
+							<Button
+								Command="{Binding CancelCreateMemoryBreakpointCommand}"
+								Content="Cancel"
+								IsCancel="True" />
+						</StackPanel>
+					</Grid>
+				</dialogHost:DialogHost.DialogContent>
+			</dialogHost:DialogHost>
+
+			<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
+		</Grid>
+	</ScrollViewer>
 </UserControl>

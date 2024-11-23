@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:controls="clr-namespace:Spice86.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.StatusMessageView"
+             x:DataType="viewModels:StatusMessageViewModel">
+    <controls:StatusBar>
+        <controls:StatusBarItem>
+            <TextBlock DataContext="{Binding Message}">
+                <Run Text="{Binding Time}" />
+                <Run Text=": " />
+                <Run Text="{Binding Origin}" />
+                <Run Text=" - " />
+                <Run Text="{Binding Message}" />
+            </TextBlock>
+        </controls:StatusBarItem>
+    </controls:StatusBar>
+</UserControl>

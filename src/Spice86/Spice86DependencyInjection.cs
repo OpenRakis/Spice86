@@ -193,8 +193,9 @@ public class Spice86DependencyInjection : IDisposable {
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation = reader.ReadGhidraSymbolsFromFileOrCreate();
         InitializeFunctionHandlers(configuration, machine, loggerService,
-            reader.ReadGhidraSymbolsFromFileOrCreate(), functionHandler, functionHandlerInExternalInterrupt);
+            functionsInformation, functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
             emulatorStateSerializer, memory, cpu, cfgCpu, state,
@@ -241,9 +242,11 @@ public class Spice86DependencyInjection : IDisposable {
         DebugWindowViewModel? debugWindowViewModel = null;
         if (textClipboard != null && hostStorageProvider != null && uiThreadDispatcher != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            debugWindowViewModel = new DebugWindowViewModel(cpu, state, memory,
+            debugWindowViewModel = new DebugWindowViewModel(cpu, state, stack, memory,
                 midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                 cfgCpu.ExecutionContextManager, messenger, uiThreadDispatcher, textClipboard, hostStorageProvider, 
+                emulatorBreakpointsManager,
+                functionsInformation,
                 new StructureViewModelFactory(configuration, loggerService, pauseHandler),
                 pauseHandler);
         }

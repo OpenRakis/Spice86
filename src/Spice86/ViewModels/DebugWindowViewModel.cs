@@ -13,11 +13,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Memory;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
@@ -53,30 +55,42 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [ObservableProperty]
     private CfgCpuViewModel _cfgCpuViewModel;
 
+    [ObservableProperty]
+    private StatusMessageViewModel _statusMessageViewModel;
+
+    [ObservableProperty]
+    private BreakpointsViewModel _breakpointsViewModel;
+
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
-        ITextClipboard textClipboard, IHostStorageProvider storageProvider,
+        ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
+        BreakpointsViewModel = new(emulatorBreakpointsManager);
+        StatusMessageViewModel = new(_messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = new(cpu, memory, cpuState, pauseHandler, uiDispatcher, messenger, textClipboard);
+        DisassemblyViewModel disassemblyVm = new(
+            cpu, memory, cpuState, functionsInformation.ToDictionary(x => x.Key.ToPhysical(), x => x.Value),
+            BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
+            uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
-        CpuViewModel = new(cpuState, pauseHandler, uiDispatcher);
+        CpuViewModel = new(cpuState, stack, memory, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModels.Add(new(memory, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
+        MemoryViewModels.Add(new(memory, BreakpointsViewModel, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
     }
 

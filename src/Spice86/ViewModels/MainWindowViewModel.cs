@@ -29,7 +29,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly IUIDispatcher _uiDispatcher;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
@@ -60,14 +59,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     public MainWindowViewModel(
         ITimeMultiplier pit, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
-        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel) : base(textClipboard) {
+        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel) : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
-        _uiDispatcher = uiDispatcher;
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Resumed += OnResumed;

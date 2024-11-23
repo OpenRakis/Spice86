@@ -1,84 +1,138 @@
 <Window
-    x:Class="Spice86.Views.DebugWindow"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:vm="using:Spice86.ViewModels"
-    xmlns:local="clr-namespace:Spice86"
-    xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-    xmlns:controls="clr-namespace:Spice86.Controls"
-    x:CompileBindings="True"
-    x:DataType="vm:DebugWindowViewModel"
-    WindowStartupLocation="CenterOwner"
-    ShowInTaskbar="True"
-    CanResize="True"
-    Title="Spice86 Debug Window"
-    MinWidth="1024"
-    MinHeight="768"
-    Width="1024"
-    Height="768"
-    Icon="/Assets/Debug.ico"
-    mc:Ignorable="d">
-    <Design.DataContext>
-        <vm:DebugWindowViewModel />
-    </Design.DataContext>
-    <Window.DataTemplates>
-        <local:ViewLocator />
-    </Window.DataTemplates>
-    <Grid RowDefinitions="Auto,*">
-        <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-            <Button
-                Margin="5,0,0,0"
-                Command="{Binding PauseCommand}"
-                IsVisible="{Binding !IsPaused}">
-                <Button.Content>
-                    <fluent:SymbolIcon Symbol="Pause" />
-                </Button.Content>
-            </Button>
-            <Button
-                Margin="5,0,0,0"
-                Command="{Binding ContinueCommand}"
-                IsVisible="{Binding IsPaused}">
-                <Button.Content>
-                    <fluent:SymbolIcon Symbol="Play" />
-                </Button.Content>
-            </Button>
-        </StackPanel>
-        <TabControl TabStripPlacement="Left" Grid.Row="1">
-            <controls:HotKeyTabItem HotKeyManager.HotKey="F1" Header="CPU (F1)" Content="{Binding CpuViewModel}" />
-            <controls:HotKeyTabItem HotKeyManager.HotKey="F2" Header="Code flow (F2)"
-                                    Content="{Binding CfgCpuViewModel}"/>
-            <controls:HotKeyTabItem HotKeyManager.HotKey="F3" Header="Disassembly (F3)">
-                <TabControl ItemsSource="{Binding DisassemblyViewModels}">
-                    <TabControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-                            <TabItem Header="{Binding Header}">
-                                <ContentPresenter Content="{Binding}"/>
-                            </TabItem>
-                        </DataTemplate>
-                    </TabControl.ItemTemplate>
-                </TabControl>
-            </controls:HotKeyTabItem>
-            <controls:HotKeyTabItem Header="Memory (F4)" HotKeyManager.HotKey="F4">
-                <TabControl ItemsSource="{Binding MemoryViewModels}">
-                    <TabControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-                            <TabItem Header="{Binding Header}">
-                                <ContentPresenter Content="{Binding}"/>
-                            </TabItem>
-                        </DataTemplate>
-                    </TabControl.ItemTemplate>
-                </TabControl>
-            </controls:HotKeyTabItem>
-            <controls:HotKeyTabItem HotKeyManager.HotKey="F5" Header="Devices (F5)">
-                <TabControl>
-                    <controls:HotKeyTabItem HotKeyManager.HotKey="F6" Header="Video Card (F6)" Content="{Binding VideoCardViewModel}" />
-                    <controls:HotKeyTabItem HotKeyManager.HotKey="F7" Header="Color Palette (F7)" Content="{Binding PaletteViewModel}" />
-                    <controls:HotKeyTabItem HotKeyManager.HotKey="F8" Header="General MIDI / MT-32 (F8)" Content="{Binding MidiViewModel}" />
-                    <controls:HotKeyTabItem HotKeyManager.HotKey="F9" Header="Software Mixer (F9)" Content="{Binding SoftwareMixerViewModel}" />
-                </TabControl>
-            </controls:HotKeyTabItem>
-        </TabControl>
-    </Grid>
+	x:Class="Spice86.Views.DebugWindow"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:Spice86.ViewModels"
+	xmlns:local="clr-namespace:Spice86"
+	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+	xmlns:controls="clr-namespace:Spice86.Controls"
+	xmlns:views="clr-namespace:Spice86.Views"
+	x:CompileBindings="True"
+	x:DataType="vm:DebugWindowViewModel"
+	WindowStartupLocation="CenterOwner"
+	ShowInTaskbar="True"
+	CanResize="True"
+	Title="Spice86 Debug Window"
+	MinWidth="1024"
+	MinHeight="768"
+	Width="1024"
+	Height="768"
+	Icon="/Assets/Debug.ico"
+	mc:Ignorable="d">
+	<Design.DataContext>
+		<vm:DebugWindowViewModel />
+	</Design.DataContext>
+	<Window.DataTemplates>
+		<local:ViewLocator />
+	</Window.DataTemplates>
+	<Grid RowDefinitions="Auto,*,Auto">
+		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+			<Button
+				Margin="5,0,0,0"
+				Command="{Binding PauseCommand}"
+				IsVisible="{Binding !IsPaused}">
+				<Button.Content>
+					<fluent:SymbolIcon Symbol="Pause" />
+				</Button.Content>
+			</Button>
+			<Button
+				Margin="5,0,0,0"
+				Command="{Binding ContinueCommand}"
+				IsVisible="{Binding IsPaused}">
+				<Button.Content>
+					<fluent:SymbolIcon Symbol="Play" />
+				</Button.Content>
+			</Button>
+		</StackPanel>
+		<TabControl TabStripPlacement="Left" Grid.Row="1">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F1" Content="{Binding CpuViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="CPU (F1)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F2"
+				Content="{Binding CfgCpuViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Code Flow (F2)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F3">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Disassembly (F3)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
+					<TabControl.ItemTemplate>
+						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+							<TabItem Header="{Binding Header}">
+								<ContentPresenter Content="{Binding}"/>
+							</TabItem>
+						</DataTemplate>
+					</TabControl.ItemTemplate>
+				</TabControl>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F4">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Memory (F4)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+				<TabControl ItemsSource="{Binding MemoryViewModels}">
+					<TabControl.ItemTemplate>
+						<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+							<TabItem Header="{Binding Header}">
+								<ContentPresenter Content="{Binding}"/>
+							</TabItem>
+						</DataTemplate>
+					</TabControl.ItemTemplate>
+				</TabControl>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F5">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Devices (F5)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+				<TabControl>
+					<controls:HotKeyTabItem HotKeyManager.HotKey="F6" Header="Video Card (F6)" Content="{Binding VideoCardViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="F7" Header="Color Palette (F7)" Content="{Binding PaletteViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="F8" Header="General MIDI / MT-32 (F8)" Content="{Binding MidiViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="F9" Header="Software Mixer (F9)" Content="{Binding SoftwareMixerViewModel}" />
+				</TabControl>
+			</controls:HotKeyTabItem>
+			<controls:HotKeyTabItem HotKeyManager.HotKey="F10" Content="{Binding BreakpointsViewModel}">
+				<controls:HotKeyTabItem.Header>
+					<LayoutTransformControl>
+						<LayoutTransformControl.LayoutTransform>
+							<RotateTransform Angle="-90" />
+						</LayoutTransformControl.LayoutTransform>
+						<TextBlock Margin="5,0,0,5" Text="Breakpoints (F10)" />
+					</LayoutTransformControl>
+				</controls:HotKeyTabItem.Header>
+			</controls:HotKeyTabItem>
+		</TabControl>
+		<views:StatusMessageView Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" DataContext="{Binding StatusMessageViewModel}" />
+	</Grid>
 </Window>

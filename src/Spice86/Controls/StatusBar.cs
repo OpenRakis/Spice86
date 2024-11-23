@@ -17,5 +17,6 @@ internal sealed class StatusBar : StackPanel {
     
     static StatusBar() {
         OrientationProperty.OverrideDefaultValue(typeof(StatusBar), Orientation.Horizontal);
+        HorizontalAlignmentProperty.OverrideDefaultValue<StatusBar>(HorizontalAlignment.Stretch);
     }
 }
