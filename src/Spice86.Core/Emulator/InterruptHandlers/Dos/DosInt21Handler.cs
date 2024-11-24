@@ -211,6 +211,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
         CharacterDevice device = _dos.CurrentConsoleDevice;
+
         if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
@@ -221,8 +222,16 @@ public class DosInt21Handler : InterruptHandler {
             int input = stream.ReadByte();
             if (input == -1) {
                 State.AL = 0;
+                if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                    LoggerService.Information("{Method} returned 0 in AL for end of keyboard stream",
+                        nameof(DirectStandardInputWithoutEcho), State.AL);
+                }
             } else {
                 State.AL = (byte)input;
+                if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                    LoggerService.Information("{Method} returned keyboard input: {Input} in AL", 
+                        nameof(DirectStandardInputWithoutEcho), State.AL);
+                }
             }
         }
     }
