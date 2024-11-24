@@ -51,7 +51,11 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt21Handler(
+        IMemory memory, Cpu cpu,
+        KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
+        Dos dos, ILoggerService loggerService)
+            : base(memory, cpu, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;
@@ -200,6 +204,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
         CharacterDevice device = _dos.CurrentConsoleDevice;
+
         if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
@@ -210,8 +215,16 @@ public class DosInt21Handler : InterruptHandler {
             int input = stream.ReadByte();
             if (input == -1) {
                 State.AL = 0;
+                if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                    LoggerService.Information("{Method} returned 0 in AL for end of keyboard stream",
+                        nameof(DirectStandardInputWithoutEcho), State.AL);
+                }
             } else {
                 State.AL = (byte)input;
+                if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                    LoggerService.Information("{Method} returned keyboard input: {Input} in AL", 
+                        nameof(DirectStandardInputWithoutEcho), State.AL);
+                }
             }
         }
     }
