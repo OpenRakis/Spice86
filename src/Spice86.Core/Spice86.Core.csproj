@@ -1,89 +1,65 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<NoWarn>1591;1572;1573;1570;1587;1574</NoWarn>
-	</PropertyGroup>
-	<ItemGroup>
-		<Using Remove="System.Linq" />
-		<Using Include="System.Buffers.Binary" />
-		<Using Include="CommunityToolkit.HighPerformance" />
-		<Using Include="Spice86.Core.CLI" />
-	</ItemGroup>
-	<!-- Properties geared towards NuGet -->
-	<PropertyGroup>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>7.0.0</version>
-		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<Description>Reverse engineer and rewrite real mode dos programs</Description>
-		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-	</PropertyGroup>
-
-	<!-- Source Link configuration -->
-	<PropertyGroup>
-		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
-	</PropertyGroup>
-	<!-- Moxy configuration -->
-	<PropertyGroup>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-	</PropertyGroup>
-	<ItemGroup>
-		<AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
-		<AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
-		<PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Serilog" Version="4.1.0" />
-		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-		<PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
-		<PackageReference Include="System.Buffers" Version="4.5.1" />
-		<PackageReference Include="System.IO" Version="4.3.0" />
-		<PackageReference Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
-		<PackageReference Include="System.Memory" Version="4.5.5" />
-		<PackageReference Include="System.Memory.Data" Version="8.0.1" />
-		<PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
-		<PackageReference Include="CommandLineParser" Version="2.9.1" />
-		<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
-		<PackageReference Include="Mt32emu.net" Version="1.0.0-rc.1" />
-		<PackageReference Include="MeltySynth" Version="2.4.1" />
-		<PackageReference Include="Morris.Moxy" Version="1.10" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
-		<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-		<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="Resources\2MGM.license">
-			<Link>2MGM.license</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Resources\2MGM.sf2">
-			<Link>2MGM.sf2</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-			<_Parameter1>Spice86.Tests</_Parameter1>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-			<_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
-		</AssemblyAttribute>
-	</ItemGroup>
-
+  <PropertyGroup>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+	<Using Remove="System.Linq" />
+	<Using Include="System.Buffers.Binary" />
+	<Using Include="CommunityToolkit.HighPerformance" />
+	<Using Include="Spice86.Core.CLI" />
+  </ItemGroup>
+  <!-- Properties geared towards NuGet -->
+  <PropertyGroup>
+	  <PackageId>Spice86.Core</PackageId>
+  </PropertyGroup>
+  <!-- Moxy configuration -->
+  <PropertyGroup>
+	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+  <ItemGroup>
+	<AdditionalFiles Include="Emulator/CPU/CfgCpu/ParsedInstruction/Instructions/Mixins/*.mixin" />
+	<AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
+  </ItemGroup>
+  <ItemGroup>
+	<PackageReference Include="CommunityToolkit.HighPerformance" />
+	<PackageReference Include="JetBrains.Annotations" />
+	<PackageReference Include="Newtonsoft.Json" />
+	<PackageReference Include="Serilog" />
+	<PackageReference Include="Serilog.Sinks.Console" />
+	<PackageReference Include="Serilog.Sinks.Debug" />
+	<PackageReference Include="System.Buffers" />
+	<PackageReference Include="System.IO" />
+	<PackageReference Include="System.IO.UnmanagedMemoryStream" />
+	<PackageReference Include="System.Memory" />
+	<PackageReference Include="System.Memory.Data" />
+	<PackageReference Include="System.Text.Encoding.CodePages" />
+	<PackageReference Include="CommandLineParser" />
+	<PackageReference Include="MeltySynth" />
+	<PackageReference Include="Morris.Moxy" />
+	<!--WARNING: No Mac OS support (MUNT needs to be build and included for this platform)-->
+	<PackageReference Include="Mt32emu.net" />
+  </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
+	<ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+	<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+	<None Update="Resources\2MGM.license">
+	  <Link>2MGM.license</Link>
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="Resources\2MGM.sf2">
+	  <Link>2MGM.sf2</Link>
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+  </ItemGroup>
+  <ItemGroup>
+	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+	  <_Parameter1>Spice86.Tests</_Parameter1>
+	</AssemblyAttribute>
+	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+	  <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
+	</AssemblyAttribute>
+  </ItemGroup>
 </Project>

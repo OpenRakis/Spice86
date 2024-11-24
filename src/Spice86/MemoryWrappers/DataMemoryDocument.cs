@@ -5,11 +5,11 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 
-public class DataMemoryDocument : IBinaryDocument {
+public sealed class DataMemoryDocument : IBinaryDocument {
     private readonly IMemory _memory;
     private readonly uint _startAddress;
     private readonly uint _endAddress;
-    
+
     public DataMemoryDocument(IMemory memory, uint startAddress, uint endAddress) {
         IsReadOnly = false;
         CanInsert = false;
@@ -49,5 +49,19 @@ public class DataMemoryDocument : IBinaryDocument {
 
     public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
         _memory.WriteRam(buffer.ToArray(), (uint)(_startAddress + offset));
+    }
+
+    /// <summary>
+    /// Does nothing
+    /// </summary>
+    public void Flush() {
+        //NOP
+    }
+
+    /// <summary>
+    /// Does nothing
+    /// </summary>
+    public void Dispose() {
+        //NOP
     }
 }

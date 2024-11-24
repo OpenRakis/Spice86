@@ -1,33 +1,43 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
-             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-             xmlns:controls="clr-namespace:Spice86.Controls"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="Spice86.Views.CpuView"
-             x:DataType="viewModels:CpuViewModel">
-    <ScrollViewer>
-        <WrapPanel>
-            <controls:GroupBox Header="Registers and misc">
-                <pgc:PropertyGrid
-                    DataContext="{CompiledBinding State}"
-                    ShowTitle="False">
-                    <TextElement.FontFamily>
-                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                    </TextElement.FontFamily>
-                </pgc:PropertyGrid>
-            </controls:GroupBox>
-            <controls:GroupBox Header="Flag Registers">
-                <pgc:PropertyGrid
-                    DataContext="{CompiledBinding Flags}"
-                    ShowTitle="False">
-                    <TextElement.FontFamily>
-                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                    </TextElement.FontFamily>
-                </pgc:PropertyGrid>
-            </controls:GroupBox>
-        </WrapPanel>
-    </ScrollViewer>
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+			 xmlns:controls="clr-namespace:Spice86.Controls"
+			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+			 x:Class="Spice86.Views.CpuView"
+			 x:DataType="viewModels:CpuViewModel">
+	<ScrollViewer>
+		<Grid ColumnDefinitions="*,*,*">
+			<controls:GroupBox Grid.Column="0" Header="Registers and misc">
+				<pgc:PropertyGrid
+					DataContext="{CompiledBinding State}"
+					ShowTitle="False">
+					<TextElement.FontFamily>
+						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
+					</TextElement.FontFamily>
+				</pgc:PropertyGrid>
+			</controls:GroupBox>
+			<controls:GroupBox Grid.Column="1" Header="Flag Registers">
+				<pgc:PropertyGrid
+					DataContext="{CompiledBinding Flags}"
+					ShowTitle="False">
+					<TextElement.FontFamily>
+						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
+					</TextElement.FontFamily>
+				</pgc:PropertyGrid>
+			</controls:GroupBox>
+			<Expander Grid.Column="2" Header="Some register addresses as ASCII strings" IsExpanded="True">
+				<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+					<Label Grid.Row="0" Grid.Column="0">ESI:</Label>
+					<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding EsiString}" />
+					<Label Grid.Row="1" Grid.Column="0">EDI:</Label>
+					<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EdiString}" />
+					<Label Grid.Row="2" Grid.Column="0">ESP:</Label>
+					<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding EspString}" />
+				</Grid>
+			</Expander>
+		</Grid>
+	</ScrollViewer>
 </UserControl>

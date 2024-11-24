@@ -2,8 +2,6 @@ namespace Spice86.Models.Debugging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using System.ComponentModel;
-
 public partial class SoundChannelInfo : ObservableObject {
     [ObservableProperty] private int _volume;
     [ObservableProperty] private float _stereoSeparation;

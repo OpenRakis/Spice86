@@ -5,27 +5,11 @@
 	<RootNamespace>Bufdio.Spice86</RootNamespace>
 	<Copyright>Luthfi Tri Atmaja</Copyright>
 	<Description>Only for Spice86 usage. A cross platform audio playback library for .NET based on PortAudio, forked from the original Bufdio by Luthfi Tri Atmaja.</Description>
-	<TargetFramework>net8.0</TargetFramework>
-	<Nullable>enable</Nullable>
-	<WarningsAsErrors>nullable</WarningsAsErrors>
   </PropertyGroup>
   <!-- Properties geared towards NuGet -->
 	<PropertyGroup>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<version>7.0.0</version>
+		<PackageId>Bufdio.Spice86</PackageId>
 		<Authors>Luthfi Tri Atmaja, Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<Description>Reverse engineer and rewrite real mode dos programs</Description>
-		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-	</PropertyGroup>
-
-	<!-- Source Link configuration -->
-	<PropertyGroup>
-		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 
 	<ItemGroup>

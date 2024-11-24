@@ -8,15 +8,16 @@ using AvaloniaHex.Editing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Shared.Utils;
 using Spice86.Views;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
@@ -25,7 +26,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcher _uiDispatcher;
+    private readonly BreakpointsViewModel _breakpointsViewModel;
 
     public enum MemorySearchDataType {
         Binary,
@@ -98,8 +99,55 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             TryUpdateHeaderAndMemoryDocument();
         }
     }
-    
-    [RelayCommand(CanExecute = nameof(IsPaused))]
+
+    [ObservableProperty]
+    private bool _creatingMemoryBreakpoint;
+
+    private bool IsSelectionRangeValid() => SelectionRange is not null && StartAddress is not null;
+
+    [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
+    private void BeginCreateMemoryBreakpoint() {
+        if(StartAddress is not null && SelectionRange is not null) {
+            CreatingMemoryBreakpoint = true;
+            ulong address = StartAddress.Value + SelectionRange.Value.Start.ByteIndex;
+            BreakpointAddress = address.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    [ObservableProperty]
+    private string? _breakpointAddress;
+
+    [ObservableProperty]
+    private BreakPointType _selectedBreakpointType = BreakPointType.ACCESS;
+
+    public BreakPointType[] BreakpointTypes => [BreakPointType.ACCESS, BreakPointType.WRITE, BreakPointType.READ];
+
+    private bool IsBreakpointAddressValid() => !string.IsNullOrWhiteSpace(BreakpointAddress);
+
+    private void OnBreakPointReached(BreakPoint breakPoint) {
+        string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
+        _pauseHandler.RequestPause(message);
+        _uiDispatcher.Post(() => {
+            _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+            TryUpdateHeaderAndMemoryDocument();
+        });
+    }
+
+    [RelayCommand]
+    private void ConfirmCreateMemoryBreakpoint() {
+        CreatingMemoryBreakpoint = false;
+        if(!string.IsNullOrWhiteSpace(BreakpointAddress) &&
+            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
+            AddressBreakPoint addressBreakPoint = new(SelectedBreakpointType,
+                (long)breakpointAddressValue, OnBreakPointReached, false);
+            _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
+        }
+    }
+
+    [RelayCommand]
+    private void CancelCreateMemoryBreakpoint() => CreatingMemoryBreakpoint = false;
+
+    [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
     public async Task CopySelection() {
         if (SelectionRange is not null && StartAddress is not null) {
             byte[] memoryBytes = _memory.ReadRam(
@@ -222,11 +270,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private readonly IHostStorageProvider _storageProvider;
 
-    public MemoryViewModel(IMemory memory, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
+    public MemoryViewModel(IMemory memory, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
-        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(textClipboard) {
+        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(uiDispatcher, textClipboard) {
         _pauseHandler = pauseHandler;
-        _uiDispatcher = uiDispatcher;
+        _breakpointsViewModel = breakpointsViewModel;
         _memory = memory;
         _pauseHandler.Pausing += OnPause;
         IsPaused = pauseHandler.IsPaused;
@@ -286,7 +334,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void CreateNewMemoryView(uint? startAddress = null) {
-        MemoryViewModel memoryViewModel = new(_memory, _pauseHandler, _messenger, _uiDispatcher, _textClipboard,
+        MemoryViewModel memoryViewModel = new(_memory, _breakpointsViewModel, _pauseHandler, _messenger, _uiDispatcher, _textClipboard,
             _storageProvider,
             _structureViewModelFactory, canCloseTab: true);
         if (startAddress is not null) {
@@ -327,38 +375,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void EditMemory() {
         IsEditingMemory = true;
-        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out uint? memoryEditAddressValue)) {
-            MemoryEditValue = Convert.ToHexString(_memory.ReadRam((uint)(MemoryEditValue?.Length ?? sizeof(ushort)), memoryEditAddressValue.Value));
+        if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out ulong? memoryEditAddressValue)) {
+            MemoryEditValue = Convert.ToHexString(_memory.ReadRam((uint)(MemoryEditValue?.Length ?? sizeof(ushort)), (uint)memoryEditAddressValue.Value));
         }
-    }
-
-    private bool TryParseMemoryAddress(string? memoryAddress, [NotNullWhen(true)] out uint? address) {
-        if (string.IsNullOrWhiteSpace(memoryAddress)) {
-            address = null;
-            return false;
-        }
-
-        try {
-            if (memoryAddress.Contains(':')) {
-                string[] split = memoryAddress.Split(":");
-                if (split.Length > 1 &&
-                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
-                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
-                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
-
-                    return true;
-                }
-            } else if (uint.TryParse(memoryAddress, CultureInfo.InvariantCulture, out uint value)) {
-                address = value;
-
-                return true;
-            }
-        } catch (Exception e) {
-            Dispatcher.UIThread.Post(() => ShowError(e));
-        }
-        address = null;
-
-        return false;
     }
 
     [RelayCommand]
@@ -366,12 +385,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand]
     private void ApplyMemoryEdit() {
-        if (!TryParseMemoryAddress(MemoryEditAddress, out uint? address) ||
+        if (!TryParseMemoryAddress(MemoryEditAddress, out ulong? address) ||
             MemoryEditValue is null ||
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
-        DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
+        DataMemoryDocument?.WriteBytes(address!.Value, BitConverter.GetBytes(value));
         IsEditingMemory = false;
     }
 }

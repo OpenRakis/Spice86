@@ -1,34 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <WarningsAsErrors>Nullable</WarningsAsErrors>
-  </PropertyGroup>
   <!-- Properties geared towards NuGet -->
   <PropertyGroup>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <version>7.0.0</version>
-    <Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <Description>Reverse engineer and rewrite real mode dos programs</Description>
-    <PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
-  <!-- Source Link configuration -->
-  <PropertyGroup>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+	  <PackageId>Spice86.Logging</PackageId>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.1.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+	<PackageReference Include="Serilog" />
+	<PackageReference Include="Serilog.Sinks.Console" />
+	<PackageReference Include="Serilog.Sinks.Debug" />
+	<PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+	<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
   </ItemGroup>
 </Project>

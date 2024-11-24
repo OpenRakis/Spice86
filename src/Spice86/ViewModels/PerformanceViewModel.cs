@@ -37,7 +37,11 @@ public partial class PerformanceViewModel : ViewModelBase {
         InstructionsExecuted = _state.Cycles;
         _performanceMeasurer.UpdateValue(_state.Cycles);
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
+        InstructionsPerMillisecond = _performanceMeasurer.ValuePerMillisecond;
     }
+
+    [ObservableProperty]
+    private double _instructionsPerMillisecond;
 
     [ObservableProperty]
     private double _instructionsExecuted;

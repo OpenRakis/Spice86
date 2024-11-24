@@ -21,6 +21,9 @@ public class InstructionToStringConverter : IValueConverter {
             }
             _outputString.Clear();
             var output = new StringOutput();
+            if (!string.IsNullOrWhiteSpace(cpuInstructionInfo.FunctionName)) {
+                _outputString.AppendLine($"{cpuInstructionInfo.FunctionName} entry point");
+            }
             // Don't use instr.ToString(), it allocates more, uses masm syntax and default options
             _formatter.Format(instr, output);
             _outputString.AppendLine(output.ToStringAndReset());

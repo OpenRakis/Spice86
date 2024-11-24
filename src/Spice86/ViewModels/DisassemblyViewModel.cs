@@ -9,22 +9,84 @@ using CommunityToolkit.Mvvm.Messaging;
 using Iced.Intel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-public partial class DisassemblyViewModel : ViewModelBase {
+using System.Globalization;
+
+public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly ITextClipboard _textClipboard;
-    private readonly IUIDispatcher _uiDispatcher;
     private readonly IInstructionExecutor _cpu;
+    private readonly BreakpointsViewModel _breakpointsViewModel;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
+
+    public DisassemblyViewModel(
+        IInstructionExecutor cpu, IMemory memory, State state,
+        IDictionary<uint, FunctionInformation> functionsInformation,
+        BreakpointsViewModel breakpointsViewModel, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
+        IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
+        : base(uiDispatcher, textClipboard) {
+        _cpu = cpu;
+        _functionsInformation = functionsInformation;
+        Functions = new(functionsInformation
+            .Select(x => new FunctionInfo() {
+                Name = x.Value.Name,
+                Address = x.Key,
+        }).OrderBy(x => x.Address));
+        AreFunctionInformationProvided = functionsInformation.Count > 0;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _breakpointsViewModel = breakpointsViewModel;
+        _messenger = messenger;
+        _memory = memory;
+        _state = state;
+        _pauseHandler = pauseHandler;
+        IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Pausing += OnPausing;
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
+        CanCloseTab = canCloseTab;
+    }
+
+    [ObservableProperty]
+    private bool _areFunctionInformationProvided;
+
+    private FunctionInfo? _selectedFunction;
+
+    public FunctionInfo? SelectedFunction {
+        get => _selectedFunction;
+        set {
+            _selectedFunction = value;
+            OnPropertyChanged(nameof(SelectedFunction));
+            if (value is not null) {
+                uint address = value.Address;
+                GoToAddress(address);
+            }
+        }
+    }
+
+    [ObservableProperty]
+    private AvaloniaList<FunctionInfo> _functions = new();
+
+    private void OnPausing() {
+        _uiDispatcher.Post(() => {
+            IsPaused = true;
+            if(Instructions.Count == 0 && GoToCsIpCommand.CanExecute(null)) {
+                GoToCsIpCommand.Execute(null);
+            }
+        });
+    }
 
     [ObservableProperty]
     private string _header = "Disassembly View";
@@ -38,41 +100,86 @@ public partial class DisassemblyViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StepOverCommand))]
     private bool _isPaused;
 
-    [ObservableProperty] private int _numberOfInstructionsShown = 50;
+    [ObservableProperty]
+    private bool _creatingExecutionBreakpoint;
+
+    [ObservableProperty]
+    private string? _breakpointAddress;
+
+    [RelayCommand]
+    private void BeginCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = true;
+        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP).ToString(CultureInfo.InvariantCulture);
+    }
+
+    [RelayCommand]
+    private void CancelCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = false;
+    }
+
+    [RelayCommand]
+    private void ConfirmCreateExecutionBreakpoint() {
+        CreatingExecutionBreakpoint = false;
+        if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
+            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
+            AddressBreakPoint addressBreakPoint = new(BreakPointType.EXECUTION,
+                (long)breakpointAddressValue, OnBreakPointReached, false);
+            _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
+        }
+    }
+
+    [ObservableProperty]
+    private int _numberOfInstructionsShown = 50;
+
+    [ObservableProperty]
+    private bool _isUsingLinearAddressing = true;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
+    private SegmentedAddress? _segmentedStartAddress;
 
     private uint? _startAddress;
 
     public uint? StartAddress {
         get => _startAddress;
         set {
-            Header = value is null ? "" : $"0x{value:X}";
             SetProperty(ref _startAddress, value);
+            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
         }
     }
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
     private bool _canCloseTab;
 
-    public DisassemblyViewModel(IInstructionExecutor cpu, IMemory memory, State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
-        IMessenger messenger, ITextClipboard textClipboard,
-        bool canCloseTab = false) {
-        _cpu = cpu;
-        _messenger = messenger;
-        _uiDispatcher = uiDispatcher;
-        _textClipboard = textClipboard;
-        _memory = memory;
-        _state = state;
-        _pauseHandler = pauseHandler;
-        IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += () => _uiDispatcher.Post(() => IsPaused = true);
-        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
-        CanCloseTab = canCloseTab;
+    private void UpdateHeader(uint? address) {
+        Header = address is null ? "" : $"0x{address:X}";
     }
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void StepOver() {
+        if(SelectedInstruction is null) {
+            return;
+        }
+        var nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
+        var addressBreakpoint = new AddressBreakPoint(
+            BreakPointType.EXECUTION,
+            nextInstructionAddressInListing,
+            (breakpoint) => {
+                OnBreakPointReached(breakpoint);
+                _uiDispatcher.Post(GoToCsIp);
+            },
+            isRemovedOnTrigger: true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(addressBreakpoint, on: true);
+        _pauseHandler.Resume();
+    }
+
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
@@ -82,7 +189,9 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
-        DisassemblyViewModel disassemblyViewModel = new(_cpu, _memory, _state, _pauseHandler, _uiDispatcher, _messenger,
+        DisassemblyViewModel disassemblyViewModel = new(
+            _cpu, _memory, _state, _functionsInformation, 
+            _breakpointsViewModel, _emulatorBreakpointsManager, _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
@@ -91,31 +200,65 @@ public partial class DisassemblyViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void GoToCsIp() {
-        StartAddress = _state.IpPhysicalAddress;
-        UpdateDisassembly();
+        SegmentedStartAddress = new(_state.CS, _state.IP);
+        GoToAddress(_state.IpPhysicalAddress);
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void UpdateDisassembly() {
-        if (StartAddress is null) {
-            return;
-        }
-
-        Instructions = new(DecodeInstructions(_state, _memory, StartAddress.Value, NumberOfInstructionsShown));
+    private void GoToAddress(uint address) {
+        StartAddress = address;
+        UpdateDisassembly();
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    [ObservableProperty]
+    private uint? GetStartAddress() {
+        return IsUsingLinearAddressing switch {
+            true => StartAddress,
+            false => SegmentedStartAddress is null
+                ? null
+                : MemoryUtils.ToPhysicalAddress(SegmentedStartAddress.Value.Segment,
+                    SegmentedStartAddress.Value.Offset),
+        };
+    }
+
+    private bool CanExecuteUpdateDisassembly() {
+        return IsPaused && GetStartAddress() is not null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
+    private void UpdateDisassembly() {
+        uint? startAddress = GetStartAddress();
+        if (startAddress is null) {
+            return;
+        }
+
+        Instructions = new(DecodeInstructions(_state, _memory, startAddress.Value, NumberOfInstructionsShown));
+        SelectedInstruction = Instructions.FirstOrDefault();
+        UpdateHeader(SelectedInstruction?.Address);
+    }
+
     private CpuInstructionInfo? _selectedInstruction;
+
+    public CpuInstructionInfo? SelectedInstruction {
+        get => _selectedInstruction;
+        set {
+            if (value is not null) {
+                _selectedFunction = Functions.
+                    FirstOrDefault(x => x.Address == value.Address);
+                OnPropertyChanged(nameof(SelectedFunction));
+            }
+            _selectedInstruction = value;
+            OnPropertyChanged(nameof(SelectedInstruction));
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {
         if (SelectedInstruction is not null) {
-            await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation).ConfigureAwait(false);
+            await _textClipboard.SetTextAsync(SelectedInstruction.StringRepresentation);
         }
     }
 
-    private static List<CpuInstructionInfo> DecodeInstructions(State state, IMemory memory, uint startAddress,
+    private List<CpuInstructionInfo> DecodeInstructions(State state, IMemory memory, uint startAddress,
         int numberOfInstructionsShown) {
         CodeReader codeReader = CreateCodeReader(memory, out CodeMemoryStream emulatedMemoryStream);
         using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
@@ -129,6 +272,8 @@ public partial class DisassemblyViewModel : ViewModelBase {
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
                 Address = (uint)instructionAddress,
+                FunctionName = Functions.FirstOrDefault(x => x.Address == instructionAddress)?.Name,
+                AddressInformation = $"{instructionAddress} (0x{state.CS:x4}:{(ushort)(state.IP + byteOffset):X4})",
                 Length = instruction.Length,
                 IP16 = instruction.IP16,
                 IP32 = instruction.IP32,
@@ -137,11 +282,11 @@ public partial class DisassemblyViewModel : ViewModelBase {
                 IsStackInstruction = instruction.IsStackInstruction,
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                SegmentedAddress =
-                    ConvertUtils.ToSegmentedAddressRepresentation(state.CS, (ushort)(state.IP + byteOffset)),
                 FlowControl = instruction.FlowControl,
-                Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))}"
+                Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"
             };
+            instructionInfo.SegmentedAddress = new(state.CS, (ushort)(state.IP + byteOffset));
+            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(instructionInfo);
             instructionInfo.StringRepresentation =
                 $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == state.IpPhysicalAddress) {
@@ -153,6 +298,55 @@ public partial class DisassemblyViewModel : ViewModelBase {
         }
 
         return instructions;
+    }
+    
+    private void OnBreakPointReached(BreakPoint breakPoint) {
+        string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
+        _pauseHandler.RequestPause(message);
+        _uiDispatcher.Post(() => {
+            _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+            if (UpdateDisassemblyCommand.CanExecute(null)) {
+                UpdateDisassemblyCommand.Execute(null);
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void MoveCsIpHere() {
+        if (SelectedInstruction is null) {
+            return;
+        }
+        _state.CS = SelectedInstruction.SegmentedAddress.Segment;
+        _state.IP = SelectedInstruction.SegmentedAddress.Offset;
+        if (UpdateDisassemblyCommand.CanExecute(null)) {
+            UpdateDisassemblyCommand.Execute(null);
+        }
+    }
+
+    private bool RemoveExecutionBreakpointHereCanExecute() =>
+        SelectedInstruction is not null && _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+
+    [RelayCommand(CanExecute = nameof(RemoveExecutionBreakpointHereCanExecute))]
+    private void RemoveExecutionBreakpointHere() {
+        if (SelectedInstruction is null) {
+            return;
+        }
+        _breakpointsViewModel.RemoveUserExecutionBreakpoint(SelectedInstruction);
+        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+    }
+
+    private bool CreateExecutionBreakpointHereCanExecute() =>
+        SelectedInstruction is not null && !_breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+    
+    [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]
+    private void CreateExecutionBreakpointHere() {
+        if (SelectedInstruction is null) {
+            return;
+        }
+        AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached,
+            isRemovedOnTrigger: false);
+        _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
+        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
     }
 
     private static Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
