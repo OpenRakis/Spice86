@@ -13,7 +13,7 @@
 		</Grid.RowDefinitions>
 		<StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
 			<Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
-			<Button Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
+			<Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
 		</StackPanel>
 		<DataGrid Grid.Row="1"
 				ItemsSource="{Binding Breakpoints}"

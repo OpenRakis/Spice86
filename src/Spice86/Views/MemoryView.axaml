@@ -24,11 +24,11 @@
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
 				ScrollViewer.HorizontalScrollBarVisibility="Hidden">
-				<Button VerticalAlignment="Top" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
+				<Button VerticalAlignment="Top" HotKey="F3" ToolTip.Tip="F3" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
 				<Button VerticalAlignment="Top" Command="{Binding EditMemoryCommand}" Content="Edit..." />
 				<Button VerticalAlignment="Top" Command="{Binding DumpMemoryCommand}" Content="Dump..." />
 				<StackPanel Orientation="Vertical">
-					<Button Command="{Binding BeginCreateMemoryBreakpointCommand}" Content="Breakpoint..." />
+					<Button HotKey="F2" ToolTip.Tip="F2" Command="{Binding BeginCreateMemoryBreakpointCommand}" Content="Breakpoint..." />
 					<Button IsVisible="{Binding IsStructureInfoPresent}"
 						Command="{Binding ShowStructureView}"
 						Content="Structure view" />
@@ -37,9 +37,12 @@
 					<Button
 						Command="{Binding NewMemoryViewCommand}"
 						Content="New Memory View"
+						HotKey="Ctrl+T" ToolTip.Tip="Ctrl-T"
 						IsEnabled="{Binding IsPaused}" />
 					<Button
 						Command="{Binding CloseTabCommand}"
+						HotKey="Ctrl+F4"
+						ToolTip.Tip="Ctrl-F4"
 						Content="Close View"
 						IsEnabled="{Binding CanCloseTab}" />
 				</StackPanel>
@@ -49,7 +52,7 @@
 					<Label Content="End" />
 					<NumericUpDown Value="{Binding EndAddress}" />
 				</UniformGrid>
-				<Button IsVisible="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" Content="Refresh" />
+				<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" HotKey="F5" ToolTip.Tip="F5" Content="Refresh" />
 			</StackPanel>
 			<Grid Grid.Row="1">
 				<TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />

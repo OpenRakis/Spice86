@@ -31,6 +31,8 @@
 		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
 			<Button
 				Margin="5,0,0,0"
+				ToolTip.Tip="Pause (Ctrl+Shift+F5)"
+				HotKey="Ctrl+Shift+F5"
 				Command="{Binding PauseCommand}"
 				IsVisible="{Binding !IsPaused}">
 				<Button.Content>
@@ -39,6 +41,8 @@
 			</Button>
 			<Button
 				Margin="5,0,0,0"
+				ToolTip.Tip="Continue (F5)"
+				HotKey="F5"
 				Command="{Binding ContinueCommand}"
 				IsVisible="{Binding IsPaused}">
 				<Button.Content>
@@ -47,34 +51,34 @@
 			</Button>
 		</StackPanel>
 		<TabControl TabStripPlacement="Left" Grid.Row="1">
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F1" Content="{Binding CpuViewModel}">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1" Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="CPU (F1)" />
+						<TextBlock Margin="5,0,0,5" Text="CPU" ToolTip.Tip="Alt-F1" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F2"
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F2"
 				Content="{Binding CfgCpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Code Flow (F2)" />
+						<TextBlock Margin="5,0,0,5" Text="Code Flow" ToolTip.Tip="Alt-F2" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F3">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F3">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Disassembly (F3)" />
+						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F3" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
@@ -87,13 +91,13 @@
 					</TabControl.ItemTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F4">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F4">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Memory (F4)" />
+						<TextBlock Margin="5,0,0,5" Text="Memory" ToolTip.Tip="Alt-F4" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 				<TabControl ItemsSource="{Binding MemoryViewModels}">
@@ -106,29 +110,29 @@
 					</TabControl.ItemTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F5">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F5">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Devices (F5)" />
+						<TextBlock Margin="5,0,0,5" Text="Devices" ToolTip.Tip="Alt-F5" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 				<TabControl>
-					<controls:HotKeyTabItem HotKeyManager.HotKey="F6" Header="Video Card (F6)" Content="{Binding VideoCardViewModel}" />
-					<controls:HotKeyTabItem HotKeyManager.HotKey="F7" Header="Color Palette (F7)" Content="{Binding PaletteViewModel}" />
-					<controls:HotKeyTabItem HotKeyManager.HotKey="F8" Header="General MIDI / MT-32 (F8)" Content="{Binding MidiViewModel}" />
-					<controls:HotKeyTabItem HotKeyManager.HotKey="F9" Header="Software Mixer (F9)" Content="{Binding SoftwareMixerViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
+					<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Software Mixer" ToolTip.Tip="Alt-F10" Content="{Binding SoftwareMixerViewModel}" />
 				</TabControl>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="F10" Content="{Binding BreakpointsViewModel}">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F6" Content="{Binding BreakpointsViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Breakpoints (F10)" />
+						<TextBlock Margin="5,0,0,5" Text="Breakpoints" ToolTip.Tip="Alt-F6" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 			</controls:HotKeyTabItem>

@@ -126,7 +126,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
             TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
             AddressBreakPoint addressBreakPoint = new(BreakPointType.EXECUTION,
-                (long)breakpointAddressValue, OnBreakPointReached, false);
+                (long)breakpointAddressValue, (breakpoint) => {
+                    RequestPause(breakpoint);
+                    UpdateDisassemblyInternal();
+                }, false);
             _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
         }
     }
@@ -172,7 +175,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             BreakPointType.EXECUTION,
             nextInstructionAddressInListing,
             (breakpoint) => {
-                OnBreakPointReached(breakpoint);
+                RequestPause(breakpoint);
                 _uiDispatcher.Post(GoToCsIp);
             },
             isRemovedOnTrigger: true);
@@ -184,7 +187,11 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
         _cpu.ExecuteNext();
-        _uiDispatcher.Post(GoToCsIp);
+        if (!Instructions.GetRange(0, 15).Any(x => x.Address == _state.IpPhysicalAddress)) {
+            GoToCsIp();
+        } else {
+            UpdateDisassemblyInternal();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -230,10 +237,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (startAddress is null) {
             return;
         }
-
-        Instructions = new(DecodeInstructions(_state, _memory, startAddress.Value, NumberOfInstructionsShown));
+        Instructions = new(DecodeCurrentWindowOfInstructions(startAddress.Value));
         SelectedInstruction = Instructions.FirstOrDefault();
         UpdateHeader(SelectedInstruction?.Address);
+    }
+
+    private List<CpuInstructionInfo> DecodeCurrentWindowOfInstructions(uint startAddress) {
+        return
+            DecodeInstructions(
+                _state,
+                _memory,
+                startAddress,
+                NumberOfInstructionsShown);
     }
 
     private CpuInstructionInfo? _selectedInstruction;
@@ -300,11 +315,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         return instructions;
     }
     
-    private void OnBreakPointReached(BreakPoint breakPoint) {
+    private void RequestPause(BreakPoint breakPoint) {
         string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+        });
+    }
+
+    private void UpdateDisassemblyInternal() {
+        _uiDispatcher.Post(() => {
             if (UpdateDisassemblyCommand.CanExecute(null)) {
                 UpdateDisassemblyCommand.Execute(null);
             }
@@ -318,9 +338,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
         _state.CS = SelectedInstruction.SegmentedAddress.Segment;
         _state.IP = SelectedInstruction.SegmentedAddress.Offset;
-        if (UpdateDisassemblyCommand.CanExecute(null)) {
-            UpdateDisassemblyCommand.Execute(null);
-        }
+        UpdateDisassemblyInternal();
     }
 
     private bool RemoveExecutionBreakpointHereCanExecute() =>
@@ -343,7 +361,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (SelectedInstruction is null) {
             return;
         }
-        AddressBreakPoint breakPoint = new(BreakPointType.EXECUTION, SelectedInstruction.Address, OnBreakPointReached,
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.EXECUTION,
+            SelectedInstruction.Address,
+            (breakpoint) => {
+                RequestPause(breakpoint);
+                UpdateDisassemblyInternal();
+                },
             isRemovedOnTrigger: false);
         _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
         SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);

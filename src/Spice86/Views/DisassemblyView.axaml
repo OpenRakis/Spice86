@@ -25,16 +25,19 @@
 				<Button
 					Command="{Binding NewDisassemblyViewCommand}"
 					Content="New Disassembly View"
+					HotKey="Ctrl+T" ToolTip.Tip="Ctrl-T"
 					IsEnabled="{Binding IsPaused}" />
 				<Button
+					HotKey="Ctrl+F4"
+					ToolTip.Tip="Ctrl-F4"
 					Command="{Binding CloseTabCommand}"
 					Content="Close View"
 					IsEnabled="{Binding CanCloseTab}"/>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="1">
 				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" Content="Breakpoint..." />
-				<Button Content="Step into" Command="{Binding StepIntoCommand}" />
-				<Button Content="Step over" Command="{Binding StepOverCommand}" />
+				<Button Content="Step into" ToolTip.Tip="F11" HotKey="F11" Command="{Binding StepIntoCommand}" />
+				<Button Content="Step over" ToolTip.Tip="F10" HotKey="F10" Command="{Binding StepOverCommand}" />
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="2">
 				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
@@ -55,7 +58,7 @@
 				</StackPanel>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
-				<Button Content="Go to CS:IP" Command="{Binding GoToCsIpCommand}" />
+				<Button Content="Go to CS:IP" HotKey="Ctrl+F5" ToolTip.Tip="Ctrl-F5" Command="{Binding GoToCsIpCommand}" />
 				<Label
 					IsVisible="{Binding AreFunctionInformationProvided}">
 					Go to function:
@@ -65,7 +68,7 @@
 					ItemsSource="{Binding Functions}"
 					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 			</StackPanel>
-			<Button Grid.Column="5" Content="Refresh" Command="{Binding UpdateDisassemblyCommand}" />
+			<Button Grid.Column="5" Content="Refresh" HotKey="F5" ToolTip.Tip="F5" Command="{Binding UpdateDisassemblyCommand}" />
 		</Grid>	
 		<DataGrid
 			Grid.Row="1"
@@ -99,7 +102,15 @@
 				<DataGridTextColumn MaxWidth="300"
 					Binding="{Binding Converter={StaticResource InstructionToStringConverter}}"
 					Header="MASM" />
-				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)" />
+				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
 				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
 				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
