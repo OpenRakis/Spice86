@@ -22,7 +22,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.8.1" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.265" />
+    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.266" />
     <PackageVersion Include="Iced" Version="1.21.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="JvE.Structurizer" Version="1.0.1" />
