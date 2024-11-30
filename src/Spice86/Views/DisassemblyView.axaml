@@ -70,7 +70,7 @@
 					ItemsSource="{Binding Functions}"
 					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 			</StackPanel>
-			<Button Grid.Column="5" Content="Refresh" HotKey="F5" ToolTip.Tip="F5" Command="{Binding UpdateDisassemblyCommand}" />
+			<Button Grid.Column="5" Content="Refresh" HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Command="{Binding UpdateDisassemblyCommand}" />
 		</Grid>
 		
 		<DataGrid

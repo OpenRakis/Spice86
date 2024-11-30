@@ -52,7 +52,9 @@
 					<Label Content="End" />
 					<NumericUpDown Value="{Binding EndAddress}" />
 				</UniformGrid>
-				<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}" Command="{Binding UpdateBinaryDocumentCommand}" HotKey="F5" ToolTip.Tip="F5" Content="Refresh" />
+				<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
+						Command="{Binding UpdateBinaryDocumentCommand}"
+						HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
 			</StackPanel>
 			<Grid Grid.Row="1">
 				<TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
