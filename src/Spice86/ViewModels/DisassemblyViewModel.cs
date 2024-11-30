@@ -6,8 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Iced.Intel;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -31,6 +29,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
+    private readonly InstructionsDecoder _instructionsDecoder;
 
     public DisassemblyViewModel(
         IInstructionExecutor cpu, IMemory memory, State state,
@@ -53,6 +52,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
+        _instructionsDecoder = new(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += OnPausing;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
@@ -247,9 +247,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private List<CpuInstructionInfo> DecodeCurrentWindowOfInstructions(uint startAddress) {
         return
-            DecodeInstructions(
-                _state,
-                _memory,
+            _instructionsDecoder.DecodeInstructions(
                 startAddress,
                 NumberOfInstructionsShown);
     }
@@ -276,48 +274,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
     }
 
-    private List<CpuInstructionInfo> DecodeInstructions(State state, IMemory memory, uint startAddress,
-        int numberOfInstructionsShown) {
-        CodeReader codeReader = CreateCodeReader(memory, out CodeMemoryStream emulatedMemoryStream);
-        using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
-        Decoder decoder = InitializeDecoder(codeReader, startAddress);
-        int byteOffset = 0;
-        codeMemoryStream.Position = startAddress;
-        var instructions = new List<CpuInstructionInfo>();
-        while (instructions.Count < numberOfInstructionsShown) {
-            long instructionAddress = codeMemoryStream.Position;
-            decoder.Decode(out Instruction instruction);
-            CpuInstructionInfo instructionInfo = new() {
-                Instruction = instruction,
-                Address = (uint)instructionAddress,
-                FunctionName = Functions.FirstOrDefault(x => x.Address == instructionAddress)?.Name,
-                AddressInformation = $"{instructionAddress} (0x{state.CS:x4}:{(ushort)(state.IP + byteOffset):X4})",
-                Length = instruction.Length,
-                IP16 = instruction.IP16,
-                IP32 = instruction.IP32,
-                MemorySegment = instruction.MemorySegment,
-                SegmentPrefix = instruction.SegmentPrefix,
-                IsStackInstruction = instruction.IsStackInstruction,
-                IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
-                IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                FlowControl = instruction.FlowControl,
-                Bytes = $"{Convert.ToHexString(memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"
-            };
-            instructionInfo.SegmentedAddress = new(state.CS, (ushort)(state.IP + byteOffset));
-            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(instructionInfo);
-            instructionInfo.StringRepresentation =
-                $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
-            if (instructionAddress == state.IpPhysicalAddress) {
-                instructionInfo.IsCsIp = true;
-            }
-
-            instructions.Add(instructionInfo);
-            byteOffset += instruction.Length;
-        }
-
-        return instructions;
-    }
-    
     private void RequestPause(BreakPoint breakPoint) {
         string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
         _pauseHandler.RequestPause(message);
@@ -374,17 +330,5 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             isRemovedOnTrigger: false);
         _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
         SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
-    }
-
-    private static Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
-        Decoder decoder = Decoder.Create(16, codeReader, currentIp,
-            DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
-        return decoder;
-    }
-
-    private static CodeReader CreateCodeReader(IMemory memory, out CodeMemoryStream codeMemoryStream) {
-        codeMemoryStream = new CodeMemoryStream(memory);
-        CodeReader codeReader = new StreamCodeReader(codeMemoryStream);
-        return codeReader;
     }
 }
