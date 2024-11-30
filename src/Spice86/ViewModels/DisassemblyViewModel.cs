@@ -115,8 +115,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
             TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
             AddressBreakPoint addressBreakPoint = new(BreakPointType.EXECUTION,
-                (long)breakpointAddressValue, (breakpoint) => {
-                    RequestPause(breakpoint);
+                (long)breakpointAddressValue.Value, (breakpoint) => {
+                    RequestPause(breakpoint, breakpointAddressValue.Value);
                     UpdateDisassemblyInternal();
                 }, false);
             _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
@@ -159,12 +159,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if(SelectedInstruction is null) {
             return;
         }
-        var nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
-        var addressBreakpoint = new AddressBreakPoint(
+        long nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
+        AddressBreakPoint addressBreakpoint = new AddressBreakPoint(
             BreakPointType.EXECUTION,
             nextInstructionAddressInListing,
             (breakpoint) => {
-                RequestPause(breakpoint);
+                RequestPause(breakpoint, (uint)nextInstructionAddressInListing);
                 _uiDispatcher.Post(() => GoToCsIpCommand.Execute(null));
             },
             isRemovedOnTrigger: true);
@@ -274,8 +274,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
     }
 
-    private void RequestPause(BreakPoint breakPoint) {
-        string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
+    private void RequestPause(BreakPoint breakPoint, ulong address) {
+        string message = $"{breakPoint.BreakPointType} breakpoint was reached at address {address}.";
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
@@ -324,7 +324,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             BreakPointType.EXECUTION,
             SelectedInstruction.Address,
             (breakpoint) => {
-                RequestPause(breakpoint);
+                RequestPause(breakpoint, SelectedInstruction.Address);
                 UpdateDisassemblyInternal();
                 },
             isRemovedOnTrigger: false);
