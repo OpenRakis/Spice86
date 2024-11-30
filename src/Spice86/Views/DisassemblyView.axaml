@@ -2,6 +2,7 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
 			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 			 xmlns:userControls="clr-namespace:Spice86.UserControls"
 			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
@@ -64,12 +65,14 @@
 					Go to function:
 				</Label>
 				<ComboBox
+					Name="FunctionComboBox"
 					IsVisible="{Binding AreFunctionInformationProvided}"
 					ItemsSource="{Binding Functions}"
 					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 			</StackPanel>
 			<Button Grid.Column="5" Content="Refresh" HotKey="F5" ToolTip.Tip="F5" Command="{Binding UpdateDisassemblyCommand}" />
-		</Grid>	
+		</Grid>
+		
 		<DataGrid
 			Grid.Row="1"
 			AutoGenerateColumns="False"
@@ -124,7 +127,7 @@
 				<ContextMenu>
 					<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
 					<MenuItem Header="Create execution breakpoint here" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-					<MenuItem Header="Remove execution breakPoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Remove execution breakpoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
 					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
 				</ContextMenu>
 			</DataGrid.ContextMenu>
@@ -137,7 +140,15 @@
 		</DataGrid>
 		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
 			IsVisible="{Binding CreatingExecutionBreakpoint}"/>
-		<dialogHost:DialogHost
+		<progRing:ProgressRing
+			IsVisible="{Binding IsLoading}"
+			Width="100" Height="100"
+			Grid.Row="0" Grid.RowSpan="2"
+			IsActive="{Binding IsLoading}"
+			HorizontalAlignment="Center"
+			VerticalAlignment="Center"
+			Foreground="Black" />
+		<dialogHost:DialogHost IsVisible="{Binding !IsLoading}"
 			Grid.Row="0" Grid.RowSpan="2"
 			Background="{Binding $parent[Window].Background}"
 			CloseOnClickAway="False"

@@ -20,6 +20,7 @@
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.3.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.8.1" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.265" />

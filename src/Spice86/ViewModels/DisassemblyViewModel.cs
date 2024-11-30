@@ -62,19 +62,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [ObservableProperty]
     private bool _areFunctionInformationProvided;
 
+    [ObservableProperty]
     private FunctionInfo? _selectedFunction;
-
-    public FunctionInfo? SelectedFunction {
-        get => _selectedFunction;
-        set {
-            _selectedFunction = value;
-            OnPropertyChanged(nameof(SelectedFunction));
-            if (value is not null) {
-                uint address = value.Address;
-                GoToAddress(address);
-            }
-        }
-    }
 
     [ObservableProperty]
     private AvaloniaList<FunctionInfo> _functions = new();
@@ -176,7 +165,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             nextInstructionAddressInListing,
             (breakpoint) => {
                 RequestPause(breakpoint);
-                _uiDispatcher.Post(GoToCsIp);
+                _uiDispatcher.Post(() => GoToCsIpCommand.Execute(null));
             },
             isRemovedOnTrigger: true);
         _emulatorBreakpointsManager.ToggleBreakPoint(addressBreakpoint, on: true);
@@ -185,10 +174,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void StepInto() {
+    private async Task StepInto() {
         _cpu.ExecuteNext();
         if (!Instructions.GetRange(0, 15).Any(x => x.Address == _state.IpPhysicalAddress)) {
-            GoToCsIp();
+            await GoToCsIp();
         } else {
             UpdateDisassemblyInternal();
         }
@@ -206,14 +195,21 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void GoToCsIp() {
+    private async Task GoToCsIp() {
         SegmentedStartAddress = new(_state.CS, _state.IP);
-        GoToAddress(_state.IpPhysicalAddress);
+        await GoToAddress(_state.IpPhysicalAddress);
     }
 
-    private void GoToAddress(uint address) {
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private async Task GoToFunction(object? parameter) {
+        if(parameter is FunctionInfo functionInfo) {
+            await GoToAddress(functionInfo.Address);
+        }
+    }
+
+    private async Task GoToAddress(uint address) {
         StartAddress = address;
-        UpdateDisassembly();
+        await UpdateDisassembly();
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
@@ -231,15 +227,22 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         return IsPaused && GetStartAddress() is not null;
     }
 
+    [ObservableProperty]
+    private bool _isLoading;
+
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
-    private void UpdateDisassembly() {
+    private async Task UpdateDisassembly() {
         uint? startAddress = GetStartAddress();
         if (startAddress is null) {
             return;
         }
-        Instructions = new(DecodeCurrentWindowOfInstructions(startAddress.Value));
+        Instructions.Clear();
+        IsLoading = true;
+        Instructions.AddRange(await Task.Run(
+            () => DecodeCurrentWindowOfInstructions(startAddress.Value)));
         SelectedInstruction = Instructions.FirstOrDefault();
         UpdateHeader(SelectedInstruction?.Address);
+        IsLoading = false;
     }
 
     private List<CpuInstructionInfo> DecodeCurrentWindowOfInstructions(uint startAddress) {
@@ -257,7 +260,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         get => _selectedInstruction;
         set {
             if (value is not null) {
-                _selectedFunction = Functions.
+                SelectedFunction = Functions.
                     FirstOrDefault(x => x.Address == value.Address);
                 OnPropertyChanged(nameof(SelectedFunction));
             }
