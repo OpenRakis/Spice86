@@ -19,9 +19,21 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     public BreakPointType Type => _breakPoint.BreakPointType;
 
-    //Can't get out of sync since GDB can't be used at the same tiem as the internal debugger
-    [ObservableProperty]
+    //Can't get out of sync since GDB can't be used at the same time as the internal debugger
     private bool _isEnabled;
+
+    public bool IsEnabled {
+        get => _isEnabled;
+        set {
+            if(SetProperty(ref _isEnabled, value)) {
+                if (value) {
+                    Enable();
+                } else {
+                    Disable();
+                }
+            }
+        }
+    }
 
     public bool IsRemovedOnTrigger => _breakPoint.IsRemovedOnTrigger;
 
@@ -37,12 +49,14 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     public void Enable() {
         _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: true);
-        IsEnabled = true;
+        _isEnabled = true;
+        OnPropertyChanged(nameof(IsEnabled));
     }
 
     public void Disable() {
         _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: false);
-        IsEnabled = false;
+        _isEnabled = false;
+        OnPropertyChanged(nameof(IsEnabled));
     }
 
     internal bool IsFor(CpuInstructionInfo instructionInfo) {

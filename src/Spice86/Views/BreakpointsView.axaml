@@ -21,13 +21,12 @@
 				AutoGenerateColumns="False"
 				CanUserReorderColumns="True"
 				CanUserResizeColumns="True"
-				CanUserSortColumns="False"
-				IsReadOnly="True">
+				CanUserSortColumns="False">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
-				<DataGridCheckBoxColumn Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
-				<DataGridTextColumn Binding="{Binding Type}" Header="Type" />
+				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
 			</DataGrid.Columns>
 		</DataGrid>
 	</Grid>
