@@ -49,11 +49,11 @@
 				<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
 				<Label HorizontalAlignment="Center" Content="Start Address" />
 				<StackPanel Orientation="Horizontal">
-					<TextBox IsEnabled="{Binding !IsUsingLinearAddressing}"
+					<AutoCompleteBox IsEnabled="{Binding !IsUsingLinearAddressing}"
 						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
 						Converter={StaticResource SegmentedAddressConverter}}"
 						Watermark="segment:offset" />
-					<TextBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
+					<AutoCompleteBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
 						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
 						Watermark="linear address"/>
 				</StackPanel>
@@ -227,7 +227,7 @@
 						<StackPanel
 							Grid.Row="1"
 							Orientation="Vertical">
-							<TextBox
+							<AutoCompleteBox
 								FontFamily="RobotoMonoFont"
 								Text="{Binding BreakpointAddress}"
 								Watermark="linear or segmented address" />

@@ -119,7 +119,7 @@
 								Grid.Row="0"
 								Grid.Column="0"
 								Content="Memory value" />
-							<TextBox
+							<AutoCompleteBox
 								Grid.Row="0"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont"
@@ -179,7 +179,7 @@
 								Grid.Row="0"
 								Grid.Column="0"
 								Content="Memory Address:" />
-							<TextBox
+							<AutoCompleteBox
 								Grid.Row="0"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont"
@@ -189,7 +189,7 @@
 								Grid.Row="1"
 								Grid.Column="0"
 								Content="Bytes:" />
-							<TextBox
+							<AutoCompleteBox
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont"
@@ -240,7 +240,7 @@
 								Grid.Row="0"
 								Grid.Column="1"
 								Orientation="Vertical">
-								<TextBox
+								<AutoCompleteBox
 									FontFamily="RobotoMonoFont"
 									Text="{Binding BreakpointAddress}"
 									Watermark="linear or segmented address" />
