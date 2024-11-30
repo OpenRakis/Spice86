@@ -375,8 +375,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void EditMemory() {
         IsEditingMemory = true;
+        try {
         if (MemoryEditAddress is not null && TryParseMemoryAddress(MemoryEditAddress, out ulong? memoryEditAddressValue)) {
             MemoryEditValue = Convert.ToHexString(_memory.ReadRam((uint)(MemoryEditValue?.Length ?? sizeof(ushort)), (uint)memoryEditAddressValue.Value));
+        }
+        } catch (Exception e) {
+            ShowError(e);
         }
     }
 
@@ -390,7 +394,15 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value)) {
             return;
         }
-        DataMemoryDocument?.WriteBytes(address!.Value, BitConverter.GetBytes(value));
-        IsEditingMemory = false;
+        try {
+            DataMemoryDocument?.WriteBytes(address!.Value, BitConverter.GetBytes(value));
+        } catch (IndexOutOfRangeException e) {
+            ShowError(e);
+            MemoryEditValue = null;
+            MemoryEditAddress = null;
+        }
+        finally {
+            IsEditingMemory = false;
+        }
     }
 }
