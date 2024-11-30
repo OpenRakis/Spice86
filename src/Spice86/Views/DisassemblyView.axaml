@@ -72,8 +72,16 @@
 			</StackPanel>
 			<Button Grid.Column="5" Content="Refresh" HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Command="{Binding UpdateDisassemblyCommand}" />
 		</Grid>
-		
+		<progRing:ProgressRing
+			IsVisible="{Binding IsLoading}"
+			Width="100" Height="100"
+			Grid.Row="0"
+			IsActive="{Binding IsLoading}"
+			HorizontalAlignment="Center"
+			VerticalAlignment="Center"
+			Foreground="Black" />
 		<DataGrid
+			IsEnabled="{Binding !IsLoading}"
 			Grid.Row="1"
 			AutoGenerateColumns="False"
 			CanUserReorderColumns="True"
@@ -104,7 +112,15 @@
 				</DataGridTextColumn>
 				<DataGridTextColumn MaxWidth="300"
 					Binding="{Binding Converter={StaticResource InstructionToStringConverter}}"
-					Header="MASM" />
+					Header="MASM">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)">
 					<DataGridTextColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
@@ -114,14 +130,62 @@
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix" />
-				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment" />
-				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl" />
+				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
+				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
+				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 				<DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
-				<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address" />
+				<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-				<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP" />
-				<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP" />
+				<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
+				<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP">
+					<DataGridTextColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+						</ControlTheme>
+					</DataGridTextColumn.CellTheme>
+				</DataGridTextColumn>
 			</DataGrid.Columns>
 			<DataGrid.ContextMenu>
 				<ContextMenu>
@@ -140,14 +204,6 @@
 		</DataGrid>
 		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
 			IsVisible="{Binding CreatingExecutionBreakpoint}"/>
-		<progRing:ProgressRing
-			IsVisible="{Binding IsLoading}"
-			Width="100" Height="100"
-			Grid.Row="0" Grid.RowSpan="2"
-			IsActive="{Binding IsLoading}"
-			HorizontalAlignment="Center"
-			VerticalAlignment="Center"
-			Foreground="Black" />
 		<dialogHost:DialogHost IsVisible="{Binding !IsLoading}"
 			Grid.Row="0" Grid.RowSpan="2"
 			Background="{Binding $parent[Window].Background}"
