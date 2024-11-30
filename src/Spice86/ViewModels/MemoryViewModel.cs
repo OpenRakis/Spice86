@@ -312,7 +312,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (SelectionRange is {ByteLength: > 1} bitRange) {
             byte[] bytes = new byte[bitRange.ByteLength];
             DataMemoryDocument.ReadBytes(bitRange.Start.ByteIndex, bytes);
-            data = new ByteArrayBinaryDocument(bytes);
+            data = new MemoryBinaryDocument(bytes);
         } else {
             data = DataMemoryDocument;
         }

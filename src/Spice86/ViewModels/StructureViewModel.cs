@@ -174,7 +174,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         StructureMembers.AddRange(members);
 
         // This "zooms" the hex view to the selected structure data.
-        StructureMemory = new ByteArrayBinaryDocument(data);
+        StructureMemory = new MemoryBinaryDocument(data);
     }
 
     private List<StructureMember> PopulateMembers(IEnumerable<TypeDefinition> selectedStructure, byte[] data) {
