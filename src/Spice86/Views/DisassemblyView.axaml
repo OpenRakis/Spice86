@@ -42,21 +42,23 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="2">
 				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-				<NumericUpDown Margin="5" Value="{Binding NumberOfInstructionsShown}" />
+				<NumericUpDown Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="3">
-				<RadioButton GroupName="AddressingMode" Content="Segmented addressing" IsChecked="{Binding !IsUsingLinearAddressing}" />
-				<RadioButton GroupName="AddressingMode" Content="Linear addressing" IsChecked="{Binding IsUsingLinearAddressing}" />
 				<Label HorizontalAlignment="Center" Content="Start Address" />
-				<StackPanel Orientation="Horizontal">
-					<AutoCompleteBox IsEnabled="{Binding !IsUsingLinearAddressing}"
+				<Grid ColumnDefinitions="*,*">
+					<AutoCompleteBox Name="SegmentedStartAddressTextBox"
+						Grid.Column="0"
+						Width="100"
 						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
 						Converter={StaticResource SegmentedAddressConverter}}"
 						Watermark="segment:offset" />
-					<AutoCompleteBox IsEnabled="{Binding IsUsingLinearAddressing, Mode=TwoWay}"
+					<AutoCompleteBox Name="LinearStartAddressTextBox"
+						Grid.Column="1"
+						Width="80"
 						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
 						Watermark="linear address"/>
-				</StackPanel>
+				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
 				<Button Content="Go to CS:IP" HotKey="Ctrl+F5" ToolTip.Tip="Ctrl-F5" Command="{Binding GoToCsIpCommand}" />
