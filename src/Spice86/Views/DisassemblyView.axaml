@@ -81,6 +81,7 @@
 			VerticalAlignment="Center"
 			Foreground="Black" />
 		<DataGrid
+			x:Name="DisassemblyDataGrid"
 			IsEnabled="{Binding !IsLoading}"
 			Grid.Row="1"
 			AutoGenerateColumns="False"
@@ -189,9 +190,9 @@
 			</DataGrid.Columns>
 			<DataGrid.ContextMenu>
 				<ContextMenu>
-					<MenuItem Header="Copy line" Command="{Binding CopyLineCommand}" />
-					<MenuItem Header="Create execution breakpoint here" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-					<MenuItem Header="Remove execution breakpoint here" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
+					<MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
 					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
 				</ContextMenu>
 			</DataGrid.ContextMenu>
