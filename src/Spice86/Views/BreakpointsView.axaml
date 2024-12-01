@@ -28,6 +28,7 @@
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
+				<DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
 			</DataGrid.Columns>
 		</DataGrid>
 	</Grid>

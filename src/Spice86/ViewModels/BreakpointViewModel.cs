@@ -47,6 +47,9 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
     }
 
+    [ObservableProperty]
+    private string? _comment;
+
     public void Enable() {
         _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: true);
         _isEnabled = true;
