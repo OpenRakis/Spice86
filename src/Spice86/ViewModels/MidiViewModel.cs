@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Infrastructure;
+using Spice86.Mappers;
 using Spice86.Models.Debugging;
 
 public partial class MidiViewModel : ViewModelBase {
@@ -20,8 +21,6 @@ public partial class MidiViewModel : ViewModelBase {
     }
 
     private void UpdateValues(object? sender, EventArgs e) {
-        Midi.LastPortRead = _externalMidiDevice.LastPortRead;
-        Midi.LastPortWritten = _externalMidiDevice.LastPortWritten;
-        Midi.LastPortWrittenValue = _externalMidiDevice.LastPortWrittenValue;
+        _externalMidiDevice.CopyToMidiInfo(Midi);
     }
 }

@@ -34,8 +34,8 @@ public partial class PerformanceViewModel : ViewModelBase {
             return;
         }
 
-        InstructionsExecuted = _state.Cycles;
         _performanceMeasurer.UpdateValue(_state.Cycles);
+        InstructionsExecuted = _state.Cycles;
         AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
         InstructionsPerMillisecond = _performanceMeasurer.ValuePerMillisecond;
     }

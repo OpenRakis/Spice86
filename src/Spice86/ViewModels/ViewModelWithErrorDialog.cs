@@ -1,9 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -15,6 +11,7 @@ using Spice86.Shared.Utils;
 using System.Diagnostics.CodeAnalysis;
 
 using System.Globalization;
+using System.Text.Json;
 
 public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
     protected readonly ITextClipboard _textClipboard;
@@ -78,7 +75,7 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
     public async Task CopyExceptionToClipboard() {
         if(Exception is not null) {
             await _textClipboard.SetTextAsync(
-                Newtonsoft.Json.JsonConvert.SerializeObject(
+                JsonSerializer.Serialize(
                     new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
         }
     }

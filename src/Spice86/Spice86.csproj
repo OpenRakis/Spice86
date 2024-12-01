@@ -33,6 +33,7 @@
     <PackageReference Include="bodong.Avalonia.PropertyGrid" />
     <PackageReference Include="bodong.PropertyModels" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Deadpikle.AvaloniaProgressRing" />
     <PackageReference Include="DialogHost.Avalonia" />
     <PackageReference Include="FluentIcons.Avalonia.Fluent" />
     <PackageReference Include="Iced" />

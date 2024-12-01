@@ -15,6 +15,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public BreakpointsViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
+
+    public event Action? BreakpointDeleted;
+    public event Action? BreakpointCreated;
+    public event Action? BreakpointEnabled;
+    public event Action? BreakpointDisabled;
     
     [ObservableProperty]
     private ObservableCollection<BreakpointViewModel> _breakpoints = new();
@@ -23,6 +28,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void ToggleSelectedBreakpoint() {
         if (SelectedBreakpoint is not null) {
             SelectedBreakpoint.Toggle();
+            if (SelectedBreakpoint.IsEnabled) {
+                BreakpointEnabled?.Invoke();
+            } else {
+                BreakpointDisabled?.Invoke();
+            }
         }
     }
 
@@ -47,17 +57,16 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void RemoveBreakpoint() {
         if (SelectedBreakpoint is not null) {
             DeleteBreakpoint(SelectedBreakpoint);
+            BreakpointDeleted?.Invoke();
         }
     }
 
-    internal void RemoveUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        DeleteBreakpoint(Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION }));
+    internal void RemoveBreakpoint(BreakpointViewModel vm) {
+        DeleteBreakpoint(vm);
     }
 
-    internal bool HasUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.Any(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION });
+    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
+        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
     private void DeleteBreakpoint(BreakpointViewModel? breakpoint) {
