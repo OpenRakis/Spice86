@@ -390,7 +390,7 @@ Stunts:
 
 Betrayal at Krondor:
 
-![](doc/BaK.PNG)
+![](doc/BaK.png)
 
 ## Credits
 
