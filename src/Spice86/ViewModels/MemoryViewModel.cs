@@ -129,22 +129,29 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
     private void BeginCreateMemoryBreakpoint() {
-        if(StartAddress is not null && SelectionRange is not null) {
-            CreatingMemoryBreakpoint = true;
-            ulong address = StartAddress.Value + SelectionRange.Value.Start.ByteIndex;
-            BreakpointAddress = address.ToString(CultureInfo.InvariantCulture);
+        CreatingMemoryBreakpoint = true;
+        if (StartAddress is not null && SelectionRange is not null) {
+            ulong rangeStart = StartAddress.Value + SelectionRange.Value.Start.ByteIndex;
+            ulong rangEnd = StartAddress.Value + SelectionRange.Value.End.ByteIndex;
+            BreakpointRangeStartAddress = rangeStart.ToString(CultureInfo.InvariantCulture);
+            if (rangeStart != rangEnd) {
+                BreakpointRangeEndAddress = rangEnd.ToString(CultureInfo.InvariantCulture);
+            }
         }
     }
 
     [ObservableProperty]
-    private string? _breakpointAddress;
+    [NotifyCanExecuteChangedFor(nameof(ConfirmCreateMemoryBreakpointCommand))]
+    private string? _breakpointRangeEndAddress;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmCreateMemoryBreakpointCommand))]
+    private string? _breakpointRangeStartAddress;
 
     [ObservableProperty]
     private BreakPointType _selectedBreakpointType = BreakPointType.ACCESS;
 
     public BreakPointType[] BreakpointTypes => [BreakPointType.ACCESS, BreakPointType.WRITE, BreakPointType.READ];
-
-    private bool IsBreakpointAddressValid() => !string.IsNullOrWhiteSpace(BreakpointAddress);
 
     private void OnBreakPointReached(BreakPoint breakPoint) {
         string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
@@ -155,15 +162,33 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         });
     }
 
-    [RelayCommand]
-    private void ConfirmCreateMemoryBreakpoint() {
-        CreatingMemoryBreakpoint = false;
-        if(!string.IsNullOrWhiteSpace(BreakpointAddress) &&
-            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            AddressBreakPoint addressBreakPoint = new(SelectedBreakpointType,
-                (long)breakpointAddressValue, OnBreakPointReached, false);
-            _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
+    private bool IsBreakpointRangeValid() {
+        bool isValid = TryParseMemoryAddress(BreakpointRangeStartAddress, out _);
+        if(!string.IsNullOrWhiteSpace(BreakpointRangeEndAddress)) {
+            isValid = TryParseMemoryAddress(BreakpointRangeStartAddress, out _);
         }
+        return isValid;
+    }
+
+    [RelayCommand(CanExecute = nameof(IsBreakpointRangeValid))]
+    private void ConfirmCreateMemoryBreakpoint() {
+        if (TryParseMemoryAddress(BreakpointRangeStartAddress, out ulong? breakpointStartAddressValue)
+            && TryParseMemoryAddress(BreakpointRangeEndAddress, out ulong? endAddressValue)) {
+            for (ulong i = breakpointStartAddressValue.Value; i <= endAddressValue.Value; i++) {
+                CreateMemoryAddressBreakpoint(i);
+            }
+        }
+        else if (TryParseMemoryAddress(BreakpointRangeStartAddress, out ulong? breakPointAddress)) {
+            CreateMemoryAddressBreakpoint(breakPointAddress.Value);
+            
+        }
+        CreatingMemoryBreakpoint = false;
+    }
+
+    private void CreateMemoryAddressBreakpoint(ulong breakpointAddressValue) {
+        AddressBreakPoint addressBreakPoint = new(SelectedBreakpointType,
+        (long)breakpointAddressValue, OnBreakPointReached, false);
+        _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
     }
 
     [RelayCommand]

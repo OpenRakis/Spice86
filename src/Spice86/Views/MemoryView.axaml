@@ -240,28 +240,38 @@
 						<Label
 							Grid.Row="0"
 							HorizontalAlignment="Center"
-							Content="Creating memory breakpoint"
+							Content="Creating memory breakpoint on linear or segmented address"
 							FontWeight="Bold" />
 						<Grid
 							Grid.Row="1"
 							ColumnDefinitions="Auto,*"
 							RowDefinitions="Auto,Auto">
-							<Label
+							<Grid Grid.Column="0"
+								Grid.ColumnSpan="2"
 								Grid.Row="0"
-								Grid.Column="0"
-								VerticalContentAlignment="Center"
-								HorizontalContentAlignment="Left"
-								Content="Memory Address to break on:" />
-							<StackPanel
-								Grid.Row="0"
-								Grid.Column="1"
-								Orientation="Vertical">
+								RowDefinitions="Auto,Auto"
+								ColumnDefinitions="Auto,*">
+								<Label
+									Grid.Row="0"
+									Grid.Column="0"
+									Content="Breakpoint Range Start:" />
+								<Label
+									Grid.Row="1"
+									Grid.Column="0"
+									Content="Breakpoint Range End:" />
 								<AutoCompleteBox
+								    Grid.Row="0"
+									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointAddress}"
+									Text="{Binding BreakpointRangeStartAddress}"
 									Watermark="linear or segmented address" />
-								<TextBlock>Linear or segmented address</TextBlock>
-							</StackPanel>
+								<AutoCompleteBox
+								    Grid.Row="1"
+									Grid.Column="1"
+									FontFamily="RobotoMonoFont"
+									Text="{Binding BreakpointRangeEndAddress}"
+									Watermark="optional" />
+							</Grid>
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
