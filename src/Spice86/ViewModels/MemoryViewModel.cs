@@ -298,7 +298,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     /// <param name="sender">The source of the event, expected to be of type <see cref="Selection"/>.</param>
     /// <param name="e">The event arguments, not used in this method.</param>
     public void OnSelectionRangeChanged(object? sender, EventArgs e) {
-        SelectionRange = (sender as Selection)?.Range;
+        Selection? selection = (sender as Selection);
+        if (selection != null) {
+            SelectionRange = selection.Range;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]

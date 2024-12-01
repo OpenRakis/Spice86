@@ -10,6 +10,7 @@
 	xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
 	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 	xmlns:userControls="clr-namespace:Spice86.UserControls"
+	xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	x:CompileBindings="True"
@@ -19,7 +20,7 @@
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
-		<Grid RowDefinitions="Auto,*">
+		<Grid RowDefinitions="Auto,*,Auto">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
@@ -56,11 +57,13 @@
 						Command="{Binding UpdateBinaryDocumentCommand}"
 						HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
 			</StackPanel>
-			<Grid Grid.Row="1">
-				<TextBlock IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
+			<Grid Grid.Row="1"
+				  RowDefinitions="*, Auto">
+				<TextBlock Grid.Row="0" IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
 				<avaloniaHex:HexEditor
 					x:Name="HexViewer"
 					Width="800"
+					Grid.Row="0"
 					Document="{Binding DataMemoryDocument}"
 					IsVisible="{Binding IsPaused}">
 					<TextElement.FontFamily>
@@ -81,9 +84,22 @@
 						</ContextMenu>
 					</avaloniaHex:HexEditor.ContextMenu>
 				</avaloniaHex:HexEditor>
+				<controls:StatusBar Grid.Row="1">
+					<controls:StatusBarItem FontFamily="RobotoMonoFont">
+						<WrapPanel Orientation="Horizontal">
+							<TextBlock Text="Selection start: " />
+							<TextBlock Text="{Binding SelectionRange.Value.Start.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" End: " />
+							<TextBlock Text="{Binding SelectionRange.Value.End.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" Byte Length: " />
+							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
+						</WrapPanel>
+					</controls:StatusBarItem>
+				</controls:StatusBar>
 			</Grid>
-			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-					   IsVisible="{Binding IsSearchingMemory}"/>
+			<Rectangle
+				Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+				IsVisible="{Binding IsSearchingMemory}"/>
 			<dialogHost:DialogHost
 				Grid.Row="0" Grid.RowSpan="2"
 				Background="{Binding $parent[Window].Background}"
@@ -91,7 +107,7 @@
 				IsOpen="{Binding IsSearchingMemory}">
 				<dialogHost:DialogHost.DialogContent>
 					<Grid RowDefinitions="Auto,Auto,*,Auto"
-						  ColumnDefinitions="Auto,*">
+						ColumnDefinitions="Auto,*">
 						<Label
 							Grid.Row="0"
 							Grid.Column="0"
@@ -100,14 +116,14 @@
 							Content="Search memory"
 							FontWeight="Bold" />
 						<Label Grid.Column="0" Grid.Row="1"
-							   Content="Data type:" />
+							Content="Data type:" />
 						<StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
 							<RadioButton GroupName="SearchDataType" Content="Binary"
-										 IsChecked="{Binding SearchDataTypeIsBinary}"
-										 Command="{Binding SetSearchDataTypeToBinaryCommand}" />
+								IsChecked="{Binding SearchDataTypeIsBinary}"
+								Command="{Binding SetSearchDataTypeToBinaryCommand}" />
 							<RadioButton GroupName="SearchDataType" Content="ASCII"
-										 IsChecked="{Binding SearchDataTypeIsAscii}"
-										 Command="{Binding SetSearchDataTypeToAsciiCommand}" />
+								IsChecked="{Binding SearchDataTypeIsAscii}"
+								Command="{Binding SetSearchDataTypeToAsciiCommand}" />
 						</StackPanel>
 						<Grid
 							Grid.Column="0"
