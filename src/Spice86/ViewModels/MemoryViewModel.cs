@@ -28,6 +28,28 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
+    public MemoryViewModel(IMemory memory, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
+        ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
+        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(uiDispatcher, textClipboard) {
+        _pauseHandler = pauseHandler;
+        _breakpointsViewModel = breakpointsViewModel;
+        _memory = memory;
+        _pauseHandler.Pausing += OnPause;
+        IsPaused = pauseHandler.IsPaused;
+        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
+        _messenger = messenger;
+        _storageProvider = storageProvider;
+        _structureViewModelFactory = structureViewModelFactory;
+        StartAddress = startAddress;
+        EndAddress = endAddress;
+        CanCloseTab = canCloseTab;
+        if (EndAddress is 0) {
+            EndAddress = _memory.Length;
+        }
+        IsMemoryRangeValid = GetIsMemoryRangeValid();
+        TryUpdateHeaderAndMemoryDocument();
+    }
+
     public enum MemorySearchDataType {
         Binary,
         Ascii,
@@ -269,28 +291,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public bool IsStructureInfoPresent => _structureViewModelFactory.IsInitialized;
 
     private readonly IHostStorageProvider _storageProvider;
-
-    public MemoryViewModel(IMemory memory, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
-        ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
-        bool canCloseTab = false, uint startAddress = 0, uint endAddress = A20Gate.EndOfHighMemoryArea) : base(uiDispatcher, textClipboard) {
-        _pauseHandler = pauseHandler;
-        _breakpointsViewModel = breakpointsViewModel;
-        _memory = memory;
-        _pauseHandler.Pausing += OnPause;
-        IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
-        _messenger = messenger;
-        _storageProvider = storageProvider;
-        _structureViewModelFactory = structureViewModelFactory;
-        StartAddress = startAddress;
-        EndAddress = endAddress;
-        CanCloseTab = canCloseTab;
-        if (EndAddress is 0) {
-            EndAddress = _memory.Length;
-        }
-        IsMemoryRangeValid = GetIsMemoryRangeValid();
-        TryUpdateHeaderAndMemoryDocument();
-    }
 
     /// <summary>
     /// Handles the event when the selection range within the HexEditor changes.
