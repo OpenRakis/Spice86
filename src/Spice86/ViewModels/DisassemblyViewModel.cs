@@ -57,6 +57,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         pauseHandler.Pausing += OnPausing;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         CanCloseTab = canCloseTab;
+        breakpointsViewModel.BreakpointCreated += UpdateDisassemblyInternal;
+        breakpointsViewModel.BreakpointDeleted += UpdateDisassemblyInternal;
+        breakpointsViewModel.BreakpointDisabled += UpdateDisassemblyInternal;
+        breakpointsViewModel.BreakpointEnabled += UpdateDisassemblyInternal;
     }
 
     [ObservableProperty]
