@@ -16,6 +16,7 @@
 			<Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
 		</StackPanel>
 		<DataGrid Grid.Row="1"
+				x:Name="BreakpointsDataGrid"
 				ItemsSource="{Binding Breakpoints}"
 				SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
 				AutoGenerateColumns="False"
