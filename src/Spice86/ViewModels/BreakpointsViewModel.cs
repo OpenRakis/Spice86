@@ -61,14 +61,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
     }
 
-    internal void RemoveUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        DeleteBreakpoint(Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION }));
+    internal void RemoveBreakpoint(BreakpointViewModel vm) {
+        DeleteBreakpoint(vm);
     }
 
-    internal bool HasUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.Any(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION });
+    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
+        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
     private void DeleteBreakpoint(BreakpointViewModel? breakpoint) {

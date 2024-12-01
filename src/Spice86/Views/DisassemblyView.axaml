@@ -14,7 +14,7 @@
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
-		<converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -107,8 +107,8 @@
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
 							<Setter Property="Background"
-								Value="{ReflectionBinding HasBreakpoint,
-								Converter={StaticResource BoolToBrushConverter},
+								Value="{ReflectionBinding Breakpoint,
+								Converter={StaticResource BreakpointToBrushConverter},
 								ConverterParameter={}}" />
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
@@ -195,6 +195,8 @@
 					<MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
 					<MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
 					<MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+					<MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
+					<MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
 					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
 				</ContextMenu>
 			</DataGrid.ContextMenu>

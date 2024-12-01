@@ -176,6 +176,22 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _pauseHandler.Resume();
     }
 
+    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
+    private void DisableBreakpoint() {
+        if (SelectedInstruction?.Breakpoint is null) {
+            return;
+        }
+        SelectedInstruction.Breakpoint.IsEnabled = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
+    private void EnableBreakpoint() {
+        if (SelectedInstruction?.Breakpoint is null) {
+            return;
+        }
+        SelectedInstruction.Breakpoint.IsEnabled = false;
+    }
+
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task StepInto() {
@@ -304,20 +320,20 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         UpdateDisassemblyInternal();
     }
 
-    private bool RemoveExecutionBreakpointHereCanExecute() =>
-        SelectedInstruction is not null && _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+    private bool SelectedInstructionHasBreakpoint() =>
+        SelectedInstruction?.Breakpoint is not null;
 
-    [RelayCommand(CanExecute = nameof(RemoveExecutionBreakpointHereCanExecute))]
+    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
     private void RemoveExecutionBreakpointHere() {
-        if (SelectedInstruction is null) {
+        if (SelectedInstruction?.Breakpoint is null) {
             return;
         }
-        _breakpointsViewModel.RemoveUserExecutionBreakpoint(SelectedInstruction);
-        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+        _breakpointsViewModel.RemoveBreakpoint(SelectedInstruction.Breakpoint);
+        SelectedInstruction.Breakpoint = _breakpointsViewModel.GetBreakpoint(SelectedInstruction);
     }
 
     private bool CreateExecutionBreakpointHereCanExecute() =>
-        SelectedInstruction is not null && !_breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+        SelectedInstruction?.Breakpoint is not { Type: BreakPointType.EXECUTION };
     
     [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]
     private void CreateExecutionBreakpointHere() {
@@ -333,6 +349,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                 },
             isRemovedOnTrigger: false);
         _breakpointsViewModel.AddAddressBreakpoint(breakPoint);
-        SelectedInstruction.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(SelectedInstruction);
+        SelectedInstruction.Breakpoint = _breakpointsViewModel.GetBreakpoint(SelectedInstruction);
     }
 }

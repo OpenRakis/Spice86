@@ -55,7 +55,7 @@ internal class InstructionsDecoder {
                 instructionInfo.FunctionName = functionInformation.Name;
             }
             instructionInfo.SegmentedAddress = new(_state.CS, (ushort)(_state.IP + byteOffset));
-            instructionInfo.HasBreakpoint = _breakpointsViewModel.HasUserExecutionBreakpoint(instructionInfo);
+            instructionInfo.Breakpoint = _breakpointsViewModel.GetBreakpoint(instructionInfo);
             instructionInfo.StringRepresentation =
                 $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == _state.IpPhysicalAddress) {
