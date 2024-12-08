@@ -17,7 +17,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     public event Action? BreakpointDeleted;
-    public event Action? BreakpointCreated;
     public event Action? BreakpointEnabled;
     public event Action? BreakpointDisabled;
     
