@@ -49,11 +49,8 @@ public sealed class EmulatorBreakpointsManager {
     /// </summary>
     /// <param name="breakPoint">The breakpoint to toggle.</param>
     /// <param name="on">True to turn the breakpoint on, false to turn it off.</param>
-    public void ToggleBreakPoint(BreakPoint? breakPoint, bool on) {
-        if (breakPoint is null) {
-            return;
-        }
-        BreakPointType? breakPointType = breakPoint.BreakPointType;
+    public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
+        BreakPointType breakPointType = breakPoint.BreakPointType;
         switch (breakPointType) {
             case BreakPointType.EXECUTION:
                 _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
