@@ -180,7 +180,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (SelectedInstruction?.Breakpoint is null) {
             return;
         }
-        SelectedInstruction.Breakpoint.IsEnabled = false;
+        SelectedInstruction.Breakpoint.Disable();
     }
 
     [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
@@ -188,7 +188,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         if (SelectedInstruction?.Breakpoint is null) {
             return;
         }
-        SelectedInstruction.Breakpoint.IsEnabled = false;
+        SelectedInstruction.Breakpoint.Enable();
     }
 
 

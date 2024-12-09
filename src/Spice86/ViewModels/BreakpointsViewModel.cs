@@ -46,7 +46,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         var breakpointViewModel = new BreakpointViewModel( _emulatorBreakpointsManager, addressBreakPoint);
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
-        SelectedBreakpoint.Enable();
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;

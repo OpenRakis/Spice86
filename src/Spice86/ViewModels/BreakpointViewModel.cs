@@ -15,6 +15,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         IsEnabled = true;
         Address = breakPoint.Address;
+        Enable();
     }
 
     public BreakPointType Type => _breakPoint.BreakPointType;
