@@ -153,8 +153,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     public BreakPointType[] BreakpointTypes => [BreakPointType.ACCESS, BreakPointType.WRITE, BreakPointType.READ];
 
-    private void OnBreakPointReached(BreakPoint breakPoint) {
-        string message = $"{breakPoint.BreakPointType} breakpoint was reached.";
+    private void OnBreakPointReached() {
+        string message = $"Memory breakpoint was reached.";
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
@@ -186,9 +186,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void CreateMemoryAddressBreakpoint(ulong breakpointAddressValue) {
-        AddressBreakPoint addressBreakPoint = new(SelectedBreakpointType,
-        (long)breakpointAddressValue, OnBreakPointReached, false);
-        _breakpointsViewModel.AddAddressBreakpoint(addressBreakPoint);
+        _breakpointsViewModel.AddAddressBreakpoint(
+            (long)breakpointAddressValue,
+            SelectedBreakpointType,
+            isRemovedOnTrigger: false,
+            OnBreakPointReached);
     }
 
     [RelayCommand]

@@ -80,7 +80,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
             cpu, memory, cpuState, functionsInformation.ToDictionary(x => x.Key.ToPhysical(), x => x.Value),
-            BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
+            BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);

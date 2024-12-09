@@ -7,18 +7,35 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 
 public partial class BreakpointViewModel : ViewModelBase {
-    private readonly BreakPoint _breakPoint;
+    private readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private AddressBreakPoint? _breakPoint;
 
-    public BreakpointViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, AddressBreakPoint breakPoint) {
-        _breakPoint = breakPoint;
+    public BreakpointViewModel(
+        BreakpointsViewModel breakpointsViewModel,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+            long address,
+            BreakPointType type,
+            bool isRemovedOnTrigger,
+            Action onReached) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        IsEnabled = true;
-        Address = breakPoint.Address;
+        Address = address;
+        Type = type;
+        IsRemovedOnTrigger = isRemovedOnTrigger;
+        if(IsRemovedOnTrigger) {
+            _onReached = () => {
+                breakpointsViewModel.RemoveBreakpointInternal(this);
+                onReached();
+            };
+        } else {
+            _onReached = onReached;
+        }
         Enable();
     }
 
-    public BreakPointType Type => _breakPoint.BreakPointType;
+    internal event Action? Reached;
+
+    public BreakPointType Type { get; }
 
     //Can't get out of sync since GDB can't be used at the same time as the internal debugger
     private bool _isEnabled;
@@ -26,17 +43,16 @@ public partial class BreakpointViewModel : ViewModelBase {
     public bool IsEnabled {
         get => _isEnabled;
         set {
-            if(SetProperty(ref _isEnabled, value)) {
-                if (value) {
-                    Enable();
-                } else {
-                    Disable();
-                }
+            if (value) {
+                Enable();
+            } else {
+                Disable();
             }
+            SetProperty(ref _isEnabled, value);
         }
     }
 
-    public bool IsRemovedOnTrigger => _breakPoint.IsRemovedOnTrigger;
+    public bool IsRemovedOnTrigger { get; }
 
     public long Address { get; }
 
@@ -51,19 +67,35 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
+    private AddressBreakPoint GenerateBreakPoint() {
+        _breakPoint ??=
+        new AddressBreakPoint(
+            Type,
+            Address,
+            (_) => _onReached(),
+            IsRemovedOnTrigger);
+        return _breakPoint;
+    }
+
     public void Enable() {
-        _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: true);
+        if (IsEnabled) {
+            return;
+        }
+        _emulatorBreakpointsManager.ToggleBreakPoint(GenerateBreakPoint(), on: true);
         _isEnabled = true;
         OnPropertyChanged(nameof(IsEnabled));
     }
 
     public void Disable() {
-        _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, on: false);
+        if (!IsEnabled) {
+            return;
+        }
+        _emulatorBreakpointsManager.ToggleBreakPoint(GenerateBreakPoint(), on: false);
         _isEnabled = false;
         OnPropertyChanged(nameof(IsEnabled));
     }
 
     internal bool IsFor(CpuInstructionInfo instructionInfo) {
-        return _breakPoint is AddressBreakPoint addressBreakPoint && addressBreakPoint.Address == instructionInfo.Address;
+        return Address == instructionInfo.Address;
     }
 }

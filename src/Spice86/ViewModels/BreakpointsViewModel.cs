@@ -42,10 +42,24 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(ToggleSelectedBreakpointCommand))]
     private BreakpointViewModel? _selectedBreakpoint;
 
-    internal void AddAddressBreakpoint(AddressBreakPoint addressBreakPoint) {
-        var breakpointViewModel = new BreakpointViewModel( _emulatorBreakpointsManager, addressBreakPoint);
+    internal void AddAddressBreakpoint(
+            long address,
+            BreakPointType type,
+            bool isRemovedOnTrigger,
+            Action onReached) {
+        var breakpointViewModel = new BreakpointViewModel( 
+            this,
+            _emulatorBreakpointsManager,
+            address, type, isRemovedOnTrigger, onReached);
         Breakpoints.Add(breakpointViewModel);
+        if (isRemovedOnTrigger) {
+            breakpointViewModel.Reached += () => DeleteBreakpoint(breakpointViewModel);
+        }
         SelectedBreakpoint = breakpointViewModel;
+    }
+
+    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
+        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
@@ -53,18 +67,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(RemoveBreakpointCanExecute))]
     private void RemoveBreakpoint() {
-        if (SelectedBreakpoint is not null) {
-            DeleteBreakpoint(SelectedBreakpoint);
-            BreakpointDeleted?.Invoke();
-        }
+        DeleteBreakpoint(SelectedBreakpoint);
     }
 
-    internal void RemoveBreakpoint(BreakpointViewModel vm) {
+    internal void RemoveBreakpointInternal(BreakpointViewModel vm) {
         DeleteBreakpoint(vm);
-    }
-
-    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
     private void DeleteBreakpoint(BreakpointViewModel? breakpoint) {
@@ -73,5 +80,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
         breakpoint.Disable();
         Breakpoints.Remove(breakpoint);
+        BreakpointDeleted?.Invoke();
     }
 }
