@@ -33,8 +33,6 @@ public partial class BreakpointViewModel : ViewModelBase {
         Enable();
     }
 
-    internal event Action? Reached;
-
     public BreakPointType Type { get; }
 
     //Can't get out of sync since GDB can't be used at the same time as the internal debugger

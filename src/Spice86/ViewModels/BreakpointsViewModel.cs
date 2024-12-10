@@ -52,9 +52,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
             _emulatorBreakpointsManager,
             address, type, isRemovedOnTrigger, onReached);
         Breakpoints.Add(breakpointViewModel);
-        if (isRemovedOnTrigger) {
-            breakpointViewModel.Reached += () => DeleteBreakpoint(breakpointViewModel);
-        }
         SelectedBreakpoint = breakpointViewModel;
     }
 
