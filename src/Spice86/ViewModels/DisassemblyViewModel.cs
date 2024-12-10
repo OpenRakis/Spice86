@@ -25,19 +25,17 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly State _state;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IInstructionExecutor _cpu;
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
 
     public DisassemblyViewModel(
-        IInstructionExecutor cpu, IMemory memory, State state,
+        IMemory memory, State state,
         IDictionary<uint, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel,
         IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
         IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
         : base(uiDispatcher, textClipboard) {
-        _cpu = cpu;
         _functionsInformation = functionsInformation;
         Functions = new(functionsInformation
             .Select(x => new FunctionInfo() {
@@ -201,7 +199,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task StepInto() {
-        _cpu.ExecuteNext();
+        _breakpointsViewModel.AddUnconditionalBreakpoint(
+            () => Pause("Step into unconditional breakpoint was reached"),
+            removedOnTrigger: true);
+        _pauseHandler.Resume();
         if (!Instructions.GetRange(0, 15).Any(x => x.Address == _state.IpPhysicalAddress)) {
             await GoToCsIp();
         } else {
@@ -212,8 +213,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
         DisassemblyViewModel disassemblyViewModel = new(
-            _cpu, _memory, _state, _functionsInformation,
-            _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger,
+            _memory, _state, _functionsInformation,
+            _breakpointsViewModel, 
+            _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
         };
@@ -302,6 +304,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private void RequestPause(long address) {
         string message = $"Execution breakpoint was reached at address {address}.";
+        Pause(message);
+    }
+
+    private void Pause(string message) {
         _pauseHandler.RequestPause(message);
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));

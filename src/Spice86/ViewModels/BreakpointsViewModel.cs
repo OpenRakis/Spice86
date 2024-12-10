@@ -42,6 +42,14 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(ToggleSelectedBreakpointCommand))]
     private BreakpointViewModel? _selectedBreakpoint;
 
+    internal void AddUnconditionalBreakpoint(Action onReached, bool removedOnTrigger) {
+        _emulatorBreakpointsManager.ToggleBreakPoint(
+            new UnconditionalBreakPoint(
+                BreakPointType.EXECUTION,
+                (_) => onReached(),
+                removedOnTrigger), on: true);
+    }
+
     internal void AddAddressBreakpoint(
             long address,
             BreakPointType type,

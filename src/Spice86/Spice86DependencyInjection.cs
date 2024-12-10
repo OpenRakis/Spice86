@@ -242,7 +242,7 @@ public class Spice86DependencyInjection : IDisposable {
         DebugWindowViewModel? debugWindowViewModel = null;
         if (textClipboard != null && hostStorageProvider != null && uiThreadDispatcher != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            debugWindowViewModel = new DebugWindowViewModel(cpu, state, stack, memory,
+            debugWindowViewModel = new DebugWindowViewModel(state, stack, memory,
                 midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
                 cfgCpu.ExecutionContextManager, messenger, uiThreadDispatcher, textClipboard, hostStorageProvider, 
                 emulatorBreakpointsManager,
