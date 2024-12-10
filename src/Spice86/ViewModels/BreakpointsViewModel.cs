@@ -15,6 +15,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public BreakpointsViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
+
+    public event Action? BreakpointDeleted;
+    public event Action? BreakpointEnabled;
+    public event Action? BreakpointDisabled;
     
     [ObservableProperty]
     private ObservableCollection<BreakpointViewModel> _breakpoints = new();
@@ -23,6 +27,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void ToggleSelectedBreakpoint() {
         if (SelectedBreakpoint is not null) {
             SelectedBreakpoint.Toggle();
+            if (SelectedBreakpoint.IsEnabled) {
+                BreakpointEnabled?.Invoke();
+            } else {
+                BreakpointDisabled?.Invoke();
+            }
         }
     }
 
@@ -33,11 +42,24 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(ToggleSelectedBreakpointCommand))]
     private BreakpointViewModel? _selectedBreakpoint;
 
-    internal void AddAddressBreakpoint(AddressBreakPoint addressBreakPoint) {
-        var breakpointViewModel = new BreakpointViewModel( _emulatorBreakpointsManager, addressBreakPoint);
+    internal void AddAddressBreakpoint(
+            long address,
+            BreakPointType type,
+            bool isRemovedOnTrigger,
+            Action onReached) {
+        var breakpointViewModel = new BreakpointViewModel( 
+            this,
+            _emulatorBreakpointsManager,
+            address, type, isRemovedOnTrigger, onReached);
         Breakpoints.Add(breakpointViewModel);
+        if (isRemovedOnTrigger) {
+            breakpointViewModel.Reached += () => DeleteBreakpoint(breakpointViewModel);
+        }
         SelectedBreakpoint = breakpointViewModel;
-        SelectedBreakpoint.Enable();
+    }
+
+    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
+        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
@@ -45,19 +67,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(RemoveBreakpointCanExecute))]
     private void RemoveBreakpoint() {
-        if (SelectedBreakpoint is not null) {
-            DeleteBreakpoint(SelectedBreakpoint);
-        }
+        DeleteBreakpoint(SelectedBreakpoint);
     }
 
-    internal void RemoveUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        DeleteBreakpoint(Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION }));
-    }
-
-    internal bool HasUserExecutionBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.Any(x => x.IsFor(instructionInfo) && x is
-            { IsRemovedOnTrigger: false, Type: BreakPointType.EXECUTION });
+    internal void RemoveBreakpointInternal(BreakpointViewModel vm) {
+        DeleteBreakpoint(vm);
     }
 
     private void DeleteBreakpoint(BreakpointViewModel? breakpoint) {
@@ -66,5 +80,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
         breakpoint.Disable();
         Breakpoints.Remove(breakpoint);
+        BreakpointDeleted?.Invoke();
     }
 }

@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
+using Spice86.Mappers;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
@@ -71,51 +72,10 @@ public partial class CpuViewModel : ViewModelBase {
     private string? _espString;
 
     private void UpdateCpuState(State state) {
-        State.AH = state.AH;
-        State.AL = state.AL;
-        State.AX = state.AX;
-        State.EAX = state.EAX;
-        State.BH = state.BH;
-        State.BL = state.BL;
-        State.BX = state.BX;
-        State.EBX = state.EBX;
-        State.CH = state.CH;
-        State.CL = state.CL;
-        State.CX = state.CX;
-        State.ECX = state.ECX;
-        State.DH = state.DH;
-        State.DL = state.DL;
-        State.DX = state.DX;
-        State.EDX = state.EDX;
-        State.DI = state.DI;
-        State.EDI = state.EDI;
-        State.SI = state.SI;
-        State.ES = state.ES;
-        State.BP = state.BP;
-        State.EBP = state.EBP;
-        State.SP = state.SP;
-        State.ESP = state.ESP;
-        State.CS = state.CS;
-        State.DS = state.DS;
-        State.ES = state.ES;
-        State.FS = state.FS;
-        State.GS = state.GS;
-        State.SS = state.SS;
-        State.IP = state.IP;
+        state.CopyToStateInfo(this.State);
+        state.CopyFlagsToStateInfo(this.Flags);
         EspString = _memory.GetZeroTerminatedString(State.ESP, 32);
         EsiString = _memory.GetZeroTerminatedString(State.ESI, 32);
         EdiString = _memory.GetZeroTerminatedString(State.EDI, 32);
-        State.Cycles = state.Cycles;
-        State.IpPhysicalAddress = state.IpPhysicalAddress;
-        State.StackPhysicalAddress = state.StackPhysicalAddress;
-        State.SegmentOverrideIndex = state.SegmentOverrideIndex;
-        Flags.AuxiliaryFlag = state.AuxiliaryFlag;
-        Flags.CarryFlag = state.CarryFlag;
-        Flags.DirectionFlag = state.DirectionFlag;
-        Flags.InterruptFlag = state.InterruptFlag;
-        Flags.OverflowFlag = state.OverflowFlag;
-        Flags.ParityFlag = state.ParityFlag;
-        Flags.ZeroFlag = state.ZeroFlag;
-        Flags.ContinueZeroFlag = state.ContinueZeroFlagValue;
     }
 }

@@ -39,9 +39,11 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
+        if(breakPoint is not null) {
+            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
+            }
         }
         return _gdbIo.GenerateResponse("OK");
     }

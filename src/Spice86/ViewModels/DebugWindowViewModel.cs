@@ -1,13 +1,11 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -82,7 +80,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
             cpu, memory, cpuState, functionsInformation.ToDictionary(x => x.Key.ToPhysical(), x => x.Value),
-            BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
+            BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);

@@ -9,6 +9,6 @@ using Avalonia.Layout;
 internal sealed class StatusBarItem : ContentControl {
     static StatusBarItem() {
         HorizontalContentAlignmentProperty.OverrideDefaultValue<StatusBarItem>(HorizontalAlignment.Stretch);
-        IsTabStopProperty.OverrideDefaultValue(typeof(StatusBarItem), false);
+        IsTabStopProperty.OverrideDefaultValue<StatusBarItem>(false);
     }
 }
