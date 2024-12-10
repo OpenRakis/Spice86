@@ -17,7 +17,8 @@ public partial class BreakpointViewModel : ViewModelBase {
             long address,
             BreakPointType type,
             bool isRemovedOnTrigger,
-            Action onReached) {
+            Action onReached,
+            string comment = "") {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         Address = address;
         Type = type;
@@ -30,6 +31,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         } else {
             _onReached = onReached;
         }
+        Comment = comment;
         Enable();
     }
 

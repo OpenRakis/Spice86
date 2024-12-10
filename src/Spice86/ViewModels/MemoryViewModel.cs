@@ -190,7 +190,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             (long)breakpointAddressValue,
             SelectedBreakpointType,
             isRemovedOnTrigger: false,
-            OnBreakPointReached);
+            OnBreakPointReached, 
+            "Memory breakpoint");
     }
 
     [RelayCommand]

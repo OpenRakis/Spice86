@@ -175,7 +175,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             BreakPointType.EXECUTION, isRemovedOnTrigger: true, () => {
                 RequestPause((uint)nextInstructionAddressInListing);
                 _uiDispatcher.Post(() => GoToCsIpCommand.Execute(null));
-            });
+            },
+        "Step Over breakpoint");
         _pauseHandler.Resume();
     }
 

@@ -46,11 +46,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
             long address,
             BreakPointType type,
             bool isRemovedOnTrigger,
-            Action onReached) {
+            Action onReached,
+            string comment = "") {
         var breakpointViewModel = new BreakpointViewModel( 
             this,
             _emulatorBreakpointsManager,
-            address, type, isRemovedOnTrigger, onReached);
+            address, type, isRemovedOnTrigger, onReached, comment);
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
     }
