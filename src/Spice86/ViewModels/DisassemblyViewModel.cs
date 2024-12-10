@@ -185,6 +185,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         SelectedInstruction.Breakpoint.Disable();
+        UpdateDisassemblyInternal();
     }
 
     [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
@@ -193,6 +194,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         SelectedInstruction.Breakpoint.Enable();
+        UpdateDisassemblyInternal();
     }
 
 
