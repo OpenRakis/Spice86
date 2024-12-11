@@ -67,7 +67,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
-    private AddressBreakPoint GenerateBreakPoint() {
+    private AddressBreakPoint GetOrCreateBreakpoint() {
         _breakPoint ??=
         new AddressBreakPoint(
             Type,
@@ -81,7 +81,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GenerateBreakPoint(), on: true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(), on: true);
         _isEnabled = true;
         OnPropertyChanged(nameof(IsEnabled));
     }
@@ -90,7 +90,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (!IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GenerateBreakPoint(), on: false);
+        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(), on: false);
         _isEnabled = false;
         OnPropertyChanged(nameof(IsEnabled));
     }
