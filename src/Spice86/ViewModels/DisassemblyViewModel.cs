@@ -21,6 +21,7 @@ using Spice86.Shared.Utils;
 using System.Globalization;
 
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IMessenger _messenger;
@@ -30,12 +31,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly InstructionsDecoder _instructionsDecoder;
 
     public DisassemblyViewModel(
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory, State state,
         IDictionary<uint, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel,
         IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
         IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
         : base(uiDispatcher, textClipboard) {
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         Functions = new(functionsInformation
             .Select(x => new FunctionInfo() {
@@ -168,13 +171,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         long nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
-        _breakpointsViewModel.AddAddressBreakpoint(
-        nextInstructionAddressInListing,
-            BreakPointType.EXECUTION, isRemovedOnTrigger: true, () => {
+        _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
+           address: nextInstructionAddressInListing,
+           breakPointType: BreakPointType.EXECUTION,
+           isRemovedOnTrigger: true,
+           onReached: (_) => {
                 RequestPause((uint)nextInstructionAddressInListing);
-                _uiDispatcher.Post(() => GoToCsIpCommand.Execute(null));
-            },
-        "Step Over breakpoint");
+            }), on: true);
         _pauseHandler.Resume();
     }
 
@@ -213,6 +216,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void NewDisassemblyView() {
         DisassemblyViewModel disassemblyViewModel = new(
+            _emulatorBreakpointsManager,
             _memory, _state, _functionsInformation,
             _breakpointsViewModel, 
             _pauseHandler, _uiDispatcher, _messenger,
