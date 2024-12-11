@@ -14,7 +14,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-            long address,
+            uint address,
             BreakPointType type,
             bool isRemovedOnTrigger,
             Action onReached,
@@ -54,7 +54,7 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     public bool IsRemovedOnTrigger { get; }
 
-    public long Address { get; }
+    public uint Address { get; }
 
     public void Toggle() {
         if (IsEnabled) {

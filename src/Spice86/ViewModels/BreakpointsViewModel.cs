@@ -16,9 +16,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
 
-    public event Action? BreakpointDeleted;
-    public event Action? BreakpointEnabled;
-    public event Action? BreakpointDisabled;
+    public event Action<BreakpointViewModel>? BreakpointDeleted;
+    public event Action<BreakpointViewModel>? BreakpointEnabled;
+    public event Action<BreakpointViewModel>? BreakpointDisabled;
     
     [ObservableProperty]
     private ObservableCollection<BreakpointViewModel> _breakpoints = new();
@@ -28,9 +28,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
         if (SelectedBreakpoint is not null) {
             SelectedBreakpoint.Toggle();
             if (SelectedBreakpoint.IsEnabled) {
-                BreakpointEnabled?.Invoke();
+                BreakpointEnabled?.Invoke(SelectedBreakpoint);
             } else {
-                BreakpointDisabled?.Invoke();
+                BreakpointDisabled?.Invoke(SelectedBreakpoint);
             }
         }
     }
@@ -50,8 +50,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 removedOnTrigger), on: true);
     }
 
-    internal void AddAddressBreakpoint(
-            long address,
+    internal BreakpointViewModel AddAddressBreakpoint(
+            uint address,
             BreakPointType type,
             bool isRemovedOnTrigger,
             Action onReached,
@@ -62,6 +62,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             address, type, isRemovedOnTrigger, onReached, comment);
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
+        return breakpointViewModel;
     }
 
     internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
@@ -86,6 +87,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
         breakpoint.Disable();
         Breakpoints.Remove(breakpoint);
-        BreakpointDeleted?.Invoke();
+        BreakpointDeleted?.Invoke(breakpoint);
     }
 }

@@ -180,14 +180,13 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         }
         else if (TryParseMemoryAddress(BreakpointRangeStartAddress, out ulong? breakPointAddress)) {
             CreateMemoryAddressBreakpoint(breakPointAddress.Value);
-            
         }
         CreatingMemoryBreakpoint = false;
     }
 
     private void CreateMemoryAddressBreakpoint(ulong breakpointAddressValue) {
         _breakpointsViewModel.AddAddressBreakpoint(
-            (long)breakpointAddressValue,
+            (uint)breakpointAddressValue,
             SelectedBreakpointType,
             isRemovedOnTrigger: false,
             OnBreakPointReached, 
