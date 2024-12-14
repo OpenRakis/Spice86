@@ -5,10 +5,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Iced.Intel;
 
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels;
 
 public partial class CpuInstructionInfo : ObservableObject {
     [ObservableProperty] private string? _stringRepresentation;
-    [ObservableProperty] private bool _hasBreakpoint;
+    [ObservableProperty] private BreakpointViewModel? _breakpoint;
     [ObservableProperty] private string? _functionName;
     [ObservableProperty] private bool _isCsIp;
     [ObservableProperty] private uint _address;

@@ -1,27 +1,28 @@
 <Application
-    x:Class="Spice86.App"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-    RequestedThemeVariant="Default">
+	x:Class="Spice86.App"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:dialogHostAvalonia="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+	RequestedThemeVariant="Default">
 
-    <Application.Resources>
-        <ResourceDictionary>
-            <FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
-            <FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Spice86/Assets/ControlThemes.axaml" />
-            </ResourceDictionary.MergedDictionaries>    
-        </ResourceDictionary>
-    </Application.Resources>
+	<Application.Resources>
+		<ResourceDictionary>
+			<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
+			<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="avares://Spice86/Assets/ControlThemes.axaml" />
+			</ResourceDictionary.MergedDictionaries>    
+		</ResourceDictionary>
+	</Application.Resources>
 
-    <Application.Styles>
-        <dialogHostAvalonia:DialogHostStyles />
-        <StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
-        <StyleInclude Source="avares://Semi.Avalonia/Themes/Index.axaml" />
-        <StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
-        <StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
-        <StyleInclude Source="Styles/Spice86.axaml" />
-    </Application.Styles>
+	<Application.Styles>
+		<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+		<dialogHostAvalonia:DialogHostStyles />
+		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
+		<StyleInclude Source="avares://Semi.Avalonia/Themes/Index.axaml" />
+		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
+		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
+		<StyleInclude Source="Styles/Spice86.axaml" />
+	</Application.Styles>
 
 </Application>

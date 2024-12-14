@@ -16,18 +16,19 @@
 			<Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
 		</StackPanel>
 		<DataGrid Grid.Row="1"
+				x:Name="BreakpointsDataGrid"
 				ItemsSource="{Binding Breakpoints}"
 				SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
 				AutoGenerateColumns="False"
 				CanUserReorderColumns="True"
 				CanUserResizeColumns="True"
-				CanUserSortColumns="False"
-				IsReadOnly="True">
+				CanUserSortColumns="False">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
-				<DataGridCheckBoxColumn Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-				<DataGridTextColumn Binding="{Binding Address}" Header="Address" />
-				<DataGridTextColumn Binding="{Binding Type}" Header="Type" />
+				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
+				<DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
 			</DataGrid.Columns>
 		</DataGrid>
 	</Grid>

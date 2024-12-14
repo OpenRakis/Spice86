@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.DataTemplates;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
-using Spice86.Models;
 using Spice86.Shared.Emulator.Memory;
 
 using Structurizer;
@@ -175,7 +174,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         StructureMembers.AddRange(members);
 
         // This "zooms" the hex view to the selected structure data.
-        StructureMemory = new ByteArrayBinaryDocument(data);
+        StructureMemory = new MemoryBinaryDocument(data);
     }
 
     private List<StructureMember> PopulateMembers(IEnumerable<TypeDefinition> selectedStructure, byte[] data) {

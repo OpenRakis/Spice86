@@ -1,13 +1,11 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -63,7 +61,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(IInstructionExecutor cpu, State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -81,8 +79,11 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
-            cpu, memory, cpuState, functionsInformation.ToDictionary(x => x.Key.ToPhysical(), x => x.Value),
-            BreakpointsViewModel, emulatorBreakpointsManager, pauseHandler,
+            emulatorBreakpointsManager,
+            memory, cpuState, 
+            functionsInformation.ToDictionary(x =>
+                x.Key.ToPhysical(), x => x.Value),
+            BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
         PaletteViewModel = new(argbPalette, uiDispatcher);

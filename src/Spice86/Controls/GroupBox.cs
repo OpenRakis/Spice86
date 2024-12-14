@@ -7,7 +7,7 @@ using Avalonia.Controls.Primitives;
 /// </summary>
 internal sealed class GroupBox : HeaderedContentControl {
     static GroupBox() {
-        IsTabStopProperty.OverrideDefaultValue(typeof(GroupBox), false);
-        FocusableProperty.OverrideDefaultValue(typeof(GroupBox), false);
+        IsTabStopProperty.OverrideDefaultValue<GroupBox>(false);
+        FocusableProperty.OverrideDefaultValue<GroupBox>(false);
     }
 }
