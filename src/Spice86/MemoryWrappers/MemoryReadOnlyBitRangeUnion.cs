@@ -28,6 +28,8 @@ internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     public BitRange EnclosingRange { get; }
     public int Count => (int)(_endAddress - _startAddress);
 
+    public bool IsFragmented => false;
+
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 
     public bool Contains(BitLocation location) {
