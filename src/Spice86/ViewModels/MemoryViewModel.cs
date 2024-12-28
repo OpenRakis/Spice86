@@ -50,6 +50,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         TryUpdateHeaderAndMemoryDocument();
     }
 
+    [ObservableProperty]
+    private string? _title;
+
     public enum MemorySearchDataType {
         Binary,
         Ascii,
