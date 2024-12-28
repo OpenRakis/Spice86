@@ -91,8 +91,24 @@ public partial class DebugWindowViewModel : ViewModelBase,
         VideoCardViewModel = new(vgaRenderer, videoState);
         CpuViewModel = new(cpuState, memory, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModels.Add(new(memory, BreakpointsViewModel, pauseHandler, messenger, uiDispatcher, textClipboard, storageProvider, structureViewModelFactory));
+        MemoryViewModel mainMemoryViewModel = new(memory,
+            BreakpointsViewModel, pauseHandler, messenger,
+            uiDispatcher, textClipboard, storageProvider, structureViewModelFactory);
+        MemoryViewModel stackMemoryViewModel = new(memory,
+            BreakpointsViewModel, pauseHandler, messenger,
+            uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
+            canCloseTab: false, startAddress: stack.PhysicalAddress) {
+            Title = "CPU Stack Memory"
+        };
+        pauseHandler.Pausing += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
+        MemoryViewModels.Add(mainMemoryViewModel);
+        MemoryViewModels.Add(stackMemoryViewModel);
         CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
+    }
+
+    private void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
+        stackMemoryViewModel.StartAddress = stack.PhysicalAddress;
+        stackMemoryViewModel.EndAddress = A20Gate.EndOfHighMemoryArea;
     }
 
     [RelayCommand]
