@@ -24,7 +24,7 @@ public partial class CpuViewModel : ViewModelBase {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(State state, Stack stack, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+    public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         _memory = memory;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => _isPaused = true);
