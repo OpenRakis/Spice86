@@ -53,9 +53,12 @@
 					<Label Content="End" />
 					<NumericUpDown Value="{Binding EndAddress}" />
 				</UniformGrid>
-				<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
-						Command="{Binding UpdateBinaryDocumentCommand}"
-						HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
+				<StackPanel Orientation="Vertical">
+					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
+							Command="{Binding UpdateBinaryDocumentCommand}"
+							HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
+					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
+				</StackPanel>
 			</StackPanel>
 			<Grid Grid.Row="1"
 				  RowDefinitions="*, Auto">
