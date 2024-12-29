@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Memory;
 
 using System;
 
+/// <inheritdoc cref="IBinaryDocument" />
 public sealed class DataMemoryDocument : IBinaryDocument {
     private readonly IMemory _memory;
     private readonly uint _startAddress;
@@ -17,7 +18,7 @@ public sealed class DataMemoryDocument : IBinaryDocument {
         _startAddress = startAddress;
         _endAddress = endAddress;
         _memory = memory;
-        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress + 1 - _startAddress);
+        ValidRanges = new MemoryReadOnlyBitRangeUnion(0, _endAddress - _startAddress);
     }
 
     public event Action<Exception>? MemoryReadInvalidOperation;
