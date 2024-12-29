@@ -16,8 +16,8 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>8.0.1</Version>
-		<PackageReleaseNotes>fix: General MIDI soundfont did not load, preventing Spice86 from loading.</PackageReleaseNotes>
+		<Version>8.0.2</Version>
+		<PackageReleaseNotes>fix: Off by one error generating an IndexOutOfRangeException in the internal debugger Memory tab.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
