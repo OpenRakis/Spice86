@@ -24,6 +24,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
 
     private readonly IMessenger _messenger;
+    private readonly IUIDispatcher _uiDispatcher;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
@@ -72,6 +73,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
+        _uiDispatcher = uiDispatcher;
         BreakpointsViewModel = new(emulatorBreakpointsManager);
         StatusMessageViewModel = new(_messenger);
         _pauseHandler = pauseHandler;
@@ -112,10 +114,12 @@ public partial class DebugWindowViewModel : ViewModelBase,
     }
 
     [RelayCommand]
-    private void Pause() => _pauseHandler.RequestPause("Pause button pressed in debug window");
+    private void Pause() => _uiDispatcher.Post(() => {
+        _pauseHandler.RequestPause("Pause button pressed in debug window");
+    });
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void Continue() => _pauseHandler.Resume();
+    private void Continue() => _uiDispatcher.Post(_pauseHandler.Resume);
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
     public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
