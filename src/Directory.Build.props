@@ -16,8 +16,8 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>8.0.0</Version>
-		<PackageReleaseNotes>Some breaking API changes (replaced Microosft.DI with compile-time DI, see Spice86DependencyInjection), Breakpoint support in Internal Debugger, SegmentRegisters replaced by SegmentRegisterIndex, and dependendencies to the Machine class have been replaced with direct dependencies in all classes, which is also a breaking change for projects using Spice86 compared to Nuget v7.0.0.</PackageReleaseNotes>
+		<Version>8.0.1</Version>
+		<PackageReleaseNotes>fix: General MIDI soundfont did not load, preventing Spice86 from loading.</PackageReleaseNotes>
 		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
 		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
