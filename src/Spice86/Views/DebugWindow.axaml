@@ -61,7 +61,8 @@
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F2"
+			<!-- Commented out until CFGCPU is used in production -->
+			<!--controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F2"
 				Content="{Binding CfgCpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
@@ -71,7 +72,7 @@
 						<TextBlock Margin="5,0,0,5" Text="Code Flow" ToolTip.Tip="Alt-F2" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
-			</controls:HotKeyTabItem>
+			</controls:HotKeyTabItem-->
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F3">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
