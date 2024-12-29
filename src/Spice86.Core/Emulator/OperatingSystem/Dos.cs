@@ -29,6 +29,11 @@ public class Dos {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public ErrorCode ErrorCode { get; set; }
+
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -48,10 +53,12 @@ public class Dos {
     /// </summary>
     public DosInt28Handler DosInt28Handler { get; }
 
+    public DosTables DosTables { get; }
+
     /// <summary>
     /// Gets the country ID from the CountryInfo table
     /// </summary>
-    public byte CurrentCountryId => CountryInfo.Country;
+    public CountryId CurrentCountryId => DosTables.CountryInfo.CountryId;
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -77,11 +84,6 @@ public class Dos {
     /// Gets the DOS file manager.
     /// </summary>
     public DosFileManager FileManager { get; }
-
-    /// <summary>
-    /// Gets the global DOS memory structures.
-    /// </summary>
-    public CountryInfo CountryInfo { get; } = new();
 
     /// <summary>
     /// Gets the current DOS master environment variables.
@@ -113,19 +115,23 @@ public class Dos {
         _state = cpu.State;
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
+
         AddDefaultDevices();
+        DosTables = new(memory);
+
         FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, cpu, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
-        }
 
         if (!initializeDos) {
             return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
