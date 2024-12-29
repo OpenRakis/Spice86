@@ -49,6 +49,7 @@ If there is already data there the emulator will load it first and complete it, 
 ## More command line options
 
 ```
+  --Debug                            (Default: false) Starts the program paused.
   --Ems                              (Default: false) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
@@ -80,7 +81,11 @@ Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 - it supports most of the commands you need to debug.
 - it also provides custom GDB commands to do dynamic analysis.
 
-### Connecting
+### Alternative to GDB
+
+Alternatively, Spice86 has a [home-grown debugger](https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger).
+
+### Connecting to GDB
 You need to specify a port for the GDB server to start when launching Spice86:
 ```
 Spice86 --GdbPort=10000
@@ -121,7 +126,7 @@ GDB does not support x86 real mode segmented addressing, so pointers need to ref
 
 Similarly, The $pc variable in GDB will be exposed by Spice86 as the physical address pointed by CS:IP.
 
-### Custom commands (where the magic happens)
+### Custom GDB commands (where the magic happens)
 The list of custom commands can be displayed like this:
 ```
 (gdb) monitor help
@@ -153,6 +158,8 @@ Break at the end of the emulated program:
 ```
 
 For a pleasing and productive experience with GDB, the [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
+
+
 
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
