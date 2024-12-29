@@ -7,7 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.StatusMessageView"
              x:DataType="viewModels:StatusMessageViewModel">
-    <controls:StatusBar>
+    <controls:StatusBar IsVisible="{Binding IsVisible}">
         <controls:StatusBarItem>
             <TextBlock DataContext="{Binding Message}">
                 <Run Text="{Binding Time}" />
