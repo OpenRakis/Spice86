@@ -17,7 +17,7 @@ internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     /// Initializes a new instance of the <see cref="MemoryReadOnlyBitRangeUnion"/> class.
     /// </summary>
     /// <param name="startAddress">The start address of tha range of memory.</param>
-    /// <param name="endAddress">The end address of the range of memory. This end address is not included in the range.</param>
+    /// <param name="endAddress">The end address of the range of memory.</param>
     public MemoryReadOnlyBitRangeUnion(uint startAddress, uint endAddress) {
         _startAddress = startAddress;
         _endAddress = endAddress;
@@ -27,6 +27,8 @@ internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
 
     public BitRange EnclosingRange { get; }
     public int Count => (int)(_endAddress - _startAddress);
+
+    public bool IsFragmented => false;
 
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
 

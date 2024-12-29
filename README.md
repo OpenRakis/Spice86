@@ -49,6 +49,7 @@ If there is already data there the emulator will load it first and complete it, 
 ## More command line options
 
 ```
+  --Debug                            (Default: false) Starts the program paused.
   --Ems                              (Default: false) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
@@ -80,7 +81,11 @@ Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 - it supports most of the commands you need to debug.
 - it also provides custom GDB commands to do dynamic analysis.
 
-### Connecting
+### Alternative to GDB
+
+Alternatively, Spice86 has a [home-grown debugger](https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger).
+
+### Connecting to GDB
 You need to specify a port for the GDB server to start when launching Spice86:
 ```
 Spice86 --GdbPort=10000
@@ -121,7 +126,7 @@ GDB does not support x86 real mode segmented addressing, so pointers need to ref
 
 Similarly, The $pc variable in GDB will be exposed by Spice86 as the physical address pointed by CS:IP.
 
-### Custom commands (where the magic happens)
+### Custom GDB commands (where the magic happens)
 The list of custom commands can be displayed like this:
 ```
 (gdb) monitor help
@@ -153,6 +158,8 @@ Break at the end of the emulated program:
 ```
 
 For a pleasing and productive experience with GDB, the [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
+
+
 
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
@@ -199,9 +206,9 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
 public class MyOverrides : CSharpOverrideHelper {
   private MyOverridesGlobalsOnDs globalsOnDs;
 
-  public MyOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, int segment, Machine machine) {
+  public MyOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, ushort entrySegment, Machine machine, ILoggerService loggerService, Configuration configuration) {
     // "myOverides" is a prefix that will be appended to all the function names defined in this class
-    base(functionInformations, "myOverides", machine);
+    base(functionInformations, machine,  loggerService, configuration);
     globalsOnDs = new MyOverridesGlobalsOnDs(machine);
     // incUnknown47A8_0x1ED_0xA1E8_0xC0B8 will get executed instead of the assembly code when a call to 1ED:A1E8 is performed.
     // Also when dumping functions, the name myOverides.incUnknown47A8 or instead of unknown
@@ -229,18 +236,26 @@ public class MyOverrides : CSharpOverrideHelper {
 }
 
 // Memory accesses can be encapsulated into classes like this to give names to addresses and make the code shorter.
-public class MyOverridesGlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress {
-  public DialoguesGlobalsOnDs(Machine machine) {
-    base(machine);
-  }
+public class GlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress {
+    public GlobalsOnDs(IByteReaderWriter memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+    }
 
-  public void SetDialogueCount47A8(int value) {
-    this.SetUint8(0x47A8, value);
-  }
+    // Getters and Setters for address 0x1DD:0x2/0x1DD2.
+    // Was accessed via the following registers: DS
+    public int Get01DD_0002_Word16() {
+        return UInt16[0x2];
+    }
 
-  public int GetDialogueCount47A8() {
-    return this.GetUint8(0x47A8);
-  }
+    // Operation not registered by running code
+    public void Set01DD_0002_Word16(byte value) {
+        UInt16[0x2] = value;
+    }
+
+    // Getters and Setters for address 0x1138:0x0/0x11380.
+    // Operation not registered by running code
+    public int Get1138_0000_Word16() {
+        return UInt16[0x0];
+    }
 }
 ```
 
@@ -329,7 +344,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the .NET 8 SDK (once)
+- Install the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) (once)
 - clone the repo
 - run this where Spice86.sln is located:
 
@@ -390,7 +405,7 @@ Stunts:
 
 Betrayal at Krondor:
 
-![](doc/BaK.PNG)
+![](doc/BaK.png)
 
 ## Credits
 

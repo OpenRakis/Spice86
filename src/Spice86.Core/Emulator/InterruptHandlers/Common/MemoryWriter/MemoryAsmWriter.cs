@@ -30,7 +30,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="callbackNumber">Callback index</param>
     /// <param name="runnable">Action to run when this callback is executed by the CPU</param>
     public void RegisterAndWriteCallback(byte callbackNumber, Action runnable) {
-        ICallback callback = new Callback(callbackNumber, runnable, GetCurrentAddressCopy());
+        Callback callback = new Callback(callbackNumber, runnable, GetCurrentAddressCopy());
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
     }

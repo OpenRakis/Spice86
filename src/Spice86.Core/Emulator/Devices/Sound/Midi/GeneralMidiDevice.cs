@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
+using System.Linq;
+
 using Windows;
 
 using OperatingSystem = System.OperatingSystem;
@@ -17,7 +19,7 @@ using OperatingSystem = System.OperatingSystem;
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
     private readonly SoundChannel? _soundChannel;
-    private readonly Synthesizer _synthesizer;
+    private readonly Synthesizer? _synthesizer;
 
     private bool _disposed;
     private bool _threadStarted;
@@ -33,6 +35,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// The file name of the soundfont we load and use for all General MIDI preset sounds.
     /// </summary>
     public const string SoundFont = "2MGM.sf2";
+    private const string SoundFontResourceName = "Spice86.Core.2MGM.sf2";
 
     private IntPtr _midiOutHandle;
 
@@ -43,7 +46,12 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// <param name="loggerService">The service used to log messages.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService,  IPauseHandler pauseHandler) {
-        _synthesizer = new Synthesizer(new SoundFont(SoundFont), 48000);
+        if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
+            Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);
+            if (resource is not null) {
+                _synthesizer = new Synthesizer(new SoundFont(resource), 48000);
+            }
+        }
         _pauseHandler = pauseHandler;
         _loggerService = loggerService;
         if (!OperatingSystem.IsWindows()) {
@@ -88,9 +96,9 @@ public sealed class GeneralMidiDevice : MidiDevice {
         }
     }
 
-    private void FillBuffer(Synthesizer synthesizer, Span<float> data) {
+    private void FillBuffer(Synthesizer? synthesizer, Span<float> data) {
         ExtractAndProcessMidiMessage(_message, synthesizer);
-        synthesizer.RenderInterleaved(data);
+        synthesizer?.RenderInterleaved(data);
     }
 
     protected override void PlayShortMessage(uint message) {
@@ -109,7 +117,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
         }
     }
 
-    private static void ExtractAndProcessMidiMessage(uint packedMessage, Synthesizer synthesizer) {
+    private static void ExtractAndProcessMidiMessage(uint packedMessage, Synthesizer? synthesizer) {
         byte[] bytes = BitConverter.GetBytes(packedMessage);
 
         // Extract MIDI status from the low word, low-order byte
@@ -131,7 +139,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
         // find the channel by masking off all but the low 4 bits
         byte channel = (byte)(midiStatus & 0x0F);
 
-        synthesizer.ProcessMidiMessage(channel, command, data1, data2);
+        synthesizer?.ProcessMidiMessage(channel, command, data1, data2);
     }
 
     /// <summary>

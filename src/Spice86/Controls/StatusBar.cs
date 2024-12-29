@@ -16,7 +16,7 @@ internal sealed class StatusBar : StackPanel {
     protected override Type StyleKeyOverride { get; } = typeof(StackPanel);
     
     static StatusBar() {
-        OrientationProperty.OverrideDefaultValue(typeof(StatusBar), Orientation.Horizontal);
+        OrientationProperty.OverrideDefaultValue<StatusBar>(Orientation.Horizontal);
         HorizontalAlignmentProperty.OverrideDefaultValue<StatusBar>(HorizontalAlignment.Stretch);
     }
 }

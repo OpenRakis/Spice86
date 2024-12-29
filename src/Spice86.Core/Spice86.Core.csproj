@@ -21,6 +21,9 @@
 	<AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Resources\2MGM.sf2" />
+  </ItemGroup>
+  <ItemGroup>
 	<PackageReference Include="CommunityToolkit.HighPerformance" />
 	<PackageReference Include="JetBrains.Annotations" />
 	<PackageReference Include="Newtonsoft.Json" />
@@ -47,11 +50,7 @@
   <ItemGroup>
 	<None Update="Resources\2MGM.license">
 	  <Link>2MGM.license</Link>
-	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	</None>
-	<None Update="Resources\2MGM.sf2">
-	  <Link>2MGM.sf2</Link>
-	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
   </ItemGroup>
   <ItemGroup>
@@ -61,5 +60,11 @@
 	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
 	  <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
 	</AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\2MGM.sf2">
+      <Link>2MGM.sf2</Link>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

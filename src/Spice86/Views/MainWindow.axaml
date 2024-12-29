@@ -33,7 +33,7 @@
 	<Grid RowDefinitions="Auto,*,Auto">
 		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
 			<MenuItem Header="Debug">
-				<MenuItem IsEnabled="{Binding IsEmulatorRunning}">
+				<MenuItem HotKey="Ctrl+Alt+F2" ToolTip.Tip="Ctrl+Alt+F2" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem.Header>
 						<StackPanel Orientation="Horizontal">
 							<fluent:SymbolIcon Symbol="Glance" />
@@ -59,7 +59,9 @@
 					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
 					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
 				</MenuItem>
-				<MenuItem IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
+				<MenuItem
+					HotKey="Ctrl+Alt+D" ToolTip.Tip="Ctrl+Alt+D"
+					IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
 					<MenuItem.Header>
 						<StackPanel Orientation="Horizontal">
 							<fluent:SymbolIcon Symbol="Document" />
@@ -93,10 +95,10 @@
 			</MenuItem>
 		</Menu>
 		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-			<Button Focusable="False" Command="{Binding PauseCommand}" HotKey="Alt+Pause" IsVisible="{Binding !IsPaused}">
+			<Button Focusable="False" Command="{Binding PauseCommand}" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
 				<fluent:SymbolIcon Symbol="Pause" />
 			</Button>
-			<Button Focusable="False" Command="{Binding PlayCommand}" HotKey="F5" IsVisible="{Binding IsPaused}">
+			<Button Focusable="False" Command="{Binding PlayCommand}" ToolTip.Tip="Continue (F5)" HotKey="F5" IsVisible="{Binding IsPaused}">
 				<fluent:SymbolIcon Symbol="Play" />
 			</Button>
 			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
