@@ -75,7 +75,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
         BreakpointsViewModel = new(emulatorBreakpointsManager);
-        StatusMessageViewModel = new(_messenger);
+        StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
