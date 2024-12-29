@@ -42,7 +42,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [NotifyCanExecuteChangedFor(nameof(ToggleSelectedBreakpointCommand))]
     private BreakpointViewModel? _selectedBreakpoint;
 
-    internal void AddUnconditionalBreakpoint(Action onReached, bool removedOnTrigger) {
+    public void AddUnconditionalBreakpoint(Action onReached, bool removedOnTrigger) {
         _emulatorBreakpointsManager.ToggleBreakPoint(
             new UnconditionalBreakPoint(
                 BreakPointType.EXECUTION,
@@ -50,7 +50,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 removedOnTrigger), on: true);
     }
 
-    internal BreakpointViewModel AddAddressBreakpoint(
+    public BreakpointViewModel AddAddressBreakpoint(
             uint address,
             BreakPointType type,
             bool isRemovedOnTrigger,
@@ -65,7 +65,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         return breakpointViewModel;
     }
 
-    internal BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
+    public BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
         return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
     }
 
@@ -77,7 +77,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         DeleteBreakpoint(SelectedBreakpoint);
     }
 
-    internal void RemoveBreakpointInternal(BreakpointViewModel vm) {
+    public void RemoveBreakpointInternal(BreakpointViewModel vm) {
         DeleteBreakpoint(vm);
     }
 
