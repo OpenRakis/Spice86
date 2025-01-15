@@ -15,7 +15,7 @@
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.6" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.1.4.2" />
-    <PackageVersion Include="bodong.PropertyModels" Version="11.1.4.2" />
+    <PackageVersion Include="bodong.PropertyModels" Version="11.2.3.4" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
