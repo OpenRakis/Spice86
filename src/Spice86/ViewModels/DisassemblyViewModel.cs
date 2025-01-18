@@ -60,6 +60,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
         breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
         breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
+        breakpointsViewModel.BreakpointCreated += OnBreakPointUpdateFromBreakpointsViewModel;
     }
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpointViewModel) {

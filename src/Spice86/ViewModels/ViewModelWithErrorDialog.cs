@@ -61,6 +61,7 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
 
         return false;
     }
+
     protected void ShowError(Exception e) {
         Exception = e.GetBaseException();
         IsDialogVisible = true;
