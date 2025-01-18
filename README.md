@@ -16,7 +16,7 @@ Pre-releases are also available [on the Release page](https://github.com/OpenRak
 
 NOTE: This is a port, and a continuation from the [original Java Spice86](https://github.com/kevinferrare/spice86).
 
-It requires [.NET 9](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) and runs on Windows, macOS, and Linux.
+It requires [.NET 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) and runs on Windows, macOS, and Linux.
 
 ## Approach
 Rewriting a program from only the binary is a hard task.
@@ -344,7 +344,7 @@ Compatibility list available [here](COMPATIBILITY.md).
 
 ### How to build on your machine
 
-- Install the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) (once)
+- Install the [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (once)
 - clone the repo
 - run this where Spice86.sln is located:
 
