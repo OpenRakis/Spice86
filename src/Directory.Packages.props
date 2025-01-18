@@ -11,17 +11,17 @@
     <PackageVersion Include="Avalonia.Desktop" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.3" />
-    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.0.1" />
+    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.0.7" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.6" />
-    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.1.4.2" />
-    <PackageVersion Include="bodong.PropertyModels" Version="11.1.4.2" />
+    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.2.3.4" />
+    <PackageVersion Include="bodong.PropertyModels" Version="11.2.3.4" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
-    <PackageVersion Include="DialogHost.Avalonia" Version="0.8.1" />
+    <PackageVersion Include="DialogHost.Avalonia" Version="0.9.1" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.271" />
     <PackageVersion Include="Iced" Version="1.21.0" />
@@ -35,8 +35,8 @@
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.9" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.9" />
-    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.2" />
-    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.2" />
+    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.3" />
+    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.3" />
     <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.1" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
@@ -46,8 +46,8 @@
     <PackageVersion Include="System.IO" Version="4.3.0" />
     <PackageVersion Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
     <PackageVersion Include="System.Memory" Version="4.6.0" />
-    <PackageVersion Include="System.Memory.Data" Version="9.0.0" />
-    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.0" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.0" />
+    <PackageVersion Include="System.Memory.Data" Version="9.0.1" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.1" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.1" />
   </ItemGroup>
 </Project>
