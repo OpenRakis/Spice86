@@ -75,7 +75,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        BreakpointsViewModel = new(emulatorBreakpointsManager);
+        BreakpointsViewModel = new(pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard);
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
