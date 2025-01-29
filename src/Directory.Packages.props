@@ -11,7 +11,7 @@
     <PackageVersion Include="Avalonia.Desktop" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.3" />
-    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.0.7" />
+    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.0.8" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.6" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.2.3.4" />
