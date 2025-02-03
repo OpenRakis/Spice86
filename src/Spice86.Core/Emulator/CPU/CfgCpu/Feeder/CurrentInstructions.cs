@@ -64,7 +64,7 @@ public class CurrentInstructions : InstructionReplacer {
              byteAddress < instructionPhysicalAddress + instruction.Length;
              byteAddress++) {
             // When reached the breakpoint will clear the cache and the other breakpoints for the instruction
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.WRITE, byteAddress,
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
                 b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
             breakpoints.Add(breakPoint);
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);

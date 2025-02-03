@@ -29,7 +29,7 @@ public class Joystick : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         return port switch {
             JoystickPositionAndStatus => _joystickPositionAndStatusValue,
             _ => base.ReadByte(port),
@@ -37,7 +37,7 @@ public class Joystick : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case JoystickPositionAndStatus:
                 _joystickPositionAndStatusValue = value;

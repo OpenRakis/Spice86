@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
@@ -9,7 +10,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 
-    private readonly MemoryBreakpoints _memoryBreakpoints;
+    private readonly AddressReadWriteBreakpoints _memoryBreakpoints;
     private IMemoryDevice[] _memoryDevices;
     private readonly List<DeviceRegistration> _devices = new();
 
@@ -25,7 +26,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
-    public Memory(MemoryBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate, bool initializeResetVector = false) {
+    public Memory(AddressReadWriteBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate, bool initializeResetVector = false) {
         _memoryBreakpoints = memoryBreakpoints;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];

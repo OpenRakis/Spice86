@@ -81,7 +81,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         byte value;
         switch (port) {
             case Ports.DacStateRead:
@@ -196,7 +196,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override ushort ReadWord(int port) {
+    public override ushort ReadWord(ushort port) {
         byte value = ReadByte(port);
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -207,7 +207,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override uint ReadDWord(int port) {
+    public override uint ReadDWord(ushort port) {
         byte value = ReadByte(port);
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -218,7 +218,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case Ports.DacAddressReadIndex:
                 if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -349,8 +349,8 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <summary>
     ///     Special shortcut for VGA controller to select a register and write a value in a single call.
     /// </summary>
-    public override void WriteWord(int port, ushort value) {
+    public override void WriteWord(ushort port, ushort value) {
         WriteByte(port, (byte)(value & 0xFF));
-        WriteByte(port + 1, (byte)(value >> 8));
+        WriteByte((ushort)(port + 1), (byte)(value >> 8));
     }
 }

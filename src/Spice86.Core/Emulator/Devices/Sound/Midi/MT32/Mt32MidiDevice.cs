@@ -92,7 +92,10 @@ public sealed class Mt32MidiDevice : MidiDevice {
             if (!Directory.Exists(path)) {
                 return false;
             }
-            IEnumerable<string> fileNames = Directory.EnumerateFiles(path, "*.ROM");
+
+            EnumerationOptions enumerationOptions = new();
+            enumerationOptions.MatchCasing = MatchCasing.CaseInsensitive;
+            IEnumerable<string> fileNames = Directory.EnumerateFiles(path, "*.ROM", enumerationOptions);
             IEnumerable<string> enumerable = fileNames as string[] ?? fileNames.ToArray();
             foreach (string? fileName in enumerable) {
                 _context.AddRom(fileName);

@@ -78,7 +78,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
             _timer1Data++;
             if (_timer1Data == 0) {
@@ -97,12 +97,12 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override ushort ReadWord(int port) {
+    public override ushort ReadWord(ushort port) {
         return _statusByte;
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         if (port == 0x388) {
             _currentAddress = value;
         } else if (port == 0x389) {
@@ -126,7 +126,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override void WriteWord(int port, ushort value) {
+    public override void WriteWord(ushort port, ushort value) {
         if (port == 0x388) {
             WriteByte(0x388, (byte)value);
             WriteByte(0x389, (byte)(value >> 8));

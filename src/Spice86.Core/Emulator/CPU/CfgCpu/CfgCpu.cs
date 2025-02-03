@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -24,7 +24,7 @@ public class CfgCpu : IInstructionExecutor {
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, ILoggerService loggerService) {
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, loggerService);
         _state = state;
         _dualPic = dualPic;
         

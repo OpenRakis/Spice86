@@ -149,9 +149,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private string? _breakpointRangeStartAddress;
 
     [ObservableProperty]
-    private BreakPointType _selectedBreakpointType = BreakPointType.ACCESS;
+    private BreakPointType _selectedBreakpointType = BreakPointType.MEMORY_ACCESS;
 
-    public BreakPointType[] BreakpointTypes => [BreakPointType.ACCESS, BreakPointType.WRITE, BreakPointType.READ];
+    public BreakPointType[] BreakpointTypes => [BreakPointType.MEMORY_ACCESS, BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ];
 
     private void OnBreakPointReached() {
         string message = $"Memory breakpoint was reached.";

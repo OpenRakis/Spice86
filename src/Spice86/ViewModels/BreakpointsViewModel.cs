@@ -45,7 +45,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     internal void AddUnconditionalBreakpoint(Action onReached, bool removedOnTrigger) {
         _emulatorBreakpointsManager.ToggleBreakPoint(
             new UnconditionalBreakPoint(
-                BreakPointType.EXECUTION,
+                BreakPointType.CPU_EXECUTION_ADDRESS,
                 (_) => onReached(),
                 removedOnTrigger), on: true);
     }

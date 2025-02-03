@@ -7,5 +7,5 @@ using System.ComponentModel;
 public partial class MidiInfo : ObservableObject {
     [ObservableProperty, ReadOnly(true)] private int _lastPortRead;
     [ObservableProperty, ReadOnly(true)] private int _lastPortWritten;
-    [ObservableProperty, ReadOnly(true)] private int _lastPortWrittenValue;
+    [ObservableProperty, ReadOnly(true)] private uint _lastPortWrittenValue;
 }

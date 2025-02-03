@@ -181,7 +181,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         if (port != 0x61) {
             return base.ReadByte(port);
         }
@@ -199,7 +199,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("PC Speaker set value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }

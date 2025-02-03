@@ -11,7 +11,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -1131,6 +1131,7 @@ public class Cpu : IInstructionExecutor {
         if (vectorNumber == null) {
             return;
         }
+        EmulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber.Value);
 
         (ushort targetCS, ushort targetIP) = InterruptVectorTable[vectorNumber.Value];
         if (ErrorOnUninitializedInterruptHandler && targetCS == 0 && targetIP == 0) {
@@ -1244,23 +1245,23 @@ public class Cpu : IInstructionExecutor {
         HandleCall(CallType.NEAR, State.CS, returnIP, State.CS, callIP);
     }
 
-    public byte In8(int port) {
-        return _ioPortDispatcher.ReadByte((ushort)port);
+    public byte In8(ushort port) {
+        return _ioPortDispatcher.ReadByte(port);
     }
 
-    public ushort In16(int port) {
-        return _ioPortDispatcher.ReadWord((ushort)port);
+    public ushort In16(ushort port) {
+        return _ioPortDispatcher.ReadWord(port);
     }
 
-    public uint In32(int port) {
-        return _ioPortDispatcher.ReadDWord((ushort)port);
+    public uint In32(ushort port) {
+        return _ioPortDispatcher.ReadDWord(port);
     }
 
-    public void Out8(int port, byte val) => _ioPortDispatcher.WriteByte((ushort)port, val);
+    public void Out8(ushort port, byte val) => _ioPortDispatcher.WriteByte(port, val);
 
-    public void Out16(int port, ushort val) => _ioPortDispatcher.WriteWord((ushort)port, val);
+    public void Out16(ushort port, ushort val) => _ioPortDispatcher.WriteWord(port, val);
 
-    public void Out32(int port, uint val) => _ioPortDispatcher.WriteDWord((ushort)port, val);
+    public void Out32(ushort port, uint val) => _ioPortDispatcher.WriteDWord(port, val);
 
     private bool ProcessPrefix(int opcode) {
         switch (opcode) {

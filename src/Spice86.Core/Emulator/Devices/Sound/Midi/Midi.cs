@@ -103,7 +103,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <param name="port">The port number.</param>
     /// <returns>The value from the port.</returns>
     /// <exception cref="ArgumentException">When the port isn't recognized.</exception>
-    public override ushort ReadWord(int port) => ReadByte(port);
+    public override ushort ReadWord(ushort port) => ReadByte(port);
 
     /// <summary>
     /// All the output ports usable with the device.
@@ -115,7 +115,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="port">The port to write to.</param>
     /// <param name="value">The value being written.</param>
-    public override void WriteWord(int port, ushort value) => WriteByte(port, (byte)value);
+    public override void WriteWord(ushort port, ushort value) => WriteByte(port, (byte)value);
     
     /// <summary>
     /// The port number used for MIDI commands.
@@ -128,8 +128,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     public const int Data = 0x330;
     
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
-        UpdateLastPortRead(port);
+    public override byte ReadByte(ushort port) {
         return port switch {
             DataPort => _dataBytes.Count > 0 ? _dataBytes.Dequeue() : (byte)0,
             StatusPort => (byte)(~(byte)Status & 0xC0),
@@ -143,8 +142,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
-        UpdateLastPortWrite(port, value);
+    public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case DataPort:
                 _midiMapper.SendByte(value);

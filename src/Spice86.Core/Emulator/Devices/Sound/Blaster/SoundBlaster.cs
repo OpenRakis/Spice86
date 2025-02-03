@@ -202,7 +202,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public string BlasterString => $"A220 I{IRQ} D{DMA} T4";
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         switch (port) {
             case DspPorts.DspReadStatus:
                 return _dsp.IsDmaTransferActive ? (byte)0xff : (byte)0x7f;
@@ -223,7 +223,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         if (!_playbackStarted) {
             _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(SoundBlaster));
             _playbackStarted = true;
@@ -287,9 +287,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     }
 
     /// <inheritdoc />
-    public override ushort ReadWord(int port) {
+    public override ushort ReadWord(ushort port) {
         uint value = ReadByte(port);
-        value |= (uint)(ReadByte(port + 1) << 8);
+        value |= (uint)(ReadByte((ushort)(port + 1)) << 8);
         return (ushort)value;
     }
 

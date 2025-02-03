@@ -5,6 +5,7 @@ using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Diagnostics;
 using System.Diagnostics;
@@ -91,7 +92,7 @@ public class EmulationLoop {
         }
         _stopwatch.Start();
         while (_cpuState.IsRunning) {
-            _emulatorBreakpointsManager.CheckBreakPoint();
+            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             _pauseHandler.WaitIfPaused();
             _cpu.ExecuteNext();
             _performanceMeasurer.UpdateValue(_cpuState.Cycles);

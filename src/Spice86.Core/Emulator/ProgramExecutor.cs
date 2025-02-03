@@ -19,6 +19,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -64,8 +65,8 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, cpu, state, timer,
-            emulatorBreakpointsManager, pauseHandler);
+        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, configuration.CfgCpu ? cfgCpu : cpu, state,
+            timer, emulatorBreakpointsManager, pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
                 executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);

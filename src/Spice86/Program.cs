@@ -31,7 +31,10 @@ public class Program {
     [STAThread]
     public static void Main(string[] args) {
         ILoggerService loggerService = new LoggerService();
-        Configuration configuration = CommandLineParser.ParseCommandLine(args);
+        Configuration? configuration = new CommandLineParser().ParseCommandLine(args);
+        if (configuration == null) {
+            return;
+        }
         using Spice86DependencyInjection spice86DependencyInjection = new(loggerService, configuration);
         spice86DependencyInjection.Start();
     }

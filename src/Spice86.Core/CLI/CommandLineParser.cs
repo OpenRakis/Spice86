@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.CLI;
 
 using CommandLine;
+using CommandLine.Text;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Errors;
@@ -15,31 +16,28 @@ using System.Reflection;
 /// <summary>
 /// Parses the command line options to create a <see cref="Configuration"/>.
 /// </summary>
-public static class CommandLineParser {
+public class CommandLineParser {
     /// <summary>
     /// Parses the command line into a <see cref="Configuration"/> object.
     /// </summary>
     /// <param name="args">The application command line arguments</param>
     /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
     /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
-    public static Configuration ParseCommandLine(string[] args) {
+    public Configuration? ParseCommandLine(string[] args) {
         string[] reducedArgs = ProcessArgs(args, out string exeArgs);
 
-        ParserResult<Configuration> result = Parser.Default.ParseArguments<Configuration>(reducedArgs);
+        ParserResult<Configuration?> result = Parser.Default.ParseArguments<Configuration?>(reducedArgs);
         return result.MapResult(initialConfig => {
+            if (initialConfig is null) {
+                return null;
+            }
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             initialConfig.ExeArgs = exeArgs;
             return initialConfig;
-        }, error => {
-            string? message = "Unparseable command line";
-            var exception = new UnreachableException(message);
-            exception.Data.Add("Error", error);
-            Environment.FailFast(message, exception);
-            throw exception;
-        });
+        }, error => null);
     }
     
     private static string[] ProcessArgs(string[] args, out string exeArgs) {

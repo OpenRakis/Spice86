@@ -32,7 +32,7 @@ public class ExecutionContextManager : InstructionReplacer {
         CurrentExecutionContext = new(_currentDepth);
         if (expectedReturnAddress != null) {
             // breakpoint that deletes itself on reach. Should be triggered when the return address is reached and before it starts execution.
-            _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.EXECUTION, expectedReturnAddress.Value.ToPhysical(), (_) => {
+            _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, expectedReturnAddress.Value.ToPhysical(), (_) => {
                 // Restore previous execution context and depth
                 CurrentExecutionContext = previousExecutionContext;
                 _currentDepth--;

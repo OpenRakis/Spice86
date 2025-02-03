@@ -18,6 +18,7 @@ namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.VM.Breakpoint;
 
 public class CfgNodeFeederTest {
     private const int AxIndex = 0;
@@ -34,10 +35,9 @@ public class CfgNodeFeederTest {
 
     private CfgNodeFeeder CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
-        MemoryBreakpoints memoryBreakpoints = new();
-        _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), _state);
+        _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(memoryBreakpoints, new PauseHandler(loggerService), _state);
         return new(_memory, _state, emulatorBreakpointsManager, new());
     }
 

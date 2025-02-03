@@ -99,11 +99,11 @@ public class GdbCommandBreakpointHandler {
             string[] commandSplit = command.Split(",");
             int type = int.Parse(commandSplit[0]);
             BreakPointType? breakPointType = type switch {
-                0 => BreakPointType.EXECUTION,
-                1 => BreakPointType.EXECUTION,
-                2 => BreakPointType.WRITE,
-                3 => BreakPointType.READ,
-                4 => BreakPointType.ACCESS,
+                0 => BreakPointType.CPU_EXECUTION_ADDRESS,
+                1 => BreakPointType.CPU_EXECUTION_ADDRESS,
+                2 => BreakPointType.MEMORY_WRITE,
+                3 => BreakPointType.MEMORY_READ,
+                4 => BreakPointType.MEMORY_ACCESS,
                 _ => null
             };
             if (breakPointType == null) {
@@ -153,7 +153,7 @@ public class GdbCommandBreakpointHandler {
         _resumeEmulatorOnCommandEnd = true;
 
         // will pause the CPU at the next instruction unconditionally
-        BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.EXECUTION, OnBreakPointReached, true);
+        BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, OnBreakPointReached, true);
         _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakPoint, true);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Breakpoint added for st@ep!\n{@StepBreakPoint}", stepBreakPoint);

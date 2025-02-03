@@ -19,7 +19,7 @@ public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
 
     private Spice86DependencyInjection CreateDummyProgramExecutor() {
-        Spice86DependencyInjection res =  new Spice86Creator().CreateSpice86ForBinName("add", false, false);
+        Spice86DependencyInjection res =  new Spice86Creator("add", false).Create();
         // Setup stack
         res.Machine.Cpu.State.SS = 0;
         res.Machine.Cpu.State.SP = 100;

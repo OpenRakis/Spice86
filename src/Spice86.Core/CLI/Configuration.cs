@@ -3,6 +3,7 @@ namespace Spice86.Core.CLI;
 using CommandLine;
 
 using Spice86.Core.Emulator.Devices.Input.Mouse;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
@@ -149,4 +150,16 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(StructureFile), Default = null, Required = false, HelpText = "Specify a C header file to be used for structure information")]
     public string? StructureFile { get; init; }
+    
+    /// <summary>
+    /// Determines whether to use experimental CFG CPU or regular interpreter.
+    /// </summary>
+    [Option(nameof(CfgCpu), Default = false, Required = false, HelpText = "Enable CFG CPU (Control Flow Graph)")]
+    public bool CfgCpu { get; init; }
+
+    /// <summary>
+    /// Audio engine to use
+    /// </summary>
+    [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
+    public AudioEngine AudioEngine { get; init; }
 }

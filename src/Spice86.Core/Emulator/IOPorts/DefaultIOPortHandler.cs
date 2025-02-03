@@ -15,17 +15,17 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <summary>
     /// Contains the argument of the last <see cref="ReadByte"/> operation.
     /// </summary>
-    public int LastPortRead { get; protected set; }
+    public ushort LastPortRead { get; private set; }
 
     /// <summary>
     /// Contains the first argument of the last <see cref="WriteByte"/> operation.
     /// </summary>
-    public int LastPortWritten { get; protected set; }
+    public ushort LastPortWritten { get; private set; }
 
     /// <summary>
     /// Contains the second argument of the last <see cref="WriteByte"/> operation.
     /// </summary>
-    public int LastPortWrittenValue { get; protected set; }
+    public uint LastPortWrittenValue { get; private set; }
 
     /// <summary>
     /// The logger service implementation.
@@ -54,30 +54,21 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         _failOnUnhandledPort = failOnUnhandledPort;
     }
 
-    /// <summary>
-    /// Updates the <see cref="LastPortRead"/> for the internal UI debugger.
-    /// </summary>
-    /// <param name="port">The port number</param>
-    protected void UpdateLastPortRead(int port) {
+
+    /// <inheritdoc />
+    public void UpdateLastPortRead(ushort port) {
         LastPortRead = port;
     }
 
-    /// <summary>
-    /// Updates the <see cref="LastPortWritten"/> and value for the internal UI debugger.
-    /// </summary>
-    /// <param name="port">The port number</param>
-    /// <param name="value">The value written to the port.</param>
-    protected void UpdateLastPortWrite(int port, int value) {
+
+    /// <inheritdoc />
+    public void UpdateLastPortWrite(ushort port, uint value) {
         LastPortWritten = port;
         LastPortWrittenValue = value;
     }
 
-    /// <summary>
-    /// Read a byte from the specified port.
-    /// </summary>
-    /// <param name="port">The port to read from.</param>
-    /// <returns>The value read from the port.</returns>
-    public virtual byte ReadByte(int port) {
+    /// <inheritdoc />
+    public virtual byte ReadByte(ushort port) {
         LogUnhandledPortRead(port);
         return OnUnandledIn(port);
     }
@@ -87,7 +78,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// </summary>
     /// <param name="port">The port number that was read.</param>
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
-    protected void LogUnhandledPortRead(int port, [CallerMemberName] string? methodName = null) {
+    protected void LogUnhandledPortRead(ushort port, [CallerMemberName] string? methodName = null) {
         if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("Unhandled port read: 0x{PortNumber:X4} in {MethodName}", port, methodName);
         }
@@ -100,7 +91,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="port">The port number that was written.</param>
     /// <param name="value">The value that was supposed to be written to the port.</param>
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
-    protected void LogUnhandledPortWrite<T>(int port, T value, [CallerMemberName] string? methodName = null)
+    protected void LogUnhandledPortWrite<T>(ushort port, T value, [CallerMemberName] string? methodName = null)
         where T : INumber<T> {
         if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
             _loggerService.Error("Unhandled port write: 0x{PortNumber:X4}, 0x{Value:X4} in {MethodName}", port, value,
@@ -108,12 +99,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         }
     }
 
-    /// <summary>
-    /// Reads a word from the specified I/O port.
-    /// </summary>
-    /// <param name="port">The port number.</param>
-    /// <returns>The value read from the port.</returns>
-    public virtual ushort ReadWord(int port) {
+    /// <inheritdoc />
+    public virtual ushort ReadWord(ushort port) {
         LogUnhandledPortRead(port);
         if (_failOnUnhandledPort) {
             throw new UnhandledIOPortException(_state, port);
@@ -122,12 +109,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         return ushort.MaxValue;
     }
 
-    /// <summary>
-    /// Reads a double word from the specified I/O port.
-    /// </summary>
-    /// <param name="port">The port number.</param>
-    /// <returns>The value read from the port.</returns>
-    public virtual uint ReadDWord(int port) {
+    /// <inheritdoc />
+    public virtual uint ReadDWord(ushort port) {
         LogUnhandledPortRead(port);
         if (_failOnUnhandledPort) {
             throw new UnhandledIOPortException(_state, port);
@@ -136,32 +119,20 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
         return uint.MaxValue;
     }
 
-    /// <summary>
-    /// Writes a byte to the specified I/O port.
-    /// </summary>
-    /// <param name="port">The port number.</param>
-    /// <param name="value">The value to write to the port.</param>
-    public virtual void WriteByte(int port, byte value) {
+    /// <inheritdoc />
+    public virtual void WriteByte(ushort port, byte value) {
         LogUnhandledPortWrite(port, value);
         OnUnhandledPort(port);
     }
 
-    /// <summary>
-    /// Writes a word to the specified I/O port.
-    /// </summary>
-    /// <param name="port">The port number.</param>
-    /// <param name="value">The value to write to the port.</param>
-    public virtual void WriteWord(int port, ushort value) {
+    /// <inheritdoc />
+    public virtual void WriteWord(ushort port, ushort value) {
         LogUnhandledPortWrite(port, value);
         OnUnhandledPort(port);
     }
 
-    /// <summary>
-    /// Writes a double word to the specified I/O port.
-    /// </summary>
-    /// <param name="port">The port number.</param>
-    /// <param name="value">The value to write to the port.</param>
-    public virtual void WriteDWord(int port, uint value) {
+    /// <inheritdoc />
+    public virtual void WriteDWord(ushort port, uint value) {
         LogUnhandledPortWrite(port, value);
         OnUnhandledPort(port);
     }
@@ -171,7 +142,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// </summary>
     /// <param name="port">The port number.</param>
     /// <returns>A default value.</returns>
-    protected virtual byte OnUnandledIn(int port) {
+    protected virtual byte OnUnandledIn(ushort port) {
         LogUnhandledPortRead(port);
         OnUnhandledPort(port);
         return byte.MaxValue;
@@ -181,7 +152,7 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// Invoked when an unhandled port operation is performed.
     /// </summary>
     /// <param name="port">The port number.</param>
-    protected virtual void OnUnhandledPort(int port) {
+    protected virtual void OnUnhandledPort(ushort port) {
         if (_failOnUnhandledPort) {
             throw new UnhandledIOPortException(_state, port);
         }
