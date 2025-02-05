@@ -12,7 +12,7 @@
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.10" />
-    <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.10" />
+    <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.11" />
     <PackageVersion Include="System.Text.Json" Version="9.0.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
