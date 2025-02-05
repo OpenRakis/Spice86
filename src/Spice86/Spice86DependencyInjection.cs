@@ -84,13 +84,15 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.DumpDataOnExit is not false);
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService,
             configuration.DumpDataOnExit is not false);
+
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+            dualPic, ioPortDispatcher, callbackHandler,
+            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager,
-            loggerService);
+        CfgCpu cfgCpu = new(memory, state,
+            ioPortDispatcher, callbackHandler, dualPic,
+            emulatorBreakpointsManager, loggerService);
 
         // IO devices
         DmaController dmaController =
@@ -125,7 +127,8 @@ public class Spice86DependencyInjection : IDisposable {
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
 
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService),
+            loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 
@@ -147,6 +150,7 @@ public class Spice86DependencyInjection : IDisposable {
         ITextClipboard? textClipboard = null;
         IHostStorageProvider? hostStorageProvider = null;
         IUIDispatcher? uiThreadDispatcher = null;
+        CyclesLimiter cyclesLimiter = new(state, pauseHandler);
 
         if (!configuration.HeadlessMode) {
             desktop = CreateDesktopApp();
@@ -160,7 +164,7 @@ public class Spice86DependencyInjection : IDisposable {
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiThreadDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
+                loggerService, pauseHandler, performanceViewModel, cyclesLimiter);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
@@ -202,6 +206,7 @@ public class Spice86DependencyInjection : IDisposable {
             timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
             mainWindowViewModel,
             dmaController,
+            cyclesLimiter,
             loggerService);
 
         if (configuration.InitializeDOS is not false) {

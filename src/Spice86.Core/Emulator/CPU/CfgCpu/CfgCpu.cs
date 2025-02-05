@@ -27,15 +27,15 @@ public class CfgCpu : IInstructionExecutor {
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, loggerService);
         _state = state;
         _dualPic = dualPic;
-        
+
         _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(emulatorBreakpointsManager, _cfgNodeFeeder, _replacerRegistry);
     }
-    
+
     public ExecutionContextManager ExecutionContextManager => _executionContextManager;
 
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
-    
+
     /// <inheritdoc />
     public void ExecuteNext() {
         ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
@@ -44,7 +44,7 @@ public class CfgCpu : IInstructionExecutor {
         try {
             toExecute.Execute(_instructionExecutionHelper);
         } catch (CpuException e) {
-            if(toExecute is CfgInstruction cfgInstruction) {
+            if (toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
             }
         }
@@ -64,7 +64,7 @@ public class CfgCpu : IInstructionExecutor {
     public void SignalEntry() {
         _executionContextManager.SignalNewExecutionContext(_state.IpSegmentedAddress, null);
     }
-    
+
     private void HandleExternalInterrupt() {
         if (!_state.InterruptFlag) {
             return;

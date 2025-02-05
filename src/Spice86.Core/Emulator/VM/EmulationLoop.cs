@@ -1,22 +1,24 @@
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
-using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Interfaces;
+
 using System.Diagnostics;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+
+using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
-public class EmulationLoop {
+public class EmulationLoop : IDisposable {
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -24,8 +26,10 @@ public class EmulationLoop {
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly PerformanceMeasurer _performanceMeasurer = new();
     private readonly Stopwatch _stopwatch;
+    private readonly CyclesLimiter _cyclesLimiter;
+    private bool disposedValue;
     private readonly DmaController _dmaController;
 
     /// <summary>
@@ -43,11 +47,13 @@ public class EmulationLoop {
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The Direct Memory Access controller chip.</param>
+    /// <param name="cyclesLimiter">The class responsible for limiting CPU cycles, for time sensitive games.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
     public EmulationLoop(ILoggerService loggerService,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController, IPauseHandler pauseHandler) {
+        DmaController dmaController, CyclesLimiter cyclesLimiter,
+        IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -56,8 +62,8 @@ public class EmulationLoop {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _performanceMeasurer = new PerformanceMeasurer();
         _stopwatch = new();
+        _cyclesLimiter = cyclesLimiter;
     }
 
     /// <summary>
@@ -118,5 +124,20 @@ public class EmulationLoop {
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }
+    }
+
+    private void Dispose(bool disposing) {
+        if (!disposedValue) {
+            if (disposing) {
+                _cyclesLimiter.Dispose();
+            }
+            disposedValue = true;
+        }
+    }
+
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

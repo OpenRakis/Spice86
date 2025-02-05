@@ -58,12 +58,13 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="loggerService">The logging service to use.</param>
+    /// <param name="cyclesLimiter">The class responsible for limiting CPU performance for time sensitive programs.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
         IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DmaController dmaController,
+        IScreenPresenter? screenPresenter, DmaController dmaController, CyclesLimiter cyclesLimiter,
         ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
@@ -73,6 +74,7 @@ public sealed class ProgramExecutor : IDisposable {
             functionHandler, configuration.CfgCpu ? cfgCpu : cpu,
             state, timer, emulatorBreakpointsManager,
             dmaController,
+            cyclesLimiter,
             pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
@@ -191,6 +193,7 @@ public sealed class ProgramExecutor : IDisposable {
             if (disposing) {
                 _gdbServer?.Dispose();
                 _emulationLoop.Exit();
+                _emulationLoop.Dispose();
             }
             _disposed = true;
         }
