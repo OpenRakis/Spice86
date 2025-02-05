@@ -3,19 +3,20 @@ namespace Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Interfaces;
+
 using System.Diagnostics;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
+
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
-public class EmulationLoop {
+public class EmulationLoop : ICyclesLimiter {
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -23,14 +24,21 @@ public class EmulationLoop {
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly PerformanceMeasurer _performanceMeasurer = new();
     private readonly Stopwatch _stopwatch;
     private readonly DmaController _dmaController;
+    private const int CyclesUp = 1000;
+    private const int CyclesDown = 1000;
+    private const int MaxCyclesPerMs = 60000;
+    private const int MinCyclesPerMs = 100;
+
+    private long _lastTime;
 
     /// <summary>
     /// Whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
+    public int TargetCpuCylesPerMs { get; set; } = ICyclesLimiter.RealModeCpuCylesPerMs;
 
     /// <summary>
     /// Initializes a new instance.
@@ -46,7 +54,8 @@ public class EmulationLoop {
     public EmulationLoop(ILoggerService loggerService,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController, IPauseHandler pauseHandler) {
+        DmaController dmaController,
+        IPauseHandler pauseHandler) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -55,7 +64,6 @@ public class EmulationLoop {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _performanceMeasurer = new PerformanceMeasurer();
         _stopwatch = new();
     }
 
@@ -94,17 +102,39 @@ public class EmulationLoop {
 
     private void RunLoop() {
         _stopwatch.Start();
+        _lastTime = _stopwatch.ElapsedMilliseconds;
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
-            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
-            _pauseHandler.WaitIfPaused();
-            _cpu.ExecuteNext();
-            _performanceMeasurer.UpdateValue(_cpuState.Cycles);
-            _timer.Tick();
-            _dmaController.PerformDmaTransfers();
+            RunEmulatorComponentsInTurn();
+            AdjustCycles();
         }
         _stopwatch.Stop();
         OutputPerfStats();
+    }
+
+    private void RunEmulatorComponentsInTurn() {
+        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+        _pauseHandler.WaitIfPaused();
+        _cpu.ExecuteNext();
+        _performanceMeasurer.UpdateValue(_cpuState.Cycles);
+        _timer.Tick();
+        _dmaController.PerformDmaTransfers();
+    }
+
+    private void AdjustCycles() {
+        long currentTime = _stopwatch.ElapsedMilliseconds;
+        long elapsedTime = currentTime - _lastTime;
+
+        long targetCycles = Math.Max(TargetCpuCylesPerMs, 1) * elapsedTime;
+        long executedCycles = Math.Max(_performanceMeasurer.ValuePerMillisecond, 1) * elapsedTime;
+        if (executedCycles > targetCycles) {
+            if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                _loggerService.Debug("Executed {ExecutedCycles} instructions in {ElapsedTime}ms. Target was {TargetCycles} instructions.",
+                    executedCycles, elapsedTime, targetCycles);
+            }
+            Thread.Sleep(1);
+        }
+        _lastTime = currentTime;
     }
 
     private void OutputPerfStats() {
@@ -115,5 +145,13 @@ public class EmulationLoop {
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }
+    }
+
+    public void IncreaseCycles() {
+        TargetCpuCylesPerMs = Math.Min(TargetCpuCylesPerMs + CyclesUp, MaxCyclesPerMs);
+    }
+
+    public void DecreaseCycles() {
+        TargetCpuCylesPerMs = Math.Max(TargetCpuCylesPerMs - CyclesDown, MinCyclesPerMs);
     }
 }

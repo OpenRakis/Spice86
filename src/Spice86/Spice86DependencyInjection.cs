@@ -86,11 +86,11 @@ public class Spice86DependencyInjection : IDisposable {
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+            dualPic, ioPortDispatcher, callbackHandler,
+            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, functionCatalogue,
-            loggerService);
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
+            dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
 
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
@@ -148,6 +148,11 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
+        IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
+
+        EmulationLoop emulationLoop = new(loggerService, functionHandler, cpuForEmulationLoop, state, timer,
+            emulatorBreakpointsManager, dmaController, pauseHandler);
+
         MainWindowViewModel? mainWindowViewModel = null;
         MainWindow? mainWindow = null;
         ClassicDesktopStyleApplicationLifetime? desktop = null;
@@ -166,9 +171,9 @@ public class Spice86DependencyInjection : IDisposable {
             hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
-                timer, state, uiThreadDispatcher, hostStorageProvider,
+                timer, uiThreadDispatcher, hostStorageProvider,
                 textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
+                loggerService, pauseHandler, performanceViewModel, emulationLoop);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
@@ -206,11 +211,10 @@ public class Spice86DependencyInjection : IDisposable {
         InitializeFunctionHandlers(configuration, functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, functionHandlerProvider, instructionExecutor, memoryDataExporter, state,
-            timer, dos, functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
-            mainWindowViewModel,
-            dmaController,
-            loggerService);
+            emulatorStateSerializer, memory, functionHandlerProvider,
+            instructionExecutor, memoryDataExporter, state, timer, dos,
+            functionHandler, functionCatalogue, executionFlowRecorder,
+            pauseHandler, mainWindowViewModel, emulationLoop, loggerService);
 
         if (configuration.InitializeDOS is not false) {
             // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
