@@ -29,7 +29,7 @@
 	<Design.DataContext>
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
-	<Grid RowDefinitions="Auto,*,Auto">
+	<Grid RowDefinitions="Auto,Auto,*,Auto">
 		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
 			<MenuItem Header="Debug">
 				<MenuItem HotKey="Ctrl+Alt+F2" ToolTip.Tip="Ctrl+Alt+F2" IsEnabled="{Binding IsEmulatorRunning}">
@@ -106,9 +106,16 @@
 				<fluent:SymbolIcon Symbol="ArrowReset" />
 			</Button>
 		</StackPanel>
+		<StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+			<Button Focusable="False" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
+			<controls:GroupBox Header="Target cycles/ms:">
+				<NumericUpDown Text="{Binding TargetCyclesPerMs}" Minimum="50" Maximum="60000" />
+			</controls:GroupBox>
+			<Button Focusable="False" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
+		</StackPanel>
 		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
 			Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
-		<Viewbox Grid.Row="1">
+		<Viewbox Grid.Row="2">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
 					<ScaleTransform
@@ -124,7 +131,7 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<controls:StatusBar VerticalAlignment="Bottom" Grid.Row="2">
+		<controls:StatusBar VerticalAlignment="Bottom" Grid.Row="3">
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding StatusMessage}" />
 			</controls:StatusBarItem>

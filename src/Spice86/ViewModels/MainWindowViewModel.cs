@@ -32,7 +32,31 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
+    private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
+
+    private int _targetCyclesPerMs;
+
+    public int TargetCyclesPerMs {
+        get => _cyclesLimiter.TargetCpuCylesPerMs;
+        set {
+            if(SetProperty(ref _targetCyclesPerMs, value)) {
+                _cyclesLimiter.TargetCpuCylesPerMs = value;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void IncreaseTargetCycles() {
+        _cyclesLimiter.IncreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
+    }
+
+    [RelayCommand]
+    private void DecreaseTargetCycles() {
+        _cyclesLimiter.DecreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
+    }
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -58,14 +82,16 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
-        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
-        : base(uiDispatcher, textClipboard) {
+        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
+        ICyclesLimiter cyclesLimiter) : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
+        _cyclesLimiter = cyclesLimiter;
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;

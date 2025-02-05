@@ -201,8 +201,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+            dualPic, ioPortDispatcher, callbackHandler,
+            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CPU created...");
@@ -287,6 +287,11 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
+        IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
+
+        EmulationLoop emulationLoop = new(loggerService, functionHandler, cpuForEmulationLoop, state, timer,
+            emulatorBreakpointsManager, dmaController, pauseHandler);
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
         }
@@ -295,21 +300,21 @@ public class Spice86DependencyInjection : IDisposable {
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
+        PerformanceMeasurer performanceMeasurer = new PerformanceMeasurer();
 
-        if(mainWindow != null) {
+        if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-
-            PerformanceViewModel performanceViewModel = new(
-                state, pauseHandler, uiDispatcher);
-
+            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
+                emulatorStateSerializer);
+            PerformanceViewModel performanceViewModel = new PerformanceViewModel(performanceMeasurer, state, pauseHandler, uiDispatcher);
+            mainWindowViewModel = new MainWindowViewModel(
+                timer, uiDispatcher, hostStorageProvider,
+                textClipboard, configuration,
+                loggerService, pauseHandler, performanceViewModel, emulationLoop);
             mainWindow.PerformanceViewModel = performanceViewModel;
-
-            mainWindowViewModel = new(
-                timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
@@ -403,7 +408,7 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorStateSerializer, memory, functionHandlerProvider,
             instructionExecutor, memoryDataExporter, state, timer, dos,
             functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
-            mainWindowViewModel, dmaController, loggerService);
+            mainWindowViewModel, emulationLoop, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");
@@ -447,7 +452,7 @@ public class Spice86DependencyInjection : IDisposable {
             MidiViewModel midiViewModel = new(midiDevice);
 
             CfgCpuViewModel cfgCpuViewModel = new(configuration, cfgCpu.ExecutionContextManager,
-                pauseHandler, new PerformanceMeasurer());
+                pauseHandler, performanceMeasurer);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);

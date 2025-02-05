@@ -7,12 +7,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Interfaces;
 
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
-    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly IPerformanceMeasurer _performanceMeasurer;
     private readonly State _state;
 
     [ObservableProperty]
@@ -20,12 +20,12 @@ public partial class PerformanceViewModel : ViewModelBase {
 
     private bool _isPaused;
     
-    public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+    public PerformanceViewModel(IPerformanceMeasurer performanceMeasurer, State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         _state = state;
         _isPaused = pauseHandler.IsPaused;
-        _performanceMeasurer = new PerformanceMeasurer();
+        _performanceMeasurer = performanceMeasurer;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Background, UpdatePerformanceInfo);
     }
 
