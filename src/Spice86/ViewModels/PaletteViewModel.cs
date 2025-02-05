@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
+using Spice86.Shared.Interfaces;
 
 public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly ArgbPalette _argbPalette;
