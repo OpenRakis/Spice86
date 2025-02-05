@@ -7,7 +7,7 @@
     <PackageVersion Include="Avalonia" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Controls.PanAndZoom" Version="11.2.0" />
-    <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.0" />
+    <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.1" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.3" />
