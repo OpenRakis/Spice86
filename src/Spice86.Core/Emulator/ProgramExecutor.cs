@@ -47,7 +47,6 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated x86 CPU.</param>
-    /// <param name="cfgCpu">The emulated x86 CPU, CFG version.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
@@ -56,24 +55,20 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
+    /// <param name="emulationLoop">The class responsible for running emulator components in a loop.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
+        IMemory memory, Cpu cpu, State state, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DmaController dmaController,
+        IScreenPresenter? screenPresenter, EmulationLoop emulationLoop,
         ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, configuration.CfgCpu ? cfgCpu : cpu,
-            state, timer, emulatorBreakpointsManager,
-            dmaController,
-            pauseHandler);
+        _emulationLoop = emulationLoop;
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
                 executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);

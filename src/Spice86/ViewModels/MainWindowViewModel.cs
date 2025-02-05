@@ -33,6 +33,30 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly PerformanceViewModel _performanceViewModel;
+    private readonly ICyclesLimiter _cyclesLimiter;
+
+    private int _targetCyclesPerMs;
+
+    public int TargetCyclesPerMs {
+        get => _cyclesLimiter.TargetCpuCylesPerMs;
+        set {
+            if(SetProperty(ref _targetCyclesPerMs, value)) {
+                _cyclesLimiter.TargetCpuCylesPerMs = value;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void IncreaseTargetCycles() {
+        _cyclesLimiter.IncreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
+    }
+
+    [RelayCommand]
+    private void DecreaseTargetCycles() {
+        _cyclesLimiter.DecreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
+    }
 
     [ObservableProperty]
     private bool _canUseInternalDebugger;
@@ -58,14 +82,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        ITimeMultiplier pit, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
-        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel) : base(uiDispatcher, textClipboard) {
+        ITimeMultiplier pit, IUIDispatcher uiDispatcher,
+        IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
+        Configuration configuration, ILoggerService loggerService,
+        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
+        ICyclesLimiter cyclesLimiter) : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
+        _cyclesLimiter = cyclesLimiter;
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCylesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Resumed += OnResumed;

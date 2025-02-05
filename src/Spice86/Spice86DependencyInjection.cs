@@ -84,13 +84,15 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.DumpDataOnExit is not false);
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService,
             configuration.DumpDataOnExit is not false);
+
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+            dualPic, ioPortDispatcher, callbackHandler,
+            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager,
-            loggerService);
+        CfgCpu cfgCpu = new(memory, state,
+            ioPortDispatcher, callbackHandler, dualPic,
+            emulatorBreakpointsManager, loggerService);
 
         // IO devices
         DmaController dmaController =
@@ -125,7 +127,8 @@ public class Spice86DependencyInjection : IDisposable {
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
 
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService),
+            loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 
@@ -140,6 +143,10 @@ public class Spice86DependencyInjection : IDisposable {
 
         EmulatorStateSerializer emulatorStateSerializer = new(configuration, memory, state, callbackHandler,
             executionFlowRecorder, functionHandler, loggerService);
+
+        IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
+        EmulationLoop emulationLoop = new(loggerService, functionHandler, cpuForEmulationLoop, state, timer,
+            emulatorBreakpointsManager, dmaController, pauseHandler);
 
         MainWindowViewModel? mainWindowViewModel = null;
         MainWindow? mainWindow = null;
@@ -160,7 +167,7 @@ public class Spice86DependencyInjection : IDisposable {
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiThreadDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
+                loggerService, pauseHandler, performanceViewModel, emulationLoop);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
@@ -198,11 +205,10 @@ public class Spice86DependencyInjection : IDisposable {
             functionsInformation, functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, cpu, cfgCpu, state,
-            timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
-            mainWindowViewModel,
-            dmaController,
-            loggerService);
+            emulatorStateSerializer, memory, cpu, state,
+            timer, dos, callbackHandler,
+            functionHandler, executionFlowRecorder, pauseHandler,
+            mainWindowViewModel, emulationLoop, loggerService);
 
         if (configuration.InitializeDOS is not false) {
             // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
