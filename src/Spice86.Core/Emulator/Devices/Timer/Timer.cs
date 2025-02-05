@@ -71,7 +71,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     public long NumberOfTicks => _counters[0].Ticks;
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             byte value = counter.ValueUsingMode;
@@ -91,7 +91,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         if (IsCounterRegisterPort(port)) {
             Counter counter = GetCounterIndexFromPortNumber(port);
             counter.SetValueUsingMode(value);

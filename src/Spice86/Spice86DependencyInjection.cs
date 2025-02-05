@@ -39,6 +39,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -65,13 +66,12 @@ public class Spice86DependencyInjection : IDisposable {
         ExecutionFlowRecorder executionFlowRecorder =
             reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
         State state = new();
-        IOPortDispatcher ioPortDispatcher = new(state, loggerService, configuration.FailOnUnhandledPort);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
+        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20Gate = new(configuration.A20Gate);
-        MemoryBreakpoints memoryBreakpoints = new();
-        Memory memory = new(memoryBreakpoints, ram, a20Gate,
+        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(memoryBreakpoints, pauseHandler, state);
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
         var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort,
@@ -103,7 +103,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort);
         Renderer vgaRenderer = new(memory, videoState);
 
-        SoftwareMixer softwareMixer = new(loggerService);
+        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         Midi midiDevice = new Midi(softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
 

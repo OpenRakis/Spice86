@@ -720,7 +720,7 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private byte ReadByteFromIoPort(VgaPort port) {
-        return _ioPortDispatcher.ReadByte((int)port);
+        return _ioPortDispatcher.ReadByte((ushort)port);
     }
 
     private void Planar4Plane(int plane) {
@@ -1229,7 +1229,7 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private void WriteWordToIoPort(ushort value, VgaPort port) {
-        _ioPortDispatcher.WriteWord((int)port, value);
+        _ioPortDispatcher.WriteWord((ushort)port, value);
     }
 
     private void WriteToAttributeController(byte index, byte value) {
@@ -1257,7 +1257,7 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     private void WriteByteToIoPort(byte value, VgaPort port) {
-        _ioPortDispatcher.WriteByte((int)port, value);
+        _ioPortDispatcher.WriteByte((ushort)port, value);
     }
 
     private byte ReadAttributeController(byte index) {

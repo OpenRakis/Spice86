@@ -18,8 +18,9 @@ public sealed class SoftwareMixer : IDisposable {
     /// Initializes a new instance of the <see cref="SoftwareMixer"/> class.
     /// </summary>
     /// <param name="loggerService">The logger service.</param>
-    public SoftwareMixer(ILoggerService loggerService) {
-        _audioPlayerFactory = new(loggerService);
+    /// <param name="audioEngine">Audio engine to use.</param>
+    public SoftwareMixer(ILoggerService loggerService, AudioEngine audioEngine) {
+        _audioPlayerFactory = new(loggerService, audioEngine);
     }
 
     internal SoundChannel CreateChannel(string name) {

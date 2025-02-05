@@ -84,7 +84,7 @@ public class GdbCustomCommandsHandler {
         if (long.TryParse(cyclesToWaitString, out long cyclesToWait)) {
             long currentCycles = _state.Cycles;
             long cyclesBreak = currentCycles + cyclesToWait;
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CYCLES, cyclesBreak, _onBreakpointReached, true);
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_CYCLES, cyclesBreak, _onBreakpointReached, true);
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
@@ -103,7 +103,7 @@ public class GdbCustomCommandsHandler {
         try {
             uint cs = ConvertUtils.ParseHex32(args[1]);
             uint ip = ConvertUtils.ParseHex32(args[2]);
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.EXECUTION, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);

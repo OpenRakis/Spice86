@@ -1,11 +1,9 @@
-﻿namespace Spice86.Core.Emulator.Memory;
-
-using Spice86.Core.Emulator.VM.Breakpoint;
+﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
-/// Manages memory breakpoints (breakpoints based on memory access).
+/// Manages breakpoints for read / write access to memory
 /// </summary>
-public class MemoryBreakpoints {
+public class AddressReadWriteBreakpoints {
     private readonly BreakPointHolder _readBreakPoints = new();
     private readonly BreakPointHolder _writeBreakPoints = new();
 
@@ -13,26 +11,21 @@ public class MemoryBreakpoints {
     ///     Enable or disable a memory breakpoint.
     /// </summary>
     /// <param name="breakPoint">The breakpoint to enable or disable</param>
+    /// <param name="trigger">Trigger for the breakpoint</param>
     /// <param name="on">true to enable a breakpoint, false to disable it</param>
     /// <exception cref="NotSupportedException"></exception>
-    public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
-        BreakPointType type = breakPoint.BreakPointType;
-        switch (type) {
-            case BreakPointType.READ:
+    public void ToggleBreakPoint(BreakPoint breakPoint, AddressOperation trigger, bool on) {
+        switch (trigger) {
+            case AddressOperation.READ:
                 _readBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
-            case BreakPointType.WRITE:
+            case AddressOperation.WRITE:
                 _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
-            case BreakPointType.ACCESS:
+            case AddressOperation.ACCESS:
                 _readBreakPoints.ToggleBreakPoint(breakPoint, on);
                 _writeBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
-            case BreakPointType.EXECUTION:
-            case BreakPointType.CYCLES:
-            case BreakPointType.MACHINE_STOP:
-            default:
-                throw new NotSupportedException($"Trying to add unsupported breakpoint of type {type}");
         }
     }
 

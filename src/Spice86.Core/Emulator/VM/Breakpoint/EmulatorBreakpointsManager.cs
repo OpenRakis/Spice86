@@ -1,8 +1,6 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
 /// A class for managing breakpoints in the emulator.
@@ -12,27 +10,25 @@ public sealed class EmulatorBreakpointsManager {
     private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
     private readonly IPauseHandler _pauseHandler;
-    private readonly MemoryBreakpoints _memoryBreakpoints;
     private BreakPoint? _machineStopBreakPoint;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmulatorBreakpointsManager"/> class.
     /// </summary>
-    /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    public EmulatorBreakpointsManager(MemoryBreakpoints memoryBreakpoints, IPauseHandler pauseHandler, State state) {
+    public EmulatorBreakpointsManager(IPauseHandler pauseHandler, State state) {
         _state = state;
-        _memoryBreakpoints = memoryBreakpoints;
+        MemoryReadWriteBreakpoints = new();
+        IoReadWriteBreakpoints = new();
+        InterruptBreakPoints = new();
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
     }
-
-    /// <summary>
-    /// Checks the current breakpoints.
-    /// </summary>
-    public void CheckBreakPoint() => CheckBreakPoints();
+    public AddressReadWriteBreakpoints MemoryReadWriteBreakpoints { get; }
+    public AddressReadWriteBreakpoints IoReadWriteBreakpoints { get; }
+    public BreakPointHolder InterruptBreakPoints { get; }
 
     /// <summary>
     /// Called when the machine stops.
@@ -52,17 +48,35 @@ public sealed class EmulatorBreakpointsManager {
     public void ToggleBreakPoint(BreakPoint breakPoint, bool on) {
         BreakPointType breakPointType = breakPoint.BreakPointType;
         switch (breakPointType) {
-            case BreakPointType.EXECUTION:
+            case BreakPointType.CPU_EXECUTION_ADDRESS:
                 _executionBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
-            case BreakPointType.CYCLES:
+            case BreakPointType.CPU_CYCLES:
                 _cycleBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.CPU_INTERRUPT:
+                InterruptBreakPoints.ToggleBreakPoint(breakPoint, on);
                 break;
             case BreakPointType.MACHINE_STOP:
                 _machineStopBreakPoint = breakPoint;
                 break;
-            default:
-                _memoryBreakpoints.ToggleBreakPoint(breakPoint, on);
+            case BreakPointType.MEMORY_READ:
+                MemoryReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.READ, on);
+                break;
+            case BreakPointType.MEMORY_WRITE:
+                MemoryReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.WRITE, on);
+                break;
+            case BreakPointType.MEMORY_ACCESS:
+                MemoryReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.ACCESS, on);
+                break;
+            case BreakPointType.IO_READ:
+                IoReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.READ, on);
+                break;
+            case BreakPointType.IO_WRITE:
+                IoReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.WRITE, on);
+                break;
+            case BreakPointType.IO_ACCESS:
+                IoReadWriteBreakpoints.ToggleBreakPoint(breakPoint, AddressOperation.ACCESS, on);
                 break;
         }
     }
@@ -70,7 +84,7 @@ public sealed class EmulatorBreakpointsManager {
     /// <summary>
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
-    private void CheckBreakPoints() {
+    public void CheckExecutionBreakPoints() {
         if (!_executionBreakPoints.IsEmpty) {
             uint address = _state.IpPhysicalAddress;
             _executionBreakPoints.TriggerMatchingBreakPoints(address);

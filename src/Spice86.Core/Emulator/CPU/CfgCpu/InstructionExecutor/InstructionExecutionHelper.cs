@@ -14,17 +14,21 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
+    private readonly BreakPointHolder _interruptBreakPoints;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
-        CallbackHandler callbackHandler, ILoggerService loggerService) {
+        CallbackHandler callbackHandler,
+        BreakPointHolder interruptBreakPoints,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
         Memory = memory;
@@ -35,6 +39,7 @@ public class InstructionExecutionHelper {
         Alu32 = new(state);
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
+        _interruptBreakPoints = interruptBreakPoints;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -148,6 +153,7 @@ public class InstructionExecutionHelper {
     }
     
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
+        _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
         if (target.Segment == 0 && target.Offset == 0) {
             throw new UnhandledOperationException(State,

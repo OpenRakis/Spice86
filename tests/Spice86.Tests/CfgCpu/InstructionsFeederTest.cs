@@ -17,22 +17,22 @@ namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.VM.Breakpoint;
 
 public class InstructionsFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
-    private static readonly MemoryBreakpoints MemoryBreakpoints = new();
-    private readonly Memory _memory = new(MemoryBreakpoints, new Ram(64), new A20Gate());
+    private Memory _memory = new(new(), new Ram(64), new A20Gate());
     private InstructionReplacerRegistry _instructionReplacer = new();
 
     private InstructionsFeeder CreateInstructionsFeeder() {
-        _memory.Memset8(0, 0, 64);
-        _instructionReplacer = new();
         ILoggerService loggerService = Substitute.For<LoggerService>();
         State state = new();
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(MemoryBreakpoints, new PauseHandler(loggerService), state);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), state);
+        _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
+        _instructionReplacer = new();
         
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
     }

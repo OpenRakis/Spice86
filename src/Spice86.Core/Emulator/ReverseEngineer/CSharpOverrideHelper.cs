@@ -626,7 +626,7 @@ public class CSharpOverrideHelper {
     /// <param name="renamedOverride">An action that provides the new implementation to use for the instruction.</param>
     public void OverrideInstruction(ushort segment, ushort offset, Func<Action> renamedOverride) {
         AddressBreakPoint breakPoint = new(
-            BreakPointType.EXECUTION,
+            BreakPointType.CPU_EXECUTION_ADDRESS,
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
@@ -643,7 +643,7 @@ public class CSharpOverrideHelper {
     /// <param name="action">The action to execute on top of the instruction.</param>
     public void DoOnTopOfInstruction(ushort segment, ushort offset, Action action) {
         AddressBreakPoint breakPoint = new(
-            BreakPointType.EXECUTION,
+            BreakPointType.CPU_EXECUTION_ADDRESS,
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
@@ -660,7 +660,7 @@ public class CSharpOverrideHelper {
     /// <param name="action">The action to execute when the memory location is written to.</param>
     public void DoOnMemoryWrite(ushort segment, ushort offset, Action action) {
         AddressBreakPoint breakPoint = new(
-            BreakPointType.WRITE,
+            BreakPointType.MEMORY_WRITE,
             MemoryUtils.ToPhysicalAddress(segment, offset),
             _ => action.Invoke()
             , false);
@@ -675,7 +675,7 @@ public class CSharpOverrideHelper {
     /// <param name="action">The action to execute when the memory location is written to.</param>
     public void DoOnMemoryRead(ushort segment, ushort offset, Action action) {
         AddressBreakPoint breakPoint = new(
-            BreakPointType.READ,
+            BreakPointType.MEMORY_READ,
             MemoryUtils.ToPhysicalAddress(segment, offset),
             _ => action.Invoke()
             , false);

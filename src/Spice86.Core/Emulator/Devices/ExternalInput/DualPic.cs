@@ -144,7 +144,7 @@ public class DualPic : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         return port switch {
             MasterCommand => _pic1.CommandRead(),
             MasterData => _pic1.DataRead(),
@@ -155,7 +155,7 @@ public class DualPic : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override ushort ReadWord(int port) {
+    public override ushort ReadWord(ushort port) {
         if (port == MasterCommand) {
             return (ushort)(ReadByte(MasterCommand) | ReadByte(SlaveCommand) << 8);
         }
@@ -168,7 +168,7 @@ public class DualPic : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case MasterCommand:
                 _pic1.ProcessCommandWrite(value);
@@ -189,7 +189,7 @@ public class DualPic : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override void WriteWord(int port, ushort value) {
+    public override void WriteWord(ushort port, ushort value) {
         if (port == MasterCommand) {
             WriteByte(MasterCommand, (byte)value);
             WriteByte(SlaveCommand, (byte)(value >> 8));

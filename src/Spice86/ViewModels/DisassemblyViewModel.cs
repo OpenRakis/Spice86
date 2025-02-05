@@ -133,7 +133,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
             BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
                 (uint)breakpointAddressValue.Value,
-                BreakPointType.EXECUTION,
+                BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
                     () => PauseAndReportAddress((long)breakpointAddressValue.Value));
             UpdateAssemblyLineIfShown((uint)breakpointAddressValue.Value, breakpointViewModel);
@@ -187,7 +187,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         long nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
         _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
            address: nextInstructionAddressInListing,
-           breakPointType: BreakPointType.EXECUTION,
+           breakPointType: BreakPointType.CPU_EXECUTION_ADDRESS,
            isRemovedOnTrigger: true,
            onReached: (_) => {
                 Pause($"Step over execution breakpoint was reached at address {nextInstructionAddressInListing}");
@@ -361,7 +361,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
 
     private bool CreateExecutionBreakpointHereCanExecute() =>
-        SelectedInstruction?.Breakpoint is not { Type: BreakPointType.EXECUTION };
+        SelectedInstruction?.Breakpoint is not { Type: BreakPointType.CPU_EXECUTION_ADDRESS };
 
     [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]
     private void CreateExecutionBreakpointHere() {
@@ -370,7 +370,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
         uint address = SelectedInstruction.Address;
         BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address,
-            BreakPointType.EXECUTION, isRemovedOnTrigger: false, () => {
+            BreakPointType.CPU_EXECUTION_ADDRESS, isRemovedOnTrigger: false, () => {
                 PauseAndReportAddress(address);
             });
         UpdateAssemblyLineIfShown(address, breakpointViewModel);

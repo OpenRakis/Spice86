@@ -69,7 +69,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     public KeyboardEventArgs LastKeyboardInput { get; private set; } = KeyboardEventArgs.None;
 
     /// <inheritdoc/>
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         byte? scancode = LastKeyboardInput.ScanCode;
         scancode ??= 0;
 
@@ -82,7 +82,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     }
 
     /// <inheritdoc />
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case KeyboardPorts.Data:
                 _a20Gate.IsEnabled = Command switch {

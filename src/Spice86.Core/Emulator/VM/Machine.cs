@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
 /// Centralizes many useful emulator devices and components for machine code overrides.

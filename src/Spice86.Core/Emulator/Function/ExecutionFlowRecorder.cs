@@ -187,7 +187,7 @@ public class ExecutionFlowRecorder {
     }
 
     private AddressBreakPoint GenerateBreakPoint(IMemory memory, State state, uint physicalAddress) {
-        AddressBreakPoint breakPoint = new(BreakPointType.WRITE, physicalAddress, _ => {
+        AddressBreakPoint breakPoint = new(BreakPointType.MEMORY_WRITE, physicalAddress, _ => {
             if (!IsRegisterExecutableCodeModificationEnabled) {
                 return;
             }

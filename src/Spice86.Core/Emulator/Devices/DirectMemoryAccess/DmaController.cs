@@ -123,19 +123,19 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc/>
-    public override byte ReadByte(int port) {
+    public override byte ReadByte(ushort port) {
         StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
-    public override ushort ReadWord(int port) {
+    public override ushort ReadWord(ushort port) {
         StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
-    public override void WriteByte(int port, byte value) {
+    public override void WriteByte(ushort port, byte value) {
         StartDmaThreadIfNeeded();
         switch (port) {
             case ModeRegister8:
@@ -161,7 +161,7 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
     }
 
     /// <inheritdoc/>
-    public override void WriteWord(int port, ushort value) {
+    public override void WriteWord(ushort port, ushort value) {
         StartDmaThreadIfNeeded();
         int index = Array.IndexOf(AllPorts, port);
 
