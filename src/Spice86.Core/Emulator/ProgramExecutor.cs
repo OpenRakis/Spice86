@@ -53,7 +53,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
+    /// <param name="emulationLoop">The class responsible for running emulator components in a loop.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
@@ -61,17 +61,13 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Timer timer, Dos dos,
         FunctionHandler functionHandler, FunctionCatalogue functionCatalogue,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DmaController dmaController,
+        IScreenPresenter? screenPresenter, EmulationLoop emulationLoop,
         ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, instructionExecutor,
-            state, timer, emulatorBreakpointsManager,
-            dmaController,
-            pauseHandler);
+        _emulationLoop = emulationLoop;
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
                 state, functionCatalogue,

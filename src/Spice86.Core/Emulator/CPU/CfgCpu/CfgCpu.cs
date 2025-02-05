@@ -28,12 +28,12 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
-        
+
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, loggerService);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, _executionContextManager, loggerService);
     }
-    
+
     /// <summary>
     /// Handles at high level parsing, linking and book keeping of nodes from the graph.
     /// </summary>
@@ -49,7 +49,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public FunctionHandler FunctionHandlerInUse => ExecutionContextManager.CurrentExecutionContext.FunctionHandler;
     public bool IsInitialExecutionContext => ExecutionContextManager.CurrentExecutionContext.Depth == 0;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
-    
+
     /// <inheritdoc />
     public void ExecuteNext() {
         ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
@@ -59,13 +59,13 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
             toExecute.Execute(_instructionExecutionHelper);
         } catch (CpuException e) {
-            if(toExecute is CfgInstruction cfgInstruction) {
+            if (toExecute is CfgInstruction cfgInstruction) {
                 _instructionExecutionHelper.HandleCpuException(cfgInstruction, e);
             }
         }
 
         ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
-        
+
         _state.IncCycles();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
@@ -89,7 +89,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public void SignalEnd() {
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Ret(CallType.MACHINE, null);
     }
-    
+
     private void HandleExternalInterrupt(ICfgNode toExecute) {
         // Before any external interrupt has a chance to execute, check if we landed in a place where context should be switched.
         if (toExecute.CanCauseContextRestore) {
