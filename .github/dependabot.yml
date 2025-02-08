@@ -13,28 +13,43 @@ updates:
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      - dependency-name: "FluentAssertions"
+        versions: ["7.1.0"]
     open-pull-requests-limit: 5
   - package-ecosystem: "nuget"
     directory: "/src/Bufdio.Spice86"
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      - dependency-name: "FluentAssertions"
+        versions: ["7.1.0"]
     open-pull-requests-limit: 5
   - package-ecosystem: "nuget"
     directory: "/src/Spice86.Core"
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      - dependency-name: "FluentAssertions"
+        versions: ["7.1.0"]
     open-pull-requests-limit: 5
   - package-ecosystem: "nuget"
     directory: "/src/Spice86.Logging"
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      - dependency-name: "FluentAssertions"
+        versions: ["7.1.0"]
     open-pull-requests-limit: 5
   - package-ecosystem: "nuget"
     directory: "/tests/Spice86.Tests"
     schedule:
       interval: "weekly"
       day: "wednesday"
+    ignore:
+      - dependency-name: "FluentAssertions"
+        versions: ["7.1.0"]
     open-pull-requests-limit: 5
