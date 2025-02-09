@@ -47,12 +47,19 @@
 						Content="Close View"
 						IsEnabled="{Binding CanCloseTab}" />
 				</StackPanel>
-				<UniformGrid>
-					<Label Content="Start" />
-					<NumericUpDown Value="{Binding StartAddress}" />
-					<Label Content="End" />
-					<NumericUpDown Value="{Binding EndAddress}" />
-				</UniformGrid>
+				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
+					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
+					<userControls:AddressAutoCompleteBox
+						Grid.Row="0" Grid.Column="1"
+						State="{Binding State}"
+						ParsedAddress="{Binding StartAddress}" />
+					<Label Grid.Row="1" Grid.Column="0" Content="End" />
+					<userControls:AddressAutoCompleteBox
+						Grid.Row="1"
+						Grid.Column="1"
+						State="{Binding State}"
+						ParsedAddress="{Binding EndAddress}" />
+				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
 							Command="{Binding UpdateBinaryDocumentCommand}"
@@ -199,17 +206,16 @@
 								Grid.Row="0"
 								Grid.Column="0"
 								Content="Memory Address:" />
-							<AutoCompleteBox
+							<userControls:AddressAutoCompleteBox
 								Grid.Row="0"
 								Grid.Column="1"
-								FontFamily="RobotoMonoFont"
-								Text="{Binding MemoryEditAddress}"
-								Watermark="linear or segmented address" />
+								State="{Binding State}"
+								ParsedAddress="{Binding MemoryEditAddress}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
 								Content="Bytes:" />
-							<AutoCompleteBox
+							<TextBox
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont"
