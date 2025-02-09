@@ -63,7 +63,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(State cpuState, Stack stack, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(State state, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -83,7 +83,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
             emulatorBreakpointsManager,
-            memory, cpuState, 
+            memory, state, 
             functionsInformation.ToDictionary(x =>
                 x.Key.ToPhysical(), x => x.Value),
             BreakpointsViewModel, pauseHandler,
@@ -92,12 +92,12 @@ public partial class DebugWindowViewModel : ViewModelBase,
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
-        CpuViewModel = new(cpuState, memory, pauseHandler, uiDispatcher);
+        CpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModel mainMemoryViewModel = new(memory,
+        MemoryViewModel mainMemoryViewModel = new(memory, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory);
-        MemoryViewModel stackMemoryViewModel = new(memory,
+        MemoryViewModel stackMemoryViewModel = new(memory, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
             canCloseTab: false, startAddress: stack.PhysicalAddress) {
