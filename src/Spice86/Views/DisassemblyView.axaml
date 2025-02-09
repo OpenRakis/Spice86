@@ -47,17 +47,11 @@
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
 				<Grid ColumnDefinitions="*,*">
-					<AutoCompleteBox Name="SegmentedStartAddressTextBox"
+					<userControls:AddressAutoCompleteBox Name="StartAddressTextBox"
 						Grid.Column="0"
-						Width="100"
-						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
-						Converter={StaticResource SegmentedAddressConverter}}"
-						Watermark="segment:offset" />
-					<AutoCompleteBox Name="LinearStartAddressTextBox"
-						Grid.Column="1"
-						Width="80"
-						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
-						Watermark="linear address"/>
+						Width="150"
+						State="{Binding State}"
+						ParsedAddress="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
@@ -232,11 +226,8 @@
 						<StackPanel
 							Grid.Row="1"
 							Orientation="Vertical">
-							<AutoCompleteBox
-								FontFamily="RobotoMonoFont"
-								Text="{Binding BreakpointAddress}"
-								Watermark="linear or segmented address" />
-							<TextBlock>Linear or segmented address</TextBlock>
+							<userControls:AddressAutoCompleteBox
+								ParsedAddress="{Binding BreakpointAddress}"/>
 						</StackPanel>
 					</Grid>
 					<StackPanel

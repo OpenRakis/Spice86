@@ -32,36 +32,6 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
         }
     }
 
-
-    protected bool TryParseMemoryAddress(string? memoryAddress, [NotNullWhen(true)] out ulong? address) {
-        if (string.IsNullOrWhiteSpace(memoryAddress)) {
-            address = null;
-            return false;
-        }
-
-        try {
-            if (memoryAddress.Contains(':')) {
-                string[] split = memoryAddress.Split(":");
-                if (split.Length > 1 &&
-                    ushort.TryParse(split[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort segment) &&
-                    ushort.TryParse(split[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort offset)) {
-                    address = MemoryUtils.ToPhysicalAddress(segment, offset);
-
-                    return true;
-                }
-            } else if (ulong.TryParse(memoryAddress, CultureInfo.InvariantCulture, out ulong value)) {
-                address = value;
-
-                return true;
-            }
-        } catch (Exception e) {
-            _uiDispatcher.Post(() => ShowError(e));
-        }
-        address = null;
-
-        return false;
-    }
-
     protected void ShowError(Exception e) {
         Exception = e.GetBaseException();
         IsDialogVisible = true;
