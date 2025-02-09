@@ -15,10 +15,7 @@ using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
-
-using System.Globalization;
 
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -62,6 +59,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
         breakpointsViewModel.BreakpointCreated += OnBreakPointUpdateFromBreakpointsViewModel;
     }
+
+    public State State => _state;
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpointViewModel) {
         UpdateAssemblyLineIfShown(breakpointViewModel.Address, breakpointViewModel);
@@ -114,12 +113,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private bool _creatingExecutionBreakpoint;
 
     [ObservableProperty]
-    private string? _breakpointAddress;
+    private ulong? _breakpointAddress;
 
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP).ToString(CultureInfo.InvariantCulture);
+        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
     }
 
     [RelayCommand]
@@ -130,14 +129,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
-        if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
-            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
+        if (BreakpointAddress != null) {
             BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
-                (uint)breakpointAddressValue.Value,
+                (uint)BreakpointAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
-                    () => PauseAndReportAddress((long)breakpointAddressValue.Value));
-            UpdateAssemblyLineIfShown((uint)breakpointAddressValue.Value, breakpointViewModel);
+                    () => PauseAndReportAddress((long)BreakpointAddress.Value));
+            UpdateAssemblyLineIfShown((uint)BreakpointAddress.Value, breakpointViewModel);
         }
     }
 
@@ -153,21 +151,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private int _numberOfInstructionsShown = 50;
 
     [ObservableProperty]
-    private bool _isUsingLinearAddressing = true;
-
-    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    private SegmentedAddress? _segmentedStartAddress;
-
     private uint? _startAddress;
-
-    public uint? StartAddress {
-        get => _startAddress;
-        set {
-            SetProperty(ref _startAddress, value);
-            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
-        }
-    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -250,7 +235,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        SegmentedStartAddress = new(_state.CS, _state.IP);
+        StartAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
         await GoToAddress(_state.IpPhysicalAddress);
     }
 
@@ -267,18 +252,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    private uint? GetStartAddress() {
-        return IsUsingLinearAddressing switch {
-            true => StartAddress,
-            false => SegmentedStartAddress is null
-                ? null
-                : MemoryUtils.ToPhysicalAddress(SegmentedStartAddress.Value.Segment,
-                    SegmentedStartAddress.Value.Offset),
-        };
-    }
-
     private bool CanExecuteUpdateDisassembly() {
-        return IsPaused && GetStartAddress() is not null;
+        return IsPaused && StartAddress is not null;
     }
 
     [ObservableProperty]
@@ -286,7 +261,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        uint? startAddress = GetStartAddress();
+        uint? startAddress = StartAddress;
         if (startAddress is null) {
             return;
         }

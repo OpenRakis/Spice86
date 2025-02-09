@@ -51,4 +51,9 @@
     <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
     <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="UserControls\AddressAutoCompleteBox.axaml.cs">
+      <DependentUpon>AddressAutoCompleteBox.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>

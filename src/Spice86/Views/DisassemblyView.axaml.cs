@@ -9,8 +9,7 @@ public partial class DisassemblyView : UserControl {
     public DisassemblyView() {
         InitializeComponent();
         FunctionComboBox.SelectionChanged += FunctionComboBox_SelectionChanged;
-        SegmentedStartAddressTextBox.KeyUp += SegmentedStartAddressTextBox_KeyUp;
-        LinearStartAddressTextBox.KeyUp += LinearStartAddressTextBox_KeyUp;
+        StartAddressTextBox.KeyUp += StartAddressTextBox_KeyUp;
         DisassemblyDataGrid.KeyUp += DisassemblyDataGrid_KeyUp;
         NumberOfInstructionsShownNumericUpDown.KeyUp += NumberOfInstructionsShownNumericUpDown_KeyUp;
     }
@@ -22,22 +21,15 @@ public partial class DisassemblyView : UserControl {
         }
     }
 
-    private void LinearStartAddressTextBox_KeyUp(object? sender, KeyEventArgs e) {
+    private void StartAddressTextBox_KeyUp(object? sender, KeyEventArgs e) {
         ExecUpdateDisassemblyCommand(e, true);
     }
 
     private void ExecUpdateDisassemblyCommand(KeyEventArgs e, bool isUsingLinearAddressing) {
-        if (DataContext is DisassemblyViewModel viewModel && e.Key == Key.Enter) {
-            viewModel.IsUsingLinearAddressing = isUsingLinearAddressing;
-            if (viewModel.UpdateDisassemblyCommand.CanExecute(null)) {
-                viewModel.UpdateDisassemblyCommand.Execute(null);
-            }
+        if (DataContext is DisassemblyViewModel viewModel && e.Key == Key.Enter &&
+            viewModel.UpdateDisassemblyCommand.CanExecute(null)) {
+            viewModel.UpdateDisassemblyCommand.Execute(null);
         }
-    }
-
-    private void SegmentedStartAddressTextBox_KeyUp(object? sender, KeyEventArgs e) {
-        ExecUpdateDisassemblyCommand(e, false);
-
     }
 
     private void DisassemblyDataGrid_KeyUp(object? sender, KeyEventArgs e) {
