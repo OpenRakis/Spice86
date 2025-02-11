@@ -36,6 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
+    private readonly DosSwappableDataArea _dosSwappableDataArea;
 
     /// <summary>
     /// Initializes a new instance.
@@ -45,8 +46,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="dos">The DOS kernel.</param>
+    /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt21Handler(IMemory memory, Cpu cpu,
+        KeyboardInt16Handler keyboardInt16Handler,
+        IVgaFunctionality vgaFunctionality, Dos dos,
+        DosSwappableDataArea dosSwappableDataArea,
+        ILoggerService loggerService)
+            : base(memory, cpu, loggerService) {
+        _dosSwappableDataArea = dosSwappableDataArea;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;
@@ -83,6 +91,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
         AddAction(0x33, GetSetControlBreak);
+        AddAction(0x34, GetInDosFlagAddress);
         AddAction(0x35, GetInterruptVector);
         AddAction(0x36, GetFreeDiskSpace);
         AddAction(0x38, () => SetCountryCode(true));
@@ -667,6 +676,17 @@ public class DosInt21Handler : InterruptHandler {
         } else {
             throw new UnhandledOperationException(State, "Ctrl-C get/set operation unhandled: " + op);
         }
+    }
+
+    /// <summary>
+    /// Gets the address of the InDOS flag.
+    /// </summary>
+    private void GetInDosFlagAddress() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET InDOS FLAG ADDRESS");
+        }
+        State.ES = DosSwappableDataArea.BaseSegment;
+        State.BX = DosSwappableDataArea.InDosFlagOffset;
     }
 
     /// <summary>
