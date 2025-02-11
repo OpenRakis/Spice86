@@ -217,6 +217,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
                 return (byte)_ctMixer.CurrentAddress;
             case DspPorts.MixerData:
                 return _ctMixer.ReadData();
+            case DspPorts.DspReset:
+                return 0xFF;
             default:
                 return base.ReadByte(port);
         }

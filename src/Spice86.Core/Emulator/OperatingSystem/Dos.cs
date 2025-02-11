@@ -114,12 +114,23 @@ public class Dos {
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath, _loggerService, this.Devices);
+        DosSwappableDataArea dosSwappableDataArea = new(_memory,
+            MemoryUtils.ToPhysicalAddress(0xb2, 0));
+
+        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+            _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, cpu, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, cpu, keyboardInt16Handler, _vgaFunctionality, this, _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, cpu, _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, cpu, _loggerService);
+        DosInt20Handler = new DosInt20Handler(_memory, cpu, 
+            _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, cpu,
+            keyboardInt16Handler, _vgaFunctionality, this,
+            dosSwappableDataArea,
+            _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, cpu,
+            _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, cpu, 
+            _loggerService);
+
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }

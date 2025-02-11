@@ -201,6 +201,7 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorStateSerializer, memory, cpu, cfgCpu, state,
             timer, dos, callbackHandler, functionHandler, executionFlowRecorder, pauseHandler,
             mainWindowViewModel,
+            dmaController,
             loggerService);
 
         if (configuration.InitializeDOS is not false) {
