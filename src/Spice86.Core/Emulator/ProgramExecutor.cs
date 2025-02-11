@@ -7,6 +7,7 @@ using Serilog.Events;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
@@ -55,18 +56,24 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
         IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
         CallbackHandler callbackHandler, FunctionHandler functionHandler,
-        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler, IScreenPresenter? screenPresenter, ILoggerService loggerService) {
+        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
+        IScreenPresenter? screenPresenter, DmaController dmaController,
+        ILoggerService loggerService) {
         _configuration = configuration;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService, functionHandler, configuration.CfgCpu ? cfgCpu : cpu, state,
-            timer, emulatorBreakpointsManager, pauseHandler);
+        _emulationLoop = new EmulationLoop(_loggerService,
+            functionHandler, configuration.CfgCpu ? cfgCpu : cpu,
+            state, timer, emulatorBreakpointsManager,
+            dmaController,
+            pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
                 executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);

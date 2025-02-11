@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Diagnostics;
 using System.Diagnostics;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
 
 /// <summary>
@@ -25,6 +26,7 @@ public class EmulationLoop {
     private readonly IPauseHandler _pauseHandler;
     private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly Stopwatch _stopwatch;
+    private readonly DmaController _dmaController;
 
     /// <summary>
     /// Whether the emulation is paused.
@@ -40,9 +42,14 @@ public class EmulationLoop {
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService, FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState, Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler) {
+    public EmulationLoop(ILoggerService loggerService,
+        FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
+        Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        DmaController dmaController, IPauseHandler pauseHandler) {
         _loggerService = loggerService;
+        _dmaController = dmaController;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
@@ -97,6 +104,7 @@ public class EmulationLoop {
             _cpu.ExecuteNext();
             _performanceMeasurer.UpdateValue(_cpuState.Cycles);
             _timer.Tick();
+            _dmaController.PerformDmaTransfers();
         }
         _stopwatch.Stop();
         OutputPerfStats();

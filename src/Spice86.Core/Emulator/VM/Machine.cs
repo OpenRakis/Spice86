@@ -275,7 +275,6 @@ public sealed class Machine : IDisposable {
             if (disposing) {
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
-                DmaController.Dispose();
                 OPL3FM.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();

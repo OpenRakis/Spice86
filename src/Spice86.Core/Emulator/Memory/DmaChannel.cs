@@ -19,8 +19,10 @@ public sealed class DmaChannel {
     private byte _addressHighByte;
     private int _transferRate;
     private readonly Stopwatch _transferTimer = new();
+    private readonly IMemory _memory;
 
-    internal DmaChannel() {
+    internal DmaChannel(IMemory memory) {
+        _memory = memory;
     }
 
     /// <summary>
@@ -192,11 +194,10 @@ public sealed class DmaChannel {
     /// <summary>
     /// Performs a DMA transfer.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal bool Transfer(IMemory memory) {
+    internal bool Transfer() {
         if (!MustTransferData) {
             return false;
         }
@@ -209,7 +210,7 @@ public sealed class DmaChannel {
 
         int count = Math.Min(TransferChunkSize, TransferBytesRemaining);
         int startAddress = (int)(memoryAddress + sourceOffset);
-        Span<byte> source = memory.GetSpan(startAddress, count);
+        Span<byte> source = _memory.GetSpan(startAddress, count);
 
         count = device.WriteBytes(source);
         TransferBytesRemaining -= count;

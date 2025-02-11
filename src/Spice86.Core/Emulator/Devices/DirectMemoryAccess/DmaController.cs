@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// Provides the basic services of an Intel 8237 DMA controller.
 /// </summary>
-public class DmaController : DefaultIOPortHandler, IDisposable {
+public class DmaController : DefaultIOPortHandler {
     private const int ModeRegister8 = 0x0B;
     private const int ModeRegister16 = 0xD6;
     private const int MaskRegister8 = 0x0A;
@@ -21,11 +21,6 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly List<DmaChannel> _channels = new(8);
     private readonly IMemory _memory;
-
-    private bool _disposed;
-    private bool _exitDmaLoop;
-    private readonly Thread _dmaThread;
-    private bool _dmaThreadStarted;
 
     private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
             ModeRegister8,
@@ -48,36 +43,18 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
         ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _memory = memory;
         for (int i = 0; i < 8; i++) {
-            DmaChannel channel = new DmaChannel();
+            DmaChannel channel = new DmaChannel(_memory);
             _channels.Add(channel);
         }
 
         Channels = new ReadOnlyCollection<DmaChannel>(_channels);
 
-        _dmaThread = new Thread(DmaLoop) {
-            Name = "DMAThread"
-        };
         InitPortHandlers(ioPortDispatcher);
     }
 
-    private void StartDmaThreadIfNeeded() {
-        if (!_dmaThreadStarted) {
-            _loggerService.Information("Starting thread '{ThreadName}'", _dmaThread.Name ?? nameof(DmaController));
-            _dmaThread.Start();
-            _dmaThreadStarted = true;
-        }
-    }
-
-    /// <summary>
-    /// https://techgenix.com/direct-memory-access/
-    /// </summary>
-    private void DmaLoop() {
-        while (!_exitDmaLoop) {
-            foreach (DmaChannel dmaChannel in _dmaDeviceChannels) {
-                dmaChannel.Transfer(_memory);
-            }
-            // Help linux thread schedulers to switch to other threads. This allows the .NET debugger to work.
-            Thread.Sleep(0);
+    internal void PerformDmaTransfers() {
+        foreach (DmaChannel channel in _dmaDeviceChannels) {
+            channel.Transfer();
         }
     }
 
@@ -124,19 +101,16 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
-        StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
     public override ushort ReadWord(ushort port) {
-        StartDmaThreadIfNeeded();
         return GetPortValue(port);
     }
 
     /// <inheritdoc/>
     public override void WriteByte(ushort port, byte value) {
-        StartDmaThreadIfNeeded();
         switch (port) {
             case ModeRegister8:
                 SetChannelMode(_channels[value & 3], value);
@@ -162,7 +136,6 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc/>
     public override void WriteWord(ushort port, ushort value) {
-        StartDmaThreadIfNeeded();
         int index = Array.IndexOf(AllPorts, port);
 
         switch (index % 3) {
@@ -234,24 +207,5 @@ public class DmaController : DefaultIOPortHandler, IDisposable {
                 _channels[index / 3].WriteCountByte(value);
                 break;
         }
-    }
-
-    private void Dispose(bool disposing) {
-        if (!_disposed) {
-            if (disposing) {
-                _exitDmaLoop = true;
-                if (_dmaThread.IsAlive && _dmaThreadStarted) {
-                    _dmaThread.Join();
-                }
-            }
-            _disposed = true;
-        }
-    }
-
-    /// <inheritdoc />
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }
