@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -24,7 +25,7 @@ using System.Linq;
 /// <remarks>This is a LIM standard implementation. Which means there's no
 /// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler {
+public sealed class ExpandedMemoryManager : DosInterruptHandler {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
     /// DOS programs can detect the presence of an EMS handler by looking for it <br/>
@@ -99,8 +100,10 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="dos">The DOS kernel.</param>
+    /// <param name="dosSwappableDataArea">The DOS structure holding global information, such as the INDOS flag.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExpandedMemoryManager(IMemory memory, Cpu cpu, Dos dos, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public ExpandedMemoryManager(IMemory memory, Cpu cpu, Dos dos, DosSwappableDataArea dosSwappableDataArea, ILoggerService loggerService) :
+        base(memory, cpu, dosSwappableDataArea, loggerService) {
         var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
         dos.AddDevice(device, DosDeviceSegment, 0x0000);
         FillDispatchTable();
@@ -150,18 +153,20 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = State.AH;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, State.AL);
-        }
-
-        if (!HasRunnable(operation)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                LoggerService.Error("EMS function not provided: {@Function}", operation);
+        RunCriticalSection(() => {
+            byte operation = State.AH;
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, State.AL);
             }
-            State.AH = EmmStatus.EmmFunctionNotSupported;
-        }
-        Run(operation);
+
+            if (!HasRunnable(operation)) {
+                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                    LoggerService.Error("EMS function not provided: {@Function}", operation);
+                }
+                State.AH = EmmStatus.EmmFunctionNotSupported;
+            }
+            Run(operation);
+        });
     }
 
     /// <summary>

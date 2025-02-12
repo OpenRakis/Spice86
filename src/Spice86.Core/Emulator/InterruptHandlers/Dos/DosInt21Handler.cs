@@ -23,7 +23,7 @@ using System.Text;
 /// <summary>
 /// Implementation of the DOS INT21H services.
 /// </summary>
-public class DosInt21Handler : InterruptHandler {
+public class DosInt21Handler : DosInterruptHandler {
     private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
@@ -36,7 +36,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly DosSwappableDataArea _dosSwappableDataArea;
 
     /// <summary>
     /// Initializes a new instance.
@@ -46,15 +45,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="dos">The DOS kernel.</param>
-    /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
+    /// <param name="dosSwappableDataArea">The DOS structure holding global information, such as the INDOS flag.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, Cpu cpu,
         KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, Dos dos,
         DosSwappableDataArea dosSwappableDataArea,
         ILoggerService loggerService)
-            : base(memory, cpu, loggerService) {
-        _dosSwappableDataArea = dosSwappableDataArea;
+            : base(memory, cpu, dosSwappableDataArea, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;
@@ -819,8 +817,10 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = State.AH;
-        Run(operation);
+        RunCriticalSection(() => {
+            byte operation = State.AH;
+            Run(operation);
+        });
     }
 
     /// <summary>

@@ -3,6 +3,8 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
+using System;
+
 
 /// <summary>
 /// Represents the DOS swappable data area.
@@ -25,5 +27,19 @@ public class DosSwappableDataArea : MemoryBasedDataStructure {
     public byte InDosFlag {
         get => UInt8[InDosFlagOffset];
         set => UInt8[InDosFlagOffset] = value;
+    }
+
+    /// <summary>
+    /// Increments the InDOS flag.
+    /// </summary>
+    public void EnterCriticalSection() {
+        InDosFlag++;
+    }
+
+    /// <summary>
+    /// Decrements the InDOS flag.
+    /// </summary>
+    public void LeaveCriticalSection() {
+        InDosFlag--;
     }
 }
