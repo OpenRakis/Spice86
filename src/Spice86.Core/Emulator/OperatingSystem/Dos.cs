@@ -107,7 +107,9 @@ public class Dos {
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IVgaFunctionality vgaFunctionality,
+        string? cDriveFolderPath, string? executablePath, bool initializeDos,
+        bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = cpu.State;
@@ -120,15 +122,15 @@ public class Dos {
         FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, cpu, 
+        DosInt20Handler = new DosInt20Handler(_memory, cpu, dosSwappableDataArea,
             _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, cpu,
             keyboardInt16Handler, _vgaFunctionality, this,
             dosSwappableDataArea,
             _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, cpu,
+        DosInt2FHandler = new DosInt2fHandler(_memory, cpu, dosSwappableDataArea,
             _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, cpu, 
+        DosInt28Handler = new DosInt28Handler(_memory, cpu, dosSwappableDataArea,
             _loggerService);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -142,7 +144,7 @@ public class Dos {
         OpenDefaultFileHandles();
 
         if (enableEms) {
-            Ems = new(_memory, cpu, this, _loggerService);
+            Ems = new(_memory, cpu, this, dosSwappableDataArea, _loggerService);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {

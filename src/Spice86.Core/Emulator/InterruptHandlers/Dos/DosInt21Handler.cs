@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -23,7 +24,7 @@ using System.Text;
 /// <summary>
 /// Implementation of the DOS INT21H services.
 /// </summary>
-public class DosInt21Handler : InterruptHandler {
+public class DosInt21Handler : DosInterruptHandler {
     private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
@@ -36,7 +37,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly DosSwappableDataArea _dosSwappableDataArea;
 
     /// <summary>
     /// Initializes a new instance.
@@ -53,8 +53,7 @@ public class DosInt21Handler : InterruptHandler {
         IVgaFunctionality vgaFunctionality, Dos dos,
         DosSwappableDataArea dosSwappableDataArea,
         ILoggerService loggerService)
-            : base(memory, cpu, loggerService) {
-        _dosSwappableDataArea = dosSwappableDataArea;
+            : base(memory, cpu, dosSwappableDataArea, loggerService) {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
         _dos = dos;
@@ -819,8 +818,10 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = State.AH;
-        Run(operation);
+        RunDosCriticalSection(() => {
+            byte operation = State.AH;
+            Run(operation);
+        });
     }
 
     /// <summary>

@@ -5,20 +5,23 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 /// <summary>
 /// Reimplementation of int2f
 /// </summary>
-public class DosInt2fHandler : InterruptHandler {
+public class DosInt2fHandler : DosInterruptHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt2fHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt2fHandler(IMemory memory, Cpu cpu, DosSwappableDataArea dosSwappableDataArea, ILoggerService loggerService)
+        : base(memory, cpu, dosSwappableDataArea, loggerService) {
         FillDispatchTable();
     }
 
@@ -27,8 +30,10 @@ public class DosInt2fHandler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = State.AH;
-        Run(operation);
+        RunDosCriticalSection(() => {
+            byte operation = State.AH;
+            Run(operation);
+        });
     }
 
     private void FillDispatchTable() {
