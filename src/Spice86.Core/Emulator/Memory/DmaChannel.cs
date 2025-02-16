@@ -202,20 +202,20 @@ public sealed class DmaChannel {
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal bool Transfer() {
+    internal void Transfer() {
         // Delayed signaling of operation completion to give certain programs time to detect it.
         if (_signalCompletionAfter.HasValue && _signalCompletionAfter.Value <= _state.Cycles) {
             _signalCompletionAfter = null;
             Device?.SingleCycleComplete();
 
-            return false;
+            return;
         }
         if (!MustTransferData) {
-            return false;
+            return;
         }
         IDmaDevice8? device = Device;
         if (device is null) {
-            return false;
+            return;
         }
         uint memoryAddress = (uint)Page << 16 | Address;
         uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
@@ -236,6 +236,5 @@ public sealed class DmaChannel {
             }
         }
         _transferTimer.Restart();
-        return true;
     }
 }
