@@ -37,6 +37,11 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public const int DSP_RESET_PORT_NUMBER = 0x226;
 
     /// <summary>
+    /// An undocumented port that is ignored by the 'Hardware Programming Guide' and only logged by DOSBox Staging's Sound Blaster implementation.
+    /// </summary>
+    public const int IGNORE_PORT = 0x0227;
+
+    /// <summary>
     /// The port number for checking the status of the DSP write buffer.
     /// </summary>
     public const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
@@ -282,6 +287,12 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
             case DspPorts.MixerAddress:
                 _ctMixer.CurrentAddress = value;
                 break;
+            case IGNORE_PORT:
+                if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Sound Blaster ignored port write {PortNumber:X2} with value {alue:X2}", 
+                        port, value);
+                }
+                break;
             default:
                 base.WriteByte(port, value);
                 break;
@@ -308,7 +319,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The list of input ports.
     /// </summary>
     public FrozenSet<int> InputPorts => new int[] {
-        DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData
+        DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData, DspPorts.DspReset,
+        IGNORE_PORT
     }.ToFrozenSet();
 
     /// <summary>
@@ -360,6 +372,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(IGNORE_PORT, this);
         // Those are managed by OPL3FM class.
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);

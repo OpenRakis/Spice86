@@ -10,12 +10,26 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     Driver for the mouse.
 /// </summary>
 public class MouseDriver : IMouseDriver {
+    private class MouseButtonPressCount {
+        public int PressCount { get; set; }
+        public double LastPressedX { get; set; }
+        public double LastPressedY { get; set; }
+    }
+
+    private readonly Dictionary<MouseButton, MouseButtonPressCount> _buttonsPressCounts = new() {
+        { MouseButton.Left, new() },
+        { MouseButton.Right, new() },
+        { MouseButton.Middle, new() }
+    };
+
+
     private const byte BeforeUserHandlerExecutionCallbackNumber = 0xFE;
     private const byte AfterUserHandlerExecutionCallbackNumber = 0xFF;
     private const int VirtualScreenWidth = 640;
@@ -47,11 +61,26 @@ public class MouseDriver : IMouseDriver {
         _logger = loggerService;
         _mouseDevice = mouseDevice;
         _gui = gui;
+        if (_gui is not null) {
+            _gui.MouseButtonUp += OnMouseButtonUp;
+        }
         _vgaFunctions = vgaFunctions;
 
         _vgaFunctions.VideoModeChanged += OnVideoModeChanged;
         _userHandlerAddressSwitcher = new(memory);
         Reset();
+    }
+    private void OnMouseButtonUp(object? sender, MouseButtonEventArgs e) {
+        MouseButton button = e.Button switch {
+            MouseButton.Left => MouseButton.Left,
+            MouseButton.Right => MouseButton.Right,
+            MouseButton.Middle => MouseButton.Middle,
+            _ => throw new ArgumentOutOfRangeException(nameof(e))
+        };
+
+        _buttonsPressCounts[button].PressCount++;
+        _buttonsPressCounts[button].LastPressedX = _mouseDevice.MouseXRelative;
+        _buttonsPressCounts[button].LastPressedY = _mouseDevice.MouseYRelative;
     }
 
     /// <inheritdoc />
@@ -172,6 +201,32 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
+    public int GetButtonPressCount(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        int count = _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? value) ? value.PressCount : 0;
+
+        // Reset the count after reading
+        _buttonsPressCounts[mouseButton].PressCount = 0;
+
+        return count;
+    }
+
+    /// <inheritdoc />
+    public double GetLastPressedX(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+    /// <inheritdoc />
+    public double GetLastPressedY(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+    /// <inheritdoc />
     public int HorizontalMickeysPerPixel {
         get => _mouseDevice.HorizontalMickeysPerPixel;
         set => _mouseDevice.HorizontalMickeysPerPixel = value;
@@ -222,6 +277,12 @@ public class MouseDriver : IMouseDriver {
         HorizontalMickeysPerPixel = 8;
         VerticalMickeysPerPixel = 16;
         DoubleSpeedThreshold = 64;
+
+        foreach (MouseButton button in _buttonsPressCounts.Keys) {
+            _buttonsPressCounts[button].PressCount = 0;
+            _buttonsPressCounts[button].LastPressedX = 0;
+            _buttonsPressCounts[button].LastPressedY = 0;
+        }
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {

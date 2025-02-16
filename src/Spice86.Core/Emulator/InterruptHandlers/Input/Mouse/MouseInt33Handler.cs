@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -133,6 +134,50 @@ public class MouseInt33Handler : InterruptHandler {
         State.CX = (ushort)status.X;
         State.DX = (ushort)status.Y;
         State.BX = (ushort)status.ButtonFlags;
+    }
+
+    /// <summary>
+    /// Expects: BX Button to query (0=left, 1=right, 2=center) <br/>
+    /// Returns: <br/>
+    ///     AX    Button status: <br/>
+    ///         bit 0 = left button down   (BX &amp; 1) == 1 <br/>
+    ///         bit 1 = right button down  (BX &amp; 2) == 2 <br/>
+    ///         bit 2 = center button down (BX &amp; 4) == 4 <br/>
+    ///     BX    Count of times that button was pressed since last call <br/>
+    ///     CX    X coordinate (horizontal)    divide by 8 for text column <br/>
+    ///     DX    Y coordinate (vertical)      divide by 8 for text line <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This obtains <br/>
+    /// * The current button status. <br/>
+    /// * The number of times the specified button (in BX) has been pressed since the last call to this function.. <br/>
+    /// * The X,Y coordinates of the pointer at the time of the most recent press of that button. <br/><br/>
+    ///
+    ///     You might use this to check for double-clicks, or periodically to
+    ///     check for the press of a particular button(e.g., if the right-button means to cancel). <br/><br/>
+    ///
+    /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
+    ///        you must divide each value by 8 to get a character column,row. <br/>
+    /// </summary>
+    private void QueryButtonPressedCounter() {
+        ushort bx = State.BX;
+        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseButton button = bx switch {
+            0 => MouseButton.Left,
+            1 => MouseButton.Right,
+            2 => MouseButton.Middle,
+            _ => MouseButton.None
+        };
+        if(button == MouseButton.None) {
+            State.AX = 0;
+            State.BX = 0;
+            State.CX = 0;
+            State.DX = 0;
+            return;
+        }
+        State.AX = (ushort)status.ButtonFlags;
+        State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
+        State.CX = (ushort)_mouseDriver.GetLastPressedX(button);
+        State.DX = (ushort)_mouseDriver.GetLastPressedY(button);
     }
 
     /// <summary>
@@ -460,6 +505,7 @@ public class MouseInt33Handler : InterruptHandler {
         AddAction(0x02, HideMouseCursor);
         AddAction(0x03, GetMousePositionAndStatus);
         AddAction(0x04, SetMouseCursorPosition);
+        AddAction(0x0005, QueryButtonPressedCounter);
         AddAction(0x07, SetMouseHorizontalMinMaxPosition);
         AddAction(0x08, SetMouseVerticalMinMaxPosition);
         AddAction(0x0B, GetMotionDistance);
