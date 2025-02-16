@@ -13,21 +13,22 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
-using System;
-
 /// <summary>
 ///     Driver for the mouse.
 /// </summary>
 public class MouseDriver : IMouseDriver {
-    private int _leftButtonPressCount;
-    private int _rightButtonPressCount;
-    private int _middleButtonPressCount;
-    private double _leftButtonPressX;
-    private double _leftButtonPressY;
-    private double _rightButtonPressX;
-    private double _rightButtonPressY;
-    private double _middleButtonPressX;
-    private double _middleButtonPressY;
+    private class MouseButtonPressCount {
+        public int PressCount { get; set; }
+        public double LastPressedX { get; set; }
+        public double LastPressedY { get; set; }
+    }
+
+    private readonly Dictionary<MouseButton, MouseButtonPressCount> _buttonsPressCounts = new() {
+        { MouseButton.Left, new() },
+        { MouseButton.Right, new() },
+        { MouseButton.Middle, new() }
+    };
+
 
     private const byte BeforeUserHandlerExecutionCallbackNumber = 0xFE;
     private const byte AfterUserHandlerExecutionCallbackNumber = 0xFF;
@@ -70,21 +71,16 @@ public class MouseDriver : IMouseDriver {
         Reset();
     }
     private void OnMouseButtonUp(object? sender, MouseButtonEventArgs e) {
-        if (e.Button == MouseButton.Left) {
-            _leftButtonPressCount++;
-            _leftButtonPressX = _mouseDevice.MouseXRelative;
-            _leftButtonPressY = _mouseDevice.MouseYRelative;
-        }
-        if (e.Button == MouseButton.Right) {
-            _rightButtonPressCount++;
-            _rightButtonPressX = _mouseDevice.MouseXRelative;
-            _rightButtonPressY = _mouseDevice.MouseYRelative;
-        }
-        if (e.Button == MouseButton.Middle) {
-            _middleButtonPressCount++;
-            _middleButtonPressX = _mouseDevice.MouseXRelative;
-            _middleButtonPressY = _mouseDevice.MouseYRelative;
-        }
+        MouseButton button = e.Button switch {
+            MouseButton.Left => MouseButton.Left,
+            MouseButton.Right => MouseButton.Right,
+            MouseButton.Middle => MouseButton.Middle,
+            _ => throw new ArgumentOutOfRangeException(nameof(e))
+        };
+
+        _buttonsPressCounts[button].PressCount++;
+        _buttonsPressCounts[button].LastPressedX = _mouseDevice.MouseXRelative;
+        _buttonsPressCounts[button].LastPressedY = _mouseDevice.MouseYRelative;
     }
 
     /// <inheritdoc />
@@ -205,40 +201,29 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
-    public int GetButtonPressCount(int button) {
-        int count = button switch {
-            0 => _leftButtonPressCount,
-            1 => _rightButtonPressCount,
-            2 => _middleButtonPressCount,
-            _ => 0
-        };
+    public int GetButtonPressCount(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        int count = _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? value) ? value.PressCount : 0;
 
         // Reset the count after reading
-        if (button == 0) _leftButtonPressCount = 0;
-        if (button == 1) _rightButtonPressCount = 0;
-        if (button == 2) _middleButtonPressCount = 0;
+        _buttonsPressCounts[mouseButton].PressCount = 0;
 
         return count;
     }
 
     /// <inheritdoc />
-    public double GetLastPressedX(int button) {
-        return button switch {
-            0 => _leftButtonPressX,
-            1 => _rightButtonPressX,
-            2 => _middleButtonPressX,
-            _ => 0
-        };
+    public double GetLastPressedX(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
     }
 
     /// <inheritdoc />
-    public double GetLastPressedY(int button) {
-        return button switch {
-            0 => _leftButtonPressY,
-            1 => _rightButtonPressY,
-            2 => _middleButtonPressY,
-            _ => 0
-        };
+    public double GetLastPressedY(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsPressCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
     }
 
     /// <inheritdoc />
@@ -293,15 +278,11 @@ public class MouseDriver : IMouseDriver {
         VerticalMickeysPerPixel = 16;
         DoubleSpeedThreshold = 64;
 
-        _leftButtonPressCount = 0;
-        _rightButtonPressCount = 0;
-        _middleButtonPressCount = 0;
-        _leftButtonPressX = 0;
-        _leftButtonPressY = 0;
-        _rightButtonPressX = 0;
-        _rightButtonPressY = 0;
-        _middleButtonPressX = 0;
-        _middleButtonPressY = 0;
+        foreach (MouseButton button in _buttonsPressCounts.Keys) {
+            _buttonsPressCounts[button].PressCount = 0;
+            _buttonsPressCounts[button].LastPressedX = 0;
+            _buttonsPressCounts[button].LastPressedY = 0;
+        }
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {

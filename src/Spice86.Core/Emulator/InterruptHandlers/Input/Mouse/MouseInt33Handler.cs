@@ -1,15 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
-using Avalonia;
-using Avalonia.Controls;
-
-using MeltySynth;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -163,8 +159,21 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     private void QueryButtonPressedCounter() {
-        int button = State.BX;
+        ushort bx = State.BX;
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseButton button = bx switch {
+            0 => MouseButton.Left,
+            1 => MouseButton.Right,
+            2 => MouseButton.Middle,
+            _ => MouseButton.None
+        };
+        if(button == MouseButton.None) {
+            State.AX = 0;
+            State.BX = 0;
+            State.CX = 0;
+            State.DX = 0;
+            return;
+        }
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
         State.CX = (ushort)_mouseDriver.GetLastPressedX(button);

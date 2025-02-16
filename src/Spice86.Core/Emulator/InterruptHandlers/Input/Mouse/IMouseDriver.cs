@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Shared.Emulator.Mouse;
 
 /// <summary>
 ///     Mouse driver interface.
@@ -112,21 +113,21 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// </summary>
     /// <param name="button">The button to query (0=left, 1=right, 2=center).</param>
     /// <returns>The count of button presses.</returns>
-    int GetButtonPressCount(int button);
+    int GetButtonPressCount(MouseButton button);
 
     /// <summary>
     /// Gets the last X position of the mouse when the button was pressed.
     /// </summary>
     /// <param name="button">0= Left, 1= right, 2= center</param>
     /// <returns>The X part of the virtual coordinates.</returns>
-    double GetLastPressedX(int button);
+    double GetLastPressedX(MouseButton button);
 
     /// <summary>
     /// Gets the last Y position of the mouse when the button was pressed.
     /// </summary>
     /// <param name="button">0= Left, 1= right, 2= center</param>
     /// <returns>The Y part of the virtual coordinates.</returns>
-    double GetLastPressedY(int button);
+    double GetLastPressedY(MouseButton button);
 
     /// <summary>
     ///     Resets the mouse driver to default values.
