@@ -15,6 +15,8 @@ internal class DosPathResolver {
     internal const char VolumeSeparatorChar = ':';
     internal const char DirectorySeparatorChar = '\\';
     internal const char AltDirectorySeparatorChar = '/';
+    private const char Dot = '.';
+    private const string DoubleDot = "..";
     private const int MaxPathLength = 255;
 
     /// <summary>
@@ -221,7 +223,16 @@ internal class DosPathResolver {
             hostDirInfo.EnumerateFiles("*", new EnumerationOptions() {
                 RecurseSubdirectories = true,
             }))
-            .FirstOrDefault(x => IsRelativeHostFileOrFolderPathEqualIgnoreCase(x, HostPrefix, DosRelativePath))?.FullName;
+            .FirstOrDefault(x => 
+                IsRelativeHostFileOrFolderPathEqualIgnoreCase(
+                    x,
+                    HostPrefix,
+                    DosRelativePath) ||
+                IsRelativeHostFileOrFolderPathEqualIgnoreCase(
+                    x,
+                    HostPrefix,
+                    RemoveTrailingUniqueDot(DosRelativePath)))
+            ?.FullName;
 
         if (string.IsNullOrWhiteSpace(relativeHostPath)) {
             return null;
@@ -230,7 +241,15 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
     }
 
-    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
+    private static string RemoveTrailingUniqueDot(string path) {
+        if (path.EndsWith(Dot) && !path.EndsWith(DoubleDot)) {
+            return path[..^1];
+        }
+        return path;
+    }
+
+    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(
+        FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
         string relativePath = fileOrDirInfo.FullName[hostPrefix.Length..];
         if (fileOrDirInfo is FileInfo) {
             return string.Equals(ConvertUtils.ToSlashPath(relativePath),
