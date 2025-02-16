@@ -29,7 +29,16 @@ public class DmaController : DefaultIOPortHandler {
             MaskRegister16,
             ClearBytePointerFlipFlop}.ToFrozenSet();
 
-    private static readonly int[] AllPorts = new int[] { 0x87, 0x00, 0x01, 0x83, 0x02, 0x03, 0x81, 0x04, 0x05, 0x82, 0x06, 0x07, 0x8F, 0xC0, 0xC2, 0x8B, 0xC4, 0xC6, 0x89, 0xC8, 0xCA, 0x8A, 0xCC, 0xCE };
+    private static readonly int[] AllPorts = [
+        0x87, 0x00, 0x01,
+        0x83, 0x02, 0x03,
+        0x81, 0x04, 0x05,
+        0x82, 0x06, 0x07,
+        0x8F, 0xC0, 0xC2,
+        0x8B, 0xC4, 0xC6,
+        0x89, 0xC8, 0xCA,
+        0x8A, 0xCC, 0xCE
+    ];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DmaController"/> class.
@@ -43,7 +52,7 @@ public class DmaController : DefaultIOPortHandler {
         ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _memory = memory;
         for (int i = 0; i < 8; i++) {
-            DmaChannel channel = new DmaChannel(_memory);
+            DmaChannel channel = new DmaChannel(_memory, state);
             _channels.Add(channel);
         }
 
@@ -126,6 +135,12 @@ public class DmaController : DefaultIOPortHandler {
 
             case MaskRegister16:
                 _channels[(value & 3) + 4].IsMasked = (value & 4) != 0;
+                break;
+
+            case ClearBytePointerFlipFlop:
+                // clear byte pointer flip-flop.
+                // Any write clears the flip-flop so that the next write to any of the 16-bit registers is decoded as the low byte.
+                // The next is the high byte, then next is low, etc.
                 break;
 
             default:

@@ -1,15 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.CPU;
 
 using System;
-using System.Diagnostics;
 
 /// <summary>
 /// Contains information about a DMA channel.
 /// </summary>
 public sealed class DmaChannel {
-    private bool _isActive;
+    private const long CompletionDelayInCycles = 30;
     private bool _addressByteRead;
     private bool _addressByteWritten;
     private bool _countByteRead;
@@ -18,29 +17,19 @@ public sealed class DmaChannel {
     private byte _bytesRemainingHighByte;
     private byte _addressHighByte;
     private int _transferRate;
-    private readonly Stopwatch _transferTimer = new();
     private readonly IMemory _memory;
+    private readonly State _state;
+    private long? _signalCompletionAfter;
 
-    internal DmaChannel(IMemory memory) {
+    internal DmaChannel(IMemory memory, State state) {
         _memory = memory;
+        _state = state;
     }
 
     /// <summary>
     /// Gets or sets a value indicating whether a DMA transfer is active.
     /// </summary>
-    public bool IsActive {
-        get => _isActive;
-        set {
-            if (_isActive != value) {
-                if (value) {
-                    _transferTimer.Start();
-                } else {
-                    _transferTimer.Reset();
-                }
-                _isActive = value;
-            }
-        }
-    }
+    public bool IsActive { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the channel is masked (disabled).
@@ -84,16 +73,13 @@ public sealed class DmaChannel {
     public int TransferRate {
         get => _transferRate;
         set {
-            int period = 1;
             int chunkSize = value / 1000;
 
             if (chunkSize < 1) {
                 chunkSize = 1;
-                period = value / 1000;
             }
 
             _transferRate = value;
-            TransferPeriod = Timer.StopwatchTicksPerMillisecond * period;
             TransferChunkSize = chunkSize;
         }
     }
@@ -102,11 +88,6 @@ public sealed class DmaChannel {
     /// Gets or sets the device which is connected to the DMA channel.
     /// </summary>
     internal IDmaDevice8? Device { get; set; }
-
-    /// <summary>
-    /// Gets or sets the period between DMA transfers in stopwatch ticks.
-    /// </summary>
-    private long TransferPeriod { get; set; }
 
     /// <summary>
     /// Gets or sets the size of each DMA transfer chunk.
@@ -188,8 +169,7 @@ public sealed class DmaChannel {
         }
     }
 
-    private bool MustTransferData =>
-        Device is not null && !IsMasked && IsActive && _transferTimer.ElapsedTicks >= TransferPeriod;
+    private bool MustTransferData => Device is not null && !IsMasked && IsActive;
 
     /// <summary>
     /// Performs a DMA transfer.
@@ -197,13 +177,20 @@ public sealed class DmaChannel {
     /// <remarks>
     /// This method should only be called if the channel is active.
     /// </remarks>
-    internal bool Transfer() {
+    internal void Transfer() {
+        // Delayed signaling of operation completion to give certain programs time to detect it.
+        if (_signalCompletionAfter.HasValue && _signalCompletionAfter.Value <= _state.Cycles) {
+            _signalCompletionAfter = null;
+            Device?.SingleCycleComplete();
+
+            return;
+        }
         if (!MustTransferData) {
-            return false;
+            return;
         }
         IDmaDevice8? device = Device;
         if (device is null) {
-            return false;
+            return;
         }
         uint memoryAddress = (uint)Page << 16 | Address;
         uint sourceOffset = (uint)Count + 1 - (uint)TransferBytesRemaining;
@@ -218,12 +205,10 @@ public sealed class DmaChannel {
         if (TransferBytesRemaining <= 0) {
             if (TransferMode == DmaTransferMode.SingleCycle) {
                 IsActive = false;
-                device.SingleCycleComplete();
+                _signalCompletionAfter = _state.Cycles + CompletionDelayInCycles;
             } else {
                 TransferBytesRemaining = Count + 1;
             }
         }
-        _transferTimer.Restart();
-        return true;
     }
 }
