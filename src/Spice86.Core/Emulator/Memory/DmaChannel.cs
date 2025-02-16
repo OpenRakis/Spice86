@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
 
 using System;
@@ -9,6 +10,7 @@ using System.Diagnostics;
 /// Contains information about a DMA channel.
 /// </summary>
 public sealed class DmaChannel {
+    private const long CompletionDelayInCycles = 20;
     private bool _isActive;
     private bool _addressByteRead;
     private bool _addressByteWritten;
@@ -20,9 +22,12 @@ public sealed class DmaChannel {
     private int _transferRate;
     private readonly Stopwatch _transferTimer = new();
     private readonly IMemory _memory;
+    private readonly State _state;
+    private long? _signalCompletionAfter;
 
-    internal DmaChannel(IMemory memory) {
+    internal DmaChannel(IMemory memory, State state) {
         _memory = memory;
+        _state = state;
     }
 
     /// <summary>
@@ -198,6 +203,13 @@ public sealed class DmaChannel {
     /// This method should only be called if the channel is active.
     /// </remarks>
     internal bool Transfer() {
+        // Delayed signaling of operation completion to give certain programs time to detect it.
+        if (_signalCompletionAfter.HasValue && _signalCompletionAfter.Value <= _state.Cycles) {
+            _signalCompletionAfter = null;
+            Device?.SingleCycleComplete();
+
+            return false;
+        }
         if (!MustTransferData) {
             return false;
         }
@@ -218,7 +230,7 @@ public sealed class DmaChannel {
         if (TransferBytesRemaining <= 0) {
             if (TransferMode == DmaTransferMode.SingleCycle) {
                 IsActive = false;
-                device.SingleCycleComplete();
+                _signalCompletionAfter = _state.Cycles + CompletionDelayInCycles;
             } else {
                 TransferBytesRemaining = Count + 1;
             }
