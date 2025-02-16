@@ -108,6 +108,27 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     short GetDeltaYMickeys();
 
     /// <summary>
+    /// Gets the count of button presses since the last call.
+    /// </summary>
+    /// <param name="button">The button to query (0=left, 1=right, 2=center).</param>
+    /// <returns>The count of button presses.</returns>
+    int GetButtonPressCount(int button);
+
+    /// <summary>
+    /// Gets the last X position of the mouse when the button was pressed.
+    /// </summary>
+    /// <param name="button">0= Left, 1= right, 2= center</param>
+    /// <returns>The X part of the virtual coordinates.</returns>
+    double GetLastPressedX(int button);
+
+    /// <summary>
+    /// Gets the last Y position of the mouse when the button was pressed.
+    /// </summary>
+    /// <param name="button">0= Left, 1= right, 2= center</param>
+    /// <returns>The Y part of the virtual coordinates.</returns>
+    double GetLastPressedY(int button);
+
+    /// <summary>
     ///     Resets the mouse driver to default values.
     /// </summary>
     void Reset();
