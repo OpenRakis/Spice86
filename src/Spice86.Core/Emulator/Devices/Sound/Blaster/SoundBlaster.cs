@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -177,9 +178,11 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
-    public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state, DmaController dmaController,
+    public SoundBlaster(IOPortDispatcher ioPortDispatcher,
+        SoftwareMixer softwareMixer, State state, DmaController dmaController,
         DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler)
+        : base(state, failOnUnhandledPort, loggerService) {
         SbType = soundBlasterHardwareConfig.SbType;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
@@ -191,7 +194,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         dmaController.SetupDmaDeviceChannel(this);
         _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
-        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(Opl));
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPLFMChip));
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
