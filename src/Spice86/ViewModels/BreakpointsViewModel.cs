@@ -61,8 +61,13 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
             if(value is not null) {
                 foreach (TabItemViewModel tab in BreakpointTabs) {
                     tab.IsSelected = tab == value;
-                    SetProperty(ref _selectedBreakpointTypeTab, value);
                 }
+                SetProperty(ref _selectedBreakpointTypeTab, value);
+                OnPropertyChanged(nameof(IsExecutionBreakpointSelected));
+                OnPropertyChanged(nameof(IsMemoryBreakpointSelected));
+                OnPropertyChanged(nameof(IsCyclesBreakpointSelected));
+                OnPropertyChanged(nameof(IsInterruptBreakpointSelected));
+                OnPropertyChanged(nameof(IsIoPortBreakpointSelected));
             }
         }
     }
@@ -198,7 +203,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
 
     private void PauseAndReportAddress(long address)
     {
-        string message = $"Execution breakpoint was reached at address {address}.";
+        string message = $"Execution breakpoint was reached at address 0x{address:X2}.";
         Pause(message);
     }
 
@@ -210,13 +215,13 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
 
     private void PauseAndReportInterrupt(long interruptNumber)
     {
-        string message = $"Interrupt breakpoint was reached at interrupt {interruptNumber}.";
+        string message = $"Interrupt breakpoint was reached at interrupt 0x{interruptNumber:X2}.";
         Pause(message);
     }
 
     private void PauseAndReportIoPort(long ioPortAddress)
     {
-        string message = $"I/O Port breakpoint was reached at address {ioPortAddress}.";
+        string message = $"I/O Port breakpoint was reached at 0x{ioPortAddress:X2}.";
         Pause(message);
     }
 
