@@ -8,54 +8,62 @@ using Spice86.Shared.Interfaces;
 using System;
 
 /// <summary>
-/// Virtual device which emulates OPL3 FM sound.
+/// The class responsible for emulating the OPL FM music synth chip.
 /// </summary>
-public class OPL3FM : DefaultIOPortHandler, IDisposable {
+public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     private const byte Timer1Mask = 0xC0;
     private const byte Timer2Mask = 0xA0;
+
+    private bool _dualOpl = false;
 
     private readonly SoundChannel _soundChannel;
     //TODO: replace it with nukedOpl3.
     private readonly dynamic? _synth;
     private readonly IPauseHandler _pauseHandler;
-    private int _currentAddress;
     private volatile bool _endThread;
     private readonly Thread _playbackThread;
-    private bool _initialized;
-    private byte _statusByte;
-    private byte _timer1Data;
-    private byte _timer2Data;
-    private byte _timerControlByte;
-
     private bool _disposed;
 
     /// <summary>
-    /// The sound channel used for the OPL3 FM synth.
+    /// The sound channel used for rendering audio.
     /// </summary>
     public SoundChannel SoundChannel => _soundChannel;
 
     /// <summary>
-    /// Initializes a new instance of the OPL3 FM synth chip.
+    /// Initializes a new instance of the OPL FM synth chip.
     /// </summary>
-    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL3 FM Synth chip.</param>
+    /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL FM Synth chip.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
-    public OPL3FM(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+    public OPLFMChip(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
         _pauseHandler = pauseHandler;
         _soundChannel = fmSynthSoundChannel;
         //_synth = new(48000);
         _playbackThread = new Thread(GenerateWaveforms) {
-            Name = nameof(OPL3FM)
+            Name = nameof(OPLFMChip)
         };
         InitPortHandlers(ioPortDispatcher);
+        StartPlaybackThread();
     }
+
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
+        ioPortDispatcher.AddIOPortHandler(0x38b, this);
+        if (_dualOpl) {
+            //Read/Write
+            ioPortDispatcher.AddIOPortHandler(0x220, this);
+            //Read/Write
+            ioPortDispatcher.AddIOPortHandler(0x223, this);
+        }
+        //Read/Write
+        ioPortDispatcher.AddIOPortHandler(0x228, this);
+        //Write
+        ioPortDispatcher.AddIOPortHandler(0x229, this);
     }
 
     /// <inheritdoc />
@@ -72,7 +80,6 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
                 if (_playbackThread.IsAlive) {
                     _playbackThread.Join();
                 }
-                _initialized = false;
             }
             _disposed = true;
         }
@@ -80,58 +87,60 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
-        if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
-            _timer1Data++;
-            if (_timer1Data == 0) {
-                _statusByte |= Timer1Mask;
-            }
-        }
+        //if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
+        //    _timer1Data++;
+        //    if (_timer1Data == 0) {
+        //        _statusByte |= Timer1Mask;
+        //    }
+        //}
 
-        if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
-            _timer2Data++;
-            if (_timer2Data == 0) {
-                _statusByte |= Timer2Mask;
-            }
-        }
+        //if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
+        //    _timer2Data++;
+        //    if (_timer2Data == 0) {
+        //        _statusByte |= Timer2Mask;
+        //    }
+        //}
 
-        return _statusByte;
+        //return _statusByte;
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc />
     public override ushort ReadWord(ushort port) {
-        return _statusByte;
+        //return _statusByte;
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        if (port == 0x388) {
-            _currentAddress = value;
-        } else if (port == 0x389) {
-            if (_currentAddress == 0x02) {
-                _timer1Data = value;
-            } else if (_currentAddress == 0x03) {
-                _timer2Data = value;
-            } else if (_currentAddress == 0x04) {
-                _timerControlByte = value;
-                if ((value & 0x80) == 0x80) {
-                    _statusByte = 0;
-                }
-            } else {
-                if (!_initialized) {
-                    StartPlaybackThread();
-                }
+        //if (port == 0x388) {
+        //    _currentAddress = value;
+        //} else if (port == 0x389) {
+        //    if (_currentAddress == 0x02) {
+        //        _timer1Data = value;
+        //    } else if (_currentAddress == 0x03) {
+        //        _timer2Data = value;
+        //    } else if (_currentAddress == 0x04) {
+        //        _timerControlByte = value;
+        //        if ((value & 0x80) == 0x80) {
+        //            _statusByte = 0;
+        //        }
+        //    } else {
+        //        if (!_initialized) {
+        //            StartPlaybackThread();
+        //        }
 
-                _synth?.SetRegisterValue(0, _currentAddress, value);
-            }
-        }
+        //        _synth?.SetRegisterValue(0, _currentAddress, value);
+        //    }
+        //}
     }
 
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
-        if (port == 0x388) {
-            WriteByte(0x388, (byte)value);
-            WriteByte(0x389, (byte)(value >> 8));
-        }
+        //if (port == 0x388) {
+        //    WriteByte(0x388, (byte)value);
+        //    WriteByte(0x389, (byte)(value >> 8));
+        //}
     }
     /// <summary>
     /// Generates and plays back output waveform data.
@@ -140,25 +149,21 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
         const int length = 1024;
         Span<float> buffer = stackalloc float[length];
         Span<float> playBuffer = stackalloc float[length * 2];
-        FillBuffer(buffer, playBuffer);
+        MonoToStereo(buffer, playBuffer);
         while (!_endThread) {
             _pauseHandler.WaitIfPaused();
             _soundChannel.Render(playBuffer);
-            FillBuffer(buffer, playBuffer);
+            MonoToStereo(buffer, playBuffer);
         }
     }
 
-    private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
+    private void MonoToStereo(Span<float> buffer, Span<float> playBuffer) {
         //_synth?.GetData(buffer);
         ChannelAdapter.MonoToStereo(buffer, playBuffer);
     }
 
     private void StartPlaybackThread() {
-        if (_endThread) {
-            return;
-        }
-        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(OPL3FM));
-        _initialized = true;
+        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(OPLFMChip));
         _playbackThread.Start();
     }
 }

@@ -190,7 +190,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
             Name = nameof(SoundBlaster),
         };
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
-        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPLFMChip));
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
