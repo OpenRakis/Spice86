@@ -1,84 +1,113 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-			 xmlns:converters="clr-namespace:Spice86.Converters"
-			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
-			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:Class="Spice86.Views.BreakpointsView"
-			 x:DataType="viewModels:BreakpointsViewModel">
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		<StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-			<Button Content="New..." Command="{Binding BeginCreateBreakpointCommand}" Margin="5"/>
-			<Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
-			<Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
-		</StackPanel>
-		<DataGrid Grid.Row="1"
-				x:Name="BreakpointsDataGrid"
-				ItemsSource="{Binding Breakpoints}"
-				SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
-				AutoGenerateColumns="False"
-				CanUserReorderColumns="True"
-				CanUserResizeColumns="True"
-				CanUserSortColumns="False">
-			<DataGrid.Columns>
-				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
-				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
-				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
-				<DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
-			</DataGrid.Columns>
-		</DataGrid>
-		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-					IsVisible="{Binding CreatingBreakpoint}"/>
-		<dialogHost:DialogHost
-			Grid.Row="0" Grid.RowSpan="2"
-			Background="{Binding $parent[Window].Background}"
-			CloseOnClickAway="False"
-			IsOpen="{Binding CreatingBreakpoint}">
-			<dialogHost:DialogHost.DialogContent>
-				<Grid RowDefinitions="*,Auto" MinWidth="320" MinHeight="200">
-					<TabControl Grid.Row="0">
-						<TabItem Header="Cycles"
-							IsSelected="{Binding IsCyclesBreakpointSelected}">
-							<NumericUpDown Text="{Binding CyclesValue}" Margin="5,0,0,0" />
-						</TabItem>
-						<TabItem Header="Memory"
-							IsSelected="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="Auto,*">
-								<controls:GroupBox Grid.Column="0" Header="Memory access type">
-									<ComboBox SelectedItem="{Binding SelectedMemoryBreakpointType}"
-										ItemsSource="{Binding MemoryBreakpointTypes}" />
-								</controls:GroupBox>
-								<NumericUpDown Grid.Column="1" Text="{Binding MemoryAddressValue}" Margin="5,0,0,0" />
-							</Grid>
-						</TabItem>
-						<TabItem Header="Execution"
-							IsSelected="{Binding IsExecutionBreakpointSelected}">
-							<NumericUpDown Text="{Binding ExecutionAddressValue}" Margin="5,0,0,0" />
-						</TabItem>
-					</TabControl>
-					<StackPanel
-						Grid.Row="1"
-						HorizontalAlignment="Right"
-						Orientation="Horizontal">
-						<Button Margin="5"
-							Command="{Binding ConfirmBreakpointCreationCommand}"
-							Content="OK"
-							IsDefault="True" />
-						<Button Margin="5"
-							Command="{Binding CancelBreakpointCreationCommand}"
-							Content="Cancel"
-							IsCancel="True" />
-					</StackPanel>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
+			 xmlns:userControls="clr-namespace:Spice86.UserControls;assembly=Spice86"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.BreakpointsView"
+             x:DataType="viewModels:BreakpointsViewModel">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button Content="New..." Command="{Binding BeginCreateBreakpointCommand}" Margin="5"/>
+            <Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
+            <Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
+        </StackPanel>
+        <DataGrid Grid.Row="1"
+                  x:Name="BreakpointsDataGrid"
+                  ItemsSource="{Binding Breakpoints}"
+                  SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="False">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+                <DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
+                <DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
+                <DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
+                <DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
+            </DataGrid.Columns>
+        </DataGrid>
+        <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+                   IsVisible="{Binding CreatingBreakpoint}"/>
+        <dialogHost:DialogHost
+            Grid.Row="0" Grid.RowSpan="2"
+            Background="{Binding $parent[Window].Background}"
+            CloseOnClickAway="False"
+            IsOpen="{Binding CreatingBreakpoint}">
+            <dialogHost:DialogHost.DialogContent>
+				<Grid ColumnDefinitions="Auto,*">
+					<ComboBox Grid.Column="0" DisplayMemberBinding="{Binding Header}"
+							  ItemsSource="{Binding BreakpointTabs}"
+							  SelectedItem="{Binding SelectedBreakpointTypeTab, Mode=TwoWay}">
+					</ComboBox>
+                    <Grid Grid.Column="1" RowDefinitions="*,Auto" MinWidth="320" MinHeight="200">
+                        <TabControl Grid.Row="0">
+                            <TabItem Header="Cycles"
+                                     IsVisible="{Binding IsCyclesBreakpointSelected, Mode=OneWay}">
+							    <controls:GroupBox Header="Cycles count">
+                                    <NumericUpDown Text="{Binding CyclesValue}" Margin="5,0,0,0" />
+							    </controls:GroupBox>
+                            </TabItem>
+                            <TabItem Header="Memory"
+                                     IsVisible="{Binding IsMemoryBreakpointSelected, Mode=OneWay}">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <controls:GroupBox Grid.Column="0" Header="Memory access type">
+                                        <ComboBox SelectedItem="{Binding SelectedMemoryBreakpointType}"
+                                                  ItemsSource="{Binding MemoryBreakpointTypes}" />
+                                    </controls:GroupBox>
+								    <controls:GroupBox Grid.Column="1" Header="Memory address">
+									    <userControls:AddressAutoCompleteBox
+									    State="{Binding State}"
+									    ParsedAddress="{Binding MemoryAddressValue}" Margin="5,0,0,0" />
+								    </controls:GroupBox>
+                                </Grid>
+                            </TabItem>
+                            <TabItem Header="Execution"
+                                     IsVisible="{Binding IsExecutionBreakpointSelected, Mode=OneWay}">
+							    <controls:GroupBox Header="Memory address">
+								    <userControls:AddressAutoCompleteBox
+									    State="{Binding State}"
+									    ParsedAddress="{Binding ExecutionAddressValue}" Margin="5,0,0,0" />
+							    </controls:GroupBox>
+						    </TabItem>
+                            <TabItem Header="Interrupt"
+                                     IsVisible="{Binding IsInterruptBreakpointSelected, Mode=OneWay}">
+							    <controls:GroupBox Header="Interrupt Number">
+								    <NumericUpDown Text="{Binding InterruptNumber}" Watermark="decimal" Margin="5,0,0,0" />
+							    </controls:GroupBox>
+                            </TabItem>
+                            <TabItem Header="I/O Port"
+                                     IsVisible="{Binding IsIoPortBreakpointSelected, Mode=OneWay}">
+							    <controls:GroupBox Header="I/O Port Number">
+                                    <NumericUpDown Text="{Binding IoPortNumber}" Watermark="decimal" Margin="5,0,0,0" />
+							    </controls:GroupBox>
+                            </TabItem>
+                        </TabControl>
+                        <StackPanel
+                            Grid.Row="1"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                            <Button Margin="5"
+                                    Command="{Binding ConfirmBreakpointCreationCommand}"
+                                    Content="OK"
+                                    IsDefault="True" />
+                            <Button Margin="5"
+                                    Command="{Binding CancelBreakpointCreationCommand}"
+                                    Content="Cancel"
+                                    IsCancel="True" />
+                        </StackPanel>
+                    </Grid>
 				</Grid>
 			</dialogHost:DialogHost.DialogContent>
-		</dialogHost:DialogHost>
-	</Grid>
+        </dialogHost:DialogHost>
+    </Grid>
 </UserControl>
