@@ -63,7 +63,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public State State => _state;
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpointViewModel) {
-        UpdateAssemblyLineIfShown(breakpointViewModel.Address, breakpointViewModel);
+        UpdateAssemblyLineIfShown((uint)breakpointViewModel.Address, breakpointViewModel);
     }
 
     private void OnResumed() {
