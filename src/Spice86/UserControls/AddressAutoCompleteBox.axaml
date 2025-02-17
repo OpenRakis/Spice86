@@ -6,8 +6,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.UserControls.AddressAutoCompleteBox"
              x:DataType="uc:AddressAutoCompleteBox">
-    <AutoCompleteBox FontFamily="RobotoMonoFont"
+    <TextBox FontFamily="RobotoMonoFont"
 		Watermark="linear or hex or segmented address"
-        x:Name="AddressTextCompleteBox"
-        ItemsSource="{Binding AddressesSuggestions}" />
+        x:Name="AddressTextBox" />
 </UserControl>  
