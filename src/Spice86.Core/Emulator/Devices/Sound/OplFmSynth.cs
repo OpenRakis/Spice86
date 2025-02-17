@@ -12,7 +12,7 @@ public enum Mode {
 public struct Control {
     public Control() { }
     public byte Index { get; set; }
-    public byte LVol { get; set; } = Opl.DefaultVolumeValue;
+    public byte LVol { get; set; } = OplFmSynth.DefaultVolumeValue;
     public byte RVol { get; set; }
 
     public bool IsActive { get; set; }
@@ -182,10 +182,8 @@ public class Chip {
 /// <summary>
 /// The OPL3 / OPL2 / Adlib Gold OPL chip emulation class.
 /// </summary>
-public class Opl : DefaultIOPortHandler {
+public class OplFmSynth {
     public const byte DefaultVolumeValue = 0xff;
-
-    //public MixerChannel Channel { get; private set; } = new();
 
     /// <summary>
     /// The cache for 2 chips or an OPL3
@@ -230,39 +228,13 @@ public class Opl : DefaultIOPortHandler {
 
     private bool _dualOpl = false;
 
-    public Opl(State state, Timer timer, IOPortDispatcher ioPortDispatcher,
-        bool failOnUnhandledPort, ILoggerService loggerService,
-        AdlibGold adlibGold, OplMode oplMode) 
-            : base(state, failOnUnhandledPort, loggerService) {
+    public OplFmSynth(Timer timer,
+        AdlibGold adlibGold, OplMode oplMode) {
         _adlibGold = adlibGold;
         _oplMode = oplMode;
         _chip[0] = new Chip(timer);
         _chip[1] = new Chip(timer);
-        InitPortHandlers(ioPortDispatcher);
     }
-
-    public override byte ReadByte(ushort port) {
-        return _chip[0].Read();
-    }
-
-    public override void WriteByte(ushort port, byte value) {
-        _chip[0].Write(port, value);
-    }
-
-    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-       ioPortDispatcher.AddIOPortHandler(0x388, this);
-       ioPortDispatcher.AddIOPortHandler(0x38b, this);
-       if (_dualOpl) {
-           //Read/Write
-           ioPortDispatcher.AddIOPortHandler(0x220, this);
-           //Read/Write
-           ioPortDispatcher.AddIOPortHandler(0x223, this);
-       }
-       //Read/Write
-       ioPortDispatcher.AddIOPortHandler(0x228, this);
-       //Write
-       ioPortDispatcher.AddIOPortHandler(0x229, this);
-   }
 
    private void AdlibGoldControlWrite(byte val) {
         switch (_ctrl.Index) {
