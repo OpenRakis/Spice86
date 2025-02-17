@@ -67,7 +67,7 @@
 								    <controls:GroupBox Grid.Column="1" Header="Memory address">
 									    <userControls:AddressAutoCompleteBox
 									    State="{Binding State}"
-									    ParsedAddress="{Binding MemoryAddressValue}" Margin="5,0,0,0" />
+									    ParsedAddress="{Binding MemoryAddressValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
 								    </controls:GroupBox>
                                 </Grid>
                             </TabItem>
@@ -76,7 +76,7 @@
 							    <controls:GroupBox Header="Memory address">
 								    <userControls:AddressAutoCompleteBox
 									    State="{Binding State}"
-									    ParsedAddress="{Binding ExecutionAddressValue}" Margin="5,0,0,0" />
+									    ParsedAddress="{Binding ExecutionAddressValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
 							    </controls:GroupBox>
 						    </TabItem>
                             <TabItem Header="Interrupt"
