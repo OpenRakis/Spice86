@@ -22,6 +22,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -199,9 +200,10 @@ public class Spice86DependencyInjection : IDisposable {
             timer,
             timerInt8Handler,
             vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaRom,
-            dmaController, new Opl(
-                state, timer, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService,
-                new AdlibGold(loggerService), OplMode.Opl3),
+            dmaController, new OPLFMChip(
+                soundBlaster.FMSynthSoundChannel, state,
+                ioPortDispatcher, configuration.FailOnUnhandledPort,
+                loggerService, pauseHandler),
             softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 

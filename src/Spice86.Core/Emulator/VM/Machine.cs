@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
@@ -193,7 +194,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public Opl OPL { get; }
+    public OPLFMChip OPL { get; }
     
     /// <summary>
     /// The internal software mixer for all sound channels.
@@ -259,7 +260,7 @@ public sealed class Machine : IDisposable {
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
         DmaController dmaController,
-        Opl opl,
+        OPLFMChip opl,
         SoftwareMixer softwareMixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
