@@ -100,8 +100,12 @@
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start: " />
 							<TextBlock Text="{Binding SelectionRange.Value.Start.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" Address: " />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, StringFormat={}{0:X4}}" />
 							<TextBlock Text=" End: " />
 							<TextBlock Text="{Binding SelectionRange.Value.End.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" Address: " />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, StringFormat={}{0:X4}}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>

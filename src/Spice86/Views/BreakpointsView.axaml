@@ -45,10 +45,12 @@
             IsOpen="{Binding CreatingBreakpoint}">
             <dialogHost:DialogHost.DialogContent>
 				<Grid ColumnDefinitions="Auto,*">
-					<ComboBox Grid.Column="0" DisplayMemberBinding="{Binding Header}"
-							  ItemsSource="{Binding BreakpointTabs}"
-							  SelectedItem="{Binding SelectedBreakpointTypeTab, Mode=TwoWay}">
-					</ComboBox>
+					<controls:GroupBox Header="Breakpoint Type" Grid.Column="0">
+						<ComboBox DisplayMemberBinding="{Binding Header}"
+								  ItemsSource="{Binding BreakpointTabs}"
+								  SelectedItem="{Binding SelectedBreakpointTypeTab, Mode=TwoWay}">
+						</ComboBox>
+					</controls:GroupBox>
                     <Grid Grid.Column="1" RowDefinitions="*,Auto" MinWidth="320" MinHeight="200">
                         <TabControl Grid.Row="0">
                             <TabItem Header="Cycles"

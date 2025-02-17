@@ -1,7 +1,5 @@
 using Avalonia;
-using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Input;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
@@ -15,12 +13,11 @@ namespace Spice86.UserControls;
 public partial class AddressAutoCompleteBox : UserControl {
     public AddressAutoCompleteBox() {
         InitializeComponent();
-        AddressesSuggestions = new();
-        this.AddressTextCompleteBox.TextChanged += OnTextChanged;
+        this.AddressTextBox.TextChanged += OnTextChanged;
     }
 
     private void OnTextChanged(object? sender, TextChangedEventArgs e) {
-        OnTextChanged(AddressTextCompleteBox.Text);
+        OnTextChanged(AddressTextBox.Text);
     }
 
     private bool TryParseMemoryAddress(string? addressExpression,
@@ -97,14 +94,6 @@ public partial class AddressAutoCompleteBox : UserControl {
         set => SetValue(StateProperty, value);
     }
 
-    public static readonly StyledProperty<AvaloniaList<string>> AddressesSuggestionsProperty =
-        AvaloniaProperty.Register<AddressAutoCompleteBox, AvaloniaList<string>>(nameof(AddressesSuggestions));
-
-    public AvaloniaList<string> AddressesSuggestions {
-        get => GetValue(AddressesSuggestionsProperty);
-        set => SetValue(AddressesSuggestionsProperty, value);
-    }
-
     public static readonly StyledProperty<uint?> ParsedAddressProperty =
         AvaloniaProperty.Register<AddressAutoCompleteBox, uint?>(nameof(ParsedAddressProperty),
             coerce: CoerceParseAddress);
@@ -112,10 +101,10 @@ public partial class AddressAutoCompleteBox : UserControl {
     private static uint? CoerceParseAddress(AvaloniaObject @object, uint? nullable) {
         if(@object is AddressAutoCompleteBox instance) {
             if (nullable.HasValue) {
-                instance.AddressTextCompleteBox.Text = nullable.Value.ToString(
+                instance.AddressTextBox.Text = nullable.Value.ToString(
                     CultureInfo.InvariantCulture);
             } else {
-                instance.AddressTextCompleteBox.Text = null;
+                instance.AddressTextBox.Text = null;
             }
         }
         return nullable;
@@ -132,10 +121,6 @@ public partial class AddressAutoCompleteBox : UserControl {
         }
         if (TryParseMemoryAddress(address, out var parsedAddress)) {
             ParsedAddress = parsedAddress;
-            if (!AddressesSuggestions.Contains(address)) {
-                AddressesSuggestions.Add(address);
-            }
-            this.AddressTextCompleteBox.SelectedItem = address;
         } else {
             ParsedAddress = null;
         }

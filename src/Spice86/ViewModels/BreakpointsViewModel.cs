@@ -41,7 +41,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
         _pauseHandler = pauseHandler;
         _messenger = messenger;
         _state = state;
-        SelectedBreakpointTypeTab = BreakpointTabs[0];
+        _selectedBreakpointTypeTab = BreakpointTabs[0];
     }
 
     public AvaloniaList<TabItemViewModel> BreakpointTabs { get; } = new AvaloniaList<TabItemViewModel>
