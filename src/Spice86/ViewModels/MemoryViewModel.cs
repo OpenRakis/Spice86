@@ -328,8 +328,16 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         Selection? selection = (sender as Selection);
         if (selection != null) {
             SelectionRange = selection.Range;
+            SelectionRangeStartAddress = StartAddress + selection.Range.Start.ByteIndex;
+            SelectionRangeEndAddress = StartAddress + selection.Range.End.ByteIndex;
         }
     }
+
+    [ObservableProperty]
+    private ulong? _selectionRangeStartAddress;
+
+    [ObservableProperty]
+    private ulong? _selectionRangeEndAddress;
 
     [RelayCommand(CanExecute = nameof(IsStructureInfoPresent))]
     public void ShowStructureView() {
