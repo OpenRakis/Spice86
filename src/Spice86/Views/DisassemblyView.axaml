@@ -227,7 +227,7 @@
 							Grid.Row="1"
 							Orientation="Vertical">
 							<userControls:AddressAutoCompleteBox
-								ParsedAddress="{Binding BreakpointAddress}"/>
+								ParsedAddress="{Binding BreakpointAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 						</StackPanel>
 					</Grid>
 					<StackPanel
