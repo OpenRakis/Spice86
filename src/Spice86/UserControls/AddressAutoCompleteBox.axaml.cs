@@ -16,13 +16,11 @@ public partial class AddressAutoCompleteBox : UserControl {
     public AddressAutoCompleteBox() {
         InitializeComponent();
         AddressesSuggestions = new();
-        this.AddressTextCompleteBox.KeyUp += OnKeyUp;
+        this.AddressTextCompleteBox.TextChanged += OnTextChanged;
     }
 
-    private void OnKeyUp(object? sender, KeyEventArgs e) {
-        if(e.Key == Key.Enter) {
-            OnTextChanged(AddressTextCompleteBox.Text);
-        }
+    private void OnTextChanged(object? sender, TextChangedEventArgs e) {
+        OnTextChanged(AddressTextCompleteBox.Text);
     }
 
     private bool TryParseMemoryAddress(string? addressExpression,

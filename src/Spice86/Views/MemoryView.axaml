@@ -52,13 +52,13 @@
 					<userControls:AddressAutoCompleteBox
 						Grid.Row="0" Grid.Column="1"
 						State="{Binding State}"
-						ParsedAddress="{Binding StartAddress}" />
+						ParsedAddress="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
 					<userControls:AddressAutoCompleteBox
 						Grid.Row="1"
 						Grid.Column="1"
 						State="{Binding State}"
-						ParsedAddress="{Binding EndAddress}" />
+						ParsedAddress="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -210,7 +210,7 @@
 								Grid.Row="0"
 								Grid.Column="1"
 								State="{Binding State}"
-								ParsedAddress="{Binding MemoryEditAddress}" />
+								ParsedAddress="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
