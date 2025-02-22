@@ -10,9 +10,6 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
-	<UserControl.Resources>
-		<converters:HexadecimalToDecimalConverter x:Key="HexadecimalToDecimalConverter" />
-	</UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -34,7 +31,7 @@
             <DataGrid.Columns>
                 <DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
                 <DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-                <DataGridTextColumn IsReadOnly="True" Binding="{Binding Address, Converter={StaticResource HexadecimalToDecimalConverter}}" Header="Parameter" />
+                <DataGridTextColumn IsReadOnly="True" Binding="{Binding Address, Converter={StaticResource DecimalToHexadecimalConverter}}" Header="Parameter" />
                 <DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
                 <DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
             </DataGrid.Columns>
@@ -69,30 +66,35 @@
 											  ItemsSource="{Binding MemoryBreakpointTypes}" />
 								</controls:GroupBox>
 								<controls:GroupBox Grid.Column="1" Header="Memory address">
-									<userControls:AddressAutoCompleteBox
-									State="{Binding State}"
-									ParsedAddress="{Binding MemoryAddressValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+									<TextBox
+									Text="{Binding MemoryAddressValue, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+									Margin="5,0,0,0" />
 								</controls:GroupBox>
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
 								 IsVisible="{Binding IsExecutionBreakpointSelected}">
 							<controls:GroupBox Header="Memory address">
-								<userControls:AddressAutoCompleteBox
-									State="{Binding State}"
-									ParsedAddress="{Binding ExecutionAddressValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+								<TextBox
+									Text="{Binding ExecutionAddressValue,
+									Mode=TwoWay,
+									UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
 								 IsVisible="{Binding IsInterruptBreakpointSelected}">
 							<controls:GroupBox Header="Interrupt Number">
-								<userControls:HexadecimalTextBox ParsedHexadecimalNumber="{Binding InterruptNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+								<NumericUpDown Text="{Binding InterruptNumber,
+												 Mode=TwoWay,
+												 UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="I/O Port"
 								 IsVisible="{Binding IsIoPortBreakpointSelected}">
 							<controls:GroupBox Header="I/O Port Number">
-								<userControls:HexadecimalTextBox ParsedHexadecimalNumber="{Binding IoPortNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+								<NumericUpDown
+									Text="{Binding IoPortNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<StackPanel

@@ -49,16 +49,14 @@
 				</StackPanel>
 				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
 					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
-					<userControls:AddressAutoCompleteBox
+					<TextBox
 						Grid.Row="0" Grid.Column="1"
-						State="{Binding State}"
-						ParsedAddress="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
-					<userControls:AddressAutoCompleteBox
+					<TextBox
 						Grid.Row="1"
 						Grid.Column="1"
-						State="{Binding State}"
-						ParsedAddress="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -210,11 +208,10 @@
 								Grid.Row="0"
 								Grid.Column="0"
 								Content="Memory Address:" />
-							<userControls:AddressAutoCompleteBox
+							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								State="{Binding State}"
-								ParsedAddress="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+								Text="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
@@ -273,18 +270,17 @@
 									Grid.Row="1"
 									Grid.Column="0"
 									Content="Breakpoint Range End:" />
-								<AutoCompleteBox
+								<TextBox
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeStartAddress}"
-									Watermark="linear or segmented address" />
-								<AutoCompleteBox
+									Text="{Binding BreakpointRangeStartAddress}" />
+								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeEndAddress}"
-									Watermark="optional" />
+									Watermark="optional"
+									Text="{Binding BreakpointRangeEndAddress}" />
 							</Grid>
 							<Label
 								Grid.Row="1"
