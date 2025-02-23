@@ -43,7 +43,7 @@ public class DosFileManagerTests {
         DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
 
         // Act
-        var result = dosFileManager.OpenFile("C.txt", 1);
+        DosFileOperationResult result = dosFileManager.OpenFile("C.txt", 1);
 
         // Assert
         result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));
