@@ -20,7 +20,7 @@ public class PicTests {
     private const byte NonSpecificEOICommand = 0b0010_0000;
 
     public PicTests() {
-        var loggerMock = Substitute.For<ILoggerService>();
+        ILoggerService loggerMock = Substitute.For<ILoggerService>();
         _pic = new Pic(loggerMock);
     }
 

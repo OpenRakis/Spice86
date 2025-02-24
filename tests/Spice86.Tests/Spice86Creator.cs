@@ -16,7 +16,7 @@ public class Spice86Creator {
     private readonly long _maxCycles;
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000) {
+        long maxCycles = 100000, bool failOnUnhandledPort = false) {
         _configuration = new Configuration {
             Exe = $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
@@ -30,7 +30,8 @@ public class Spice86Creator {
             // Use instructions per second based timer for predictability if timer is enabled
             InstructionsPerSecond = enablePit ? 100000 : null,
             CfgCpu = enableCfgCpu,
-            AudioEngine = AudioEngine.Dummy
+            AudioEngine = AudioEngine.Dummy,
+            FailOnUnhandledPort = failOnUnhandledPort
         };
         _maxCycles = maxCycles;
     }

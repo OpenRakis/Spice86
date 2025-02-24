@@ -1,7 +1,5 @@
 namespace Spice86.Tests.Video;
 
-using FluentAssertions;
-
 using Spice86.Core.Emulator.Devices.Video.Registers;
 
 using Xunit;
@@ -22,7 +20,7 @@ public class DacTest {
         for (byte i = 0; i < byte.MaxValue; i++) {
             byte expected = (byte)(i & 0b00111111);
             byte result = dac.DataRegister;
-            result.Should().Be(expected, $"The same 6 low bits of 0x{i:X2} that were written should be read back");
+            Assert.Equal(expected, result);
         }
     }
 
@@ -37,6 +35,6 @@ public class DacTest {
         dac.DataRegister = 0b111111;
 
         // Assert
-        dac.ArgbPalette[0].Should().Be(0xFFFFFFFF);
+        Assert.Equal(0xFFFFFFFF, dac.ArgbPalette[0]);
     }
 }
