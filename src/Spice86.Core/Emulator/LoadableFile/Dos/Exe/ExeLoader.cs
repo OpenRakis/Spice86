@@ -80,7 +80,7 @@ public class ExeLoader : DosFileLoader {
     /// <param name="startSegment">The starting segment for the program.</param>
     private void LoadExeFileInMemory(ExeFile exeFile, ushort startSegment) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
-        _memory.LoadData(physicalStartAddress, exeFile.ProgramImage);
+        _memory.LoadData(physicalStartAddress, exeFile.ProgramImage, (int) exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
             uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
