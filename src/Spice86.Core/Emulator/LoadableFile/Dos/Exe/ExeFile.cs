@@ -21,9 +21,10 @@ public class ExeFile : MemoryBasedDataStructure {
     public string Signature => GetZeroTerminatedString(0, 2);
 
     /// <summary>
-    /// Number of extra bytes needed by the program.
+    /// Number of bytes in the final page (all previous pages have 512 Bytes).
+    /// If 0, all the 512 Bytes of the final page are also filled.
     /// </summary>
-    public ushort ExtraBytes => UInt16[0x02];
+    public ushort LenFinalPage => UInt16[0x02];
 
     /// <summary>
     /// Number of pages in the executable file.
@@ -111,7 +112,16 @@ public class ExeFile : MemoryBasedDataStructure {
     /// <summary>
     /// Size of the program code in the executable file.
     /// </summary>
-    public uint ProgramSize => ByteReaderWriter.Length - HeaderSizeInBytes;
+    public uint ProgramSize {
+        get {
+            uint result = Pages * 512U;
+            if (LenFinalPage != 0) {
+                result = result - 512 + LenFinalPage;
+            }
+            result -= HeaderSizeInBytes;
+            return result;
+        }
+    }
 
     /// <summary>
     /// True when represented EXE is valid.
