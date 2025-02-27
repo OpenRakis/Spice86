@@ -25,11 +25,28 @@ public class GdbCommandBreakpointHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
-    public GdbCommandBreakpointHandler(EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
-        _loggerService = loggerService;
+    public GdbCommandBreakpointHandler(
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
+        _pauseHandler.Pausing += OnPauseFromEmulator;
         _gdbIo = gdbIo;
+    }
+
+    /// <summary>
+    /// Handles a pause coming event from the emulator UI, so GDB client can inspect the state of the emulator again.
+    /// </summary>
+    private void OnPauseFromEmulator() {
+        if(!_resumeEmulatorOnCommandEnd) {
+            return;
+        }
+        if(_loggerService.Equals(LogEventLevel.Debug)) {
+            _loggerService.Debug("Notification of emulator pause from the UI to the GDB client.");
+        }
+        _resumeEmulatorOnCommandEnd = false;
+        SendS05StringToGdb();
     }
 
     /// <summary>
@@ -81,12 +98,16 @@ public class GdbCommandBreakpointHandler {
         _pauseHandler.RequestPause($"Gdb breakpoint {breakPoint.BreakPointType} hit");
         _resumeEmulatorOnCommandEnd = false;
         try {
-            _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
+            SendS05StringToGdb();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "IOException while sending breakpoint info");
             }
         }
+    }
+
+    private void SendS05StringToGdb() {
+        _gdbIo.SendResponse(_gdbIo.GenerateResponse("S05"));
     }
 
     /// <summary>
