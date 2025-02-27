@@ -175,11 +175,4 @@ public sealed class GdbServer : IDisposable {
     private void OnConnect() {
         _waitFirstConnectionHandle?.Set();
     }
-
-    /// <summary>
-    /// Executes a single CPU instruction.
-    /// </summary>
-    public void StepInstruction() {
-        _gdbCommandHandler?.Step();
-    }
 }
