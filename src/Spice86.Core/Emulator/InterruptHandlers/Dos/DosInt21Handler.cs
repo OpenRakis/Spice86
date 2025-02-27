@@ -67,10 +67,6 @@ public class DosInt21Handler : InterruptHandler {
         FillDispatchTable();
     }
 
-    public override void Run(int index) {
-        base.Run(index);
-    }
-
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
         AddAction(0x02, DisplayOutput);
