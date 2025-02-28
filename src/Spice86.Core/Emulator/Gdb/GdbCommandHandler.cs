@@ -67,11 +67,6 @@ public class GdbCommandHandler {
     }
 
     /// <summary>
-    /// Executes a single CPU instruction.
-    /// </summary>
-    public void Step() => _gdbCommandBreakpointHandler.Step();
-
-    /// <summary>
     /// Runs a custom GDB command.
     /// </summary>
     /// <param name="command">The custom GDB command string</param>
@@ -99,7 +94,7 @@ public class GdbCommandHandler {
                 'P' => _gdbCommandRegisterHandler.WriteRegister(commandContent),
                 'm' => _gdbCommandMemoryHandler.ReadMemory(commandContent),
                 'M' => _gdbCommandMemoryHandler.WriteMemory(commandContent),
-                'T' => HandleThreadALive(),
+                'T' => HandleThreadAlive(),
                 'v' => ProcessVPacket(commandContent),
                 's' => _gdbCommandBreakpointHandler.Step(),
                 'z' => _gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
@@ -125,7 +120,7 @@ public class GdbCommandHandler {
         return _gdbIo.GenerateResponse("");
     }
 
-    private string HandleThreadALive() {
+    private string HandleThreadAlive() {
         return _gdbIo.GenerateResponse("OK");
     }
 
