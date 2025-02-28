@@ -5,7 +5,7 @@ using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-
+using Iced.Intel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -181,17 +181,24 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepOver() {
-        if (SelectedInstruction is null) {
+        CpuInstructionInfo? instruction = _instructionsDecoder.DecodeInstructions(_state.IpPhysicalAddress, numberOfInstructionsShown: 1).SingleOrDefault();
+        if (instruction == null) {
             return;
         }
-        long nextInstructionAddressInListing = SelectedInstruction.Address + SelectedInstruction.Length;
+
+        // Only step over instructions that return
+        if (instruction.FlowControl is not FlowControl.Call and not FlowControl.IndirectCall and not FlowControl.Interrupt) {
+            StepInto();
+            return;
+        }
+        long nextInstructionAddressInListing = instruction.Address + instruction.Length;
         _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
            address: nextInstructionAddressInListing,
            breakPointType: BreakPointType.CPU_EXECUTION_ADDRESS,
            isRemovedOnTrigger: true,
            onReached: (_) => {
-                Pause($"Step over execution breakpoint was reached at address {nextInstructionAddressInListing}");
-            }), on: true);
+               Pause($"Step over execution breakpoint was reached at address {nextInstructionAddressInListing}");
+           }), on: true);
         _pauseHandler.Resume();
     }
 
@@ -216,7 +223,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         List<CpuInstructionInfo> instructionInfo = _instructionsDecoder.
             DecodeInstructions(_state.IpPhysicalAddress, 1);
         if(instructionInfo.Count != 0 &&
-            instructionInfo[0].FlowControl != Iced.Intel.FlowControl.Next) {
+            instructionInfo[0].FlowControl != FlowControl.Next) {
             _didCsIpGoOutOfCurrentListing = true;
         }
         _breakpointsViewModel.AddUnconditionalBreakpoint(
