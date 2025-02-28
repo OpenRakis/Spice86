@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.VM;
 /// Base class for counter activators
 /// </summary>
 public abstract class CounterActivator {
+    protected const int MinTicksBetweenActivation = 100;
     private readonly IPauseHandler _pauseHandler;
 
     /// <summary>
@@ -67,7 +68,7 @@ public abstract class CounterActivator {
         return Multiplier * desiredFrequency;
     }
 
-    private void UpdateFrequency() {
+    protected void UpdateFrequency() {
         double computedFrequency = ComputeActualFrequency(Frequency);
         if (computedFrequency == 0) {
             return;

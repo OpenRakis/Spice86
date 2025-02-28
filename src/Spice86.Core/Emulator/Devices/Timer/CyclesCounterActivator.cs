@@ -22,6 +22,8 @@ public class CyclesCounterActivator : CounterActivator {
     public CyclesCounterActivator(State state, IPauseHandler pauseHandler, long instructionsPerSecond, double multiplier) : base (pauseHandler, multiplier) {
         _state = state;
         _instructionsPerSecond = instructionsPerSecond;
+        // Once everything is setup, update the frequency
+        UpdateFrequency();
     }
 
     /// <inheritdoc />
@@ -44,5 +46,8 @@ public class CyclesCounterActivator : CounterActivator {
     /// <inheritdoc />
     protected override void UpdateNonZeroFrequency(double desiredFrequency) {
         _cyclesBetweenActivations = (long)(_instructionsPerSecond / desiredFrequency);
+        if(_cyclesBetweenActivations < MinTicksBetweenActivation) {
+            _cyclesBetweenActivations = MinTicksBetweenActivation;
+        }
     }
 }
