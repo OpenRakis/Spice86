@@ -20,7 +20,7 @@ public class TimeCounterActivator : CounterActivator {
     public override bool IsActivated {
         get {
             _ticks++;
-            if (_ticks % 100 != 0) {
+            if (_ticks % MinTicksBetweenActivation != 0) {
                 // System.Diagnostics.Stopwatch.GetTimestamp is quite slow, let's not call it every time.
                 return false;
             }
