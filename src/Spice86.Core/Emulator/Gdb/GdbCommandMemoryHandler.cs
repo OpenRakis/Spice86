@@ -81,19 +81,15 @@ public class GdbCommandMemoryHandler {
         // read the bytes from the raw command as GDB does not send them as hex
         List<byte> rawCommand = _gdbIo.RawCommand;
 
-        // Extract the original hex sent by GDB, read from
-        // 3: +$q
-        // variable: header
-        // 2: ;
-        // variable 2 hex strings
-        int patternStartIndex = 3 + "Search:memory:".Length + 2 + parameters[0].Length + parameters[1].Length;
-        List<byte> patternBytesList = rawCommand.GetRange(patternStartIndex, rawCommand.Count - 1);
+        // Extract the original hex sent by GDB, read from rawCommand
+        int patternStartIndex = $"+$qSearch:memory:{parameters[0]};{parameters[1]};".Length;
+        int patternEndIndex = rawCommand.Count - patternStartIndex - "#".Length;
+        List<byte> patternBytesList = rawCommand.GetRange(patternStartIndex, patternEndIndex);
         uint? address = _memory.SearchValue(start, (int)end, patternBytesList);
         if (address == null) {
             return _gdbIo.GenerateResponse("0");
         }
-
-        return _gdbIo.GenerateResponse($"1,{_gdbFormatter.FormatValueAsHex32(address.Value)}");
+        return _gdbIo.GenerateResponse($"1,{address.Value:X}");
     }
 
     /// <summary>
