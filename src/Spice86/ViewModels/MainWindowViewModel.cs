@@ -288,12 +288,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             using ILockedFramebuffer pixels = Bitmap.Lock();
             var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
             RenderScreen.Invoke(this, uiRenderEventArgs);
+            _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
         } finally {
             if (!_disposed) {
                 _drawingSemaphoreSlim?.Release();
             }
         }
-        _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Render);
     }
 
     internal void StartEmulator() {
