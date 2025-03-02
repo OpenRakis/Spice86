@@ -1,12 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 
-using Spice86.Core.Backend.Audio;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 
 /// <summary>
@@ -14,23 +14,21 @@ using System.Diagnostics;
 /// </summary>
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
-    
-    /// <summary>
-    /// Value into which the input frequency is divided to get the frequency in Hz.
-    /// </summary>
-    private const double FrequencyFactor = 1193180;
+
     private readonly SoundChannel _soundChannel;
 
     private readonly int _outputSampleRate = 48000;
     private readonly int _ticksPerSample;
-    private readonly LatchedUInt16 _frequencyRegister;
+    private readonly Pit8254Counter _pit8254Counter;
     private readonly Stopwatch _durationTimer = new();
-    private readonly ConcurrentQueue<QueuedNote> _queuedNotes = new();
-    private readonly object _threadStateLock = new();
+    private QueuedNote _currentNote;
     private SpeakerControl _controlRegister = SpeakerControl.UseTimer;
-    private Task? _generateWaveformTask;
-    private readonly CancellationTokenSource _cancelGenerateWaveform = new();
     private int _currentPeriod;
+
+    private readonly Thread _playbackThread;
+    private bool _playbackStarted;
+    private volatile bool _endPlayback;
+    private readonly IPauseHandler _pauseHandler;
 
     private bool _disposed;
 
@@ -38,29 +36,40 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// Initializes a new instance of <see cref="PcSpeaker"/>
     /// </summary>
     /// <param name="softwareMixer">The software mixer for sound channels.</param>
+    /// <param name="pit8254Counter">PIT8254 counter backing up the PC speaker.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
+    /// <param name="pauseHandler">The handler for the emulation pause state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(SoftwareMixer softwareMixer, State state, IOPortDispatcher ioPortDispatcher,
-        ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public PcSpeaker(SoftwareMixer softwareMixer,
+        State state,
+        Pit8254Counter pit8254Counter,
+        IOPortDispatcher ioPortDispatcher,
+        IPauseHandler pauseHandler,
+        ILoggerService loggerService,
+        bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
-        _frequencyRegister = new();
-        _frequencyRegister.ValueChanged += FrequencyChanged;
+        _pit8254Counter = pit8254Counter;
+        pit8254Counter.SettingChangedEvent += OnTimerSettingChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
         InitPortHandlers(ioPortDispatcher);
+        _pauseHandler = pauseHandler;
+        _playbackThread = new Thread(AudioPlayback) {
+            Name = nameof(PcSpeaker),
+        };
     }
 
     /// <summary>
     /// Gets the current frequency in Hz.
     /// </summary>
-    private double Frequency => FrequencyFactor / _frequencyRegister;
+    private double Frequency => _pit8254Counter.Activator.Frequency;
 
     /// <summary>
     /// Gets the current period in samples.
     /// </summary>
     private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
-    
+
     /// <summary>
     /// Fills a buffer with silence.
     /// </summary>
@@ -71,42 +80,43 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// Invoked when the speaker has been turned off.
     /// </summary>
     private void SpeakerDisabled() {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PC Speaker disabled");
+        }
         EnqueueCurrentNote();
         _currentPeriod = 0;
     }
-    
+
     /// <summary>
     /// Invoked when the frequency has changed.
     /// </summary>
     /// <param name="source">Source of the event.</param>
     /// <param name="e">Unused EventArgs instance.</param>
-    private void FrequencyChanged(object? source, EventArgs e) {
+    private void OnTimerSettingChanged(object? source, EventArgs e) {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("PC Speaker frequency changed to {Frequency}", _pit8254Counter.Activator.Frequency);
+        }
         EnqueueCurrentNote();
 
         _durationTimer.Reset();
         _durationTimer.Start();
         _currentPeriod = PeriodInSamples;
     }
-    
+
     /// <summary>
     /// Enqueues the current note.
     /// </summary>
     private void EnqueueCurrentNote() {
-        if (_durationTimer.IsRunning && _currentPeriod != 0) {
-            _durationTimer.Stop();
-
-            int periodDuration = _ticksPerSample * _currentPeriod;
-            int repetitions = (int)(_durationTimer.ElapsedTicks / periodDuration);
-            _queuedNotes.Enqueue(new QueuedNote(_currentPeriod, repetitions));
-
-            lock (_threadStateLock) {
-                if (_generateWaveformTask == null || _generateWaveformTask.IsCompleted) {
-                    _generateWaveformTask = Task.Run(GenerateWaveformAsync);
-                }
-            }
+        if (!_durationTimer.IsRunning || _currentPeriod == 0) {
+            return;
         }
+        _durationTimer.Stop();
+
+        int periodDuration = _ticksPerSample * _currentPeriod;
+        int repetitions = (int)(_durationTimer.ElapsedTicks / periodDuration);
+        _currentNote = new QueuedNote(_currentPeriod, repetitions);
     }
-    
+
     /// <summary>
     /// Fills a buffer with a square wave of the current frequency.
     /// </summary>
@@ -125,64 +135,36 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
 
         return period;
     }
-    
-    /// <summary>
-    /// Generates the PC speaker waveform.
-    /// </summary>
-    private async Task GenerateWaveformAsync() {
-        FillWithSilence();
 
+    private void AudioPlayback() {
         byte[] buffer = new byte[4096];
-        const bool expandToStereo = true;
         byte[] writeBuffer = new byte[buffer.Length * 2];
 
-        int idleCount = 0;
+        while (!_endPlayback) {
+            _pauseHandler.WaitIfPaused();
+            if (!IsEnabled(_controlRegister)) {
+                continue;
+            }
+            int samples = GenerateSquareWave(buffer, _currentNote.Period);
+            int periods = _currentNote.PeriodCount;
 
-        while (idleCount < 10000) {
-            if (_queuedNotes.TryDequeue(out QueuedNote note)) {
-                int samples = GenerateSquareWave(buffer, note.Period);
-                int periods = note.PeriodCount;
+            // While the original PC speaker was mono, the emulator output is stereo.
+            // So we have to duplicate the signal.
+            ChannelAdapter.MonoToStereo(buffer.AsSpan(0, samples), writeBuffer.AsSpan(0, samples * 2));
+            samples *= 2;
 
-                if (expandToStereo) {
-                    ChannelAdapter.MonoToStereo(buffer.AsSpan(0, samples), writeBuffer.AsSpan(0, samples * 2));
-                    samples *= 2;
-                }
-
-                while (periods > 0) {
-                    _soundChannel.Render(writeBuffer.AsSpan(0, samples));
-                    periods--;
-                }
-
-                GenerateSilence(buffer);
-                idleCount = 0;
-            } else {
-                float[] floatArray = new float[buffer.Length];
-
-                for (int i = 0; i < buffer.Length; i++) {
-                    floatArray[i] = buffer[i];
-                }
-
-
-                while (_soundChannel.Render(floatArray.AsSpan()) > 0) {
-                    await Task.Yield();
-                }
-
-                await Task.Delay(5, _cancelGenerateWaveform.Token);
-                idleCount++;
+            while (periods > 0) {
+                _soundChannel.Render(writeBuffer.AsSpan(0, samples));
+                periods--;
             }
 
-            _cancelGenerateWaveform.Token.ThrowIfCancellationRequested();
+            GenerateSilence(buffer);
         }
-    }
-
-    private void FillWithSilence() {
-        Span<float> buffer = stackalloc float[4096];
-        _soundChannel.Render(buffer);
     }
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
-        if (port != 0x61) {
+        if (port != PcSpeakerPortNumber) {
             return base.ReadByte(port);
         }
 
@@ -204,25 +186,23 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             _loggerService.Verbose("PC Speaker set value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
         }
 
-        switch (port)
-        {
-            case 0x61:
-            {
-                SpeakerControl oldValue = _controlRegister;
-                _controlRegister = (SpeakerControl)value;
-                if ((oldValue & SpeakerControl.SpeakerOn) != 0 && (_controlRegister & SpeakerControl.SpeakerOn) == 0) {
-                    SpeakerDisabled();
-                }
-
-                break;
+        if (port == PcSpeakerPortNumber) {
+            SpeakerControl newValue = (SpeakerControl)value;
+            if (IsEnabled(_controlRegister) && !IsEnabled(newValue)) {
+                SpeakerDisabled();
+            } else if (!_playbackStarted) {
+                _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name);
+                _playbackStarted = true;
+                _playbackThread.Start();
             }
-            case 0x42:
-                _frequencyRegister.WriteByte(value);
-                break;
-            default:
-                base.WriteByte(port, value);
-                break;
+            _controlRegister = newValue;
+        } else {
+            base.WriteByte(port, value);
         }
+    }
+
+    private bool IsEnabled(SpeakerControl registerValue) {
+        return (registerValue & SpeakerControl.SpeakerOn) != 0 && (registerValue & SpeakerControl.UseTimer) != 0;
     }
 
     /// <inheritdoc />
@@ -232,11 +212,12 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
 
     private void Dispose(bool disposing) {
-        if(!_disposed){
-            if(disposing) {
-                _frequencyRegister.ValueChanged -= FrequencyChanged;
-                lock (_threadStateLock) {
-                    _cancelGenerateWaveform.Cancel();
+        if (!_disposed) {
+            if (disposing) {
+                _pit8254Counter.SettingChangedEvent -= OnTimerSettingChanged;
+                _endPlayback = true;
+                if (_playbackThread.IsAlive) {
+                    _playbackThread.Join();
                 }
             }
             _disposed = true;
