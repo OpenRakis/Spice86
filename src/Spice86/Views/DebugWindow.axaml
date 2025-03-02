@@ -82,14 +82,29 @@
 						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F3" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
-				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
-					<TabControl.ItemTemplate>
-						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-							<TabItem Header="{Binding Header}">
-								<ContentPresenter Content="{Binding}"/>
-							</TabItem>
-						</DataTemplate>
-					</TabControl.ItemTemplate>
+				<TabControl>
+					<TabItem Header="Classic View">
+						<TabControl ItemsSource="{Binding DisassemblyViewModels}">
+							<TabControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+									<TabItem Header="{Binding Header}">
+										<ContentPresenter Content="{Binding}"/>
+									</TabItem>
+								</DataTemplate>
+							</TabControl.ItemTemplate>
+						</TabControl>
+					</TabItem>
+					<TabItem Header="Modern View">
+						<TabControl ItemsSource="{Binding ModernDisassemblyViewModels}">
+							<TabControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:ModernDisassemblyViewModel}">
+									<TabItem Header="{Binding Header}">
+										<ContentPresenter Content="{Binding}"/>
+									</TabItem>
+								</DataTemplate>
+							</TabControl.ItemTemplate>
+						</TabControl>
+					</TabItem>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F4">

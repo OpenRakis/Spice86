@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.ModernDisassemblyView"
+             x:DataType="viewModels:ModernDisassemblyViewModel">
+    <UserControl.Resources>
+        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+        <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
+
+        <!-- Context Menu for Instructions -->
+        <ContextMenu x:Key="InstructionContextMenu">
+            <MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
+            <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
+            <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+            <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
+            <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
+            <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
+        </ContextMenu>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Top toolbar with improved layout and organization -->
+        <Grid Grid.Row="0" IsVisible="{Binding IsPaused}" Margin="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Navigation Controls -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP">
+                    <PathIcon Data="{StaticResource pin_regular}" Width="16" Height="16" />
+                </Button>
+                <Button Command="{Binding UpdateDisassemblyCommand}" ToolTip.Tip="Refresh view">
+                    <PathIcon Data="{StaticResource arrow_sync_regular}" Width="16" Height="16" />
+                </Button>
+                <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)">
+                    <PathIcon Data="{StaticResource arrow_step_in_regular}" Width="16" Height="16" />
+                </Button>
+                <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)">
+                    <PathIcon Data="{StaticResource arrow_step_over_regular}" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+
+            <!-- Address Input -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+                <TextBlock VerticalAlignment="Center" Text="Address:" />
+                <TextBox Width="120" Text="{Binding CurrentlyFocusedAddress, StringFormat=0x{0:X}}" />
+                <Button Command="{Binding UpdateDisassemblyCommand}" Content="Go" />
+            </StackPanel>
+
+            <!-- Function Selection -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" IsVisible="{Binding IsFunctionInformationProvided}">
+                <TextBlock VerticalAlignment="Center" Text="Function:" />
+                <ComboBox Width="200"
+                          ItemsSource="{Binding Functions}"
+                          SelectedItem="{Binding SelectedFunction}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Command="{Binding GoToFunctionCommand}" CommandParameter="{Binding SelectedFunction}" Content="Go" />
+            </StackPanel>
+
+            <!-- View Options -->
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                <Button Command="{Binding NewDisassemblyViewCommand}" ToolTip.Tip="New view">
+                    <PathIcon Data="{StaticResource document_add_regular}" Width="16" Height="16" />
+                </Button>
+                <Button Command="{Binding OpenClassicViewCommand}" ToolTip.Tip="Open classic view">
+                    <PathIcon Data="{StaticResource document_regular}" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Loading indicator -->
+        <progRing:ProgressRing Grid.Row="1"
+                               Width="40"
+                               Height="40"
+                               IsActive="{Binding IsLoading}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource SystemAccentColor}" />
+
+        <!-- Disassembly View with Scrolling -->
+        <ScrollViewer Grid.Row="1"
+                      IsVisible="{Binding IsPaused}"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      Name="DisassemblyScrollViewer"
+                      Padding="0,0,16,0">
+            <ItemsRepeater ItemsSource="{Binding DebuggerLines.Values}" Name="DisassemblyItemsRepeater">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Vertical" Spacing="0" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate>
+                        <ContentControl PointerPressed="Instruction_PointerPressed"
+                                        FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
+                                        Background="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightBackground}}"
+                                        FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToBold}}"
+                                        Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}">
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*">
+                                <!-- Breakpoint indicator -->
+                                <Ellipse Grid.Column="0"
+                                         Width="10"
+                                         Height="10"
+                                         Margin="4,0,4,0"
+                                         Fill="{Binding Breakpoints, Converter={StaticResource BreakpointToBrushConverter}}"
+                                         VerticalAlignment="Center" />
+
+                                <!-- Address -->
+                                <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress, Converter={StaticResource SegmentedAddressConverter}}"
+                                           Margin="0,0,8,0" />
+
+                                <!-- Bytes -->
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding ByteString}"
+                                           Margin="8,0,0,0" />
+
+                                <!-- Instruction -->
+                                <TextBlock Grid.Column="3" Text="{Binding Disassembly}" />
+
+
+                            </Grid>
+                        </ContentControl>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

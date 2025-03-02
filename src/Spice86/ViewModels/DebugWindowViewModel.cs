@@ -22,7 +22,8 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
-    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
+    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>>,
+    IRecipient<AddViewModelMessage<ModernDisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<ModernDisassemblyViewModel>> {
 
     private readonly IMessenger _messenger;
 
@@ -49,6 +50,9 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private AvaloniaList<DisassemblyViewModel> _disassemblyViewModels = new();
 
     [ObservableProperty]
+    private AvaloniaList<ModernDisassemblyViewModel> _modernDisassemblyViewModels = new();
+
+    [ObservableProperty]
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
     [ObservableProperty]
@@ -72,6 +76,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
+        messenger.Register<AddViewModelMessage<ModernDisassemblyViewModel>>(this);
+        messenger.Register<RemoveViewModelMessage<ModernDisassemblyViewModel>>(this);
         _messenger = messenger;
         BreakpointsViewModel = new(emulatorBreakpointsManager);
         StatusMessageViewModel = new(_messenger);
@@ -79,6 +85,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
+        
+        // Create the classic disassembly view
         DisassemblyViewModel disassemblyVm = new(
             emulatorBreakpointsManager,
             memory, cpuState, 
@@ -87,6 +95,17 @@ public partial class DebugWindowViewModel : ViewModelBase,
             BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
+        
+        // Create the modern disassembly view
+        ModernDisassemblyViewModel modernDisassemblyVm = new(
+            emulatorBreakpointsManager,
+            memory, cpuState, 
+            functionsInformation.ToDictionary(x =>
+                x.Key.ToPhysical(), x => x.Value),
+            BreakpointsViewModel, pauseHandler,
+            uiDispatcher, messenger, textClipboard);
+        ModernDisassemblyViewModels.Add(modernDisassemblyVm);
+        
         PaletteViewModel = new(argbPalette, uiDispatcher);
         SoftwareMixerViewModel = new(softwareMixer);
         VideoCardViewModel = new(vgaRenderer, videoState);
@@ -106,4 +125,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
     public void Receive(AddViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Add(message.ViewModel);
     public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
     public void Receive(RemoveViewModelMessage<MemoryViewModel> message) => MemoryViewModels.Remove(message.ViewModel);
+    public void Receive(AddViewModelMessage<ModernDisassemblyViewModel> message) => ModernDisassemblyViewModels.Add(message.ViewModel);
+    public void Receive(RemoveViewModelMessage<ModernDisassemblyViewModel> message) => ModernDisassemblyViewModels.Remove(message.ViewModel);
 }

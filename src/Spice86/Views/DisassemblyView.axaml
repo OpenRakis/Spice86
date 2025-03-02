@@ -100,7 +100,7 @@
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
 				<DataGridTextColumn
-					Binding="{Binding Address}">
+					Binding="{Binding SegmentedAddress}">
 					<DataGridTextColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
 							<Setter Property="FontWeight"
