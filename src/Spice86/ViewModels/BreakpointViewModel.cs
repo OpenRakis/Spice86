@@ -14,14 +14,14 @@ public partial class BreakpointViewModel : ViewModelBase
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        long addressOrIoPortOrCyclesOrInterruptNumber,
+        long trigger,
         BreakPointType type,
         bool isRemovedOnTrigger,
         Action onReached,
         string comment = "")
     {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        Address = addressOrIoPortOrCyclesOrInterruptNumber;
+        Address = trigger;
         Type = type;
         IsRemovedOnTrigger = isRemovedOnTrigger;
         if (IsRemovedOnTrigger)
