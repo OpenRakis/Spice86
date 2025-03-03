@@ -99,6 +99,7 @@ public class GdbCommandHandler {
                 's' => _gdbCommandBreakpointHandler.Step(),
                 'z' => _gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
                 'Z' => _gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
+                '!' => DeclineExtendedMode(),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -112,6 +113,11 @@ public class GdbCommandHandler {
                 _pauseHandler.Resume();
             }
         }
+    }
+
+    private string DeclineExtendedMode() {
+        // Respond with an error response to indicate that extended mode is not supported.
+        return _gdbIo.GenerateResponse("E01"); // E01 is a generic error code.
     }
 
     private string Detach() {
