@@ -1,43 +1,81 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
-			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-			 xmlns:controls="clr-namespace:Spice86.Controls"
-			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:Class="Spice86.Views.CpuView"
-			 x:DataType="viewModels:CpuViewModel">
-	<ScrollViewer>
-		<Grid ColumnDefinitions="*,*,*">
-			<controls:GroupBox Grid.Column="0" Header="Registers and misc">
-				<pgc:PropertyGrid
-					DataContext="{CompiledBinding State}"
-					ShowTitle="False">
-					<TextElement.FontFamily>
-						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
-					</TextElement.FontFamily>
-				</pgc:PropertyGrid>
-			</controls:GroupBox>
-			<controls:GroupBox Grid.Column="1" Header="Flag Registers">
-				<pgc:PropertyGrid
-					DataContext="{CompiledBinding Flags}"
-					ShowTitle="False">
-					<TextElement.FontFamily>
-						<OnPlatform Default="{StaticResource RobotoMonoFont}" />
-					</TextElement.FontFamily>
-				</pgc:PropertyGrid>
-			</controls:GroupBox>
-			<Expander Grid.Column="2" Header="Some register addresses as ASCII strings" IsExpanded="True">
-				<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
-					<Label Grid.Row="0" Grid.Column="0">ESI:</Label>
-					<TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding EsiString}" />
-					<Label Grid.Row="1" Grid.Column="0">EDI:</Label>
-					<TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding EdiString}" />
-					<Label Grid.Row="2" Grid.Column="0">ESP:</Label>
-					<TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding EspString}" />
-				</Grid>
-			</Expander>
-		</Grid>
-	</ScrollViewer>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:controls="clr-namespace:Spice86.Controls"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.CpuView"
+             x:DataType="viewModels:CpuViewModel">
+    <UserControl.Resources>
+        <converters:UIntToAsciiConverter x:Key="UIntToAsciiConverter" />
+    </UserControl.Resources>
+    <ScrollViewer>
+        <Grid ColumnDefinitions="*,*,*">
+            <controls:GroupBox Grid.Column="0" Header="Registers and misc">
+                <pgc:PropertyGrid
+                    DataContext="{CompiledBinding State}"
+                    ShowTitle="False">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                </pgc:PropertyGrid>
+            </controls:GroupBox>
+            <controls:GroupBox Grid.Column="1" Header="Flag Registers">
+                <pgc:PropertyGrid
+                    DataContext="{CompiledBinding Flags}"
+                    ShowTitle="False">
+                    <TextElement.FontFamily>
+                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                    </TextElement.FontFamily>
+                </pgc:PropertyGrid>
+            </controls:GroupBox>
+            <Expander Grid.Column="2" Header="32 bit regs as ASCII strings" IsExpanded="True">
+				<WrapPanel Orientation="Vertical">
+					<controls:GroupBox Header="As addresses to zero-terminated ASCII strings">
+						<WrapPanel Orientation="Vertical">
+							<Label>ESI:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EsiString, Mode=OneWay}" />
+							<Label>EDI:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EdiString, Mode=OneWay}" />
+							<Label>ESP:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EspString, Mode=OneWay}" />
+							<Label>EAX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EaxString, Mode=OneWay}" />
+							<Label>EBX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EbxString, Mode=OneWay}" />
+							<Label>ECX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EcxString, Mode=OneWay}" />
+							<Label>EDX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EdxString, Mode=OneWay}" />
+							<Label>EBP:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EbpString, Mode=OneWay}" />
+						</WrapPanel>
+					</controls:GroupBox>
+					<controls:GroupBox Header="As direct values of ASCII strings">
+						<WrapPanel Orientation="Vertical">
+							<Label>ESI:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ESI, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>EDI:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EDI, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>ESP:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ESP, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>EAX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EAX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>EBX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EBX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>ECX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ECX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>EDX:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EDX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+							<Label>EBP:</Label>
+							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EBP, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
+						</WrapPanel>
+					</controls:GroupBox>
+				</WrapPanel>
+            </Expander>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

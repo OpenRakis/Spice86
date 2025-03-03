@@ -71,11 +71,31 @@ public partial class CpuViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _espString;
 
+    [ObservableProperty]
+    private string? _eaxString;
+
+    [ObservableProperty]
+    private string? _ebpString;
+
+    [ObservableProperty]
+    private string? _ebxString;
+
+    [ObservableProperty]
+    private string? _ecxString;
+
+    [ObservableProperty]
+    private string? _edxString;
+
     private void UpdateCpuState(State state) {
         state.CopyToStateInfo(this.State);
         state.CopyFlagsToStateInfo(this.Flags);
         EspString = _memory.GetZeroTerminatedString(State.ESP, 32);
         EsiString = _memory.GetZeroTerminatedString(State.ESI, 32);
         EdiString = _memory.GetZeroTerminatedString(State.EDI, 32);
+        EbxString = _memory.GetZeroTerminatedString(State.EBX, 32);
+        EbpString = _memory.GetZeroTerminatedString(State.EBP, 32);
+        EaxString = _memory.GetZeroTerminatedString(State.EAX, 32);
+        EcxString = _memory.GetZeroTerminatedString(State.ECX, 32);
+        EdxString = _memory.GetZeroTerminatedString(State.EDX, 32);
     }
 }
