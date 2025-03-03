@@ -40,6 +40,11 @@ public class Pit8254Counter {
     public CounterActivator Activator { get; }
 
     /// <summary>
+    /// Calculated frequency for the counter
+    /// </summary>
+    public long Frequency => Activator.Frequency;
+
+    /// <summary>
     /// Fires when the Timer parameters are changed.
     /// </summary>
     public event EventHandler? SettingChangedEvent;

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
@@ -25,12 +26,12 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private SpeakerControl _controlRegister = SpeakerControl.UseTimer;
     private int _currentPeriod;
 
-    private readonly Thread _playbackThread;
-    private bool _playbackStarted;
-    private volatile bool _endPlayback;
-    private readonly IPauseHandler _pauseHandler;
+    private readonly DeviceThread _deviceThread;
 
     private bool _disposed;
+    
+    private readonly byte[] _monoBuffer;
+    private readonly byte[] _stereoBuffer;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PcSpeaker"/>
@@ -54,16 +55,16 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         pit8254Counter.SettingChangedEvent += OnTimerSettingChanged;
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
         InitPortHandlers(ioPortDispatcher);
-        _pauseHandler = pauseHandler;
-        _playbackThread = new Thread(AudioPlayback) {
-            Name = nameof(PcSpeaker),
-        };
+        
+        _deviceThread = new DeviceThread(nameof(PcSpeaker), Loop, pauseHandler, loggerService);
+        _monoBuffer = new byte[4096];
+        _stereoBuffer = new byte[_monoBuffer.Length * 2];
     }
 
     /// <summary>
     /// Gets the current frequency in Hz.
     /// </summary>
-    private double Frequency => _pit8254Counter.Activator.Frequency;
+    private double Frequency => _pit8254Counter.Frequency;
 
     /// <summary>
     /// Gets the current period in samples.
@@ -85,6 +86,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         }
         EnqueueCurrentNote();
         _currentPeriod = 0;
+        _deviceThread.Pause();
     }
 
     /// <summary>
@@ -94,13 +96,14 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <param name="e">Unused EventArgs instance.</param>
     private void OnTimerSettingChanged(object? source, EventArgs e) {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PC Speaker frequency changed to {Frequency}", _pit8254Counter.Activator.Frequency);
+            _loggerService.Verbose("PC Speaker frequency changed to {Frequency}", _pit8254Counter.Frequency);
         }
         EnqueueCurrentNote();
 
         _durationTimer.Reset();
         _durationTimer.Start();
         _currentPeriod = PeriodInSamples;
+        _deviceThread.Resume();
     }
 
     /// <summary>
@@ -136,30 +139,27 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         return period;
     }
 
-    private void AudioPlayback() {
-        byte[] buffer = new byte[4096];
-        byte[] writeBuffer = new byte[buffer.Length * 2];
-
-        while (!_endPlayback) {
-            _pauseHandler.WaitIfPaused();
-            if (!IsEnabled(_controlRegister)) {
-                continue;
-            }
-            int samples = GenerateSquareWave(buffer, _currentNote.Period);
-            int periods = _currentNote.PeriodCount;
-
-            // While the original PC speaker was mono, the emulator output is stereo.
-            // So we have to duplicate the signal.
-            ChannelAdapter.MonoToStereo(buffer.AsSpan(0, samples), writeBuffer.AsSpan(0, samples * 2));
-            samples *= 2;
-
-            while (periods > 0) {
-                _soundChannel.Render(writeBuffer.AsSpan(0, samples));
-                periods--;
-            }
-
-            GenerateSilence(buffer);
+    /// <summary>
+    /// Body of the loop for PC speaker sound generation
+    /// </summary>
+    public void Loop() {
+        if (!IsEnabled(_controlRegister)) {
+            return;
         }
+        int samples = GenerateSquareWave(_monoBuffer, _currentNote.Period);
+        int periods = _currentNote.PeriodCount;
+
+        // While the original PC speaker was mono, the emulator output is stereo.
+        // So we have to duplicate the signal.
+        ChannelAdapter.MonoToStereo(_monoBuffer.AsSpan(0, samples), _stereoBuffer.AsSpan(0, samples * 2));
+        samples *= 2;
+
+        while (periods > 0) {
+            _soundChannel.Render(_stereoBuffer.AsSpan(0, samples));
+            periods--;
+        }
+
+        GenerateSilence(_monoBuffer);
     }
 
     /// <inheritdoc />
@@ -190,10 +190,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             SpeakerControl newValue = (SpeakerControl)value;
             if (IsEnabled(_controlRegister) && !IsEnabled(newValue)) {
                 SpeakerDisabled();
-            } else if (!_playbackStarted) {
-                _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name);
-                _playbackStarted = true;
-                _playbackThread.Start();
+            } else {
+                _deviceThread.StartThreadIfNeeded();
             }
             _controlRegister = newValue;
         } else {
@@ -214,11 +212,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _pit8254Counter.SettingChangedEvent -= OnTimerSettingChanged;
-                _endPlayback = true;
-                if (_playbackThread.IsAlive) {
-                    _playbackThread.Join();
-                }
+                _deviceThread.Dispose();
             }
             _disposed = true;
         }
