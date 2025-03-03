@@ -9,7 +9,6 @@
              x:Class="Spice86.Views.ModernDisassemblyView"
              x:DataType="viewModels:ModernDisassemblyViewModel">
     <UserControl.Resources>
-        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
         <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
 
         <!-- Context Menu for Instructions -->
@@ -120,7 +119,7 @@
                                          VerticalAlignment="Center" />
 
                                 <!-- Address -->
-                                <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress, Converter={StaticResource SegmentedAddressConverter}}"
+                                <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
                                            Margin="0,0,8,0" />
 
                                 <!-- Bytes -->

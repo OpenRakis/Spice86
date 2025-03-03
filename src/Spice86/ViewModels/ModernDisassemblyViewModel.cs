@@ -79,8 +79,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private FunctionInfo? _selectedFunction;
 
     [ObservableProperty]
-    private EnrichedInstruction? _selectedInstruction;
+    private DebuggerLineViewModel? _selectedDebuggerLine;
 
+    
     public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<uint, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
@@ -98,12 +99,24 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         _pauseHandler = pauseHandler;
         _instructionsDecoder = new InstructionsDecoder(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += OnPausing;
-        pauseHandler.Resumed += OnResumed;
         CanCloseTab = canCloseTab;
-        breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
-        breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
-        breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
+        EnableEventHandlers();
+    }
+
+    public void EnableEventHandlers() {
+        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Resumed += OnResumed;
+        _breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
+        _breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
+        _breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
+    }
+
+    public void DisableEventHandlers() {
+        _pauseHandler.Pausing -= OnPausing;
+        _pauseHandler.Resumed -= OnResumed;
+        _breakpointsViewModel.BreakpointDeleted -= OnBreakPointUpdateFromBreakpointsViewModel;
+        _breakpointsViewModel.BreakpointDisabled -= OnBreakPointUpdateFromBreakpointsViewModel;
+        _breakpointsViewModel.BreakpointEnabled -= OnBreakPointUpdateFromBreakpointsViewModel;
     }
 
     public uint CurrentlyFocusedAddress {
@@ -118,13 +131,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     /// Clean up event handlers when the view model is disposed.
     /// </summary>
     public void Dispose() {
-        // Unsubscribe from events
-        _pauseHandler.Pausing -= OnPausing;
-        _pauseHandler.Resumed -= OnResumed;
-        // Unsubscribe from breakpoint events
-        _breakpointsViewModel.BreakpointDeleted -= OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointDisabled -= OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointEnabled -= OnBreakPointUpdateFromBreakpointsViewModel;
+        DisableEventHandlers();
     }
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpoint) {
@@ -134,13 +141,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private void OnResumed() {
         _uiDispatcher.Post(() => {
             IsPaused = false;
-            DebuggerLines.Clear();
         });
     }
 
     private void OnPausing() {
         _uiDispatcher.Post(() => {
             IsPaused = true;
+            CurrentlyFocusedAddress = _state.IpPhysicalAddress;
 
             // Check if the current IP is within our current view
             bool ipInCurrentListing = DebuggerLines.ContainsKey(_state.IpPhysicalAddress);
@@ -148,7 +155,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             // Only rebuild the disassembly if necessary
             if (!ipInCurrentListing) {
                 // CS:IP changed to lie outside our current listing, update the disassembly
-                CurrentlyFocusedAddress = _state.IpPhysicalAddress;
                 UpdateDisassemblyInternal();
             }
         });
@@ -212,14 +218,14 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         _pauseHandler.Resume();
     }
 
-    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
+    [RelayCommand(CanExecute = nameof(SelectedDebuggerLineHasBreakpoint))]
     private void DisableBreakpoint() {
-        SelectedInstruction?.Breakpoints.ForEach(bp => bp.Disable());
+        SelectedDebuggerLine?.Breakpoints.ForEach(bp => bp.Disable());
     }
 
-    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
+    [RelayCommand(CanExecute = nameof(SelectedDebuggerLineHasBreakpoint))]
     private void EnableBreakpoint() {
-        SelectedInstruction?.Breakpoints.ForEach(bp => bp.Enable());
+        SelectedDebuggerLine?.Breakpoints.ForEach(bp => bp.Enable());
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -258,24 +264,20 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task UpdateDisassembly() {
-        DebuggerLines.Clear();
+        // DebuggerLines.Clear();
         IsLoading = true;
-        Dictionary<uint,EnrichedInstruction> enrichedInstructions = await Task.Run(() => DecodeCurrentWindowOfInstructions(CurrentlyFocusedAddress));
+        Dictionary<uint,EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(CurrentlyFocusedAddress, 512));
         foreach ((uint key, EnrichedInstruction value) in enrichedInstructions) {
             DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
         }
-        UpdateHeader(DebuggerLines.FirstOrDefault().Key);
+        UpdateHeader(CurrentlyFocusedAddress);
         IsLoading = false;
-    }
-
-    private Dictionary<uint, EnrichedInstruction> DecodeCurrentWindowOfInstructions(uint centerAddress) {
-        return _instructionsDecoder.DecodeInstructionsExtended(centerAddress, 2048);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CopyLine() {
-        if (SelectedInstruction is not null) {
-            await _textClipboard.SetTextAsync(SelectedInstruction.ToString());
+        if (SelectedDebuggerLine is not null) {
+            await _textClipboard.SetTextAsync(SelectedDebuggerLine.ToString());
         }
     }
 
@@ -299,39 +301,43 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
 
     [RelayCommand]
     private void MoveCsIpHere() {
-        if (SelectedInstruction is null) {
+        if (SelectedDebuggerLine is null) {
             return;
         }
-        _state.CS = SelectedInstruction.SegmentedAddress.Segment;
-        _state.IP = SelectedInstruction.SegmentedAddress.Offset;
+        _state.CS = SelectedDebuggerLine.SegmentedAddress.Segment;
+        _state.IP = SelectedDebuggerLine.SegmentedAddress.Offset;
         UpdateDisassemblyInternal();
     }
 
-    private bool SelectedInstructionHasBreakpoint() {
-        return SelectedInstruction?.Breakpoints.Count > 0;
+    private bool SelectedDebuggerLineHasBreakpoint() {
+        return SelectedDebuggerLine?.Breakpoints.Count > 0;
     }
 
-    [RelayCommand(CanExecute = nameof(SelectedInstructionHasBreakpoint))]
+    [RelayCommand(CanExecute = nameof(SelectedDebuggerLineHasBreakpoint))]
     private void RemoveExecutionBreakpointHere() {
-        if (SelectedInstruction == null || SelectedInstruction.Breakpoints.Count == 0) {
+        if (SelectedDebuggerLine == null || SelectedDebuggerLine.Breakpoints.Count == 0) {
             return;
         }
-        foreach (BreakpointViewModel breakpoint in SelectedInstruction.Breakpoints) {
+        
+        // Create a copy of the breakpoints collection to avoid modifying while iterating
+        var breakpointsToRemove = SelectedDebuggerLine.Breakpoints.ToList();
+        
+        foreach (BreakpointViewModel breakpoint in breakpointsToRemove) {
             _breakpointsViewModel.RemoveBreakpointInternal(breakpoint);
-            SelectedInstruction.Breakpoints.Remove(breakpoint);
+            SelectedDebuggerLine.Breakpoints.Remove(breakpoint);
         }
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void CreateExecutionBreakpointHere() {
-        if (SelectedInstruction is null) {
+        if (SelectedDebuggerLine is null) {
             return;
         }
-        uint address = SelectedInstruction.Instruction.IP32;
+        uint address = SelectedDebuggerLine.Address;
         BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
-        SelectedInstruction.Breakpoints.Add(breakpointViewModel);
+        SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
     }
 
     private new bool TryParseMemoryAddress(string addressString, out ulong? result) {
@@ -362,8 +368,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         };
 
         // If we have a selected instruction, set the same address in the classic view
-        if (SelectedInstruction != null) {
-            classicViewModel.StartAddress = SelectedInstruction.Instruction.IP32;
+        if (SelectedDebuggerLine != null) {
+            classicViewModel.StartAddress = SelectedDebuggerLine.Address;
             classicViewModel.UpdateDisassemblyCommand.Execute(null);
         }
 
