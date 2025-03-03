@@ -12,6 +12,7 @@
              x:DataType="viewModels:BreakpointsViewModel">
 	<UserControl.Resources>
 		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
 	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
@@ -97,17 +98,26 @@
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
                                  IsVisible="{Binding IsInterruptBreakpointSelected}">
 							<controls:GroupBox Header="Interrupt Number">
-								<NumericUpDown Text="{Binding InterruptNumber,
-                                                 Mode=TwoWay,
-                                                 UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+								<TextBox
+									Text="{Binding InterruptNumber,
+										Mode=TwoWay,
+										Converter={StaticResource HexadecimalStringToNumberConverter},
+										UpdateSourceTrigger=PropertyChanged}"
+
+									Margin="5,0,0,0"
+									Watermark="hexadecimal number"/>
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="I/O Port"
                                  IsVisible="{Binding IsIoPortBreakpointSelected}">
 							<controls:GroupBox Header="I/O Port Number">
-								<NumericUpDown
-                                    Text="{Binding IoPortNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Margin="5,0,0,0" />
+								<TextBox
+                                    Text="{Binding IoPortNumber,
+										Mode=TwoWay,
+										Converter={StaticResource HexadecimalStringToNumberConverter},
+										UpdateSourceTrigger=PropertyChanged}"
+                                    Margin="5,0,0,0"
+									Watermark="hexadecimal number"/>
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<StackPanel

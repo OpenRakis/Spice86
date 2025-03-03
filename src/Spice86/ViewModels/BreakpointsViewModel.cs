@@ -54,11 +54,11 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
                     break;
                 case BreakPointType.CPU_INTERRUPT:
-                    InterruptNumber = SelectedBreakpoint.Address;
+                    InterruptNumber = (int?)SelectedBreakpoint.Address;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
                     break;
                 case BreakPointType.IO_ACCESS:
-                    IoPortNumber = SelectedBreakpoint.Address;
+                    IoPortNumber = (ushort?)SelectedBreakpoint.Address;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
                     break;
                 case BreakPointType.MEMORY_ACCESS:
@@ -138,10 +138,10 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
     private SegmentedAddress? _memoryAddressValue;
 
     [ObservableProperty]
-    private long? _ioPortNumber;
+    private ushort? _ioPortNumber;
 
     [ObservableProperty]
-    private long? _interruptNumber;
+    private int? _interruptNumber;
 
     [ObservableProperty]
     private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_ACCESS;
