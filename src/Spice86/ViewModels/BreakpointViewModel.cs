@@ -40,6 +40,8 @@ public partial class BreakpointViewModel : ViewModelBase
         Enable();
     }
 
+    public Action OnReached => _onReached;
+
     public BreakPointType Type { get; }
 
     private bool _isEnabled;

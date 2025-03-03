@@ -41,8 +41,48 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
         _pauseHandler = pauseHandler;
         _messenger = messenger;
         _state = state;
-        _selectedBreakpointTypeTab = BreakpointTabs[0];
+        SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
+        NotifySelectedBreakpointTypeChanged();
     }
+
+    private bool _isEditingSelectedBreakpoint;
+
+
+    [RelayCommand(CanExecute = nameof(EditSelectedBreakpointCanExecute))]
+    private void EditSelectedBreakpoint() {
+        if (SelectedBreakpoint is not null) {
+            _isEditingSelectedBreakpoint = true;
+            switch (SelectedBreakpoint.Type) {
+                case BreakPointType.CPU_EXECUTION_ADDRESS:
+                    ExecutionAddressValue = SelectedBreakpoint.Address;
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
+                    break;
+                case BreakPointType.CPU_CYCLES:
+                    CyclesValue = SelectedBreakpoint.Address;
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
+                    break;
+                case BreakPointType.CPU_INTERRUPT:
+                    InterruptNumber = SelectedBreakpoint.Address;
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
+                    break;
+                case BreakPointType.IO_ACCESS:
+                    IoPortNumber = SelectedBreakpoint.Address;
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
+                    break;
+                case BreakPointType.MEMORY_ACCESS:
+                case BreakPointType.MEMORY_READ:
+                case BreakPointType.MEMORY_WRITE:
+                    MemoryAddressValue = SelectedBreakpoint.Address;
+                    SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
+                    SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
+                    break;
+            }
+            CreatingBreakpoint = true;
+        }
+    }
+
+    private bool EditSelectedBreakpointCanExecute() => SelectedBreakpoint is not null;
+
 
     public AvaloniaList<TabItemViewModel> BreakpointTabs { get; } = new AvaloniaList<TabItemViewModel>
     {
@@ -53,7 +93,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
         new TabItemViewModel { Header = "I/O Port", IsSelected = false }
     };
 
-    private TabItemViewModel _selectedBreakpointTypeTab;
+    private TabItemViewModel? _selectedBreakpointTypeTab;
 
     public TabItemViewModel? SelectedBreakpointTypeTab {
         get => _selectedBreakpointTypeTab;
@@ -63,13 +103,17 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
                     tab.IsSelected = tab == value;
                 }
                 SetProperty(ref _selectedBreakpointTypeTab, value);
-                OnPropertyChanged(nameof(IsExecutionBreakpointSelected));
-                OnPropertyChanged(nameof(IsMemoryBreakpointSelected));
-                OnPropertyChanged(nameof(IsCyclesBreakpointSelected));
-                OnPropertyChanged(nameof(IsInterruptBreakpointSelected));
-                OnPropertyChanged(nameof(IsIoPortBreakpointSelected));
+                NotifySelectedBreakpointTypeChanged();
             }
         }
+    }
+
+    private void NotifySelectedBreakpointTypeChanged() {
+        OnPropertyChanged(nameof(IsExecutionBreakpointSelected));
+        OnPropertyChanged(nameof(IsMemoryBreakpointSelected));
+        OnPropertyChanged(nameof(IsCyclesBreakpointSelected));
+        OnPropertyChanged(nameof(IsInterruptBreakpointSelected));
+        OnPropertyChanged(nameof(IsIoPortBreakpointSelected));
     }
 
     public State State => _state;
@@ -270,6 +314,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveBreakpointCommand))]
     [NotifyCanExecuteChangedFor(nameof(ToggleSelectedBreakpointCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditSelectedBreakpointCommand))]
     private BreakpointViewModel? _selectedBreakpoint;
 
     public void AddUnconditionalBreakpoint(Action onReached, bool removedOnTrigger)
@@ -288,6 +333,11 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
             Action onReached,
             string comment = "")
     {
+        if(_isEditingSelectedBreakpoint) {
+            // Remove the existing breakpoint
+            DeleteBreakpoint(SelectedBreakpoint);
+        }
+
         var breakpointViewModel = new BreakpointViewModel(
             this,
             _emulatorBreakpointsManager,

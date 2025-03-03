@@ -20,4 +20,12 @@ public partial class BreakpointsView : UserControl
             viewModel.RemoveBreakpointCommand.Execute(null);
         }
     }
+
+    private void DataGrid_DoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if(DataContext is BreakpointsViewModel viewModel &&
+            viewModel.EditSelectedBreakpointCommand.CanExecute(null)) {
+            viewModel.EditSelectedBreakpointCommand.Execute(null);
+        }
+    }
 }
