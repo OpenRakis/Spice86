@@ -74,15 +74,15 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog
 
     public State State => _state;
 
-    public bool IsExecutionBreakpointSelected => BreakpointTabs[2].IsSelected;
+    public bool IsExecutionBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Execution" && x.IsSelected);
 
-    public bool IsMemoryBreakpointSelected => BreakpointTabs[1].IsSelected;
+    public bool IsMemoryBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Memory" && x.IsSelected);
 
-    public bool IsCyclesBreakpointSelected => BreakpointTabs[0].IsSelected;
+    public bool IsCyclesBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Cycles" && x.IsSelected);
 
-    public bool IsInterruptBreakpointSelected => BreakpointTabs[3].IsSelected;
+    public bool IsInterruptBreakpointSelected => BreakpointTabs.Any(x => x.Header == "Interrupt" && x.IsSelected);
 
-    public bool IsIoPortBreakpointSelected => BreakpointTabs[4].IsSelected;
+    public bool IsIoPortBreakpointSelected => BreakpointTabs.Any(x => x.Header == "I/O Port" && x.IsSelected);
 
     [ObservableProperty]
     private bool _creatingBreakpoint;
