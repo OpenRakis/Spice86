@@ -130,7 +130,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (BreakpointAddress != null) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(
                 (uint)BreakpointAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
@@ -352,7 +352,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         uint address = SelectedInstruction.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address,
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(address,
             BreakPointType.CPU_EXECUTION_ADDRESS, isRemovedOnTrigger: false, () => {
                 PauseAndReportAddress(address);
             });

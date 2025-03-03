@@ -4,12 +4,32 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 public partial class BreakpointViewModel : ViewModelBase
 {
     private readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private BreakPoint? _breakPoint;
+
+    public BreakpointViewModel(
+        BreakpointsViewModel breakpointsViewModel,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        SegmentedAddress segmentedAddress,
+        BreakPointType type,
+        bool isRemovedOnTrigger,
+        Action onReached,
+        string comment = "") :
+            this(breakpointsViewModel, emulatorBreakpointsManager,
+                MemoryUtils.ToPhysicalAddress(
+                    segmentedAddress.Segment,
+                    segmentedAddress.Offset),
+                type, isRemovedOnTrigger, onReached,
+                comment) {
+        SegmentedAddress = segmentedAddress;
+        
+    }
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -39,6 +59,8 @@ public partial class BreakpointViewModel : ViewModelBase
         Comment = comment;
         Enable();
     }
+
+    public SegmentedAddress? SegmentedAddress { get; }
 
     public Action OnReached => _onReached;
 

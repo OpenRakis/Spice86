@@ -185,7 +185,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void CreateMemoryAddressBreakpoint(ulong breakpointAddressValue) {
-        _breakpointsViewModel.AddAddressBreakpoint(
+        _breakpointsViewModel.AddLinearAddressBreakpoint(
             (uint)breakpointAddressValue,
             SelectedBreakpointType,
             isRemovedOnTrigger: false,

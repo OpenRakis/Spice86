@@ -10,6 +10,9 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
+	<UserControl.Resources>
+		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -62,16 +65,21 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="Auto,*">
-								<controls:GroupBox Grid.Column="0" Header="Memory access type">
-									<ComboBox SelectedItem="{Binding SelectedMemoryBreakpointType}"
-                                              ItemsSource="{Binding MemoryBreakpointTypes}" />
-								</controls:GroupBox>
-								<controls:GroupBox Grid.Column="1" Header="Memory address">
-									<TextBox
-                                    Text="{Binding MemoryAddressValue, Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}"
+							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,*">
+								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
+								<ComboBox Grid.Column="0" Grid.Row="1"
+									SelectedItem="{Binding SelectedMemoryBreakpointType}"
+                                    ItemsSource="{Binding MemoryBreakpointTypes}" />
+								<Label Grid.Column="1" Grid.Row="0" Content="Memory address" />
+								<TextBox
+									Grid.Row="1"
+									Grid.Column="1"
+                                    Text="{Binding MemoryAddressValue,
+										Mode=OneWayToSource,
+										UpdateSourceTrigger=PropertyChanged,
+										Converter={StaticResource SegmentedAddressConverter}}"
+									Watermark="1000:FFFF (example)"
                                     Margin="5,0,0,0" />
-								</controls:GroupBox>
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
@@ -79,8 +87,11 @@
 							<controls:GroupBox Header="Memory address">
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
-                                    Mode=TwoWay,
-                                    UpdateSourceTrigger=PropertyChanged}" Margin="5,0,0,0" />
+										Mode=OneWayToSource,
+										UpdateSourceTrigger=PropertyChanged,
+										Converter={StaticResource SegmentedAddressConverter}}"
+									Watermark="1000:FFFF (example)"
+									Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
