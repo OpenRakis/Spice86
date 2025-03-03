@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -63,7 +64,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(State state, Stack stack, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(State state, Configuration configuration, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -107,7 +108,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Pausing += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
         MemoryViewModels.Add(mainMemoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
-        CfgCpuViewModel = new(executionContextManager, pauseHandler, new PerformanceMeasurer());
+        CfgCpuViewModel = new(configuration, executionContextManager,
+            pauseHandler, new PerformanceMeasurer());
     }
 
     private void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
