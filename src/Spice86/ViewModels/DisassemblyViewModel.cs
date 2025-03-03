@@ -248,26 +248,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void OpenModernView() {
-        ModernDisassemblyViewModel modernViewModel = new(
-            _emulatorBreakpointsManager,
-            _memory, _state, _functionsInformation,
-            _breakpointsViewModel, 
-            _pauseHandler, _uiDispatcher, _messenger,
-            _textClipboard, canCloseTab: true) {
-            IsPaused = IsPaused
-        };
-        
-        // If we have a selected instruction, set the same address in the modern view
-        if (SelectedInstruction != null) {
-            modernViewModel.CurrentlyFocusedAddress = SelectedInstruction.Address;
-            modernViewModel.UpdateDisassemblyCommand.Execute(null);
-        }
-        
-        _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(modernViewModel));
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
         SegmentedStartAddress = new(_state.CS, _state.IP);
         await GoToAddress(_state.IpPhysicalAddress);
