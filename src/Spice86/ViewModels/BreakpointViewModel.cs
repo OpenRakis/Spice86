@@ -28,7 +28,7 @@ public partial class BreakpointViewModel : ViewModelBase
                 type, isRemovedOnTrigger, onReached,
                 comment) {
         SegmentedAddress = segmentedAddress;
-        
+        Parameter = segmentedAddress.ToString();
     }
 
     public BreakpointViewModel(
@@ -58,7 +58,11 @@ public partial class BreakpointViewModel : ViewModelBase
         }
         Comment = comment;
         Enable();
+        Parameter = $"0x{trigger:X2}";
     }
+
+    [ObservableProperty]
+    private string _parameter;
 
     public SegmentedAddress? SegmentedAddress { get; }
 

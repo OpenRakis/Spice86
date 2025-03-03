@@ -11,7 +11,7 @@
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
 	<UserControl.Resources>
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" State="{Binding State}" />
 		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
 	</UserControl.Resources>
 	<Grid>
@@ -32,12 +32,12 @@
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="True"
                   CanUserResizeColumns="True"
-                  CanUserSortColumns="False"
+                  CanUserSortColumns="True"
                   DoubleTapped="DataGrid_DoubleTapped">
 			<DataGrid.Columns>
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address, StringFormat='0x{0:X2}'}" Header="Parameter" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Parameter}" Header="Parameter" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Comment}" Header="Comment" />
 			</DataGrid.Columns>
@@ -76,10 +76,10 @@
 									Grid.Row="1"
 									Grid.Column="1"
                                     Text="{Binding MemoryAddressValue,
+										ConverterParameter='lenientMode',
 										Mode=OneWayToSource,
-										UpdateSourceTrigger=PropertyChanged,
 										Converter={StaticResource SegmentedAddressConverter}}"
-									Watermark="1000:FFFF (example)"
+									Watermark="1000:FFFF (example) or like 'cs:ip'"
                                     Margin="5,0,0,0" />
 							</Grid>
 						</controls:GroupBox>
@@ -89,9 +89,9 @@
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
 										Mode=OneWayToSource,
-										UpdateSourceTrigger=PropertyChanged,
+										ConverterParameter='lenientMode',
 										Converter={StaticResource SegmentedAddressConverter}}"
-									Watermark="1000:FFFF (example)"
+									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
@@ -101,8 +101,7 @@
 								<TextBox
 									Text="{Binding InterruptNumber,
 										Mode=TwoWay,
-										Converter={StaticResource HexadecimalStringToNumberConverter},
-										UpdateSourceTrigger=PropertyChanged}"
+										Converter={StaticResource HexadecimalStringToNumberConverter}}"
 
 									Margin="5,0,0,0"
 									Watermark="hexadecimal number"/>
@@ -114,8 +113,7 @@
 								<TextBox
                                     Text="{Binding IoPortNumber,
 										Mode=TwoWay,
-										Converter={StaticResource HexadecimalStringToNumberConverter},
-										UpdateSourceTrigger=PropertyChanged}"
+										Converter={StaticResource HexadecimalStringToNumberConverter}}"
                                     Margin="5,0,0,0"
 									Watermark="hexadecimal number"/>
 							</controls:GroupBox>
