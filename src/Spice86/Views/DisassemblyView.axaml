@@ -95,9 +95,8 @@
 			IsVisible="{Binding IsPaused}"
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
-				<DataGridTextColumn
-					Binding="{Binding Address}">
-					<DataGridTextColumn.CellTheme>
+				<DataGridTemplateColumn Header="Address">
+					<DataGridTemplateColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
@@ -106,19 +105,32 @@
 								Value="{ReflectionBinding Breakpoint,
 								Converter={StaticResource BreakpointToBrushConverter}}" />
 						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn MaxWidth="300"
-					Binding="{Binding Converter={StaticResource InstructionToStringConverter}}"
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox Text="{Binding Address, Mode=OneWay,
+									 StringFormat={}0x{0:X4}}"
+									 IsReadOnly="True" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn MaxWidth="300"
 					Header="MASM">
-					<DataGridTextColumn.CellTheme>
+					<DataGridTemplateColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
 						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox Text="{Binding Mode=OneWay,
+									 Converter={StaticResource InstructionToStringConverter}}"
+									 IsReadOnly="True" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
 				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)">
 					<DataGridTextColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
@@ -239,7 +251,8 @@
 								IsReadOnly="True"
 								Text="{Binding BreakpointAddress,
 								Converter={StaticResource SegmentedAddressToLinearAddressConverter},
-								Mode=OneWay}"
+								Mode=OneWay,
+								StringFormat={}0x{0:X4}}"
 								Margin="5,0,0,0" />
 						</controls:GroupBox>
 					</Grid>
