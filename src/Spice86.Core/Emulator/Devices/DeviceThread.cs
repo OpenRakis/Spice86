@@ -34,6 +34,8 @@ public class DeviceThread : IDisposable {
         _loopBody = loopBody;
     }
 
+    public bool Active => _thread != null && !_deviceStopRequested;
+
     /// <summary>
     /// Pauses the device loop
     /// </summary>
@@ -52,7 +54,7 @@ public class DeviceThread : IDisposable {
     /// Start the thread and the loop. A new thread is created there if needed.
     /// </summary>
     public void StartThreadIfNeeded() {
-        if (_disposed || _thread != null || _deviceStopRequested) {
+        if (_thread != null || _disposed || _deviceStopRequested) {
             return;
         }
 

@@ -52,11 +52,11 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
         _pit8254Counter = pit8254Counter;
-        pit8254Counter.SettingChangedEvent += OnTimerSettingChanged;
+        pit8254Counter.SettingChangedEvent += (_, _) => OnTimerSettingChanged();
         _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
         InitPortHandlers(ioPortDispatcher);
         
-        _deviceThread = new DeviceThread(nameof(PcSpeaker), Loop, pauseHandler, loggerService);
+        _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoopBody, pauseHandler, loggerService);
         _monoBuffer = new byte[4096];
         _stereoBuffer = new byte[_monoBuffer.Length * 2];
     }
@@ -92,9 +92,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Invoked when the frequency has changed.
     /// </summary>
-    /// <param name="source">Source of the event.</param>
-    /// <param name="e">Unused EventArgs instance.</param>
-    private void OnTimerSettingChanged(object? source, EventArgs e) {
+    private void OnTimerSettingChanged() {
+        if (_currentPeriod == PeriodInSamples) {
+            return;
+        }
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("PC Speaker frequency changed to {Frequency}", _pit8254Counter.Frequency);
         }
@@ -142,7 +143,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Body of the loop for PC speaker sound generation
     /// </summary>
-    public void Loop() {
+    public void PlaybackLoopBody() {
         if (!IsEnabled(_controlRegister)) {
             return;
         }
@@ -189,8 +190,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         if (port == PcSpeakerPortNumber) {
             SpeakerControl newValue = (SpeakerControl)value;
             if (IsEnabled(_controlRegister) && !IsEnabled(newValue)) {
+                // Enabled -> Disabled => stop it
                 SpeakerDisabled();
-            } else {
+            } else if (!IsEnabled(_controlRegister) && IsEnabled(newValue)) {
+                // Disabled -> Enabled => start it if not yet started
                 _deviceThread.StartThreadIfNeeded();
             }
             _controlRegister = newValue;
