@@ -12,7 +12,12 @@ using System.Text;
 
 public class InstructionToStringConverter : IValueConverter {
     private readonly StringBuilder _outputString = new();
-    private readonly Formatter _formatter = new MasmFormatter();
+    private readonly Formatter _formatter = new MasmFormatter(
+        new FormatterOptions() {
+            AddLeadingZeroToHexNumbers = true,
+            AlwaysShowSegmentRegister = true,
+            BranchLeadingZeros = true });
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is CpuInstructionInfo cpuInstructionInfo) {
             Instruction instr = cpuInstructionInfo.Instruction;
