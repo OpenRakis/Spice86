@@ -1,7 +1,5 @@
 namespace Spice86.Views;
 
-using Avalonia;
-using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -10,16 +8,16 @@ using Avalonia.Threading;
 
 using Spice86.ViewModels;
 
+using System;
 using System.ComponentModel;
-using System.Windows.Input;
 
 public partial class ModernDisassemblyView : UserControl {
     // Cache for the ordered keys to avoid recreating the list on every GetIndex call
-    private List<uint>? _cachedOrderedKeys;
-    private ItemsRepeater? _itemsRepeater;
-    private AvaloniaDictionary<uint, DebuggerLineViewModel>? _lastDictionaryReference;
-    private ScrollViewer? _scrollViewer;
+    private ListBox? _listBox;
     private ModernDisassemblyViewModel? ViewModel => DataContext as ModernDisassemblyViewModel;
+
+    // Timer for debouncing scroll operations
+    private DispatcherTimer? _scrollDebounceTimer;
 
     public ModernDisassemblyView() {
         InitializeComponent();
@@ -28,8 +26,7 @@ public partial class ModernDisassemblyView : UserControl {
     protected override void OnLoaded(RoutedEventArgs e) {
         base.OnLoaded(e);
         // Get references to UI elements
-        _scrollViewer = this.FindControl<ScrollViewer>("DisassemblyScrollViewer");
-        _itemsRepeater = _scrollViewer?.FindControl<ItemsRepeater>("DisassemblyItemsRepeater");
+        _listBox = this.FindControl<ListBox>("DisassemblyListBox");
 
         // Set up scroll to instruction handler
         if (ViewModel != null) {
@@ -48,48 +45,6 @@ public partial class ModernDisassemblyView : UserControl {
             ViewModel.DisableEventHandlers();
         }
         base.OnUnloaded(e);
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e) {
-        if (ViewModel != null) {
-            ICommand? command = e.Key switch {
-                Key.Up => ViewModel.LineUpCommand,
-                Key.Down => ViewModel.LineDownCommand,
-                Key.PageUp => ViewModel.PageUpCommand,
-                Key.PageDown => ViewModel.PageDownCommand,
-                _ => null
-            };
-
-            if (command != null && command.CanExecute(null)) {
-                command.Execute(null);
-                e.Handled = true;
-
-                return;
-            }
-        }
-
-        base.OnKeyDown(e);
-    }
-
-    protected override void OnPointerWheelChanged(PointerWheelEventArgs e) {
-        if (ViewModel is not {IsPaused: true}) {
-        } else {
-            if (e.Delta.Y > 0) {
-                // Scroll up
-                if (ViewModel.LineUpCommand.CanExecute(null)) {
-                    ViewModel.LineUpCommand.Execute(null);
-                }
-            } else if (e.Delta.Y < 0) {
-                // Scroll down
-                if (ViewModel.LineDownCommand.CanExecute(null)) {
-                    ViewModel.LineDownCommand.Execute(null);
-                }
-            }
-
-            e.Handled = true;
-        }
-
-        base.OnPointerWheelChanged(e);
     }
 
     protected override void OnDataContextChanged(EventArgs e) {
@@ -113,175 +68,41 @@ public partial class ModernDisassemblyView : UserControl {
     }
 
     private void ScrollToAddress(uint address) {
-        if (ViewModel == null || _itemsRepeater == null || _scrollViewer == null) {
+        if (ViewModel == null || _listBox == null) {
             return;
         }
 
-        // Find the index of the instruction
-        int index = GetIndex(address);
-        if (index < 0) {
-            return;
-        }
-
-        // Get the container for this item
-        Control? container = _itemsRepeater.TryGetElement(index);
-        if (container != null) {
-            // Scroll to this container, centering it in the view
-            // Calculate the position to scroll to (center the item in the viewport)
-            Rect containerBounds = container.Bounds;
-            double viewportHeight = _scrollViewer.Viewport.Height;
-
-            // Calculate the target scroll position (center the item)
-            double targetScrollPosition = containerBounds.Y - viewportHeight / 2 + containerBounds.Height / 2;
-
-            // Ensure we don't scroll beyond bounds
-            targetScrollPosition = Math.Max(0, targetScrollPosition);
-
-            // Set the scroll position
-            _scrollViewer.Offset = new Vector(0, targetScrollPosition);
+        // Check if the address exists in the collection
+        if (ViewModel.DebuggerLines.TryGetValue(address, out DebuggerLineViewModel? line)) {
+            // Force the line to update its highlighting state
+            line.UpdateIsCurrentInstruction();
+            
+            // Use the ListBox's built-in scrolling
+            _listBox.ScrollIntoView(line);
+            
+            Console.WriteLine($"Scrolled to address {address:X8}");
+        } else {
+            Console.WriteLine($"Address {address:X8} not found in the disassembly");
         }
     }
 
     private void ScrollToCurrentInstruction() {
-        if (_itemsRepeater == null || _scrollViewer == null || ViewModel == null || ViewModel.DebuggerLines.Count == 0) {
+        if (_listBox == null || ViewModel == null || ViewModel.DebuggerLines.Count == 0) {
             return;
         }
 
         // Find the current instruction
-        int currentIndex = GetIndex(ViewModel.CurrentlyFocusedAddress);
-        if (currentIndex < 0) {
-            Console.WriteLine($"Couldn't find line with address {ViewModel.CurrentlyFocusedAddress:X8}");
-
-            return;
-        }
-
-        // Use ConfigureAwait(false) to avoid deadlocks and fire-and-forget the task
-        _ = TryScrollToCurrentInstruction(currentIndex, 0);
-    }
-
-    private int GetIndex(uint address) {
-        if (ViewModel == null) {
-            return -1;
-        }
-
-        AvaloniaDictionary<uint, DebuggerLineViewModel> collection = ViewModel.DebuggerLines;
-
-        // First check if the target exists (O(1) operation)
-        if (!collection.ContainsKey(address)) {
-            return -1;
-        }
-
-        // Use cached list if available and still valid, otherwise create a new one
-        if (_cachedOrderedKeys == null || _lastDictionaryReference != collection) {
-            _cachedOrderedKeys = [..collection.Keys];
-            _lastDictionaryReference = collection;
-        }
-
-        // Use the cached list for lookup
-        return _cachedOrderedKeys.IndexOf(address);
-    }
-
-    private async Task TryScrollToCurrentInstruction(int index, int attemptCount) {
-        if (_itemsRepeater == null || _scrollViewer == null || attemptCount > 5) {
-            return;
-        }
-
-        // Try to get the container
-        Control? container = _itemsRepeater.TryGetElement(index);
-
-        if (container != null) {
-            // We found the container, scroll to it
-            try {
-                // Calculate the position to center the item in the viewport
-                Rect containerBounds = container.Bounds;
-                double viewportHeight = _scrollViewer.Viewport.Height;
-
-                // Calculate the target offset to center the item
-                double targetOffset = containerBounds.Y - viewportHeight / 2 + containerBounds.Height / 2;
-                targetOffset = Math.Max(0, targetOffset); // Ensure we don't scroll past the top
-
-                // Scroll to the calculated position
-                _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, targetOffset);
-
-                Console.WriteLine($"Successfully scrolled to instruction at index {index}, offset {targetOffset}");
-            } catch (Exception ex) {
-                Console.WriteLine($"Error scrolling to instruction: {ex.Message}");
-            }
+        uint address = ViewModel.CurrentlyFocusedAddress;
+        if (ViewModel.DebuggerLines.TryGetValue(address, out DebuggerLineViewModel? line)) {
+            // Force the line to update its highlighting state
+            line.UpdateIsCurrentInstruction();
+            
+            // Use the ListBox's built-in scrolling
+            _listBox.ScrollIntoView(line);
+            
+            Console.WriteLine($"Scrolled to instruction at address {address:X8}");
         } else {
-            Console.WriteLine($"Container for instruction at index {index} not found, attempt {attemptCount + 1}");
-
-            // If we can't find the container, try to scroll to approximately where it should be
-            if (ViewModel?.DebuggerLines is {Count: > 0}) {
-                // First attempt: use ItemsRepeater's built-in scrolling
-                if (attemptCount == 0) {
-                    try {
-                        // This will attempt to bring the item into view and realize it
-                        await ScrollToIndex(index);
-                        Console.WriteLine($"Used ItemsRepeater ScrollIntoView for index {index}");
-                    } catch (Exception ex) {
-                        Console.WriteLine($"Error using ScrollIntoView: {ex.Message}");
-                    }
-                }
-                // Second attempt: try approximate position
-                else if (attemptCount == 1) {
-                    // Approximate position based on index
-                    double approximatePosition = (double)index / ViewModel.DebuggerLines.Count;
-                    double estimatedOffset = approximatePosition * _scrollViewer.Extent.Height;
-
-                    // Set an approximate scroll position to force container creation
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, estimatedOffset);
-                    Console.WriteLine($"Set approximate scroll position to {estimatedOffset}");
-                }
-                // Additional attempts: try scrolling a bit before and after the estimated position
-                else {
-                    double approximatePosition = (double)index / ViewModel.DebuggerLines.Count;
-                    double estimatedOffset = approximatePosition * _scrollViewer.Extent.Height;
-
-                    // Add some jitter based on attempt count to try different positions
-                    double jitter = attemptCount % 2 == 0 ? 100 : -100;
-                    _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, estimatedOffset + jitter);
-                    Console.WriteLine($"Set jittered scroll position to {estimatedOffset + jitter}");
-                }
-            }
-
-            // Schedule another attempt with a delay
-            await Task.Delay(150 * (attemptCount + 1)); // Increasing delay for each attempt
-
-            // Make sure we're on the UI thread when we try again
-            await Dispatcher.UIThread.InvokeAsync(() => TryScrollToCurrentInstruction(index, attemptCount + 1));
-        }
-    }
-
-    // Helper method to scroll to an index using ItemsRepeater's functionality
-    private async Task ScrollToIndex(int index) {
-        if (_itemsRepeater == null || _scrollViewer == null) {
-            return;
-        }
-
-        // Force layout update to ensure items are measured
-        _itemsRepeater.UpdateLayout();
-
-        // Wait for layout to complete
-        await Task.Delay(50);
-
-        // Try to get the container after layout update
-        Control? container = _itemsRepeater.TryGetElement(index);
-
-        if (container != null) {
-            // Scroll the container into view
-            container.BringIntoView();
-
-            // Wait for scrolling to complete
-            await Task.Delay(50);
-        } else {
-            // If container still not realized, try to scroll approximately
-            if (ViewModel?.DebuggerLines != null && ViewModel.DebuggerLines.Count > 0) {
-                double approximatePosition = (double)index / ViewModel.DebuggerLines.Count;
-                double estimatedOffset = approximatePosition * _scrollViewer.Extent.Height;
-
-                // Set scroll position
-                _scrollViewer.Offset = new Vector(_scrollViewer.Offset.X, estimatedOffset);
-            }
+            Console.WriteLine($"Couldn't find line with address {address:X8}");
         }
     }
 
@@ -290,10 +111,59 @@ public partial class ModernDisassemblyView : UserControl {
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        // Properties that should trigger scrolling to the current instruction
-        if (e.PropertyName is nameof(ModernDisassemblyViewModel.CurrentlyFocusedAddress)) {
-            // When instructions are updated or execution pauses, scroll to the current instruction
-            Dispatcher.UIThread.Post(ScrollToCurrentInstruction, DispatcherPriority.Background);
+        // Handle property changes from the view model
+        if (e.PropertyName is nameof(ModernDisassemblyViewModel.DebuggerLines)) {
+            // When the debugger lines are updated, reset the items repeater
+            if (_listBox != null) {
+                _listBox.ItemsSource = ViewModel?.DebuggerLines.Values;
+            }
+        }
+        // Only scroll to the current instruction when the IP changes or when pausing
+        else if (e.PropertyName is nameof(ModernDisassemblyViewModel.IpPhysicalAddress) ||
+                 e.PropertyName is nameof(ModernDisassemblyViewModel.CurrentlyFocusedAddress) ||
+                (e.PropertyName is nameof(ModernDisassemblyViewModel.IsPaused) &&
+                 sender is ModernDisassemblyViewModel viewModel &&
+                 viewModel.IsPaused)) {
+            
+            // Avoid multiple scroll operations by using a debounce mechanism
+            // Cancel any pending scroll operation
+            _scrollDebounceTimer?.Stop();
+            
+            // Create a new timer if needed
+            if (_scrollDebounceTimer == null) {
+                _scrollDebounceTimer = new DispatcherTimer {
+                    Interval = TimeSpan.FromMilliseconds(50)
+                };
+                _scrollDebounceTimer.Tick += (_, _) => {
+                    _scrollDebounceTimer?.Stop();
+                    
+                    // Force a refresh of the ListBox to update the highlighting
+                    if (_listBox != null && ViewModel != null) {
+                        // This will force the ListBox to re-evaluate all bindings
+                        _listBox.InvalidateVisual();
+                        
+                        // Force a refresh of the items collection to update the IsCurrentInstruction property
+                        {
+                            // Store the current items source
+
+                            // Reset the items source to force a refresh
+                            _listBox.ItemsSource = null;
+                            _listBox.ItemsSource = ViewModel.DebuggerLines.Values;
+                            
+                            // Update the previous and current instruction highlighting
+                            foreach (var line in ViewModel.DebuggerLines.Values) {
+                                line.UpdateIsCurrentInstruction();
+                            }
+                        }
+                    }
+                    
+                    // Scroll to the current instruction after refreshing
+                    ScrollToCurrentInstruction();
+                };
+            }
+            
+            // Start the timer to trigger the scroll operation after a short delay
+            _scrollDebounceTimer.Start();
         }
     }
 
@@ -303,7 +173,7 @@ public partial class ModernDisassemblyView : UserControl {
         }
 
         // Get the instruction from the sender's DataContext
-        if (sender is Border {DataContext: DebuggerLineViewModel debuggerLine}) {
+        if (sender is ContentControl {DataContext: DebuggerLineViewModel debuggerLine}) {
             // Set the selected instruction in the view model
             ViewModel.SelectedDebuggerLine = debuggerLine;
 

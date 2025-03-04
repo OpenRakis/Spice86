@@ -92,50 +92,47 @@
                                Foreground="{DynamicResource SystemAccentColor}" />
 
         <!-- Disassembly View with Scrolling -->
-        <ScrollViewer Grid.Row="1"
-                      IsVisible="{Binding IsPaused}"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      Name="DisassemblyScrollViewer"
-                      Padding="0,0,16,0">
-            <ItemsRepeater ItemsSource="{Binding DebuggerLines.Values}" Name="DisassemblyItemsRepeater">
-                <ItemsRepeater.Layout>
-                    <StackLayout Orientation="Vertical" Spacing="0" />
-                </ItemsRepeater.Layout>
-                <ItemsRepeater.ItemTemplate>
-                    <DataTemplate>
-                        <ContentControl PointerPressed="Instruction_PointerPressed"
-                                        FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
-                                        Background="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightBackground}}"
-                                        FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToBold}}"
-                                        Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}">
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*">
-                                <!-- Breakpoint indicator -->
-                                <Ellipse Grid.Column="0"
-                                         Width="10"
-                                         Height="10"
-                                         Margin="4,0,4,0"
-                                         Fill="{Binding Breakpoints, Converter={StaticResource BreakpointToBrushConverter}}"
-                                         VerticalAlignment="Center" />
+        <ListBox Grid.Row="1"
+                 IsVisible="{Binding IsPaused}"
+                 ItemsSource="{Binding DebuggerLines.Values}" 
+                 Name="DisassemblyListBox"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="0,0,16,0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 SelectedItem="{Binding SelectedDebuggerLine}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <ContentControl PointerPressed="Instruction_PointerPressed"
+                                    FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
+                                    Background="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightBackground}}"
+                                    FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToBold}}"
+                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}">
+                        <Grid ColumnDefinitions="Auto, Auto, *,4*">
+                            <!-- Breakpoint indicator -->
+                            <Ellipse Grid.Column="0"
+                                     Width="10"
+                                     Height="10"
+                                     Margin="4,0,4,0"
+                                     Fill="{Binding Breakpoints, Converter={StaticResource BreakpointToBrushConverter}}"
+                                     VerticalAlignment="Center" />
 
-                                <!-- Address -->
-                                <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
-                                           Margin="0,0,8,0" />
+                            <!-- Address -->
+                            <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
+                                       Margin="0,0,8,0" />
 
-                                <!-- Bytes -->
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding ByteString}"
-                                           Margin="8,0,0,0" />
+                            <!-- Bytes -->
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding ByteString}"
+                                       Margin="8,0,0,0" />
 
-                                <!-- Instruction -->
-                                <TextBlock Grid.Column="3" Text="{Binding Disassembly}" />
-
-
-                            </Grid>
-                        </ContentControl>
-                    </DataTemplate>
-                </ItemsRepeater.ItemTemplate>
-            </ItemsRepeater>
-        </ScrollViewer>
+                            <!-- Instruction -->
+                            <TextBlock Grid.Column="3" Text="{Binding Disassembly}" />
+                        </Grid>
+                    </ContentControl>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </UserControl>
