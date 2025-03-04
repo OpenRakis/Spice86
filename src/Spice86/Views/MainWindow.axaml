@@ -107,7 +107,8 @@
 				<fluent:SymbolIcon Symbol="ArrowReset" />
 			</Button>
 		</StackPanel>
-		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
+		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+			Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
@@ -118,9 +119,9 @@
 				</LayoutTransformControl.RenderTransform>
 				<Viewbox>
 					<Image x:Name="Image"
-					       RenderOptions.BitmapInterpolationMode="None"
-					       Cursor="{Binding Cursor}"
-					       Source="{Binding Bitmap}" />
+					    RenderOptions.BitmapInterpolationMode="None"
+					    Cursor="{Binding Cursor}"
+					    Source="{Binding Bitmap}" />
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
@@ -139,7 +140,7 @@
 			</controls:StatusBarItem>
 		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
-		           IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
+		        IsVisible="{Binding IsDialogVisible, FallbackValue=False}">
 				<userControls:ErrorModalDialogUserControl x:Name="ErrorDialog" />
 		</WrapPanel>
 	</Grid>
