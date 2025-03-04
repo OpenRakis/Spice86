@@ -1,4 +1,4 @@
-namespace Spice86.Tests;
+namespace Spice86.Tests.Devices;
 
 using FluentAssertions;
 

@@ -6,6 +6,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -17,8 +18,6 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
-
-using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.

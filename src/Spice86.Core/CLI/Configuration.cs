@@ -4,6 +4,7 @@ using CommandLine;
 
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
@@ -86,7 +87,7 @@ public sealed class Configuration {
     public bool? InitializeDOS { get; set; }
 
     /// <summary>
-    /// Only for <see cref="Emulator.Devices.Timer.Timer"/>
+    /// Only for <see cref="Timer"/>
     /// </summary>
     [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.")]
     public long? InstructionsPerSecond { get; set; }

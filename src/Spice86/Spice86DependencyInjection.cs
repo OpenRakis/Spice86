@@ -93,6 +93,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService);
 
         // IO devices
+        Timer timer = new Timer(configuration, state, ioPortDispatcher,
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+        TimerInt8Handler timerInt8Handler =
+            new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
+
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
@@ -107,7 +112,7 @@ public class Spice86DependencyInjection : IDisposable {
         Midi midiDevice = new Midi(softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
 
-        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, ioPortDispatcher, loggerService,
+        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2), ioPortDispatcher, pauseHandler, loggerService,
             configuration.FailOnUnhandledPort);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.Sb16);
@@ -123,11 +128,6 @@ public class Spice86DependencyInjection : IDisposable {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
         VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
-
-        Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
-        TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
 
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler =
             new BiosEquipmentDeterminationInt11Handler(memory, cpu, loggerService);
