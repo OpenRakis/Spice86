@@ -7,8 +7,7 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-public partial class BreakpointViewModel : ViewModelBase
-{
+public partial class BreakpointViewModel : ViewModelBase {
     private readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private BreakPoint? _breakPoint;
@@ -38,22 +37,17 @@ public partial class BreakpointViewModel : ViewModelBase
         BreakPointType type,
         bool isRemovedOnTrigger,
         Action onReached,
-        string comment = "")
-    {
+        string comment = "") {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         Address = trigger;
         Type = type;
         IsRemovedOnTrigger = isRemovedOnTrigger;
-        if (IsRemovedOnTrigger)
-        {
-            _onReached = () =>
-            {
+        if (IsRemovedOnTrigger) {
+            _onReached = () => {
                 breakpointsViewModel.RemoveBreakpointInternal(this);
                 onReached();
             };
-        }
-        else
-        {
+        } else {
             _onReached = onReached;
         }
         Comment = comment;
@@ -72,17 +66,12 @@ public partial class BreakpointViewModel : ViewModelBase
 
     private bool _isEnabled;
 
-    public bool IsEnabled
-    {
+    public bool IsEnabled {
         get => _isEnabled;
-        set
-        {
-            if (value)
-            {
+        set {
+            if (value) {
                 Enable();
-            }
-            else
-            {
+            } else {
                 Disable();
             }
             SetProperty(ref _isEnabled, value);
@@ -93,14 +82,10 @@ public partial class BreakpointViewModel : ViewModelBase
 
     public long Address { get; }
 
-    public void Toggle()
-    {
-        if (IsEnabled)
-        {
+    public void Toggle() {
+        if (IsEnabled) {
             Disable();
-        }
-        else
-        {
+        } else {
             Enable();
         }
     }
@@ -115,10 +100,8 @@ public partial class BreakpointViewModel : ViewModelBase
         return _breakPoint;
     }
 
-    public void Enable()
-    {
-        if (IsEnabled)
-        {
+    public void Enable() {
+        if (IsEnabled) {
             return;
         }
         _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
@@ -127,10 +110,8 @@ public partial class BreakpointViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEnabled));
     }
 
-    public void Disable()
-    {
-        if (!IsEnabled)
-        {
+    public void Disable() {
+        if (!IsEnabled) {
             return;
         }
         _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
@@ -139,8 +120,7 @@ public partial class BreakpointViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEnabled));
     }
 
-    internal bool IsFor(CpuInstructionInfo instructionInfo)
-    {
+    internal bool IsFor(CpuInstructionInfo instructionInfo) {
         return Address == instructionInfo.Address &&
             (Type == BreakPointType.CPU_EXECUTION_ADDRESS ||
             Type == BreakPointType.MEMORY_READ ||
