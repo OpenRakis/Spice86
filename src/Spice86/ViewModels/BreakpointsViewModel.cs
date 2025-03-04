@@ -34,7 +34,6 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
         _state = state;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
-        MemoryAddressValue = new SegmentedAddress(state.CS, state.IP);
     }
 
     private bool _isEditingSelectedBreakpoint;
@@ -126,6 +125,8 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void BeginCreateBreakpoint() {
         CreatingBreakpoint = true;
+        CyclesValue = _state.Cycles;
+        ExecutionAddressValue = MemoryAddressValue = new SegmentedAddress(_state.CS, _state.IP);
     }
 
     [ObservableProperty]

@@ -61,12 +61,15 @@
 						<controls:GroupBox Grid.Row="0" Header="Cycles"
                                  IsVisible="{Binding IsCyclesBreakpointSelected}">
 							<controls:GroupBox Header="Cycles count">
-								<NumericUpDown Text="{Binding CyclesValue}" Margin="5,0,0,0" />
+								<NumericUpDown
+									Value="{Binding CyclesValue,
+									Mode=TwoWay}"
+									Margin="5,0,0,0" />
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,*">
+							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
 								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
 								<ComboBox Grid.Column="0" Grid.Row="1"
 									SelectedItem="{Binding SelectedMemoryBreakpointType}"
@@ -77,7 +80,7 @@
 									Grid.Column="1"
                                     Text="{Binding MemoryAddressValue,
 										ConverterParameter='lenientMode',
-										Mode=OneWayToSource,
+										Mode=TwoWay,
 										Converter={StaticResource SegmentedAddressConverter}}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
                                     Margin="5,0,0,0" />
@@ -88,7 +91,7 @@
 							<controls:GroupBox Header="Memory address">
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
-										Mode=OneWayToSource,
+										Mode=TwoWay,
 										ConverterParameter='lenientMode',
 										Converter={StaticResource SegmentedAddressConverter}}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
