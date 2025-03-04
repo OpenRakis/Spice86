@@ -88,7 +88,7 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
                                  IsVisible="{Binding IsExecutionBreakpointSelected}">
-							<controls:GroupBox Header="Memory address">
+							<controls:GroupBox Header="Execution address">
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
 										Mode=TwoWay,

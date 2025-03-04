@@ -7,14 +7,17 @@
 			 xmlns:userControls="clr-namespace:Spice86.UserControls"
 			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 			 xmlns:converters="clr-namespace:Spice86.Converters"
+			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 			 x:Class="Spice86.Views.DisassemblyView"
 			 x:DataType="viewModels:DisassemblyViewModel">
 	<UserControl.Resources>
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
+		<converters:SegmentedAddressToLinearAddressConverter x:Key="SegmentedAddressToLinearAddressConverter" />
+		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter"
+			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -101,8 +104,7 @@
 								Converter={StaticResource BoolToFontWeightConverter}}" />
 							<Setter Property="Background"
 								Value="{ReflectionBinding Breakpoint,
-								Converter={StaticResource BreakpointToBrushConverter},
-								ConverterParameter={}}" />
+								Converter={StaticResource BreakpointToBrushConverter}}" />
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>
@@ -216,18 +218,30 @@
 						FontWeight="Bold" />
 					<Grid
 						Grid.Row="1"
-						RowDefinitions="Auto,Auto">
+						RowDefinitions="Auto,Auto,Auto">
 						<Label
 							Grid.Row="0"
 							VerticalContentAlignment="Center"
 							HorizontalContentAlignment="Left"
-							Content="Memory Address to break on:" />
-						<StackPanel
-							Grid.Row="1"
-							Orientation="Vertical">
+							Content="Memory Segmented Address to break on:" />
+						<controls:GroupBox Grid.Row="1" Header="Segmented address">
 							<TextBox
-								Text="{Binding BreakpointAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-						</StackPanel>
+								Text="{Binding BreakpointAddress,
+								Mode=TwoWay,
+								ConverterParameter='lenientMode',
+								Converter={StaticResource SegmentedAddressConverter}}"
+								Watermark="1000:FFFF (example) or like 'cs:ip'"
+								Margin="5,0,0,0" />
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="2" Header="Linear address representation">
+							<TextBox
+								IsEnabled="False"
+								IsReadOnly="True"
+								Text="{Binding BreakpointAddress,
+								Converter={StaticResource SegmentedAddressToLinearAddressConverter},
+								Mode=OneWay}"
+								Margin="5,0,0,0" />
+						</controls:GroupBox>
 					</Grid>
 					<StackPanel
 						Grid.Row="2"

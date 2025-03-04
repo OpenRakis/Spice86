@@ -15,6 +15,7 @@ using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
@@ -113,12 +114,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private bool _creatingExecutionBreakpoint;
 
     [ObservableProperty]
-    private ulong? _breakpointAddress;
+    private SegmentedAddress? _breakpointAddress;
 
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
+        BreakpointAddress = new SegmentedAddress(_state.CS, _state.IP);
     }
 
     [RelayCommand]
@@ -130,12 +131,15 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (BreakpointAddress != null) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(
-                (uint)BreakpointAddress.Value,
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddSegmentedAddressBreakpoint(
+                BreakpointAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
-                    () => PauseAndReportAddress((long)BreakpointAddress.Value));
-            UpdateAssemblyLineIfShown((uint)BreakpointAddress.Value, breakpointViewModel);
+                    () => PauseAndReportAddress(BreakpointAddress.Value));
+            UpdateAssemblyLineIfShown(MemoryUtils.ToPhysicalAddress(
+                BreakpointAddress.Value.Segment,
+                BreakpointAddress.Value.Offset),
+                breakpointViewModel);
         }
     }
 
@@ -303,7 +307,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
     }
 
-    private void PauseAndReportAddress(long address) {
+    private void PauseAndReportAddress(object address) {
         string message = $"Execution breakpoint was reached at address {address}.";
         Pause(message);
     }
@@ -352,7 +356,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         uint address = SelectedInstruction.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(address,
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.
+            AddLinearAddressBreakpoint(address,
             BreakPointType.CPU_EXECUTION_ADDRESS, isRemovedOnTrigger: false, () => {
                 PauseAndReportAddress(address);
             });
