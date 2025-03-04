@@ -71,7 +71,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         CanUseInternalDebugger = configuration.GdbPort is null;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.MaxValue, (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Background, (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
     }
 
     private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
@@ -218,7 +218,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             }
             _isSettingResolution = false;
             InitializeRenderingTimer();
-        }, DispatcherPriority.MaxValue);
+        }, DispatcherPriority.Background);
     }
 
     public void HideMouseCursor() => _uiDispatcher.Post(() => ShowCursor = false);
@@ -288,12 +288,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             using ILockedFramebuffer pixels = Bitmap.Lock();
             var uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
             RenderScreen.Invoke(this, uiRenderEventArgs);
+            _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Background);
         } finally {
             if (!_disposed) {
                 _drawingSemaphoreSlim?.Release();
             }
         }
-        _uiDispatcher.Post(() => InvalidateBitmap?.Invoke(), DispatcherPriority.Render);
     }
 
     internal void StartEmulator() {
