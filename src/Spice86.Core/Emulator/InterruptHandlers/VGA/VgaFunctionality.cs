@@ -1397,9 +1397,6 @@ public class VgaFunctionality : IVgaFunctionality {
         amount /= 2;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
         _memory.Memset16(address, value, (uint)amount);
-        for (int i = 0; i < amount; i += 2) {
-            _memory.UInt16[(uint)(address + i)] = value;
-        }
     }
 
     private void WriteMaskedToMiscellaneousRegister(byte offBits, byte onBits) {
