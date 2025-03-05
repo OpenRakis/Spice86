@@ -7,6 +7,7 @@ using AvaloniaGraphControl;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -29,10 +30,14 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private long _averageNodeTime;
 
-    public CfgCpuViewModel(ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
+    [ObservableProperty] private bool _isCfgCpuEnabled;
+
+    public CfgCpuViewModel(Configuration configuration, ExecutionContextManager executionContextManager, IPauseHandler pauseHandler,
         IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
+        IsCfgCpuEnabled = configuration.CfgCpu;
+
         pauseHandler.Pausing += () => UpdateGraphCommand.Execute(null);
     }
 

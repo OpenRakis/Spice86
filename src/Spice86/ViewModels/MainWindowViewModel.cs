@@ -35,9 +35,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
 
     [ObservableProperty]
-    private bool _canUseInternalDebugger;
-    
-    [ObservableProperty]
     private Configuration _configuration;
 
     private bool _disposed;
@@ -70,7 +67,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Pausing += OnPausing;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
-        CanUseInternalDebugger = configuration.GdbPort is null;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Background, (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
     }
 

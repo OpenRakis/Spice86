@@ -35,6 +35,9 @@ internal class InstructionsDecoder {
         var instructions = new List<CpuInstructionInfo>();
         while (instructions.Count < numberOfInstructionsShown) {
             long instructionAddress = codeMemoryStream.Position;
+            if(instructionAddress >= emulatedMemoryStream.Length) {
+                break;
+            }
             decoder.Decode(out Instruction instruction);
             CpuInstructionInfo instructionInfo = new() {
                 Instruction = instruction,
