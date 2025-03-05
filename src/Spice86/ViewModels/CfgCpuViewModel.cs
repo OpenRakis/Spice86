@@ -38,7 +38,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         _performanceMeasurer = performanceMeasurer;
         IsCfgCpuEnabled = configuration.CfgCpu;
 
-        pauseHandler.Pausing += () => UpdateGraphCommand.Execute(null);
+        pauseHandler.Paused += () => UpdateGraphCommand.Execute(null);
     }
 
     [RelayCommand]

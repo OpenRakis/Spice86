@@ -81,7 +81,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += () => uiDispatcher.Post(() => IsPaused = true);
+        pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = new(
             emulatorBreakpointsManager,
@@ -105,7 +105,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
             canCloseTab: false, startAddress: stack.PhysicalAddress) {
             Title = "CPU Stack Memory"
         };
-        pauseHandler.Pausing += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
+        pauseHandler.Paused += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
         MemoryViewModels.Add(mainMemoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
         CfgCpuViewModel = new(configuration, executionContextManager,

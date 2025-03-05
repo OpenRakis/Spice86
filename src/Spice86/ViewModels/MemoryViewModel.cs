@@ -37,7 +37,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _state = state;
         _breakpointsViewModel = breakpointsViewModel;
         _memory = memory;
-        _pauseHandler.Pausing += OnPause;
+        _pauseHandler.Paused += OnPause;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         _messenger = messenger;
