@@ -168,44 +168,7 @@
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
-				<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
 				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-				<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
 			</DataGrid.Columns>
 			<DataGrid.ContextMenu>
 				<ContextMenu>
