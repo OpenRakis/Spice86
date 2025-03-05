@@ -22,6 +22,7 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Modern implementation of the disassembly view model with improved performance and usability.
@@ -35,7 +36,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
-    private Avalonia.Threading.DispatcherTimer? _updateTimer;
 
     [ObservableProperty]
     private string? _breakpointAddress;
@@ -47,8 +47,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [ObservableProperty]
     private bool _creatingExecutionBreakpoint;
 
-    private uint _currentlyFocusedAddress;
-
     [ObservableProperty]
     private AvaloniaList<FunctionInfo> _functions = [];
 
@@ -56,7 +54,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private string _header = "Modern Disassembly";
 
     [ObservableProperty]
-    private AvaloniaDictionary<uint,DebuggerLineViewModel> _debuggerLines = [];
+    private AvaloniaDictionary<long, DebuggerLineViewModel> _debuggerLines = [];
 
     [ObservableProperty]
     private bool _isFunctionInformationProvided;
@@ -83,11 +81,17 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [ObservableProperty]
     private DebuggerLineViewModel? _selectedDebuggerLine;
 
+    /// <summary>
+    /// The physical address of the current instruction. This is updated when the emulator pauses.
+    /// </summary>
     [ObservableProperty]
-    private uint _ipPhysicalAddress;
+    private uint _currentInstructionAddress;
 
-    // Track the previous IP address for highlighting updates
-    private uint _previousIpAddress;
+    // Track the previous instruction address for highlighting updates
+    private uint _previousInstructionAddress;
+
+    // Flag to prevent recursive updates
+    private bool _isUpdatingHighlighting;
 
     public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<uint, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
@@ -107,34 +111,12 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         _instructionsDecoder = new InstructionsDecoder(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         CanCloseTab = canCloseTab;
-        IpPhysicalAddress = _state.IpPhysicalAddress;
+        CurrentInstructionAddress = _state.IpPhysicalAddress;
         EnableEventHandlers();
-        
-        // Start a timer to periodically update the IP physical address
-        _updateTimer = new Avalonia.Threading.DispatcherTimer {
-            Interval = TimeSpan.FromMilliseconds(200)
-        };
-        _updateTimer.Tick += UpdateIpPhysicalAddress;
-        _updateTimer.Start();
-    }
-    
-    private void UpdateIpPhysicalAddress(object? sender, EventArgs e) {
-        // Only update if paused to avoid constant UI refreshes during execution
-        if (IsPaused) {
-            uint currentIp = _state.IpPhysicalAddress;
-            
-            // Only update if the IP has changed
-            if (currentIp != IpPhysicalAddress) {
-                IpPhysicalAddress = currentIp;
-                
-                // Update the highlighting for the current instruction
-                UpdateCurrentInstructionHighlighting();
-            }
-        }
     }
 
     public void EnableEventHandlers() {
-        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         _breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
         _breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
@@ -142,19 +124,11 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     }
 
     public void DisableEventHandlers() {
-        _pauseHandler.Pausing -= OnPausing;
+        _pauseHandler.Paused -= OnPaused;
         _pauseHandler.Resumed -= OnResumed;
         _breakpointsViewModel.BreakpointDeleted -= OnBreakPointUpdateFromBreakpointsViewModel;
         _breakpointsViewModel.BreakpointDisabled -= OnBreakPointUpdateFromBreakpointsViewModel;
         _breakpointsViewModel.BreakpointEnabled -= OnBreakPointUpdateFromBreakpointsViewModel;
-    }
-
-    public uint CurrentlyFocusedAddress {
-        get => _currentlyFocusedAddress;
-        set {
-            SetProperty(ref _currentlyFocusedAddress, value);
-            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
-        }
     }
 
     /// <summary>
@@ -162,85 +136,110 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     /// </summary>
     public void Dispose() {
         DisableEventHandlers();
-        
-        // Stop and clean up the timer
-        if (_updateTimer != null) {
-            _updateTimer.Stop();
-            _updateTimer = null;
-        }
+        GC.SuppressFinalize(this);
     }
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpoint) {
-        AddBreakpointToListing(breakpoint);
+        // todo: show/hide breakpint on current line
     }
 
     private void OnResumed() {
         _uiDispatcher.Post(() => {
             IsPaused = false;
-            
-            // Update the IP physical address
-            uint currentIp = _state.IpPhysicalAddress;
-            
-            // Only update IpPhysicalAddress if it has changed
-            if (IpPhysicalAddress != currentIp) {
-                IpPhysicalAddress = currentIp;
-                
-                // Force an update of the highlighting
-                UpdateCurrentInstructionHighlighting();
-            }
         });
     }
 
-    private void OnPausing() {
-        _uiDispatcher.Post(() => {
-            IsPaused = true;
+    private void OnPaused() {
+        // Ensure we're on the UI thread
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(OnPaused);
+            return;
+        }
+
+        // Capture the current CPU instruction pointer at the moment of pausing
+        // This value will be preserved for highlighting even if the CPU state changes
+        CurrentInstructionAddress = _state.IpPhysicalAddress;
+        Console.WriteLine($"Pausing: Captured instruction pointer at {CurrentInstructionAddress:X8}");
+
+        // Check if the current instruction address is in our collection
+        if (!DebuggerLines.ContainsKey(CurrentInstructionAddress)) {
+            Console.WriteLine($"Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly");
             
-            // Update the IP physical address
-            uint currentIp = _state.IpPhysicalAddress;
-            CurrentlyFocusedAddress = currentIp;
-            
-            // Only update IpPhysicalAddress if it has changed
-            if (IpPhysicalAddress != currentIp) {
-                IpPhysicalAddress = currentIp;
+            // We need to ensure the disassembly is updated synchronously before continuing
+            try {
+                IsLoading = true;
                 
-                // Force an update of the highlighting
-                UpdateCurrentInstructionHighlighting();
+                // Use Task.Run and Wait to execute the async method synchronously
+                // This ensures the instructions are loaded before we continue
+                Task.Run(async () => {
+                    await UpdateDisassembly(CurrentInstructionAddress);
+                }).Wait();
+                
+                Console.WriteLine($"Disassembly updated, now contains {DebuggerLines.Count} instructions");
+                
+                // Verify that the current instruction is now in the collection
+                if (!DebuggerLines.ContainsKey(CurrentInstructionAddress)) {
+                    Console.WriteLine($"Warning: Current address {CurrentInstructionAddress:X8} still not found in DebuggerLines after update");
+                }
+            } catch (Exception ex) {
+                Console.WriteLine($"Error updating disassembly: {ex.Message}");
+            } finally {
+                IsLoading = false;
             }
+        }
 
-            // Check if the current IP is within our current view
-            bool ipInCurrentListing = DebuggerLines.ContainsKey(currentIp);
+        // Now that we've ensured the instructions are loaded, update the highlighting
+        UpdateCurrentInstructionHighlighting();
 
-            // Only rebuild the disassembly if necessary
-            if (!ipInCurrentListing) {
-                // CS:IP changed to lie outside our current listing, update the disassembly
-                UpdateDisassemblyInternal();
-            }
-        });
+        // Scroll to the current instruction
+        ScrollToAddress?.Invoke(CurrentInstructionAddress);
+
+        IsPaused = true;
     }
 
     /// <summary>
-    /// Updates the highlighting for the current instruction by notifying property changes.
+    /// Updates the highlighting for the current instruction based on the current CPU state.
     /// </summary>
     private void UpdateCurrentInstructionHighlighting() {
-        uint currentIpAddress = _state.IpPhysicalAddress;
-        
-        // Only update if the IP address has changed
-        if (_previousIpAddress != currentIpAddress) {
-            // If the previous address is in our collection, update its highlighting
-            if (_previousIpAddress != 0 && DebuggerLines.TryGetValue(_previousIpAddress, out DebuggerLineViewModel? previousLine)) {
-                previousLine.UpdateIsCurrentInstruction();
+        // Ensure we're on the UI thread
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
+            Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCurrentInstructionHighlighting);
+            return;
+        }
+
+        // Skip if we're already updating the highlighting to prevent recursive calls
+        if (_isUpdatingHighlighting) {
+            return;
+        }
+
+        _isUpdatingHighlighting = true;
+
+        try {
+            // Log the current state for debugging
+            Console.WriteLine($"Updating highlighting: CurrentInstructionAddress={CurrentInstructionAddress:X8}, Previous={_previousInstructionAddress:X8}");
+            Console.WriteLine($"Current CPU IP: {_state.IpPhysicalAddress:X8}");
+
+            // Only update if we have a valid current instruction address
+            if (CurrentInstructionAddress != 0) {
+                // If the current address is in our collection, update its highlighting
+                if (DebuggerLines.TryGetValue(CurrentInstructionAddress, out DebuggerLineViewModel? currentLine)) {
+                    currentLine.UpdateIsCurrentInstruction();
+                    Console.WriteLine($"Updated current line at {CurrentInstructionAddress:X8}");
+                } else {
+                    Console.WriteLine($"WARNING: Current instruction at {CurrentInstructionAddress:X8} is NOT in the DebuggerLines collection!");
+                }
+
+                // If the previous address is in our collection, update its highlighting
+                if (_previousInstructionAddress != 0 && DebuggerLines.TryGetValue(_previousInstructionAddress, out DebuggerLineViewModel? previousLine)) {
+                    previousLine.UpdateIsCurrentInstruction();
+                    Console.WriteLine($"Updated previous line at {_previousInstructionAddress:X8}");
+                }
+
+                // Update the previous IP address for the next time
+                _previousInstructionAddress = CurrentInstructionAddress;
             }
-            
-            // If the current address is in our collection, update its highlighting
-            if (DebuggerLines.TryGetValue(currentIpAddress, out DebuggerLineViewModel? currentLine)) {
-                currentLine.UpdateIsCurrentInstruction();
-                
-                // Scroll to the current instruction
-                ScrollToAddress?.Invoke(currentIpAddress);
-            }
-            
-            // Update the previous IP address for next time
-            _previousIpAddress = currentIpAddress;
+        } finally {
+            _isUpdatingHighlighting = false;
         }
     }
 
@@ -282,9 +281,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepOver() {
-        if (!DebuggerLines.TryGetValue(_state.IpPhysicalAddress, out DebuggerLineViewModel? debuggerLine)) {
+        if (!DebuggerLines.TryGetValue(CurrentInstructionAddress, out DebuggerLineViewModel? debuggerLine)) {
             return;
         }
+        
         // Only step over instructions that return
         if (!debuggerLine.CanBeSteppedOver) {
             StepInto();
@@ -293,24 +293,40 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         // Calculate the next instruction address
-        uint nextInstructionAddress = debuggerLine.NextAddress;
+        long nextInstructionAddress = debuggerLine.NextAddress;
+        
+        // Store the current instruction address before stepping
+        uint currentAddress = CurrentInstructionAddress;
 
         // Set the breakpoint at the next instruction address
         _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, nextInstructionAddress, onReached: _ => {
-            // Update the IP physical address when the breakpoint is reached
-            IpPhysicalAddress = _state.IpPhysicalAddress;
             Pause($"Step over execution breakpoint was reached at address {nextInstructionAddress}");
+            
+            // Ensure we update the current instruction address from the CPU state
+            // This is done in OnPausing, but we log it here for clarity
+            Console.WriteLine($"Step over breakpoint reached. Previous address: {currentAddress:X8}, New address: {_state.IpPhysicalAddress:X8}");
         }, isRemovedOnTrigger: true), on: true);
+        
         _pauseHandler.Resume();
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
+        Console.WriteLine("Setting unconditional breakpoint for step into");
+        
+        // Store the current instruction address before stepping
+        uint currentAddress = CurrentInstructionAddress;
+        
         _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-            // Update the IP physical address when the breakpoint is reached
-            IpPhysicalAddress = _state.IpPhysicalAddress;
+            // When the breakpoint is hit, pause the emulator
             Pause("Step into unconditional breakpoint was reached");
+            
+            // Ensure we update the current instruction address from the CPU state
+            // This is done in OnPausing, but we log it here for clarity
+            Console.WriteLine($"Step into breakpoint reached. Previous address: {currentAddress:X8}, New address: {_state.IpPhysicalAddress:X8}");
         }, true);
+
+        Console.WriteLine("Resuming execution for step into");
         _pauseHandler.Resume();
     }
 
@@ -325,7 +341,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void NewDisassemblyView() {
+    private async Task NewDisassemblyView() {
         ModernDisassemblyViewModel disassemblyViewModel = new(
             _emulatorBreakpointsManager, _memory, _state, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, true) {
             IsPaused = IsPaused
@@ -335,94 +351,21 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        await GoToAddress(_state.IpPhysicalAddress);
+        if (!IsPaused) {
+            return;
+        }
+
+        // Update the disassembly
+        _ = UpdateDisassembly(_state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task GoToFunction(object? parameter) {
-        if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address);
-        }
-    }
-
-    private async Task GoToAddress(uint address) {
-        CurrentlyFocusedAddress = address;
-        await UpdateDisassembly();
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task UpdateDisassembly() {
-        // DebuggerLines.Clear();
-        IsLoading = true;
-        Dictionary<uint,EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(CurrentlyFocusedAddress, 512));
-        foreach ((uint key, EnrichedInstruction value) in enrichedInstructions) {
-            DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
-        }
-        UpdateHeader(CurrentlyFocusedAddress);
-        IsLoading = false;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task CopyLine() {
-        if (SelectedDebuggerLine is not null) {
-            await _textClipboard.SetTextAsync(SelectedDebuggerLine.ToString());
-        }
-    }
-
-    private void PauseAndReportAddress(long address) {
-        string message = $"Execution breakpoint was reached at address {address}.";
-        Pause(message);
-    }
-
-    private void Pause(string message) {
-        _pauseHandler.RequestPause(message);
-        _uiDispatcher.Post(() => {
-            _messenger.Send(new StatusMessage(DateTime.Now, this, message));
-        });
-    }
-
-    private void UpdateDisassemblyInternal() {
-        if (UpdateDisassemblyCommand.CanExecute(null)) {
-            UpdateDisassemblyCommand.Execute(null);
-        }
-    }
-
-    [RelayCommand]
-    private void MoveCsIpHere() {
+    private async Task CreateExecutionBreakpointHere() {
         if (SelectedDebuggerLine is null) {
             return;
         }
-        _state.CS = SelectedDebuggerLine.SegmentedAddress.Segment;
-        _state.IP = SelectedDebuggerLine.SegmentedAddress.Offset;
-        UpdateDisassemblyInternal();
-    }
-
-    private bool SelectedDebuggerLineHasBreakpoint() {
-        return SelectedDebuggerLine?.Breakpoints.Count > 0;
-    }
-
-    [RelayCommand(CanExecute = nameof(SelectedDebuggerLineHasBreakpoint))]
-    private void RemoveExecutionBreakpointHere() {
-        if (SelectedDebuggerLine == null || SelectedDebuggerLine.Breakpoints.Count == 0) {
-            return;
-        }
-        
-        // Create a copy of the breakpoints collection to avoid modifying while iterating
-        var breakpointsToRemove = SelectedDebuggerLine.Breakpoints.ToList();
-        
-        foreach (BreakpointViewModel breakpoint in breakpointsToRemove) {
-            _breakpointsViewModel.RemoveBreakpointInternal(breakpoint);
-            SelectedDebuggerLine.Breakpoints.Remove(breakpoint);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void CreateExecutionBreakpointHere() {
-        if (SelectedDebuggerLine is null) {
-            return;
-        }
-        uint address = SelectedDebuggerLine.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+        long address = SelectedDebuggerLine.Address;
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((uint)address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
         SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
@@ -448,22 +391,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         return false;
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void OpenClassicView() {
-        DisassemblyViewModel classicViewModel = new(
-            _emulatorBreakpointsManager, _memory, _state, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, true) {
-            IsPaused = IsPaused
-        };
-
-        // If we have a selected instruction, set the same address in the classic view
-        if (SelectedDebuggerLine != null) {
-            classicViewModel.StartAddress = SelectedDebuggerLine.Address;
-            classicViewModel.UpdateDisassemblyCommand.Execute(null);
-        }
-
-        _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(classicViewModel));
-    }
-
     /// <summary>
     /// Scrolls the view by the specified number of instructions.
     /// </summary>
@@ -475,7 +402,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         // Find the index of the current center instruction
-        int currentIndex = DebuggerLines.Keys.IndexOf(CurrentlyFocusedAddress);
+        int currentIndex = DebuggerLines.Keys.IndexOf(CurrentInstructionAddress);
 
         // Calculate the new center index
         int newIndex = Math.Clamp(currentIndex + instructionOffset, 0, DebuggerLines.Count - 1);
@@ -487,7 +414,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             await GoToAddress(newCenterAddress);
         } else {
             // Just update the selected instruction
-            CurrentlyFocusedAddress = newCenterAddress;
+            // CurrentlyFocusedAddress = newCenterAddress;
 
             // Notify the view to scroll to this instruction
             ScrollToAddress?.Invoke(newCenterAddress);
@@ -529,5 +456,80 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task LineDown() {
         await ScrollView(1);
+    }
+
+    private async Task GoToAddress(uint address) {
+        await UpdateDisassembly(address);
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private async Task UpdateDisassembly(uint currentInstructionAddress) {
+        IsLoading = true;
+        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(CurrentInstructionAddress, 512));
+        foreach ((uint key, EnrichedInstruction value) in enrichedInstructions) {
+            if (DebuggerLines.TryGetValue(key, out DebuggerLineViewModel? existingLine)) {
+                // Update the existing line
+                existingLine.UpdateIsCurrentInstruction();
+            } else {
+                // Add a new line
+                DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
+            }
+        }
+        IsLoading = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private async Task CopyLine() {
+        if (SelectedDebuggerLine is not null) {
+            await _textClipboard.SetTextAsync(SelectedDebuggerLine.ToString());
+        }
+    }
+
+    private void PauseAndReportAddress(long address) {
+        string message = $"Execution breakpoint was reached at address {address}.";
+        Pause(message);
+    }
+
+    private void Pause(string message) {
+        _pauseHandler.RequestPause(message);
+        _uiDispatcher.Post(() => {
+            _messenger.Send(new StatusMessage(DateTime.Now, this, message));
+        });
+    }
+
+    [RelayCommand]
+    private void MoveCsIpHere() {
+        if (SelectedDebuggerLine is null) {
+            return;
+        }
+        _state.CS = SelectedDebuggerLine.SegmentedAddress.Segment;
+        _state.IP = SelectedDebuggerLine.SegmentedAddress.Offset;
+        _pauseHandler.Resume();
+    }
+
+    private bool SelectedDebuggerLineHasBreakpoint() {
+        return SelectedDebuggerLine?.Breakpoints.Count > 0;
+    }
+
+    [RelayCommand(CanExecute = nameof(SelectedDebuggerLineHasBreakpoint))]
+    private void RemoveExecutionBreakpointHere() {
+        if (SelectedDebuggerLine == null || SelectedDebuggerLine.Breakpoints.Count == 0) {
+            return;
+        }
+
+        // Create a copy of the breakpoints collection to avoid modifying while iterating
+        var breakpointsToRemove = SelectedDebuggerLine.Breakpoints.ToList();
+
+        foreach (BreakpointViewModel breakpoint in breakpointsToRemove) {
+            _breakpointsViewModel.RemoveBreakpointInternal(breakpoint);
+            SelectedDebuggerLine.Breakpoints.Remove(breakpoint);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private async Task GoToFunction(object? parameter) {
+        if (parameter is FunctionInfo functionInfo) {
+            await GoToAddress(functionInfo.Address);
+        }
     }
 }
