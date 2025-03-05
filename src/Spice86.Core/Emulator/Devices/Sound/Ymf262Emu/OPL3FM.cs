@@ -16,15 +16,14 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private readonly SoundChannel _soundChannel;
     private readonly FmSynthesizer? _synth;
-    private readonly IPauseHandler _pauseHandler;
     private int _currentAddress;
-    private volatile bool _endThread;
-    private readonly Thread _playbackThread;
-    private bool _initialized;
+    private readonly DeviceThread _deviceThread;
     private byte _statusByte;
     private byte _timer1Data;
     private byte _timer2Data;
     private byte _timerControlByte;
+    private readonly float[] _synthReadBuffer = new float[1024];
+    private readonly float[] _playBuffer = new float[1024 * 2];
 
     private bool _disposed;
 
@@ -43,12 +42,9 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
     public OPL3FM(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
-        _pauseHandler = pauseHandler;
         _soundChannel = fmSynthSoundChannel;
         _synth = new(48000);
-        _playbackThread = new Thread(GenerateWaveforms) {
-            Name = nameof(OPL3FM)
-        };
+        _deviceThread = new DeviceThread(nameof(OPL3FM), PlaybackLoopBody, pauseHandler, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -67,11 +63,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private void Dispose(bool disposing) {
         if(!_disposed) {
             if(disposing) {
-                _endThread = true;
-                if (_playbackThread.IsAlive) {
-                    _playbackThread.Join();
-                }
-                _initialized = false;
+                _deviceThread.Dispose();
             }
             _disposed = true;
         }
@@ -116,14 +108,18 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
                     _statusByte = 0;
                 }
             } else {
-                if (!_initialized) {
-                    StartPlaybackThread();
-                }
-
+                InitializePlaybackIfNeeded();
                 _synth?.SetRegisterValue(0, _currentAddress, value);
             }
         }
     }
+
+    private void InitializePlaybackIfNeeded() {
+        if (!_deviceThread.Active) {
+            FillBuffer(_synthReadBuffer, _playBuffer);
+            _deviceThread.StartThreadIfNeeded();
+        }
+    } 
 
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
@@ -132,32 +128,17 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
             WriteByte(0x389, (byte)(value >> 8));
         }
     }
+
     /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
-    private void GenerateWaveforms() {
-        const int length = 1024;
-        Span<float> buffer = stackalloc float[length];
-        Span<float> playBuffer = stackalloc float[length * 2];
-        FillBuffer(buffer, playBuffer);
-        while (!_endThread) {
-            _pauseHandler.WaitIfPaused();
-            _soundChannel.Render(playBuffer);
-            FillBuffer(buffer, playBuffer);
-        }
+    private void PlaybackLoopBody() {
+        _soundChannel.Render(_playBuffer);
+        FillBuffer(_synthReadBuffer, _playBuffer);
     }
 
     private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
         _synth?.GetData(buffer);
         ChannelAdapter.MonoToStereo(buffer, playBuffer);
-    }
-
-    private void StartPlaybackThread() {
-        if (_endThread) {
-            return;
-        }
-        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(OPL3FM));
-        _initialized = true;
-        _playbackThread.Start();
     }
 }

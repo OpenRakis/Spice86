@@ -13,7 +13,6 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Frozen;
-using System.Threading;
 
 /// <summary>
 /// Sound blaster implementation. <br/>
@@ -105,6 +104,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The port number for checking the status of the right speaker.
     /// </summary>
     public const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
+    
+    private const int ResampleRate = 48000;
 
     private bool _disposed;
 
@@ -135,17 +136,15 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     private readonly Dsp _dsp;
     private readonly HardwareMixer _ctMixer;
     private readonly Queue<byte> _outputData = new();
-    private readonly Thread _playbackThread;
+    private readonly DeviceThread _deviceThread;
     private bool _blockTransferSizeSet;
     private byte _commandDataLength;
     private byte _currentCommand;
-    private volatile bool _endPlayback;
     private int _pauseDuration;
     private BlasterState _blasterState;
-    private bool _playbackStarted;
     private readonly DualPic _dualPic;
-    private readonly IPauseHandler _pauseHandler;
-
+    private readonly byte[] _readFromDspBuffer = new byte[512];
+    private readonly short[] _renderingBuffer = new short[65536 * 2];
     /// <summary>
     /// The SoundBlaster's PCM sound channel.
     /// </summary>
@@ -185,15 +184,12 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
         _dma16 = soundBlasterHardwareConfig.HighDma;
-        _pauseHandler = pauseHandler;
         _dualPic = dualPic;
         _eightByteDmaChannel = dmaController.Channels[soundBlasterHardwareConfig.LowDma];
         _dsp = new Dsp(_eightByteDmaChannel, dmaController.Channels[soundBlasterHardwareConfig.HighDma]);
         _dsp.OnAutoInitBufferComplete += RaiseInterruptRequest;
         dmaController.SetupDmaDeviceChannel(this);
-        _playbackThread = new Thread(AudioPlayback) {
-            Name = nameof(SoundBlaster),
-        };
+        _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
         FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
         Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService, pauseHandler);
@@ -231,12 +227,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        if (!_playbackStarted) {
-            _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(SoundBlaster));
-            _playbackStarted = true;
-            _playbackThread.Start();
-        }
-
+        _deviceThread.StartThreadIfNeeded();
         switch (port) {
             case DspPorts.DspWriteStatus:
                 return;
@@ -344,11 +335,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _endPlayback = true;
-                if (_playbackThread.IsAlive) {
-                    _playbackThread.Join();
-                }
-
+                _deviceThread.Dispose();
                 _dsp.Dispose();
             }
 
@@ -389,27 +376,20 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 
-    private void AudioPlayback() {
-        Span<byte> buffer = stackalloc byte[512];
-        short[] writeBuffer = new short[65536 * 2];
-        const int sampleRate = 48000;
+    private void PlaybackLoopBody() {
+        _dsp.Read(_readFromDspBuffer);
+        int length = Resample(_readFromDspBuffer, ResampleRate, _renderingBuffer);
+        PCMSoundChannel.Render(_renderingBuffer.AsSpan(0, length));
 
-        while (!_endPlayback) {
-            _pauseHandler.WaitIfPaused();
-            _dsp.Read(buffer);
-            int length = Resample(buffer, sampleRate, writeBuffer);
-            PCMSoundChannel.Render(writeBuffer.AsSpan(0, length));
-
-            if (_pauseDuration > 0) {
-                Array.Clear(writeBuffer, 0, writeBuffer.Length);
-                int count = (_pauseDuration / (1024 / 2)) + 1;
-                for (int i = 0; i < count; i++) {
-                    PCMSoundChannel.Render(writeBuffer.AsSpan(0, 1024));
-                }
-
-                _pauseDuration = 0;
-                RaiseInterruptRequest();
+        if (_pauseDuration > 0) {
+            Array.Clear(_renderingBuffer, 0, _renderingBuffer.Length);
+            int count = (_pauseDuration / (1024 / 2)) + 1;
+            for (int i = 0; i < count; i++) {
+                PCMSoundChannel.Render(_renderingBuffer.AsSpan(0, 1024));
             }
+
+            _pauseDuration = 0;
+            RaiseInterruptRequest();
         }
     }
 

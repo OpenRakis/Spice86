@@ -3,6 +3,7 @@
 using Mt32emu;
 
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System.IO.Compression;
@@ -14,26 +15,27 @@ using System.Linq;
 public sealed class Mt32MidiDevice : MidiDevice {
     private readonly Mt32Context _context;
     private readonly SoundChannel _soundChannel;
-    private readonly Thread? _renderThread;
-
-    private bool _threadStarted;
-    private bool _exitRenderThread;
+    private readonly DeviceThread _deviceThread;
 
     /// <summary>
     /// Indicates whether this object has been disposed.
     /// </summary>
     private bool _disposed;
 
+    private readonly float[] _buffer = new float[128];
+
     /// <summary>
     /// Constructs an instance of <see cref="Mt32MidiDevice"/>.
     /// </summary>
     /// <param name="softwareMixer">The software mixer for sund channels.</param>
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
+    /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer softwareMixer, string romsPath, IPauseHandler pauseHandler, ILoggerService loggerService) {
         _soundChannel = softwareMixer.CreateChannel(nameof(Mt32MidiDevice));
         _context = new();
+        _deviceThread = new DeviceThread(nameof(Mt32MidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
@@ -48,43 +50,28 @@ public sealed class Mt32MidiDevice : MidiDevice {
         _context.AnalogOutputMode = Mt32GlobalState.GetBestAnalogOutputMode(48000);
         _context.SetSampleRate(48000);
         _context.OpenSynth();
-
-        _renderThread = new Thread(RenderThreadMethod) {
-            Name = nameof(Mt32MidiDevice)
-        };
     }
 
     /// <inheritdoc/>
     protected override void PlayShortMessage(uint message) {
-        StartThreadIfNeeded();
-        if (!_disposed && !_exitRenderThread) {
+        if (!_disposed) {
+            _deviceThread.StartThreadIfNeeded();
             _context.PlayMessage(message);
         }
     }
 
     /// <inheritdoc/>
     protected override void PlaySysex(ReadOnlySpan<byte> data) {
-        StartThreadIfNeeded();
-        if (!_disposed && !_exitRenderThread) {
+        if (!_disposed) {
+            _deviceThread.StartThreadIfNeeded();
             _context.PlaySysex(data);
         }
     }
 
-
-    private void StartThreadIfNeeded() {
-        if (!_disposed && !_exitRenderThread && !_threadStarted) {
-            _threadStarted = true;
-            _renderThread?.Start();
-        }
-    }
-
-    private void RenderThreadMethod() {
-        Span<float> buffer = stackalloc float[128];
-        while (!_exitRenderThread) {
-            buffer.Clear();
-            _context.Render(buffer);
-            _soundChannel.Render(buffer);
-        }
+    private void PlaybackLoopBody() {
+        ((Span<float>)_buffer).Clear();
+        _context.Render(_buffer);
+        _soundChannel.Render(_buffer);
     }
 
     private bool LoadRoms(string path) {
@@ -119,10 +106,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                _exitRenderThread = true;
-                if (_renderThread?.IsAlive == true) {
-                    _renderThread.Join();
-                }
+                _deviceThread.Dispose();
                 _context.Dispose();
             }
             _disposed = true;
