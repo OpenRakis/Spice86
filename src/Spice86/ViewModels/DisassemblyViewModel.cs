@@ -52,7 +52,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         _pauseHandler = pauseHandler;
         _instructionsDecoder = new(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
-        pauseHandler.Pausing += OnPausing;
+        pauseHandler.Paused += OnPaused;
         pauseHandler.Resumed += OnResumed;
         CanCloseTab = canCloseTab;
         breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
@@ -83,7 +83,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [ObservableProperty]
     private AvaloniaList<FunctionInfo> _functions = new();
 
-    private void OnPausing() {
+    private void OnPaused() {
         _uiDispatcher.Post(() => {
             IsPaused = true;
             if (!_didCsIpGoOutOfCurrentListing) {

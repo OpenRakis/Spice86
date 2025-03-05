@@ -49,6 +49,9 @@ public class PauseHandler : IDisposable, IPauseHandler {
     /// <inheritdoc />
     public event Action? Pausing;
 
+    /// <inheritdoc/>
+    public event Action? Paused;
+
     /// <inheritdoc />
     public event Action? Resumed;
 
@@ -59,6 +62,7 @@ public class PauseHandler : IDisposable, IPauseHandler {
         Pausing?.Invoke();
         _pausing = true;
         _manualResetEvent.Reset();
+        Paused?.Invoke();
     }
 
     /// <inheritdoc />

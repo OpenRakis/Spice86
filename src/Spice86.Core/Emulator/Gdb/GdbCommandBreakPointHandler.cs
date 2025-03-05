@@ -31,7 +31,7 @@ public class GdbCommandBreakpointHandler {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _pauseHandler.Pausing += OnPauseFromEmulator;
+        _pauseHandler.Paused += OnPauseFromEmulator;
         _gdbIo = gdbIo;
     }
 
