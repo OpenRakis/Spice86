@@ -20,10 +20,10 @@ public class DebuggerLineViewModel : ViewModelBase {
     public string ByteString { get; }
     public FunctionInformation? Function { get; }
     public SegmentedAddress SegmentedAddress { get; }
-    public uint Address { get; }
+    public long Address { get; }
     public bool ContinuesToNextInstruction => _info.FlowControl == FlowControl.Next;
     public bool CanBeSteppedOver => _info.FlowControl is FlowControl.Call or FlowControl.IndirectCall or FlowControl.Interrupt;
-    public uint NextAddress => _info.NextIP32;
+    public long NextAddress => _info.NextIP32;
     public string Disassembly => _info.ToString();
     public bool IsSelected { get; set; }
     public List<BreakpointViewModel> Breakpoints { get; }
@@ -47,9 +47,6 @@ public class DebuggerLineViewModel : ViewModelBase {
         SegmentedAddress = instruction.SegmentedAddress;
         Address = instruction.Instruction.IP32;
         Breakpoints = instruction.Breakpoints;
-        
-        // Initialize the current instruction state
-        UpdateIsCurrentInstruction();
     }
     
     /// <summary>
@@ -57,11 +54,12 @@ public class DebuggerLineViewModel : ViewModelBase {
     /// </summary>
     public void UpdateIsCurrentInstruction() {
         // Get the current state from the CPU
-        bool isCurrentInstr = Address == _cpuState.IpPhysicalAddress;
+        bool newValue = Address == _cpuState.IpPhysicalAddress;
         
-        // Only update if the state has changed
-        if (IsCurrentInstruction != isCurrentInstr) {
-            IsCurrentInstruction = isCurrentInstr;
-        }
+        // Log the current and new values
+        Console.WriteLine($"DebuggerLine at {Address:X8}: IsCurrentInstruction changing from {_isCurrentInstruction} to {newValue} (CPU IP: {_cpuState.IpPhysicalAddress:X8})");
+        
+        // Update the property
+        IsCurrentInstruction = newValue;
     }
 }

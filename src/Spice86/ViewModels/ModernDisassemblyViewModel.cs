@@ -6,8 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using FluentAvalonia.Core;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -191,9 +189,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         // Now that we've ensured the instructions are loaded, update the highlighting
         UpdateCurrentInstructionHighlighting();
 
-        // Scroll to the current instruction
-        ScrollToAddress?.Invoke(CurrentInstructionAddress);
-
         IsPaused = true;
     }
 
@@ -258,7 +253,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) && TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((uint)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((uint)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
                 () => PauseAndReportAddress((long)breakpointAddressValue.Value));
             AddBreakpointToListing(breakpointViewModel);
         }
@@ -365,13 +360,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             return;
         }
         long address = SelectedDebuggerLine.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((uint)address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((uint)address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
         SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
     }
 
-    private new bool TryParseMemoryAddress(string addressString, out ulong? result) {
+    private bool TryParseMemoryAddress(string addressString, out ulong? result) {
         result = null;
         if (string.IsNullOrWhiteSpace(addressString)) {
             return false;
@@ -391,72 +386,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         return false;
     }
 
-    /// <summary>
-    /// Scrolls the view by the specified number of instructions.
-    /// </summary>
-    /// <param name="instructionOffset">The number of instructions to scroll (positive = down, negative = up)</param>
-    [RelayCommand]
-    private async Task ScrollView(int instructionOffset) {
-        if (DebuggerLines.Count == 0 || !IsPaused) {
-            return;
-        }
-
-        // Find the index of the current center instruction
-        int currentIndex = DebuggerLines.Keys.IndexOf(CurrentInstructionAddress);
-
-        // Calculate the new center index
-        int newIndex = Math.Clamp(currentIndex + instructionOffset, 0, DebuggerLines.Count - 1);
-        uint newCenterAddress = (uint)DebuggerLines.Keys.ElementAt(newIndex);
-
-        // If we're at the edge of our loaded instructions, we jump to the address, which will update the disassembly
-        if (newIndex < DebuggerLines.Count / 4 || newIndex > DebuggerLines.Count * 3 / 4) {
-            // Get the address to center on
-            await GoToAddress(newCenterAddress);
-        } else {
-            // Just update the selected instruction
-            // CurrentlyFocusedAddress = newCenterAddress;
-
-            // Notify the view to scroll to this instruction
-            ScrollToAddress?.Invoke(newCenterAddress);
-        }
-    }
-
-    /// <summary>
-    /// Event that signals the view to scroll to a specific address.
-    /// </summary>
-    public event Action<uint>? ScrollToAddress;
-
-    /// <summary>
-    /// Scrolls the view up by one page.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task PageUp() {
-        await ScrollView(-20);
-    }
-
-    /// <summary>
-    /// Scrolls the view down by one page.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task PageDown() {
-        await ScrollView(20);
-    }
-
-    /// <summary>
-    /// Scrolls the view up by one instruction.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task LineUp() {
-        await ScrollView(-1);
-    }
-
-    /// <summary>
-    /// Scrolls the view down by one instruction.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task LineDown() {
-        await ScrollView(1);
-    }
 
     private async Task GoToAddress(uint address) {
         await UpdateDisassembly(address);

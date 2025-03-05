@@ -37,7 +37,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _state = state;
         _breakpointsViewModel = breakpointsViewModel;
         _memory = memory;
-        _pauseHandler.Paused += OnPause;
+        _pauseHandler.Paused += OnPaused;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
         _messenger = messenger;
@@ -359,7 +359,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         structureWindow.Show();
     }
     
-    private void OnPause() {
+    private void OnPaused() {
         _uiDispatcher.Post(() => {
             IsPaused = true;
             UpdateBinaryDocument();
