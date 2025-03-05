@@ -32,48 +32,14 @@
                     </TextElement.FontFamily>
                 </pgc:PropertyGrid>
             </controls:GroupBox>
-            <Expander Grid.Column="2" Header="32 bit regs as ASCII strings" IsExpanded="True">
+            <Expander Grid.Column="2" Header="Possibly zero-terminated ASCII strings" IsExpanded="True">
 				<WrapPanel Orientation="Vertical">
-					<controls:GroupBox Header="As addresses to zero-terminated ASCII strings">
-						<WrapPanel Orientation="Vertical">
-							<Label>ESI:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EsiString, Mode=OneWay}" />
-							<Label>EDI:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EdiString, Mode=OneWay}" />
-							<Label>ESP:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EspString, Mode=OneWay}" />
-							<Label>EAX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EaxString, Mode=OneWay}" />
-							<Label>EBX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EbxString, Mode=OneWay}" />
-							<Label>ECX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EcxString, Mode=OneWay}" />
-							<Label>EDX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EdxString, Mode=OneWay}" />
-							<Label>EBP:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EbpString, Mode=OneWay}" />
-						</WrapPanel>
-					</controls:GroupBox>
-					<controls:GroupBox Header="As direct values of ASCII strings">
-						<WrapPanel Orientation="Vertical">
-							<Label>ESI:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ESI, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>EDI:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EDI, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>ESP:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ESP, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>EAX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EAX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>EBX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EBX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>ECX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.ECX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>EDX:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EDX, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-							<Label>EBP:</Label>
-							<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding State.EBP, Converter={StaticResource UIntToAsciiConverter}, Mode=OneWay}" />
-						</WrapPanel>
-					</controls:GroupBox>
+					<Label>ES:DI:</Label>
+					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EsDiString, Mode=OneWay}" />
+					<Label>DS:SI:</Label>
+					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding DsSiString, Mode=OneWay}" />
+					<Label>DS:DX:</Label>
+					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding DsDxString, Mode=OneWay}" />
 				</WrapPanel>
             </Expander>
         </Grid>

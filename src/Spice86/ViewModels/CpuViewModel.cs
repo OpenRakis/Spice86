@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Mappers;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Utils;
 
 using System.ComponentModel;
 using System.Reflection;
@@ -63,39 +64,26 @@ public partial class CpuViewModel : ViewModelBase {
     }
 
     [ObservableProperty]
-    private string? _esiString;
+    private string? _esDiString;
 
     [ObservableProperty]
-    private string? _ediString;
+    private string? _dsSiString;
 
     [ObservableProperty]
-    private string? _espString;
+    private string? _dsDxString;
 
-    [ObservableProperty]
-    private string? _eaxString;
-
-    [ObservableProperty]
-    private string? _ebpString;
-
-    [ObservableProperty]
-    private string? _ebxString;
-
-    [ObservableProperty]
-    private string? _ecxString;
-
-    [ObservableProperty]
-    private string? _edxString;
 
     private void UpdateCpuState(State state) {
         state.CopyToStateInfo(this.State);
         state.CopyFlagsToStateInfo(this.Flags);
-        EspString = _memory.GetZeroTerminatedString(State.ESP, 32);
-        EsiString = _memory.GetZeroTerminatedString(State.ESI, 32);
-        EdiString = _memory.GetZeroTerminatedString(State.EDI, 32);
-        EbxString = _memory.GetZeroTerminatedString(State.EBX, 32);
-        EbpString = _memory.GetZeroTerminatedString(State.EBP, 32);
-        EaxString = _memory.GetZeroTerminatedString(State.EAX, 32);
-        EcxString = _memory.GetZeroTerminatedString(State.ECX, 32);
-        EdxString = _memory.GetZeroTerminatedString(State.EDX, 32);
+        EsDiString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.ES, State.DI),
+            32);
+        DsSiString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.DS, State.SI),
+            32);
+        DsDxString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.DS, State.DX),
+            32);
     }
 }
