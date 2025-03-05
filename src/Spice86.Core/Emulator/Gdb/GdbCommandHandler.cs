@@ -67,11 +67,6 @@ public class GdbCommandHandler {
     }
 
     /// <summary>
-    /// Executes a single CPU instruction.
-    /// </summary>
-    public void Step() => _gdbCommandBreakpointHandler.Step();
-
-    /// <summary>
     /// Runs a custom GDB command.
     /// </summary>
     /// <param name="command">The custom GDB command string</param>
@@ -99,11 +94,12 @@ public class GdbCommandHandler {
                 'P' => _gdbCommandRegisterHandler.WriteRegister(commandContent),
                 'm' => _gdbCommandMemoryHandler.ReadMemory(commandContent),
                 'M' => _gdbCommandMemoryHandler.WriteMemory(commandContent),
-                'T' => HandleThreadALive(),
+                'T' => HandleThreadAlive(),
                 'v' => ProcessVPacket(commandContent),
                 's' => _gdbCommandBreakpointHandler.Step(),
                 'z' => _gdbCommandBreakpointHandler.RemoveBreakpoint(commandContent),
                 'Z' => _gdbCommandBreakpointHandler.AddBreakpoint(commandContent),
+                '!' => DeclineExtendedMode(),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -119,13 +115,18 @@ public class GdbCommandHandler {
         }
     }
 
+    private string DeclineExtendedMode() {
+        // Respond with an error response to indicate that extended mode is not supported.
+        return _gdbIo.GenerateResponse("E01"); // E01 is a generic error code.
+    }
+
     private string Detach() {
         IsConnected = false;
         _gdbCommandBreakpointHandler.ResumeEmulatorOnCommandEnd = true;
         return _gdbIo.GenerateResponse("");
     }
 
-    private string HandleThreadALive() {
+    private string HandleThreadAlive() {
         return _gdbIo.GenerateResponse("OK");
     }
 

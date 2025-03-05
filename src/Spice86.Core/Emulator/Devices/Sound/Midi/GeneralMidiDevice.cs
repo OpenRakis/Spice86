@@ -22,19 +22,18 @@ public sealed class GeneralMidiDevice : MidiDevice {
     private readonly Synthesizer? _synthesizer;
 
     private bool _disposed;
-    private bool _threadStarted;
 
-    private readonly ManualResetEvent _fillBufferEvent = new(false);
-    private readonly Thread? _playbackThread;
-    private readonly ILoggerService _loggerService;
-    private readonly IPauseHandler _pauseHandler;
-    private volatile bool _endThread;
+    private readonly DeviceThread _deviceThread;
     private volatile uint _message;
+
+    // General MIDI needs a large buffer to store preset PCM data of musical instruments.
+    // Too small and it's garbled.
+    // Too large and we can't render in time, therefore there is only silence.
+    private readonly float[] _buffer = new float[16384];
 
     /// <summary>
     /// The file name of the soundfont we load and use for all General MIDI preset sounds.
     /// </summary>
-    public const string SoundFont = "2MGM.sf2";
     private const string SoundFontResourceName = "Spice86.Core.2MGM.sf2";
 
     private IntPtr _midiOutHandle;
@@ -43,23 +42,20 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// Initializes a new instance of <see cref="GeneralMidiDevice"/>.
     /// </summary>
     /// <param name="softwareMixer">The software mixer for sound channels.</param>
-    /// <param name="loggerService">The service used to log messages.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
-    public GeneralMidiDevice(SoftwareMixer softwareMixer, ILoggerService loggerService,  IPauseHandler pauseHandler) {
+    /// <param name="loggerService">The service used to log messages.</param>
+    public GeneralMidiDevice(SoftwareMixer softwareMixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
             Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);
             if (resource is not null) {
                 _synthesizer = new Synthesizer(new SoundFont(resource), 48000);
             }
         }
-        _pauseHandler = pauseHandler;
-        _loggerService = loggerService;
         if (!OperatingSystem.IsWindows()) {
             _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
         }
-        _playbackThread = new Thread(RenderThreadMethod) {
-            Name = nameof(GeneralMidiDevice)
-        };
+        
+        _deviceThread = new DeviceThread(nameof(GeneralMidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
         if (OperatingSystem.IsWindows()) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
@@ -67,33 +63,11 @@ public sealed class GeneralMidiDevice : MidiDevice {
 
     ~GeneralMidiDevice() => Dispose(false);
 
-    private void StartThreadIfNeeded() {
-        if (_disposed || _endThread || _threadStarted || _playbackThread == null) {
-            return;
-        }
-        _loggerService.Information("Starting thread '{ThreadName}'", _playbackThread.Name ?? nameof(GeneralMidiDevice));
-        _threadStarted = true;
-        _playbackThread.Start();
-    }
+    private void PlaybackLoopBody() {
+        ((Span<float>)_buffer).Clear();
 
-    private void RenderThreadMethod() {
-        if (!File.Exists(SoundFont)) {
-            return;
-        }
-
-        // General MIDI needs a large buffer to store preset PCM data of musical instruments.
-        // Too small and it's garbled.
-        // Too large and we can't render in time, therefore there is only silence.
-        Span<float> buffer = stackalloc float[16384];
-        while (!_endThread) {
-            _pauseHandler.WaitIfPaused();
-            _fillBufferEvent.WaitOne(Timeout.Infinite);
-            buffer.Clear();
-
-            FillBuffer(_synthesizer, buffer);
-            _soundChannel?.Render(buffer);
-            _fillBufferEvent.Reset();
-        }
+        FillBuffer(_synthesizer, _buffer);
+        _soundChannel?.Render(_buffer);
     }
 
     private void FillBuffer(Synthesizer? synthesizer, Span<float> data) {
@@ -105,15 +79,9 @@ public sealed class GeneralMidiDevice : MidiDevice {
         if (OperatingSystem.IsWindows()) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
-            StartThreadIfNeeded();
+            _deviceThread.StartThreadIfNeeded();
             _message = message;
-            WakeUpRenderThread();
-        }
-    }
-
-    private void WakeUpRenderThread() {
-        if (!_disposed && !_endThread) {
-            _fillBufferEvent.Set();
+            _deviceThread.Resume();
         }
     }
 
@@ -159,14 +127,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
                         _midiOutHandle = IntPtr.Zero;
                     }
                 }
-
-                _endThread = true;
-                _fillBufferEvent.Set();
-                if (_playbackThread?.IsAlive == true) {
-                    _playbackThread.Join();
-                }
-
-                _fillBufferEvent.Dispose();
+                _deviceThread.Dispose();
             }
 
             _disposed = true;
