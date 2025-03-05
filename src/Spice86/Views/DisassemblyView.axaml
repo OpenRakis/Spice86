@@ -159,15 +159,6 @@
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
 				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
 			</DataGrid.Columns>
 			<DataGrid.ContextMenu>
