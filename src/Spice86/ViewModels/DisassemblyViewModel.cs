@@ -145,9 +145,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private void UpdateAssemblyLineIfShown(uint breakpointAddress, BreakpointViewModel breakpointViewModel) {
         CpuInstructionInfo? shownInstructionAtAddress = Instructions.
-            FirstOrDefault(x => x.Address == breakpointAddress);
+            FirstOrDefault(breakpointViewModel.IsFor);
         if (shownInstructionAtAddress is not null) {
-            shownInstructionAtAddress.Breakpoint = breakpointViewModel;
+            shownInstructionAtAddress.Breakpoint = _breakpointsViewModel.Breakpoints.FirstOrDefault(x =>
+            x.IsFor(shownInstructionAtAddress));
         }
     }
 

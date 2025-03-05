@@ -304,6 +304,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
     private BreakpointViewModel AddBreakpointInternal(BreakpointViewModel breakpointViewModel) {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
+        BreakpointCreated?.Invoke(breakpointViewModel);
         return breakpointViewModel;
     }
 
