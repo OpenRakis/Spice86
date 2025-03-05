@@ -67,7 +67,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _pauseHandler = pauseHandler;
-        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         CanUseInternalDebugger = configuration.GdbPort is null;
@@ -324,7 +324,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             _disposed = true;
             if (disposing) {
                 // Unsubscribe from PauseHandler events
-                _pauseHandler.Pausing -= OnPausing;
+                _pauseHandler.Paused -= OnPaused;
                 _pauseHandler.Resumed -= OnResumed;
 
                 _drawTimer.Stop();
@@ -350,7 +350,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Normal);
 
-    private void OnPausing() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Normal);
+    private void OnPaused() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Normal);
 
     [ObservableProperty]
     private string _currentLogLevel = "";

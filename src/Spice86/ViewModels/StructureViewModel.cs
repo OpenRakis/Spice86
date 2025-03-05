@@ -62,7 +62,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         _availableStructures = new AvaloniaList<StructType>(structureInformation.Structs.Values);
         _isAddressableMemory = data is DataMemoryDocument;
         _pauseHandler = pauseHandler;
-        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Paused += OnPaused;
         Source = InitializeSource();
     }
 
@@ -147,7 +147,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     /// <summary>
     /// Update the view when the application is paused.
     /// </summary>
-    private void OnPausing() {
+    private void OnPaused() {
         Update();
     }
 
@@ -194,7 +194,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     /// Disposes of the resources used by the <see cref="StructureViewModel" />.
     /// </summary>
     public void Dispose() {
-        _pauseHandler.Pausing -= OnPausing;
+        _pauseHandler.Paused -= OnPaused;
         Source.Dispose();
         GC.SuppressFinalize(this);
     }

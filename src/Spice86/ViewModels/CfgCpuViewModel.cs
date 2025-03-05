@@ -33,7 +33,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         IPerformanceMeasurer performanceMeasurer) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = performanceMeasurer;
-        pauseHandler.Pausing += () => UpdateGraphCommand.Execute(null);
+        pauseHandler.Paused += () => UpdateGraphCommand.Execute(null);
     }
 
     [RelayCommand]

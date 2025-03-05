@@ -11,10 +11,16 @@ public interface IPauseHandler {
 
     /// <summary>
     /// Event triggered when a pause is requested on the emulator.
-    /// This allows other parts of the application to react to pauses,
-    /// such as stopping processing or updating UI elements.
+    /// This allows other parts of the application to stop their work.
     /// </summary>
     event Action? Pausing;
+
+    /// <summary>
+    /// Event triggered when a pause has taken effect.
+    /// This allows other parts of the application to react to pauses,
+    /// such as updating UI elements.
+    /// </summary>
+    event Action? Paused;
 
     /// <summary>
     /// Event triggered when a resume is requested on the emulator.
