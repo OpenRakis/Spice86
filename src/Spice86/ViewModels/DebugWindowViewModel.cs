@@ -93,7 +93,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         // Create the classic disassembly view
         DisassemblyViewModel disassemblyVm = new(
             emulatorBreakpointsManager,
-            memory, cpuState,
+            memory, state,
             functionsInformation.ToDictionary(x =>
                 x.Key.ToPhysical(), x => x.Value),
             BreakpointsViewModel, pauseHandler,

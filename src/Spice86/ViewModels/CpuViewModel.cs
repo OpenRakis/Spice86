@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Mappers;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Utils;
 
 using System.ComponentModel;
 using System.Reflection;
@@ -24,7 +25,7 @@ public partial class CpuViewModel : ViewModelBase {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
-    public CpuViewModel(State state, Stack stack, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+    public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         _memory = memory;
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
@@ -63,19 +64,26 @@ public partial class CpuViewModel : ViewModelBase {
     }
 
     [ObservableProperty]
-    private string? _esiString;
+    private string? _esDiString;
 
     [ObservableProperty]
-    private string? _ediString;
+    private string? _dsSiString;
 
     [ObservableProperty]
-    private string? _espString;
+    private string? _dsDxString;
+
 
     private void UpdateCpuState(State state) {
         state.CopyToStateInfo(this.State);
         state.CopyFlagsToStateInfo(this.Flags);
-        EspString = _memory.GetZeroTerminatedString(State.ESP, 32);
-        EsiString = _memory.GetZeroTerminatedString(State.ESI, 32);
-        EdiString = _memory.GetZeroTerminatedString(State.EDI, 32);
+        EsDiString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.ES, State.DI),
+            32);
+        DsSiString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.DS, State.SI),
+            32);
+        DsDxString = _memory.GetZeroTerminatedString(
+            MemoryUtils.ToPhysicalAddress(State.DS, State.DX),
+            32);
     }
 }

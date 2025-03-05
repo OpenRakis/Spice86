@@ -2,28 +2,47 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 public partial class BreakpointViewModel : ViewModelBase {
     private readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private AddressBreakPoint? _breakPoint;
+    private BreakPoint? _breakPoint;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-            uint address,
-            BreakPointType type,
-            bool isRemovedOnTrigger,
-            Action onReached,
-            string comment = "") {
+        SegmentedAddress segmentedAddress,
+        BreakPointType type,
+        bool isRemovedOnTrigger,
+        Action onReached,
+        string comment = "") :
+            this(breakpointsViewModel, emulatorBreakpointsManager,
+                MemoryUtils.ToPhysicalAddress(
+                    segmentedAddress.Segment,
+                    segmentedAddress.Offset),
+                type, isRemovedOnTrigger, onReached,
+                comment) {
+        SegmentedAddress = segmentedAddress;
+        Parameter = segmentedAddress.ToString();
+    }
+
+    public BreakpointViewModel(
+        BreakpointsViewModel breakpointsViewModel,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        long trigger,
+        BreakPointType type,
+        bool isRemovedOnTrigger,
+        Action onReached,
+        string comment = "") {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        Address = address;
+        Address = trigger;
         Type = type;
         IsRemovedOnTrigger = isRemovedOnTrigger;
-        if(IsRemovedOnTrigger) {
+        if (IsRemovedOnTrigger) {
             _onReached = () => {
                 breakpointsViewModel.RemoveBreakpointInternal(this);
                 onReached();
@@ -33,11 +52,18 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
         Comment = comment;
         Enable();
+        Parameter = $"0x{trigger:X2}";
     }
+
+    [ObservableProperty]
+    private string _parameter;
+
+    public SegmentedAddress? SegmentedAddress { get; }
+
+    public Action OnReached => _onReached;
 
     public BreakPointType Type { get; }
 
-    //Can't get out of sync since GDB can't be used at the same time as the internal debugger
     private bool _isEnabled;
 
     public bool IsEnabled {
@@ -54,7 +80,7 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     public bool IsRemovedOnTrigger { get; }
 
-    public uint Address { get; }
+    public long Address { get; }
 
     public void Toggle() {
         if (IsEnabled) {
@@ -67,12 +93,9 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
-    private AddressBreakPoint GetOrCreateBreakpoint() {
-        _breakPoint ??=
-        new AddressBreakPoint(
-            Type,
-            Address,
-            (_) => _onReached(),
+    private BreakPoint GetOrCreateBreakpoint() {
+        _breakPoint ??= new AddressBreakPoint(Type,
+            Address, (_) => _onReached(),
             IsRemovedOnTrigger);
         return _breakPoint;
     }
@@ -81,7 +104,8 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(), on: true);
+        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
+            on: true);
         _isEnabled = true;
         OnPropertyChanged(nameof(IsEnabled));
     }
@@ -90,12 +114,17 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (!IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(), on: false);
+        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
+            on: false);
         _isEnabled = false;
         OnPropertyChanged(nameof(IsEnabled));
     }
 
     internal bool IsFor(CpuInstructionInfo instructionInfo) {
-        return Address == instructionInfo.Address;
+        return Address == instructionInfo.Address &&
+            (Type == BreakPointType.CPU_EXECUTION_ADDRESS ||
+            Type == BreakPointType.MEMORY_READ ||
+            Type == BreakPointType.MEMORY_WRITE ||
+            Type == BreakPointType.MEMORY_ACCESS);
     }
 }

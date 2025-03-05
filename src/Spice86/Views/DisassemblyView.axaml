@@ -3,18 +3,22 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+			 xmlns:models="clr-namespace:Spice86.Models.Debugging"
 			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 			 xmlns:userControls="clr-namespace:Spice86.UserControls"
 			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 			 xmlns:converters="clr-namespace:Spice86.Converters"
+			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 			 x:Class="Spice86.Views.DisassemblyView"
 			 x:DataType="viewModels:DisassemblyViewModel">
 	<UserControl.Resources>
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
+		<converters:SegmentedAddressToLinearAddressConverter x:Key="SegmentedAddressToLinearAddressConverter" />
+		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter"
+			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -47,17 +51,10 @@
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
 				<Grid ColumnDefinitions="*,*">
-					<AutoCompleteBox Name="SegmentedStartAddressTextBox"
+					<TextBox Name="StartAddressTextBox"
 						Grid.Column="0"
-						Width="100"
-						Text="{Binding SegmentedStartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
-						Converter={StaticResource SegmentedAddressConverter}}"
-						Watermark="segment:offset" />
-					<AutoCompleteBox Name="LinearStartAddressTextBox"
-						Grid.Column="1"
-						Width="80"
-						Text="{Binding StartAddress, UpdateSourceTrigger=PropertyChanged}"
-						Watermark="linear address"/>
+						MinWidth="150"
+						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
@@ -70,7 +67,16 @@
 					Name="FunctionComboBox"
 					IsVisible="{Binding AreFunctionInformationProvided}"
 					ItemsSource="{Binding Functions}"
-					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+					<ComboBox.ItemTemplate>
+						<DataTemplate x:DataType="models:FunctionInfo">
+							<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="200">
+								<TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Text="{Binding Name}" />
+								<TextBlock Grid.Row="1" Grid.Column="0" TextWrapping="Wrap" Text="{Binding Address, StringFormat={}Address: 0x{0:X4}}" />
+							</Grid>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
 			</StackPanel>
 			<Button Grid.Column="5" Content="Refresh" HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Command="{Binding UpdateDisassemblyCommand}" />
 		</Grid>
@@ -99,31 +105,42 @@
 			IsVisible="{Binding IsPaused}"
 			ItemsSource="{Binding Instructions}">
 			<DataGrid.Columns>
-				<DataGridTextColumn
-					Binding="{Binding SegmentedAddress}">
-					<DataGridTextColumn.CellTheme>
+				<DataGridTemplateColumn Header="Address">
+					<DataGridTemplateColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
 							<Setter Property="Background"
 								Value="{ReflectionBinding Breakpoint,
-								Converter={StaticResource BreakpointToBrushConverter},
-								ConverterParameter={}}" />
+								Converter={StaticResource BreakpointToBrushConverter}}" />
 						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn MaxWidth="300"
-					Binding="{Binding Converter={StaticResource InstructionToStringConverter}}"
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox Text="{Binding Address, Mode=OneWay,
+									 StringFormat={}0x{0:X4}}"
+									 IsReadOnly="True" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn MaxWidth="300"
 					Header="MASM">
-					<DataGridTextColumn.CellTheme>
+					<DataGridTemplateColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
 						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox Text="{Binding Mode=OneWay,
+									 Converter={StaticResource InstructionToStringConverter}}"
+									 IsReadOnly="True" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
 				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)">
 					<DataGridTextColumn.CellTheme>
 						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
@@ -142,53 +159,7 @@
 						</ControlTheme>
 					</DataGridTextColumn.CellTheme>
 				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding MemorySegment}" Header="Memory Segment">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding FlowControl}" Header="FlowControl">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridCheckBoxColumn Binding="{Binding IsIPRelativeMemoryOperand}" Header="Is IP relative?" />
-				<DataGridTextColumn Binding="{Binding IPRelativeMemoryAddress}" Header="IP relative memory address">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
 				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-				<DataGridTextColumn Binding="{Binding IP16}" Header="16-bit IP">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding IP32}" Header="32-bit IP">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
 			</DataGrid.Columns>
 			<DataGrid.ContextMenu>
 				<ContextMenu>
@@ -223,21 +194,31 @@
 						FontWeight="Bold" />
 					<Grid
 						Grid.Row="1"
-						RowDefinitions="Auto,Auto">
+						RowDefinitions="Auto,Auto,Auto">
 						<Label
 							Grid.Row="0"
 							VerticalContentAlignment="Center"
 							HorizontalContentAlignment="Left"
-							Content="Memory Address to break on:" />
-						<StackPanel
-							Grid.Row="1"
-							Orientation="Vertical">
-							<AutoCompleteBox
-								FontFamily="RobotoMonoFont"
-								Text="{Binding BreakpointAddress}"
-								Watermark="linear or segmented address" />
-							<TextBlock>Linear or segmented address</TextBlock>
-						</StackPanel>
+							Content="Memory Segmented Address to break on:" />
+						<controls:GroupBox Grid.Row="1" Header="Segmented address">
+							<TextBox
+								Text="{Binding BreakpointAddress,
+								Mode=TwoWay,
+								ConverterParameter='lenientMode',
+								Converter={StaticResource SegmentedAddressConverter}}"
+								Watermark="1000:FFFF (example) or like 'cs:ip'"
+								Margin="5,0,0,0" />
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="2" Header="Linear address representation">
+							<TextBox
+								IsEnabled="False"
+								IsReadOnly="True"
+								Text="{Binding BreakpointAddress,
+								Converter={StaticResource SegmentedAddressToLinearAddressConverter},
+								Mode=OneWay,
+								StringFormat={}0x{0:X4}}"
+								Margin="5,0,0,0" />
+						</controls:GroupBox>
 					</Grid>
 					<StackPanel
 						Grid.Row="2"

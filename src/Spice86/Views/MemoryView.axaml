@@ -47,15 +47,23 @@
 						Content="Close View"
 						IsEnabled="{Binding CanCloseTab}" />
 				</StackPanel>
-				<UniformGrid>
-					<Label Content="Start" />
-					<NumericUpDown Value="{Binding StartAddress}" />
-					<Label Content="End" />
-					<NumericUpDown Value="{Binding EndAddress}" />
-				</UniformGrid>
-				<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
-						Command="{Binding UpdateBinaryDocumentCommand}"
-						HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
+				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
+					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
+					<TextBox
+						Grid.Row="0" Grid.Column="1"
+						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+					<Label Grid.Row="1" Grid.Column="0" Content="End" />
+					<TextBox
+						Grid.Row="1"
+						Grid.Column="1"
+						Text="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+				</Grid>
+				<StackPanel Orientation="Vertical">
+					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
+							Command="{Binding UpdateBinaryDocumentCommand}"
+							HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Content="Refresh" />
+					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
+				</StackPanel>
 			</StackPanel>
 			<Grid Grid.Row="1"
 				  RowDefinitions="*, Auto">
@@ -90,8 +98,12 @@
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start: " />
 							<TextBlock Text="{Binding SelectionRange.Value.Start.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" Address: " />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, StringFormat={}{0:X4}}" />
 							<TextBlock Text=" End: " />
 							<TextBlock Text="{Binding SelectionRange.Value.End.ByteIndex, StringFormat={}{0:X4}}" />
+							<TextBlock Text=" Address: " />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, StringFormat={}{0:X4}}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -196,17 +208,15 @@
 								Grid.Row="0"
 								Grid.Column="0"
 								Content="Memory Address:" />
-							<AutoCompleteBox
+							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								FontFamily="RobotoMonoFont"
-								Text="{Binding MemoryEditAddress}"
-								Watermark="linear or segmented address" />
+								Text="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
 								Content="Bytes:" />
-							<AutoCompleteBox
+							<TextBox
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont"
@@ -260,18 +270,17 @@
 									Grid.Row="1"
 									Grid.Column="0"
 									Content="Breakpoint Range End:" />
-								<AutoCompleteBox
+								<TextBox
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeStartAddress}"
-									Watermark="linear or segmented address" />
-								<AutoCompleteBox
+									Text="{Binding BreakpointRangeStartAddress}" />
+								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeEndAddress}"
-									Watermark="optional" />
+									Watermark="optional"
+									Text="{Binding BreakpointRangeEndAddress}" />
 							</Grid>
 							<Label
 								Grid.Row="1"

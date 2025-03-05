@@ -12,7 +12,25 @@ using System.Text;
 
 public class InstructionToStringConverter : IValueConverter {
     private readonly StringBuilder _outputString = new();
-    private readonly Formatter _formatter = new MasmFormatter();
+    private readonly Formatter _formatter = new MasmFormatter(
+        new FormatterOptions() {
+            AddLeadingZeroToHexNumbers = true,
+            ShowBranchSize = true,
+            ShowSymbolAddress = true,
+            AlwaysShowSegmentRegister = true,
+            DisplacementLeadingZeros = true,
+            HexPrefix = "0x",
+            UppercasePrefixes = true,
+            UppercaseKeywords = true,
+            LeadingZeros = true,
+            MasmDisplInBrackets = true,
+            MasmSymbolDisplInBrackets = true,
+            MasmAddDsPrefix32 = true,
+            ScaleBeforeIndex = true,
+            SmallHexNumbersInDecimal = true,
+            UppercaseRegisters = true,
+            BranchLeadingZeros = true });
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is CpuInstructionInfo cpuInstructionInfo) {
             Instruction instr = cpuInstructionInfo.Instruction;
@@ -24,10 +42,15 @@ public class InstructionToStringConverter : IValueConverter {
             if (!string.IsNullOrWhiteSpace(cpuInstructionInfo.FunctionName)) {
                 _outputString.AppendLine($"{cpuInstructionInfo.FunctionName} entry point");
             }
-            // Don't use instr.ToString(), it allocates more, uses masm syntax and default options
             _formatter.Format(instr, output);
-            _outputString.AppendLine(output.ToStringAndReset());
-            return _outputString.ToString();
+            string decodecInstructionString = output.ToStringAndReset();
+            _outputString.AppendLine(decodecInstructionString);
+            if (instr.GetOpKind(0) is OpKind.Memory or OpKind.MemorySegESI or OpKind.MemorySegEDI) {
+                _outputString.AppendLine($"Memory segment: {instr.MemorySegment}");
+            } else if (instr.IsCallFar || instr.IsCallNear || instr.IsCallNearIndirect) {
+                _outputString.AppendLine($"Memory segment: {instr.MemorySegment}");
+            }
+                return _outputString.ToString();
         }
         return null;
     }

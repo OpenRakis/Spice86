@@ -18,8 +18,6 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-using System.Globalization;
-
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMemory _memory;
@@ -60,10 +58,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
         breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
         breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
+        breakpointsViewModel.BreakpointCreated += OnBreakPointUpdateFromBreakpointsViewModel;
     }
 
+    public State State => _state;
+
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpointViewModel) {
-        UpdateAssemblyLineIfShown(breakpointViewModel.Address, breakpointViewModel);
+        UpdateAssemblyLineIfShown((uint)breakpointViewModel.Address, breakpointViewModel);
     }
 
     private void OnResumed() {
@@ -113,12 +114,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private bool _creatingExecutionBreakpoint;
 
     [ObservableProperty]
-    private string? _breakpointAddress;
+    private SegmentedAddress? _breakpointAddress;
 
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP).ToString(CultureInfo.InvariantCulture);
+        BreakpointAddress = new SegmentedAddress(_state.CS, _state.IP);
     }
 
     [RelayCommand]
@@ -129,14 +130,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
-        if (!string.IsNullOrWhiteSpace(BreakpointAddress) &&
-            TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
-                (uint)breakpointAddressValue.Value,
+        if (BreakpointAddress != null) {
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddSegmentedAddressBreakpoint(
+                BreakpointAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
-                    () => PauseAndReportAddress((long)breakpointAddressValue.Value));
-            UpdateAssemblyLineIfShown((uint)breakpointAddressValue.Value, breakpointViewModel);
+                    () => PauseAndReportAddress(BreakpointAddress.Value));
+            UpdateAssemblyLineIfShown(MemoryUtils.ToPhysicalAddress(
+                BreakpointAddress.Value.Segment,
+                BreakpointAddress.Value.Offset),
+                breakpointViewModel);
         }
     }
 
@@ -152,21 +155,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private int _numberOfInstructionsShown = 50;
 
     [ObservableProperty]
-    private bool _isUsingLinearAddressing = true;
-
-    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    private SegmentedAddress? _segmentedStartAddress;
-
     private uint? _startAddress;
-
-    public uint? StartAddress {
-        get => _startAddress;
-        set {
-            SetProperty(ref _startAddress, value);
-            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
-        }
-    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -249,7 +239,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        SegmentedStartAddress = new(_state.CS, _state.IP);
+        StartAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
         await GoToAddress(_state.IpPhysicalAddress);
     }
 
@@ -266,18 +256,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    private uint? GetStartAddress() {
-        return IsUsingLinearAddressing switch {
-            true => StartAddress,
-            false => SegmentedStartAddress is null
-                ? null
-                : MemoryUtils.ToPhysicalAddress(SegmentedStartAddress.Value.Segment,
-                    SegmentedStartAddress.Value.Offset),
-        };
-    }
-
     private bool CanExecuteUpdateDisassembly() {
-        return IsPaused && GetStartAddress() is not null;
+        return IsPaused && StartAddress is not null;
     }
 
     [ObservableProperty]
@@ -285,7 +265,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        uint? startAddress = GetStartAddress();
+        uint? startAddress = StartAddress;
         if (startAddress is null) {
             return;
         }
@@ -327,7 +307,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
     }
 
-    private void PauseAndReportAddress(long address) {
+    private void PauseAndReportAddress(object address) {
         string message = $"Execution breakpoint was reached at address {address}.";
         Pause(message);
     }
@@ -376,7 +356,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
             return;
         }
         uint address = SelectedInstruction.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address,
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.
+            AddLinearAddressBreakpoint(address,
             BreakPointType.CPU_EXECUTION_ADDRESS, isRemovedOnTrigger: false, () => {
                 PauseAndReportAddress(address);
             });

@@ -1,35 +1,142 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:Class="Spice86.Views.BreakpointsView"
-			 x:DataType="viewModels:BreakpointsViewModel">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
+             xmlns:userControls="clr-namespace:Spice86.UserControls;assembly=Spice86"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.BreakpointsView"
+             x:DataType="viewModels:BreakpointsViewModel">
+	<UserControl.Resources>
+		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" State="{Binding State}" />
+		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
+	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 		<StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
+			<Button Content="New..." Command="{Binding BeginCreateBreakpointCommand}" Margin="5"/>
+			<Button Content="Edit..." Command="{Binding EditSelectedBreakpointCommand}" Margin="5" />
 			<Button Content="Remove" Command="{Binding RemoveBreakpointCommand}" Margin="5"/>
 			<Button HotKey="Ctrl+F9" ToolTip.Tip="Ctrl-F9" Content="Toggle" Command="{Binding ToggleSelectedBreakpointCommand}" Margin="5"/>
 		</StackPanel>
 		<DataGrid Grid.Row="1"
-				x:Name="BreakpointsDataGrid"
-				ItemsSource="{Binding Breakpoints}"
-				SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
-				AutoGenerateColumns="False"
-				CanUserReorderColumns="True"
-				CanUserResizeColumns="True"
-				CanUserSortColumns="False">
+                  x:Name="BreakpointsDataGrid"
+                  ItemsSource="{Binding Breakpoints}"
+                  SelectedItem="{Binding SelectedBreakpoint, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  DoubleTapped="DataGrid_DoubleTapped">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
-				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Address}" Header="Address" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Parameter}" Header="Parameter" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
-				<DataGridTextColumn IsReadOnly="False" Binding="{Binding Comment}" Header="Comment" />
+				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Comment}" Header="Comment" />
 			</DataGrid.Columns>
 		</DataGrid>
+		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+                   IsVisible="{Binding CreatingBreakpoint}"/>
+		<dialogHost:DialogHost
+            Grid.Row="0" Grid.RowSpan="2"
+            Background="{Binding $parent[Window].Background}"
+            CloseOnClickAway="False"
+            IsOpen="{Binding CreatingBreakpoint}">
+			<dialogHost:DialogHost.DialogContent>
+				<Grid ColumnDefinitions="Auto,*">
+					<controls:GroupBox Header="Breakpoint Type" Grid.Column="0">
+						<ComboBox DisplayMemberBinding="{Binding Header}"
+                                  ItemsSource="{Binding BreakpointTabs}"
+                                  SelectedItem="{Binding SelectedBreakpointTypeTab, Mode=TwoWay}">
+						</ComboBox>
+					</controls:GroupBox>
+					<Grid Grid.Column="1" RowDefinitions="*,Auto" MinWidth="320" MinHeight="200">
+						<controls:GroupBox Grid.Row="0" Header="Cycles"
+                                 IsVisible="{Binding IsCyclesBreakpointSelected}">
+							<controls:GroupBox Header="Cycles count">
+								<NumericUpDown
+									Value="{Binding CyclesValue,
+									Mode=TwoWay}"
+									Margin="5,0,0,0" />
+							</controls:GroupBox>
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="0" Header="Memory"
+                                 IsVisible="{Binding IsMemoryBreakpointSelected}">
+							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
+								<ComboBox Grid.Column="0" Grid.Row="1"
+									SelectedItem="{Binding SelectedMemoryBreakpointType}"
+                                    ItemsSource="{Binding MemoryBreakpointTypes}" />
+								<Label Grid.Column="1" Grid.Row="0" Content="Memory address" />
+								<TextBox
+									Grid.Row="1"
+									Grid.Column="1"
+                                    Text="{Binding MemoryAddressValue,
+										ConverterParameter='lenientMode',
+										Mode=TwoWay,
+										Converter={StaticResource SegmentedAddressConverter}}"
+									Watermark="1000:FFFF (example) or like 'cs:ip'"
+                                    Margin="5,0,0,0" />
+							</Grid>
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="0" Header="Execution"
+                                 IsVisible="{Binding IsExecutionBreakpointSelected}">
+							<controls:GroupBox Header="Execution address">
+								<TextBox
+                                    Text="{Binding ExecutionAddressValue,
+										Mode=TwoWay,
+										ConverterParameter='lenientMode',
+										Converter={StaticResource SegmentedAddressConverter}}"
+									Watermark="1000:FFFF (example) or like 'cs:ip'"
+									Margin="5,0,0,0" />
+							</controls:GroupBox>
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="0" Header="Interrupt"
+                                 IsVisible="{Binding IsInterruptBreakpointSelected}">
+							<controls:GroupBox Header="Interrupt Number">
+								<TextBox
+									Text="{Binding InterruptNumber,
+										Mode=TwoWay,
+										Converter={StaticResource HexadecimalStringToNumberConverter}}"
+
+									Margin="5,0,0,0"
+									Watermark="hexadecimal number"/>
+							</controls:GroupBox>
+						</controls:GroupBox>
+						<controls:GroupBox Grid.Row="0" Header="I/O Port"
+                                 IsVisible="{Binding IsIoPortBreakpointSelected}">
+							<controls:GroupBox Header="I/O Port Number">
+								<TextBox
+                                    Text="{Binding IoPortNumber,
+										Mode=TwoWay,
+										Converter={StaticResource HexadecimalStringToNumberConverter}}"
+                                    Margin="5,0,0,0"
+									Watermark="hexadecimal number"/>
+							</controls:GroupBox>
+						</controls:GroupBox>
+						<StackPanel
+                            Grid.Row="1"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+							<Button Margin="5"
+                                    Command="{Binding ConfirmBreakpointCreationCommand}"
+                                    Content="OK"
+                                    IsDefault="True" />
+							<Button Margin="5"
+                                    Command="{Binding CancelBreakpointCreationCommand}"
+                                    Content="Cancel"
+                                    IsCancel="True" />
+						</StackPanel>
+					</Grid>
+				</Grid>
+			</dialogHost:DialogHost.DialogContent>
+		</dialogHost:DialogHost>
 	</Grid>
 </UserControl>
