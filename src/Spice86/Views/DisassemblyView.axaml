@@ -15,9 +15,9 @@
 	<UserControl.Resources>
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
+		<converters:AddressAndSegmentedAddressConverter x:Key="AddressAndSegmentedAddressConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-		<converters:SegmentedAddressToLinearAddressConverter x:Key="SegmentedAddressToLinearAddressConverter" />
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter"
+		<converters:AddressStringToSegmentedAddressConverter x:Key="AddressStringToSegmentedAddressConverter"
 			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
@@ -54,7 +54,9 @@
 					<TextBox Name="StartAddressTextBox"
 						Grid.Column="0"
 						MinWidth="150"
-						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding StartAddress, Mode=TwoWay,
+							Converter={StaticResource AddressStringToSegmentedAddressConverter},
+							ConverterParameter='lenientMode'}" />
 				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
@@ -118,8 +120,8 @@
 					</DataGridTemplateColumn.CellTheme>
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
-							<TextBox Text="{Binding Address, Mode=OneWay,
-									 StringFormat={}0x{0:X4}}"
+							<TextBox Text="{Binding SegmentedAddress, Mode=OneWay,
+									 Converter={StaticResource AddressAndSegmentedAddressConverter}}"
 									 IsReadOnly="True" />
 						</DataTemplate>
 					</DataGridTemplateColumn.CellTemplate>
@@ -199,24 +201,14 @@
 							Grid.Row="0"
 							VerticalContentAlignment="Center"
 							HorizontalContentAlignment="Left"
-							Content="Memory Segmented Address to break on:" />
+							Content="Memory hex, decimal, or Segmented Address to break on:" />
 						<controls:GroupBox Grid.Row="1" Header="Segmented address">
 							<TextBox
 								Text="{Binding BreakpointAddress,
-								Mode=TwoWay,
-								ConverterParameter='lenientMode',
-								Converter={StaticResource SegmentedAddressConverter}}"
+									Mode=TwoWay,
+									Converter={StaticResource AddressStringToSegmentedAddressConverter},
+									ConverterParameter='lenientMode'}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
-								Margin="5,0,0,0" />
-						</controls:GroupBox>
-						<controls:GroupBox Grid.Row="2" Header="Linear address representation">
-							<TextBox
-								IsEnabled="False"
-								IsReadOnly="True"
-								Text="{Binding BreakpointAddress,
-								Converter={StaticResource SegmentedAddressToLinearAddressConverter},
-								Mode=OneWay,
-								StringFormat={}0x{0:X4}}"
 								Margin="5,0,0,0" />
 						</controls:GroupBox>
 					</Grid>

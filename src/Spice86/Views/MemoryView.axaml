@@ -17,6 +17,8 @@
 	x:DataType="viewModels:MemoryViewModel"
 	mc:Ignorable="d">
 	<UserControl.Resources>
+		<converters:AddressAndSegmentedAddressConverter x:Key="AddressAndSegmentedAddressConverter" />
+		<converters:AddressStringToSegmentedAddressConverter x:Key="AddressStringToSegmentedAddressConverter" State="{Binding State}" />
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
@@ -51,12 +53,16 @@
 					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
 					<TextBox
 						Grid.Row="0" Grid.Column="1"
-						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding StartAddress, Mode=TwoWay,
+							Converter={StaticResource AddressStringToSegmentedAddressConverter}
+							ConverterParameter='lenientMode'}" />
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
 					<TextBox
 						Grid.Row="1"
 						Grid.Column="1"
-						Text="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding EndAddress, Mode=TwoWay,
+							Converter={StaticResource AddressStringToSegmentedAddressConverter}
+							ConverterParameter='lenientMode'}" />
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -96,14 +102,10 @@
 				<controls:StatusBar Grid.Row="1">
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
-							<TextBlock Text="Selection start: " />
-							<TextBlock Text="{Binding SelectionRange.Value.Start.ByteIndex, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" Address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" End: " />
-							<TextBlock Text="{Binding SelectionRange.Value.End.ByteIndex, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" Address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, StringFormat={}{0:X4}}" />
+							<TextBlock Text="Selection start address: " />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressAndSegmentedAddressConverter}}" />
+							<TextBlock Text=" End address: " />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressAndSegmentedAddressConverter}}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -162,7 +164,9 @@
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence, Converter={StaticResource InvalidNumberToQuestionMarkConverter}}" />
+								Text="{Binding AddressOFoundOccurence,
+									Converter={StaticResource AddressStringToSegmentedAddressConverter}
+									ConverterParameter='lenientMode'}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
 							<Button Command="{Binding FirstOccurrenceCommand}"
@@ -211,7 +215,9 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+								Text="{Binding MemoryEditAddress, Mode=TwoWay,
+									Converter={StaticResource AddressStringToSegmentedAddressConverter}
+									ConverterParameter='lenientMode'}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
@@ -251,7 +257,7 @@
 						<Label
 							Grid.Row="0"
 							HorizontalAlignment="Center"
-							Content="Creating memory breakpoint on linear or segmented address"
+							Content="Creating memory breakpoint on hex, decimal, or segmented address"
 							FontWeight="Bold" />
 						<Grid
 							Grid.Row="1"
@@ -274,13 +280,17 @@
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeStartAddress}" />
+									Text="{Binding BreakpointRangeStartAddress,
+										Converter={StaticResource AddressStringToSegmentedAddressConverter}
+										ConverterParameter='lenientMode'}" />
 								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding BreakpointRangeEndAddress}" />
+									Text="{Binding BreakpointRangeEndAddress,,
+										Converter={StaticResource AddressStringToSegmentedAddressConverter}
+										ConverterParameter='lenientMode'}" />
 							</Grid>
 							<Label
 								Grid.Row="1"
@@ -310,7 +320,6 @@
 					</Grid>
 				</dialogHost:DialogHost.DialogContent>
 			</dialogHost:DialogHost>
-
 			<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
 		</Grid>
 	</ScrollViewer>

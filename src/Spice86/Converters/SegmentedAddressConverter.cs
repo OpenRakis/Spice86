@@ -24,7 +24,7 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         set => SetValue(StateProperty, value);
     }
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public virtual object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return value switch
         {
@@ -34,7 +34,7 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         };
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public virtual object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string str || string.IsNullOrWhiteSpace(str))
         {

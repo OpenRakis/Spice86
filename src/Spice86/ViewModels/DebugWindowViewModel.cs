@@ -20,6 +20,7 @@ using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
@@ -102,7 +103,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MemoryViewModel stackMemoryViewModel = new(memory, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
-            canCloseTab: false, startAddress: stack.PhysicalAddress) {
+            canCloseTab: false, startAddress: MemoryUtils.ToSegmentedAddress(stack.PhysicalAddress)) {
             Title = "CPU Stack Memory"
         };
         pauseHandler.Paused += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
@@ -113,8 +114,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
     }
 
     private void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
-        stackMemoryViewModel.StartAddress = stack.PhysicalAddress;
-        stackMemoryViewModel.EndAddress = A20Gate.EndOfHighMemoryArea;
+        stackMemoryViewModel.StartAddress = MemoryUtils.ToSegmentedAddress(stack.PhysicalAddress);
+        stackMemoryViewModel.EndAddress = MemoryUtils.ToSegmentedAddress(A20Gate.EndOfHighMemoryArea);
     }
 
     [RelayCommand]

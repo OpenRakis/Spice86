@@ -157,7 +157,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    private uint? _startAddress;
+    private SegmentedAddress? _startAddress;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -240,18 +240,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        StartAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
-        await GoToAddress(_state.IpPhysicalAddress);
+        StartAddress = new(_state.CS, _state.IP);
+        await GoToAddress(StartAddress.Value);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToFunction(object? parameter) {
         if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address);
+            await GoToAddress(MemoryUtils.ToSegmentedAddress(functionInfo.Address));
         }
     }
 
-    private async Task GoToAddress(uint address) {
+    private async Task GoToAddress(SegmentedAddress address) {
         StartAddress = address;
         await UpdateDisassembly();
         SelectedInstruction = Instructions.FirstOrDefault();
@@ -266,14 +266,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        uint? startAddress = StartAddress;
+        SegmentedAddress? startAddress = StartAddress;
         if (startAddress is null) {
             return;
         }
         Instructions.Clear();
         IsLoading = true;
         Instructions.AddRange(await Task.Run(
-            () => DecodeCurrentWindowOfInstructions(startAddress.Value)));
+            () => DecodeCurrentWindowOfInstructions(startAddress.Value.ToPhysical())));
         SelectedInstruction = Instructions.FirstOrDefault();
         UpdateHeader(SelectedInstruction?.Address);
         IsLoading = false;
