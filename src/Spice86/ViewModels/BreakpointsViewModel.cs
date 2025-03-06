@@ -16,22 +16,23 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelWithErrorDialog {
+public partial class BreakpointsViewModel : ViewModelBase {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
+    private readonly IUIDispatcher _uiDispatcher;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IUIDispatcher uiDispatcher,
-        ITextClipboard textClipboard) : base(uiDispatcher, textClipboard) {
+        IUIDispatcher uiDispatcher) : base() {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
         _state = state;
+        _uiDispatcher = uiDispatcher;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
     }
