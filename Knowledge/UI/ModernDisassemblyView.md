@@ -11,7 +11,7 @@ The Modern Disassembly View is designed to provide a clear and efficient way to 
 - **Instruction Highlighting**: Must highlight the current instruction based on CPU state
 - **Function Navigation**: Must allow navigation to specific functions in the disassembled code
 - **Lazy Loading**: Must only be instantiated when the Modern View tab is selected
-- **Centered Scrolling**: Must keep the current instruction within the middle of the visible area
+- **Centered Scrolling**: Must keep the current instruction within the middle 50% of the visible area
 - **Thread-Safe UI Updates**: Must ensure all UI operations are performed on the UI thread
 
 ## Functional Requirements

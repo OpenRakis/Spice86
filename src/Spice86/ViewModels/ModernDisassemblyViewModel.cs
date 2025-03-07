@@ -52,7 +52,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private string _header = "Modern Disassembly";
 
     [ObservableProperty]
-    private AvaloniaDictionary<long, DebuggerLineViewModel> _debuggerLines = [];
+    private AvaloniaDictionary<uint, DebuggerLineViewModel> _debuggerLines = [];
 
     [ObservableProperty]
     private bool _isFunctionInformationProvided;
@@ -79,11 +79,20 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [ObservableProperty]
     private DebuggerLineViewModel? _selectedDebuggerLine;
 
+    private uint _currentInstructionAddress;
+
     /// <summary>
     /// The physical address of the current instruction. This is updated when the emulator pauses.
     /// </summary>
-    [ObservableProperty]
-    private uint _currentInstructionAddress;
+    public uint CurrentInstructionAddress {
+        get => _currentInstructionAddress;
+        private set {
+            if (value != _currentInstructionAddress) {
+                _currentInstructionAddress = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     // Track the previous instruction address for highlighting updates
     private uint _previousInstructionAddress;
@@ -151,33 +160,33 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         // Ensure we're on the UI thread
         if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
             Avalonia.Threading.Dispatcher.UIThread.Post(OnPaused);
+
             return;
         }
 
         // Capture the current CPU instruction pointer at the moment of pausing
-        // This value will be preserved for highlighting even if the CPU state changes
-        CurrentInstructionAddress = _state.IpPhysicalAddress;
-        Console.WriteLine($"Pausing: Captured instruction pointer at {CurrentInstructionAddress:X8}");
+        var currentInstructionAddress = _state.IpPhysicalAddress;
+        Console.WriteLine($"Pausing: Captured instruction pointer at {currentInstructionAddress:X8}");
 
         // Check if the current instruction address is in our collection
-        if (!DebuggerLines.ContainsKey(CurrentInstructionAddress)) {
-            Console.WriteLine($"Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly");
-            
+        if (!DebuggerLines.ContainsKey(currentInstructionAddress)) {
+            Console.WriteLine($"Current address {currentInstructionAddress:X8} not found in DebuggerLines, updating disassembly");
+
             // We need to ensure the disassembly is updated synchronously before continuing
             try {
                 IsLoading = true;
-                
+
                 // Use Task.Run and Wait to execute the async method synchronously
                 // This ensures the instructions are loaded before we continue
                 Task.Run(async () => {
-                    await UpdateDisassembly(CurrentInstructionAddress);
+                    await UpdateDisassembly(currentInstructionAddress);
                 }).Wait();
-                
+
                 Console.WriteLine($"Disassembly updated, now contains {DebuggerLines.Count} instructions");
-                
+
                 // Verify that the current instruction is now in the collection
-                if (!DebuggerLines.ContainsKey(CurrentInstructionAddress)) {
-                    Console.WriteLine($"Warning: Current address {CurrentInstructionAddress:X8} still not found in DebuggerLines after update");
+                if (!DebuggerLines.ContainsKey(currentInstructionAddress)) {
+                    Console.WriteLine($"Warning: Current address {currentInstructionAddress:X8} still not found in DebuggerLines after update");
                 }
             } catch (Exception ex) {
                 Console.WriteLine($"Error updating disassembly: {ex.Message}");
@@ -186,9 +195,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             }
         }
 
+        // Notify that the current instruction has changed and should be scrolled to
+        CurrentInstructionAddress = currentInstructionAddress;
+
         // Now that we've ensured the instructions are loaded, update the highlighting
         UpdateCurrentInstructionHighlighting();
 
+        // Set the paused state last to ensure all updates are complete
         IsPaused = true;
     }
 
@@ -199,6 +212,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         // Ensure we're on the UI thread
         if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
             Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCurrentInstructionHighlighting);
+
             return;
         }
 
@@ -225,7 +239,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
                 }
 
                 // If the previous address is in our collection, update its highlighting
-                if (_previousInstructionAddress != 0 && DebuggerLines.TryGetValue(_previousInstructionAddress, out DebuggerLineViewModel? previousLine)) {
+                if (_previousInstructionAddress != 0 && _previousInstructionAddress != CurrentInstructionAddress &&
+                    DebuggerLines.TryGetValue(_previousInstructionAddress, out DebuggerLineViewModel? previousLine)) {
                     previousLine.UpdateIsCurrentInstruction();
                     Console.WriteLine($"Updated previous line at {_previousInstructionAddress:X8}");
                 }
@@ -253,14 +268,14 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) && TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((uint)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
-                () => PauseAndReportAddress((long)breakpointAddressValue.Value));
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((long)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
+                () => PauseAndReportAddress((uint)breakpointAddressValue.Value));
             AddBreakpointToListing(breakpointViewModel);
         }
     }
 
     private void AddBreakpointToListing(BreakpointViewModel breakpoint) {
-        if (DebuggerLines.TryGetValue(breakpoint.Address, out DebuggerLineViewModel? debuggerLine)) {
+        if (DebuggerLines.TryGetValue((uint)breakpoint.Address, out DebuggerLineViewModel? debuggerLine)) {
             debuggerLine.Breakpoints.Add(breakpoint);
         }
     }
@@ -279,7 +294,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         if (!DebuggerLines.TryGetValue(CurrentInstructionAddress, out DebuggerLineViewModel? debuggerLine)) {
             return;
         }
-        
+
         // Only step over instructions that return
         if (!debuggerLine.CanBeSteppedOver) {
             StepInto();
@@ -288,34 +303,34 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         // Calculate the next instruction address
-        long nextInstructionAddress = debuggerLine.NextAddress;
-        
+        uint nextInstructionAddress = debuggerLine.NextAddress;
+
         // Store the current instruction address before stepping
         uint currentAddress = CurrentInstructionAddress;
 
         // Set the breakpoint at the next instruction address
         _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, nextInstructionAddress, onReached: _ => {
             Pause($"Step over execution breakpoint was reached at address {nextInstructionAddress}");
-            
+
             // Ensure we update the current instruction address from the CPU state
             // This is done in OnPausing, but we log it here for clarity
             Console.WriteLine($"Step over breakpoint reached. Previous address: {currentAddress:X8}, New address: {_state.IpPhysicalAddress:X8}");
         }, isRemovedOnTrigger: true), on: true);
-        
+
         _pauseHandler.Resume();
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
         Console.WriteLine("Setting unconditional breakpoint for step into");
-        
+
         // Store the current instruction address before stepping
         uint currentAddress = CurrentInstructionAddress;
-        
+
         _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
             // When the breakpoint is hit, pause the emulator
             Pause("Step into unconditional breakpoint was reached");
-            
+
             // Ensure we update the current instruction address from the CPU state
             // This is done in OnPausing, but we log it here for clarity
             Console.WriteLine($"Step into breakpoint reached. Previous address: {currentAddress:X8}, New address: {_state.IpPhysicalAddress:X8}");
@@ -359,8 +374,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         if (SelectedDebuggerLine is null) {
             return;
         }
-        long address = SelectedDebuggerLine.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((uint)address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+
+        uint address = SelectedDebuggerLine.Address;
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
         SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
@@ -386,7 +402,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         return false;
     }
 
-
     private async Task GoToAddress(uint address) {
         await UpdateDisassembly(address);
     }
@@ -394,15 +409,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task UpdateDisassembly(uint currentInstructionAddress) {
         IsLoading = true;
-        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(CurrentInstructionAddress, 512));
+        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
         foreach ((uint key, EnrichedInstruction value) in enrichedInstructions) {
-            if (DebuggerLines.TryGetValue(key, out DebuggerLineViewModel? existingLine)) {
-                // Update the existing line
-                existingLine.UpdateIsCurrentInstruction();
-            } else {
-                // Add a new line
-                DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
-            }
+            DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
         }
         IsLoading = false;
     }
@@ -414,9 +423,14 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
     }
 
-    private void PauseAndReportAddress(long address) {
-        string message = $"Execution breakpoint was reached at address {address}.";
+    private void PauseAndReportAddress(uint address) {
+        // Create the message
+        string message = $"Execution breakpoint was reached at address {address:X8}.";
+
+        // Pause the emulator with the message
         Pause(message);
+
+        Console.WriteLine($"Paused and reported address {address:X8}");
     }
 
     private void Pause(string message) {

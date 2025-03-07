@@ -1,0 +1,23 @@
+- When building C# code to see if it compiles, only build the affected project, not the whole solution.
+- that the build succeeds does not mean the implementation is correct.
+
+* Workflow
+Follow this sequence of events:
+1. Analyze
+2. Design
+3. Implement
+4. Build
+5. Test
+6. Get confirmation from human tester
+7. Update documentation if needed
+
+* Documentation
+- The root of the project contains an Obsidian vault named "Knowledge". 
+- When a new requirement has been implemented, add it to the documentation.
+- Document only requirements, not implementation details.
+- The documentation is mainly there for AIs to understand the goals and requirements. Not to keep a history of changes.
+
+* Feedback
+- Ask for a decision when there is a choice of actions to take.
+- Ask for clarification if there is any ambiguity about the expected behavior.
+- Ask specific questions if the context of a task is unclear.
