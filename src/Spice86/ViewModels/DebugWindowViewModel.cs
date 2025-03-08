@@ -88,7 +88,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
             emulatorBreakpointsManager,
             memory, state, 
             functionsInformation.ToDictionary(x =>
-                x.Key.Linear, x => x.Value),
+                x.Key, x => x.Value),
             BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);
@@ -103,7 +103,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MemoryViewModel stackMemoryViewModel = new(memory, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
-            canCloseTab: false, startAddress: MemoryUtils.ToSegmentedAddress(stack.PhysicalAddress)) {
+            canCloseTab: false, startAddress: stack.PhysicalAddress) {
             Title = "CPU Stack Memory"
         };
         pauseHandler.Paused += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
@@ -114,8 +114,8 @@ public partial class DebugWindowViewModel : ViewModelBase,
     }
 
     private void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
-        stackMemoryViewModel.StartAddress = MemoryUtils.ToSegmentedAddress(stack.PhysicalAddress);
-        stackMemoryViewModel.EndAddress = MemoryUtils.ToSegmentedAddress(A20Gate.EndOfHighMemoryArea);
+        stackMemoryViewModel.StartAddress = stack.PhysicalAddress;
+        stackMemoryViewModel.EndAddress = A20Gate.EndOfHighMemoryArea;
     }
 
     [RelayCommand]

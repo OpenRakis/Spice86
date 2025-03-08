@@ -6,19 +6,23 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 internal class InstructionsDecoder {
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly IDictionary<uint, FunctionInformation> _functions;
+    private readonly IDictionary<SegmentedAddress, FunctionInformation> _functions;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
     public InstructionsDecoder(
-        IMemory memory, State state, IDictionary<uint, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
+        IMemory memory, State state,
+        IDictionary<SegmentedAddress, FunctionInformation> functions,
+        BreakpointsViewModel breakpointsViewModel) {
         _memory = memory;
         _state = state;
         _functions = functions;
@@ -27,7 +31,8 @@ internal class InstructionsDecoder {
 
     public List<CpuInstructionInfo> DecodeInstructions(uint startAddress,
         int numberOfInstructionsShown) {
-        CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
+        CodeReader codeReader = CreateCodeReader(_memory,
+            out CodeMemoryStream emulatedMemoryStream);
         using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
         Decoder decoder = InitializeDecoder(codeReader, startAddress);
         int byteOffset = 0;
@@ -52,10 +57,14 @@ internal class InstructionsDecoder {
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 FlowControl = instruction.FlowControl,
-                Bytes = $"""{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"""
+                Bytes = $"""{Convert.ToHexString(_memory.GetData(
+                    (uint)instructionAddress,
+                    (uint)instruction.Length))} ({instruction.Length})"""
             };
-            if (_functions.TryGetValue((uint)instructionAddress, out FunctionInformation? functionInformation)) {
-                instructionInfo.FunctionName = functionInformation.Name;
+            KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions
+                .FirstOrDefault(x => x.Key.ToPhysical() == instructionAddress);
+            if(functionInformation.Key != default) {
+                instructionInfo.FunctionName = functionInformation.Value.Name;
             }
             instructionInfo.SegmentedAddress = new(_state.CS, (ushort)(_state.IP + byteOffset));
             instructionInfo.Breakpoint = _breakpointsViewModel.GetBreakpoint(instructionInfo);

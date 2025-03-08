@@ -14,7 +14,7 @@ using Xunit;
 namespace Spice86.Tests.UI.Converters;
 
 public class AddressStringToSegmentedAddressConverterTests {
-    private readonly AddressStringToSegmentedAddressConverter _converter = new();
+    private readonly AddressStringToLinearMemoryAddresssConverter _converter = new();
 
     [Fact]
     public void Convert_NullValue_ReturnsNull() {

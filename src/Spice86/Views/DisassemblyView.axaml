@@ -13,11 +13,11 @@
 			 x:Class="Spice86.Views.DisassemblyView"
 			 x:DataType="viewModels:DisassemblyViewModel">
 	<UserControl.Resources>
+		<converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
-		<converters:AddressAndSegmentedAddressConverter x:Key="AddressAndSegmentedAddressConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-		<converters:AddressStringToSegmentedAddressConverter x:Key="AddressStringToSegmentedAddressConverter"
+		<converters:AddressStringToLinearMemoryAddresssConverter x:Key="AddressStringToLinearMemoryAddresssConverter"
 			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
@@ -55,8 +55,7 @@
 						Grid.Column="0"
 						MinWidth="150"
 						Text="{Binding StartAddress, Mode=TwoWay,
-							Converter={StaticResource AddressStringToSegmentedAddressConverter},
-							ConverterParameter='lenientMode'}" />
+							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
 				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
@@ -120,9 +119,28 @@
 					</DataGridTemplateColumn.CellTheme>
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
-							<TextBox Text="{Binding SegmentedAddress, Mode=OneWay,
-									 Converter={StaticResource AddressAndSegmentedAddressConverter}}"
-									 IsReadOnly="True" />
+							<WrapPanel Orientation="Horizontal">
+								<TextBox IsReadOnly="True" Text="{ReflectionBinding Address, Mode=OneWay}" />
+							</WrapPanel>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="CS:IP based address">
+					<DataGridTemplateColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="Background"
+								Value="{ReflectionBinding Breakpoint,
+								Converter={StaticResource BreakpointToBrushConverter}}" />
+						</ControlTheme>
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<WrapPanel Orientation="Horizontal">
+								<TextBox IsReadOnly="True" Text="{ReflectionBinding SegmentedAddress, Mode=OneWay}" />
+							</WrapPanel>
 						</DataTemplate>
 					</DataGridTemplateColumn.CellTemplate>
 				</DataGridTemplateColumn>
@@ -133,6 +151,8 @@
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="Background" Value="{ReflectionBinding ,
+									Converter={StaticResource BoolToBrushConverter}}" />
 						</ControlTheme>
 					</DataGridTemplateColumn.CellTheme>
 					<DataGridTemplateColumn.CellTemplate>
@@ -206,8 +226,8 @@
 							<TextBox
 								Text="{Binding BreakpointAddress,
 									Mode=TwoWay,
-									Converter={StaticResource AddressStringToSegmentedAddressConverter},
-									ConverterParameter='lenientMode'}"
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter},
+									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
 								Margin="5,0,0,0" />
 						</controls:GroupBox>

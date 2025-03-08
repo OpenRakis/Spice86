@@ -51,13 +51,10 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
             }
 
         }
-        if ((string?)parameter == "lenientMode") {
-            return new SegmentedAddress();
-        }
         return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
     }
 
-    private static ushort? ParseSegmentOrRegister(string value, State? parameter)
+    internal static ushort? ParseSegmentOrRegister(string value, State? parameter)
     {
         if (ushort.TryParse(value, NumberStyles.HexNumber, 
             CultureInfo.InvariantCulture, out ushort result))
@@ -80,5 +77,5 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
     }
 
     [GeneratedRegex(@"^([0-9A-Fa-f]{4}|[a-zA-Z]{2}):([0-9A-Fa-f]{4}|[a-zA-Z]{2})$")]
-    private static partial Regex SegmentedAddressRegex();
+    internal static partial Regex SegmentedAddressRegex();
 }

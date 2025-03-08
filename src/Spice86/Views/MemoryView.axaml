@@ -17,8 +17,9 @@
 	x:DataType="viewModels:MemoryViewModel"
 	mc:Ignorable="d">
 	<UserControl.Resources>
-		<converters:AddressAndSegmentedAddressConverter x:Key="AddressAndSegmentedAddressConverter" />
-		<converters:AddressStringToSegmentedAddressConverter x:Key="AddressStringToSegmentedAddressConverter" State="{Binding State}" />
+		<converters:AddressStringToLinearMemoryAddresssConverter
+			State="{Binding State}"
+			x:Key="AddressStringToLinearMemoryAddresssConverter" />
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
@@ -54,15 +55,15 @@
 					<TextBox
 						Grid.Row="0" Grid.Column="1"
 						Text="{Binding StartAddress, Mode=TwoWay,
-							Converter={StaticResource AddressStringToSegmentedAddressConverter}
-							ConverterParameter='lenientMode'}" />
+							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+							}" />
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
 					<TextBox
 						Grid.Row="1"
 						Grid.Column="1"
 						Text="{Binding EndAddress, Mode=TwoWay,
-							Converter={StaticResource AddressStringToSegmentedAddressConverter}
-							ConverterParameter='lenientMode'}" />
+							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+							}" />
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -103,9 +104,9 @@
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressAndSegmentedAddressConverter}}" />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
 							<TextBlock Text=" End address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressAndSegmentedAddressConverter}}" />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -165,8 +166,8 @@
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
 								Text="{Binding AddressOFoundOccurence,
-									Converter={StaticResource AddressStringToSegmentedAddressConverter}
-									ConverterParameter='lenientMode'}" />
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+									}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
 							<Button Command="{Binding FirstOccurrenceCommand}"
@@ -216,8 +217,8 @@
 								Grid.Row="0"
 								Grid.Column="1"
 								Text="{Binding MemoryEditAddress, Mode=TwoWay,
-									Converter={StaticResource AddressStringToSegmentedAddressConverter}
-									ConverterParameter='lenientMode'}" />
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+									}" />
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
@@ -281,16 +282,16 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Text="{Binding BreakpointRangeStartAddress,
-										Converter={StaticResource AddressStringToSegmentedAddressConverter}
-										ConverterParameter='lenientMode'}" />
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+										}" />
 								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
 									Text="{Binding BreakpointRangeEndAddress,,
-										Converter={StaticResource AddressStringToSegmentedAddressConverter}
-										ConverterParameter='lenientMode'}" />
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
+										}" />
 							</Grid>
 							<Label
 								Grid.Row="1"

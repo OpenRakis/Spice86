@@ -11,7 +11,8 @@
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
 	<UserControl.Resources>
-		<converters:AddressStringToSegmentedAddressConverter x:Key="AddressStringToSegmentedAddressConverter" State="{Binding State}" />
+		<converters:AddressStringToLinearMemoryAddresssConverter State="{Binding State}"
+			x:Key="AddressStringToLinearMemoryAddresssConverter" />
 		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
 	</UserControl.Resources>
 	<Grid>
@@ -80,8 +81,7 @@
 									Grid.Column="1"
                                     Text="{Binding MemoryAddressValue,
 										Mode=TwoWay,
-										Converter={StaticResource AddressStringToSegmentedAddressConverter}
-										ConverterParameter='lenientMode'}"
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
                                     Margin="5,0,0,0" />
 							</Grid>
@@ -92,8 +92,7 @@
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
 										Mode=TwoWay,
-										Converter={StaticResource AddressStringToSegmentedAddressConverter}
-										ConverterParameter='lenientMode'}"
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0" />
 							</controls:GroupBox>

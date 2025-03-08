@@ -15,24 +15,6 @@ public partial class BreakpointViewModel : ViewModelBase {
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        SegmentedAddress segmentedAddress,
-        BreakPointType type,
-        bool isRemovedOnTrigger,
-        Action onReached,
-        string comment = "") :
-            this(breakpointsViewModel, emulatorBreakpointsManager,
-                MemoryUtils.ToPhysicalAddress(
-                    segmentedAddress.Segment,
-                    segmentedAddress.Offset),
-                type, isRemovedOnTrigger, onReached,
-                comment) {
-        SegmentedAddress = segmentedAddress;
-        Parameter = segmentedAddress.ToString();
-    }
-
-    public BreakpointViewModel(
-        BreakpointsViewModel breakpointsViewModel,
-        EmulatorBreakpointsManager emulatorBreakpointsManager,
         long trigger,
         BreakPointType type,
         bool isRemovedOnTrigger,
@@ -120,7 +102,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         OnPropertyChanged(nameof(IsEnabled));
     }
 
-    internal bool IsFor(CpuInstructionInfo instructionInfo) {
+    internal bool IsForCpuInstruction(CpuInstructionInfo instructionInfo) {
         return Address == instructionInfo.Address &&
             (Type == BreakPointType.CPU_EXECUTION_ADDRESS ||
             Type == BreakPointType.MEMORY_READ ||

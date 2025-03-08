@@ -12,7 +12,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
 
@@ -46,7 +46,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             _isEditingSelectedBreakpoint = true;
             switch (SelectedBreakpoint.Type) {
                 case BreakPointType.CPU_EXECUTION_ADDRESS:
-                    ExecutionAddressValue = SelectedBreakpoint.SegmentedAddress;
+                    ExecutionAddressValue = SelectedBreakpoint.SegmentedAddress?.ToPhysical();
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
                     break;
                 case BreakPointType.CPU_CYCLES:
@@ -64,7 +64,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 case BreakPointType.MEMORY_ACCESS:
                 case BreakPointType.MEMORY_READ:
                 case BreakPointType.MEMORY_WRITE:
-                    MemoryAddressValue = SelectedBreakpoint.SegmentedAddress;
+                    MemoryAddressValue = (LinearMemoryAddress?)SelectedBreakpoint.Address;
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
                     break;
@@ -127,17 +127,18 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void BeginCreateBreakpoint() {
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
-        ExecutionAddressValue = MemoryAddressValue = new SegmentedAddress(_state.CS, _state.IP);
+        ExecutionAddressValue = MemoryAddressValue = new LinearMemoryAddress(
+            MemoryUtils.ToPhysicalAddress( _state.CS, _state.IP));
     }
 
     [ObservableProperty]
     private long? _cyclesValue;
 
     [ObservableProperty]
-    private SegmentedAddress? _executionAddressValue;
+    private LinearMemoryAddress? _executionAddressValue;
 
     [ObservableProperty]
-    private SegmentedAddress? _memoryAddressValue;
+    private LinearMemoryAddress? _memoryAddressValue;
 
     [ObservableProperty]
     private ushort? _ioPortNumber;
@@ -158,7 +159,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             if (ExecutionAddressValue is null) {
                 return;
             }
-            BreakpointViewModel executionVm = AddSegmentedAddressBreakpoint(
+            BreakpointViewModel executionVm = AddAddressBreakpoint(
                 ExecutionAddressValue.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                 false,
@@ -171,7 +172,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             if (MemoryAddressValue is null) {
                 return;
             }
-            BreakpointViewModel memoryVm = AddSegmentedAddressBreakpoint(
+            BreakpointViewModel memoryVm = AddAddressBreakpoint(
                MemoryAddressValue.Value,
                 SelectedMemoryBreakpointType,
                 false,
@@ -184,7 +185,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 return;
             }
             long cyclesValue = CyclesValue.Value;
-            BreakpointViewModel cyclesVm = AddLinearAddressBreakpoint(
+            BreakpointViewModel cyclesVm = AddAddressBreakpoint(
                 cyclesValue,
                 BreakPointType.CPU_CYCLES,
                 false,
@@ -196,7 +197,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             if (InterruptNumber is null) {
                 return;
             }
-            BreakpointViewModel interruptVm = AddLinearAddressBreakpoint(
+            BreakpointViewModel interruptVm = AddAddressBreakpoint(
                 InterruptNumber.Value,
                 BreakPointType.CPU_INTERRUPT,
                 false,
@@ -208,7 +209,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             if (IoPortNumber is null) {
                 return;
             }
-            BreakpointViewModel ioPortVm = AddLinearAddressBreakpoint(
+            BreakpointViewModel ioPortVm = AddAddressBreakpoint(
                 IoPortNumber.Value,
                 BreakPointType.IO_ACCESS,
                 false,
@@ -220,7 +221,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         CreatingBreakpoint = false;
     }
 
-    private void PauseAndReportAddress(SegmentedAddress address) {
+    private void PauseAndReportAddress(LinearMemoryAddress address) {
         string message = $"Execution breakpoint was reached at address {address}.";
         Pause(message);
     }
@@ -230,12 +231,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
         Pause(message);
     }
 
-    private void PauseAndReportInterrupt(long interruptNumber) {
+    private void PauseAndReportInterrupt(int interruptNumber) {
         string message = $"Interrupt breakpoint was reached at interrupt 0x{interruptNumber:X2}.";
         Pause(message);
     }
 
-    private void PauseAndReportIoPort(long ioPortAddress) {
+    private void PauseAndReportIoPort(ushort ioPortAddress) {
         string message = $"I/O Port breakpoint was reached at 0x{ioPortAddress:X2}.";
         Pause(message);
     }
@@ -288,20 +289,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 removedOnTrigger), on: true);
     }
 
-    public BreakpointViewModel AddSegmentedAddressBreakpoint(
-        SegmentedAddress address,
-        BreakPointType type,
-        bool isRemovedOnTrigger,
-        Action onReached,
-        string comment = "") {
-        RemoveFirstIfEdited();
-        var breakpointViewModel = new BreakpointViewModel(
-            this,
-            _emulatorBreakpointsManager,
-            address, type, isRemovedOnTrigger, onReached, comment);
-        return AddBreakpointInternal(breakpointViewModel);
-    }
-
     private BreakpointViewModel AddBreakpointInternal(BreakpointViewModel breakpointViewModel) {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
@@ -309,7 +296,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         return breakpointViewModel;
     }
 
-    public BreakpointViewModel AddLinearAddressBreakpoint(
+    public BreakpointViewModel AddAddressBreakpoint(
             long trigger,
             BreakPointType type,
             bool isRemovedOnTrigger,
@@ -331,7 +318,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     public BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.FirstOrDefault(x => x.IsFor(instructionInfo));
+        return Breakpoints.FirstOrDefault(x => x.IsForCpuInstruction(instructionInfo));
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
