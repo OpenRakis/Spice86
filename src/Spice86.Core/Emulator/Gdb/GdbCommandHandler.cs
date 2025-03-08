@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -29,18 +30,18 @@ public class GdbCommandHandler {
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
-    /// <param name="callbackHandler">The class that stores callbacks as machine code instructions and is responsible for calling our C# handlers.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="functionHandler">The class that handles function calls at the machine code level.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
-    public GdbCommandHandler(IMemory memory, Cpu cpu, State state, IPauseHandler pauseHandler,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder,
+    public GdbCommandHandler(IMemory memory, MemoryDataExporter memoryDataExporter, Cpu cpu, State state, IPauseHandler pauseHandler,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, ExecutionFlowRecorder executionFlowRecorder,
         FunctionHandler functionHandler, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
         _state = state;
@@ -51,7 +52,8 @@ public class GdbCommandHandler {
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService);
-        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(configuration, memory, cpu, callbackHandler, executionFlowRecorder, emulatorBreakpointsManager, gdbIo,
+        _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
+            memory, memoryDataExporter, cpu, executionFlowRecorder, emulatorBreakpointsManager, gdbIo,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }

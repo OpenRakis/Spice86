@@ -9,22 +9,20 @@ using Spice86.Shared.Interfaces;
 /// This class is responsible for serializing the emulator state to a directory.
 /// </summary>
 public class EmulatorStateSerializer {
-    private readonly IMemory _memory;
     private readonly State _state;
-    private readonly CallbackHandler _callbackHandler;
-    private readonly Configuration _configuration;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private readonly FunctionHandler _functionHandler;
     private readonly ILoggerService _loggerService;
+
+    private readonly MemoryDataExporter _memoryDataExporter;
     
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
-    public EmulatorStateSerializer(Configuration configuration, IMemory memory, State state, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, FunctionHandler cpuFunctionHandler, ILoggerService loggerService) {
-        _configuration = configuration;
-        _memory = memory;
+    public EmulatorStateSerializer(MemoryDataExporter memoryDataExporter, State state,
+        ExecutionFlowRecorder executionFlowRecorder, FunctionHandler cpuFunctionHandler, ILoggerService loggerService) {
         _state = state;
-        _callbackHandler = callbackHandler;
+        _memoryDataExporter = memoryDataExporter;
         _executionFlowRecorder = executionFlowRecorder;
         _functionHandler = cpuFunctionHandler;
         _loggerService = loggerService;
@@ -36,11 +34,10 @@ public class EmulatorStateSerializer {
     /// </summary>
     /// <param name="path">The directory used for dumping the emulator state.</param>
     public void SerializeEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(_memory,
+        new RecorderDataWriter(
                 _state,
-                _callbackHandler,
-                _configuration,
                 _executionFlowRecorder,
+                _memoryDataExporter,
                 path, _loggerService)
             .DumpAll(_executionFlowRecorder, _functionHandler);
     }

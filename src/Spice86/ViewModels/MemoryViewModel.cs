@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -17,11 +18,9 @@ using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 using Spice86.Views;
 
-using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text;
 
@@ -32,11 +31,13 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly State _state;
+    private readonly MemoryDataExporter _memoryDataExporter;
 
-    public MemoryViewModel(IMemory memory, State state, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
+    public MemoryViewModel(IMemory memory, MemoryDataExporter memoryDataExporter, State state, BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
         bool canCloseTab = false, LinearMemoryAddress? startAddress = null, LinearMemoryAddress? endAddress = null) : base(uiDispatcher, textClipboard) {
         _pauseHandler = pauseHandler;
+        _memoryDataExporter = memoryDataExporter;
         _state = state;
         _breakpointsViewModel = breakpointsViewModel;
         _memory = memory;
@@ -382,7 +383,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void CreateNewMemoryView(LinearMemoryAddress? startAddress = null) {
-        MemoryViewModel memoryViewModel = new(_memory, _state,
+        MemoryViewModel memoryViewModel = new(_memory, _memoryDataExporter, _state,
             _breakpointsViewModel, _pauseHandler,
             _messenger, _uiDispatcher, _textClipboard,
             _storageProvider, _structureViewModelFactory, canCloseTab: true);
@@ -408,11 +409,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
     private async Task DumpMemory() {
-        if (StartAddress is not null && EndAddress is not null) {
-            await _storageProvider.SaveBinaryFile(_memory.ReadRam(
-                EndAddress.Value - StartAddress.Value,
-                    StartAddress.Value));
-        }
+        await _storageProvider.SaveBinaryFile(_memoryDataExporter.GenerateToolingCompliantRamDump());
     }
 
     [ObservableProperty]

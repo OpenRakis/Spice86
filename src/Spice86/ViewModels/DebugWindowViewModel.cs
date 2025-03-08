@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -65,7 +66,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(State state, Configuration configuration, Stack stack, IMemory memory, Midi externalMidiDevice,
+    public DebugWindowViewModel(State state, MemoryDataExporter memoryDataExporter, Configuration configuration, Stack stack, IMemory memory, Midi externalMidiDevice,
         ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
         ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -97,10 +98,10 @@ public partial class DebugWindowViewModel : ViewModelBase,
         VideoCardViewModel = new(vgaRenderer, videoState);
         CpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
         MidiViewModel = new(externalMidiDevice);
-        MemoryViewModel mainMemoryViewModel = new(memory, state,
+        MemoryViewModel mainMemoryViewModel = new(memory, memoryDataExporter, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory);
-        StackMemoryViewModel stackMemoryViewModel = new(memory, state, stack,
+        StackMemoryViewModel stackMemoryViewModel = new(memory, memoryDataExporter, state, stack,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
             canCloseTab: false, startAddress: stack.PhysicalAddress);

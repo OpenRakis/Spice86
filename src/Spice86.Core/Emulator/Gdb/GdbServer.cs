@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -23,33 +24,38 @@ public sealed class GdbServer : IDisposable {
     private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly CallbackHandler _callbackHandler;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
     private readonly FunctionHandler _functionHandler;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private GdbCommandHandler? _gdbCommandHandler;
+
+    private readonly MemoryDataExporter _memoryDataExporter;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
     /// </summary>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that handles breakpoints.</param>
     /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
-    public GdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public GdbServer(Configuration configuration, IMemory memory,
+        MemoryDataExporter memoryDataExporter, Cpu cpu, State state,
+        FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
+        _memoryDataExporter = memoryDataExporter;
         _functionHandler = functionHandler;
         _cpu = cpu;
         _state = state;
         _memory = memory;
-        _callbackHandler = callbackHandler;
         _executionFlowRecorder = executionFlowRecorder;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _configuration = configuration;
@@ -89,8 +95,9 @@ public sealed class GdbServer : IDisposable {
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
-            _memory, _cpu, _state, _pauseHandler, _emulatorBreakpointsManager,
-            _callbackHandler, _executionFlowRecorder, _functionHandler,
+            _memory, _memoryDataExporter,  _cpu, _state, _pauseHandler,
+            _emulatorBreakpointsManager,
+            _executionFlowRecorder, _functionHandler,
             gdbIo,
             _loggerService,
             _configuration);

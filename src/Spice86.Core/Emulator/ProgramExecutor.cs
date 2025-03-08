@@ -46,12 +46,12 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="cpu">The emulated x86 CPU.</param>
     /// <param name="cfgCpu">The emulated x86 CPU, CFG version.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
-    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
     /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
@@ -60,8 +60,9 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, Cpu cpu, CfgCpu cfgCpu, State state, Timer timer, Dos dos,
-        CallbackHandler callbackHandler, FunctionHandler functionHandler,
+        IMemory memory, MemoryDataExporter memoryDataExporter, Cpu cpu, CfgCpu cfgCpu,
+        State state, Timer timer, Dos dos,
+        FunctionHandler functionHandler,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
         IScreenPresenter? screenPresenter, DmaController dmaController,
         ILoggerService loggerService) {
@@ -75,10 +76,14 @@ public sealed class ProgramExecutor : IDisposable {
             dmaController,
             pauseHandler);
         if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler,
-                executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, _loggerService);
+            _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, cpu,
+                state, functionHandler,
+                executionFlowRecorder,
+                emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
-        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration, memory, state, dos.EnvironmentVariables, dos.FileManager, dos.MemoryManager);
+        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
+            memory, state, dos.EnvironmentVariables,
+            dos.FileManager, dos.MemoryManager);
         if (configuration.InitializeDOS is null) {
             configuration.InitializeDOS = loader.DosInitializationNeeded;
             if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -154,12 +159,17 @@ public sealed class ProgramExecutor : IDisposable {
         return new BiosLoader(memory, cpuState, _loggerService);
     }
     
-    private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory, Cpu cpu, State state, CallbackHandler callbackHandler, FunctionHandler functionHandler,
-        ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
+        MemoryDataExporter memoryDataExporter, Cpu cpu, State state,
+        FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (configuration.GdbPort is null) {
             return null;
         }
-        return new GdbServer(configuration, memory, cpu, state, callbackHandler, functionHandler, executionFlowRecorder, emulatorBreakpointsManager, pauseHandler, loggerService);
+        return new GdbServer(configuration, memory, memoryDataExporter, cpu,
+            state, functionHandler, executionFlowRecorder,
+            emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
