@@ -100,22 +100,14 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MemoryViewModel mainMemoryViewModel = new(memory, state,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory);
-        MemoryViewModel stackMemoryViewModel = new(memory, state,
+        StackMemoryViewModel stackMemoryViewModel = new(memory, state, stack,
             BreakpointsViewModel, pauseHandler, messenger,
             uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
-            canCloseTab: false, startAddress: stack.PhysicalAddress) {
-            Title = "CPU Stack Memory"
-        };
-        pauseHandler.Paused += () => UpdateStackMemoryViewModel(stackMemoryViewModel, stack);
+            canCloseTab: false, startAddress: stack.PhysicalAddress);
         MemoryViewModels.Add(mainMemoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
         CfgCpuViewModel = new(configuration, executionContextManager,
             pauseHandler, new PerformanceMeasurer());
-    }
-
-    private void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
-        stackMemoryViewModel.StartAddress = stack.PhysicalAddress;
-        stackMemoryViewModel.EndAddress = A20Gate.EndOfHighMemoryArea;
     }
 
     [RelayCommand]
