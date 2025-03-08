@@ -62,7 +62,7 @@
 						<controls:GroupBox Grid.Row="0" Header="Cycles"
                                  IsVisible="{Binding IsCyclesBreakpointSelected}">
 							<controls:GroupBox Header="Cycles count">
-								<NumericUpDown
+								<NumericUpDown FormatString="0" Minimum="0"
 									Value="{Binding CyclesValue,
 									Mode=TwoWay}"
 									Margin="5,0,0,0" />

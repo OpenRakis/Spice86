@@ -75,7 +75,7 @@
 					<MenuItem.Header>
 						<StackPanel Orientation="Horizontal">
 							<Label Content="Scale" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-							<NumericUpDown Text="{Binding Scale}" Margin="5,0,0,0" />
+							<NumericUpDown Text="{Binding Scale}" FormatString="0" Minimum="0" Margin="5,0,0,0" />
 						</StackPanel>
 					</MenuItem.Header>
 				</MenuItem>
@@ -102,7 +102,7 @@
 				<fluent:SymbolIcon Symbol="Play" />
 			</Button>
 			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
-			<NumericUpDown Focusable="False" Margin="5,0,0,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
+			<NumericUpDown FormatString="0" Focusable="False" Margin="5,0,0,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
 			<Button Focusable="False" Margin="5,0,0,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
 				<fluent:SymbolIcon Symbol="ArrowReset" />
 			</Button>

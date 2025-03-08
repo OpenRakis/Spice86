@@ -46,7 +46,7 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="2">
 				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-				<NumericUpDown Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
+				<NumericUpDown FormatString="0" Minimum="0" Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
@@ -120,7 +120,7 @@
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
 							<WrapPanel Orientation="Horizontal">
-								<TextBox IsReadOnly="True" Text="{ReflectionBinding Address, Mode=OneWay}" />
+								<TextBox IsReadOnly="True" Text="{ReflectionBinding Address, Mode=OneWay, StringFormat={}0x{0:X}}" />
 							</WrapPanel>
 						</DataTemplate>
 					</DataGridTemplateColumn.CellTemplate>
@@ -215,20 +215,15 @@
 						Content="Creating execution breakpoint"
 						FontWeight="Bold" />
 					<Grid
-						Grid.Row="1"
-						RowDefinitions="Auto,Auto,Auto">
-						<Label
-							Grid.Row="0"
-							VerticalContentAlignment="Center"
-							HorizontalContentAlignment="Left"
-							Content="Memory hex, decimal, or Segmented Address to break on:" />
-						<controls:GroupBox Grid.Row="1" Header="Segmented address">
+						Grid.Row="1">
+						<controls:GroupBox Header="Address:">
 							<TextBox
 								Text="{Binding BreakpointAddress,
 									Mode=TwoWay,
 									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter},
 									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
+								ToolTip.Tip="Hex or linear or segmented address"
 								Margin="5,0,0,0" />
 						</controls:GroupBox>
 					</Grid>
