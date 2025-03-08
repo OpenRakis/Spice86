@@ -34,7 +34,7 @@ public partial class AddressStringToLinearMemoryAddresssConverter : AvaloniaObje
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
         if (value is not string str || string.IsNullOrWhiteSpace(str)) {
-            return new LinearMemoryAddress(0);
+            return BindingNotification.Null;
         }
 
         Match match = SegmentedAddressConverter.SegmentedAddressRegex().Match(str);
