@@ -59,15 +59,19 @@ public partial class AddressStringToLinearMemoryAddresssConverter : AvaloniaObje
 
         if (match.Success) {
             string sourceInput = match.Groups[1].Value;
-            return new LinearMemoryAddress(uint.Parse(sourceInput,
-                NumberStyles.HexNumber), sourceInput);
+            if (uint.TryParse(sourceInput, NumberStyles.HexNumber, CultureInfo.InvariantCulture,
+                out uint result)) {
+                return new LinearMemoryAddress(result, sourceInput);
+            }
         }
 
         match = DecimalAddressRegex().Match(str);
 
         if (match.Success) {
             string sourceInput = match.Groups[1].Value;
-            return new LinearMemoryAddress(uint.Parse(sourceInput), sourceInput);
+            if(uint.TryParse(sourceInput, out uint result)) {
+                return new LinearMemoryAddress(result, sourceInput);
+            }
         }
         return BindingOperations.DoNothing;
     }
