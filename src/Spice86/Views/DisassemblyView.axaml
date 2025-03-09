@@ -52,7 +52,6 @@
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
 				<TextBox Name="StartAddressTextBox"
-					Grid.Column="0"
 					Width="150"
 					Text="{Binding StartAddress, Mode=TwoWay,
 						Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}">
