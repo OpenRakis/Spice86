@@ -32,11 +32,11 @@
             <Expander Grid.Column="2" Header="Possibly zero-terminated ASCII strings" IsExpanded="True">
 				<WrapPanel Orientation="Vertical">
 					<Label>ES:DI:</Label>
-					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding EsDiString, Mode=OneWay}" />
+					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding EsDiString, Mode=OneWay}" />
 					<Label>DS:SI:</Label>
-					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding DsSiString, Mode=OneWay}" />
+					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsSiString, Mode=OneWay}" />
 					<Label>DS:DX:</Label>
-					<TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding DsDxString, Mode=OneWay}" />
+					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsDxString, Mode=OneWay}" />
 				</WrapPanel>
             </Expander>
         </Grid>
