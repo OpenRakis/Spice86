@@ -59,7 +59,7 @@ public class CurrentInstructions : InstructionReplacer {
         SegmentedAddress instructionAddress = instruction.Address;
         List<AddressBreakPoint> breakpoints = new();
         _breakpointsForInstruction.Add(instructionAddress, breakpoints);
-        uint instructionPhysicalAddress = instructionAddress.ToPhysical();
+        uint instructionPhysicalAddress = instructionAddress.Linear;
         for (uint byteAddress = instructionPhysicalAddress;
              byteAddress < instructionPhysicalAddress + instruction.Length;
              byteAddress++) {

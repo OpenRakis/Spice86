@@ -15,14 +15,6 @@ public class MemoryWriter {
     public SegmentedAddress CurrentAddress { get; set; }
 
     /// <summary>
-    /// Creates and returns a copy of CurrentAddress so that the returned instance is not impacted by changes to CurrentAddress.
-    /// </summary>
-    /// <returns>a copy of CurrentAddress</returns>
-    public SegmentedAddress GetCurrentAddressCopy() {
-        return new SegmentedAddress(CurrentAddress);
-    }
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="MemoryWriter"/> class with the specified memory as a data sink and beginningAddress for position for the first write.
     /// </summary>
     /// <param name="memory">memory bus to write to</param>

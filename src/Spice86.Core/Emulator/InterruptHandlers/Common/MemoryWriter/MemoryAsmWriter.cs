@@ -30,7 +30,7 @@ public class MemoryAsmWriter : MemoryWriter {
     /// <param name="callbackNumber">Callback index</param>
     /// <param name="runnable">Action to run when this callback is executed by the CPU</param>
     public void RegisterAndWriteCallback(byte callbackNumber, Action runnable) {
-        Callback callback = new Callback(callbackNumber, runnable, GetCurrentAddressCopy());
+        Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
     }
@@ -84,7 +84,7 @@ public class MemoryAsmWriter : MemoryWriter {
         if (inMemoryAddressSwitcher.DefaultAddress is null) {
             throw new UnrecoverableException("Cannot write a FAR call to a null address.");
         }
-        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress.Value).ToPhysical();
+        inMemoryAddressSwitcher.PhysicalLocation = WriteFarCall(inMemoryAddressSwitcher.DefaultAddress.Value).Linear;
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class MemoryAsmWriter : MemoryWriter {
     public SegmentedAddress WriteFarCall(SegmentedAddress destination) {
         WriteUInt8(0x9A);
         // Make a copy of the address since it is going to be modified by our writes.
-        SegmentedAddress ret = GetCurrentAddressCopy();
+        SegmentedAddress ret = CurrentAddress;
         WriteSegmentedAddress(destination);
         return ret;
     }

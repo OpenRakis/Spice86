@@ -278,7 +278,7 @@ public static partial class ConvertUtils {
     /// <param name="address">The SegmentedAddress object to convert.</param>
     /// <returns>A C# formatted string representing the SegmentedAddress object with physical address.</returns>
     public static string ToCSharpStringWithPhysical(SegmentedAddress address) {
-        return $"{ToHex16WithoutX(address.Segment)}_{ToHex16WithoutX(address.Offset)}_{ToHex32WithoutX(address.ToPhysical())}";
+        return $"{ToHex16WithoutX(address.Segment)}_{ToHex16WithoutX(address.Offset)}_{ToHex32WithoutX(address.Linear)}";
     }
 
     /// <summary>

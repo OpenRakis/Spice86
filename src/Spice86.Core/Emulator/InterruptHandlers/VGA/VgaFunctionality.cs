@@ -279,8 +279,8 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <inheritdoc />
     public SegmentedAddress GetFontAddress(byte fontNumber) {
         SegmentedAddress address = fontNumber switch {
-            0x00 => GetInterruptVectorAddress(0x1F),
-            0x01 => GetInterruptVectorAddress(0x43),
+            0x00 => _interruptVectorTable[0x1F],
+            0x01 => _interruptVectorTable[0x43],
             0x02 => _vgaRom.VgaFont14Address,
             0x03 => _vgaRom.VgaFont8Address,
             0x04 => _vgaRom.VgaFont8Address2,
@@ -788,10 +788,6 @@ public class VgaFunctionality : IVgaFunctionality {
         return new CharacterPlusAttribute((char)0, 0, false);
     }
 
-    private SegmentedAddress GetInterruptVectorAddress(byte vector) {
-        return new SegmentedAddress(_interruptVectorTable[vector]);
-    }
-
     private int MemCmp(ReadOnlySpan<byte> bytes, ushort segment, ushort offset, int length) {
         int i = 0;
         while (length-- > 0 && i < bytes.Length) {
@@ -1162,10 +1158,10 @@ public class VgaFunctionality : IVgaFunctionality {
         int characterHeight = _biosDataArea.CharacterHeight;
         SegmentedAddress address;
         if (characterHeight == 8 && character >= 128) {
-            address = GetInterruptVectorAddress(0x1F);
+            address = _interruptVectorTable[0x1F];
             character = (char)(character - 128);
         } else {
-            address = GetInterruptVectorAddress(0x43);
+            address = _interruptVectorTable[0x43];
         }
         address += (ushort)(character * characterHeight);
         return address;
