@@ -3,6 +3,7 @@ namespace Spice86;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
@@ -41,6 +42,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
+using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -246,13 +248,47 @@ public class Spice86DependencyInjection : IDisposable {
         DebugWindowViewModel? debugWindowViewModel = null;
         if (textClipboard != null && hostStorageProvider != null && uiThreadDispatcher != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            debugWindowViewModel = new DebugWindowViewModel(state, memoryDataExporter, configuration, stack, memory,
-                midiDevice, videoState.DacRegisters.ArgbPalette, softwareMixer, vgaRenderer, videoState,
-                cfgCpu.ExecutionContextManager, messenger, uiThreadDispatcher, textClipboard, hostStorageProvider, 
+
+
+            BreakpointsViewModel breakpointsViewModel = new(state, pauseHandler,
+                messenger, emulatorBreakpointsManager, uiThreadDispatcher);
+            CfgCpuViewModel cfgCpuViewModel = new(configuration,
+                cfgCpu.ExecutionContextManager,
+                pauseHandler, new PerformanceMeasurer());
+            DisassemblyViewModel disassemblyVm = new(
                 emulatorBreakpointsManager,
-                functionsInformation,
-                new StructureViewModelFactory(configuration, loggerService, pauseHandler),
-                pauseHandler);
+                memory, state,
+                functionsInformation.ToDictionary(x =>
+                x.Key, x => x.Value),
+            breakpointsViewModel, pauseHandler,
+            uiThreadDispatcher, messenger, textClipboard);
+            PaletteViewModel paletteViewModel = new(
+                videoState.DacRegisters.ArgbPalette,
+                uiThreadDispatcher);
+            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
+            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
+            CpuViewModel cpuViewModel = new(state, memory, pauseHandler,
+                uiThreadDispatcher);
+            MidiViewModel midiViewModel = new(midiDevice);
+            StructureViewModelFactory structureViewModelFactory = new(
+                configuration, loggerService, pauseHandler);
+            MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
+                        breakpointsViewModel, pauseHandler, messenger,
+                        uiThreadDispatcher, textClipboard,
+                        hostStorageProvider, structureViewModelFactory);
+            StackMemoryViewModel stackMemoryViewModel = new(memory,
+                memoryDataExporter, state, stack,
+                breakpointsViewModel, pauseHandler, messenger,
+                uiThreadDispatcher, textClipboard,
+                hostStorageProvider, structureViewModelFactory,
+                canCloseTab: false, startAddress: stack.PhysicalAddress);
+
+            debugWindowViewModel = new DebugWindowViewModel(messenger,
+                uiThreadDispatcher, pauseHandler,
+                breakpointsViewModel, disassemblyVm,
+                paletteViewModel, softwareMixerViewModel,
+                videoCardViewModel, cpuViewModel, midiViewModel,
+                cfgCpuViewModel, memoryViewModel, stackMemoryViewModel);
         }
 
         if (desktop != null && mainWindow != null) {

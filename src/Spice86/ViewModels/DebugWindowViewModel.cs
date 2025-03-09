@@ -66,49 +66,35 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     private readonly IPauseHandler _pauseHandler;
 
-    public DebugWindowViewModel(State state, MemoryDataExporter memoryDataExporter, Configuration configuration, Stack stack, IMemory memory, Midi externalMidiDevice,
-        ArgbPalette argbPalette, SoftwareMixer softwareMixer, IVgaRenderer vgaRenderer, VideoState videoState,
-        ExecutionContextManager executionContextManager, IMessenger messenger, IUIDispatcher uiDispatcher,
-        ITextClipboard textClipboard, IHostStorageProvider storageProvider, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
-        IStructureViewModelFactory structureViewModelFactory, IPauseHandler pauseHandler) {
+    public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
+        IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
+        DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
+        SoftwareMixerViewModel softwareMixerViewModel, VideoCardViewModel videoCardViewModel,
+        CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
+        MemoryViewModel memoryViewModel, StackMemoryViewModel stackMemoryViewModel
+        ) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        BreakpointsViewModel = new(state, pauseHandler, messenger,
-            emulatorBreakpointsManager, uiDispatcher);
+        BreakpointsViewModel = breakpointsViewModel;
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = new(
-            emulatorBreakpointsManager,
-            memory, state, 
-            functionsInformation.ToDictionary(x =>
-                x.Key, x => x.Value),
-            BreakpointsViewModel, pauseHandler,
-            uiDispatcher, messenger, textClipboard);
+        DisassemblyViewModel disassemblyVm = disassemblyViewModel;
         DisassemblyViewModels.Add(disassemblyVm);
-        PaletteViewModel = new(argbPalette, uiDispatcher);
-        SoftwareMixerViewModel = new(softwareMixer);
-        VideoCardViewModel = new(vgaRenderer, videoState);
-        CpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
-        MidiViewModel = new(externalMidiDevice);
-        MemoryViewModel mainMemoryViewModel = new(memory, memoryDataExporter, state,
-            BreakpointsViewModel, pauseHandler, messenger,
-            uiDispatcher, textClipboard, storageProvider, structureViewModelFactory);
-        StackMemoryViewModel stackMemoryViewModel = new(memory, memoryDataExporter, state, stack,
-            BreakpointsViewModel, pauseHandler, messenger,
-            uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
-            canCloseTab: false, startAddress: stack.PhysicalAddress);
-        MemoryViewModels.Add(mainMemoryViewModel);
+        PaletteViewModel = paletteViewModel;
+        SoftwareMixerViewModel = softwareMixerViewModel;
+        VideoCardViewModel = videoCardViewModel;
+        CpuViewModel = cpuViewModel;
+        MidiViewModel = midiViewModel;
+        MemoryViewModels.Add(memoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
-        CfgCpuViewModel = new(configuration, executionContextManager,
-            pauseHandler, new PerformanceMeasurer());
+        CfgCpuViewModel = cfgCpuViewModel;
     }
 
     [RelayCommand]
