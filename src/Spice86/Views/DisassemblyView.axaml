@@ -223,7 +223,7 @@
 							<TextBox
 								Text="{Binding BreakpointAddress,
 									Mode=TwoWay,
-									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus,
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus
 									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
 								ToolTip.Tip="Hex or linear or segmented address"
