@@ -33,21 +33,26 @@ jobs:
       run: dotnet pack --include-symbols --include-source --configuration Release
 
     - name: Upload NuGet Bufdio.Spice86
+      if: github.ref == 'refs/heads/master'
       working-directory: ./src/Bufdio.Spice86/bin/Release
-      run: nuget push Bufdio.Spice86.8.0.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Bufdio.Spice86.9.0.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Shared
+      if: github.ref == 'refs/heads/master'
       working-directory: ./src/Spice86.Shared/bin/Release
-      run: nuget push Spice86.Shared.8.0.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Shared.9.0.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Logging
+      if: github.ref == 'refs/heads/master'
       working-directory: ./src/Spice86.Logging/bin/Release
-      run: nuget push Spice86.Logging.8.0.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Logging.9.0.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86.Core
+      if: github.ref == 'refs/heads/master'
       working-directory: ./src/Spice86.Core/bin/Release
-      run: nuget push Spice86.Core.8.0.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.Core.9.0.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
 
     - name: Upload NuGet Spice86
+      if: github.ref == 'refs/heads/master'
       working-directory: ./src/Spice86/bin/Release
-      run: nuget push Spice86.8.0.2.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
+      run: nuget push Spice86.9.0.0.nupkg ${{secrets.NUGET_API_KEY}} -Source 'https://api.nuget.org/v3/index.json' -SkipDuplicate
