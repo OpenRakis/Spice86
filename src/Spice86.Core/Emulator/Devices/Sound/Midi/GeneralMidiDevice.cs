@@ -2,6 +2,7 @@
 
 using MeltySynth;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -18,6 +19,7 @@ using OperatingSystem = System.OperatingSystem;
 /// <remarks>On non-Windows: Uses a soundfont, not the host OS APIs. This is not a MIDI passthrough.</remarks>
 /// </summary>
 public sealed class GeneralMidiDevice : MidiDevice {
+    private readonly Configuration _configuration;
     private readonly SoundChannel? _soundChannel;
     private readonly Synthesizer? _synthesizer;
 
@@ -41,22 +43,24 @@ public sealed class GeneralMidiDevice : MidiDevice {
     /// <summary>
     /// Initializes a new instance of <see cref="GeneralMidiDevice"/>.
     /// </summary>
+    /// <param name="configuration">The class that tells us what to run and how.</param>
     /// <param name="softwareMixer">The software mixer for sound channels.</param>
     /// <param name="pauseHandler">The service for handling pause/resume of emulation.</param>
     /// <param name="loggerService">The service used to log messages.</param>
-    public GeneralMidiDevice(SoftwareMixer softwareMixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
+    public GeneralMidiDevice(Configuration configuration, SoftwareMixer softwareMixer, IPauseHandler pauseHandler, ILoggerService loggerService) {
+        _configuration = configuration;
         if (GetType().Assembly.GetManifestResourceNames().Any(x => x == SoundFontResourceName)) {
             Stream? resource = GetType().Assembly.GetManifestResourceStream(SoundFontResourceName);
-            if (resource is not null) {
+            if (resource is not null && configuration.AudioEngine != AudioEngine.Dummy) {
                 _synthesizer = new Synthesizer(new SoundFont(resource), 48000);
             }
         }
-        if (!OperatingSystem.IsWindows()) {
+        if (!OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             _soundChannel = softwareMixer.CreateChannel(nameof(GeneralMidiDevice));
         }
         
         _deviceThread = new DeviceThread(nameof(GeneralMidiDevice), PlaybackLoopBody, pauseHandler, loggerService);
-        if (OperatingSystem.IsWindows()) {
+        if (OperatingSystem.IsWindows() && configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutOpen(out _midiOutHandle, NativeMethods.MIDI_MAPPER, IntPtr.Zero, IntPtr.Zero, 0);
         }
     }
@@ -76,7 +80,7 @@ public sealed class GeneralMidiDevice : MidiDevice {
     }
 
     protected override void PlayShortMessage(uint message) {
-        if (OperatingSystem.IsWindows()) {
+        if (OperatingSystem.IsWindows() && _configuration.AudioEngine != AudioEngine.Dummy) {
             NativeMethods.midiOutShortMsg(_midiOutHandle, message);
         } else {
             _deviceThread.StartThreadIfNeeded();
@@ -121,11 +125,11 @@ public sealed class GeneralMidiDevice : MidiDevice {
     protected override void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                if (OperatingSystem.IsWindows()) {
-                    if (_midiOutHandle != IntPtr.Zero) {
-                        NativeMethods.midiOutClose(_midiOutHandle);
-                        _midiOutHandle = IntPtr.Zero;
-                    }
+                if (OperatingSystem.IsWindows() &&
+                    _configuration.AudioEngine != AudioEngine.Dummy &&
+                    _midiOutHandle != IntPtr.Zero) {
+                    NativeMethods.midiOutClose(_midiOutHandle);
+                    _midiOutHandle = IntPtr.Zero;
                 }
                 _deviceThread.Dispose();
             }

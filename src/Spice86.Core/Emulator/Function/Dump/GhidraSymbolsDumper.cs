@@ -69,11 +69,11 @@ public class GhidraSymbolsDumper {
     }
 
     private string ToGhidraSymbol(string name, SegmentedAddress address, string type) {
-        return $"{name}_{ToString(address)} {ConvertUtils.ToHex(address.ToPhysical())} {type}";
+        return $"{name}_{ToString(address)} {ConvertUtils.ToHex(address.Linear)} {type}";
     }
 
     private string ToString(SegmentedAddress address) {
-        return $"{ConvertUtils.ToHex16WithoutX(address.Segment)}_{ConvertUtils.ToHex16WithoutX(address.Offset)}_{ConvertUtils.ToHex32WithoutX(address.ToPhysical())}";
+        return $"{ConvertUtils.ToHex16WithoutX(address.Segment)}_{ConvertUtils.ToHex16WithoutX(address.Offset)}_{ConvertUtils.ToHex32WithoutX(address.Linear)}";
     }
 
     /// <summary>

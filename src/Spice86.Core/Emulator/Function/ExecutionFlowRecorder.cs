@@ -203,7 +203,7 @@ public class ExecutionFlowRecorder {
     }
 
     private void RegisterExecutableByteModification(SegmentedAddress instructionAddress, uint modifiedAddress, byte oldValue, byte newValue) {
-        uint instructionAddressPhysical = instructionAddress.ToPhysical();
+        uint instructionAddressPhysical = instructionAddress.Linear;
         if (instructionAddressPhysical == 0) {
             // Probably Exe load
             return;

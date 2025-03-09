@@ -9,6 +9,9 @@ public class HexadecimalStringToNumberConverter : IValueConverter {
         if (value is ushort us) {
             return us.ToString("X");
         }
+        if(value is uint ui) {
+            return ui.ToString("X");
+        }
         if (value is int i) {
             return i.ToString("X");
         }

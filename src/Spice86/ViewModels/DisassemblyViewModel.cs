@@ -25,14 +25,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
-    private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
+    private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
     private bool _didCsIpGoOutOfCurrentListing = true;
 
     public DisassemblyViewModel(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory, State state,
-        IDictionary<uint, FunctionInformation> functionsInformation,
+        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel,
         IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
         IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
@@ -64,7 +64,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public State State => _state;
 
     private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpointViewModel) {
-        UpdateAssemblyLineIfShown((uint)breakpointViewModel.Address, breakpointViewModel);
+        UpdateAssemblyLineIfShown(breakpointViewModel);
     }
 
     private void OnResumed() {
@@ -114,12 +114,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private bool _creatingExecutionBreakpoint;
 
     [ObservableProperty]
-    private SegmentedAddress? _breakpointAddress;
+    private LinearMemoryAddress? _breakpointAddress;
 
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = new SegmentedAddress(_state.CS, _state.IP);
+        BreakpointAddress = new(MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP));
     }
 
     [RelayCommand]
@@ -131,23 +131,21 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (BreakpointAddress != null) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddSegmentedAddressBreakpoint(
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
                 BreakpointAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
                     () => PauseAndReportAddress(BreakpointAddress.Value));
-            UpdateAssemblyLineIfShown(MemoryUtils.ToPhysicalAddress(
-                BreakpointAddress.Value.Segment,
-                BreakpointAddress.Value.Offset),
-                breakpointViewModel);
+            UpdateAssemblyLineIfShown(breakpointViewModel);
         }
     }
 
-    private void UpdateAssemblyLineIfShown(uint breakpointAddress, BreakpointViewModel breakpointViewModel) {
+    private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
         CpuInstructionInfo? shownInstructionAtAddress = Instructions.
-            FirstOrDefault(x => x.Address == breakpointAddress);
+            FirstOrDefault(breakpointViewModel.IsForCpuInstruction);
         if (shownInstructionAtAddress is not null) {
-            shownInstructionAtAddress.Breakpoint = breakpointViewModel;
+            shownInstructionAtAddress.Breakpoint = _breakpointsViewModel.Breakpoints.FirstOrDefault(x =>
+            x.IsForCpuInstruction(shownInstructionAtAddress));
         }
     }
 
@@ -156,7 +154,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    private uint? _startAddress;
+    private LinearMemoryAddress? _startAddress;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -239,18 +237,18 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        StartAddress = MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP);
-        await GoToAddress(_state.IpPhysicalAddress);
+        StartAddress = new(MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP));
+        await GoToAddress(StartAddress.Value);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToFunction(object? parameter) {
         if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address);
+            await GoToAddress(functionInfo.Address.Linear);
         }
     }
 
-    private async Task GoToAddress(uint address) {
+    private async Task GoToAddress(LinearMemoryAddress address) {
         StartAddress = address;
         await UpdateDisassembly();
         SelectedInstruction = Instructions.FirstOrDefault();
@@ -265,7 +263,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        uint? startAddress = StartAddress;
+        LinearMemoryAddress? startAddress = StartAddress;
         if (startAddress is null) {
             return;
         }
@@ -292,7 +290,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         set {
             if (value is not null) {
                 SelectedFunction = Functions.
-                    FirstOrDefault(x => x.Address == value.Address);
+                    FirstOrDefault(x => x.Address.Linear == value.Address);
                 OnPropertyChanged(nameof(SelectedFunction));
             }
             _selectedInstruction = value;
@@ -357,10 +355,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
         uint address = SelectedInstruction.Address;
         BreakpointViewModel breakpointViewModel = _breakpointsViewModel.
-            AddLinearAddressBreakpoint(address,
+            AddAddressBreakpoint(address,
             BreakPointType.CPU_EXECUTION_ADDRESS, isRemovedOnTrigger: false, () => {
                 PauseAndReportAddress(address);
             });
-        UpdateAssemblyLineIfShown(address, breakpointViewModel);
+        UpdateAssemblyLineIfShown(breakpointViewModel);
     }
 }

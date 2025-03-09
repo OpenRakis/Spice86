@@ -111,7 +111,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 NumberOfNodes = localNumberOfNodes;
                 AverageNodeTime = averageNodeTime;
             });
-        }).ConfigureAwait(false);
+        });
     }
 
     private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
@@ -120,7 +120,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
             case CfgInstruction cfgInstruction: {
                 SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
                     (ushort)(cfgInstruction.Address.Offset + cfgInstruction.Length));
-                if (successor.Address.ToPhysical() != nextAddress.ToPhysical()) {
+                if (successor.Address != nextAddress) {
                     // Not direct successor, jump or call
                     label = "not contiguous";
                 }

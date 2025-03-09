@@ -39,7 +39,7 @@ public sealed class DataMemoryDocument : IBinaryDocument {
         try {
             Span<byte> memRange = _memory.ReadRam((uint)buffer.Length, (uint)(_startAddress + offset));
             memRange.CopyTo(buffer);
-        } catch (InvalidOperationException e) {
+        } catch (Exception e) when (e is ArgumentException or InvalidOperationException) {
             MemoryReadInvalidOperation?.Invoke(e);
         }
     }

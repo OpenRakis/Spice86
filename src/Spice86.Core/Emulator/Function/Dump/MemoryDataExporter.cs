@@ -41,7 +41,7 @@ public class MemoryDataExporter : RecordedDataIoHandler {
         File.WriteAllBytes(path, GenerateToolingCompliantRamDump());
     }
 
-    private byte[] GenerateToolingCompliantRamDump() {
+    public byte[] GenerateToolingCompliantRamDump() {
         if (_configuration.InitializeDOS is true) {
             return _callbackHandler.ReplaceAllCallbacksInRamImage(_memory);
         }

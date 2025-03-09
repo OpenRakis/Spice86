@@ -26,10 +26,9 @@ public class DiscriminatedNode : CfgNode {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        int address = (int)Address.ToPhysical();
         foreach (Discriminator discriminator in SuccessorsPerDiscriminator.Keys) {
             int length = discriminator.DiscriminatorValue.Count;
-            Span<byte> bytes = helper.Memory.GetSpan(address, length);
+            Span<byte> bytes = helper.Memory.GetSpan((int)Address.Linear, length);
             if (discriminator.SpanEquivalent(bytes)) {
                 helper.NextNode = SuccessorsPerDiscriminator[discriminator];
                 return;

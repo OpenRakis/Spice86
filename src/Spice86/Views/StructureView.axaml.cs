@@ -20,7 +20,7 @@ public partial class StructureView : Window {
     }
 
     private void ViewModel_RequestScrollToAddress(object? sender, AddressChangedMessage e) {
-        var scrollOffset = new Vector(0.0, (double)e.Address / StructureHexEditor.HexView.ActualBytesPerLine);
+        var scrollOffset = new Vector(0.0, (double)e.Address.Linear / StructureHexEditor.HexView.ActualBytesPerLine);
         StructureHexEditor.Caret.HexView.ScrollOffset = scrollOffset;
     }
 }

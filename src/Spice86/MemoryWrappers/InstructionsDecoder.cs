@@ -20,10 +20,13 @@ using System.Linq;
 internal class InstructionsDecoder {
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly IDictionary<uint, FunctionInformation> _functions;
+    private readonly IDictionary<SegmentedAddress, FunctionInformation> _functions;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
-    public InstructionsDecoder(IMemory memory, State state, IDictionary<uint, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
+    public InstructionsDecoder(
+        IMemory memory, State state,
+        IDictionary<SegmentedAddress, FunctionInformation> functions,
+        BreakpointsViewModel breakpointsViewModel) {
         _memory = memory;
         _state = state;
         _functions = functions;
@@ -37,7 +40,8 @@ internal class InstructionsDecoder {
     /// <param name="numberOfInstructionsShown">The number of instructions to decode</param>
     /// <returns>A list of decoded CPU instructions</returns>
     public List<CpuInstructionInfo> DecodeInstructions(uint startAddress, int numberOfInstructionsShown) {
-        CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
+        CodeReader codeReader = CreateCodeReader(_memory,
+            out CodeMemoryStream emulatedMemoryStream);
         using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
         Decoder decoder = InitializeDecoder(codeReader, startAddress);
         int byteOffset = 0;
@@ -62,14 +66,19 @@ internal class InstructionsDecoder {
                 IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
                 IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
                 FlowControl = instruction.FlowControl,
-                Bytes = $"""{Convert.ToHexString(_memory.GetData((uint)instructionAddress, (uint)instruction.Length))} ({instruction.Length})"""
+                Bytes = $"""{Convert.ToHexString(_memory.GetData(
+                    (uint)instructionAddress,
+                    (uint)instruction.Length))} ({instruction.Length})"""
             };
-            if (_functions.TryGetValue((uint)instructionAddress, out FunctionInformation? functionInformation)) {
-                instructionInfo.FunctionName = functionInformation.Name;
+            KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions
+                .FirstOrDefault(x => x.Key.Linear == instructionAddress);
+            if(functionInformation.Key != default) {
+                instructionInfo.FunctionName = functionInformation.Value.Name;
             }
             instructionInfo.SegmentedAddress = new(_state.CS, (ushort)(_state.IP + byteOffset));
             instructionInfo.Breakpoint = _breakpointsViewModel.GetBreakpoint(instructionInfo);
-            instructionInfo.StringRepresentation = $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
+            instructionInfo.StringRepresentation =
+                $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == _state.IpPhysicalAddress) {
                 instructionInfo.IsCsIp = true;
             }

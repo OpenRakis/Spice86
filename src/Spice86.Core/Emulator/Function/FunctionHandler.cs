@@ -162,7 +162,7 @@ public class FunctionHandler {
         IMemory memory = _memory;
         return returnCallType switch {
             CallType.NEAR => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
-            CallType.FAR or CallType.INTERRUPT => new SegmentedAddress(memory.SegmentedAddress[stackPhysicalAddress]),
+            CallType.FAR or CallType.INTERRUPT => memory.SegmentedAddress[stackPhysicalAddress],
             CallType.MACHINE => null,
             _ => null
         };
@@ -277,11 +277,11 @@ public class FunctionHandler {
             && !currentFunctionInformation.UnalignedReturns.ContainsKey(currentFunctionReturn)) {
             CallType callType = currentFunctionCall.CallType;
             SegmentedAddress stackAddressAfterCall = currentFunctionCall.StackAddressAfterCall;
-            SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.ToPhysical());
+            SegmentedAddress? returnAddressOnCallTimeStack = PeekReturnAddressOnMachineStack(callType, stackAddressAfterCall.Linear);
             SegmentedAddress currentStackAddress = CurrentStackAddress;
             string additionalInformation = Environment.NewLine;
             if (!currentStackAddress.Equals(stackAddressAfterCall)) {
-                int delta = (int)Math.Abs(currentStackAddress.ToPhysical() - (long)stackAddressAfterCall.ToPhysical());
+                int delta = (int)Math.Abs(currentStackAddress.Linear - (long)stackAddressAfterCall.Linear);
                 additionalInformation +=
                     $"Stack is not pointing at the same address as it was at call time. Delta is {delta} bytes{Environment.NewLine}";
             }

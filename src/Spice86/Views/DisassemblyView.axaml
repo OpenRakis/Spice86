@@ -7,17 +7,18 @@
 			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 			 xmlns:userControls="clr-namespace:Spice86.UserControls"
 			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+			 xmlns:behaviors="clr-namespace:Spice86.Behaviors"
 			 xmlns:converters="clr-namespace:Spice86.Converters"
 			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 			 x:Class="Spice86.Views.DisassemblyView"
 			 x:DataType="viewModels:DisassemblyViewModel">
 	<UserControl.Resources>
+		<converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-		<converters:SegmentedAddressToLinearAddressConverter x:Key="SegmentedAddressToLinearAddressConverter" />
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter"
+		<converters:AddressStringToLinearMemoryAddressConverter x:Key="AddressStringToLinearMemoryAddressConverter"
 			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
@@ -46,16 +47,18 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="2">
 				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-				<NumericUpDown Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
+				<NumericUpDown FormatString="0" Minimum="0" Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
-				<Grid ColumnDefinitions="*,*">
-					<TextBox Name="StartAddressTextBox"
-						Grid.Column="0"
-						MinWidth="150"
-						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-				</Grid>
+				<TextBox Name="StartAddressTextBox"
+					Width="150"
+					Text="{Binding StartAddress, Mode=TwoWay,
+						Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}">
+					<Interaction.Behaviors>
+						<behaviors:UpdateBindingOnEnterBehavior />
+					</Interaction.Behaviors>
+					</TextBox>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
 				<Button Content="Go to CS:IP" HotKey="Ctrl+F5" ToolTip.Tip="Ctrl-F5" Command="{Binding GoToCsIpCommand}" />
@@ -118,9 +121,28 @@
 					</DataGridTemplateColumn.CellTheme>
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
-							<TextBox Text="{Binding Address, Mode=OneWay,
-									 StringFormat={}0x{0:X4}}"
-									 IsReadOnly="True" />
+							<WrapPanel Orientation="Horizontal">
+								<TextBox IsReadOnly="True" Text="{ReflectionBinding Address, Mode=OneWay, StringFormat={}0x{0:X}}" />
+							</WrapPanel>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="CS:IP based address">
+					<DataGridTemplateColumn.CellTheme>
+						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+							<Setter Property="FontWeight"
+								Value="{ReflectionBinding IsCsIp,
+								Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="Background"
+								Value="{ReflectionBinding Breakpoint,
+								Converter={StaticResource BreakpointToBrushConverter}}" />
+						</ControlTheme>
+					</DataGridTemplateColumn.CellTheme>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<WrapPanel Orientation="Horizontal">
+								<TextBox IsReadOnly="True" Text="{ReflectionBinding SegmentedAddress, Mode=OneWay}" />
+							</WrapPanel>
 						</DataTemplate>
 					</DataGridTemplateColumn.CellTemplate>
 				</DataGridTemplateColumn>
@@ -131,6 +153,8 @@
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
+							<Setter Property="Background" Value="{ReflectionBinding
+									Converter={StaticResource BoolToBrushConverter}}" />
 						</ControlTheme>
 					</DataGridTemplateColumn.CellTheme>
 					<DataGridTemplateColumn.CellTemplate>
@@ -193,31 +217,20 @@
 						Content="Creating execution breakpoint"
 						FontWeight="Bold" />
 					<Grid
-						Grid.Row="1"
-						RowDefinitions="Auto,Auto,Auto">
-						<Label
-							Grid.Row="0"
-							VerticalContentAlignment="Center"
-							HorizontalContentAlignment="Left"
-							Content="Memory Segmented Address to break on:" />
-						<controls:GroupBox Grid.Row="1" Header="Segmented address">
+						Grid.Row="1">
+						<controls:GroupBox Header="Address:">
 							<TextBox
 								Text="{Binding BreakpointAddress,
-								Mode=TwoWay,
-								ConverterParameter='lenientMode',
-								Converter={StaticResource SegmentedAddressConverter}}"
+									Mode=TwoWay,
+									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
-								Margin="5,0,0,0" />
-						</controls:GroupBox>
-						<controls:GroupBox Grid.Row="2" Header="Linear address representation">
-							<TextBox
-								IsEnabled="False"
-								IsReadOnly="True"
-								Text="{Binding BreakpointAddress,
-								Converter={StaticResource SegmentedAddressToLinearAddressConverter},
-								Mode=OneWay,
-								StringFormat={}0x{0:X4}}"
-								Margin="5,0,0,0" />
+								ToolTip.Tip="Hex or linear or segmented address"
+								Margin="5,0,0,0">
+								<Interaction.Behaviors>
+									<behaviors:UpdateBindingOnEnterBehavior />
+								</Interaction.Behaviors>
+							</TextBox>
 						</controls:GroupBox>
 					</Grid>
 					<StackPanel
