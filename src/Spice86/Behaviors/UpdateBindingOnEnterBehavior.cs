@@ -24,9 +24,7 @@ public class UpdateBindingOnEnterBehavior : Behavior<TextBox> {
         if (e.Key == Key.Enter && AssociatedObject != null) {
             BindingExpressionBase? binding = BindingOperations.
                 GetBindingExpressionBase(AssociatedObject, TextBox.TextProperty);
-            if (binding != null) {
-                binding?.UpdateSource();
-            }
+            binding?.UpdateSource();
         }
     }
 }
