@@ -16,9 +16,31 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>8.0.2</Version>
-		<PackageReleaseNotes>fix: Off by one error generating an IndexOutOfRangeException in the internal debugger Memory tab.</PackageReleaseNotes>
-		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Artjom Vejsel</Authors>
+		<Version>9.0.0</Version>
+		<PackageReleaseNotes>
+            <![CDATA[
+            ## Breaking Changes
+            - Moved back target framework from .NET 9.0 to .NET 8.0.
+            - Updated all classes that handles ports to use ushort type for port parameter. This is a breaking change if your code referenced them (ie. SoundBlaster.WriteByte)
+
+            ## Improvements
+            - Refactored `DmaController` class to remove thread loop. DMA Transfers now run on the main thread. This improves compatibility with games.
+            - Improved segmented address handling in `SegmentedAddress` struct, making it truly immutable and fixing overflow bugs.
+            - Updated Spice86 internal debugger with new features and improved UI, including support for all breakpoint types.
+            - Added support for hexadecimal, decimal, and segmented address input in all address textboxes in the internal debugger.
+            - Improved `SoundBlaster` implementation with better handling of undocumented ports. This improves compatibility with games.
+			- When using the CFGCPU, the CfgCpuView is displayed again in the internal debugger.
+            - GDB: Added new tips and documentation for using Seer with Spice86.
+			- GDB: server has been fixed and improved. It now fully supports Seer and has better compatibility with GDB clients overall.
+			- GDB: memory search has been fixed. It now works as expected.
+
+            ## New APIs
+            - Added `AudioEngine` enum to specify the audio engine to use (PortAudio or Dummy).
+			- CSharpOverrideHelper now has DoOnMemoryWrite and DoOnMemoryRead methods to allow for custom memory read/write handling.
+
+            ]]>
+		</PackageReleaseNotes>
+		<Authors>Kevin Ferrare, Maximilien Noal, Joris van Eijden, Alberto Marnetto, Artjom Vejsel</Authors>
 		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
