@@ -11,9 +11,9 @@ using System.Text.RegularExpressions;
 
 namespace Spice86.Converters;
 
-public partial class AddressStringToLinearMemoryAddresssConverter : AvaloniaObject, IValueConverter {
+public partial class AddressStringToLinearMemoryAddressConverter : AvaloniaObject, IValueConverter {
     public static readonly StyledProperty<State?> StateProperty =
-        AvaloniaProperty.Register<AddressStringToLinearMemoryAddresssConverter, State?>(
+        AvaloniaProperty.Register<AddressStringToLinearMemoryAddressConverter, State?>(
         nameof(State),
         null,
         false);

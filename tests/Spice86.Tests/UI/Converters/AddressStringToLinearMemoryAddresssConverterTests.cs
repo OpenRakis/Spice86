@@ -14,7 +14,7 @@ using Xunit;
 namespace Spice86.Tests.UI.Converters;
 
 public class AddressStringToLinearMemoryAddresssConverterTests {
-    private readonly AddressStringToLinearMemoryAddresssConverter _converter = new();
+    private readonly AddressStringToLinearMemoryAddressConverter _converter = new();
 
     [Fact]
     public void Convert_NullValue_ReturnsNull() {
