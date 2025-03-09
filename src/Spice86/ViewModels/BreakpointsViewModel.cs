@@ -37,16 +37,16 @@ public partial class BreakpointsViewModel : ViewModelBase {
         NotifySelectedBreakpointTypeChanged();
     }
 
-    private bool _isEditingSelectedBreakpoint;
+    private bool _mustRemoveSelectedBreakpoint;
 
 
     [RelayCommand(CanExecute = nameof(EditSelectedBreakpointCanExecute))]
     private void EditSelectedBreakpoint() {
         if (SelectedBreakpoint is not null) {
-            _isEditingSelectedBreakpoint = true;
+            _mustRemoveSelectedBreakpoint = true;
             switch (SelectedBreakpoint.Type) {
                 case BreakPointType.CPU_EXECUTION_ADDRESS:
-                    ExecutionAddressValue = SelectedBreakpoint.SegmentedAddress?.ToPhysical();
+                    ExecutionAddressValue = (uint)SelectedBreakpoint.Address;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
                     break;
                 case BreakPointType.CPU_CYCLES:
@@ -54,17 +54,17 @@ public partial class BreakpointsViewModel : ViewModelBase {
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
                     break;
                 case BreakPointType.CPU_INTERRUPT:
-                    InterruptNumber = (int?)SelectedBreakpoint.Address;
+                    InterruptNumber = (int)SelectedBreakpoint.Address;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
                     break;
                 case BreakPointType.IO_ACCESS:
-                    IoPortNumber = (ushort?)SelectedBreakpoint.Address;
+                    IoPortNumber = (ushort)SelectedBreakpoint.Address;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
                     break;
                 case BreakPointType.MEMORY_ACCESS:
                 case BreakPointType.MEMORY_READ:
                 case BreakPointType.MEMORY_WRITE:
-                    MemoryAddressValue = (LinearMemoryAddress?)SelectedBreakpoint.Address;
+                    MemoryAddressValue = (uint)SelectedBreakpoint.Address;
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
                     break;
@@ -311,9 +311,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     private void RemoveFirstIfEdited() {
-        if (_isEditingSelectedBreakpoint) {
+        if (_mustRemoveSelectedBreakpoint) {
             // Remove the existing breakpoint
             DeleteBreakpoint(SelectedBreakpoint);
+            _mustRemoveSelectedBreakpoint = false;
         }
     }
 
