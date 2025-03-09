@@ -210,7 +210,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
                 (uint)(StartAddress.Value + SelectionRange.Value.Start.ByteIndex),
                 (uint)SelectionRange.Value.ByteLength);
             string hexRepresentation = ConvertUtils.ByteArrayToHexString(memoryBytes);
-            await _textClipboard.SetTextAsync($"{hexRepresentation}").ConfigureAwait(false);
+            await _textClipboard.SetTextAsync($"{hexRepresentation}");
         }
     }
 
@@ -229,7 +229,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private async Task PreviousOccurrence() {
         if (SearchMemoryCommand.CanExecute(null)) {
             _searchDirection = SearchDirection.Backward;
-            await SearchMemoryCommand.ExecuteAsync(null).ConfigureAwait(false);
+            await SearchMemoryCommand.ExecuteAsync(null);
         }
     }
     
@@ -237,7 +237,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private async Task NextOccurrence() {
         if (SearchMemoryCommand.CanExecute(null)) {
             _searchDirection = SearchDirection.Forward;
-            await SearchMemoryCommand.ExecuteAsync(null).ConfigureAwait(false);
+            await SearchMemoryCommand.ExecuteAsync(null);
         }
     }
     
@@ -245,7 +245,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private async Task FirstOccurrence() {
         if (SearchMemoryCommand.CanExecute(null)) {
             _searchDirection = SearchDirection.FirstOccurence;
-            await SearchMemoryCommand.ExecuteAsync(null).ConfigureAwait(false);
+            await SearchMemoryCommand.ExecuteAsync(null);
         }
     }
 
@@ -285,10 +285,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
                 searchLength = (int)(AddressOFoundOccurence.Value - 1);
             }
             if(SearchDataType == MemorySearchDataType.Binary && ConvertUtils.TryParseHexToByteArray(MemorySearchValue, out byte[]? searchBytes)) {
-                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token).ConfigureAwait(false);
+                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
             } else if(SearchDataType == MemorySearchDataType.Ascii) {
                 searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
-                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token).ConfigureAwait(false);
+                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
             }
         } finally {
             await _uiDispatcher.InvokeAsync(() => {
