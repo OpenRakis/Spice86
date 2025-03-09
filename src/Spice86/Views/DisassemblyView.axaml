@@ -154,7 +154,7 @@
 							<Setter Property="FontWeight"
 								Value="{ReflectionBinding IsCsIp,
 								Converter={StaticResource BoolToFontWeightConverter}}" />
-							<Setter Property="Background" Value="{ReflectionBinding ,
+							<Setter Property="Background" Value="{ReflectionBinding
 									Converter={StaticResource BoolToBrushConverter}}" />
 						</ControlTheme>
 					</DataGridTemplateColumn.CellTheme>
