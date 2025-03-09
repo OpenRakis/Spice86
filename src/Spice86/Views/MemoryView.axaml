@@ -308,7 +308,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding BreakpointRangeEndAddress,,
+									Text="{Binding BreakpointRangeEndAddress,
 										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus
 										}">
 									<Interaction.Behaviors>
