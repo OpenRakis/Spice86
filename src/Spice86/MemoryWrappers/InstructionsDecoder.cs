@@ -62,7 +62,7 @@ internal class InstructionsDecoder {
                     (uint)instruction.Length))} ({instruction.Length})"""
             };
             KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions
-                .FirstOrDefault(x => x.Key.ToPhysical() == instructionAddress);
+                .FirstOrDefault(x => x.Key.Linear == instructionAddress);
             if(functionInformation.Key != default) {
                 instructionInfo.FunctionName = functionInformation.Value.Name;
             }

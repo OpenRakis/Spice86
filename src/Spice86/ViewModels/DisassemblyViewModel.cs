@@ -244,7 +244,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToFunction(object? parameter) {
         if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address.ToPhysical());
+            await GoToAddress(functionInfo.Address.Linear);
         }
     }
 
@@ -290,7 +290,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         set {
             if (value is not null) {
                 SelectedFunction = Functions.
-                    FirstOrDefault(x => x.Address.ToPhysical() == value.Address);
+                    FirstOrDefault(x => x.Address.Linear == value.Address);
                 OnPropertyChanged(nameof(SelectedFunction));
             }
             _selectedInstruction = value;
