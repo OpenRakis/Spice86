@@ -43,6 +43,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the MPU-401 MIDI interface.
     /// </summary>
+    /// <param name="configuration">The class that tells us what to run and how.</param>
     /// <param name="softwareMixer">The emulator's sound mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
@@ -50,14 +51,14 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <param name="mt32RomsPath">Where are the MT-32 ROMs path located. Can be null if MT-32 isn't used.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Midi(SoftwareMixer softwareMixer, State state, IOPortDispatcher ioPortDispatcher, IPauseHandler pauseHandler,
+    public Midi(Configuration configuration, SoftwareMixer softwareMixer, State state, IOPortDispatcher ioPortDispatcher, IPauseHandler pauseHandler,
         string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
         Mt32RomsPath = mt32RomsPath;
         // the external MIDI device (external General MIDI or external Roland MT-32).
         if (!string.IsNullOrWhiteSpace(Mt32RomsPath) && (Directory.Exists(Mt32RomsPath) || File.Exists(Mt32RomsPath))) {
             _midiMapper = new Mt32MidiDevice(softwareMixer, Mt32RomsPath, pauseHandler, loggerService);
         } else {
-            _midiMapper = new GeneralMidiDevice(softwareMixer, pauseHandler, loggerService);
+            _midiMapper = new GeneralMidiDevice(configuration, softwareMixer, pauseHandler, loggerService);
         }
         InitPortHandlers(ioPortDispatcher);
     }

@@ -110,7 +110,7 @@ public class Spice86DependencyInjection : IDisposable {
         Renderer vgaRenderer = new(memory, videoState);
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        Midi midiDevice = new Midi(softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+        Midi midiDevice = new Midi(configuration, softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
 
         PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2), ioPortDispatcher, pauseHandler, loggerService,
