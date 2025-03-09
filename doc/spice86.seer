@@ -1,0 +1,17 @@
+{
+    "seerproject": {
+        "connectmode": {
+            "gdbserver": "127.0.0.1:10000",
+            "targettype": "remote"
+        },
+        "executable": "",
+        "postgdbcommands": [
+            ""
+        ],
+        "pregdbcommands": [
+            "set architecture i8086"
+        ],
+        "symbolfile": "",
+        "workingdirectory": ""
+    }
+}
