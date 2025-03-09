@@ -791,8 +791,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
         }
         State.IsRunning = false;
     }
