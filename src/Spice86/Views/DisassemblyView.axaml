@@ -7,6 +7,7 @@
 			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 			 xmlns:userControls="clr-namespace:Spice86.UserControls"
 			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+			 xmlns:behaviors="clr-namespace:Spice86.Behaviors"
 			 xmlns:converters="clr-namespace:Spice86.Converters"
 			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -55,7 +56,11 @@
 						Grid.Column="0"
 						MinWidth="150"
 						Text="{Binding StartAddress, Mode=TwoWay,
-							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
+							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}">
+						<Interaction.Behaviors>
+							<behaviors:UpdateBindingOnEnterBehavior />
+						</Interaction.Behaviors>
+						</TextBox>
 				</Grid>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
@@ -220,11 +225,15 @@
 							<TextBox
 								Text="{Binding BreakpointAddress,
 									Mode=TwoWay,
-									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter},
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus,
 									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
 								ToolTip.Tip="Hex or linear or segmented address"
-								Margin="5,0,0,0" />
+								Margin="5,0,0,0">
+								<Interaction.Behaviors>
+									<behaviors:UpdateBindingOnEnterBehavior />
+								</Interaction.Behaviors>
+							</TextBox>
 						</controls:GroupBox>
 					</Grid>
 					<StackPanel

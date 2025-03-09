@@ -30,7 +30,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
     }
 
     [Fact]
-    public void Convert_LinearMemoryAddress_ReturnsFormattedString() {
+    public void Convert_LinearMemoryAddress_ReturnsLinearMemoryAddressUnchanged() {
         // Arrange
         var address = new LinearMemoryAddress(0x1234);
 
@@ -39,7 +39,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        Assert.Equal("0x1234", result);
+        result?.Should().BeEquivalentTo(new LinearMemoryAddress(4660));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
     }
 
     [Fact]
-    public void Convert_InvalidType_ReturnsBindingNotification() {
+    public void Convert_InvalidType_ReturnsNull() {
         // Arrange
         object value = 12345;
 
@@ -78,7 +78,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        Assert.IsType<BindingNotification>(result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        BindingNotification.Null.Should().BeEquivalentTo(result);
+        Assert.Null(result);
 
         // Arrange
         value = "   ";
@@ -101,7 +101,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        BindingNotification.Null.Should().BeEquivalentTo(result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
     }
 
     [Fact]
-    public void ConvertBack_InvalidString_ReturnsBindingNotification() {
+    public void ConvertBack_InvalidString_ReturnsBindingOperationDoNothing() {
         // Arrange
         object value = "invalid";
 
@@ -127,7 +127,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        Assert.IsType<BindingNotification>(result);
+        BindingOperations.DoNothing.Should().BeEquivalentTo(result);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
     }
 
     [Fact]
-    public void ConvertBack_InvalidStringWithState_ReturnsBindingNotification() {
+    public void ConvertBack_InvalidStringWithState_ReturnsBindingOperationDoNothing() {
         // Arrange
         var state = new State { AX = 0x1234, BX = 0x5678 };
         _converter.State = state;
@@ -157,6 +157,6 @@ public class AddressStringToLinearMemoryAddresssConverterTests {
             null, CultureInfo.InvariantCulture);
 
         // Assert
-        Assert.IsType<BindingNotification>(result);
+        BindingOperations.DoNothing.Should().BeEquivalentTo(result);
     }
 }

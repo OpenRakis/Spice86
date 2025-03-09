@@ -3,6 +3,7 @@
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:converters="clr-namespace:Spice86.Converters"
+	xmlns:behaviors="clr-namespace:Spice86.Behaviors"
 	xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
@@ -53,17 +54,27 @@
 				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
 					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
 					<TextBox
+						MinWidth="100"
 						Grid.Row="0" Grid.Column="1"
-						Text="{Binding StartAddress, Mode=TwoWay,
+						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
 							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
-							}" />
+							}">
+						<Interaction.Behaviors>
+							<behaviors:UpdateBindingOnEnterBehavior />
+						</Interaction.Behaviors>
+					</TextBox>
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
 					<TextBox
+						MinWidth="100"
 						Grid.Row="1"
 						Grid.Column="1"
-						Text="{Binding EndAddress, Mode=TwoWay,
+						Text="{Binding EndAddress, Mode=TwoWay,UpdateSourceTrigger=LostFocus,
 							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
-							}" />
+							}">
+						<Interaction.Behaviors>
+							<behaviors:UpdateBindingOnEnterBehavior />
+						</Interaction.Behaviors>
+					</TextBox>
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -104,9 +115,9 @@
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}" />
 							<TextBlock Text=" End address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}}" />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -217,8 +228,12 @@
 								Grid.Row="0"
 								Grid.Column="1"
 								Text="{Binding MemoryEditAddress, Mode=TwoWay,
-									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
-									}" />
+									Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus
+									}">
+								<Interaction.Behaviors>
+									<behaviors:UpdateBindingOnEnterBehavior />
+								</Interaction.Behaviors>
+							</TextBox>
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
@@ -282,16 +297,24 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Text="{Binding BreakpointRangeStartAddress,
-										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
-										}" />
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus
+										}">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
 									Text="{Binding BreakpointRangeEndAddress,,
-										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}
-										}" />
+										Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus
+										}">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 							</Grid>
 							<Label
 								Grid.Row="1"

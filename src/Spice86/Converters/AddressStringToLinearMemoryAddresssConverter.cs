@@ -26,38 +26,50 @@ public partial class AddressStringToLinearMemoryAddresssConverter : AvaloniaObje
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
         return value switch {
             null => null,
-            LinearMemoryAddress linearAddress => linearAddress.ToString(),
-            uint uintAddress => $"0x{uintAddress:X}",
-            _ => BindingNotification.Null
+            LinearMemoryAddress linearAddress => linearAddress,
+            uint uintAddress => new LinearMemoryAddress(uintAddress),
+            _ => null
         };
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        if (value is LinearMemoryAddress linearAddress) {
+            return linearAddress;
+        }
         if (value is not string str || string.IsNullOrWhiteSpace(str)) {
-            return BindingNotification.Null;
+            return null;
         }
 
         Match match = SegmentedAddressConverter.SegmentedAddressRegex().Match(str);
         if (match.Success) {
-            ushort? segment = SegmentedAddressConverter.ParseSegmentOrRegister(match.Groups[1].Value, State);
-            ushort? offset = SegmentedAddressConverter.ParseSegmentOrRegister(match.Groups[2].Value, State);
+            string inputSegment = match.Groups[1].Value;
+            ushort? segment = SegmentedAddressConverter.ParseSegmentOrRegister(
+                inputSegment, State);
+            string inputOffset = match.Groups[2].Value;
+            ushort? offset = SegmentedAddressConverter.ParseSegmentOrRegister(
+                inputOffset, State);
             if (segment.HasValue && offset.HasValue) {
-                return new LinearMemoryAddress(MemoryUtils.ToPhysicalAddress(segment.Value, offset.Value));
+                return new LinearMemoryAddress(MemoryUtils.ToPhysicalAddress(
+                    segment.Value, offset.Value),
+                    $"{inputSegment}:{inputOffset}");
             }
         }
 
         match = HexAddressRegex().Match(str);
 
         if (match.Success) {
-            return new LinearMemoryAddress(uint.Parse(match.Groups[1].Value, NumberStyles.HexNumber));
+            string sourceInput = match.Groups[1].Value;
+            return new LinearMemoryAddress(uint.Parse(sourceInput,
+                NumberStyles.HexNumber), sourceInput);
         }
 
         match = DecimalAddressRegex().Match(str);
 
         if (match.Success) {
-            return new LinearMemoryAddress(uint.Parse(match.Groups[1].Value));
+            string sourceInput = match.Groups[1].Value;
+            return new LinearMemoryAddress(uint.Parse(sourceInput), sourceInput);
         }
-        return BindingNotification.Null;
+        return BindingOperations.DoNothing;
     }
 
     [GeneratedRegex(@"^0x([0-9A-Fa-f]+)$")]

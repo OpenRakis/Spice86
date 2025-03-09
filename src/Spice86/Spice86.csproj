@@ -51,9 +51,4 @@
     <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
     <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Views\StackMemoryView.axaml.cs">
-      <DependentUpon>StackMemoryView.axaml</DependentUpon>
-    </Compile>
-  </ItemGroup>
 </Project>

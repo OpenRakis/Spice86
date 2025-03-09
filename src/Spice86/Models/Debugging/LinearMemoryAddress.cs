@@ -5,7 +5,8 @@ using Spice86.Core.Emulator.Memory;
 using System.ComponentModel.DataAnnotations;
 
 public readonly record struct LinearMemoryAddress {
-    public LinearMemoryAddress([Range(0, A20Gate.EndOfHighMemoryArea)] uint address) {
+    private readonly string? _sourceInput;
+    public LinearMemoryAddress([Range(0, A20Gate.EndOfHighMemoryArea)] uint address, string? sourceInput = null) {
         Address = address;
     }
 
@@ -17,7 +18,7 @@ public readonly record struct LinearMemoryAddress {
     /// </summary>
     /// <returns>The hexadecimal representation of the address.</returns>
     public override string ToString() {
-        return $"0x{Address:X}";
+        return string.IsNullOrWhiteSpace(_sourceInput) ? $"0x{Address:X}" : _sourceInput;
     }
 
     public static implicit operator uint(LinearMemoryAddress address) => address.Address;
