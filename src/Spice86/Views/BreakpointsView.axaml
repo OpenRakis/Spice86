@@ -37,7 +37,7 @@
                   CanUserSortColumns="True"
                   DoubleTapped="DataGrid_DoubleTapped">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Parameter}" Header="Parameter" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
