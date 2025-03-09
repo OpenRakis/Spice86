@@ -18,7 +18,7 @@
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-		<converters:AddressStringToLinearMemoryAddresssConverter x:Key="AddressStringToLinearMemoryAddresssConverter"
+		<converters:AddressStringToLinearMemoryAddresssConverter x:Key="AddressStringToLinearMemoryAddressConverter"
 			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
