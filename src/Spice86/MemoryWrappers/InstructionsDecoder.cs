@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 using System;
