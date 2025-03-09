@@ -541,7 +541,7 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
-        SegmentedAddress target = new(Cpu.InterruptVectorTable[vectorNumber]);
+        SegmentedAddress target = Cpu.InterruptVectorTable[vectorNumber];
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
             throw FailAsUntested($"Could not find an override at address {target}");

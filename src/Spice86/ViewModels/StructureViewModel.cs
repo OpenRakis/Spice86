@@ -131,7 +131,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         if (value is null) {
             StructureMemory = _originalMemory;
             if (MemoryAddress is { } address) {
-                RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.ToPhysical()));
+                RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address));
             }
         }
         Update();
@@ -139,7 +139,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
 
     partial void OnMemoryAddressChanged(SegmentedAddress? value) {
         if (value is { } address) {
-            RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.ToPhysical()));
+            RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address));
         }
         Update();
     }
@@ -164,7 +164,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
 
         // Calculate the offset into the viewed memory.
         uint offset = IsAddressableMemory && MemoryAddress is { } address
-            ? address.ToPhysical()
+            ? address.Linear
             : 0;
 
         byte[] data = new byte[SelectedStructure.Size];

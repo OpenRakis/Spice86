@@ -1,3 +1,5 @@
 namespace Spice86.Messages;
 
-public record AddressChangedMessage(ulong Address);
+using Spice86.Shared.Emulator.Memory;
+
+public record AddressChangedMessage(SegmentedAddress Address);

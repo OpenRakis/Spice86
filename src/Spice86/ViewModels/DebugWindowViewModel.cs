@@ -87,7 +87,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
             emulatorBreakpointsManager,
             memory, state, 
             functionsInformation.ToDictionary(x =>
-                x.Key.ToPhysical(), x => x.Value),
+                x.Key.Linear, x => x.Value),
             BreakpointsViewModel, pauseHandler,
             uiDispatcher, messenger, textClipboard);
         DisassemblyViewModels.Add(disassemblyVm);

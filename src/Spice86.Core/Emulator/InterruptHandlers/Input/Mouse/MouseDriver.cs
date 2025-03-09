@@ -340,10 +340,10 @@ public class MouseDriver : IMouseDriver {
 
         // Write ASM
         // Default user handler: nothing, just a far ret. 
-        _userHandlerAddressSwitcher.DefaultAddress = memoryAsmWriter.GetCurrentAddressCopy();
+        _userHandlerAddressSwitcher.DefaultAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.WriteFarRet();
 
-        SegmentedAddress driverAddress = memoryAsmWriter.GetCurrentAddressCopy();
+        SegmentedAddress driverAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecutionCallbackNumber, BeforeUserHandlerExecution);
         // Far call to default handler, can be changed via _inMemoryAddressSwitcher
         memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
