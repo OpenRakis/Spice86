@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 namespace Spice86.Converters;
 
 public partial class AddressStringToLinearMemoryAddresssConverter : AvaloniaObject, IValueConverter {
-    public static StyledProperty<State?> StateProperty =
+    public static readonly StyledProperty<State?> StateProperty =
         AvaloniaProperty.Register<AddressStringToLinearMemoryAddresssConverter, State?>(
         nameof(State),
         null,

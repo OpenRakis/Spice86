@@ -8,6 +8,7 @@ public readonly record struct LinearMemoryAddress {
     private readonly string? _sourceInput;
     public LinearMemoryAddress([Range(0, A20Gate.EndOfHighMemoryArea)] uint address, string? sourceInput = null) {
         Address = address;
+        _sourceInput = sourceInput;
     }
 
     [Range(0, A20Gate.EndOfHighMemoryArea)]

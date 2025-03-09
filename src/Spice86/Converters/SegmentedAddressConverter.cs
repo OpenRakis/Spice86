@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 
 public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
 {
-    public static StyledProperty<State?> StateProperty =
+    public static readonly StyledProperty<State?> StateProperty =
         AvaloniaProperty.Register<SegmentedAddressConverter, State?>(
         nameof(State),
         null,
