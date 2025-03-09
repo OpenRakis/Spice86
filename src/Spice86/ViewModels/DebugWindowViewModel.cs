@@ -6,22 +6,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Messages;
-using Spice86.Shared.Diagnostics;
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,

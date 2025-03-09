@@ -1,21 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.IO;
-using System.Reflection;
-using System.Text;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.IO;
+using System.Reflection;
+using System.Text;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
