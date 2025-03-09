@@ -51,17 +51,15 @@
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="3">
 				<Label HorizontalAlignment="Center" Content="Start Address" />
-				<Grid ColumnDefinitions="*,*">
-					<TextBox Name="StartAddressTextBox"
-						Grid.Column="0"
-						MinWidth="150"
-						Text="{Binding StartAddress, Mode=TwoWay,
-							Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}">
-						<Interaction.Behaviors>
-							<behaviors:UpdateBindingOnEnterBehavior />
-						</Interaction.Behaviors>
-						</TextBox>
-				</Grid>
+				<TextBox Name="StartAddressTextBox"
+					Grid.Column="0"
+					Width="150"
+					Text="{Binding StartAddress, Mode=TwoWay,
+						Converter={StaticResource AddressStringToLinearMemoryAddresssConverter}, UpdateSourceTrigger=LostFocus}">
+					<Interaction.Behaviors>
+						<behaviors:UpdateBindingOnEnterBehavior />
+					</Interaction.Behaviors>
+					</TextBox>
 			</StackPanel>
 			<StackPanel Orientation="Vertical" Grid.Column="4">
 				<Button Content="Go to CS:IP" HotKey="Ctrl+F5" ToolTip.Tip="Ctrl-F5" Command="{Binding GoToCsIpCommand}" />
