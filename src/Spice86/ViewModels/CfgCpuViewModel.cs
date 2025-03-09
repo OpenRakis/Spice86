@@ -111,7 +111,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 NumberOfNodes = localNumberOfNodes;
                 AverageNodeTime = averageNodeTime;
             });
-        }).ConfigureAwait(false);
+        });
     }
 
     private Edge CreateEdge(ICfgNode node, ICfgNode successor) {

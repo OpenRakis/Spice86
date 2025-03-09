@@ -1,21 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.IO;
-using System.Reflection;
-using System.Text;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.IO;
+using System.Reflection;
+using System.Text;
 
 /// <summary>
 /// Handles custom GDB commands triggered in command line via the monitor prefix.<br/>
@@ -34,17 +32,18 @@ public class GdbCustomCommandsHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">The emulator configuration.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="cpu">The emulated CPU.</param>
-    /// <param name="callbackHandler">The class that stores callback instructions definitions.</param>
+    /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    public GdbCustomCommandsHandler(Configuration configuration, IMemory memory, Cpu cpu, CallbackHandler callbackHandler, ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager, GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(IMemory memory, MemoryDataExporter memoryDataExporter,
+        Cpu cpu, ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
         _state = cpu.State;
@@ -53,7 +52,7 @@ public class GdbCustomCommandsHandler {
         _cpu = cpu;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(_memory, _cpu.State, callbackHandler, configuration, executionFlowRecorder, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = new RecorderDataWriter(_cpu.State, executionFlowRecorder, memoryDataExporter, recordedDataDirectory, _loggerService);
     }
 
     /// <summary>

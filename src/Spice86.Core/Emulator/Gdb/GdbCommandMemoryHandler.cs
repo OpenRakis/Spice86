@@ -1,12 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using System.Diagnostics;
-using System.Text;
-
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Text;
 
 /// <summary>
 /// Handles GDB memory-related commands such as reading and writing memory, and searching for patterns in memory.

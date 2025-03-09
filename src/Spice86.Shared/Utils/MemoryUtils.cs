@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Shared.Utils;
+using Spice86.Shared.Emulator.Memory;
 
-using System.Runtime.Intrinsics.X86;
 
-using System.Runtime.Intrinsics;
+using System.ComponentModel.DataAnnotations;
 
 /// <summary>
 /// Utils to get and set values in an array. Words and DWords are considered to be stored

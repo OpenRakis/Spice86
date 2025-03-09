@@ -109,7 +109,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     [RelayCommand]
     private async Task SaveBitmap() {
         if (Bitmap is not null) {
-            await _hostStorageProvider.SaveBitmapFile(Bitmap).ConfigureAwait(false);
+            await _hostStorageProvider.SaveBitmapFile(Bitmap);
         }
     }
 
@@ -229,7 +229,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [RelayCommand(CanExecute = nameof(IsEmulatorRunning))]
     private async Task DumpEmulatorStateToFile() {
-        await _hostStorageProvider.DumpEmulatorStateToFile().ConfigureAwait(false);
+        await _hostStorageProvider.DumpEmulatorStateToFile();
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]

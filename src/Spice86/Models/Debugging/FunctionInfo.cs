@@ -6,7 +6,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class FunctionInfo : ObservableObject {
     [ObservableProperty] private string? _name;
-    [ObservableProperty] private uint _address;
+    [ObservableProperty] private SegmentedAddress _address;
 
     public override string ToString() {
         return $"{Address}: {Name}";

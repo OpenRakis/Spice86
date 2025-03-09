@@ -5,13 +5,15 @@
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              xmlns:converters="clr-namespace:Spice86.Converters"
+			 xmlns:behaviors="clr-namespace:Spice86.Behaviors"
              xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
              xmlns:userControls="clr-namespace:Spice86.UserControls;assembly=Spice86"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
 	<UserControl.Resources>
-		<converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" State="{Binding State}" />
+		<converters:AddressStringToLinearMemoryAddressConverter State="{Binding State}"
+			x:Key="AddressStringToLinearMemoryAddressConverter" />
 		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
 	</UserControl.Resources>
 	<Grid>
@@ -35,7 +37,7 @@
                   CanUserSortColumns="True"
                   DoubleTapped="DataGrid_DoubleTapped">
 			<DataGrid.Columns>
-				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
+				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Parameter}" Header="Parameter" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Type}" Header="Type" />
@@ -61,7 +63,7 @@
 						<controls:GroupBox Grid.Row="0" Header="Cycles"
                                  IsVisible="{Binding IsCyclesBreakpointSelected}">
 							<controls:GroupBox Header="Cycles count">
-								<NumericUpDown
+								<NumericUpDown FormatString="0" Minimum="0"
 									Value="{Binding CyclesValue,
 									Mode=TwoWay}"
 									Margin="5,0,0,0" />
@@ -79,11 +81,14 @@
 									Grid.Row="1"
 									Grid.Column="1"
                                     Text="{Binding MemoryAddressValue,
-										ConverterParameter='lenientMode',
 										Mode=TwoWay,
-										Converter={StaticResource SegmentedAddressConverter}}"
+										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
-                                    Margin="5,0,0,0" />
+                                    Margin="5,0,0,0">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
@@ -92,8 +97,7 @@
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
 										Mode=TwoWay,
-										ConverterParameter='lenientMode',
-										Converter={StaticResource SegmentedAddressConverter}}"
+										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0" />
 							</controls:GroupBox>
@@ -105,7 +109,6 @@
 									Text="{Binding InterruptNumber,
 										Mode=TwoWay,
 										Converter={StaticResource HexadecimalStringToNumberConverter}}"
-
 									Margin="5,0,0,0"
 									Watermark="hexadecimal number"/>
 							</controls:GroupBox>

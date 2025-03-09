@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 
 public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
 {
-    public static StyledProperty<State?> StateProperty =
+    public static readonly StyledProperty<State?> StateProperty =
         AvaloniaProperty.Register<SegmentedAddressConverter, State?>(
         nameof(State),
         null,
@@ -24,7 +24,7 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         set => SetValue(StateProperty, value);
     }
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public virtual object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return value switch
         {
@@ -34,7 +34,7 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         };
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public virtual object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string str || string.IsNullOrWhiteSpace(str))
         {
@@ -51,13 +51,10 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
             }
 
         }
-        if ((string?)parameter == "lenientMode") {
-            return new SegmentedAddress();
-        }
         return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
     }
 
-    private static ushort? ParseSegmentOrRegister(string value, State? parameter)
+    internal static ushort? ParseSegmentOrRegister(string value, State? parameter)
     {
         if (ushort.TryParse(value, NumberStyles.HexNumber, 
             CultureInfo.InvariantCulture, out ushort result))
@@ -80,5 +77,5 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
     }
 
     [GeneratedRegex(@"^([0-9A-Fa-f]{4}|[a-zA-Z]{2}):([0-9A-Fa-f]{4}|[a-zA-Z]{2})$")]
-    private static partial Regex SegmentedAddressRegex();
+    internal static partial Regex SegmentedAddressRegex();
 }

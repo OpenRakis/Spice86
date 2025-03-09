@@ -3,6 +3,7 @@
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:converters="clr-namespace:Spice86.Converters"
+	xmlns:behaviors="clr-namespace:Spice86.Behaviors"
 	xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
@@ -17,6 +18,9 @@
 	x:DataType="viewModels:MemoryViewModel"
 	mc:Ignorable="d">
 	<UserControl.Resources>
+		<converters:AddressStringToLinearMemoryAddressConverter
+			State="{Binding State}"
+			x:Key="AddressStringToLinearMemoryAddressConverter" />
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
@@ -50,13 +54,27 @@
 				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
 					<Label Grid.Row="0" Grid.Column="0" Content="Start" />
 					<TextBox
+						MinWidth="100"
 						Grid.Row="0" Grid.Column="1"
-						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
+							Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
+							}">
+						<Interaction.Behaviors>
+							<behaviors:UpdateBindingOnEnterBehavior />
+						</Interaction.Behaviors>
+					</TextBox>
 					<Label Grid.Row="1" Grid.Column="0" Content="End" />
 					<TextBox
+						MinWidth="100"
 						Grid.Row="1"
 						Grid.Column="1"
-						Text="{Binding EndAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+						Text="{Binding EndAddress, Mode=TwoWay,UpdateSourceTrigger=LostFocus,
+							Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
+							}">
+						<Interaction.Behaviors>
+							<behaviors:UpdateBindingOnEnterBehavior />
+						</Interaction.Behaviors>
+					</TextBox>
 				</Grid>
 				<StackPanel Orientation="Vertical">
 					<Button IsVisible="{Binding IsPaused}" IsEnabled="{Binding IsPaused}"
@@ -96,14 +114,10 @@
 				<controls:StatusBar Grid.Row="1">
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
-							<TextBlock Text="Selection start: " />
-							<TextBlock Text="{Binding SelectionRange.Value.Start.ByteIndex, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" Address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" End: " />
-							<TextBlock Text="{Binding SelectionRange.Value.End.ByteIndex, StringFormat={}{0:X4}}" />
-							<TextBlock Text=" Address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, StringFormat={}{0:X4}}" />
+							<TextBlock Text="Selection start address: " />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}" />
+							<TextBlock Text=" End address: " />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -162,7 +176,9 @@
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence, Converter={StaticResource InvalidNumberToQuestionMarkConverter}}" />
+								Text="{Binding AddressOFoundOccurence,
+									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
+									}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
 							<Button Command="{Binding FirstOccurrenceCommand}"
@@ -211,7 +227,13 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+								Text="{Binding MemoryEditAddress, Mode=TwoWay,
+									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+									}">
+								<Interaction.Behaviors>
+									<behaviors:UpdateBindingOnEnterBehavior />
+								</Interaction.Behaviors>
+							</TextBox>
 							<Label
 								Grid.Row="1"
 								Grid.Column="0"
@@ -251,7 +273,7 @@
 						<Label
 							Grid.Row="0"
 							HorizontalAlignment="Center"
-							Content="Creating memory breakpoint on linear or segmented address"
+							Content="Creating memory breakpoint on hex, decimal, or segmented address"
 							FontWeight="Bold" />
 						<Grid
 							Grid.Row="1"
@@ -274,13 +296,25 @@
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeStartAddress}" />
+									Text="{Binding BreakpointRangeStartAddress,
+										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+										}">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 								<TextBox
 								    Grid.Row="1"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding BreakpointRangeEndAddress}" />
+									Text="{Binding BreakpointRangeEndAddress,
+										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+										}">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 							</Grid>
 							<Label
 								Grid.Row="1"
@@ -310,7 +344,6 @@
 					</Grid>
 				</dialogHost:DialogHost.DialogContent>
 			</dialogHost:DialogHost>
-
 			<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
 		</Grid>
 	</ScrollViewer>

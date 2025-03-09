@@ -11,35 +11,37 @@
     x:CompileBindings="True"
     x:DataType="viewModels:CfgCpuViewModel"
     mc:Ignorable="d">
-    <Design.DataContext>
-        <viewModels:CfgCpuViewModel />
-    </Design.DataContext>
-        <DockPanel>
-            <Grid Margin="5" ColumnDefinitions="*,*,*" DockPanel.Dock="Top">
-                <StackPanel Grid.Column="0" Margin="5" Orientation="Horizontal">
-                    <Label HorizontalAlignment="Center" Margin="5">Number of nodes</Label>
-                    <TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding NumberOfNodes}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
-                    <Label HorizontalAlignment="Center" Margin="5">Average time (ms) for adding a node</Label>
-                    <TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding AverageNodeTime}" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
-                    <Label HorizontalAlignment="Center" Margin="5">Max number of nodes to display</Label>
-                    <NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
-                </StackPanel>
-            </Grid>
-			<Border DockPanel.Dock="Bottom" Background="White">
-				<ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-                    <ZoomBorder Name="ZoomBorder"
-                                    Stretch="None"
-                                    ZoomSpeed="1.5"
-                                    EnableConstrains="True"
-                                    ClipToBounds="True" Focusable="True"
-                                    VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-                        <agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
-                    </ZoomBorder>
-				</ScrollViewer>
+	<Design.DataContext>
+		<viewModels:CfgCpuViewModel />
+	</Design.DataContext>
+	<Grid RowDefinitions="Auto,*,Auto">
+		<Grid Grid.Row="0" Margin="5" ColumnDefinitions="*,*,*" DockPanel.Dock="Top">
+			<StackPanel Grid.Column="0" Margin="5" Orientation="Horizontal">
+				<Label HorizontalAlignment="Center" Margin="5">Number of nodes</Label>
+				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding NumberOfNodes}" />
+			</StackPanel>
+			<StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
+				<Label HorizontalAlignment="Center" Margin="5">Average time (ms) for adding a node</Label>
+				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding AverageNodeTime}" />
+			</StackPanel>
+			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
+				<Label HorizontalAlignment="Center" Margin="5">Max number of nodes to display</Label>
+				<NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
+			</StackPanel>
+		</Grid>
+		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+			<Border Background="White">
+				<ZoomBorder 
+					Name="ZoomBorder"
+					ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
+					Stretch="None"
+					ZoomSpeed="1.5"
+					EnableConstrains="True"
+					ClipToBounds="True" Focusable="True"
+					VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+					<agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
+				</ZoomBorder>
 			</Border>
-			</DockPanel>
+		</ScrollViewer>
+	</Grid>
 </UserControl>
