@@ -12,7 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="libportaudio.dll">
-      <PackagePath>lib\net9.0\libportaudio.dll</PackagePath>
+      <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Pack>True</Pack>
     </Content>
