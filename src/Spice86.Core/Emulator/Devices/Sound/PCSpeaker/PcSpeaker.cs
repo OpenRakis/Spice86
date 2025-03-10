@@ -150,17 +150,10 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         int samples = GenerateSquareWave(_monoBuffer, _currentNote.Period);
         int periods = _currentNote.PeriodCount;
 
-        // While the original PC speaker was mono, the emulator output is stereo.
-        // So we have to duplicate the signal.
-        ChannelAdapter.MonoToStereo(_monoBuffer.AsSpan(0, samples), _stereoBuffer.AsSpan(0, samples * 2));
-        samples *= 2;
-
         while (periods > 0) {
-            _soundChannel.Render(_stereoBuffer.AsSpan(0, samples));
+            _soundChannel.Render(_monoBuffer.AsSpan(0, samples));
             periods--;
         }
-
-        GenerateSilence(_monoBuffer);
     }
 
     /// <inheritdoc />
