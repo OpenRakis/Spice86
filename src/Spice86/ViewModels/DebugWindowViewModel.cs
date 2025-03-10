@@ -59,7 +59,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
         IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
-        DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
+        DisassemblyViewModel disassemblyViewModel, ModernDisassemblyViewModel modernDisassemblyViewModel, PaletteViewModel paletteViewModel,
         SoftwareMixerViewModel softwareMixerViewModel, VideoCardViewModel videoCardViewModel,
         CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
         MemoryViewModel memoryViewModel, StackMemoryViewModel stackMemoryViewModel
@@ -80,6 +80,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
         DisassemblyViewModel disassemblyVm = disassemblyViewModel;
         DisassemblyViewModels.Add(disassemblyVm);
+        ModernDisassemblyViewModels.Add(modernDisassemblyViewModel);
         PaletteViewModel = paletteViewModel;
         SoftwareMixerViewModel = softwareMixerViewModel;
         VideoCardViewModel = videoCardViewModel;

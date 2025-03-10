@@ -128,7 +128,7 @@ internal class InstructionsDecoder {
                 // Create instruction info
                 EnrichedInstruction enrichedInstruction = new(instruction) {
                     Bytes = _memory.ReadRam((uint)instruction.Length, currentAddress),
-                    Function = _functions.TryGetValue(currentAddress, out FunctionInformation? functionInformation) ? functionInformation : null,
+                    Function = _functions.SingleOrDefault(pair => pair.Key.Linear == currentAddress).Value,
                     SegmentedAddress = new SegmentedAddress(_state.CS, (ushort)(currentAddress - _state.IpPhysicalAddress + _state.IP)),
                     Breakpoints = _breakpointsViewModel.Breakpoints.Where(bp => bp.Address == instruction.IP32 && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS).ToList()
                 };

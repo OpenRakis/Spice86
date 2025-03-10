@@ -40,6 +40,10 @@ public partial class ModernDisassemblyView : UserControl {
             _scrollViewer = _listBox.FindDescendantOfType<ScrollViewer>();
         }
         Console.WriteLine("View loaded");
+        // Scroll to the item with the current address
+        if (ViewModel != null) {
+            ScrollToAddress(ViewModel.CurrentInstructionAddress);
+        }
     }
 
     private void UpdateItemHeightEstimate() {
@@ -86,8 +90,6 @@ public partial class ModernDisassemblyView : UserControl {
         AvaloniaXamlLoader.Load(this);
     }
 
-
-
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
         Console.WriteLine($"ViewModel_PropertyChanged({sender?.GetType().Name}, {e.PropertyName})");
         // Ensure we're on the UI thread
@@ -106,9 +108,51 @@ public partial class ModernDisassemblyView : UserControl {
 
             // Scroll to the item with the matching address
             if (ViewModel != null) {
-                ScrollToAddress(ViewModel.CurrentInstructionAddress);
+                uint instructionAddress = ViewModel.CurrentInstructionAddress;
+                if (!IsWithinMiddleRangeOfViewPort(instructionAddress)) {
+                    ScrollToAddress(instructionAddress);
+                }
             }
         }
+    }
+
+    private List<DebuggerLineViewModel> GetVisibleDebuggerLines()
+    {
+        if (_listBox == null || _scrollViewer == null || ViewModel == null)
+        {
+            Console.WriteLine("ListBox, ScrollViewer, or ViewModel is null");
+            return [];
+        }
+
+        var visibleItems = _listBox.GetVisualDescendants()
+            .OfType<ListBoxItem>()
+            .Where(item => item.DataContext is DebuggerLineViewModel)
+            .Select(item => (DebuggerLineViewModel)item.DataContext!)
+            .ToList();
+
+        return visibleItems;
+    }
+
+    private static List<DebuggerLineViewModel> GetMiddleItems(List<DebuggerLineViewModel> items, int excludeFromTopAndBottom = 3)
+    {
+        if (items.Count <= excludeFromTopAndBottom * 3)
+        {
+            // Return all items if there aren't enough items to exclude from top and bottom
+            return items;
+        }
+
+        // Return the middle items, excluding the specified number from top and bottom
+        return items.Skip(excludeFromTopAndBottom).Take(items.Count - (excludeFromTopAndBottom * 2)).ToList();
+    }
+
+    private bool IsWithinMiddleRangeOfViewPort(uint address) {
+        List<DebuggerLineViewModel> visibleItems = GetVisibleDebuggerLines();
+
+        // Get the middle items, excluding top and bottom 3
+        List<DebuggerLineViewModel> middleItems = GetMiddleItems(visibleItems);
+
+        // Check if any of the middle items has the target address
+        return middleItems.Any(item => item.Address == address);
     }
 
     /// <summary>

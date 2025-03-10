@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly IDictionary<uint, FunctionInformation> _functionsInformation;
+    private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
     private readonly IMemory _memory;
     private readonly IMessenger _messenger;
@@ -100,7 +100,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     // Flag to prevent recursive updates
     private bool _isUpdatingHighlighting;
 
-    public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<uint, FunctionInformation> functionsInformation,
+    public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -268,7 +268,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) && TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint((long)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((long)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
                 () => PauseAndReportAddress((uint)breakpointAddressValue.Value));
             AddBreakpointToListing(breakpointViewModel);
         }
@@ -376,7 +376,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         uint address = SelectedDebuggerLine.Address;
-        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddLinearAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+        BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
         SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
@@ -472,7 +472,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToFunction(object? parameter) {
         if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address);
+            await GoToAddress(functionInfo.Address.Linear);
         }
     }
 }
