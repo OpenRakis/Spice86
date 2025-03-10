@@ -75,7 +75,7 @@ public class EmulationLoop {
             throw new InvalidVMOperationException(_cpuState, e);
         }
         _emulatorBreakpointsManager.OnMachineStop();
-        _functionHandler.Ret(CallType.MACHINE);
+        _cpu.SignalEnd();
     }
 
     /// <summary>
@@ -88,15 +88,13 @@ public class EmulationLoop {
 
     private void StartRunLoop(FunctionHandler functionHandler) {
         // Entry could be overridden and could throw exceptions
-        functionHandler.Call(CallType.MACHINE, _cpuState.CS, _cpuState.IP, null, null, "entry", false);
+        functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry", false);
         RunLoop();
     }
 
     private void RunLoop() {
-        if (_cpu is CfgCpu cfgCpu) {
-            cfgCpu.SignalEntry();
-        }
         _stopwatch.Start();
+        _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
             _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             _pauseHandler.WaitIfPaused();

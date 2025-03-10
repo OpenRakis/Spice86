@@ -39,7 +39,6 @@ public class Spice86Creator {
     public Spice86DependencyInjection Create() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         Spice86DependencyInjection res = new(loggerService, _configuration);
-        res.Machine.Cpu.ErrorOnUninitializedInterruptHandler = false;
         res.Machine.CpuState.Flags.IsDOSBoxCompatible = false;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,

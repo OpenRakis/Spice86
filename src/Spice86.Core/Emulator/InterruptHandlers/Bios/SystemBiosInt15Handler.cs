@@ -3,7 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -17,11 +17,14 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public SystemBiosInt15Handler(IMemory memory, Cpu cpu, A20Gate a20Gate, bool initializeResetVector, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public SystemBiosInt15Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, A20Gate a20Gate, bool initializeResetVector, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
