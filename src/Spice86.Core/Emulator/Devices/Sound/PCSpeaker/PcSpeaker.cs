@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 
+using Spice86.Core.Backend.Audio.IirFilters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -16,22 +17,20 @@ using System.Diagnostics;
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private const int PcSpeakerPortNumber = 0x61;
 
+    private readonly LowPass _lowPassFilter = new();
     private readonly SoundChannel _soundChannel;
-
     private readonly int _outputSampleRate = 48000;
     private readonly int _ticksPerSample;
     private readonly Pit8254Counter _pit8254Counter;
     private readonly Stopwatch _durationTimer = new();
+    private readonly DeviceThread _deviceThread;
+    private readonly byte[] _monoBuffer;
     private QueuedNote _currentNote;
     private SpeakerControl _controlRegister = SpeakerControl.UseTimer;
     private int _currentPeriod;
 
-    private readonly DeviceThread _deviceThread;
 
     private bool _disposed;
-    
-    private readonly byte[] _monoBuffer;
-    private readonly byte[] _stereoBuffer;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PcSpeaker"/>
@@ -58,7 +57,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoopBody, pauseHandler, loggerService);
         _monoBuffer = new byte[4096];
-        _stereoBuffer = new byte[_monoBuffer.Length * 2];
+
+        // Setup the low-pass filter with a cutoff frequency of 4kHz
+        _lowPassFilter.Setup(_outputSampleRate, 4000);
     }
 
     /// <summary>
@@ -150,9 +151,23 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         int samples = GenerateSquareWave(_monoBuffer, _currentNote.Period);
         int periods = _currentNote.PeriodCount;
 
+        // Apply the low-pass filter to emulate the bandwidth-limited sound
+        ApplyLowPassFilter(_monoBuffer.AsSpan(0, samples));
+
         while (periods > 0) {
             _soundChannel.Render(_monoBuffer.AsSpan(0, samples));
             periods--;
+        }
+    }
+
+    /// <summary>
+    /// Applies a low-pass filter to the buffer.
+    /// </summary>
+    /// <param name="buffer">Buffer to filter.</param>
+    private void ApplyLowPassFilter(Span<byte> buffer) {
+
+        for (int i = 0; i < buffer.Length; i++) {
+            buffer[i] = (byte)_lowPassFilter.Filter(buffer[i]);
         }
     }
 
