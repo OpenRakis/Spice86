@@ -5,9 +5,10 @@
              xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              xmlns:converters="clr-namespace:Spice86.Converters"
+             xmlns:behaviors="clr-namespace:Spice86.Behaviors"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.ModernDisassemblyView"
-             x:DataType="viewModels:ModernDisassemblyViewModel">
+             x:DataType="viewModels:IModernDisassemblyViewModel">
     <UserControl.Resources>
         <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
 
@@ -98,14 +99,17 @@
                  Padding="0,0,16,0"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  ScrollViewer.VerticalScrollBarVisibility="Visible"
-                 SelectedItem="{Binding SelectedDebuggerLine}">
+                 SelectedItem="{Binding SelectedDebuggerLine}"
+                 behaviors:DisassemblyScrollBehavior.IsEnabled="True"
+                 behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <ContentControl PointerPressed="Instruction_PointerPressed"
-                                    FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
+                    <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
                                     Background="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightBackground}}"
                                     FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToBold}}"
-                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}">
+                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}"
+                                    ContextMenu="{StaticResource InstructionContextMenu}"
+                                    behaviors:InstructionPointerBehavior.IsEnabled="True">
                         <Grid ColumnDefinitions="Auto, Auto, *,4*">
                             <!-- Breakpoint indicator -->
                             <Ellipse Grid.Column="0"

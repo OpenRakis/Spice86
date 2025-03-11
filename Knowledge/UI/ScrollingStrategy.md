@@ -4,6 +4,7 @@
 - Context Preservation: Always maintain visual context around the current instruction
 - Predictable Navigation: Ensure consistent behavior for all navigation methods
 - Minimal Disruption: Avoid jarring scroll position changes
+- MVVM Compliance: Use attached behaviors for UI-specific logic
 
 ## Detailed Scrolling Strategy
 ### Current Instruction Centering
@@ -56,43 +57,43 @@ When the user clicks the "Go to Current Instruction" button:
 - Right-clicking should show a context menu with options like "Run to here", "Set breakpoint", etc.
 - Mouse wheel should scroll normally, respecting the user's system settings for scroll speed
 
-### Implementation Details
-#### Key Properties to Track
+## Implementation Details
+
+### MVVM Architecture with Attached Behaviors
+
+The scrolling strategy is implemented using Avalonia's attached behaviors to maintain proper separation of concerns:
+
+#### DisassemblyScrollBehavior
+- Handles all scrolling logic for the disassembly view
+- Attached to the ListBox in XAML via `behaviors:DisassemblyScrollBehavior.IsEnabled="True"`
+- Monitors changes to the `CurrentInstructionAddress` property via `behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}"`
+- Automatically scrolls to center the instruction when the address changes
+- Implements middle zone detection to avoid unnecessary scrolling
+- Handles all the complex UI calculations for proper centering
+
+#### InstructionPointerBehavior
+- Handles pointer events for instruction items
+- Attached to instruction ContentControl via `behaviors:InstructionPointerBehavior.IsEnabled="True"`
+- Updates the SelectedDebuggerLine property in the ViewModel when an instruction is clicked
+- Handles context menu interactions through data binding
+
+### Key Properties to Track
 - CurrentInstructionAddress: The physical address of the current instruction (CPU's IP)
-- SelectedInstructionAddress: The address of the user-selected instruction (may differ from current)
-- LastScrollSource: Enum tracking whether last scroll was user-initiated or automatic
-- IsUserNavigating: Boolean flag set when user is actively navigating with keyboard/mouse
-- VisibleInstructionCount: Number of instructions visible in the viewport
+- SelectedDebuggerLine: The user-selected instruction line (may differ from current)
 
-#### Edge Detection:
-  - Define edge zones as the top and bottom 20% of the viewport
-  - Check if an item's position in the viewport is within these zones
-  - Trigger scrolling when items approach these edges during keyboard navigation
+### Middle Zone Detection:
+- Define the middle zone as the middle part of the viewport that excludes the top and bottom 3 lines
+- Check if an item is fully contained within this zone
+- Avoid unnecessary scrolling if the item is already in the middle zone
 
-#### Middle Zone Detection:
-  - Define the middle zone as the middle 50% of the viewport
-  - Check if an item is fully contained within this zone
-  - Avoid unnecessary scrolling if the item is already in the middle zone
+### Key Methods in DisassemblyScrollBehavior
+- ScrollToAddress(listBox, targetAddress): Scrolls to position an item in the middle of viewport
+- IsWithinMiddleRangeOfViewPort(listBox, address): Checks if an address is already in the middle zone
+- GetVisibleDebuggerLines(listBox): Gets the currently visible instruction lines
+- GetMiddleItems(items): Gets the items in the middle zone of the viewport
+- CalculateOffsetByIndex(targetIndex, totalItems, estimatedItemHeight, scrollViewer): Calculates scroll offset based on item index
 
-#### Key Methods
-- ScrollToItemWithCentering(item): Scrolls to position an item in the middle of viewport
-- ScrollToSelectedInstructionWithPosition(relativePosition): Positions an item at a specific relative position in the viewport
-- IsItemInMiddleZone(item): Checks if an item is already in the middle zone of viewport
-- IsItemNearEdge(item): Checks if an item is near the edge of the viewport
-- SetScrollSource(source): Sets the scroll source and updates the IsUserNavigating flag
-- HandleKeyNavigation(key): Processes keyboard navigation and updates selection/scroll accordingly
-- OnPaused(): Handles scrolling behavior when CPU pauses execution
+### Thread Safety
+- All UI updates are performed on the UI thread using Dispatcher.UIThread.Post()
+- Asynchronous operations are properly handled to avoid UI freezing
 
-#### Thread Safety
-- All UI updates must be performed on the UI thread using Dispatcher.UIThread.Post()
-- Ensure all scroll position calculations are done atomically to prevent visual glitches
-- Use _isScrolling flag to prevent recursive scrolling operations
-
-### User Experience Benefits
-This scrolling strategy provides:
-
-- Continuity: Users always see context around the current instruction
-- Predictability: Navigation behaves consistently across different methods
-- Control: Users can override automatic scrolling when needed
-- Focus: The most important information is always centered in the view
-- Efficiency: Minimal viewport changes reduce cognitive load during debugging

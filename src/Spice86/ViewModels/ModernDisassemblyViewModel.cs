@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,19 +14,17 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.MemoryWrappers;
-using Spice86.Models.Debugging;
 using Spice86.Messages;
+using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-using System.Collections.Generic;
 using System.Globalization;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Modern implementation of the disassembly view model with improved performance and usability.
 /// </summary>
-public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDisposable {
+public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IModernDisassemblyViewModel, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
@@ -100,6 +99,24 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     // Flag to prevent recursive updates
     private bool _isUpdatingHighlighting;
 
+    // Explicit interface implementations
+    IAsyncRelayCommand IModernDisassemblyViewModel.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
+    IRelayCommand IModernDisassemblyViewModel.CopyLineCommand => CopyLineCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.StepIntoCommand => (IAsyncRelayCommand)StepIntoCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.StepOverCommand => (IAsyncRelayCommand)StepOverCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.GoToCsIpCommand => GoToCsIpCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
+    IRelayCommand IModernDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
+    IRelayCommand<uint> IModernDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;
+    IAsyncRelayCommand IModernDisassemblyViewModel.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
+    IRelayCommand IModernDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
+    IRelayCommand IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
+    IRelayCommand IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
+    IRelayCommand IModernDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
+
+    public IRelayCommand<uint> ScrollToAddressCommand { get; private set; }
+
     public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
@@ -120,6 +137,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         CanCloseTab = canCloseTab;
         CurrentInstructionAddress = _state.IpPhysicalAddress;
         EnableEventHandlers();
+        ScrollToAddressCommand = new RelayCommand<uint>(ScrollToAddress);
     }
 
     public void EnableEventHandlers() {
@@ -158,8 +176,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
 
     private void OnPaused() {
         // Ensure we're on the UI thread
-        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
-            Avalonia.Threading.Dispatcher.UIThread.Post(OnPaused);
+        if (!Dispatcher.UIThread.CheckAccess()) {
+            Dispatcher.UIThread.Post(OnPaused);
 
             return;
         }
@@ -210,8 +228,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
     /// </summary>
     private void UpdateCurrentInstructionHighlighting() {
         // Ensure we're on the UI thread
-        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) {
-            Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCurrentInstructionHighlighting);
+        if (!Dispatcher.UIThread.CheckAccess()) {
+            Dispatcher.UIThread.Post(UpdateCurrentInstructionHighlighting);
 
             return;
         }
@@ -356,7 +374,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             _emulatorBreakpointsManager, _memory, _state, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, true) {
             IsPaused = IsPaused
         };
-        _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(disassemblyViewModel));
+        await Task.Run(() => _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(disassemblyViewModel)));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -366,7 +384,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         // Update the disassembly
-        _ = UpdateDisassembly(_state.IpPhysicalAddress);
+        await UpdateDisassembly(_state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -379,7 +397,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
-        SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
+        await Task.Run(() => SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel));
     }
 
     private bool TryParseMemoryAddress(string addressString, out ulong? result) {
@@ -474,5 +492,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         if (parameter is FunctionInfo functionInfo) {
             await GoToAddress(functionInfo.Address.Linear);
         }
+    }
+
+    private void ScrollToAddress(uint address) {
+        // Notify the view that we want to scroll to this address
+        // This is a command that will be called from the view
+        // The actual scrolling logic is handled in the view
+        CurrentInstructionAddress = address;
+        OnPropertyChanged(nameof(CurrentInstructionAddress));
     }
 }
