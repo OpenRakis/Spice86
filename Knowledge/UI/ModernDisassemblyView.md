@@ -13,6 +13,8 @@ The Modern Disassembly View is designed to provide a clear and efficient way to 
 - **Lazy Loading**: Must only be instantiated when the Modern View tab is selected
 - **Centered Scrolling**: Must keep the current instruction within the middle 50% of the visible area
 - **Thread-Safe UI Updates**: Must ensure all UI operations are performed on the UI thread
+- **Efficient Batch Updates**: Must support batch updates of debugger lines to minimize UI update overhead
+- **Fast Lookups**: Must provide O(1) lookups for debugger lines by address
 
 ## Functional Requirements
 
@@ -67,12 +69,23 @@ The architecture must follow proper decoupling:
 2. The interface must define a clear contract between view and view model
 3. The implementation must be replaceable without changing the view
 
+### Data Management
+
+The view model must efficiently manage debugger line data:
+
+1. It must provide a dictionary-based storage for O(1) lookups by address
+2. It must provide a sorted view for UI display
+3. It must support batch updates to minimize UI update overhead
+4. It must avoid triggering unnecessary collection change notifications
+
 ## Performance Requirements
 
 1. The view must respond quickly to user interactions
 2. The view must only update elements that have changed
 3. The view must load quickly when the tab is selected
 4. The view must handle large disassembly listings efficiently
+5. The view must minimize collection change notifications during bulk updates
+6. The view must provide fast lookups for addresses when scrolling
 
 ## Testing Requirements
 

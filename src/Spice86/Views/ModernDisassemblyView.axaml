@@ -92,7 +92,7 @@
         <!-- Disassembly View with Scrolling -->
         <ListBox Grid.Row="1"
                  IsVisible="{Binding IsPaused}"
-                 ItemsSource="{Binding DebuggerLines.Values}"
+                 ItemsSource="{Binding SortedDebuggerLinesView}"
                  Name="DisassemblyListBox"
                  Background="Transparent"
                  BorderThickness="0"

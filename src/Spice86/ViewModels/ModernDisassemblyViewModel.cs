@@ -19,6 +19,8 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 
 /// <summary>
@@ -52,6 +54,15 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
     [ObservableProperty]
     private AvaloniaDictionary<uint, DebuggerLineViewModel> _debuggerLines = [];
+
+    // Flag to track if we're doing a batch update
+    private bool _isBatchUpdating;
+
+    // Cached sorted view of the debugger lines
+    private ObservableCollection<DebuggerLineViewModel>? _sortedDebuggerLinesView;
+    
+    // Flag to track if the sorted view needs to be updated
+    private bool _sortedViewNeedsUpdate = true;
 
     [ObservableProperty]
     private bool _isFunctionInformationProvided;
@@ -99,6 +110,75 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     // Flag to prevent recursive updates
     private bool _isUpdatingHighlighting;
 
+    /// <summary>
+    /// Gets a sorted view of the debugger lines for UI display.
+    /// </summary>
+    public ObservableCollection<DebuggerLineViewModel> SortedDebuggerLinesView {
+        get {
+            if (_sortedDebuggerLinesView == null || _sortedViewNeedsUpdate) {
+                // Create or update the sorted view
+                if (_sortedDebuggerLinesView == null) {
+                    _sortedDebuggerLinesView = [];
+                } else {
+                    _sortedDebuggerLinesView.Clear();
+                }
+                
+                // Add all items in sorted order
+                foreach (KeyValuePair<uint, DebuggerLineViewModel> item in DebuggerLines.OrderBy(kvp => kvp.Key)) {
+                    _sortedDebuggerLinesView.Add(item.Value);
+                }
+                
+                _sortedViewNeedsUpdate = false;
+            }
+            return _sortedDebuggerLinesView;
+        }
+    }
+
+    /// <summary>
+    /// Gets a debugger line by its address with O(1) lookup time.
+    /// </summary>
+    /// <param name="address">The address to look up.</param>
+    /// <returns>The debugger line if found, otherwise null.</returns>
+    public DebuggerLineViewModel? GetLineByAddress(uint address) {
+        return DebuggerLines.GetValueOrDefault(address);
+    }
+
+    /// <summary>
+    /// Updates the debugger lines in batch to avoid multiple collection change notifications.
+    /// </summary>
+    /// <param name="enrichedInstructions">The dictionary of instructions to add.</param>
+    private void UpdateDebuggerLinesInBatch(Dictionary<uint, EnrichedInstruction> enrichedInstructions) {
+        try {
+            _isBatchUpdating = true;
+
+            // Add all new items at once
+            foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
+                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _state);
+            }
+        } finally {
+            _isBatchUpdating = false;
+            
+            // Mark the sorted view as needing an update
+            _sortedViewNeedsUpdate = true;
+            
+            // Manually trigger notifications after the batch update
+            OnPropertyChanged(nameof(DebuggerLines));
+            OnPropertyChanged(nameof(SortedDebuggerLinesView));
+        }
+    }
+
+    // Override OnPropertyChanged to track when the dictionary changes
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
+        base.OnPropertyChanged(e);
+        
+        // If the DebuggerLines property changed, and we're not in a batch update,
+        // mark the sorted view as needing an update
+        if (!_isBatchUpdating && e.PropertyName == nameof(DebuggerLines)) {
+            _sortedViewNeedsUpdate = true;
+            OnPropertyChanged(nameof(SortedDebuggerLinesView));
+        }
+    }
+
     // Explicit interface implementations
     IAsyncRelayCommand IModernDisassemblyViewModel.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
     IRelayCommand IModernDisassemblyViewModel.CopyLineCommand => CopyLineCommand;
@@ -114,6 +194,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     IRelayCommand IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
     IRelayCommand IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
     IRelayCommand IModernDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
+    ObservableCollection<DebuggerLineViewModel> IModernDisassemblyViewModel.SortedDebuggerLinesView => SortedDebuggerLinesView;
 
     public IRelayCommand<uint> ScrollToAddressCommand { get; private set; }
 
@@ -183,7 +264,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         }
 
         // Capture the current CPU instruction pointer at the moment of pausing
-        var currentInstructionAddress = _state.IpPhysicalAddress;
+        uint currentInstructionAddress = _state.IpPhysicalAddress;
         Console.WriteLine($"Pausing: Captured instruction pointer at {currentInstructionAddress:X8}");
 
         // Check if the current instruction address is in our collection
@@ -428,9 +509,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private async Task UpdateDisassembly(uint currentInstructionAddress) {
         IsLoading = true;
         Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
-        foreach ((uint key, EnrichedInstruction value) in enrichedInstructions) {
-            DebuggerLines[key] = new DebuggerLineViewModel(value, _state);
-        }
+        
+        // Use the batch update method instead of updating items individually
+        UpdateDebuggerLinesInBatch(enrichedInstructions);
+        
         IsLoading = false;
     }
 
@@ -479,7 +561,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         }
 
         // Create a copy of the breakpoints collection to avoid modifying while iterating
-        var breakpointsToRemove = SelectedDebuggerLine.Breakpoints.ToList();
+        List<BreakpointViewModel> breakpointsToRemove = SelectedDebuggerLine.Breakpoints.ToList();
 
         foreach (BreakpointViewModel breakpoint in breakpointsToRemove) {
             _breakpointsViewModel.RemoveBreakpointInternal(breakpoint);

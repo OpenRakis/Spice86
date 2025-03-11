@@ -14,8 +14,8 @@ Follow this sequence of events:
 * Documentation
 - The root of the project contains an Obsidian vault named "Knowledge". 
 - When a new requirement has been implemented, add it to the documentation.
-- Document only requirements, do not document implementation details.
-- Do not document benefits.
+- Document only functional requirements, do not document implementation details.
+- Do not document benefits or non-functional requirements.
 - The documentation is mainly there for AIs to understand the goals and requirements. Not to keep a history of changes.
 
 * Feedback

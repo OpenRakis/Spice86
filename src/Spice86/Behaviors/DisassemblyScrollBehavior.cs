@@ -132,156 +132,99 @@ public class DisassemblyScrollBehavior
             return;
         }
 
-        // Find the item with the matching address
-        var items = listBox.ItemsSource?.Cast<DebuggerLineViewModel>().ToList();
-        if (items == null || items.Count == 0)
+        // Use the view model's GetLineByAddress method for efficient lookup
+        if (listBox.DataContext is IModernDisassemblyViewModel viewModel)
         {
-            Console.WriteLine("No items in the ListBox");
-            return;
-        }
-
-        Console.WriteLine($"Looking for item with address {targetAddress:X8} among {items.Count} items");
-        DebuggerLineViewModel? targetItem = items.FirstOrDefault(item => item.Address == targetAddress);
-        if (targetItem == null)
-        {
-            Console.WriteLine($"Could not find instruction with address {targetAddress:X8} in the list");
-            return;
-        }
-
-        Console.WriteLine($"Found target item with address {targetItem.Address:X8}");
-
-        // Get the index of the target item
-        int targetIndex = items.IndexOf(targetItem);
-        if (targetIndex < 0)
-        {
-            Console.WriteLine("Could not determine index of target item");
-            return;
-        }
-        
-        // Use a two-step approach for reliable scrolling
-        // Step 1: First scroll the item into view to ensure the container is created
-        listBox.ScrollIntoView(targetItem);
-        
-        // Step 2: After the container is created, calculate and apply the exact position
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
+            DebuggerLineViewModel? targetItem = viewModel.GetLineByAddress(targetAddress);
+            if (targetItem == null)
             {
-                // Try to find the container for the target item
-                ListBoxItem? container = listBox.ContainerFromItem(targetItem) as ListBoxItem;
-                
-                if (container == null)
-                {
-                    Console.WriteLine("Container not found after ScrollIntoView, trying visual tree search");
-                    container = listBox.GetVisualDescendants()
-                        .OfType<ListBoxItem>()
-                        .FirstOrDefault(item => item.DataContext is DebuggerLineViewModel line && line.Address == targetAddress);
-                }
-                
-                if (container == null)
-                {
-                    Console.WriteLine("Container still not found, cannot center item");
-                    return;
-                }
-                
-                // Get the position and size of the container
-                double itemHeight = container.Bounds.Height;
-                double viewportHeight = scrollViewer.Viewport.Height;
-                double itemTop = container.Bounds.Y;
-                double itemBottom = itemTop + itemHeight;
-                double scrollOffset = scrollViewer.Offset.Y;
-                
-                // Calculate the visible area boundaries
-                double viewportTop = scrollOffset;
-                double viewportBottom = viewportTop + viewportHeight;
-                double viewportMiddle = viewportTop + (viewportHeight / 2);
-                
-                Console.WriteLine($"Item bounds: Top={itemTop}, Bottom={itemBottom}, Height={itemHeight}");
-                Console.WriteLine($"Viewport: Top={viewportTop}, Bottom={viewportBottom}, Middle={viewportMiddle}, Height={viewportHeight}");
-                
-                // Check if the item is already in the middle 50% of the viewport
-                double middleRangeTop = viewportTop + (viewportHeight * 0.25);
-                double middleRangeBottom = viewportBottom - (viewportHeight * 0.25);
-                
-                bool isInMiddleRange = (itemTop >= middleRangeTop && itemTop <= middleRangeBottom) ||
-                                      (itemBottom >= middleRangeTop && itemBottom <= middleRangeBottom) ||
-                                      (itemTop <= middleRangeTop && itemBottom >= middleRangeBottom);
-                
-                if (isInMiddleRange)
-                {
-                    Console.WriteLine("Item is already in the middle range of the viewport, no need to scroll");
-                    return;
-                }
-                
-                // Calculate the new scroll position to center the item
-                double itemCenter = itemTop + (itemHeight / 2);
-                double newOffset = itemCenter - (viewportHeight / 2);
-                
-                // Ensure the offset is within valid bounds
-                double maxOffset = scrollViewer.Extent.Height - viewportHeight;
-                newOffset = Math.Max(0, Math.Min(newOffset, maxOffset));
-                
-                Console.WriteLine($"Calculated new offset: {newOffset} (max: {maxOffset})");
-                
-                // Apply the new scroll position
-                scrollViewer.Offset = new Vector(scrollViewer.Offset.X, newOffset);
-                
-                // Verify the scroll position changed
-                Dispatcher.UIThread.Post(() =>
-                {
-                    double finalPosition = scrollViewer.Offset.Y;
-                    Console.WriteLine($"Final scroll position: {finalPosition}");
-                    
-                    // Check if the item is now visible in the middle of the viewport
-                    double newViewportTop = finalPosition;
-                    double newViewportBottom = newViewportTop + viewportHeight;
-                    double newMiddleRangeTop = newViewportTop + (viewportHeight * 0.25);
-                    double newMiddleRangeBottom = newViewportBottom - (viewportHeight * 0.25);
-                    
-                    bool isNowInMiddleRange = (itemTop >= newMiddleRangeTop && itemTop <= newMiddleRangeBottom) ||
-                                             (itemBottom >= newMiddleRangeTop && itemBottom <= newMiddleRangeBottom) ||
-                                             (itemTop <= newMiddleRangeTop && itemBottom >= newMiddleRangeBottom);
-                    
-                    Console.WriteLine($"Item is now {(isNowInMiddleRange ? "in" : "not in")} the middle range of the viewport");
-                }, DispatcherPriority.Background);
+                Console.WriteLine($"Could not find instruction with address {targetAddress:X8} in the dictionary");
+                return;
             }
-            catch (Exception ex)
+
+            Console.WriteLine($"Found target item with address {targetItem.Address:X8}");
+            
+            // Use a two-step approach for reliable scrolling
+            // Step 1: First scroll the item into view to ensure the container is created
+            listBox.ScrollIntoView(targetItem);
+            
+            // Step 2: After the container is created, calculate and apply the exact position
+            Dispatcher.UIThread.Post(() =>
             {
-                Console.WriteLine($"Error centering item: {ex.Message}");
-            }
-        }, DispatcherPriority.Render);
-    }
-
-    // Helper method to check if an address is within the middle range of the viewport
-    public static bool IsWithinMiddleRangeOfViewPort(ListBox listBox, uint address, int excludeFromTopAndBottom = 3)
-    {
-        List<DebuggerLineViewModel> visibleItems = GetVisibleDebuggerLines(listBox);
-        List<DebuggerLineViewModel> middleItems = GetMiddleItems(visibleItems, excludeFromTopAndBottom);
-        return middleItems.Any(item => item.Address == address);
-    }
-
-    // Helper method to get visible debugger lines
-    private static List<DebuggerLineViewModel> GetVisibleDebuggerLines(ListBox listBox)
-    {
-        var visibleItems = listBox.GetVisualDescendants()
-            .OfType<ListBoxItem>()
-            .Where(item => item.DataContext is DebuggerLineViewModel)
-            .Select(item => (DebuggerLineViewModel)item.DataContext!)
-            .ToList();
-
-        return visibleItems;
-    }
-
-    // Helper method to get middle items
-    private static List<DebuggerLineViewModel> GetMiddleItems(List<DebuggerLineViewModel> items, int excludeFromTopAndBottom = 3)
-    {
-        if (items.Count <= excludeFromTopAndBottom * 3)
-        {
-            // Return all items if there aren't enough items to exclude from top and bottom
-            return items;
+                try
+                {
+                    // Try to find the container for the target item
+                    ListBoxItem? container = listBox.ContainerFromItem(targetItem) as ListBoxItem;
+                    
+                    if (container == null)
+                    {
+                        Console.WriteLine("Container not found after ScrollIntoView, trying visual tree search");
+                        container = listBox.GetVisualDescendants()
+                            .OfType<ListBoxItem>()
+                            .FirstOrDefault(item => item.DataContext is DebuggerLineViewModel line && line.Address == targetAddress);
+                    }
+                    
+                    if (container == null)
+                    {
+                        Console.WriteLine("Container still not found, cannot center item");
+                        return;
+                    }
+                    
+                    // Get the position and size of the container
+                    double itemHeight = container.Bounds.Height;
+                    double viewportHeight = scrollViewer.Viewport.Height;
+                    double itemTop = container.Bounds.Y;
+                    double itemBottom = itemTop + itemHeight;
+                    
+                    // Check if the item is already in the middle range of the viewport
+                    if (IsWithinMiddleRangeOfViewPort(scrollViewer, itemTop, itemBottom))
+                    {
+                        Console.WriteLine("Item is already in the middle range of the viewport");
+                        return;
+                    }
+                    
+                    // Calculate the new scroll position to center the item
+                    double targetOffset = itemTop - (viewportHeight / 2) + (itemHeight / 2);
+                    
+                    // Ensure the offset is within valid bounds
+                    targetOffset = Math.Max(0, Math.Min(targetOffset, scrollViewer.Extent.Height - viewportHeight));
+                    
+                    Console.WriteLine($"Centering item: itemTop={itemTop}, viewportHeight={viewportHeight}, itemHeight={itemHeight}, targetOffset={targetOffset}");
+                    
+                    // Set the new scroll position
+                    scrollViewer.Offset = new Vector(scrollViewer.Offset.X, targetOffset);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error centering item: {ex.Message}");
+                }
+            }, DispatcherPriority.Render);
         }
-
-        // Return the middle items, excluding the specified number from top and bottom
-        return items.Skip(excludeFromTopAndBottom).Take(items.Count - (excludeFromTopAndBottom * 2)).ToList();
+        else
+        {
+            Console.WriteLine("DataContext is not IModernDisassemblyViewModel");
+        }
     }
+
+    // Helper method to check if an item is within the middle range of the viewport
+    private static bool IsWithinMiddleRangeOfViewPort(ScrollViewer scrollViewer, double itemTop, double itemBottom)
+    {
+        double viewportHeight = scrollViewer.Viewport.Height;
+        double scrollOffset = scrollViewer.Offset.Y;
+        double edgeZoneHeight = (itemBottom - itemTop) * 3;
+
+        // Calculate the visible area boundaries
+        double viewportTop = scrollOffset;
+        double viewportBottom = viewportTop + viewportHeight;
+
+        // Define the middle range of the viewport as 3 items from the top and bottom
+        double middleRangeTop = viewportTop + edgeZoneHeight;
+        double middleRangeBottom = viewportBottom - edgeZoneHeight;
+        
+        // Check if the item is in the middle range
+        return (itemTop >= middleRangeTop && itemTop <= middleRangeBottom) ||
+               (itemBottom >= middleRangeTop && itemBottom <= middleRangeBottom) ||
+               (itemTop <= middleRangeTop && itemBottom >= middleRangeBottom);
+    }
+
 }

@@ -2,9 +2,8 @@ namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.Input;
-using Spice86.Core.Emulator.Function;
 using Spice86.Models.Debugging;
-using Spice86.Shared.Emulator.Memory;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 /// <summary>
@@ -23,6 +22,18 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged
     /// Collection of debugger lines indexed by their physical address.
     /// </summary>
     AvaloniaDictionary<uint, DebuggerLineViewModel> DebuggerLines { get; }
+
+    /// <summary>
+    /// Gets a sorted view of the debugger lines for UI display.
+    /// </summary>
+    ObservableCollection<DebuggerLineViewModel> SortedDebuggerLinesView { get; }
+
+    /// <summary>
+    /// Gets a debugger line by its address with O(1) lookup time.
+    /// </summary>
+    /// <param name="address">The address to look up.</param>
+    /// <returns>The debugger line if found, otherwise null.</returns>
+    DebuggerLineViewModel? GetLineByAddress(uint address);
 
     /// <summary>
     /// The currently selected debugger line in the UI.
