@@ -6,6 +6,7 @@
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              xmlns:converters="clr-namespace:Spice86.Converters"
              xmlns:behaviors="clr-namespace:Spice86.Behaviors"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.ModernDisassemblyView"
              x:DataType="viewModels:IModernDisassemblyViewModel">
@@ -36,17 +37,17 @@
 
             <!-- Navigation Controls -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP">
-                    <PathIcon Data="{StaticResource pin_regular}" Width="16" Height="16" />
+                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP" x:Name="GoToCsIpButton">
+                    <fluent:SymbolIcon Symbol="Location" Width="16" Height="16" />
                 </Button>
                 <Button Command="{Binding UpdateDisassemblyCommand}" ToolTip.Tip="Refresh view">
-                    <PathIcon Data="{StaticResource arrow_sync_regular}" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="ArrowSync" Width="16" Height="16" />
                 </Button>
                 <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)">
-                    <PathIcon Data="{StaticResource arrow_step_in_regular}" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="ArrowStepIn" Width="16" Height="16" />
                 </Button>
                 <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)">
-                    <PathIcon Data="{StaticResource arrow_step_over_regular}" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="ArrowStepOver" Width="16" Height="16" />
                 </Button>
             </StackPanel>
 
@@ -75,7 +76,7 @@
             <!-- View Options -->
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
                 <Button Command="{Binding NewDisassemblyViewCommand}" ToolTip.Tip="New view">
-                    <PathIcon Data="{StaticResource document_add_regular}" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="DocumentAdd" Width="16" Height="16" />
                 </Button>
             </StackPanel>
         </Grid>
