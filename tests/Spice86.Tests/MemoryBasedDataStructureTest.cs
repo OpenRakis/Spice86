@@ -159,7 +159,7 @@ public class MemoryBasedDataStructureTest {
         // Read
         AssertArrayEqualsCollection(ExpectedSegmentedAddressArray, segmentedAddressArray);
         // Write
-        WriteIndex0AndAssertIndex1Untouched<SegmentedAddress>(ExpectedSegmentedAddressArray, segmentedAddressArray, data.SegmentedAddress, 4, new SegmentedAddress(0, 0));
+        WriteIndex0AndAssertIndex1Untouched<SegmentedAddress>(ExpectedSegmentedAddressArray, segmentedAddressArray, data.SegmentedAddress, 4, SegmentedAddress.ZERO);
     }
 
     private void CopyArrayToIndexer<T>(IReadOnlyList<T> array, Indexer<T> data, uint baseAddress, int elementSize) {

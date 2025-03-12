@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -16,9 +17,12 @@ public class DosInt2fHandler : InterruptHandler {
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt2fHandler(IMemory memory, Cpu cpu, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public DosInt2fHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         FillDispatchTable();
     }
 

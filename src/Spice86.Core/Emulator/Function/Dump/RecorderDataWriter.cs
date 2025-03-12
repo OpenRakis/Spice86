@@ -36,19 +36,19 @@ public class RecorderDataWriter : RecordedDataIoHandler {
     /// <summary>
     /// Dumps all recorded data to their respective files.
     /// </summary>
-    public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
+    public void DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
         _loggerService.Verbose("Dumping all data to {DumpDirectory}", DumpDirectory);
         DumpCpuRegisters("");
         DumpMemory("");
-        DumpGhidraSymbols(executionFlowRecorder, functionHandler);
+        DumpGhidraSymbols(executionFlowRecorder, functionCatalogue);
         DumpExecutionFlow();
     }
 
     /// <summary>
     /// Dumps the Ghidra symbols to the file system.
     /// </summary>
-    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
-        new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionHandler, SymbolsFile);
+    private void DumpGhidraSymbols(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
+        new GhidraSymbolsDumper(_loggerService).Dump(executionFlowRecorder, functionCatalogue, SymbolsFile);
     }
 
     /// <summary>

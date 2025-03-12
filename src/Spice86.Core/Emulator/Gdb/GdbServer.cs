@@ -19,14 +19,13 @@ public sealed class GdbServer : IDisposable {
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
     private GdbIo? _gdbIo;
-    private readonly Cpu _cpu;
+    private readonly IFunctionHandlerProvider _functionHandlerProvider;
     private readonly IPauseHandler _pauseHandler;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly ExecutionFlowRecorder _executionFlowRecorder;
-    private readonly FunctionHandler _functionHandler;
+    private readonly FunctionCatalogue _functionCatalogue;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private GdbCommandHandler? _gdbCommandHandler;
 
     private readonly MemoryDataExporter _memoryDataExporter;
 
@@ -35,29 +34,29 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
-    /// <param name="cpu">The emulated CPU.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that handles breakpoints.</param>
     /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     public GdbServer(Configuration configuration, IMemory memory,
-        MemoryDataExporter memoryDataExporter, Cpu cpu, State state,
-        FunctionHandler functionHandler, ExecutionFlowRecorder executionFlowRecorder,
+        IFunctionHandlerProvider functionHandlerProvider, 
+        State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, ExecutionFlowRecorder executionFlowRecorder,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _memoryDataExporter = memoryDataExporter;
-        _functionHandler = functionHandler;
-        _cpu = cpu;
+        _functionCatalogue = functionCatalogue;
         _state = state;
         _memory = memory;
         _executionFlowRecorder = executionFlowRecorder;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _configuration = configuration;
+        _functionHandlerProvider = functionHandlerProvider;
     }
 
     /// <inheritdoc />
@@ -94,15 +93,13 @@ public sealed class GdbServer : IDisposable {
     private void AcceptOneConnection(GdbIo gdbIo) {
         gdbIo.WaitForConnection();
         GdbCommandHandler gdbCommandHandler = new GdbCommandHandler(
-            _memory, _memoryDataExporter,  _cpu, _state, _pauseHandler,
-            _emulatorBreakpointsManager,
-            _executionFlowRecorder, _functionHandler,
+            _memory, _functionHandlerProvider, _state, _memoryDataExporter, _pauseHandler,
+            _emulatorBreakpointsManager, _executionFlowRecorder, _functionCatalogue,
             gdbIo,
             _loggerService,
             _configuration);
         gdbCommandHandler.PauseEmulator();
         OnConnect();
-        _gdbCommandHandler = gdbCommandHandler;
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
             string command = gdbIo.ReadCommand();
             if (!string.IsNullOrWhiteSpace(command)) {

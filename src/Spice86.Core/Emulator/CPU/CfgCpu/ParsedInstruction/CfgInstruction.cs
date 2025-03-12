@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
@@ -10,7 +11,7 @@ using System.Linq;
 /// <summary>
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
-public abstract class CfgInstruction : CfgNode {
+public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
         opcodeField, new List<InstructionPrefix>()) {
     }
@@ -49,6 +50,21 @@ public abstract class CfgInstruction : CfgNode {
     /// </summary>
     public Dictionary<SegmentedAddress, ICfgNode> SuccessorsPerAddress { get; private set; } = new();
 
+    /// <summary>
+    /// Successors per link type
+    /// This allows to represent the link between a call instruction and the effective return address.
+    /// This is present for all instructions since most of them can trigger CPU faults (and interrupt calls)
+    /// </summary>
+    public Dictionary<InstructionSuccessorType, ISet<ICfgNode>> SuccessorsPerType { get; } = new();
+
+    /// <summary>
+    /// Means that the return from that call was not on the stack at return time.
+    /// It means generated code will need to take that into account.
+    /// Information here is different than from SuccessorsPerType.
+    /// It means the call was discarded from reconstructed call stack to accomodate real stack.
+    /// </summary>
+    public bool NotARegularReturn { get; set; }
+
     public override void UpdateSuccessorCache() {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);
     }
@@ -63,6 +79,8 @@ public abstract class CfgInstruction : CfgNode {
     public RepPrefix? RepPrefix { get; }
 
     public byte Length { get; private set; }
+
+    public SegmentedAddress NextInMemoryAddress => new(Address.Segment, (ushort)(Address.Offset + Length));
 
     public List<InstructionPrefix> InstructionPrefixes { get; }
 

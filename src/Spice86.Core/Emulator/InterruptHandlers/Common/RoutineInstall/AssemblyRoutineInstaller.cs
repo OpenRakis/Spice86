@@ -11,16 +11,16 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class AssemblyRoutineInstaller {
     private readonly MemoryAsmWriter _memoryAsmWriter;
-    private readonly FunctionHandler _functionHandler;
+    private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memoryAsmWriter">The low level class that writes x86 instructions to the memory bus.</param>
-    /// <param name="functionHandler">The class that tracks and issues functions calls.</param>
-    public AssemblyRoutineInstaller(MemoryAsmWriter memoryAsmWriter, FunctionHandler functionHandler) {
+    /// <param name="functionCatalogue">List of all functions.</param>
+    public AssemblyRoutineInstaller(MemoryAsmWriter memoryAsmWriter, FunctionCatalogue functionCatalogue) {
         _memoryAsmWriter = memoryAsmWriter;
-        _functionHandler = functionHandler;
+        _functionCatalogue = functionCatalogue;
     }
 
     /// <summary>
@@ -28,18 +28,11 @@ public class AssemblyRoutineInstaller {
     /// Registers its name in the function handler as well.
     /// </summary>
     /// <param name="assemblyRoutineWriter">The class that writes machine code in memory as glue between the interrupt calls and the C# interrupt handlers.</param>
-    /// <param name="namePrefix">The custom prefix for describing the function handler more precisely by the function tracking APIs in the function information structure.</param>
+    /// <param name="name">Name of the routine. Will be registered in function catalogue.</param>
     /// <returns>Address of the handler ASM code</returns>
-    public SegmentedAddress InstallAssemblyRoutine(IAssemblyRoutineWriter assemblyRoutineWriter, string? namePrefix = null) {
+    public SegmentedAddress InstallAssemblyRoutine(IAssemblyRoutineWriter assemblyRoutineWriter, string name) {
         SegmentedAddress routineAddress = assemblyRoutineWriter.WriteAssemblyInRam(_memoryAsmWriter);
-        // Define interrupt in function handler so that users have an idea what this is among all the other horrible things DOS programs do
-        string routineName = routineAddress.GetType().Name;
-        string name = routineName;
-        if (!string.IsNullOrWhiteSpace(namePrefix)) {
-            name = $"{namePrefix}_{routineName}";
-        }
-
-        _functionHandler.GetOrCreateFunctionInformation(routineAddress, name);
+        _functionCatalogue.GetOrCreateFunctionInformation(routineAddress, name);
         return routineAddress;
     }
 }

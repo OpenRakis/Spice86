@@ -4,8 +4,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Linq;
 
 public class NodeLinker : InstructionReplacer {
     private readonly NodeToString _nodeToString = new();
@@ -19,14 +22,19 @@ public class NodeLinker : InstructionReplacer {
     /// <param name="current"></param>
     /// <param name="next"></param>
     public void Link(ICfgNode current, ICfgNode next) {
-        if (current is CfgInstruction currentCfgInstruction) {
-            LinkCfgInstruction(currentCfgInstruction, next);
+        // Special cases for ret.
+        // We not only attach next but also the return target to the list of next for the corresponding call.
+        // This involves recording data via the Call Flow Handler and linking it in a special way here.
+        if (current is IRetInstruction retInstruction) {
+            LinkRetInstruction(retInstruction, next);
+        } else if (current is CfgInstruction currentCfgInstruction) {
+            LinkRegularInstruction(currentCfgInstruction, next);
         } else if (current is DiscriminatedNode discriminatedNode) {
             LinkDiscriminatedNode(discriminatedNode, next);
         }
     }
 
-    private void LinkCfgInstruction(CfgInstruction current, ICfgNode next) {
+    private void LinkCfgInstruction(ICfgInstruction current, ICfgNode next) {
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
@@ -52,6 +60,41 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
+    private void LinkRegularInstruction(CfgInstruction current, ICfgNode next) {
+        LinkCfgInstruction(current, next);
+        LinkCallSuccessor(InstructionSuccessorType.Normal, current, next);
+    }
+
+    private void LinkRetInstruction(IRetInstruction ret, ICfgNode next) {
+        LinkCfgInstruction(ret, next);
+        // Need to link the call instruction now that ret is known 
+        CfgInstruction? callInstruction = ret.CurrentCorrespondingCallInstruction;
+        ret.CurrentCorrespondingCallInstruction = null;
+        if (callInstruction == null) {
+            // No call associated with this ret. Nothing to do.
+            return;
+        }
+        InstructionSuccessorType type = ComputeSuccessorType(callInstruction, next);
+        LinkCallSuccessor(type, callInstruction, next);
+    }
+
+    private void LinkCallSuccessor(InstructionSuccessorType type, CfgInstruction call, ICfgNode next) {
+        if (!call.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? successorsForType)) {
+            successorsForType = new HashSet<ICfgNode>();
+            call.SuccessorsPerType[type] = successorsForType;
+        }
+        successorsForType.Add(next);
+        LinkCfgInstruction(call, next);
+    }
+
+    private InstructionSuccessorType ComputeSuccessorType(CfgInstruction call, ICfgNode nextAfterRet) {
+        if (call.NextInMemoryAddress != nextAfterRet.Address) {
+            // Instruction executed after ret is not the next instruction in memory from the call.
+            return InstructionSuccessorType.CallToMisalignedReturn;
+        }
+        return InstructionSuccessorType.CallToReturn;
+    }
+
     private void LinkDiscriminatedNode(DiscriminatedNode current, ICfgNode next) {
         if (next is CfgInstruction nextCfgInstruction) {
             Dictionary<Discriminator, CfgInstruction> successors = current.SuccessorsPerDiscriminator;
@@ -67,8 +110,22 @@ public class NodeLinker : InstructionReplacer {
             throw new UnhandledCfgDiscrepancyException("Trying to attach a non ASM instruction to a discriminated node which is not allowed. This should never happen.");
         }
     }
+    
+    private void ReplaceSuccessorsPerType(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        // Merge the SuccessorsPerType with the new instruction
+        foreach (KeyValuePair<InstructionSuccessorType, ISet<ICfgNode>> oldEntry in oldInstruction.SuccessorsPerType) {
+            if (!newInstruction.SuccessorsPerType.TryGetValue(oldEntry.Key, out ISet<ICfgNode>? successorsForType)) {
+                // No key => replace with new
+                successorsForType = oldEntry.Value;
+            } else {
+                // Key => merge the sets
+                successorsForType = new HashSet<ICfgNode>(successorsForType.Concat(oldEntry.Value));
+            }
+            newInstruction.SuccessorsPerType[oldEntry.Key] = successorsForType;
+        }
+    }
 
-    public void AttachToNext(ICfgNode current, ICfgNode next) {
+    private void AttachToNext(ICfgNode current, ICfgNode next) {
         LinkToNext(current, next);
         current.UpdateSuccessorCache();
     }
@@ -89,18 +146,37 @@ public class NodeLinker : InstructionReplacer {
 
         instruction.UpdateSuccessorCache();
         old.UpdateSuccessorCache();
+        ReplaceSuccessorsPerType(old, instruction);
     }
 
+    /// <summary>
+    /// Inserts newPredecessor as an intermediate node between current and its own predecessors
+    /// </summary>
+    /// <param name="current"></param>
+    /// <param name="newPredecessor"></param>
     public void InsertIntermediatePredecessor(ICfgNode current, ICfgNode newPredecessor) {
         foreach (ICfgNode predecessor in current.Predecessors) {
             // Replace current with new in the predecessors successors (:
             LinkToNext(predecessor, newPredecessor);
             predecessor.Successors.Remove(current);
             predecessor.UpdateSuccessorCache();
+            if (predecessor is CfgInstruction predecessorInstruction) {
+                ReplaceSuccessorOfCallInstruction(predecessorInstruction, current, newPredecessor);
+            }
         }
         // Make new the only predecessor of current
         current.Predecessors.Clear();
         LinkToNext(newPredecessor, current);
         newPredecessor.UpdateSuccessorCache();
+    }
+
+    private void ReplaceSuccessorOfCallInstruction(CfgInstruction instruction, ICfgNode currentSuccesor, ICfgNode newSuccesor) {
+        foreach(KeyValuePair<InstructionSuccessorType, ISet<ICfgNode>> entry in instruction.SuccessorsPerType) {
+            ISet<ICfgNode> successors = entry.Value;
+            if (successors.Contains(currentSuccesor)) {
+                successors.Remove(currentSuccesor);
+                successors.Add(newSuccesor);
+            }
+        }
     }
 }

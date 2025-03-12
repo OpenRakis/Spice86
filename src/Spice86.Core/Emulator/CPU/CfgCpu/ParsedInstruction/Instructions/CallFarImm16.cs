@@ -13,7 +13,7 @@ public class CallFarImm16 : InstructionWithSegmentedAddressField {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        SegmentedAddress address = helper.InstructionFieldValueRetriever.GetFieldValue(SegmentedAddressField);
-        helper.FarCallWithReturnIpNextInstruction(this, address.Segment, address.Offset);
+        SegmentedAddress targetAddress = helper.InstructionFieldValueRetriever.GetFieldValue(SegmentedAddressField);
+        helper.FarCallWithReturnIpNextInstruction(this, targetAddress);
     }
 }
