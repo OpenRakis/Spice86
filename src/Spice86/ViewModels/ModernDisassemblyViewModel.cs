@@ -181,9 +181,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     // Explicit interface implementations
     IAsyncRelayCommand IModernDisassemblyViewModel.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
     IRelayCommand IModernDisassemblyViewModel.CopyLineCommand => CopyLineCommand;
-    IAsyncRelayCommand IModernDisassemblyViewModel.StepIntoCommand => (IAsyncRelayCommand)StepIntoCommand;
-    IAsyncRelayCommand IModernDisassemblyViewModel.StepOverCommand => (IAsyncRelayCommand)StepOverCommand;
-    IAsyncRelayCommand IModernDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
+    IRelayCommand IModernDisassemblyViewModel.StepIntoCommand => StepIntoCommand;
+    IRelayCommand IModernDisassemblyViewModel.StepOverCommand => StepOverCommand;
+    IRelayCommand IModernDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
     IAsyncRelayCommand IModernDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
     IRelayCommand IModernDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
     IRelayCommand<uint> IModernDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;

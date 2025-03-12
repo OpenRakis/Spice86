@@ -88,17 +88,17 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged
     /// <summary>
     /// Command to step into the current instruction.
     /// </summary>
-    IAsyncRelayCommand StepIntoCommand { get; }
+    IRelayCommand StepIntoCommand { get; }
 
     /// <summary>
     /// Command to step over the current instruction.
     /// </summary>
-    IAsyncRelayCommand StepOverCommand { get; }
+    IRelayCommand StepOverCommand { get; }
 
     /// <summary>
     /// Command to go to a specific function.
     /// </summary>
-    IAsyncRelayCommand GoToFunctionCommand { get; }
+    IRelayCommand GoToFunctionCommand { get; }
 
     /// <summary>
     /// Command to close the current tab.
