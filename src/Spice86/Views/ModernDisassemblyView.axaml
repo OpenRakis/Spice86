@@ -37,16 +37,16 @@
 
             <!-- Navigation Controls -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP" x:Name="GoToCsIpButton">
+                <Button Click="GoToCsIpButton_Click" ToolTip.Tip="Go to current CS:IP (F9)" HotKey="F9" x:Name="GoToCsIpButton">
                     <fluent:SymbolIcon Symbol="Location" Width="16" Height="16" />
                 </Button>
-                <Button Command="{Binding UpdateDisassemblyCommand}" ToolTip.Tip="Refresh view">
+                <Button Command="{Binding UpdateDisassemblyCommand}" ToolTip.Tip="Refresh view (F5)" HotKey="F5">
                     <fluent:SymbolIcon Symbol="ArrowSync" Width="16" Height="16" />
                 </Button>
-                <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)">
+                <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)" HotKey="F11">
                     <fluent:SymbolIcon Symbol="ArrowStepIn" Width="16" Height="16" />
                 </Button>
-                <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)">
+                <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)" HotKey="F10">
                     <fluent:SymbolIcon Symbol="ArrowStepOver" Width="16" Height="16" />
                 </Button>
             </StackPanel>

@@ -72,7 +72,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    [NotifyCanExecuteChangedFor(nameof(GoToCsIpCommand))]
     [NotifyCanExecuteChangedFor(nameof(NewDisassemblyViewCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
@@ -185,7 +184,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     IAsyncRelayCommand IModernDisassemblyViewModel.StepIntoCommand => (IAsyncRelayCommand)StepIntoCommand;
     IAsyncRelayCommand IModernDisassemblyViewModel.StepOverCommand => (IAsyncRelayCommand)StepOverCommand;
     IAsyncRelayCommand IModernDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
-    IAsyncRelayCommand IModernDisassemblyViewModel.GoToCsIpCommand => GoToCsIpCommand;
     IAsyncRelayCommand IModernDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
     IRelayCommand IModernDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
     IRelayCommand<uint> IModernDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;
@@ -456,16 +454,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             IsPaused = IsPaused
         };
         await Task.Run(() => _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(disassemblyViewModel)));
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task GoToCsIp() {
-        if (!IsPaused) {
-            return;
-        }
-
-        // Update the disassembly
-        await UpdateDisassembly(_state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]

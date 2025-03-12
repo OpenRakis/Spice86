@@ -108,7 +108,7 @@ public class DisassemblyScrollBehavior
     }
 
     // Main scrolling logic
-    private static void ScrollToAddress(ListBox listBox, uint targetAddress)
+    public static void ScrollToAddress(ListBox listBox, uint targetAddress)
     {
         // Ensure we're on the UI thread
         if (!Dispatcher.UIThread.CheckAccess())

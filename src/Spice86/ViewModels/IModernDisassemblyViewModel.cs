@@ -76,11 +76,6 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged
     IAsyncRelayCommand UpdateDisassemblyCommand { get; }
 
     /// <summary>
-    /// Command to navigate to the current CS:IP location.
-    /// </summary>
-    IAsyncRelayCommand GoToCsIpCommand { get; }
-
-    /// <summary>
     /// Command to create a new disassembly view.
     /// </summary>
     IAsyncRelayCommand NewDisassemblyViewCommand { get; }
