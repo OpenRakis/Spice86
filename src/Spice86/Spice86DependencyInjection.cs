@@ -257,8 +257,7 @@ public class Spice86DependencyInjection : IDisposable {
             DisassemblyViewModel disassemblyVm = new(
                 emulatorBreakpointsManager,
                 memory, state,
-                functionsInformation.ToDictionary(x =>
-                x.Key, x => x.Value),
+                functionsInformation,
             breakpointsViewModel, pauseHandler,
             uiThreadDispatcher, messenger, textClipboard);
             PaletteViewModel paletteViewModel = new(

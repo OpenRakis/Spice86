@@ -39,11 +39,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         : base(uiDispatcher, textClipboard) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
-        Functions = new(functionsInformation
-            .Select(x => new FunctionInfo() {
-                Name = x.Value.Name,
-                Address = x.Key,
-            }).OrderBy(x => x.Address));
         AreFunctionInformationProvided = functionsInformation.Count > 0;
         _breakpointsViewModel = breakpointsViewModel;
         _messenger = messenger;
@@ -86,6 +81,17 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private void OnPaused() {
         _uiDispatcher.Post(() => {
             IsPaused = true;
+
+            Functions = new(_functionsInformation
+                .Select(x => new FunctionInfo() {
+                    Name = x.Value.Name,
+                    Address = x.Key,
+                }).OrderBy(x => x.Address));
+
+            SelectedFunction = Functions.FirstOrDefault(
+                x => x.Name == SelectedFunction?.Name &&
+                x.Address == SelectedFunction?.Address);
+
             if (!_didCsIpGoOutOfCurrentListing) {
                 UpdateDisassemblyInternal();
             } else if (GoToCsIpCommand.CanExecute(null)) {
