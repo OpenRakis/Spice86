@@ -1,4 +1,4 @@
-namespace Spice86.Tests.CfgCpu;
+namespace Spice86.Tests.CfgCpu.ModRm;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;

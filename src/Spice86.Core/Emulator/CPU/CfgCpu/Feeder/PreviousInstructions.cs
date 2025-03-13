@@ -20,22 +20,26 @@ public class PreviousInstructions : InstructionReplacer {
         _memoryInstructionMatcher = new MemoryInstructionMatcher(memory);
     }
 
-    public CfgInstruction? GetAtAddressIfMatchesMemory(SegmentedAddress address) {
-        if (_previousInstructionsAtAddress.TryGetValue(address,
-                out HashSet<CfgInstruction>? previousInstructionsAtAddress)) {
-            return _memoryInstructionMatcher.MatchExistingInstructionWithMemory(previousInstructionsAtAddress);
-        }
-
-        return null;
+    public HashSet<CfgInstruction>? GetAtAddress(SegmentedAddress address) {
+        return _previousInstructionsAtAddress.GetValueOrDefault(address);
     }
 
-    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        SegmentedAddress instructionAddress = instruction.Address;
+    public CfgInstruction? GetAtAddressIfMatchesMemory(SegmentedAddress address) {
+        HashSet<CfgInstruction>? previousInstructionsAtAddress = GetAtAddress(address);
+        if (previousInstructionsAtAddress == null) {
+            return null;
+        }
+
+        return _memoryInstructionMatcher.MatchExistingInstructionWithMemory(previousInstructionsAtAddress);
+    }
+
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        SegmentedAddress instructionAddress = newInstruction.Address;
 
         if (_previousInstructionsAtAddress.TryGetValue(instructionAddress,
                 out HashSet<CfgInstruction>? previousInstructionsAtAddress) 
-            && previousInstructionsAtAddress.Remove(old)) {
-            AddInstructionInPrevious(instruction);
+            && previousInstructionsAtAddress.Remove(oldInstruction)) {
+            AddInstructionInPrevious(newInstruction);
         }
     }
 

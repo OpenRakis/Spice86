@@ -20,6 +20,14 @@ public class DiscriminatorReducer {
         );
     }
 
+    public CfgInstruction? ReduceToOne(CfgInstruction instruction1, CfgInstruction instruction2) {
+        IList<CfgInstruction> reducedInstructions = ReduceAll([instruction1, instruction2]);
+        if (reducedInstructions.Count == 1) {
+            return reducedInstructions[0];
+        }
+        return null;
+    }
+
     public IList<CfgInstruction> ReduceAll(List<CfgInstruction> instructions) {
         IDictionary<Type, List<CfgInstruction>> groupByType =
             GroupByType(instructions);

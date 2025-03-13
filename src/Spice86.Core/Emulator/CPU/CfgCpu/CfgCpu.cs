@@ -21,7 +21,6 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
-    private readonly CfgNodeFeeder _cfgNodeFeeder;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
 
@@ -31,11 +30,13 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         _state = state;
         _dualPic = dualPic;
         
-        _cfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
-        _executionContextManager = new(memory, state, _cfgNodeFeeder, _replacerRegistry, functionCatalogue, loggerService);
+        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
+        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, loggerService);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, _executionContextManager, loggerService);
     }
     
+    public CfgNodeFeeder CfgNodeFeeder { get; }
+
     public ExecutionContextManager ExecutionContextManager => _executionContextManager;
 
     public FunctionHandler FunctionHandlerInUse => ExecutionContextManager.CurrentExecutionContext.FunctionHandler;
@@ -44,7 +45,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     
     /// <inheritdoc />
     public void ExecuteNext() {
-        ICfgNode toExecute = _cfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
+        ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
         // Execute the node
         try {
@@ -57,6 +58,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         }
 
         ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
+        
         _state.IncCycles();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass

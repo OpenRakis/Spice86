@@ -6,5 +6,5 @@ public abstract class InstructionReplacer : IInstructionReplacer {
     protected InstructionReplacer(InstructionReplacerRegistry replacerRegistry) {
         replacerRegistry.Register(this);
     }
-    public abstract void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction);
+    public abstract void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction);
 }

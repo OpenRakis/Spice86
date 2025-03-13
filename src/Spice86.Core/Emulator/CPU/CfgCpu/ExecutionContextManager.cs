@@ -104,10 +104,10 @@ public class ExecutionContextManager : InstructionReplacer {
         nodes.Add(toExecute);
     }
 
-    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        if (ExecutionContextEntryPoints.TryGetValue(instruction.Address, out ISet<CfgInstruction>? entriesAtAddress)
-            && entriesAtAddress.Remove(old)) {
-            entriesAtAddress.Add(instruction);
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        if (ExecutionContextEntryPoints.TryGetValue(newInstruction.Address, out ISet<CfgInstruction>? entriesAtAddress)
+            && entriesAtAddress.Remove(oldInstruction)) {
+            entriesAtAddress.Add(newInstruction);
         }
     }
 }

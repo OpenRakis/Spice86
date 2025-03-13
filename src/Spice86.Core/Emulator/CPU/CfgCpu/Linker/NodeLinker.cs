@@ -60,13 +60,12 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
-    private void LinkRegularInstruction(CfgInstruction current, ICfgNode next) {
-        LinkCfgInstruction(current, next);
-        LinkCallSuccessor(InstructionSuccessorType.Normal, current, next);
+    private void LinkRegularInstruction(ICfgInstruction current, ICfgNode next) {
+        LinkCfgInstructionWithType(InstructionSuccessorType.Normal, current, next);
     }
 
     private void LinkRetInstruction(IRetInstruction ret, ICfgNode next) {
-        LinkCfgInstruction(ret, next);
+        LinkCfgInstructionWithType(InstructionSuccessorType.Normal, ret, next);
         // Need to link the call instruction now that ret is known 
         CfgInstruction? callInstruction = ret.CurrentCorrespondingCallInstruction;
         ret.CurrentCorrespondingCallInstruction = null;
@@ -74,20 +73,20 @@ public class NodeLinker : InstructionReplacer {
             // No call associated with this ret. Nothing to do.
             return;
         }
-        InstructionSuccessorType type = ComputeSuccessorType(callInstruction, next);
-        LinkCallSuccessor(type, callInstruction, next);
+        InstructionSuccessorType type = ComputeSuccessorTypeForRet(callInstruction, next);
+        LinkCfgInstructionWithType(type, callInstruction, next);
     }
 
-    private void LinkCallSuccessor(InstructionSuccessorType type, CfgInstruction call, ICfgNode next) {
-        if (!call.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? successorsForType)) {
+    private void LinkCfgInstructionWithType(InstructionSuccessorType type, ICfgInstruction current, ICfgNode next) {
+        if (!current.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? successorsForType)) {
             successorsForType = new HashSet<ICfgNode>();
-            call.SuccessorsPerType[type] = successorsForType;
+            current.SuccessorsPerType[type] = successorsForType;
         }
         successorsForType.Add(next);
-        LinkCfgInstruction(call, next);
+        LinkCfgInstruction(current, next);
     }
 
-    private InstructionSuccessorType ComputeSuccessorType(CfgInstruction call, ICfgNode nextAfterRet) {
+    private InstructionSuccessorType ComputeSuccessorTypeForRet(CfgInstruction call, ICfgNode nextAfterRet) {
         if (call.NextInMemoryAddress != nextAfterRet.Address) {
             // Instruction executed after ret is not the next instruction in memory from the call.
             return InstructionSuccessorType.CallToMisalignedReturn;
@@ -135,18 +134,15 @@ public class NodeLinker : InstructionReplacer {
         next.Predecessors.Add(current);
     }
 
-    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        // Unlinks old from the graph and links instruction instead, effectively replacing it
-        InsertIntermediatePredecessor(old, instruction);
-        foreach (ICfgNode successor in old.Successors) {
-            LinkToNext(instruction, successor);
-            successor.Predecessors.Remove(old);
-            old.Successors.Remove(successor);
-        }
-
-        instruction.UpdateSuccessorCache();
-        old.UpdateSuccessorCache();
-        ReplaceSuccessorsPerType(old, instruction);
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        // Switch predecessors and successors of old to new
+        SwitchPredecessorsToNew(oldInstruction, newInstruction);
+        SwitchSuccessorsToNew(oldInstruction, newInstruction);
+        // Keep data from SuccessorsPerType map of old
+        ReplaceSuccessorsPerType(oldInstruction, newInstruction);
+        // Update caches
+        newInstruction.UpdateSuccessorCache();
+        oldInstruction.UpdateSuccessorCache();
     }
 
     /// <summary>
@@ -155,19 +151,31 @@ public class NodeLinker : InstructionReplacer {
     /// <param name="current"></param>
     /// <param name="newPredecessor"></param>
     public void InsertIntermediatePredecessor(ICfgNode current, ICfgNode newPredecessor) {
-        foreach (ICfgNode predecessor in current.Predecessors) {
-            // Replace current with new in the predecessors successors (:
-            LinkToNext(predecessor, newPredecessor);
-            predecessor.Successors.Remove(current);
-            predecessor.UpdateSuccessorCache();
-            if (predecessor is CfgInstruction predecessorInstruction) {
-                ReplaceSuccessorOfCallInstruction(predecessorInstruction, current, newPredecessor);
-            }
-        }
+        SwitchPredecessorsToNew(current, newPredecessor);
         // Make new the only predecessor of current
         current.Predecessors.Clear();
         LinkToNext(newPredecessor, current);
         newPredecessor.UpdateSuccessorCache();
+    }
+
+    private void SwitchSuccessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
+        foreach (ICfgNode successor in oldNode.Successors) {
+            LinkToNext(newNode, successor);
+            successor.Predecessors.Remove(oldNode);
+            oldNode.Successors.Remove(successor);
+        }
+    }
+
+    private void SwitchPredecessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
+        foreach (ICfgNode predecessor in oldNode.Predecessors) {
+            // Replace current with new in the predecessors successors (:
+            LinkToNext(predecessor, newNode);
+            predecessor.Successors.Remove(oldNode);
+            predecessor.UpdateSuccessorCache();
+            if (predecessor is CfgInstruction predecessorInstruction) {
+                ReplaceSuccessorOfCallInstruction(predecessorInstruction, oldNode, newNode);
+            }
+        }
     }
 
     private void ReplaceSuccessorOfCallInstruction(CfgInstruction instruction, ICfgNode currentSuccesor, ICfgNode newSuccesor) {

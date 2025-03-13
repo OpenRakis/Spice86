@@ -152,6 +152,7 @@ public class CfgNodeFeederTest {
         // Act
         // We are still after movAx0 but it changed to MOV AX 1234.
         WriteMovAx(EndOfMov0Address, NewValue);
+        // Execute changed instruction
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
         ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
