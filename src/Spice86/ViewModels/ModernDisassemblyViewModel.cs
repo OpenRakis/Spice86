@@ -292,7 +292,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             }
         }
 
-        // Notify that the current instruction has changed and should be scrolled to
+        // Set the current instruction address to trigger the view to scroll to it
         CurrentInstructionAddress = currentInstructionAddress;
 
         // Now that we've ensured the instructions are loaded, update the highlighting

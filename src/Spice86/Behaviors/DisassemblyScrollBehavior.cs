@@ -224,7 +224,7 @@ public class DisassemblyScrollBehavior
         }
     }
 
-    // Main scrolling logic with timing information
+    // Method to scroll to a specific address in the disassembly view
     public static void ScrollToAddress(ListBox listBox, uint targetAddress)
     {
         // Ensure we're on the UI thread
@@ -277,6 +277,9 @@ public class DisassemblyScrollBehavior
                 // Force layout update to ensure ScrollIntoView is applied
                 listBox.InvalidateArrange();
                 
+                // Set the selected item for better visibility
+                listBox.SelectedItem = targetItem;
+                
                 // Try to find the container for the target item
                 if (listBox.ContainerFromItem(targetItem) is ListBoxItem container)
                 {
@@ -285,23 +288,39 @@ public class DisassemblyScrollBehavior
                     
                     // Successfully scrolled, remove from pending targets
                     _pendingScrollTargets.Remove(listBox);
+                    
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Scroll operation completed, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
                 }
                 else
                 {
-                    // Container not found yet, the LayoutUpdated event will handle it
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Container not found yet, will be handled when layout is updated, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                    // Container not found yet, try again with a short delay
+                    // This is important for dynamically changing item collections
+                    Dispatcher.UIThread.Post(() => {
+                        try {
+                            // Try again to find the container after a short delay
+                            if (listBox.ContainerFromItem(targetItem) is ListBoxItem delayedContainer)
+                            {
+                                CenterContainerInViewport(scrollViewer, delayedContainer, startTime);
+                                _pendingScrollTargets.Remove(listBox);
+                                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Scroll operation completed after delay, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                            }
+                            else
+                            {
+                                // Still not found, just ensure it's in view
+                                listBox.ScrollIntoView(targetItem);
+                                // _pendingScrollTargets.Remove(listBox);
+                                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Container not found after delay, falling back to ScrollIntoView, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                            }
+                        }
+                        finally {
+                            // Make sure we're unsubscribed from the LayoutUpdated event
+                            listBox.LayoutUpdated -= OnListBoxLayoutUpdated;
+                        }
+                    }, DispatcherPriority.Background);
                     
-                    // Make sure we're subscribed to the LayoutUpdated event
+                    // Subscribe to LayoutUpdated as a backup
                     listBox.LayoutUpdated -= OnListBoxLayoutUpdated; // Avoid duplicate handlers
                     listBox.LayoutUpdated += OnListBoxLayoutUpdated;
-                    
-                    // For jumps to addresses far outside the current viewport, we need to force a more aggressive scroll
-                    // This helps ensure the virtualization panel creates the containers we need
-                    Dispatcher.UIThread.Post(() => {
-                        // Try again with a delay to allow the UI to update
-                        listBox.ScrollIntoView(targetItem);
-                        listBox.InvalidateArrange();
-                    }, DispatcherPriority.Render);
                 }
             }
             else
@@ -311,7 +330,8 @@ public class DisassemblyScrollBehavior
         }
         finally
         {
-            _isScrollingInProgress = false;
+            // Release the lock after a short delay to prevent rapid re-entry
+            Dispatcher.UIThread.Post(() => _isScrollingInProgress = false, DispatcherPriority.Background);
         }
     }
     

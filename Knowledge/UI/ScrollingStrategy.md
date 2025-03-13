@@ -98,7 +98,12 @@ The scrolling strategy is implemented using Avalonia's attached behaviors to mai
 - Unsubscribes from events when not needed to improve performance
 - Avoids retry mechanisms in favor of event-driven approach
 
+### View Implementation
+- ModernDisassemblyView subscribes to LayoutUpdated events to detect when containers are created
+- When the current instruction address changes, it first calls ScrollIntoView to bring the item into the virtualized panel
+- Once the container is created (detected via LayoutUpdated), it centers the item in the viewport
+- This approach works reliably even when jumping to addresses far from the current viewport
+
 ### Thread Safety
 - All UI updates are performed on the UI thread using Dispatcher.UIThread.Post()
 - Asynchronous operations are properly handled to avoid UI freezing
-

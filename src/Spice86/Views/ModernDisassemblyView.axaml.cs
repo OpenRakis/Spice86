@@ -12,7 +12,7 @@ using Spice86.ViewModels;
 /// </summary>
 public partial class ModernDisassemblyView : UserControl {
     private IModernDisassemblyViewModel? _viewModel;
-
+    
     /// <summary>
     /// Initializes a new instance of the <see cref="ModernDisassemblyView"/> class.
     /// </summary>
@@ -57,11 +57,11 @@ public partial class ModernDisassemblyView : UserControl {
 
         // Get the current instruction address from the view model
         uint currentInstructionAddress = _viewModel.CurrentInstructionAddress;
-
+        
         // Scroll to the current instruction address
         DisassemblyScrollBehavior.ScrollToAddress(disassemblyListBox, currentInstructionAddress);
     }
-    
+
     /// <summary>
     /// Event handler for the GoToCsIp button click.
     /// Directly calls the ScrollToAddress method in the DisassemblyScrollBehavior.
