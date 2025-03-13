@@ -20,6 +20,18 @@ using System.Collections.Frozen;
 /// </summary>
 public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRequestInterrupt,
     IBlasterEnvVarProvider, IDisposable {
+
+    /// <summary>
+    /// The port number for the MPU-401 MIDI data port.
+    /// </summary>
+    public const int MPU401_DATA_PORT = 0x300;
+
+    /// <summary>
+    /// The port number for the MPU-401 MIDI status/command port.
+    /// </summary>
+    public const int MPU401_STATUS_COMMAND_PORT = 0x301;
+
+
     /// <summary>
     /// The port number for checking if data is available to be read from the DSP.
     /// </summary>
@@ -163,7 +175,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
     /// </summary>
-    public SbType SbType { get; set; } = SbType.Sb16;
+    public SbType SbType { get; set; } = SbType.SbPro;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -205,6 +217,10 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
         switch (port) {
+            case MPU401_DATA_PORT:
+                return 0x0;
+            case MPU401_STATUS_COMMAND_PORT:
+                return 0xC0; //No data, and the interface is not ready
             case DspPorts.DspReadStatus:
                 return _dsp.IsDmaTransferActive ? (byte)0xff : (byte)0x7f;
             case DspPorts.DspReadData:
@@ -229,7 +245,14 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public override void WriteByte(ushort port, byte value) {
         _deviceThread.StartThreadIfNeeded();
         switch (port) {
+            case MPU401_DATA_PORT:
+                //ignored
+                return;
+            case MPU401_STATUS_COMMAND_PORT:
+                //ignored
+                return;
             case DspPorts.DspWriteStatus:
+                //ignored
                 return;
             case DspPorts.DspReset:
                 switch (value) {
@@ -360,6 +383,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(IGNORE_PORT, this);
+        ioPortDispatcher.AddIOPortHandler(MPU401_DATA_PORT, this);
+        ioPortDispatcher.AddIOPortHandler(MPU401_STATUS_COMMAND_PORT, this);
         // Those are managed by OPL3FM class.
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
