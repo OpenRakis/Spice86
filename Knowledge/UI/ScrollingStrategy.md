@@ -88,10 +88,15 @@ The scrolling strategy is implemented using Avalonia's attached behaviors to mai
 
 ### Key Methods in DisassemblyScrollBehavior
 - ScrollToAddress(listBox, targetAddress): Scrolls to position an item in the middle of viewport
-- IsWithinMiddleRangeOfViewPort(listBox, address): Checks if an address is already in the middle zone
+- CenterContainerInViewport(scrollViewer, container, targetAddress, startTime): Centers a container in the viewport
 - GetVisibleDebuggerLines(listBox): Gets the currently visible instruction lines
 - GetMiddleItems(items): Gets the items in the middle zone of the viewport
-- CalculateOffsetByIndex(targetIndex, totalItems, estimatedItemHeight, scrollViewer): Calculates scroll offset based on item index
+
+### Event-Based Scrolling
+- Uses the LayoutUpdated event to detect when containers are materialized
+- Automatically centers the current instruction when it becomes visible
+- Unsubscribes from events when not needed to improve performance
+- Avoids retry mechanisms in favor of event-driven approach
 
 ### Thread Safety
 - All UI updates are performed on the UI thread using Dispatcher.UIThread.Post()
