@@ -277,9 +277,6 @@ public class DisassemblyScrollBehavior
                 // Force layout update to ensure ScrollIntoView is applied
                 listBox.InvalidateArrange();
                 
-                // Set the selected item for better visibility
-                listBox.SelectedItem = targetItem;
-                
                 // Try to find the container for the target item
                 if (listBox.ContainerFromItem(targetItem) is ListBoxItem container)
                 {
@@ -295,28 +292,58 @@ public class DisassemblyScrollBehavior
                 {
                     // Container not found yet, try again with a short delay
                     // This is important for dynamically changing item collections
-                    Dispatcher.UIThread.Post(() => {
+                    DispatcherTimer timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
+                    timer.Tick += (s, e) => {
+                        timer.Stop();
                         try {
-                            // Try again to find the container after a short delay
-                            if (listBox.ContainerFromItem(targetItem) is ListBoxItem delayedContainer)
+                            // Implement a retry loop that tries for up to 3 seconds
+                            int maxRetries = 3; // 3 * 10ms = 30 milliseconds maximum retry time
+                            int currentRetry = 0;
+                            
+                            void TryGetContainer()
                             {
-                                CenterContainerInViewport(scrollViewer, delayedContainer, startTime);
-                                _pendingScrollTargets.Remove(listBox);
-                                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Scroll operation completed after delay, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                                // Try to find the container after a short delay
+                                if (listBox.ContainerFromItem(targetItem) is ListBoxItem delayedContainer)
+                                {
+                                    CenterContainerInViewport(scrollViewer, delayedContainer, startTime);
+                                    _pendingScrollTargets.Remove(listBox);
+                                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Scroll operation completed after {currentRetry} retries, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                                }
+                                else if (currentRetry < maxRetries)
+                                {
+                                    // Still not found, try again after a short delay
+                                    currentRetry++;
+                                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Container not found, retry {currentRetry}/{maxRetries}, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                                    
+                                    // Ensure the item is in view to help with container creation
+                                    listBox.ScrollIntoView(targetItem);
+                                    listBox.InvalidateArrange();
+                                    
+                                    // Schedule another retry after a short delay
+                                    timer.Interval = TimeSpan.FromMilliseconds(10);
+                                    timer.Start();
+                                }
+                                else
+                                {
+                                    // Max retries reached, fall back to simple ScrollIntoView
+                                    listBox.ScrollIntoView(targetItem);
+                                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Max retries ({maxRetries}) reached, falling back to ScrollIntoView, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                                    
+                                    // We're keeping this in pending targets since we couldn't properly center it
+                                    // The next layout update might succeed
+                                }
                             }
-                            else
-                            {
-                                // Still not found, just ensure it's in view
-                                listBox.ScrollIntoView(targetItem);
-                                // _pendingScrollTargets.Remove(listBox);
-                                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Container not found after delay, falling back to ScrollIntoView, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-                            }
+                            
+                            // Start the retry process
+                            TryGetContainer();
                         }
                         finally {
                             // Make sure we're unsubscribed from the LayoutUpdated event
+                            // We'll let the retry mechanism handle it instead
                             listBox.LayoutUpdated -= OnListBoxLayoutUpdated;
                         }
-                    }, DispatcherPriority.Background);
+                    };
+                    timer.Start();
                     
                     // Subscribe to LayoutUpdated as a backup
                     listBox.LayoutUpdated -= OnListBoxLayoutUpdated; // Avoid duplicate handlers
