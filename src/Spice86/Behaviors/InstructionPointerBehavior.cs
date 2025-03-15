@@ -33,13 +33,11 @@ public class InstructionPointerBehavior
         {
             // Subscribe to pointer events
             control.PointerPressed += OnPointerPressed;
-            // Console.WriteLine("InstructionPointerBehavior enabled");
         }
         else
         {
             // Unsubscribe from pointer events
             control.PointerPressed -= OnPointerPressed;
-            // Console.WriteLine("InstructionPointerBehavior disabled");
         }
     }
 
@@ -78,7 +76,5 @@ public class InstructionPointerBehavior
 
         // Select the line
         viewModel.SelectedDebuggerLine = line;
-
-        // The context menu is handled via XAML binding to the ViewModel commands
     }
 }

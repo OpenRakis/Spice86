@@ -58,12 +58,7 @@ public class DisassemblyScrollBehavior {
         }
 
         bool isEnabled = (bool)e.NewValue!;
-        Console.WriteLine($"IsEnabled changed to {isEnabled}");
-
         if (isEnabled) {
-            // Initialize any resources needed
-            Console.WriteLine("DisassemblyScrollBehavior enabled");
-
             // Subscribe to the Loaded event to handle initial centering
             listBox.Loaded += OnListBoxLoaded;
 
@@ -76,8 +71,6 @@ public class DisassemblyScrollBehavior {
                 }
             }
         } else {
-            // Clean up any resources
-            Console.WriteLine("DisassemblyScrollBehavior disabled");
             listBox.Loaded -= OnListBoxLoaded;
         }
     }
@@ -88,17 +81,12 @@ public class DisassemblyScrollBehavior {
             return;
         }
 
-        Console.WriteLine("OnListBoxLoaded");
-
         // Unsubscribe from the Loaded event to avoid multiple calls
         listBox.Loaded -= OnListBoxLoaded;
 
         // Check if we have a target address for this ListBox
         uint targetAddress = GetTargetAddress(listBox);
         if (targetAddress != 0) {
-            // Now that the ListBox is loaded, we can scroll to the target address
-            Console.WriteLine($"ListBox now loaded, scrolling to target {targetAddress:X8}");
-            // Delay the scroll to ensure the UI has fully loaded
             Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
         }
     }
@@ -108,19 +96,10 @@ public class DisassemblyScrollBehavior {
         if (control is not ListBox listBox || !GetIsEnabled(listBox)) {
             return;
         }
-
         uint targetAddress = (uint)e.NewValue!;
-        Console.WriteLine($"OnTargetAddress changed to {targetAddress:X8}");
-
-        // Only scroll if the ListBox is loaded
         if (listBox.IsLoaded) {
-            // Directly scroll to the address
             ScrollToAddress(listBox, targetAddress);
         } else {
-            Console.WriteLine($"ListBox IsLoaded: {listBox.IsLoaded}, IsVisible: {listBox.IsVisible}");
-            Console.WriteLine($"ListBox not loaded yet, will scroll to {targetAddress:X8} when loaded");
-
-            // Subscribe to Loaded event if not already subscribed
             listBox.Loaded -= OnListBoxLoaded;
             listBox.Loaded += OnListBoxLoaded;
         }
@@ -128,7 +107,6 @@ public class DisassemblyScrollBehavior {
 
     // Method to scroll to a specific address in the disassembly view
     public static void ScrollToAddress(ListBox listBox, uint targetAddress) {
-        Console.WriteLine($"ScrollToAddress called to go to address {targetAddress:X8}");
         // Ensure we're on the UI thread
         if (!Dispatcher.UIThread.CheckAccess()) {
             Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress));
@@ -143,14 +121,9 @@ public class DisassemblyScrollBehavior {
 
         _isScrollingInProgress = true;
         try {
-            DateTime startTime = DateTime.Now;
-            Console.WriteLine($"[{startTime:HH:mm:ss.fff}] Starting scroll to address {targetAddress:X8}");
-
             // Find the ScrollViewer
             ScrollViewer? scrollViewer = listBox.FindDescendantOfType<ScrollViewer>() ?? listBox.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
             if (scrollViewer == null) {
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] ScrollViewer not found, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-
                 return;
             }
 
@@ -159,57 +132,37 @@ public class DisassemblyScrollBehavior {
                 // Get the target item using the O(1) lookup
                 DebuggerLineViewModel? targetItem = viewModel.GetLineByAddress(targetAddress);
                 if (targetItem == null) {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Could not find instruction with address {targetAddress:X8}, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-
                     return;
                 }
-
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Found target item with address {targetItem.Address:X8}, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
 
                 // Find the index of the target item in the sorted collection
                 int targetIndex = viewModel.SortedDebuggerLinesView.IndexOf(targetItem);
                 if (targetIndex == -1) {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Target item not found in sorted view, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-
                     return;
                 }
 
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Target item index: {targetIndex}, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-
                 // Scroll to the target item
-                Dispatcher.UIThread.Post(() => ScrollToPosition(listBox, scrollViewer, startTime, targetIndex), DispatcherPriority.Loaded);
-
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Scroll operation completed, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
-            } else {
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] DataContext is not IModernDisassemblyViewModel, elapsed: {(DateTime.Now - startTime).TotalMilliseconds}ms");
+                Dispatcher.UIThread.Post(() => ScrollToPosition(listBox, scrollViewer, targetIndex), DispatcherPriority.Loaded);
             }
-        } catch (Exception ex) {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] Error scrolling to address: {ex.Message}");
         } finally {
             // Release the lock
             _isScrollingInProgress = false;
         }
     }
 
-    private static void ScrollToPosition(ListBox listBox, ScrollViewer scrollViewer, DateTime startTime, int targetIndex) {
-        // Determine the line height using the listBox.ItemCount for deterministic calculation
-        // Try to calculate line height from extent and item count
+    private static void ScrollToPosition(ListBox listBox, ScrollViewer scrollViewer, int targetIndex) {
         int itemCount = listBox.ItemCount;
         if (itemCount <= 0) {
-            Console.WriteLine($"ItemCount is {itemCount}, cannot calculate line height");
-
             return;
         }
 
         double extentHeight = scrollViewer.Extent.Height;
         if (extentHeight <= 0) {
-            Console.WriteLine($"Extent height is {extentHeight}, cannot calculate line height");
-
             return;
         }
 
-        // Calculate relevant positions
         double lineHeight = extentHeight / itemCount;
+        // Calculate relevant positions
         double topMargin = 4 * lineHeight;
         double bottomMargin = 6 * lineHeight;
         double currentOffset = scrollViewer.Offset.Y;

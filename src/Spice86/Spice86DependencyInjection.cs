@@ -265,7 +265,7 @@ public class Spice86DependencyInjection : IDisposable {
                 memory, state,
                 functionsInformation,
                 breakpointsViewModel, pauseHandler,
-                uiThreadDispatcher, messenger, textClipboard);
+                uiThreadDispatcher, messenger, textClipboard, loggerService);
             PaletteViewModel paletteViewModel = new(
                 videoState.DacRegisters.ArgbPalette,
                 uiThreadDispatcher);
