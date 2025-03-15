@@ -396,9 +396,21 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             return;
         }
 
+        // Store the current instruction address before stepping
+        uint currentAddress = CurrentInstructionAddress;
+
         // Only step over instructions that return
         if (!debuggerLine.CanBeSteppedOver) {
-            StepInto();
+            _logger.Debug("Setting unconditional breakpoint for step over");
+
+            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
+                // When the breakpoint is hit, pause the emulator
+                Pause("Step over unconditional breakpoint was reached");
+                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, _state.IpPhysicalAddress);
+            }, true);
+
+            _logger.Debug("Resuming execution for step over");
+            _pauseHandler.Resume();
 
             return;
         }
@@ -406,18 +418,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         // Calculate the next instruction address
         uint nextInstructionAddress = debuggerLine.NextAddress;
 
-        // Store the current instruction address before stepping
-        uint currentAddress = CurrentInstructionAddress;
-
         // Set the breakpoint at the next instruction address
         _emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, nextInstructionAddress, onReached: _ => {
             Pause($"Step over execution breakpoint was reached at address {nextInstructionAddress}");
-
-            // Ensure we update the current instruction address from the CPU state
-            // This is done in OnPausing, but we log it here for clarity
             _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, _state.IpPhysicalAddress);
         }, isRemovedOnTrigger: true), on: true);
 
+        _logger.Debug("Resuming execution for step over");
         _pauseHandler.Resume();
     }
 
