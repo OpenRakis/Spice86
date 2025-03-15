@@ -2,37 +2,53 @@ namespace Spice86.Behaviors;
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
-using System;
-using System.Linq;
-
 using Spice86.ViewModels;
+
+using System.Timers;
 
 /// <summary>
 /// Attached behavior for handling scrolling in the disassembly view.
 /// This behavior encapsulates the UI-specific scrolling logic to improve separation of concerns.
 /// </summary>
 public class DisassemblyScrollBehavior {
+    private const int AnimationFramesPerSecond = 60;
+
     // Attached property for enabling the behavior
     public static readonly AttachedProperty<bool> IsEnabledProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, bool>("IsEnabled");
 
     // Attached property for the target address
     public static readonly AttachedProperty<uint> TargetAddressProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, uint>("TargetAddress");
 
-    // Helper methods for getting/setting the attached properties
-    public static bool GetIsEnabled(Control control) => control.GetValue(IsEnabledProperty);
-    public static void SetIsEnabled(Control control, bool value) => control.SetValue(IsEnabledProperty, value);
+    // Static field to track if we're currently processing a scroll operation
+    private static bool _isScrollingInProgress;
 
-    public static uint GetTargetAddress(Control control) => control.GetValue(TargetAddressProperty);
-    public static void SetTargetAddress(Control control, uint value) => control.SetValue(TargetAddressProperty, value);
+    // Configuration properties for smooth scrolling
+    private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(250);
 
     // Static constructor to register property changed handlers
     static DisassemblyScrollBehavior() {
         IsEnabledProperty.Changed.AddClassHandler<Control>(OnIsEnabledChanged);
         TargetAddressProperty.Changed.AddClassHandler<Control>(OnTargetAddressChanged);
+    }
+
+    // Helper methods for getting/setting the attached properties
+    public static bool GetIsEnabled(Control control) {
+        return control.GetValue(IsEnabledProperty);
+    }
+
+    public static void SetIsEnabled(Control control, bool value) {
+        control.SetValue(IsEnabledProperty, value);
+    }
+
+    public static uint GetTargetAddress(Control control) {
+        return control.GetValue(TargetAddressProperty);
+    }
+
+    public static void SetTargetAddress(Control control, uint value) {
+        control.SetValue(TargetAddressProperty, value);
     }
 
     // Handler for when IsEnabled property changes
@@ -86,9 +102,6 @@ public class DisassemblyScrollBehavior {
             Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
         }
     }
-
-    // Static field to track if we're currently processing a scroll operation
-    private static bool _isScrollingInProgress;
 
     // Handler for when TargetAddress property changes
     private static void OnTargetAddressChanged(Control control, AvaloniaPropertyChangedEventArgs e) {
@@ -187,12 +200,14 @@ public class DisassemblyScrollBehavior {
 
             return;
         }
+
         double extentHeight = scrollViewer.Extent.Height;
         if (extentHeight <= 0) {
             Console.WriteLine($"Extent height is {extentHeight}, cannot calculate line height");
 
             return;
         }
+
         // Calculate relevant positions
         double lineHeight = extentHeight / itemCount;
         double topMargin = 4 * lineHeight;
@@ -221,6 +236,55 @@ public class DisassemblyScrollBehavior {
         double maxOffset = Math.Max(0, scrollViewer.Extent.Height - viewportHeight);
         double finalOffset = Math.Min(targetOffset, maxOffset);
 
-        scrollViewer.Offset = new Vector(scrollViewer.Offset.X, finalOffset);
+        // Use smooth scrolling with configurable parameters
+        AnimateSmoothScroll(scrollViewer, finalOffset);
+    }
+
+    private static void AnimateSmoothScroll(ScrollViewer scrollViewer, double targetOffsetY) {
+        // Get the current offset
+        double startOffsetY = scrollViewer.Offset.Y;
+
+        // If we're already at the target, no need to animate
+        if (Math.Abs(startOffsetY - targetOffsetY) < 0.1) {
+            return;
+        }
+
+        // Ensure we're on the UI thread
+        if (!Dispatcher.UIThread.CheckAccess()) {
+            Dispatcher.UIThread.Post(() => AnimateSmoothScroll(scrollViewer, targetOffsetY));
+
+            return;
+        }
+
+        // Use a timer to animate the scroll
+        var timer = new Timer(1000.0 / AnimationFramesPerSecond);
+        int currentFrame = 0;
+        int totalFrames = (int)(AnimationDuration.TotalMilliseconds / (1000.0 / AnimationFramesPerSecond));
+
+        timer.Elapsed += (sender, e) => {
+            // Calculate progress (0.0 to 1.0)
+            currentFrame++;
+            double progress = Math.Min(1.0, currentFrame / (double)totalFrames);
+
+            // Apply easing function
+            double easedProgress = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.Pow(-2 * progress + 2, 3) / 2;
+
+            // Calculate new offset
+            double newOffsetY = startOffsetY + (targetOffsetY - startOffsetY) * easedProgress;
+
+            // Apply the new offset on the UI thread
+            Dispatcher.UIThread.Post(() => {
+                scrollViewer.Offset = new Vector(scrollViewer.Offset.X, newOffsetY);
+            });
+
+            // Stop the timer when animation is complete
+            if (progress >= 1.0) {
+                timer.Stop();
+                timer.Dispose();
+            }
+        };
+
+        // Start the timer
+        timer.Start();
     }
 }
