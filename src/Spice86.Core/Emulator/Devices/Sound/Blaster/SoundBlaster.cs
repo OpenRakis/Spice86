@@ -175,7 +175,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
     /// </summary>
-    public SbType SbType { get; set; } = SbType.SbPro;
+    public SbType SbType { get; set; } = SbType.Sb16;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -218,7 +218,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public override byte ReadByte(ushort port) {
         switch (port) {
             case MPU401_DATA_PORT:
-                return 0x0;
+                return 0xFF;
             case MPU401_STATUS_COMMAND_PORT:
                 return 0xC0; //No data, and the interface is not ready
             case DspPorts.DspReadStatus:
