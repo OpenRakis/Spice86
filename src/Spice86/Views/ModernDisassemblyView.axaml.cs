@@ -39,10 +39,7 @@ public partial class ModernDisassemblyView : UserControl {
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
-        // When the CurrentInstructionAddress property changes, scroll to that address
-        if (e.PropertyName == nameof(IModernDisassemblyViewModel.CurrentInstructionAddress)) {
-            ScrollToCurrentInstruction();
-        }
+
     }
 
     private void ScrollToCurrentInstruction() {
