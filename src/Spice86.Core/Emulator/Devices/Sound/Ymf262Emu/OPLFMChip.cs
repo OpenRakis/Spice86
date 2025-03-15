@@ -17,14 +17,7 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     private bool _dualOpl = false;
 
     private readonly SoundChannel _soundChannel;
-    //TODO: replace it with nukedOpl3.
-    private readonly dynamic? _synth;
-    private int _currentAddress;
     private readonly DeviceThread _deviceThread;
-    private byte _statusByte;
-    private byte _timer1Data;
-    private byte _timer2Data;
-    private byte _timerControlByte;
     private readonly float[] _synthReadBuffer = new float[1024];
     private readonly float[] _playBuffer = new float[1024 * 2];
 
@@ -86,69 +79,38 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
-        //if ((_timerControlByte & 0x01) != 0x00 && (_statusByte & Timer1Mask) == 0) {
-        //    _timer1Data++;
-        //    if (_timer1Data == 0) {
-        //        _statusByte |= Timer1Mask;
-        //    }
-        //}
-
-        //if ((_timerControlByte & 0x02) != 0x00 && (_statusByte & Timer2Mask) == 0) {
-        //    _timer2Data++;
-        //    if (_timer2Data == 0) {
-        //        _statusByte |= Timer2Mask;
-        //    }
-        //}
-
-        //return _statusByte;
+        //TOOD, from Opl::PortRead
         throw new NotImplementedException();
     }
 
     /// <inheritdoc />
     public override ushort ReadWord(ushort port) {
-        //return _statusByte;
+        //TODO...?
         throw new NotImplementedException();
     }
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        if (port == 0x388) {
-            _currentAddress = value;
-        } else if (port == 0x389) {
-            if (_currentAddress == 0x02) {
-                _timer1Data = value;
-            } else if (_currentAddress == 0x03) {
-                _timer2Data = value;
-            } else if (_currentAddress == 0x04) {
-                _timerControlByte = value;
-                if ((value & 0x80) == 0x80) {
-                    _statusByte = 0;
-                }
-            } else {
-                InitializePlaybackIfNeeded();
-                _synth?.SetRegisterValue(0, _currentAddress, value);
-            }
-        }
+        InitializePlaybackIfNeeded();
+        //TODO, from Opl::PortWrite
     }
 
     private void InitializePlaybackIfNeeded() {
         if (!_deviceThread.Active) {
             _deviceThread.StartThreadIfNeeded();
         }
-    } 
+    }
 
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
-        //if (port == 0x388) {
-        //    WriteByte(0x388, (byte)value);
-        //    WriteByte(0x389, (byte)(value >> 8));
-        //}
+       //TODO...?
     }
 
     /// <summary>
     /// Generates and plays back output waveform data.
     /// </summary>
     private void PlaybackLoopBody() {
+        //TODO
         //_soundChannel.Render(_playBuffer);
     }
 }
