@@ -1,9 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.IOPorts;
-using Spice86.Shared.Interfaces;
 
 public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
@@ -126,11 +123,11 @@ public class Chip {
         // LOG(LOG_MISC,LOG_ERROR)("write adlib timer %X %X",reg,val);
         switch (reg) {
             case 0x02:
-                Timer0.Update(TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds);
+                Timer0.Update(_timer.EmulatorRunTime);
                 Timer0.SetCounter(val);
                 return true;
             case 0x03:
-                Timer1.Update(TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds);
+                Timer1.Update(_timer.EmulatorRunTime);
                 Timer1.SetCounter(val);
                 return true;
             case 0x04:
@@ -139,7 +136,7 @@ public class Chip {
                     Timer0.Reset();
                     Timer1.Reset();
                 } else {
-                    double time = TimeSpan.FromTicks(_timer.NumberOfTicks).TotalMilliseconds;
+                    double time = _timer.EmulatorRunTime;
                     if ((val & 0x1) > 0) {
                         Timer0.Start(time);
                     } else {
@@ -163,7 +160,7 @@ public class Chip {
     /// Read the current timer state, will use current double
     /// </summary>
     public byte Read() {
-        TimeSpan time = TimeSpan.FromTicks(_timer.NumberOfTicks);
+        TimeSpan time = TimeSpan.FromMilliseconds(_timer.EmulatorRunTime);
         byte ret = 0;
 
         // Overflow won't be set if a channel is masked
