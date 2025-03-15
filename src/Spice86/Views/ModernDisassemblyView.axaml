@@ -104,6 +104,15 @@
                                     Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}"
                                     ContextMenu="{StaticResource InstructionContextMenu}"
                                     behaviors:InstructionPointerBehavior.IsEnabled="True">
+                        <ContentControl.Styles>
+                            <Style Selector="SelectableTextBlock">
+                                <Setter Property="Foreground"
+                                        Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
+                                <Setter Property="Background"
+                                        Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
+                            </Style>
+                        </ContentControl.Styles>
+
                         <Grid ColumnDefinitions="Auto, Auto, *,4*">
                             <!-- Breakpoint indicator -->
                             <Ellipse Grid.Column="0"
@@ -114,16 +123,17 @@
                                      VerticalAlignment="Center" />
 
                             <!-- Address -->
-                            <TextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
-                                       Margin="0,0,8,0" />
+                            <SelectableTextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
+                                                 Margin="0,0,8,0" />
 
                             <!-- Bytes -->
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding ByteString}"
-                                       Margin="8,0,0,0" />
+                            <SelectableTextBlock Grid.Column="2"
+                                                 Text="{Binding ByteString}"
+                                                 FontSize="11"
+                                                 Margin="8,0,0,0" />
 
                             <!-- Instruction -->
-                            <TextBlock Grid.Column="3" Text="{Binding Disassembly}" />
+                            <SelectableTextBlock Grid.Column="3" Text="{Binding Disassembly}" />
                         </Grid>
                     </ContentControl>
                 </DataTemplate>
