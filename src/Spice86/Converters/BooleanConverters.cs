@@ -12,6 +12,8 @@ public static class BooleanConverters {
     private static readonly IBrush NormalBackground = Brushes.Transparent;
     private static readonly IBrush HighlightForeground = new SolidColorBrush(Color.Parse("#1E90FF"));
     private static readonly IBrush NormalForeground = Brushes.Teal;
+    private static readonly SolidColorBrush DarkModeHighlight = new SolidColorBrush(Color.FromRgb(40, 40, 80));
+    private static readonly SolidColorBrush LightModeHighlight = new SolidColorBrush(Color.FromRgb(173, 214, 255));
     
     /// <summary>
     /// Converts a boolean to a FontWeight (true = Bold, false = Normal).

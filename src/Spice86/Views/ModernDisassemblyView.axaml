@@ -22,6 +22,7 @@
             <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
             <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
         </ContextMenu>
+        <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*">
@@ -115,25 +116,31 @@
 
                         <Grid ColumnDefinitions="Auto, Auto, *,4*">
                             <!-- Breakpoint indicator -->
-                            <Ellipse Grid.Column="0"
-                                     Width="10"
-                                     Height="10"
-                                     Margin="4,0,4,0"
-                                     Fill="{Binding Breakpoints, Converter={StaticResource BreakpointToBrushConverter}}"
-                                     VerticalAlignment="Center" />
+                            <Border Grid.Column="0"
+                                    Width="16"
+                                    Height="16"
+                                    CornerRadius="8"
+                                    Margin="0,0,4,0"
+                                    Background="{Binding HasBreakpoint, Converter={StaticResource BreakpointToBrushConverter}}" />
 
                             <!-- Address -->
-                            <SelectableTextBlock Grid.Column="1" Text="{Binding SegmentedAddress}"
-                                                 Margin="0,0,8,0" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding SegmentedAddress}"
+                                       Foreground="#78C9B0"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,8,0" />
 
                             <!-- Bytes -->
-                            <SelectableTextBlock Grid.Column="2"
-                                                 Text="{Binding ByteString}"
-                                                 FontSize="11"
-                                                 Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding ByteString}"
+                                       Foreground="#B5CEA8"
+                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                       Margin="8,0,0,0" />
 
                             <!-- Instruction -->
-                            <SelectableTextBlock Grid.Column="3" Text="{Binding Disassembly}" />
+                            <TextBlock Grid.Column="3"
+                                       Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                       Margin="16,0,0,0" />
                         </Grid>
                     </ContentControl>
                 </DataTemplate>

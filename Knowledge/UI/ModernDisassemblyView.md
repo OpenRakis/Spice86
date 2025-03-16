@@ -15,6 +15,7 @@ The Modern Disassembly View is designed to provide a clear and efficient way to 
 - **Thread-Safe UI Updates**: Must ensure all UI operations are performed on the UI thread
 - **Efficient Batch Updates**: Must support batch updates of debugger lines to minimize UI update overhead
 - **Fast Lookups**: Must provide O(1) lookups for debugger lines by address
+- **Syntax Highlighting**: Must provide syntax highlighting for disassembly with different colors for different elements
 
 ## Functional Requirements
 
@@ -48,9 +49,18 @@ The view model must maintain a clear state model:
 
 The implementation must ensure thread safety:
 
-1. All UI operations must be performed on the UI thread
-2. Background operations must not cause UI freezes or exceptions
-3. The system must handle concurrent access to shared resources
+1. All UI updates must be performed on the UI thread
+2. Updates from breakpoint callbacks must be marshaled to the UI thread
+3. The view must handle updates from different threads gracefully
+
+### Theme-Aware Colors
+
+The disassembly view must provide appropriate colors for both light and dark themes:
+
+1. Text and background colors must have sufficient contrast in both light and dark modes
+2. Highlighting colors must be visually distinct but not distracting in both themes
+3. Syntax elements (addresses, opcodes, operands) must be visually distinguishable in both themes
+4. Boolean converters must transform values to appropriate theme-aware brushes
 
 ### Stepping Through Code
 
@@ -60,6 +70,16 @@ The stepping functionality must:
 2. Allow stepping over the current instruction when appropriate
 3. Update the UI to reflect the new state after stepping
 4. Maintain proper highlighting of the current instruction
+
+### Syntax Highlighting
+
+The disassembly view must provide syntax highlighting:
+
+1. Different elements of the disassembly must be displayed in different colors
+2. Mnemonics, registers, numbers, and other elements must be visually distinct
+3. The highlighting must be consistent across the entire disassembly
+4. The implementation must be thread-safe and not create UI elements on non-UI threads
+5. The highlighting must use a model that separates formatting from UI creation
 
 ### View-ViewModel Decoupling
 
