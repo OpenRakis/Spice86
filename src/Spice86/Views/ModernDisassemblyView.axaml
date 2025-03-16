@@ -106,9 +106,9 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
-                                    Background="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightBackground}}"
-                                    FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToBold}}"
-                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:BooleanConverters.TrueToHighlightForeground}}"
+                                    Background="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                    FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
+                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
                                     ContextMenu="{StaticResource InstructionContextMenu}"
                                     behaviors:InstructionPointerBehavior.IsEnabled="True">
                         <ContentControl.Styles>
