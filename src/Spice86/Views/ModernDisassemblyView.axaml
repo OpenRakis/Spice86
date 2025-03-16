@@ -11,18 +11,24 @@
              x:Class="Spice86.Views.ModernDisassemblyView"
              x:DataType="viewModels:IModernDisassemblyViewModel">
     <UserControl.Resources>
-        <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Styles/DisassemblyResources.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
 
-        <!-- Context Menu for Instructions -->
-        <ContextMenu x:Key="InstructionContextMenu">
-            <MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
-            <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-            <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
-            <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
-            <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
-            <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
-        </ContextMenu>
-        <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
+            <!-- Context Menu for Instructions -->
+            <ContextMenu x:Key="InstructionContextMenu">
+                <MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
+                <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
+                <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
+                <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
+                <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
+                <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
+            </ContextMenu>
+            <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*">

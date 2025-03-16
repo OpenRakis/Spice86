@@ -38,16 +38,15 @@ public class FormattedTextSegmentsConverter : IValueConverter
             return new InlineCollection();
         }
 
-        InlineCollection inlines = new InlineCollection();
+        var inlines = new InlineCollection();
         
         foreach (FormattedTextSegment segment in segments)
         {
-            Run run = new Run
+            var run = new Run
             {
                 Text = segment.Text,
-                Foreground = FormatterTextKindToBrushConverter.GetBrush(segment.Kind)
             };
-            
+            run.Bind(TextElement.ForegroundProperty, FormatterTextKindToBrushConverter.GetDynamicResourceExtension(segment.Kind));
             inlines.Add(run);
         }
         

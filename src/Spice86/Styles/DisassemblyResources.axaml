@@ -1,0 +1,37 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Theme variant resources -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#0000FF" />
+            <SolidColorBrush x:Key="DisassemblyKeywordBrush" Color="#0000FF" />
+            <SolidColorBrush x:Key="DisassemblyLabelAddressBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyLabelBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyMnemonicBrush" Color="#0000FF" />
+            <SolidColorBrush x:Key="DisassemblyNumberBrush" Color="#800080" />
+            <SolidColorBrush x:Key="DisassemblyOperatorBrush" Color="#000000" />
+            <SolidColorBrush x:Key="DisassemblyPrefixBrush" Color="#0000FF" />
+            <SolidColorBrush x:Key="DisassemblyPunctuationBrush" Color="#000000" />
+            <SolidColorBrush x:Key="DisassemblyRegisterBrush" Color="#800000" />
+            <SolidColorBrush x:Key="DisassemblyTextBrush" Color="#000000" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#80AAFF" />
+            <SolidColorBrush x:Key="DisassemblyKeywordBrush" Color="#569CD6" />
+            <SolidColorBrush x:Key="DisassemblyLabelAddressBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyLabelBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyMnemonicBrush" Color="#569CD6" />
+            <SolidColorBrush x:Key="DisassemblyNumberBrush" Color="#B5CEA8" />
+            <SolidColorBrush x:Key="DisassemblyOperatorBrush" Color="#D4D4D4" />
+            <SolidColorBrush x:Key="DisassemblyPrefixBrush" Color="#569CD6" />
+            <SolidColorBrush x:Key="DisassemblyPunctuationBrush" Color="#D4D4D4" />
+            <SolidColorBrush x:Key="DisassemblyRegisterBrush" Color="#D69D85" />
+            <SolidColorBrush x:Key="DisassemblyTextBrush" Color="#D4D4D4" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>
