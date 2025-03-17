@@ -15,7 +15,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="/Styles/DisassemblyResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
-            
+
             <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
 
             <!-- Context Menu for Instructions -->
@@ -81,76 +81,246 @@
             </StackPanel>
         </Grid>
 
-        <!-- Loading indicator -->
-        <progRing:ProgressRing Grid.Row="1"
-                               Width="40"
-                               Height="40"
-                               IsActive="{Binding IsLoading}"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource SystemAccentColor}" />
+        <!-- Main content area with disassembly and registers -->
+        <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
+            <!-- Loading indicator -->
+            <progRing:ProgressRing Grid.Column="0"
+                                   Width="40"
+                                   Height="40"
+                                   IsActive="{Binding IsLoading}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SystemAccentColor}" />
 
-        <!-- Disassembly View with Scrolling -->
-        <ListBox Grid.Row="1"
-                 IsVisible="{Binding IsPaused}"
-                 ItemsSource="{Binding SortedDebuggerLinesView}"
-                 Name="DisassemblyListBox"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 Padding="0,0,16,0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                 ScrollViewer.VerticalScrollBarVisibility="Visible"
-                 SelectedItem="{Binding SelectedDebuggerLine}"
-                 behaviors:DisassemblyScrollBehavior.IsEnabled="True"
-                 behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
-                                    Background="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
-                                    FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
-                                    Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
-                                    ContextMenu="{StaticResource InstructionContextMenu}"
-                                    behaviors:InstructionPointerBehavior.IsEnabled="True">
-                        <ContentControl.Styles>
-                            <Style Selector="SelectableTextBlock">
-                                <Setter Property="Foreground"
-                                        Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
-                                <Setter Property="Background"
-                                        Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
-                            </Style>
-                        </ContentControl.Styles>
+            <!-- Disassembly View with Scrolling -->
+            <ListBox Grid.Column="0"
+                     IsVisible="{Binding IsPaused}"
+                     ItemsSource="{Binding SortedDebuggerLinesView}"
+                     Name="DisassemblyListBox"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0,0,16,0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                     SelectedItem="{Binding SelectedDebuggerLine}"
+                     behaviors:DisassemblyScrollBehavior.IsEnabled="True"
+                     behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
+                                        Background="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                        FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
+                                        Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                        ContextMenu="{StaticResource InstructionContextMenu}"
+                                        behaviors:InstructionPointerBehavior.IsEnabled="True">
+                            <ContentControl.Styles>
+                                <Style Selector="SelectableTextBlock">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
+                                    <Setter Property="Background"
+                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
+                                </Style>
+                            </ContentControl.Styles>
 
-                        <Grid ColumnDefinitions="Auto, Auto, *,4*">
-                            <!-- Breakpoint indicator -->
-                            <Border Grid.Column="0"
-                                    Width="16"
-                                    Height="16"
-                                    CornerRadius="8"
-                                    Margin="0,0,4,0"
-                                    Background="{Binding HasBreakpoint, Converter={StaticResource BreakpointToBrushConverter}}" />
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*">
+                                <!-- Breakpoint indicator -->
+                                <Border Grid.Column="0"
+                                        Width="16"
+                                        Height="16"
+                                        CornerRadius="8"
+                                        Margin="0,0,4,0"
+                                        Background="{Binding HasBreakpoint, Converter={StaticResource BreakpointToBrushConverter}}" />
 
-                            <!-- Address -->
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding SegmentedAddress}"
-                                       Foreground="#78C9B0"
+                                <!-- Address -->
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SegmentedAddress}"
+                                           Foreground="#78C9B0"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,8,0" />
+
+                                <!-- Bytes -->
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding ByteString}"
+                                           Foreground="#B5CEA8"
+                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                           Margin="8,0,0,0" />
+
+                                <!-- Instruction -->
+                                <TextBlock Grid.Column="3"
+                                           Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                           Margin="16,0,0,0" />
+                            </Grid>
+                        </ContentControl>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Register View Panel -->
+            <Border Grid.Column="1"
+                    Width="250"
+                    IsVisible="{Binding IsPaused}"
+                    BorderBrush="{DynamicResource SystemBaseLowColor}"
+                    BorderThickness="1,0,0,0"
+                    Padding="8">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0"
+                               Text="CPU Registers"
+                               FontWeight="Bold"
+                               Margin="0,0,0,8"
+                               HorizontalAlignment="Center" />
+
+                    <!-- General Purpose Registers -->
+                    <Border Grid.Row="1"
+                            BorderBrush="{DynamicResource SystemBaseLowColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8"
+                            Margin="0,0,0,8">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding Registers.GeneralRegisters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                       Width="40"
+                                                       Foreground="#78C9B0" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <!-- For 32-bit registers (EAX, EBX, etc.) -->
+                                                <TextBlock Text="{Binding UpperWordHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding UpperWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding UpperWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}" />
+
+                                                <!-- High byte (AH, BH, etc.) -->
+                                                <TextBlock Text="{Binding HighByteHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding HighByteChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding HighByteChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                                           Margin="4,0,0,0" />
+
+                                                <!-- Low byte (AL, BL, etc.) -->
+                                                <TextBlock Text="{Binding LowByteHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding LowByteChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding LowByteChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                                           Margin="4,0,0,0" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Pointer Registers -->
+                    <Border Grid.Row="2"
+                            BorderBrush="{DynamicResource SystemBaseLowColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8"
+                            Margin="0,0,0,8">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding Registers.PointerRegisters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                       Width="40"
+                                                       Foreground="#78C9B0" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <!-- For 32-bit registers (EAX, EBX, etc.) -->
+                                                <TextBlock Text="{Binding UpperWordHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding UpperWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding UpperWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}" />
+
+                                                <!-- Lower half -->
+                                                <TextBlock Text="{Binding LowerWordHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding LowerWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding LowerWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                                           Margin="4,0,0,0" />
+
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Segment Registers -->
+                    <Border Grid.Row="3"
+                            BorderBrush="{DynamicResource SystemBaseLowColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8"
+                            Margin="0,0,0,8">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding Registers.SegmentRegisters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="Auto,*" Margin="0,2">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                       Width="40"
+                                                       Foreground="#78C9B0" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <!-- For Segment registers always show 16 bit -->
+                                                <TextBlock Text="{Binding LowerWordHex}"
+                                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                           Foreground="{Binding LowerWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                           Background="{Binding LowerWordChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Flags -->
+                    <Border Grid.Row="4"
+                            BorderBrush="{DynamicResource SystemBaseLowColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8">
+                        <StackPanel>
+                            <TextBlock Text="Flags"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,8,0" />
-
-                            <!-- Bytes -->
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding ByteString}"
-                                       Foreground="#B5CEA8"
-                                       FontFamily="Consolas,Menlo,Monaco,monospace"
-                                       Margin="8,0,0,0" />
-
-                            <!-- Instruction -->
-                            <TextBlock Grid.Column="3"
-                                       Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
-                                       Margin="16,0,0,0" />
-                        </Grid>
-                    </ContentControl>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                                       Margin="0,0,0,4" />
+                            <ItemsControl ItemsSource="{Binding Registers.Flags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="2"
+                                                Padding="4,2"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                                                CornerRadius="2"
+                                                Background="{Binding HasChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                       Foreground="{Binding Value, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
+                                                       FontWeight="{Binding Value, Converter={x:Static converters:HighlightingConverter.TrueToBold}}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

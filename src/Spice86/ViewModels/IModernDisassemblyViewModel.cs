@@ -1,8 +1,11 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+
 using CommunityToolkit.Mvvm.Input;
+
 using Spice86.Models.Debugging;
+
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -11,8 +14,7 @@ using System.ComponentModel;
 /// This interface defines the contract between the View and ViewModel, allowing for
 /// better testability and decoupling.
 /// </summary>
-public interface IModernDisassemblyViewModel : INotifyPropertyChanged
-{
+public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     /// <summary>
     /// The physical address of the current instruction. This is updated when the emulator pauses.
     /// </summary>
@@ -71,6 +73,11 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged
     string Header { get; }
 
     /// <summary>
+    /// The view model for CPU registers.
+    /// </summary>
+    RegistersViewModel Registers { get; }
+
+    /// <summary>
     /// Command to update the disassembly.
     /// </summary>
     IAsyncRelayCommand UpdateDisassemblyCommand { get; }
@@ -101,37 +108,37 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged
     IRelayCommand GoToFunctionCommand { get; }
 
     /// <summary>
-    /// Command to close the current tab.
+    /// Command to close the tab.
     /// </summary>
     IRelayCommand CloseTabCommand { get; }
-    
+
     /// <summary>
-    /// Command to scroll to a specific address in the disassembly view.
+    /// Command to scroll to a specific address.
     /// </summary>
     IRelayCommand<uint> ScrollToAddressCommand { get; }
-    
+
     /// <summary>
     /// Command to create an execution breakpoint at the current instruction.
     /// </summary>
     IAsyncRelayCommand CreateExecutionBreakpointHereCommand { get; }
-    
+
     /// <summary>
     /// Command to remove an execution breakpoint at the current instruction.
     /// </summary>
     IRelayCommand RemoveExecutionBreakpointHereCommand { get; }
-    
+
     /// <summary>
-    /// Command to disable a breakpoint at the current instruction.
+    /// Command to disable a breakpoint.
     /// </summary>
     IRelayCommand DisableBreakpointCommand { get; }
-    
+
     /// <summary>
-    /// Command to enable a breakpoint at the current instruction.
+    /// Command to enable a breakpoint.
     /// </summary>
     IRelayCommand EnableBreakpointCommand { get; }
-    
+
     /// <summary>
-    /// Command to move CS:IP to the current instruction.
+    /// Command to move the CS:IP to the current instruction.
     /// </summary>
     IRelayCommand MoveCsIpHereCommand { get; }
 }

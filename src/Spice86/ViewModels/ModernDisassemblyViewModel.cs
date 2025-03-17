@@ -61,7 +61,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
     // Cached sorted view of the debugger lines
     private ObservableCollection<DebuggerLineViewModel>? _sortedDebuggerLinesView;
-    
+
     // Flag to track if the sorted view needs to be updated
     private bool _sortedViewNeedsUpdate = true;
 
@@ -111,6 +111,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private bool _isUpdatingHighlighting;
     private readonly ILoggerService _logger;
 
+    [ObservableProperty]
+    private RegistersViewModel _registers;
+
     /// <summary>
     /// Gets a sorted view of the debugger lines for UI display.
     /// </summary>
@@ -123,14 +126,15 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
                 } else {
                     _sortedDebuggerLinesView.Clear();
                 }
-                
+
                 // Add all items in sorted order
                 foreach (KeyValuePair<uint, DebuggerLineViewModel> item in DebuggerLines.OrderBy(kvp => kvp.Key)) {
                     _sortedDebuggerLinesView.Add(item.Value);
                 }
-                
+
                 _sortedViewNeedsUpdate = false;
             }
+
             return _sortedDebuggerLinesView;
         }
     }
@@ -158,10 +162,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             }
         } finally {
             _isBatchUpdating = false;
-            
+
             // Mark the sorted view as needing an update
             _sortedViewNeedsUpdate = true;
-            
+
             // Manually trigger notifications after the batch update
             OnPropertyChanged(nameof(DebuggerLines));
             OnPropertyChanged(nameof(SortedDebuggerLinesView));
@@ -171,7 +175,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     // Override OnPropertyChanged to track when the dictionary changes
     protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
         base.OnPropertyChanged(e);
-        
+
         // If the DebuggerLines property changed, and we're not in a batch update,
         // mark the sorted view as needing an update
         if (!_isBatchUpdating && e.PropertyName == nameof(DebuggerLines)) {
@@ -218,6 +222,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         IsPaused = pauseHandler.IsPaused;
         CanCloseTab = canCloseTab;
         CurrentInstructionAddress = _state.IpPhysicalAddress;
+
+        // Initialize the registers view model
+        _registers = new RegistersViewModel(state);
+
         EnableEventHandlers();
         ScrollToAddressCommand = new RelayCommand<uint>(ScrollToAddress);
     }
@@ -301,6 +309,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         // Now that we've ensured the instructions are loaded, update the highlighting
         UpdateCurrentInstructionHighlighting();
 
+        // Update the registers view model
+        Registers.Update();
+
         // Set the paused state last to ensure all updates are complete
         IsPaused = true;
     }
@@ -325,8 +336,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
         try {
             // Log the current state for debugging
-            _logger.Debug("Updating highlighting: CurrentInstructionAddress={CurrentInstructionAddress}, Previous={PreviousInstructionAddress}",
-                CurrentInstructionAddress, _previousInstructionAddress);
+            _logger.Debug("Updating highlighting: CurrentInstructionAddress={CurrentInstructionAddress}, Previous={PreviousInstructionAddress}", CurrentInstructionAddress,
+                _previousInstructionAddress);
             _logger.Debug("Current CPU IP: {StateIpPhysicalAddress}", _state.IpPhysicalAddress);
 
             // Only update if we have a valid current instruction address
@@ -508,10 +519,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private async Task UpdateDisassembly(uint currentInstructionAddress) {
         IsLoading = true;
         Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
-        
+
         // Use the batch update method instead of updating items individually
         UpdateDebuggerLinesInBatch(enrichedInstructions);
-        
+
         IsLoading = false;
     }
 
