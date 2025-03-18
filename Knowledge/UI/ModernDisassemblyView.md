@@ -37,6 +37,15 @@ The view must implement an enhanced scrolling behavior:
 3. Scrolling must be smooth and not disorienting to the user
 4. The view must automatically scroll to the current instruction when the CPU pauses
 
+### Compact Layout
+
+The view must implement a compact layout to maximize screen real estate:
+
+1. Line height must be minimized without sacrificing readability
+2. UI elements must be properly sized and positioned to avoid wasted space
+3. The layout must maintain proper alignment of all disassembly elements
+4. The compact layout must not affect the functionality of the view
+
 ### Property Model
 
 The view model must maintain a clear state model:

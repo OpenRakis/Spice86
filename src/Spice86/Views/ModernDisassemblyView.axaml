@@ -105,6 +105,12 @@
                      SelectedItem="{Binding SelectedDebuggerLine}"
                      behaviors:DisassemblyScrollBehavior.IsEnabled="True"
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="4,1" />
+                        <Setter Property="Margin" Value="0" />
+                    </Style>
+                </ListBox.Styles>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
@@ -112,6 +118,8 @@
                                         FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
                                         Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
                                         ContextMenu="{StaticResource InstructionContextMenu}"
+                                        Padding="0"
+                                        Margin="0"
                                         behaviors:InstructionPointerBehavior.IsEnabled="True">
                             <ContentControl.Styles>
                                 <Style Selector="SelectableTextBlock">
@@ -122,12 +130,12 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*">
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
-                                        Width="16"
-                                        Height="16"
-                                        CornerRadius="8"
+                                        Width="12"
+                                        Height="12"
+                                        CornerRadius="6"
                                         Margin="0,0,4,0"
                                         Background="{Binding HasBreakpoint, Converter={StaticResource BreakpointToBrushConverter}}" />
 
@@ -136,19 +144,19 @@
                                            Text="{Binding SegmentedAddress}"
                                            Foreground="#78C9B0"
                                            FontWeight="SemiBold"
-                                           Margin="0,0,8,0" />
+                                           Margin="0,0,6,0" />
 
                                 <!-- Bytes -->
                                 <TextBlock Grid.Column="2"
                                            Text="{Binding ByteString}"
                                            Foreground="#B5CEA8"
                                            FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Margin="8,0,0,0" />
+                                           Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
                                 <TextBlock Grid.Column="3"
                                            Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
-                                           Margin="16,0,0,0" />
+                                           Margin="12,0,0,0" />
                             </Grid>
                         </ContentControl>
                     </DataTemplate>
