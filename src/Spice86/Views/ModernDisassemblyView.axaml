@@ -21,10 +21,16 @@
             <!-- Context Menu for Instructions -->
             <ContextMenu x:Key="InstructionContextMenu">
                 <MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
-                <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-                <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
-                <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
-                <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
+                <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" 
+                          InputGesture="F2"
+                          IsEnabled="{Binding !SelectedDebuggerLine.HasBreakpoint}" />
+                <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" 
+                          InputGesture="Delete"
+                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
+                <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" 
+                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
+                <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" 
+                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
                 <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
             </ContextMenu>
             <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
@@ -132,12 +138,24 @@
 
                             <Grid ColumnDefinitions="Auto, Auto, *,4*" Margin="0">
                                 <!-- Breakpoint indicator -->
-                                <Border Grid.Column="0"
+                                <ToggleButton Grid.Column="0"
                                         Width="12"
                                         Height="12"
                                         CornerRadius="6"
                                         Margin="0,0,4,0"
-                                        Background="{Binding HasBreakpoint, Converter={StaticResource BreakpointToBrushConverter}}" />
+                                        Padding="0"
+                                        IsChecked="{Binding HasBreakpoint, Mode=OneWay}"
+                                        behaviors:BreakpointIndicatorBehavior.IsEnabled="True">
+                                    <ToggleButton.Styles>
+                                        <Style Selector="ToggleButton">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                        </Style>
+                                        <Style Selector="ToggleButton:checked">
+                                            <Setter Property="Background" Value="#D00000"/>
+                                        </Style>
+                                    </ToggleButton.Styles>
+                                </ToggleButton>
 
                                 <!-- Address -->
                                 <TextBlock Grid.Column="1"
@@ -154,7 +172,7 @@
                                            Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
-                                <TextBlock Grid.Column="3"
+                                <SelectableTextBlock Grid.Column="3"
                                            Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                            Margin="12,0,0,0" />
                             </Grid>

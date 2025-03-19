@@ -197,6 +197,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     IRelayCommand IModernDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
     IRelayCommand IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
     IRelayCommand IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
+    IRelayCommand IModernDisassemblyViewModel.ToggleBreakpointCommand => ToggleBreakpointCommand;
     IRelayCommand IModernDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
     ObservableCollection<DebuggerLineViewModel> IModernDisassemblyViewModel.SortedDebuggerLinesView => SortedDebuggerLinesView;
 
@@ -377,13 +378,18 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     }
 
     [RelayCommand]
-    private void ConfirmCreateExecutionBreakpoint() {
+    private async Task ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (!string.IsNullOrWhiteSpace(BreakpointAddress) && TryParseMemoryAddress(BreakpointAddress, out ulong? breakpointAddressValue)) {
-            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((long)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
-                () => PauseAndReportAddress((uint)breakpointAddressValue.Value));
-            AddBreakpointToListing(breakpointViewModel);
+            BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint((uint)breakpointAddressValue!.Value, BreakPointType.CPU_EXECUTION_ADDRESS, false,
+                () => {
+                    PauseAndReportAddress((uint)breakpointAddressValue.Value);
+                });
+            
+            // Use await to make this method truly async
+            await Task.CompletedTask;
         }
+        BreakpointAddress = string.Empty;
     }
 
     private void AddBreakpointToListing(BreakpointViewModel breakpoint) {
@@ -469,6 +475,47 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         SelectedDebuggerLine?.Breakpoints.ForEach(bp => bp.Enable());
     }
 
+    [RelayCommand]
+    public void ToggleBreakpoint(DebuggerLineViewModel line)
+    {
+        if (line == null)
+        {
+            return;
+        }
+
+        // Select the line
+        SelectedDebuggerLine = line;
+
+        if (line.HasBreakpoint)
+        {
+            // If breakpoints exist, remove them
+            Console.WriteLine($"Removing breakpoint at address: {line.Address:X8}");
+            _logger.Debug($"Removing breakpoint at address: {line.Address:X8}");
+            
+            // Remove all breakpoints for this line
+            foreach (BreakpointViewModel breakpoint in line.Breakpoints.ToList())
+            {
+                _breakpointsViewModel.RemoveBreakpointInternal(breakpoint);
+            }
+            
+            // Clear the breakpoints collection
+            line.Breakpoints.Clear();
+            
+            // Force UI refresh
+            _uiDispatcher.Post(() => {
+                OnPropertyChanged(nameof(SelectedDebuggerLine));
+            });
+        }
+        else
+        {
+            // If no breakpoints exist, create one
+            if (IsPaused)
+            {
+                CreateExecutionBreakpointHereCommand.Execute(null);
+            }
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task NewDisassemblyView() {
         ModernDisassemblyViewModel disassemblyViewModel = new(
@@ -480,15 +527,36 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task CreateExecutionBreakpointHere() {
-        if (SelectedDebuggerLine is null) {
+        if (SelectedDebuggerLine == null) {
+            return;
+        }
+        _logger.Debug($"Creating breakpoint at address: {SelectedDebuggerLine.Address:X8}");
+        
+        // Check if a breakpoint already exists at this address
+        if (SelectedDebuggerLine.HasBreakpoint) {
+            _logger.Debug($"Breakpoint already exists at address: {SelectedDebuggerLine.Address:X8}");
             return;
         }
 
-        uint address = SelectedDebuggerLine.Address;
+        uint address = (uint)SelectedDebuggerLine.Address;
         BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
             PauseAndReportAddress(address);
         });
-        await Task.Run(() => SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel));
+
+        _logger.Debug($"Breakpoint created successfully, Enabled: {breakpointViewModel.IsEnabled}");
+        
+        // Add the breakpoint to the line's collection and update UI immediately
+        SelectedDebuggerLine.Breakpoints.Add(breakpointViewModel);
+        
+        // Force UI refresh using await to make this method truly async
+        await _uiDispatcher.InvokeAsync(() => {
+            OnPropertyChanged(nameof(SelectedDebuggerLine));
+            
+            // Force the UI to refresh by triggering property changed events
+            DebuggerLineViewModel currentLine = SelectedDebuggerLine;
+            SelectedDebuggerLine = null;
+            SelectedDebuggerLine = currentLine;
+        });
     }
 
     private bool TryParseMemoryAddress(string addressString, out ulong? result) {

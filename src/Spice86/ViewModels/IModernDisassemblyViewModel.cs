@@ -138,6 +138,11 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     IRelayCommand EnableBreakpointCommand { get; }
 
     /// <summary>
+    /// Command to toggle a breakpoint at the current instruction.
+    /// </summary>
+    IRelayCommand ToggleBreakpointCommand { get; }
+
+    /// <summary>
     /// Command to move the CS:IP to the current instruction.
     /// </summary>
     IRelayCommand MoveCsIpHereCommand { get; }

@@ -59,7 +59,7 @@ public class DebuggerLineViewModel : ViewModelBase {
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
-        Address = instruction.Instruction.IP32;
+        Address = instruction.Instruction.IP32; // This is the full 32bit physical/linear address of the instrcution, not the offset part of a segment:offset pair.
         Breakpoints = instruction.Breakpoints;
 
         // Generate the formatted disassembly text

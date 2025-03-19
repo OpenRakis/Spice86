@@ -1,4 +1,4 @@
-﻿namespace Spice86.Converters;
+namespace Spice86.Converters;
 
 using Avalonia;
 using Avalonia.Data;
@@ -26,7 +26,7 @@ internal class BreakpointToBrushConverter : IValueConverter {
             } 
             else {
                 return themeVariant == ThemeVariant.Dark ? DarkGrey : LightGrey;
-            }
+        }
         }
         else {
             return null;
