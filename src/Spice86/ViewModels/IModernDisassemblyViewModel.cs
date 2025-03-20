@@ -75,7 +75,7 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     /// <summary>
     /// The view model for CPU registers.
     /// </summary>
-    RegistersViewModel Registers { get; }
+    IRegistersViewModel Registers { get; }
 
     /// <summary>
     /// Command to update the disassembly.

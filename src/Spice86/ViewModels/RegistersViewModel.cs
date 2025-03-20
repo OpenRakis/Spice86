@@ -9,7 +9,7 @@ using System.Collections.ObjectModel;
 /// <summary>
 /// View model for the CPU registers panel.
 /// </summary>
-public partial class RegistersViewModel : ObservableObject {
+public partial class RegistersViewModel : ObservableObject, IRegistersViewModel {
     private readonly State _state;
 
     /// <summary>

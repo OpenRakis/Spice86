@@ -114,6 +114,8 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     [ObservableProperty]
     private RegistersViewModel _registers;
 
+    IRegistersViewModel IModernDisassemblyViewModel.Registers => Registers;
+
     /// <summary>
     /// Gets a sorted view of the debugger lines for UI display.
     /// </summary>
