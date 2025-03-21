@@ -473,7 +473,7 @@ public class Spice86DependencyInjection : IDisposable {
             timer,
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler, vgaRenderer, vgaBios, vgaRom,
-            dmaController, new OPLFMChip(
+            dmaController, new OPLFMChip(timer,
                 soundBlaster.FMSynthSoundChannel, state,
                 ioPortDispatcher, configuration.FailOnUnhandledPort,
                 loggerService, pauseHandler),
