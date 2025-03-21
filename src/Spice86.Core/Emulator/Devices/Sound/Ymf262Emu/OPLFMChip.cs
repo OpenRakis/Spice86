@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.Devices.Timer;
 
 using System;
 
@@ -11,15 +12,13 @@ using System;
 /// The class responsible for emulating the OPL FM music synth chip.
 /// </summary>
 public class OPLFMChip : DefaultIOPortHandler, IDisposable {
-    private const byte Timer1Mask = 0xC0;
-    private const byte Timer2Mask = 0xA0;
-
     private bool _dualOpl = false;
 
     private readonly SoundChannel _soundChannel;
     private readonly DeviceThread _deviceThread;
     private readonly float[] _synthReadBuffer = new float[1024];
     private readonly float[] _playBuffer = new float[1024 * 2];
+    private readonly OplFmSynth _opl;
 
     private bool _disposed;
 
@@ -31,15 +30,19 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     /// <summary>
     /// Initializes a new instance of the OPL FM synth chip.
     /// </summary>
+    /// <param name="timer">The emulator's PIT8254 chip.</param>
     /// <param name="fmSynthSoundChannel">The software mixer's sound channel for the OPL FM Synth chip.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
+    /// <param name="ioPortDispatcher">The class that is responsible for dispatching
+    /// ports reads and writes to classes that respond to them.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
-    public OPLFMChip(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+    public OPLFMChip(Timer timer, SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher,
+        bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler)
+        : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = fmSynthSoundChannel;
-        //_synth = new(48000);
+        _opl = new(timer, new AdlibGold(loggerService), OplMode.Opl2);
         _deviceThread = new DeviceThread(nameof(OPLFMChip), PlaybackLoopBody, pauseHandler, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
@@ -61,21 +64,6 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(0x229, this);
     }
 
-    /// <inheritdoc />
-    public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing) {
-        if(!_disposed) {
-            if(disposing) {
-                _deviceThread.Dispose();
-            }
-            _disposed = true;
-        }
-    }
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
@@ -92,7 +80,8 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
         InitializePlaybackIfNeeded();
-        //TODO, from Opl::PortWrite
+       if((port & 1) > 0) {
+        }
     }
 
     private void InitializePlaybackIfNeeded() {
@@ -111,6 +100,22 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void PlaybackLoopBody() {
         //TODO
+        //see void Opl::AudioCallback(const int requested_frames) and RenderUpToNow()
         //_soundChannel.Render(_playBuffer);
+    }
+    /// <inheritdoc />
+    public void Dispose() {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing) {
+        if (!_disposed) {
+            if (disposing) {
+                _deviceThread.Dispose();
+            }
+            _disposed = true;
+        }
     }
 }
