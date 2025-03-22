@@ -17,7 +17,7 @@
 
         <!-- General Purpose Registers -->
         <Border Grid.Row="1"
-                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
@@ -62,7 +62,7 @@
 
         <!-- Pointer Registers -->
         <Border Grid.Row="2"
-                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
@@ -101,7 +101,7 @@
 
         <!-- Segment Registers -->
         <Border Grid.Row="3"
-                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8"
@@ -132,7 +132,7 @@
 
         <!-- Flags -->
         <Border Grid.Row="4"
-                BorderBrush="{DynamicResource SystemBaseLowColor}"
+                BorderBrush="{DynamicResource SemiColorBorder}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="8">
@@ -151,7 +151,7 @@
                             <Border Margin="2"
                                     Padding="4,2"
                                     BorderThickness="1"
-                                    BorderBrush="{DynamicResource SystemBaseLowColor}"
+                                    BorderBrush="{DynamicResource SemiColorBorder}"
                                     CornerRadius="2"
                                     Background="{Binding HasChanged, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}">
                                 <TextBlock Text="{Binding Name}"

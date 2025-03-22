@@ -17,24 +17,8 @@
                 <ResourceInclude Source="/Styles/DisassemblyResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-
-            <!-- Context Menu for Instructions -->
-            <ContextMenu x:Key="InstructionContextMenu">
-                <MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
-                <MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" 
-                          InputGesture="F2"
-                          IsEnabled="{Binding !SelectedDebuggerLine.HasBreakpoint}" />
-                <MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" 
-                          InputGesture="Delete"
-                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
-                <MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" 
-                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
-                <MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" 
-                          IsEnabled="{Binding SelectedDebuggerLine.HasBreakpoint}" />
-                <MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
-            </ContextMenu>
             <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
+            <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -105,7 +89,8 @@
                      ItemsSource="{Binding SortedDebuggerLinesView}"
                      Name="DisassemblyListBox"
                      Background="Transparent"
-                     BorderThickness="0"
+                     BorderThickness="1,0,0,0"
+                     BorderBrush="{DynamicResource SemiColorBorder}"
                      Padding="0,0,16,0"
                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                      ScrollViewer.VerticalScrollBarVisibility="Visible"
@@ -139,24 +124,12 @@
 
                             <Grid ColumnDefinitions="Auto, Auto, *,4*" Margin="0">
                                 <!-- Breakpoint indicator -->
-                                <ToggleButton Grid.Column="0"
-                                        Width="12"
-                                        Height="12"
-                                        CornerRadius="6"
-                                        Margin="0,0,4,0"
-                                        Padding="0"
-                                        IsChecked="{Binding HasBreakpoint, Mode=OneWay}"
-                                        behaviors:BreakpointIndicatorBehavior.IsEnabled="True">
-                                    <ToggleButton.Styles>
-                                        <Style Selector="ToggleButton">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="0"/>
-                                        </Style>
-                                        <Style Selector="ToggleButton:checked">
-                                            <Setter Property="Background" Value="#D00000"/>
-                                        </Style>
-                                    </ToggleButton.Styles>
-                                </ToggleButton>
+                                <Ellipse
+                                    Width="12"
+                                    Height="12"
+                                    Fill="{Binding Breakpoint, Converter={StaticResource BreakpointColorConverter}}"
+                                    Margin="0,0,4,0"
+                                    Tapped="OnBreakpointClicked" />
 
                                 <!-- Address -->
                                 <TextBlock Grid.Column="1"
@@ -174,8 +147,8 @@
 
                                 <!-- Instruction -->
                                 <SelectableTextBlock Grid.Column="3"
-                                           Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
-                                           Margin="12,0,0,0" />
+                                                     Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                                     Margin="12,0,0,0" />
                             </Grid>
                         </ContentControl>
                     </DataTemplate>
@@ -186,7 +159,7 @@
             <Border Grid.Column="1"
                     Width="250"
                     IsVisible="{Binding IsPaused}"
-                    BorderBrush="{DynamicResource SystemBaseLowColor}"
+                    BorderBrush="{DynamicResource SemiColorBorder}"
                     BorderThickness="1,0,0,0"
                     Padding="8">
                 <views:RegistersView DataContext="{Binding Registers}" />

@@ -117,25 +117,25 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     /// </summary>
     IRelayCommand<uint> ScrollToAddressCommand { get; }
 
-    /// <summary>
-    /// Command to create an execution breakpoint at the current instruction.
-    /// </summary>
-    IAsyncRelayCommand CreateExecutionBreakpointHereCommand { get; }
-
-    /// <summary>
-    /// Command to remove an execution breakpoint at the current instruction.
-    /// </summary>
-    IRelayCommand RemoveExecutionBreakpointHereCommand { get; }
-
-    /// <summary>
-    /// Command to disable a breakpoint.
-    /// </summary>
-    IRelayCommand DisableBreakpointCommand { get; }
-
-    /// <summary>
-    /// Command to enable a breakpoint.
-    /// </summary>
-    IRelayCommand EnableBreakpointCommand { get; }
+    // /// <summary>
+    // /// Command to create an execution breakpoint at the current instruction.
+    // /// </summary>
+    // IAsyncRelayCommand CreateExecutionBreakpointHereCommand { get; }
+    //
+    // /// <summary>
+    // /// Command to remove an execution breakpoint at the current instruction.
+    // /// </summary>
+    // IRelayCommand RemoveExecutionBreakpointHereCommand { get; }
+    //
+    // /// <summary>
+    // /// Command to disable a breakpoint.
+    // /// </summary>
+    // IRelayCommand DisableBreakpointCommand { get; }
+    //
+    // /// <summary>
+    // /// Command to enable a breakpoint.
+    // /// </summary>
+    // IRelayCommand EnableBreakpointCommand { get; }
 
     /// <summary>
     /// Command to toggle a breakpoint at the current instruction.

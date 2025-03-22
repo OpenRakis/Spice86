@@ -1,6 +1,7 @@
 namespace Spice86.Views;
 
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using System.ComponentModel;
@@ -65,5 +66,16 @@ public partial class ModernDisassemblyView : UserControl {
     /// </summary>
     private void GoToCsIpButton_Click(object? sender, RoutedEventArgs e) {
         ScrollToCurrentInstruction();
+    }
+
+    private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
+        if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine})
+        {
+            Console.WriteLine("Breakpoint toggled: {debuggerLine.Address}");
+            _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
+            e.Handled = true;
+        } else {
+            Console.WriteLine($"Unknown control clicked: {sender?.GetType()}");
+        }
     }
 }

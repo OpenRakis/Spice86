@@ -1,11 +1,14 @@
 namespace Spice86.ViewModels;
 
+using CommunityToolkit.Mvvm.ComponentModel;
+
 using Iced.Intel;
 
 using System.Linq;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
@@ -14,7 +17,7 @@ using System.Collections.Generic;
 /// <summary>
 /// View model for a line in the debugger.
 /// </summary>
-public class DebuggerLineViewModel : ViewModelBase {
+public partial class DebuggerLineViewModel : ViewModelBase {
     private readonly Instruction _info;
     private readonly State _cpuState;
     private bool _isCurrentInstruction;
@@ -50,8 +53,28 @@ public class DebuggerLineViewModel : ViewModelBase {
         }
     }
 
-    public List<BreakpointViewModel> Breakpoints { get; }
-    public bool HasBreakpoint => Breakpoints.Count != 0;
+    [ObservableProperty]
+    private BreakpointViewModel? _breakpoint;
+
+    partial void OnBreakpointChanged(BreakpointViewModel? oldValue, BreakpointViewModel? newValue) {
+        // Unsubscribe from the old breakpoint
+        if (oldValue != null) {
+            oldValue.PropertyChanged -= Breakpoint_PropertyChanged;
+        }
+
+        // Subscribe to the new breakpoint
+        if (newValue != null) {
+            newValue.PropertyChanged += Breakpoint_PropertyChanged;
+        }
+    }
+
+    private void Breakpoint_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
+        // When the IsEnabled property changes, notify that the Breakpoint property has changed
+        // This will cause the UI to re-evaluate the binding and update the color
+        if (e.PropertyName == nameof(BreakpointViewModel.IsEnabled)) {
+            OnPropertyChanged(nameof(Breakpoint));
+        }
+    }
 
     public DebuggerLineViewModel(EnrichedInstruction instruction, State cpuState) {
         _info = instruction.Instruction;
@@ -59,8 +82,9 @@ public class DebuggerLineViewModel : ViewModelBase {
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
-        Address = instruction.Instruction.IP32; // This is the full 32bit physical/linear address of the instrcution, not the offset part of a segment:offset pair.
-        Breakpoints = instruction.Breakpoints;
+        Address = instruction.Instruction.IP32; // This is the full 32bit physical/linear address of the instruction, not the offset part of a segment:offset pair.
+        // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
+        Breakpoint = instruction.Breakpoints.SingleOrDefault(breakpoint => breakpoint.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
 
         // Generate the formatted disassembly text
         GenerateFormattedDisassembly();
@@ -90,41 +114,14 @@ public class DebuggerLineViewModel : ViewModelBase {
         MasmSymbolDisplInBrackets = false,
         SignedImmediateOperands = true,
     });
-}
-
-/// <summary>
-/// Represents a segment of formatted text with its kind.
-/// </summary>
-public class FormattedTextSegment {
-    /// <summary>
-    /// Gets or sets the text content.
-    /// </summary>
-    public string Text { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the kind of text (used for formatting).
+    /// Cleans up event subscriptions to prevent memory leaks.
     /// </summary>
-    public FormatterTextKind Kind { get; set; }
-}
-
-/// <summary>
-/// Thread-safe formatter output that doesn't create UI elements.
-/// </summary>
-public class ThreadSafeFormatterOutput : FormatterOutput {
-    /// <summary>
-    /// Gets the list of formatted text segments.
-    /// </summary>
-    public List<FormattedTextSegment> Segments { get; } = [];
-
-    /// <summary>
-    /// Writes a segment of text with the specified kind.
-    /// </summary>
-    /// <param name="text">The text to write.</param>
-    /// <param name="kind">The kind of text.</param>
-    public override void Write(string text, FormatterTextKind kind) {
-        Segments.Add(new FormattedTextSegment {
-            Text = text,
-            Kind = kind
-        });
+    public void Cleanup() {
+        // Unsubscribe from breakpoint property changes
+        if (Breakpoint != null) {
+            Breakpoint.PropertyChanged -= Breakpoint_PropertyChanged;
+        }
     }
 }
