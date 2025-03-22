@@ -3,7 +3,7 @@
 ![Linux](https://img.shields.io/badge/-Linux-grey?logo=linux)
 ![macOS](https://img.shields.io/badge/-OSX-black?logo=apple)
 ![Windows](https://img.shields.io/badge/-Windows-red?logo=windows)
-[![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml)
+[![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml)
 [![NuGet](https://img.shields.io/nuget/v/Spice86.svg)](https://www.nuget.org/packages/Spice86)
 ![Licence](https://img.shields.io/badge/License-Apache_2.0-44cc11.svg)
 [![downloads](https://img.shields.io/nuget/dt/Spice86)](https://www.nuget.org/packages/Spice86)
