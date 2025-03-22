@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<IsPackable>False</IsPackable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<WarningsAsErrors>false</WarningsAsErrors>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tests\Spice86.Tests\Spice86.Tests.csproj" />
+    <ProjectReference Include="..\Bufdio.Spice86\Bufdio.Spice86.csproj" />
+    <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+    <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
+    <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    <ProjectReference Include="..\Spice86\Spice86.csproj" />
+  </ItemGroup>
+
+</Project>
