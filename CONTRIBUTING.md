@@ -26,6 +26,12 @@ Thank you for wanting to contribute. Here are some guidelines.
 
 - [.NET](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
+### dev environment
+
+JetBrains Rider (free) or Visual Studio Community (free) are the best for dotnet work. 
+
+VSCode and C# Dev Kit is fine too. 
+
 ### What this project should do
 
 Emulate the hardware of the IBM PC (and compatible clones), allowing it to run games written for *real mode*.
@@ -36,7 +42,7 @@ For example, new emulator APIs should be public in order to give access to all o
 
 ### What this project should not do
 
-* Try to emulate protected mode and protected mode games. Protected mode is out of scope of this project.
+* Try to emulate protected mode and protected mode games. Protected mode is out of scope of this project. Well, unless you manage to make C# overrides of assembly code work with protected mode nicely...
 
 ## Technical Information
 
@@ -47,6 +53,8 @@ For example, new emulator APIs should be public in order to give access to all o
 	- `./src/Spice86.Core/Emulator/Memory/` contains the code for managing memory and monitoring memory read/write access.
 	- `.src/Spice86.Core/Emulator/Functions/` contains functions tracking APIs.
 	- `./src/Spice86.Core/Emulator/ReverseEngineer/` contains Reverse Engineering APIs.
+
+- 'tests' : contains all the unit tests. They are centered around ensuring that the CPU and low level emulation and C# overrides still work. 
 
 
 ### Building the project
