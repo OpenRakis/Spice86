@@ -30,7 +30,7 @@ Thank you for wanting to contribute. Here are some guidelines.
 
 JetBrains Rider (free) or Visual Studio Community (free) are the best for dotnet work. 
 
-VSCode and C# Dev Kit is fine too. 
+VSCode and C# Dev Kit are free and fine too. 
 
 ### What this project should do
 
