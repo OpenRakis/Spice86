@@ -29,6 +29,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Home Alone | :see_no_evil: Crashes | Int 10.8 (text mode) not implemented | 2021/09/26  |
 | Hero Quest |  :sunglasses: Fully playable | | 2022/09/02  |
 | KGB | :sunglasses: Fully playable | | 2021/09/26  |
+| Monkey Island | :sunglasses: Fully playable | 2025/03/22 |
 | Oliver & Compagnie | :see_no_evil: Crashes | Int 10.11 operation "GET INT 1F pointer" not implemented. | 2021/09/26  |
 | Prince of persia | :sunglasses: Fully playable | No music is played...? | 2021/09/26  |
 | Plan 9 From Outer Space| :confused: Not playable | Black screen. | 2021/09/26  |
