@@ -77,7 +77,7 @@ $ dotnet test
 
 This project works already quite well for rewriting games such as DUNE, but it is still in early development.
 
-As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware, remaining Memory features such as XMS, CPU 286/386 instruction set unit tests, DOS services, BIOS services, and low-level interrupts.
+As such, there is a lot of code that needs to be written, especially for emulating additionnal hardware, remaining Memory features such as XMS, CPU 286/386 instruction set unit tests (although 32 bit games such as Krondor work fine), DOS services, BIOS services, DMA controller, and such.
 
 ### Bug Reports
 
