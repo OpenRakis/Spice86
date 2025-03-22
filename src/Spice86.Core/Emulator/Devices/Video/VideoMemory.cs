@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Shared.Emulator.Errors;
 
 using System.Diagnostics;
 
@@ -153,7 +154,15 @@ public class VideoMemory : IVideoMemory {
 
     private void HandleWriteMode0(byte value, Register8 planeEnable,
         ReadOnlySpan<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
-        Debug.Assert(offset < 0x10000);
+        if(offset >= 0x10000) {
+            throw new UnrecoverableException(
+                $"""
+                Wile in video write mode 0, the emulated program tried to write at a video memory address beyond 0x10000,
+                which is forbidden! The value was : 0x{offset:X} !
+                An issue outside VGA emulation probably caused this...?
+                """
+                );
+        }
         if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
             value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         }
