@@ -31,8 +31,6 @@
 	<PackageReference Include="Serilog.Sinks.Console" />
 	<PackageReference Include="Serilog.Sinks.Debug" />
 	<PackageReference Include="System.Buffers" />
-	<PackageReference Include="System.IO" />
-	<PackageReference Include="System.IO.UnmanagedMemoryStream" />
 	<PackageReference Include="System.Memory" />
 	<PackageReference Include="System.Memory.Data" />
 	<PackageReference Include="System.Text.Encoding.CodePages" />

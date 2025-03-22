@@ -43,8 +43,6 @@
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
-    <PackageVersion Include="System.IO" Version="4.3.0" />
-    <PackageVersion Include="System.IO.UnmanagedMemoryStream" Version="4.3.0" />
     <PackageVersion Include="System.Memory" Version="4.6.2" />
     <PackageVersion Include="System.Memory.Data" Version="9.0.3" />
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.3" />
