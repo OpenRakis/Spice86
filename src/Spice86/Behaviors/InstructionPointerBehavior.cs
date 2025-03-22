@@ -44,7 +44,6 @@ public class InstructionPointerBehavior
     // Handler for pointer pressed events
     private static void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        Console.WriteLine($"Pointer pressed on control: {sender?.GetType()}");
         if (sender is not Control control)
         {
             return;

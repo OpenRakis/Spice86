@@ -20,6 +20,7 @@ using System.Collections.Generic;
 public partial class DebuggerLineViewModel : ViewModelBase {
     private readonly Instruction _info;
     private readonly State _cpuState;
+    private readonly BreakpointsViewModel? _breakpointsViewModel;
     private bool _isCurrentInstruction;
 
     public string ByteString { get; }
@@ -56,29 +57,10 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     [ObservableProperty]
     private BreakpointViewModel? _breakpoint;
 
-    partial void OnBreakpointChanged(BreakpointViewModel? oldValue, BreakpointViewModel? newValue) {
-        // Unsubscribe from the old breakpoint
-        if (oldValue != null) {
-            oldValue.PropertyChanged -= Breakpoint_PropertyChanged;
-        }
-
-        // Subscribe to the new breakpoint
-        if (newValue != null) {
-            newValue.PropertyChanged += Breakpoint_PropertyChanged;
-        }
-    }
-
-    private void Breakpoint_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) {
-        // When the IsEnabled property changes, notify that the Breakpoint property has changed
-        // This will cause the UI to re-evaluate the binding and update the color
-        if (e.PropertyName == nameof(BreakpointViewModel.IsEnabled)) {
-            OnPropertyChanged(nameof(Breakpoint));
-        }
-    }
-
-    public DebuggerLineViewModel(EnrichedInstruction instruction, State cpuState) {
+    public DebuggerLineViewModel(EnrichedInstruction instruction, State cpuState, BreakpointsViewModel? breakpointsViewModel = null) {
         _info = instruction.Instruction;
         _cpuState = cpuState;
+        _breakpointsViewModel = breakpointsViewModel;
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
@@ -116,12 +98,22 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     });
 
     /// <summary>
-    /// Cleans up event subscriptions to prevent memory leaks.
+    /// Gets the current breakpoint for this line from the BreakpointsViewModel.
     /// </summary>
-    public void Cleanup() {
-        // Unsubscribe from breakpoint property changes
-        if (Breakpoint != null) {
-            Breakpoint.PropertyChanged -= Breakpoint_PropertyChanged;
+    /// <returns>The breakpoint if one exists for this address, otherwise null.</returns>
+    public BreakpointViewModel? GetBreakpointFromViewModel() {
+        // Find a breakpoint in the BreakpointsViewModel that matches this line's address
+        return _breakpointsViewModel?.Breakpoints.FirstOrDefault(bp =>
+            bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS && 
+            (uint)bp.Address == Address);
+    }
+
+    /// <summary>
+    /// Updates the Breakpoint property with the current value from the BreakpointsViewModel.
+    /// </summary>
+    public void UpdateBreakpointFromViewModel() {
+        if (_breakpointsViewModel != null) {
+            Breakpoint = GetBreakpointFromViewModel();
         }
     }
 }

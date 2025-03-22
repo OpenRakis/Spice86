@@ -20,6 +20,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 
@@ -208,7 +209,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
             // Add all new items at once
             foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
-                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _state);
+                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _state, _breakpointsViewModel);
             }
         } finally {
             _isBatchUpdating = false;
@@ -237,22 +238,30 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     public void EnableEventHandlers() {
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
-        _breakpointsViewModel.BreakpointDeleted += OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointDisabled += OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointEnabled += OnBreakPointUpdateFromBreakpointsViewModel;
+        
+        // Subscribe to collection changes in the BreakpointsViewModel
+        _breakpointsViewModel.Breakpoints.CollectionChanged += Breakpoints_CollectionChanged;
     }
 
     public void DisableEventHandlers() {
         _pauseHandler.Paused -= OnPaused;
         _pauseHandler.Resumed -= OnResumed;
-        _breakpointsViewModel.BreakpointDeleted -= OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointDisabled -= OnBreakPointUpdateFromBreakpointsViewModel;
-        _breakpointsViewModel.BreakpointEnabled -= OnBreakPointUpdateFromBreakpointsViewModel;
+        
+        // Unsubscribe from collection changes
+        _breakpointsViewModel.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
     }
-
-    private void OnBreakPointUpdateFromBreakpointsViewModel(BreakpointViewModel breakpoint) {
-        // No implementation needed - breakpoint property changes are now handled directly
-        // in the DebuggerLineViewModel through property change notifications
+    
+    private void Breakpoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+        // Ensure we're on the UI thread
+        if (!Dispatcher.UIThread.CheckAccess()) {
+            Dispatcher.UIThread.Post(() => Breakpoints_CollectionChanged(sender, e));
+            return;
+        }
+        
+        // Update all debugger lines that might be affected by the change
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+            line.UpdateBreakpointFromViewModel();
+        }
     }
 
     private void OnResumed() {
@@ -429,11 +438,15 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     [RelayCommand]
     private void ToggleBreakpoint(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint != null) {
+            // If there's already a breakpoint, toggle it
             debuggerLine.Breakpoint.Toggle();
         } else {
-            debuggerLine.Breakpoint = _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+            // If there's no breakpoint, add one
+            _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
                 PauseAndReportAddress(debuggerLine.Address);
             });
+            
+            // The collection changed event will update the debugger line's breakpoint property
         }
     }
 

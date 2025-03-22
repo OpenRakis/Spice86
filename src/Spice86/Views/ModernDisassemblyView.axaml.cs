@@ -71,11 +71,8 @@ public partial class ModernDisassemblyView : UserControl {
     private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
         if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine})
         {
-            Console.WriteLine("Breakpoint toggled: {debuggerLine.Address}");
             _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
             e.Handled = true;
-        } else {
-            Console.WriteLine($"Unknown control clicked: {sender?.GetType()}");
         }
     }
 }

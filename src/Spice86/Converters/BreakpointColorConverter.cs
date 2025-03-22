@@ -11,6 +11,12 @@ using System.Globalization;
 
 internal class BreakpointColorConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        if (value is bool isEnabled) {
+            return isEnabled
+                ? ConverterUtilities.GetResourceBrush("DisassemblyBreakpointEnabledBrush", Brushes.Red)
+                : ConverterUtilities.GetResourceBrush("DisassemblyBreakpointDisabledBrush", Brushes.Gray);
+        }
+
         if (value is BreakpointViewModel breakpoint) {
             return breakpoint.IsEnabled
                 ? ConverterUtilities.GetResourceBrush("DisassemblyBreakpointEnabledBrush", Brushes.Red)
