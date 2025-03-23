@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,10 +22,16 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     
     public SoftwareMixerViewModel(SoftwareMixer softwareMixer) {
         _softwareMixer = softwareMixer;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
+    internal bool IsVisible { get; set; }
+
+
     private void UpdateValues(object? sender, EventArgs e) {
+        if (!IsVisible) {
+            return;
+        }
         UpdateChannels(_softwareMixer);
     }
 

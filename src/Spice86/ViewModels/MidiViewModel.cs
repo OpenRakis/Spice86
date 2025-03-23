@@ -17,10 +17,16 @@ public partial class MidiViewModel : ViewModelBase {
 
     public MidiViewModel(Midi externalMidiDevice) {
         _externalMidiDevice = externalMidiDevice;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
+    internal bool IsVisible { get; set; }
+
+
     private void UpdateValues(object? sender, EventArgs e) {
+        if (!IsVisible) {
+            return;
+        }
         _externalMidiDevice.CopyToMidiInfo(Midi);
     }
 }
