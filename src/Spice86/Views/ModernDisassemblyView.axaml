@@ -106,9 +106,8 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
-                                        Background="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightBackground}}"
+                                        behaviors:HighlightBehavior.IsContentHighlighted="{Binding IsCurrentInstruction}"
                                         FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
-                                        Foreground="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToHighlightForeground}}"
                                         ContextMenu="{StaticResource InstructionContextMenu}"
                                         Padding="0"
                                         Margin="0"
@@ -140,14 +139,14 @@
                                 </Border>
 
                                 <!-- Address -->
-                                <TextBlock Grid.Column="1"
+                                <SelectableTextBlock Grid.Column="1"
                                            Text="{Binding SegmentedAddress}"
                                            Foreground="#78C9B0"
                                            FontWeight="SemiBold"
                                            Margin="0,0,6,0" />
 
                                 <!-- Bytes -->
-                                <TextBlock Grid.Column="2"
+                                <SelectableTextBlock Grid.Column="2"
                                            Text="{Binding ByteString}"
                                            Foreground="#B5CEA8"
                                            FontFamily="Consolas,Menlo,Monaco,monospace"

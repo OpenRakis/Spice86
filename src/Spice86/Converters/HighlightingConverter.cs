@@ -25,19 +25,44 @@ public static class HighlightingConverter {
     /// Converts a boolean to a brush for background highlighting.
     /// Uses a dynamic resource when true, transparent brush when false.
     /// </summary>
-    public static readonly IValueConverter TrueToHighlightBackground = new FuncValueConverter<bool, IBrush>(value =>
-        value ? ConverterUtilities.GetResourceBrush(HighlightBackgroundKey, FallbackHighlightBackground) : ConverterUtilities.GetResourceBrush(DefaultBackgroundKey, FallbackDefaultBackground));
+    public static readonly IValueConverter TrueToHighlightBackground = new FuncValueConverter<bool, IBrush>(value => value ? GetHighlightBackgroundBrush() : GetDefaultBackgroundBrush());
 
     /// <summary>
     /// Converts a boolean to a brush for foreground highlighting.
     /// Uses a dynamic resource when true, transparent brush when false to use the default foreground.
     /// </summary>
-    public static readonly IValueConverter TrueToHighlightForeground = new FuncValueConverter<bool, IBrush>(value =>
-        value ? ConverterUtilities.GetResourceBrush(HighlightForegroundKey, FallbackHighlightForeground) : ConverterUtilities.GetResourceBrush(DefaultForegroundKey, FallbackDefaultForeground));
+    public static readonly IValueConverter TrueToHighlightForeground = new FuncValueConverter<bool, IBrush>(value => value ? GetHighlightForegroundBrush() : GetDefaultForegroundBrush());
 
     /// <summary>
     /// Converts a boolean to a FontWeight (true = Bold, false = Normal).
     /// </summary>
     public static readonly IValueConverter TrueToBold = new FuncValueConverter<bool, FontWeight>(value => value ? FontWeight.Bold : FontWeight.Normal);
 
+    /// <summary>
+    /// Gets the highlight background brush used by the converters.
+    /// </summary>
+    public static IBrush GetHighlightBackgroundBrush() {
+        return ConverterUtilities.GetResourceBrush(HighlightBackgroundKey, FallbackHighlightBackground);
+    }
+
+    /// <summary>
+    /// Gets the default background brush used by the converters.
+    /// </summary>
+    public static IBrush GetDefaultBackgroundBrush() {
+        return ConverterUtilities.GetResourceBrush(DefaultBackgroundKey, FallbackDefaultBackground);
+    }
+
+    /// <summary>
+    /// Gets the highlight foreground brush used by the converters.
+    /// </summary>
+    public static IBrush GetHighlightForegroundBrush() {
+        return ConverterUtilities.GetResourceBrush(HighlightForegroundKey, FallbackHighlightForeground);
+    }
+
+    /// <summary>
+    /// Gets the default foreground brush used by the converters.
+    /// </summary>
+    public static IBrush GetDefaultForegroundBrush() {
+        return ConverterUtilities.GetResourceBrush(DefaultForegroundKey, FallbackDefaultForeground);
+    }
 }
