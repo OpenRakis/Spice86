@@ -71,6 +71,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
+        if (IsPaused) {
+            return;
+        }
         SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
     }
 
@@ -344,9 +347,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Normal);
+    private void OnResumed() => _uiDispatcher.Post(() => IsPaused = false, DispatcherPriority.Background);
 
-    private void OnPaused() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Normal);
+    private void OnPaused() => _uiDispatcher.Post(() => IsPaused = true, DispatcherPriority.Background);
 
     [ObservableProperty]
     private string _currentLogLevel = "";
