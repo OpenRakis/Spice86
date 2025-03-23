@@ -52,7 +52,9 @@ public class HardwareMixer {
                 return GetDMAByte();
 
             default:
-                _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
+                }
                 return 0;
         }
     }
@@ -72,7 +74,9 @@ public class HardwareMixer {
                 _opl3fmSoundChannel.Volume = percentScaledValue;
                 break;
             default:
-                _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
+                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _logger.Warning("Unsupported mixer register {CurrentAddress:X2}h", CurrentAddress);
+                }
                 break;
         }
     }

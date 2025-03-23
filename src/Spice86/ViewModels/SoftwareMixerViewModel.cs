@@ -1,18 +1,16 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
 using System.ComponentModel;
 
-public partial class SoftwareMixerViewModel : ViewModelBase {
+public partial class SoftwareMixerViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly Dictionary<SoundChannel, SoundChannelInfo> _channelInfos = new();
     private readonly SoftwareMixer _softwareMixer;
     
@@ -21,10 +19,14 @@ public partial class SoftwareMixerViewModel : ViewModelBase {
     
     public SoftwareMixerViewModel(SoftwareMixer softwareMixer) {
         _softwareMixer = softwareMixer;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
     }
 
-    private void UpdateValues(object? sender, EventArgs e) {
+    public bool IsVisible { get; set; }
+
+    public void UpdateValues(object? sender, EventArgs e) {
+        if (!IsVisible) {
+            return;
+        }
         UpdateChannels(_softwareMixer);
     }
 

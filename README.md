@@ -3,7 +3,7 @@
 ![Linux](https://img.shields.io/badge/-Linux-grey?logo=linux)
 ![macOS](https://img.shields.io/badge/-OSX-black?logo=apple)
 ![Windows](https://img.shields.io/badge/-Windows-red?logo=windows)
-[![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/dotnet.yml)
+[![.NET Build](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml/badge.svg)](https://github.com/OpenRakis/Spice86/actions/workflows/prerelease.yml)
 [![NuGet](https://img.shields.io/nuget/v/Spice86.svg)](https://www.nuget.org/packages/Spice86)
 ![Licence](https://img.shields.io/badge/License-Apache_2.0-44cc11.svg)
 [![downloads](https://img.shields.io/nuget/dt/Spice86)](https://www.nuget.org/packages/Spice86)
@@ -158,25 +158,17 @@ Break at the end of the emulated program:
 ```
 
 ## Seer
-For a pleasing and productive experience with GDB, the [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
+For a pleasing and productive experience with GDB, the
+[seerGDB](https://github.com/epasveer/seer) client is highly recommended.
 
-At best, create a configuration file `spice86.seer` with this content:
-```json
-{
-    "seerproject": {
-        "connectmode": { "gdbserver": "127.0.0.1:10000" },
-        "executable": "",
-        "postgdbcommands": [ "" ],
-        "pregdbcommands": [ "set architecture i8086" ],
-        "symbolfile": "",
-        "workingdirectory": ""
-    }
-}
+At best, use the configuration file `spice86.seer` provided in the `doc`
+directory ([here](doc/spice86.seer)): start Spice86 with `--GdbPort=10000`, and
+run Seer with `seergdb --project spice86.seer`.
 
-```
-and start Seer with `seergdb --project spice86.seer`.
+If you use a different port for gdb, adjust `spice86.seer` correspondingly.
 
-Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to “Length”, otherwise the Assembly View won't work.
+Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
+“Length”, otherwise the Assembly View won't work.
 
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).

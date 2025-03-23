@@ -15,7 +15,7 @@ using Spice86.Shared.Utils;
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase {
+public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly State _cpuState;
     private readonly IMemory _memory;
     
@@ -31,10 +31,15 @@ public partial class CpuViewModel : ViewModelBase {
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Normal, UpdateValues);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
-    private void UpdateValues(object? sender, EventArgs e) {
+    public bool IsVisible { get; set; }
+
+    public void UpdateValues(object? sender, EventArgs e) {
+        if (!IsVisible) {
+            return;
+        }
         VisitCpuState(_cpuState);
     }
     
