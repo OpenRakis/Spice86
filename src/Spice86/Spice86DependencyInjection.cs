@@ -184,7 +184,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(configuration, memory, stack, state,
+        Dos dos = new Dos(configuration, memory, stack, state, a20Gate,
             functionHandlerProvider, keyboardInt16Handler, vgaFunctionality,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
