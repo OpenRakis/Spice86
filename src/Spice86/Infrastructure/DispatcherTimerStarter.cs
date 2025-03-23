@@ -9,7 +9,9 @@ internal static class DispatcherTimerStarter {
     /// <param name="interval">The time between executions of the callback</param>
     /// <param name="priority">The priority of execution for the UI Dispatcher</param>
     /// <param name="callback">The user code to execute</param>
-    public static void StartNewDispatcherTimer(TimeSpan interval, DispatcherPriority priority, EventHandler callback) {
-        new DispatcherTimer(interval, priority, callback).Start();
+    public static DispatcherTimer StartNewDispatcherTimer(TimeSpan interval, DispatcherPriority priority, EventHandler callback) {
+        var dispatcherTimer = new DispatcherTimer(interval, priority, callback);
+        dispatcherTimer.Start();
+        return dispatcherTimer;
     }
 }

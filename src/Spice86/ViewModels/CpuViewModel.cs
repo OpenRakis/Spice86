@@ -15,7 +15,7 @@ using Spice86.Shared.Utils;
 using System.ComponentModel;
 using System.Reflection;
 
-public partial class CpuViewModel : ViewModelBase {
+public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly State _cpuState;
     private readonly IMemory _memory;
     
@@ -34,9 +34,9 @@ public partial class CpuViewModel : ViewModelBase {
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
-    internal bool IsVisible { get; set; }
+    public bool IsVisible { get; set; }
 
-    private void UpdateValues(object? sender, EventArgs e) {
+    public void UpdateValues(object? sender, EventArgs e) {
         if (!IsVisible) {
             return;
         }

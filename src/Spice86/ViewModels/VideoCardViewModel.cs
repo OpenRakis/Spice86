@@ -9,7 +9,7 @@ using Spice86.Infrastructure;
 using Spice86.Mappers;
 using Spice86.Models.Debugging;
 
-public partial class VideoCardViewModel  : ViewModelBase {
+public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
     private readonly IVgaRenderer _vgaRenderer;
@@ -18,13 +18,11 @@ public partial class VideoCardViewModel  : ViewModelBase {
     public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState) {
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
-    internal bool IsVisible { get; set; }
+    public bool IsVisible { get; set; }
 
-
-    private void UpdateValues(object? sender, EventArgs e) {
+    public void UpdateValues(object? sender, EventArgs e) {
         if (!IsVisible) {
             return;
         }
