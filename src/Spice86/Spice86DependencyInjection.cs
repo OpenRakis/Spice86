@@ -356,7 +356,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Sound devices created...");
         }
 
-        Dos dos = new Dos(configuration, memory, stack, state,
+        Dos dos = new Dos(configuration, memory, stack, state, a20Gate,
             functionHandlerProvider, keyboardInt16Handler, vgaFunctionality,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
