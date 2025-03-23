@@ -71,6 +71,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     [NotifyCanExecuteChangedFor(nameof(CopyLineCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepOverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CreateExecutionBreakpointHereCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveExecutionBreakpointHereCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DisableBreakpointCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EnableBreakpointCommand))]
     private bool _isPaused;
 
     // Flag to prevent recursive updates
@@ -191,11 +195,11 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     IAsyncRelayCommand IModernDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
     IRelayCommand IModernDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
     IRelayCommand<uint> IModernDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;
-    // IAsyncRelayCommand IModernDisassemblyViewModel.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
-    // IRelayCommand IModernDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
-    // IRelayCommand IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
-    // IRelayCommand IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
-    IRelayCommand IModernDisassemblyViewModel.ToggleBreakpointCommand => ToggleBreakpointCommand;
+    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
+    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
+    IRelayCommand<BreakpointViewModel> IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
+    IRelayCommand<BreakpointViewModel> IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
+    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.ToggleBreakpointCommand => ToggleBreakpointCommand;
     IRelayCommand IModernDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
     ObservableCollection<DebuggerLineViewModel> IModernDisassemblyViewModel.SortedDebuggerLinesView => SortedDebuggerLinesView;
 
@@ -238,7 +242,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     public void EnableEventHandlers() {
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
-        
+
         // Subscribe to collection changes in the BreakpointsViewModel
         _breakpointsViewModel.Breakpoints.CollectionChanged += Breakpoints_CollectionChanged;
     }
@@ -246,18 +250,19 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     public void DisableEventHandlers() {
         _pauseHandler.Paused -= OnPaused;
         _pauseHandler.Resumed -= OnResumed;
-        
+
         // Unsubscribe from collection changes
         _breakpointsViewModel.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
     }
-    
+
     private void Breakpoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
         // Ensure we're on the UI thread
         if (!Dispatcher.UIThread.CheckAccess()) {
             Dispatcher.UIThread.Post(() => Breakpoints_CollectionChanged(sender, e));
+
             return;
         }
-        
+
         // Update all debugger lines that might be affected by the change
         foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
             line.UpdateBreakpointFromViewModel();
@@ -435,7 +440,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         _pauseHandler.Resume();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsPaused))]
     private void ToggleBreakpoint(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint != null) {
             // If there's already a breakpoint, toggle it
@@ -445,12 +450,12 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
                 PauseAndReportAddress(debuggerLine.Address);
             });
-            
+
             // The collection changed event will update the debugger line's breakpoint property
         }
     }
 
-    [RelayCommand(CanExecute = nameof(IsPaused))]
+    [RelayCommand]
     private async Task NewDisassemblyView() {
         ModernDisassemblyViewModel disassemblyViewModel = new(
             _emulatorBreakpointsManager, _memory, _state, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, true) {
@@ -542,5 +547,46 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         // The actual scrolling logic is handled in the view
         CurrentInstructionAddress = address;
         OnPropertyChanged(nameof(CurrentInstructionAddress));
+    }
+
+    /// <summary>
+    /// Command to create an execution breakpoint at the selected instruction.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void CreateExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
+        if (debuggerLine.Breakpoint == null) {
+            // Add a new breakpoint
+            _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
+                PauseAndReportAddress(debuggerLine.Address);
+            });
+            // The collection changed event will update the debugger line's breakpoint property
+        }
+    }
+
+    /// <summary>
+    /// Command to remove an execution breakpoint from the selected instruction.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void RemoveExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
+        if (debuggerLine.Breakpoint != null) {
+            _breakpointsViewModel.RemoveBreakpointInternal(debuggerLine.Breakpoint);
+            // The collection changed event will update the debugger line's breakpoint property
+        }
+    }
+
+    /// <summary>
+    /// Command to disable a breakpoint.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void DisableBreakpoint(BreakpointViewModel breakpoint) {
+        breakpoint.Disable();
+    }
+
+    /// <summary>
+    /// Command to enable a breakpoint.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsPaused))]
+    private void EnableBreakpoint(BreakpointViewModel breakpoint) {
+        breakpoint.Enable();
     }
 }

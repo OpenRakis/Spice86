@@ -10,7 +10,8 @@
              xmlns:views="clr-namespace:Spice86.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.ModernDisassemblyView"
-             x:DataType="viewModels:IModernDisassemblyViewModel">
+             x:DataType="viewModels:IModernDisassemblyViewModel"
+             x:Name="DisassemblyView">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -97,6 +98,32 @@
                      SelectedItem="{Binding SelectedDebuggerLine}"
                      behaviors:DisassemblyScrollBehavior.IsEnabled="True"
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Create breakpoint here" 
+                                  Command="{Binding CreateExecutionBreakpointHereCommand}" 
+                                  CommandParameter="{Binding SelectedDebuggerLine}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}"/>
+                        <MenuItem Header="Remove breakpoint" 
+                                  Command="{Binding RemoveExecutionBreakpointHereCommand}" 
+                                  CommandParameter="{Binding SelectedDebuggerLine}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <MenuItem Header="Disable breakpoint" 
+                                  Command="{Binding DisableBreakpointCommand}" 
+                                  CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null}"
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <MenuItem Header="Enable breakpoint" 
+                                  Command="{Binding EnableBreakpointCommand}" 
+                                  CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null, Converter={x:Static BoolConverters.Not}}"/>
+                        <Separator/>
+                        <MenuItem Header="Move CS:IP here" 
+                                  Command="{Binding MoveCsIpHereCommand}" 
+                                  CommandParameter="{Binding SelectedDebuggerLine}"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Padding" Value="4,1" />
@@ -108,7 +135,6 @@
                         <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
                                         behaviors:HighlightBehavior.IsContentHighlighted="{Binding IsCurrentInstruction}"
                                         FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
-                                        ContextMenu="{StaticResource InstructionContextMenu}"
                                         Padding="0"
                                         Margin="0"
                                         behaviors:InstructionPointerBehavior.IsEnabled="True">

@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
@@ -82,6 +83,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         return _breakPoint;
     }
 
+    [RelayCommand]
     public void Enable() {
         if (IsEnabled) {
             return;
@@ -92,6 +94,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         OnPropertyChanged(nameof(IsEnabled));
     }
 
+    [RelayCommand]
     public void Disable() {
         if (!IsEnabled) {
             return;
