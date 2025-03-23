@@ -105,6 +105,7 @@ public class Dos {
     /// </summary>
     /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
     /// <param name="memory">The emulator memory.</param>
+    /// <param name="a20gate">The class that emulates the optional silencing of the 20th address line.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
@@ -113,6 +114,7 @@ public class Dos {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     public Dos(Configuration configuration, IMemory memory, Stack stack, State state,
+        A20Gate a20gate,
         IFunctionHandlerProvider functionHandlerProvider,
         KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, IDictionary<string, string> envVars, ILoggerService loggerService) {
@@ -138,12 +140,11 @@ public class Dos {
         DosInt2FHandler = new DosInt2fHandler(Xms, _memory,
             functionHandlerProvider, stack, state, _loggerService);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
-        }
-
         if (!configuration.InitializeDOS is true) {
             return;
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Initializing DOS");
         }
 
         OpenDefaultFileHandles();
@@ -157,7 +158,7 @@ public class Dos {
             EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
         if(configuration.Xms) {
-            Xms = new(_memory, functionHandlerProvider, stack, state,
+            Xms = new(_memory, a20gate, state,
                 _loggerService);
         }
     }

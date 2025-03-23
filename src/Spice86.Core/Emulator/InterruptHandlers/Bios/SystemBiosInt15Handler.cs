@@ -10,7 +10,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// BIOS services
+/// Interrupt 15h is a ROM BIOS service that includes several extensions to the original PC ROM BIOS,
+/// including the means to find out how much RAM (conventional plus extended) is on the system. <br/>
+/// A program uses this service to find out how much extended memory there is.
 /// </summary>
 public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
@@ -87,7 +89,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
             default:
                 if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("Unrecognized command in AL for {MethodName}", nameof(ToggleA20GateOrGetStatus));
+                    LoggerService.Error("Unrecognized command in AL for {MethodName}", 
+                        nameof(ToggleA20GateOrGetStatus));
                 }
                 break;
         }
