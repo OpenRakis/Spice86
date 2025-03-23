@@ -107,6 +107,32 @@ The view model must efficiently manage debugger line data:
 3. It must support batch updates to minimize UI update overhead
 4. It must avoid triggering unnecessary collection change notifications
 
+### Breakpoint Management
+
+The Modern Disassembly View provides comprehensive breakpoint management functionality:
+
+1. **Managing Breakpoints**:
+   - Left-clicking the breakpoint indicator toggles the breakpoint between enabled and disabled states
+   - Right-clicking a line shows a context menu with options to create or delete breakpoints
+   - Context menu items are dynamically enabled/disabled based on the current state of the line:
+     - "Create breakpoint here" is only enabled when the line has no breakpoint
+     - "Remove breakpoint", "Disable breakpoint", and "Enable breakpoint" are only enabled when the line has a breakpoint
+   - The view updates breakpoint indicators immediately when breakpoints are added, removed, or toggled
+
+2. **Breakpoint Visualization**:
+   - Breakpoint indicators are visually distinct and easily recognizable
+   - The indicators clearly communicate the breakpoint state (enabled/disabled) with appropriate colors
+   - The indicators use high-contrast colors (bright red for enabled, grey for disabled) to ensure visibility
+   - The indicators are accessible and visible in both light and dark themes
+   - The indicators are properly refreshed when breakpoint state changes
+
+3. **Breakpoint Interaction**:
+   - The view properly updates when breakpoints are modified from other parts of the UI
+   - The view ensures all breakpoint operations are thread-safe
+   - The view provides appropriate feedback when breakpoint operations succeed or fail
+   - The view provides keyboard shortcuts for common breakpoint operations (e.g., F2 to toggle breakpoint)
+   - The view ensures breakpoint state is correctly maintained when reloading disassembly
+
 ## Performance Requirements
 
 1. The view must respond quickly to user interactions

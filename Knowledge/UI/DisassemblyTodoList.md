@@ -13,10 +13,9 @@
    - Indicate jump direction (forward/backward) with visual cues
    - Consider adding arrow indicators or color coding
 
-7. **Breakpoint Management**
-   - Add ability to set, remove, and manage breakpoints directly in the disassembly view
-   - Support conditional breakpoints based on register values or memory state
-   - Provide visual indicators for active breakpoints
+7. **Breakpoint Management** 
+   - Add context menu with options to create/delete breakpoints when right-clicking a line
+   - Implement keyboard shortcuts for common breakpoint operations (e.g., F2 to toggle breakpoint)
 
 8. **Segment Visualization**
    - Add visual distinction between different segments in the disassembly view
@@ -27,4 +26,3 @@
    - Detect when code modifies itself or other code regions
    - Provide visual indicators when instructions have been modified since last execution
    - Automatically refresh disassembly view when code modifications are detected
-   - Consider adding warnings or notifications when entering regions of self-modifying code
