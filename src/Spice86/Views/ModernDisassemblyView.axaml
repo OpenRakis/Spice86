@@ -100,28 +100,28 @@
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
                 <ListBox.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Create breakpoint here" 
-                                  Command="{Binding CreateExecutionBreakpointHereCommand}" 
+                        <MenuItem Header="Create breakpoint here"
+                                  Command="{Binding CreateExecutionBreakpointHereCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine}"
-                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}"/>
-                        <MenuItem Header="Remove breakpoint" 
-                                  Command="{Binding RemoveExecutionBreakpointHereCommand}" 
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}" />
+                        <MenuItem Header="Remove breakpoint"
+                                  Command="{Binding RemoveExecutionBreakpointHereCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine}"
-                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                        <MenuItem Header="Disable breakpoint" 
-                                  Command="{Binding DisableBreakpointCommand}" 
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <MenuItem Header="Disable breakpoint"
+                                  Command="{Binding DisableBreakpointCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
                                   IsVisible="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null}"
-                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                        <MenuItem Header="Enable breakpoint" 
-                                  Command="{Binding EnableBreakpointCommand}" 
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <MenuItem Header="Enable breakpoint"
+                                  Command="{Binding EnableBreakpointCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
                                   IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null, Converter={x:Static BoolConverters.Not}}"/>
-                        <Separator/>
-                        <MenuItem Header="Move CS:IP here" 
-                                  Command="{Binding MoveCsIpHereCommand}" 
-                                  CommandParameter="{Binding SelectedDebuggerLine}"/>
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null, Converter={x:Static BoolConverters.Not}}" />
+                        <Separator />
+                        <MenuItem Header="Move CS:IP here"
+                                  Command="{Binding MoveCsIpHereCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine}" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListBox.Styles>
@@ -144,6 +144,7 @@
                                             Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
                                     <Setter Property="Background"
                                             Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
+                                    <Setter Property="behaviors:UseParentListBoxContextMenuBehavior.UseParentContextMenu" Value="True" />
                                 </Style>
                             </ContentControl.Styles>
 
@@ -166,17 +167,17 @@
 
                                 <!-- Address -->
                                 <SelectableTextBlock Grid.Column="1"
-                                           Text="{Binding SegmentedAddress}"
-                                           Foreground="#78C9B0"
-                                           FontWeight="SemiBold"
-                                           Margin="0,0,6,0" />
+                                                     Text="{Binding SegmentedAddress}"
+                                                     Foreground="#78C9B0"
+                                                     FontWeight="SemiBold"
+                                                     Margin="0,0,6,0" />
 
                                 <!-- Bytes -->
                                 <SelectableTextBlock Grid.Column="2"
-                                           Text="{Binding ByteString}"
-                                           Foreground="#B5CEA8"
-                                           FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Margin="6,0,0,0" />
+                                                     Text="{Binding ByteString}"
+                                                     Foreground="#B5CEA8"
+                                                     FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                     Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
                                 <SelectableTextBlock Grid.Column="3"
