@@ -1,11 +1,14 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+using Avalonia.Controls;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+
+using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -105,7 +108,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
-        _logger = loggerService;
+        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         Functions = new AvaloniaList<FunctionInfo>(functionsInformation.Select(x => new FunctionInfo {
@@ -287,32 +290,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         uint currentInstructionAddress = _state.IpPhysicalAddress;
         _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress:X8}", currentInstructionAddress);
 
-        // Check if the current instruction address is in our collection
-        if (!DebuggerLines.ContainsKey(currentInstructionAddress)) {
-            _logger.Debug("Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly", currentInstructionAddress);
-
-            // We need to ensure the disassembly is updated synchronously before continuing
-            try {
-                IsLoading = true;
-
-                // Use Task.Run and Wait to execute the async method synchronously
-                // This ensures the instructions are loaded before we continue
-                Task.Run(async () => {
-                    await UpdateDisassembly(currentInstructionAddress);
-                }).Wait();
-
-                _logger.Debug("Disassembly updated, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
-
-                // Verify that the current instruction is now in the collection
-                if (!DebuggerLines.ContainsKey(currentInstructionAddress)) {
-                    _logger.Warning("Current address {CurrentInstructionAddress} still not found in DebuggerLines after update", currentInstructionAddress);
-                }
-            } catch (Exception ex) {
-                _logger.Error(ex, "Error updating disassembly");
-            } finally {
-                IsLoading = false;
-            }
-        }
+        EnsureAddressIsLoaded(currentInstructionAddress);
 
         // Set the current instruction address to trigger the view to scroll to it
         CurrentInstructionAddress = currentInstructionAddress;
@@ -325,6 +303,36 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
         // Set the paused state last to ensure all updates are complete
         IsPaused = true;
+    }
+
+    private void EnsureAddressIsLoaded(uint address) {
+        // Check if the current instruction address is in our collection
+        if (DebuggerLines.ContainsKey(address)) {
+            return;
+        }
+        _logger.Debug("Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly", address);
+
+        // We need to ensure the disassembly is updated synchronously before continuing
+        try {
+            IsLoading = true;
+
+            // Use Task.Run and Wait to execute the async method synchronously
+            // This ensures the instructions are loaded before we continue
+            Task.Run(async () => {
+                await UpdateDisassembly(address);
+            }).Wait();
+
+            _logger.Debug("Disassembly updated, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
+
+            // Verify that the current instruction is now in the collection
+            if (!DebuggerLines.ContainsKey(address)) {
+                _logger.Warning("Current address {CurrentInstructionAddress} still not found in DebuggerLines after update", address);
+            }
+        } catch (Exception ex) {
+            _logger.Error(ex, "Error updating disassembly");
+        } finally {
+            IsLoading = false;
+        }
     }
 
     /// <summary>
@@ -484,10 +492,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         return false;
     }
 
-    private async Task GoToAddress(uint address) {
-        await UpdateDisassembly(address);
-    }
-
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task UpdateDisassembly(uint currentInstructionAddress) {
         IsLoading = true;
@@ -534,9 +538,14 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task GoToFunction(object? parameter) {
+    private void GoToFunction(object? parameter) {
         if (parameter is FunctionInfo functionInfo) {
-            await GoToAddress(functionInfo.Address.Linear);
+            Console.WriteLine($"Go to function: {functionInfo.Name} at address {functionInfo.Address.Linear:X8}");
+
+            EnsureAddressIsLoaded(functionInfo.Address.Linear);
+            DebuggerLineViewModel debuggerLine = DebuggerLines[functionInfo.Address.Linear];
+            ScrollToAddress(debuggerLine.Address);
+            SelectedDebuggerLine = debuggerLine;
         }
     }
 
@@ -589,4 +598,16 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private void EnableBreakpoint(BreakpointViewModel breakpoint) {
         breakpoint.Enable();
     }
+
+    /// <summary>
+    /// Defines a filter for the autocomplete functionality, filtering structures based on the search text and their size.
+    /// </summary>
+    public AutoCompleteFilterPredicate<object?> FunctionFilter => (search, item) => search != null
+        && item is FunctionInfo {Name: not null} functionInformation
+        && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Create the text that is displayed in the textbox when a function is selected.
+    /// </summary>
+    public AutoCompleteSelector<object>? FunctionItemSelector { get; } = (_, item) => ((FunctionInfo)item).Name ?? "Unknown";
 }

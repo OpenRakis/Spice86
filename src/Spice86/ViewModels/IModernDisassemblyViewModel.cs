@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+using Avalonia.Controls;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -146,4 +147,14 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     /// Command to move the CS:IP to the current instruction.
     /// </summary>
     IRelayCommand MoveCsIpHereCommand { get; }
+
+    /// <summary>
+    /// Defines a filter for the autocomplete functionality, filtering structures based on the search text and their size.
+    /// </summary>
+    AutoCompleteFilterPredicate<object?> FunctionFilter { get; }
+
+    /// <summary>
+    /// Create the text that is displayed in the textbox when a function is selected.
+    /// </summary>
+    AutoCompleteSelector<object>? FunctionItemSelector { get; }
 }

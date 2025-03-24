@@ -8,6 +8,7 @@
              xmlns:behaviors="clr-namespace:Spice86.Behaviors"
              xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
              xmlns:views="clr-namespace:Spice86.Views"
+             xmlns:debugging="clr-namespace:Spice86.Models.Debugging"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.ModernDisassemblyView"
              x:DataType="viewModels:IModernDisassemblyViewModel"
@@ -53,15 +54,26 @@
             <!-- Function Selection -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" IsVisible="{Binding IsFunctionInformationProvided}">
                 <TextBlock VerticalAlignment="Center" Text="Function:" />
-                <ComboBox Width="200"
-                          ItemsSource="{Binding Functions}"
-                          SelectedItem="{Binding SelectedFunction}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}" />
+                <AutoCompleteBox
+                    ItemsSource="{Binding Functions}"
+                    SelectedItem="{Binding SelectedFunction}"
+                    FilterMode="Custom"
+                    ItemFilter="{Binding FunctionFilter}"
+                    Watermark="Type to select function"
+                    ItemSelector="{Binding FunctionItemSelector}">
+                    <AutoCompleteBox.ItemTemplate>
+                        <DataTemplate DataType="debugging:FunctionInfo">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock>
+                                    <Run Text="{Binding Name}" />
+                                    <Run Text=" [" />
+                                    <Run Text="{Binding Address}" />
+                                    <Run Text="]" />
+                                </TextBlock>
+                            </StackPanel>
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </AutoCompleteBox.ItemTemplate>
+                </AutoCompleteBox>
                 <Button Command="{Binding GoToFunctionCommand}" CommandParameter="{Binding SelectedFunction}" Content="Go" />
             </StackPanel>
 
@@ -111,13 +123,13 @@
                         <MenuItem Header="Disable breakpoint"
                                   Command="{Binding DisableBreakpointCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
-                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=false}"
                                   IsEnabled="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <MenuItem Header="Enable breakpoint"
                                   Command="{Binding EnableBreakpointCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
                                   IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=null, Converter={x:Static BoolConverters.Not}}" />
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=false, Converter={x:Static BoolConverters.Not}}" />
                         <Separator />
                         <MenuItem Header="Move CS:IP here"
                                   Command="{Binding MoveCsIpHereCommand}"
@@ -148,7 +160,7 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*" Margin="0">
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*,2*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         Width="16"
@@ -177,11 +189,19 @@
                                                      Text="{Binding ByteString}"
                                                      Foreground="#B5CEA8"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                     FontSize="11"
+                                                     Width="110"
                                                      Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
                                 <SelectableTextBlock Grid.Column="3"
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                                     Margin="12,0,0,0" />
+
+                                <!-- Function Name -->
+                                <SelectableTextBlock Grid.Column="4"
+                                                     Text="{Binding Function.Name, FallbackValue=''}"
+                                                     Foreground="#9CDCFE"
                                                      Margin="12,0,0,0" />
                             </Grid>
                         </ContentControl>
