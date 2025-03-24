@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 
 /// <summary>
@@ -18,6 +19,7 @@ internal static class Intrinsics {
     /// <param name="length">The number of bits to extract.</param>
     /// <param name="mask">A mask to apply to the value before extraction.</param>
     /// <returns>The extracted bits, packed into an unsigned integer.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint ExtractBits(uint value, byte start, byte length, uint mask) {
         if (Bmi1.IsSupported) {
             return Bmi1.BitFieldExtract(value, start, length);
@@ -31,5 +33,6 @@ internal static class Intrinsics {
     /// </summary>
     /// <param name="x">The number whose logarithm is to be computed.</param>
     /// <returns>The base-2 logarithm of x.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double Log2(double x) => Math.Log2(x);
 }

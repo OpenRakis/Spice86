@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
+using System.Runtime.CompilerServices;
+
 /// <summary>
 /// A static class that contains methods for resampling audio data using linear interpolation.
 /// </summary>
@@ -152,6 +154,7 @@ internal static class LinearUpsampler {
     /// <param name="b">The second sample.</param>
     /// <param name="factor">The interpolation factor between 0 and 1.</param>
     /// <returns>The interpolated sample.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short Interpolate(short a, short b, double factor) => (short)(((b - a) * factor) + a);
 
     /// <summary>
@@ -159,5 +162,6 @@ internal static class LinearUpsampler {
     /// </summary>
     /// <param name="s">The 8-bit value to convert.</param>
     /// <returns>The resulting 16-bit signed value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short Convert8To16(byte s) => (short)(s - 128 << 8);
 }
