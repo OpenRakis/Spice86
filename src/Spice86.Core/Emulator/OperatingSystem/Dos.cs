@@ -18,6 +18,8 @@ using Spice86.Shared.Utils;
 
 using System.Text;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
 /// <summary>
 /// Represents the DOS kernel.
@@ -106,6 +108,7 @@ public class Dos {
     /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="a20gate">The class that emulates the optional silencing of the 20th address line.</param>
+    /// <param name="callbackHandler">The class that stores callback instructions for calling the emulator.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
@@ -115,9 +118,11 @@ public class Dos {
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     public Dos(Configuration configuration, IMemory memory, Stack stack, State state,
         A20Gate a20gate,
+        CallbackHandler callbackHandler,
         IFunctionHandlerProvider functionHandlerProvider,
         KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IVgaFunctionality vgaFunctionality, IDictionary<string, string> envVars,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = state;
@@ -137,6 +142,10 @@ public class Dos {
             _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
+        if (configuration.Xms) {
+            Xms = new(_memory, a20gate, callbackHandler, state,
+                _loggerService);
+        }
         DosInt2FHandler = new DosInt2fHandler(Xms, _memory,
             functionHandlerProvider, stack, state, _loggerService);
 
@@ -156,10 +165,6 @@ public class Dos {
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             EnvironmentVariables.Add(envVar.Key, envVar.Value);
-        }
-        if(configuration.Xms) {
-            Xms = new(_memory, a20gate, state,
-                _loggerService);
         }
     }
 

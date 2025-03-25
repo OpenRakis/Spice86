@@ -2,6 +2,8 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -51,19 +53,20 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     public const string XmsIdentifier = "XMSXXXX0";
 
     public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate,
-        State state, ILoggerService loggerService) {
+        CallbackHandler callbackHandler, State state,
+        ILoggerService loggerService) {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
         _loggerService = loggerService;
-        memory.LoadData(MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0),
-            new byte[]{
-                0xEB, // jump near
-                0x03, // offset
-                0x90, // NOP
-                0x90, // NOP
-                0x90 // NOP
-            });
+        MemoryAsmWriter memoryAsmWriter = new(memory, new(DosDeviceSegment, 0), callbackHandler);
+        memoryAsmWriter.CurrentAddress = new(DosDeviceSegment,0);
+        memoryAsmWriter.WriteJumpNear(0x3);
+        memoryAsmWriter.WriteNop();
+        memoryAsmWriter.WriteNop();
+        memoryAsmWriter.WriteNop();
+        memoryAsmWriter.RegisterAndWriteCallback(0x43, Run);
+        memoryAsmWriter.WriteIret();
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize, this);
         _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize, false));
     }
