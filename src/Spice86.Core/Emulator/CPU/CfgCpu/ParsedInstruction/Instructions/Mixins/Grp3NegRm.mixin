@@ -6,6 +6,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -22,6 +23,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RM{{Size}} = value;
         helper.State.CarryFlag = value != 0;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("neg", helper.ToStringRm({{Size}}, ModRmContext));
     }
 }
 

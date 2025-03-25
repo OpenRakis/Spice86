@@ -1,11 +1,13 @@
 @moxy
 @attribute required String CounterRegister
-@attribute required String Condition=null
+@attribute required String Condition
+@attribute required string Mnemonic
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -21,5 +23,9 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm8 {
         } else {
             helper.MoveIpAndSetNextNode(this);
         }
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("{{Mnemonic}}", TargetIpToString(helper));
     }
 }

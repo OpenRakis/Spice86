@@ -5,6 +5,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -19,6 +20,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.Shld(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("shld", helper.ToStringRm({{Size}}, ModRmContext), helper.ToStringR({{Size}}, ModRmContext), helper.ToString(ValueField));
     }
 }
 

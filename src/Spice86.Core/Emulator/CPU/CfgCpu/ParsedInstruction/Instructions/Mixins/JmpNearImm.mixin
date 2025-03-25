@@ -5,17 +5,28 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{SignedType}}> {
+    private readonly ushort _targetIp;
+
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, InstructionField<{{SignedType}}> offsetField) :
         base(address, opcodeField, prefixes, offsetField) {
+        _targetIp = (ushort)(NextInMemoryAddress.Offset + offsetField.Value);
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        {{SignedType}} offset = helper.InstructionFieldValueRetriever.GetFieldValue(OffsetField);
-        helper.JumpNearOffset(this, offset);
+        helper.JumpNear(this, _targetIp);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("jmp {{ if Size == 8 }}short{{else}}near{{ end }}", TargetIpToString(helper));
+    }
+    
+    protected string TargetIpToString(InstructionRendererHelper helper) {
+        return helper.ToHex(_targetIp);
     }
 }

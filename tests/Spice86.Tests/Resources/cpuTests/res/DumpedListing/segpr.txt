@@ -1,0 +1,54 @@
+﻿F000:0000 mov BX,0xF100
+F000:0003 mov ES,BX
+F000:0005 mov SI,word ptr ES:[]
+F000:000A mov AX,word ptr ES:[0x0002]
+F000:000E mov word ptr DS:[0x0002],AX
+F000:0011 mov SP,0x0002
+F000:0014 push BX
+F000:0016 les SI,word ptr ES:[]
+F000:001B mov word ptr DS:[0x0004],SI
+F000:001F mov DX,ES
+F000:0021 mov word ptr DS:[0x0006],SI
+F000:0025 mov DI,0x0005
+F000:0028 lea BX,BP+DI+0x17
+F000:002C mov word ptr DS:[0x0008],SI
+F000:0030 mov BX,0x0005
+F000:0033 mov AX,0x0005
+F000:0036 mov word ptr DS:[0x000A],0x2345
+F000:003C mov DX,0xF100
+F000:003F mov ES,DX
+F000:0041 xlat byte ptr ES:[BX+AL]
+F000:0043 mov word ptr DS:[0x000C],AX
+F000:0046 mov AX,0x0001
+F000:0049 mov SS,AX
+F000:004B mov word ptr DS:[0x0010],0x0006
+F000:0051 inc word ptr SS:[]
+F000:0056 mov SP,0x0020
+F000:0059 mov word ptr DS:[0x0012],0x0000
+F000:005F div word ptr SS:[0x0002]
+F000:0065 sub SP,0x06
+F000:0068 mov word ptr DS:[0x0014],0x1200
+F000:006E mov BX,0x0005
+F000:0071 mov SI,0x0003
+F000:0074 call near word ptr SS:[BX+SI-4]
+F000:1100 mov SI,SI
+F000:1102 mov SP,word ptr SS:[SI]
+F000:1105 mov word ptr DS:[0x000E],SI
+F000:1109 add SI,0x06
+F000:110C mov DI,DI
+F000:110E mov word ptr SS:[DI],BP
+F000:1111 iret
+F000:1200 mov CX,0xF120
+F000:1203 mov ES,CX
+F000:1205 mov SI,0x0200
+F000:1208 mov DI,0x0E01
+F000:120B cmps byte ptr ES:[SI],byte ptr ES:[DI]
+F000:120D pushf
+F000:120E mov AX,0x0001
+F000:1211 mov ES,AX
+F000:1213 mov DI,0x0006
+F000:1216 mov SI,0x1400
+F000:1219 mov CX,0x0006
+F000:121C rep movs byte ptr ES:[DI],byte ptr CS:[SI]
+F000:121F hlt
+F000:FFF0 jmp near 0x0000

@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 public class Sahf : CfgInstruction {
@@ -15,5 +16,9 @@ public class Sahf : CfgInstruction {
         helper.State.ParityFlag = (helper.State.AH & Flags.Parity) == Flags.Parity;
         helper.State.CarryFlag = (helper.State.AH & Flags.Carry) == Flags.Carry;
         helper.MoveIpAndSetNextNode(this);
+    }
+    
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("sahf");
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Shared.Emulator.Memory;
 
@@ -15,5 +16,9 @@ public class CallFarImm16 : InstructionWithSegmentedAddressField {
     public override void Execute(InstructionExecutionHelper helper) {
         SegmentedAddress targetAddress = helper.InstructionFieldValueRetriever.GetFieldValue(SegmentedAddressField);
         helper.FarCallWithReturnIpNextInstruction(this, targetAddress);
+    }
+    
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("call far", helper.ToString(SegmentedAddressField));
     }
 }

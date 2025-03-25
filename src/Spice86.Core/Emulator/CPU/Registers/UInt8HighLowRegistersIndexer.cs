@@ -43,11 +43,11 @@ public class UInt8HighLowRegistersIndexer : RegistersIndexer<byte> {
         }
     }
 
-    public bool IsHigh(uint index) {
+    public static bool IsHigh(uint index) {
         return (index & Register8IndexHighBitMask) != 0;
     }
 
-    public uint ComputeRegisterIndexInArray(uint index) {
+    public static uint ComputeRegisterIndexInArray(uint index) {
         return index & Register8IndexHighLowMask;
     }
 }

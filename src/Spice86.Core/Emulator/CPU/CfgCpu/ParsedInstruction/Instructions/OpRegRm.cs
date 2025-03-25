@@ -31,13 +31,13 @@ public partial class AndRegRm16;
 public partial class AndRegRm32;
 
 // CMP (Sub without assigment)
-[OpRegRm("Sub", 8, false)]
+[OpRegRm("Sub", 8, false, "cmp")]
 public partial class CmpRegRm8;
 
-[OpRegRm("Sub", 16, false)]
+[OpRegRm("Sub", 16, false, "cmp")]
 public partial class CmpRegRm16;
 
-[OpRegRm("Sub", 32, false)]
+[OpRegRm("Sub", 32, false, "cmp")]
 public partial class CmpRegRm32;
 
 // OR

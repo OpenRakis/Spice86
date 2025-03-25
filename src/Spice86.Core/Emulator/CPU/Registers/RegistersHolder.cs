@@ -10,15 +10,12 @@ using System.Collections.Frozen;
 public class RegistersHolder {
     private readonly uint[] _registers;
 
-    private readonly FrozenDictionary<uint, string> _registersNames;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="RegistersHolder"/> class with the specified register names.
+    /// Initializes a new instance of the <see cref="RegistersHolder"/> class.
     /// </summary>
-    /// <param name="registersNames">The names of the registers.</param>
-    protected RegistersHolder(FrozenDictionary<uint, string> registersNames) {
-        _registersNames = registersNames;
-        _registers = new uint[registersNames.Count];
+    /// <param name="count">The number of registers.</param>
+    protected RegistersHolder(int count) {
+        _registers = new uint[count];
         IUIntReaderWriter readerWriter = new UIntArrayReaderWriter(_registers);
         UInt32 = new(readerWriter);
         UInt16 = new(readerWriter);
@@ -52,25 +49,5 @@ public class RegistersHolder {
     /// <returns>The combined hash of the instance, and the <see cref="_registers"/> array.</returns>
     public override int GetHashCode() {
         return _registers.GetHashCode();
-    }
-
-    /// <summary>
-    /// Gets the name of the 8-bit register with the specified index.
-    /// </summary>
-    /// <param name="regIndex">The index of the register.</param>
-    /// <returns>The name of the register.</returns>
-    public string GetReg8Name(uint regIndex) {
-        string suffix = UInt8HighLow.IsHigh(regIndex) ? "H" : "L";
-        string reg16 = GetRegName(UInt8HighLow.ComputeRegisterIndexInArray(regIndex));
-        return $"{reg16[..1]}{suffix}";
-    }
-
-    /// <summary>
-    /// Gets the name of a register based on a given index.
-    /// </summary>
-    /// <param name="regIndex">The index of the register to get the name of.</param>
-    /// <returns>The name of the register.</returns>
-    public string GetRegName(uint regIndex) {
-        return _registersNames[regIndex];
     }
 }

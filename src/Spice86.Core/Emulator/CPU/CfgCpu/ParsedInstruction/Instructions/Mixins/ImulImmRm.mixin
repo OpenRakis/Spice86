@@ -9,6 +9,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -26,5 +27,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
         {{ResSignedType}} result = helper.Alu{{Size}}.Imul(value, ({{RmSignedType}})helper.ModRm.RM{{Size}});
         helper.ModRm.R{{Size}} = ({{RmUnsignedType}})result;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("{{Operation}}", helper.ToStringR({{Size}}, ModRmContext), helper.ToStringRm({{Size}}, ModRmContext), helper.ToString(ValueField));
     }
 }

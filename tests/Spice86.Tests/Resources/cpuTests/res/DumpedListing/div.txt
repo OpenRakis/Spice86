@@ -1,0 +1,266 @@
+﻿F000:0000 mov SP,0x00D0
+F000:0003 mov word ptr DS:[],0x1000
+F000:0009 mov word ptr DS:[0x0002],0xF000
+F000:000F mov BP,0x00D0
+F000:0012 mov DX,0x0000
+F000:0015 mov AX,0x0014
+F000:0018 mov BX,0x0005
+F000:001B mov word ptr SS:[BP],0x0002
+F000:0020 div BX
+F000:0022 add BP,0x02
+F000:0025 mov word ptr DS:[0x0080],AX
+F000:0028 mov word ptr DS:[0x0082],SI
+F000:002C mov word ptr DS:[0x0004],SI
+F000:0030 pushf
+F000:0031 mov DX,0xA320
+F000:0034 mov AX,0xC3DA
+F000:0037 mov word ptr DS:[0x0006],0xFFFF
+F000:003D mov word ptr SS:[BP],0x0004
+F000:0042 div word ptr DS:[0x0006]
+F000:0046 add BP,0x02
+F000:0049 mov word ptr DS:[0x0008],AX
+F000:004C mov word ptr DS:[0x000A],SI
+F000:0050 pushf
+F000:0051 mov DX,0xFFFF
+F000:0054 mov AX,0xFFFF
+F000:0057 mov CX,0x0001
+F000:005A mov word ptr SS:[BP],0x0002
+F000:005F div CX
+F000:0061 add BP,0x02
+F000:0064 mov word ptr DS:[0x000C],AX
+F000:0067 mov word ptr DS:[0x000E],SI
+F000:006B mov word ptr DS:[0x0010],SI
+F000:006F pushf
+F000:0070 mov DX,0xFFFF
+F000:0073 mov AX,0xFFFF
+F000:0076 mov word ptr DS:[0x0012],0xFFFF
+F000:007C mov word ptr SS:[BP],0x0004
+F000:0081 div word ptr DS:[0x0012]
+F000:0085 add BP,0x02
+F000:0088 mov word ptr DS:[0x0014],AX
+F000:008B mov word ptr DS:[0x0016],SI
+F000:008F pushf
+F000:0090 mov DX,0xFBB4
+F000:0093 mov AX,0xC3DA
+F000:0096 mov CX,0xAE8E
+F000:0099 mov word ptr SS:[BP],0x0002
+F000:009E div CX
+F000:00A0 add BP,0x02
+F000:00A3 mov word ptr DS:[0x0018],AX
+F000:00A6 mov word ptr DS:[0x001A],SI
+F000:00AA mov word ptr DS:[0x001C],SI
+F000:00AE pushf
+F000:00AF mov DX,0x25C9
+F000:00B2 mov AX,0xF110
+F000:00B5 mov word ptr SS:[BP],0x0002
+F000:00BA div AX
+F000:00BC add BP,0x02
+F000:00BF mov word ptr DS:[0x001E],AX
+F000:00C2 mov word ptr DS:[0x0020],SI
+F000:00C6 pushf
+F000:00C7 mov AX,0x0014
+F000:00CA mov BX,0x0005
+F000:00CD mov word ptr SS:[BP],0x0002
+F000:00D2 div BL
+F000:00D4 add BP,0x02
+F000:00D7 mov word ptr DS:[0x0022],AX
+F000:00DA mov word ptr DS:[0x0024],SI
+F000:00DE mov word ptr DS:[0x0026],SI
+F000:00E2 pushf
+F000:00E3 mov DX,0xA320
+F000:00E6 mov AX,0xC3DA
+F000:00E9 mov word ptr DS:[0x0028],0x00FF
+F000:00EF mov word ptr SS:[BP],0x0004
+F000:00F4 div byte ptr DS:[0x0028]
+F000:00F8 add BP,0x02
+F000:00FB mov word ptr DS:[0x002A],AX
+F000:00FE mov word ptr DS:[0x002C],SI
+F000:0102 pushf
+F000:0103 mov AX,0xFFFF
+F000:0106 mov DH,0x01
+F000:0108 mov word ptr SS:[BP],0x0002
+F000:010D div DH
+F000:010F add BP,0x02
+F000:0112 mov word ptr DS:[0x002E],AX
+F000:0115 mov word ptr DS:[0x0030],SI
+F000:0119 pushf
+F000:011A mov AX,0xFFFF
+F000:011D mov word ptr DS:[0x0032],0xFFFF
+F000:0123 mov word ptr SS:[BP],0x0004
+F000:0128 div byte ptr DS:[0x0033]
+F000:012C add BP,0x02
+F000:012F mov word ptr DS:[0x0034],AX
+F000:0132 mov word ptr DS:[0x0036],SI
+F000:0136 pushf
+F000:0137 mov AX,0x008A
+F000:013A mov CX,0xAE8E
+F000:013D mov word ptr SS:[BP],0x0002
+F000:0142 div CL
+F000:0144 add BP,0x02
+F000:0147 mov word ptr DS:[0x0038],AX
+F000:014A mov word ptr DS:[0x003A],SI
+F000:014E pushf
+F000:014F mov DX,0x0669
+F000:0152 mov AX,0x89F3
+F000:0155 mov word ptr SS:[BP],0x0002
+F000:015A div AL
+F000:015C add BP,0x02
+F000:015F mov word ptr DS:[0x003C],AX
+F000:0162 mov word ptr DS:[0x003E],SI
+F000:0166 pushf
+F000:0167 mov DX,0x0000
+F000:016A mov AX,0x0014
+F000:016D mov BX,0x00FA
+F000:0170 mov word ptr SS:[BP],0x0002
+F000:0175 idiv BX
+F000:0177 add BP,0x02
+F000:017A mov word ptr DS:[0x0040],AX
+F000:017D mov word ptr DS:[0x0042],SI
+F000:0181 mov word ptr DS:[0x0044],SI
+F000:0185 pushf
+F000:0186 mov DX,0xA320
+F000:0189 mov AX,0xC3DA
+F000:018C mov word ptr DS:[0x0046],0xFFFF
+F000:0192 mov word ptr SS:[BP],0x0004
+F000:0197 idiv word ptr DS:[0x0046]
+F000:019B add BP,0x02
+F000:019E mov word ptr DS:[0x0048],AX
+F000:01A1 mov word ptr DS:[0x004A],SI
+F000:01A5 pushf
+F000:01A6 mov DX,0xFFFF
+F000:01A9 mov AX,0xFFFF
+F000:01AC mov CX,0x0001
+F000:01AF mov word ptr SS:[BP],0x0002
+F000:01B4 idiv CX
+F000:01B6 add BP,0x02
+F000:01B9 mov word ptr DS:[0x004C],AX
+F000:01BC mov word ptr DS:[0x004E],SI
+F000:01C0 mov word ptr DS:[0x0050],SI
+F000:01C4 pushf
+F000:01C5 mov DX,0xFFFF
+F000:01C8 mov AX,0xFFFF
+F000:01CB mov word ptr DS:[0x0052],0xFFFF
+F000:01D1 mov word ptr SS:[BP],0x0004
+F000:01D6 idiv word ptr DS:[0x0052]
+F000:01DA add BP,0x02
+F000:01DD mov word ptr DS:[0x0054],AX
+F000:01E0 mov word ptr DS:[0x0056],SI
+F000:01E4 pushf
+F000:01E5 mov DX,0xFBB4
+F000:01E8 mov AX,0xC3DA
+F000:01EB mov CX,0xAE8E
+F000:01EE mov word ptr SS:[BP],0x0002
+F000:01F3 idiv CX
+F000:01F5 add BP,0x02
+F000:01F8 mov word ptr DS:[0x0058],AX
+F000:01FB mov word ptr DS:[0x005A],SI
+F000:01FF mov word ptr DS:[0x005C],SI
+F000:0203 pushf
+F000:0204 mov DX,0x25C9
+F000:0207 mov AX,0xF110
+F000:020A mov word ptr SS:[BP],0x0002
+F000:020F idiv AX
+F000:0211 add BP,0x02
+F000:0214 mov word ptr DS:[0x005E],AX
+F000:0217 mov word ptr DS:[0x0060],SI
+F000:021B pushf
+F000:021C mov AX,0x0014
+F000:021F mov BX,0x0005
+F000:0222 mov word ptr SS:[BP],0x0002
+F000:0227 idiv BL
+F000:0229 add BP,0x02
+F000:022C mov word ptr DS:[0x0062],AX
+F000:022F mov word ptr DS:[0x0064],SI
+F000:0233 mov word ptr DS:[0x0066],SI
+F000:0237 pushf
+F000:0238 mov DX,0xA320
+F000:023B mov AX,0xC3DA
+F000:023E mov word ptr DS:[0x0068],0x00FF
+F000:0244 mov word ptr SS:[BP],0x0004
+F000:0249 idiv byte ptr DS:[0x0068]
+F000:024D add BP,0x02
+F000:0250 mov word ptr DS:[0x006A],AX
+F000:0253 mov word ptr DS:[0x006C],SI
+F000:0257 pushf
+F000:0258 mov AX,0xFFFF
+F000:025B mov DH,0x01
+F000:025D mov word ptr SS:[BP],0x0002
+F000:0262 idiv DH
+F000:0264 add BP,0x02
+F000:0267 mov word ptr DS:[0x006E],AX
+F000:026A mov word ptr DS:[0x0070],SI
+F000:026E pushf
+F000:026F mov AX,0xFFFF
+F000:0272 mov word ptr DS:[0x0072],0xFFFF
+F000:0278 mov word ptr SS:[BP],0x0004
+F000:027D idiv byte ptr DS:[0x0073]
+F000:0281 add BP,0x02
+F000:0284 mov word ptr DS:[0x0074],AX
+F000:0287 mov word ptr DS:[0x0076],SI
+F000:028B pushf
+F000:028C mov AX,0x008A
+F000:028F mov CX,0xAE8E
+F000:0292 mov word ptr SS:[BP],0x0002
+F000:0297 idiv CL
+F000:0299 add BP,0x02
+F000:029C mov word ptr DS:[0x0078],AX
+F000:029F mov word ptr DS:[0x007A],SI
+F000:02A3 pushf
+F000:02A4 mov DX,0x0669
+F000:02A7 mov AX,0x89F3
+F000:02AA mov word ptr SS:[BP],0x0002
+F000:02AF idiv AL
+F000:02B1 add BP,0x02
+F000:02B4 mov word ptr DS:[0x007C],AX
+F000:02B7 mov word ptr DS:[0x007E],SI
+F000:02BB pushf
+F000:02BC mov AX,0xFFFF
+F000:02BF mov word ptr SS:[BP],0x0002
+F000:02C4 aam
+F000:02C6 add BP,0x02
+F000:02C9 mov word ptr DS:[0x0084],AX
+F000:02CC pushf
+F000:02CD mov word ptr SS:[BP],0x0002
+F000:02D2 aam
+F000:02D4 add BP,0x02
+F000:02D7 mov word ptr DS:[0x0086],AX
+F000:02DA pushf
+F000:02DB mov AX,0xFFFF
+F000:02DE mov word ptr SS:[BP],0x0002
+F000:02E3 aam
+F000:02E5 add BP,0x02
+F000:02E8 mov word ptr DS:[0x0088],AX
+F000:02EB pushf
+F000:02EC mov AX,0xFF00
+F000:02EF mov word ptr SS:[BP],0x0002
+F000:02F4 aam
+F000:02F6 add BP,0x02
+F000:02F9 mov word ptr DS:[0x008A],AX
+F000:02FC pushf
+F000:02FD mov word ptr SS:[BP],0x0002
+F000:0302 aam
+F000:0304 add BP,0x02
+F000:0307 mov word ptr DS:[0x008C],AX
+F000:030A pushf
+F000:030B mov AX,0x3FFB
+F000:030E mov word ptr SS:[BP],0x0002
+F000:0313 aam
+F000:0315 add BP,0x02
+F000:0318 mov word ptr DS:[0x008E],AX
+F000:031B pushf
+F000:031C hlt
+F000:1000 push AX
+F000:1001 push DI
+F000:1002 mov SI,word ptr SS:[BP]
+F000:1005 mov SI,SI
+F000:1007 add SI,0x04
+F000:100A mov SP,word ptr DS:[SI]
+F000:100C mov word ptr SS:[BP],SI
+F000:100F add SI,SI
+F000:1011 mov DI,DI
+F000:1013 add DI,0x04
+F000:1016 mov word ptr DS:[DI],BP
+F000:1018 pop DI
+F000:1019 pop AX
+F000:101A iret
+F000:FFF0 jmp near 0x0000

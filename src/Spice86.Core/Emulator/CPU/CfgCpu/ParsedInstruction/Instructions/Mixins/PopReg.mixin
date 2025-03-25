@@ -6,6 +6,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -24,5 +25,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.{{ if IsSegment }}SegmentRegisters{{ else }}UInt{{Size}}Registers{{ end }}[RegisterIndex] = helper.Stack.Pop{{Size}}();
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("pop", helper.ToString{{ if IsSegment }}Segment{{ end }}Register(RegisterIndex{{ if !IsSegment }}, {{Size}}{{ end }}));
     }
 }

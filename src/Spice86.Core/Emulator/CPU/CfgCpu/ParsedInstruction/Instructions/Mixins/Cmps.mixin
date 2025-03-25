@@ -5,6 +5,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -28,5 +29,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ExecuteStringOperation(this);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString(this, "cmps", helper.ToSegmentedPointer({{Size}}, SegmentRegisterIndex, "SI"), helper.ToSegmentedPointer({{Size}}, "ES", "DI"));
     }
 }
