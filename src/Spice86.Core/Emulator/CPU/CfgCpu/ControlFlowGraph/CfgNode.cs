@@ -15,8 +15,8 @@ public abstract class CfgNode : ICfgNode {
     public HashSet<ICfgNode> Successors { get; } = new();
     public SegmentedAddress Address { get; }
     public virtual bool CanCauseContextRestore => false;
-
-    public abstract bool IsAssembly { get; }
+   
+    public abstract bool IsLive { get; }
     
     public abstract void UpdateSuccessorCache();
 

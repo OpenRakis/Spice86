@@ -14,7 +14,7 @@ public class DiscriminatedNode : CfgNode {
     public DiscriminatedNode(SegmentedAddress address) : base(address) {
     }
 
-    public override bool IsAssembly => false;
+    public override bool IsLive => true;
 
     public Dictionary<Discriminator, CfgInstruction> SuccessorsPerDiscriminator { get; private set; } =
         new();

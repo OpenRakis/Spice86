@@ -51,8 +51,8 @@ public class CfgNodeFeeder {
             return CurrentNodeFromInstructionFeeder;
         }
 
-        if (!currentFromGraph.IsAssembly) {
-            // Cannot check if match with memory. Just execute it.
+        if (currentFromGraph.IsLive) {
+            // Instruction is up to date. No need to do anything.
             return currentFromGraph;
         }
 
