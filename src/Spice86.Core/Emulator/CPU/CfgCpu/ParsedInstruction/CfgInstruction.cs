@@ -12,6 +12,11 @@ using System.Linq;
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
 public abstract class CfgInstruction : CfgNode, ICfgInstruction {
+    /// <summary>
+    /// Instructions are born live.
+    /// </summary>
+    private bool _isLive = true;
+
     protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
         opcodeField, new List<InstructionPrefix>()) {
     }
@@ -59,7 +64,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);
     }
 
-    public override bool IsAssembly { get => true; }
+    public override bool IsLive => _isLive;
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
@@ -112,6 +117,8 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
             .SelectMany(i => i)
             .ToImmutableList();
     }
-
-// Equals and HashCode to use the discriminator and super methods
+    
+    public void SetLive(bool isLive) {
+        _isLive = isLive;
+    }
 }

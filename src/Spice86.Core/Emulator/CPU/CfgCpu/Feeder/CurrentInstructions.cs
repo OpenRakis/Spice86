@@ -84,6 +84,7 @@ public class CurrentInstructions : InstructionReplacer {
     private void AddInstructionInCurrentCache(CfgInstruction instruction) {
         SegmentedAddress instructionAddress = instruction.Address;
         _currentInstructionAtAddress.Add(instructionAddress, instruction);
+        instruction.SetLive(true);
     }
 
     private void ClearCurrentInstruction(CfgInstruction instruction) {
@@ -97,5 +98,6 @@ public class CurrentInstructions : InstructionReplacer {
         }
 
         _currentInstructionAtAddress.Remove(instruction.Address);
+        instruction.SetLive(false);
     }
 }
