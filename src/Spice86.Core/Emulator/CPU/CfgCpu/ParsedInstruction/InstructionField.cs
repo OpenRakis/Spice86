@@ -25,11 +25,6 @@ public class InstructionField<T> : FieldWithValue {
     }
 
     /// <summary>
-    /// Physical address of the field in memory
-    /// </summary>
-    public uint PhysicalAddress { get; }
-
-    /// <summary>
     /// Value of the field at creation time. Meaningless if UseValue is false.
     /// Differs to discriminator for fields which do not represent something that changes CPU logic.
     /// For example in MOV AX, 1234:
