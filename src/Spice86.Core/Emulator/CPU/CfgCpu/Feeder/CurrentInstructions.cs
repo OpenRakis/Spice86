@@ -59,15 +59,20 @@ public class CurrentInstructions : InstructionReplacer {
         SegmentedAddress instructionAddress = instruction.Address;
         List<AddressBreakPoint> breakpoints = new();
         _breakpointsForInstruction.Add(instructionAddress, breakpoints);
-        uint instructionPhysicalAddress = instructionAddress.Linear;
-        for (uint byteAddress = instructionPhysicalAddress;
-             byteAddress < instructionPhysicalAddress + instruction.Length;
-             byteAddress++) {
-            // When reached the breakpoint will clear the cache and the other breakpoints for the instruction
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
-                b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
-            breakpoints.Add(breakPoint);
-            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+        foreach (FieldWithValue field in instruction.FieldsInOrder) {
+            for (int i = 0; i < field.DiscriminatorValue.Count; i++) {
+                byte? instructionByte = field.DiscriminatorValue[i];
+                if (instructionByte is null) {
+                    // Do not create breakpoints for fields that are not read from memory
+                    continue;
+                }
+
+                uint byteAddress = (uint)(field.PhysicalAddress + i);
+                AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
+                    b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
+                breakpoints.Add(breakPoint);
+                _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+            }
         }
     }
 
