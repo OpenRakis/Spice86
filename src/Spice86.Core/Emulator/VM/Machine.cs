@@ -15,7 +15,6 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -24,7 +23,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 /// <summary>
@@ -67,6 +65,11 @@ public sealed class Machine : IDisposable {
     /// The emulated CPU state.
     /// </summary>
     public State CpuState { get; }
+    
+    /// <summary>
+    /// The in memory stack used by the CPU
+    /// </summary>
+    public Stack Stack { get; }
 
     /// <summary>
     /// DOS Services.
@@ -157,7 +160,7 @@ public sealed class Machine : IDisposable {
     /// The VGA Card.
     /// </summary>
     public VgaCard VgaCard { get; }
-    
+
     /// <summary>
     /// The VGA Registers
     /// </summary>
@@ -192,17 +195,17 @@ public sealed class Machine : IDisposable {
     /// The OPL3 FM Synth chip.
     /// </summary>
     public OPL3FM OPL3FM { get; }
-    
+
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
     public SoftwareMixer SoftwareMixer { get; }
-    
+
     /// <summary>
     /// The size of the conventional memory in kilobytes.
     /// </summary>
     public const uint ConventionalMemorySizeKb = 640;
-    
+
     /// <summary>
     /// The mouse device hardware abstraction.
     /// </summary>
@@ -217,7 +220,7 @@ public sealed class Machine : IDisposable {
     /// Defines all VGA high level functions, such as writing text to the screen.
     /// </summary>
     public IVgaFunctionality VgaFunctions { get; set; }
-    
+
     /// <summary>
     /// The pause handler for the emulation thread
     /// </summary>
@@ -226,7 +229,43 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
-    public Machine(BiosDataArea biosDataArea, BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler, BiosKeyboardInt9Handler biosKeyboardInt9Handler, CallbackHandler callbackHandler, Cpu cpu, CfgCpu cfgCpu, State cpuState, Dos dos, GravisUltraSound gravisUltraSound, IOPortDispatcher ioPortDispatcher, Joystick joystick, Keyboard keyboard, KeyboardInt16Handler keyboardInt16Handler, EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, Midi midiDevice, PcSpeaker pcSpeaker, DualPic dualPic, SoundBlaster soundBlaster, SystemBiosInt12Handler systemBiosInt12Handler, SystemBiosInt15Handler systemBiosInt15Handler, SystemClockInt1AHandler systemClockInt1AHandler, Timer timer, TimerInt8Handler timerInt8Handler, VgaCard vgaCard, IVideoState vgaRegisters, IIOPortHandler vgaIoPortHandler, IVgaRenderer vgaRenderer, IVideoInt10Handler videoInt10Handler, VgaRom vgaRom, DmaController dmaController, OPL3FM opl3FM, SoftwareMixer softwareMixer, IMouseDevice mouseDevice, IMouseDriver mouseDriver, IVgaFunctionality vgaFunctions, IPauseHandler pauseHandler) {
+    public Machine(BiosDataArea biosDataArea,
+        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler,
+        CallbackHandler callbackHandler,
+        Cpu cpu,
+        CfgCpu cfgCpu,
+        State cpuState,
+        Dos dos,
+        GravisUltraSound gravisUltraSound,
+        IOPortDispatcher ioPortDispatcher,
+        Joystick joystick,
+        Keyboard keyboard,
+        KeyboardInt16Handler keyboardInt16Handler,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        IMemory memory,
+        Midi midiDevice,
+        PcSpeaker pcSpeaker,
+        DualPic dualPic,
+        SoundBlaster soundBlaster,
+        SystemBiosInt12Handler systemBiosInt12Handler,
+        SystemBiosInt15Handler systemBiosInt15Handler,
+        SystemClockInt1AHandler systemClockInt1AHandler,
+        Timer timer,
+        TimerInt8Handler timerInt8Handler,
+        VgaCard vgaCard,
+        IVideoState vgaRegisters,
+        IIOPortHandler vgaIoPortHandler,
+        IVgaRenderer vgaRenderer,
+        IVideoInt10Handler videoInt10Handler,
+        VgaRom vgaRom,
+        DmaController dmaController,
+        OPL3FM opl3FM,
+        SoftwareMixer softwareMixer,
+        IMouseDevice mouseDevice,
+        IMouseDriver mouseDriver,
+        IVgaFunctionality vgaFunctions,
+        IPauseHandler pauseHandler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -234,6 +273,7 @@ public sealed class Machine : IDisposable {
         Cpu = cpu;
         CfgCpu = cfgCpu;
         CpuState = cpuState;
+        Stack = cpu.Stack;
         Dos = dos;
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;

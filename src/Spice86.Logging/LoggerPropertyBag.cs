@@ -7,4 +7,7 @@ using Spice86.Shared.Interfaces;
 public class LoggerPropertyBag : ILoggerPropertyBag {
     /// <inheritdoc/>
     public SegmentedAddress CsIp { get; set; } = new(0,0);
+    
+    /// <inheritdoc/>
+    public int ContextIndex { get; set; }
 }

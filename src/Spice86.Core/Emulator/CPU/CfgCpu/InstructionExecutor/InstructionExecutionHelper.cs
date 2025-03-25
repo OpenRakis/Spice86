@@ -19,15 +19,19 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Runtime.CompilerServices;
+
 public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
     private readonly BreakPointHolder _interruptBreakPoints;
+    private readonly ExecutionContextManager _executionContextManager;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
         CallbackHandler callbackHandler,
         BreakPointHolder interruptBreakPoints,
+        ExecutionContextManager executionContextManager,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -40,6 +44,7 @@ public class InstructionExecutionHelper {
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
         _interruptBreakPoints = interruptBreakPoints;
+        _executionContextManager = executionContextManager;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -57,6 +62,8 @@ public class InstructionExecutionHelper {
     public UInt16RegistersIndexer UInt16Registers => State.GeneralRegisters.UInt16;
     public UInt32RegistersIndexer UInt32Registers => State.GeneralRegisters.UInt32;
     public UInt16RegistersIndexer SegmentRegisters => State.SegmentRegisters.UInt16;
+    private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
+
     public ICfgNode? NextNode { get; set; }
     
     public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
@@ -95,45 +102,47 @@ public class InstructionExecutionHelper {
 
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCallOffset(CfgInstruction instruction, int offset) {
         MoveIpToEndOfInstruction(instruction);
         ushort callIP = (ushort)(State.IP + offset);
         NearCall(instruction, State.IP, callIP);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         NearCall(instruction, State.IP, callIP);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCall(CfgInstruction instruction, ushort returnIP, ushort callIP) {
         Stack.Push16(returnIP);
-        HandleCall(instruction, CallType.NEAR, State.CS, returnIP, State.CS, callIP);
+        HandleCall(instruction, CallType.NEAR, new SegmentedAddress(State.CS, returnIP),  new SegmentedAddress(State.CS, callIP));
     }
 
-    public void FarCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort targetCS, ushort targetIP) {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void FarCallWithReturnIpNextInstruction(CfgInstruction instruction, SegmentedAddress target) {
         MoveIpToEndOfInstruction(instruction);
-        FarCall(instruction, State.CS, State.IP, targetCS, targetIP);
+        FarCall(instruction, State.IpSegmentedAddress, target);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void FarCall(CfgInstruction instruction,
-        ushort returnCS,
-        ushort returnIP,
-        ushort targetCS,
-        ushort targetIP) {
-        Stack.Push16(returnCS);
-        Stack.Push16(returnIP);
-        HandleCall(instruction, CallType.FAR, returnCS, returnIP, targetCS, targetIP);
+        SegmentedAddress returnAddress,
+        SegmentedAddress target) {
+        Stack.PushSegmentedAddress(returnAddress);
+        HandleCall(instruction, CallType.FAR, returnAddress, target);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleCall(CfgInstruction instruction,
         CallType callType,
-        ushort returnCS,
-        ushort returnIP,
-        ushort targetCS,
-        ushort targetIP) {
-        State.CS = targetCS;
-        State.IP = targetIP;
+        SegmentedAddress returnAddress,
+        SegmentedAddress target) {
+        State.CS = target.Segment;
+        State.IP = target.Offset;
+        CurrentFunctionHandler.Call(callType, target, returnAddress, instruction);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
@@ -147,8 +156,10 @@ public class InstructionExecutionHelper {
         HandleInterruptCall(instruction, vectorNumber);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptCall(CfgInstruction instruction, byte vectorNumber) {
-        DoInterrupt(vectorNumber);
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
     
@@ -161,30 +172,33 @@ public class InstructionExecutionHelper {
         }
         SegmentedAddress expectedReturn = State.IpSegmentedAddress;
         Stack.Push16(State.Flags.FlagRegister16);
-        Stack.Push16(State.CS);
-        Stack.Push16(State.IP);
+        Stack.PushSegmentedAddress(expectedReturn);
         State.InterruptFlag = false;
         State.IP = target.Offset;
         State.CS = target.Segment;
         return (target, expectedReturn);
     }
-    
-    public void HandleInterruptRet(CfgInstruction instruction) {
-        State.IP = Stack.Pop16();
-        State.CS = Stack.Pop16();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void HandleInterruptRet<T>(T instruction) where T : CfgInstruction, IReturnInstruction {
+        CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
+        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
         State.Flags.FlagRegister = Stack.Pop16();
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
-    public void HandleNearRet(CfgInstruction instruction, int numberOfBytesToPop = 0) {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void HandleNearRet<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+        CurrentFunctionHandler.Ret(CallType.NEAR, instruction);
         State.IP = Stack.Pop16();
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
-    public void HandleFarRet(CfgInstruction instruction, int numberOfBytesToPop = 0) {
-        State.IP = Stack.Pop16();
-        State.CS = Stack.Pop16();
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void HandleFarRet<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
+        CurrentFunctionHandler.Ret(CallType.FAR, instruction);
+        State.IpSegmentedAddress = Stack.PopSegmentedAddress();
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }

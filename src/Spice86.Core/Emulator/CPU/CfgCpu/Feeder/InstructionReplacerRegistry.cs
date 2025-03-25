@@ -9,9 +9,9 @@ public class InstructionReplacerRegistry : IInstructionReplacer {
         _replacers.Add(replacer);
     }
 
-    public void ReplaceInstruction(CfgInstruction old, CfgInstruction newInstruction) {
+    public void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
         foreach (InstructionReplacer instructionReplacer in _replacers) {
-            instructionReplacer.ReplaceInstruction(old, newInstruction);
+            instructionReplacer.ReplaceInstruction(oldInstruction, newInstruction);
         }
     }
 }

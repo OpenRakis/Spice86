@@ -51,7 +51,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     /// <returns>A byte array representing the memory content with the Spice86 machine code for callbacks removed.</returns>
     public byte[] ReplaceAllCallbacksInRamImage(IMemory memory) {
         ByteArrayBasedIndexable indexable = new ByteArrayBasedIndexable(memory.ReadRam());
-        MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexable, new SegmentedAddress(0, 0), this);
+        MemoryAsmWriter memoryAsmWriter = new MemoryAsmWriter(indexable, SegmentedAddress.ZERO, this);
         foreach (ICallback callback in this.AllRunnables) {
             memoryAsmWriter.CurrentAddress = callback.InstructionAddress;
             memoryAsmWriter.EraseCallbackWithInt(callback.Index);

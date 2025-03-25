@@ -37,11 +37,11 @@ public class CurrentInstructions : InstructionReplacer {
         return res;
     }
 
-    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        SegmentedAddress instructionAddress = instruction.Address;
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        SegmentedAddress instructionAddress = newInstruction.Address;
         if (_currentInstructionAtAddress.ContainsKey(instructionAddress)) {
-            ClearCurrentInstruction(old);
-            SetAsCurrent(instruction);
+            ClearCurrentInstruction(oldInstruction);
+            SetAsCurrent(newInstruction);
         }
     }
 

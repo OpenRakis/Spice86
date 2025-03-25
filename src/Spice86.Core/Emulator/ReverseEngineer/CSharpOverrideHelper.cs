@@ -29,11 +29,6 @@ public class CSharpOverrideHelper {
     protected readonly DualPic _dualPic;
 
     /// <summary>
-    /// The execution flow recorder.
-    /// </summary>
-    protected readonly ExecutionFlowRecorder _executionFlowRecorder;
-
-    /// <summary>
     /// The class that stores callback instructions definitions.
     /// </summary>
     protected readonly CallbackHandler _callbackHandler;
@@ -91,12 +86,12 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
-    public Stack Stack { get; }
+    public Stack Stack => Machine.Stack;
 
     /// <summary>
     /// Gets the state of the CPU.
     /// </summary>
-    public State State { get; }
+    public State State => Machine.CpuState;
 
     /// <summary>
     /// Arithmetic-logic unit for 8 bit operations
@@ -309,17 +304,6 @@ public class CSharpOverrideHelper {
     public JumpDispatcher JumpDispatcher { get; set; }
 
     /// <summary>
-    /// Gets or sets whether we register self modifying code.
-    /// </summary>
-    /// <remarks>
-    /// This is a shortcut to <see cref="ExecutionFlowRecorder.IsRegisterExecutableCodeModificationEnabled" />
-    /// </remarks>
-    public bool IsRegisterExecutableCodeModificationEnabled {
-        get => _executionFlowRecorder.IsRegisterExecutableCodeModificationEnabled;
-        set => _executionFlowRecorder.IsRegisterExecutableCodeModificationEnabled = value;
-    }
-
-    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
@@ -331,11 +315,8 @@ public class CSharpOverrideHelper {
         Machine = machine;
         Cpu = machine.Cpu;
         Memory = machine.Memory;
-        State = machine.CpuState;
-        Stack = Cpu.Stack;
         _dualPic = machine.DualPic;
         _timer = machine.Timer;
-        _executionFlowRecorder = Cpu.ExecutionFlowRecorder;
         _callbackHandler = machine.CallbackHandler;
         EmulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         _loggerService = loggerService;
@@ -699,17 +680,6 @@ public class CSharpOverrideHelper {
         if (foundOffset != expectedOffset || foundSegment != expectedSegment) {
             throw FailAsUntested(
                 $"Call table value changed, we would not call the method the game is calling. Expected: {new SegmentedAddress(expectedSegment, expectedOffset)} found: {new SegmentedAddress(foundSegment, foundOffset)}");
-        }
-    }
-
-    /// <summary>
-    /// Defines an executable area in memory by registering a memory write break point for every byte in the specified address range.
-    /// </summary>
-    /// <param name="startAddress">The start address of the executable area.</param>
-    /// <param name="endAddress">The end address of the executable area.</param>
-    public void DefineExecutableArea(uint startAddress, uint endAddress) {
-        for (uint address = startAddress; address <= endAddress; address++) {
-            _executionFlowRecorder.RegisterExecutableByteModificationBreakPoint(Memory, State, Machine.EmulatorBreakpointsManager, address);
         }
     }
 

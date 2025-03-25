@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -97,7 +98,9 @@ public class Dos {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
@@ -106,11 +109,11 @@ public class Dos {
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, Cpu cpu, KeyboardInt16Handler keyboardInt16Handler,
+    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _memory = memory;
-        _state = cpu.State;
+        _state = state;
         _vgaFunctionality = vgaFunctionality;
         _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
@@ -120,16 +123,13 @@ public class Dos {
         FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
-        DosInt20Handler = new DosInt20Handler(_memory, cpu, 
-            _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, cpu,
+        DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, _vgaFunctionality, this,
             dosSwappableDataArea,
             _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, cpu,
-            _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, cpu, 
-            _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
@@ -142,7 +142,7 @@ public class Dos {
         OpenDefaultFileHandles();
 
         if (enableEms) {
-            Ems = new(_memory, cpu, this, _loggerService);
+            Ems = new(_memory, functionHandlerProvider, stack, state, this, _loggerService);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {

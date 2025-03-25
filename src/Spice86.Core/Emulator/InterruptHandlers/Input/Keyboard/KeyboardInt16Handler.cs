@@ -1,8 +1,10 @@
 ﻿
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -16,10 +18,13 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    public KeyboardInt16Handler(IMemory memory, Cpu cpu, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer) : base(memory, cpu, loggerService) {
+    public KeyboardInt16Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
@@ -32,7 +37,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Returns in the AX register the pending key code.
     /// </summary>
     public void GetKeystroke() {
-        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
         }
         ushort? keyCode = GetNextKeyCode();
@@ -54,7 +59,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("KEY STROKE STATUS");
         }
 

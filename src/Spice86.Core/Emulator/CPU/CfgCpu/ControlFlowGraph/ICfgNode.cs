@@ -33,6 +33,11 @@ public interface ICfgNode {
     public bool IsAssembly { get; }
 
     /// <summary>
+    /// True when the node execution can lead to going back to previous execution context if the next to execute is the correct address
+    /// </summary>
+    public bool CanCauseContextRestore { get; }
+
+    /// <summary>
     /// Needs to be called each time a successor is added
     /// </summary>
     public void UpdateSuccessorCache();

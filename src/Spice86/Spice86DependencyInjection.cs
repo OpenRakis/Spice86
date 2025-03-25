@@ -81,23 +81,26 @@ public class Spice86DependencyInjection : IDisposable {
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, state);
-        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, loggerService,
-            configuration.DumpDataOnExit is not false);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, loggerService,
-            configuration.DumpDataOnExit is not false);
+        FunctionCatalogue functionCatalogue = new FunctionCatalogue(reader.ReadGhidraSymbolsFromFileOrCreate());
+        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, functionCatalogue, loggerService);
+        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager,
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, functionCatalogue,
             loggerService);
+
+        IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
+        IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
+        loggerService.Information("Execution will be done with " + (configuration.CfgCpu ? "CFG CPU" : "regular CPU"));
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
             new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, cpu, dualPic, timer, biosDataArea, loggerService);
+            new TimerInt8Handler(memory, functionHandlerProvider, stack, state, dualPic, timer, biosDataArea, loggerService);
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
@@ -128,22 +131,22 @@ public class Spice86DependencyInjection : IDisposable {
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
-        VgaBios vgaBios = new VgaBios(memory, cpu, vgaFunctionality, biosDataArea, loggerService);
+        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack, state, vgaFunctionality, biosDataArea, loggerService);
 
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler =
-            new BiosEquipmentDeterminationInt11Handler(memory, cpu, loggerService);
+            new BiosEquipmentDeterminationInt11Handler(memory, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler =
-            new SystemBiosInt12Handler(memory, cpu, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, cpu, a20Gate,
+            new SystemBiosInt12Handler(memory, functionHandlerProvider, stack, state, biosDataArea, loggerService);
+        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, functionHandlerProvider, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
         SystemClockInt1AHandler systemClockInt1AHandler =
-            new SystemClockInt1AHandler(memory, cpu, loggerService, timerInt8Handler);
+            new SystemClockInt1AHandler(memory, functionHandlerProvider, stack, state, loggerService, timerInt8Handler);
 
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
             configuration, configuration.RecordedDataDirectory, loggerService);
 
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
-            executionFlowRecorder, functionHandler, loggerService);
+            executionFlowRecorder, functionCatalogue, loggerService);
 
         MainWindowViewModel? mainWindowViewModel = null;
         MainWindow? mainWindow = null;
@@ -171,16 +174,16 @@ public class Spice86DependencyInjection : IDisposable {
         Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
             mainWindowViewModel, configuration.FailOnUnhandledPort);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, cpu, dualPic, keyboard, biosDataArea, loggerService);
+            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack, state, dualPic, keyboard, biosDataArea, loggerService);
         Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, configuration.Mouse, loggerService,
             configuration.FailOnUnhandledPort);
 
         MouseDriver mouseDriver =
             new MouseDriver(cpu, memory, mouse, mainWindowViewModel, vgaFunctionality, loggerService);
 
-        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, cpu, loggerService,
+        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(memory, cpu, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
@@ -197,13 +200,13 @@ public class Spice86DependencyInjection : IDisposable {
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
-        IDictionary<SegmentedAddress, FunctionInformation> functionsInformation = reader.ReadGhidraSymbolsFromFileOrCreate();
-        InitializeFunctionHandlers(configuration, machine, loggerService,
-            functionsInformation, functionHandler, functionHandlerInExternalInterrupt);
+        DictionaryUtils.AddAll(functionCatalogue.FunctionInformations, ReadFunctionOverrides(configuration, machine, loggerService));
+
+        InitializeFunctionHandlers(configuration, functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, memoryDataExporter, cpu, cfgCpu, state,
-            timer, dos, functionHandler, executionFlowRecorder, pauseHandler,
+            emulatorStateSerializer, memory, functionHandlerProvider, instructionExecutor, memoryDataExporter, state,
+            timer, dos, functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
             mainWindowViewModel,
             dmaController,
             loggerService);
@@ -213,9 +216,9 @@ public class Spice86DependencyInjection : IDisposable {
             MemoryAsmWriter memoryAsmWriter = new(memory,
                 new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
             InterruptInstaller interruptInstaller =
-                new InterruptInstaller(interruptVectorTable, memoryAsmWriter, cpu.FunctionHandler);
+                new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
             AssemblyRoutineInstaller assemblyRoutineInstaller =
-                new AssemblyRoutineInstaller(memoryAsmWriter, cpu.FunctionHandler);
+                new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
 
             // Register the interrupt handlers
             interruptInstaller.InstallInterruptHandler(vgaBios);
@@ -234,13 +237,13 @@ public class Spice86DependencyInjection : IDisposable {
                 interruptInstaller.InstallInterruptHandler(dos.Ems);
             }
 
-            var mouseInt33Handler = new MouseInt33Handler(memory, cpu, loggerService, mouseDriver);
+            var mouseInt33Handler = new MouseInt33Handler(memory, functionHandlerProvider, stack, state, loggerService, mouseDriver);
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             var mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
 
-            SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver);
+            SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver");
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
 
@@ -257,7 +260,7 @@ public class Spice86DependencyInjection : IDisposable {
             DisassemblyViewModel disassemblyVm = new(
                 emulatorBreakpointsManager,
                 memory, state,
-                functionsInformation,
+                functionCatalogue.FunctionInformations,
             breakpointsViewModel, pauseHandler,
             uiThreadDispatcher, messenger, textClipboard);
             PaletteViewModel paletteViewModel = new(
@@ -334,7 +337,7 @@ public class Spice86DependencyInjection : IDisposable {
             return res;
         }
 
-        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+        if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
             loggerService.Verbose("Override supplied: {OverrideSupplier}", configuration.OverrideSupplier);
         }
 
@@ -346,29 +349,19 @@ public class Spice86DependencyInjection : IDisposable {
         return res;
     }
 
-    private static void InitializeFunctionHandlers(Configuration configuration, Machine machine,
-        ILoggerService loggerService,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, FunctionHandler cpuFunctionHandler,
+    private static void InitializeFunctionHandlers(Configuration configuration, FunctionHandler cpuFunctionHandler,
         FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
-        if (configuration.OverrideSupplier != null) {
-            DictionaryUtils.AddAll(functionInformations,
-                GenerateFunctionInformations(loggerService, configuration,
-                    machine));
-        }
-
-        if (functionInformations.Count == 0) {
-            return;
-        }
-
         bool useCodeOverride = configuration.UseCodeOverrideOption;
-        SetupFunctionHandler(cpuFunctionHandler, functionInformations, useCodeOverride);
-        SetupFunctionHandler(cpuFunctionHandlerInExternalInterrupt, functionInformations, useCodeOverride);
+        cpuFunctionHandler.UseCodeOverride = useCodeOverride;
+        cpuFunctionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
     }
 
-    private static void SetupFunctionHandler(FunctionHandler functionHandler,
-        IDictionary<SegmentedAddress, FunctionInformation> functionInformations, bool useCodeOverride) {
-        functionHandler.FunctionInformations = functionInformations;
-        functionHandler.UseCodeOverride = useCodeOverride;
+    private static IDictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(Configuration configuration, Machine machine,
+        ILoggerService loggerService) {
+        if (configuration.OverrideSupplier != null) {
+            return GenerateFunctionInformations(loggerService, configuration, machine);
+        }
+        return new Dictionary<SegmentedAddress, FunctionInformation>();
     }
 
     private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp() {

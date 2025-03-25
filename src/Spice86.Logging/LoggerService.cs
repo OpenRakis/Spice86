@@ -11,7 +11,7 @@ public class LoggerService : ILoggerService {
     /// <summary>
     /// The format for the log message that will be output.
     /// </summary>
-    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{IP:j}] {Message:lj}{NewLine}{Exception}";
+    private const string LogFormat = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{ContextIndex}/{IP:j}] {Message:lj}{NewLine}{Exception}";
 
     /// <inheritdoc/>
     public LoggingLevelSwitch LogLevelSwitch { get; set; } = new(LogEventLevel.Information);
@@ -46,7 +46,9 @@ public class LoggerService : ILoggerService {
     }
 
     private ILogger AddProperties(Serilog.Core.Logger logger) {
-        return logger.ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false);
+        return logger.
+            ForContext("IP", LoggerPropertyBag.CsIp, destructureObjects: false).
+            ForContext("ContextIndex", LoggerPropertyBag.ContextIndex, destructureObjects: false);
     }
 
     /// <inheritdoc/>

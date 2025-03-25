@@ -11,4 +11,6 @@ public interface ILoggerPropertyBag {
     /// From Cpu.State.CS and Cpu.State.IP
     /// </summary>
     SegmentedAddress CsIp { get; set; }
+    
+    int ContextIndex { get; set; }
 }
