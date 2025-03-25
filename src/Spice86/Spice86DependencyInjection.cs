@@ -357,8 +357,9 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         Dos dos = new Dos(configuration, memory, stack, state, a20Gate,
-            functionHandlerProvider, keyboardInt16Handler, vgaFunctionality,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            callbackHandler, functionHandlerProvider, keyboardInt16Handler,
+            vgaFunctionality, new Dictionary<string, string>
+                { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
