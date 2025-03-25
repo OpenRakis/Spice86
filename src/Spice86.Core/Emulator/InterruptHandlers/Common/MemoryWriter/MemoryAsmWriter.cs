@@ -67,6 +67,11 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(vectorNumber);
     }
 
+    public void WriteJumpNear(uint offset) {
+        WriteUInt8(0xE9);
+        WriteUInt16((ushort)(CurrentAddress.Linear + 3));
+    }
+
     /// <summary>
     /// Writes a NOP to memory. This instruction does nothing.
     /// </summary>
