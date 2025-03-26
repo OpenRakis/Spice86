@@ -69,7 +69,7 @@ public class MemoryAsmWriter : MemoryWriter {
 
     public void WriteJumpNear(uint offset) {
         WriteUInt8(0xE9);
-        WriteUInt16((ushort)(CurrentAddress.Linear + 3));
+        WriteUInt32(offset);
     }
 
     /// <summary>

@@ -16,8 +16,8 @@ using System.Linq;
 /// <summary>
 /// Provides DOS applications with XMS memory. <br/>
 /// XMS is always called through INT 0x2F, AH=0x43. <br/>
-/// <remarks>This provides XMS 2.0</remarks>
 /// </summary>
+/// <remarks>This provides XMS 2.0</remarks>
 public sealed class ExtendedMemoryManager : IMemoryDevice {
     private int _a20EnableCount;
 
@@ -33,14 +33,14 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// </summary>
 
     public const ushort DosDeviceSegment = 0xD000;
-    
+
     /// <summary>
     /// The size of available XMS Memory, in bytes.
+    /// </summary>
     /// <remarks>
     /// 32 MB for XMS 2.0
     /// </remarks>
-    /// </summary>
-    public const uint XmsMemorySize = 32 * 1024 * 1024;
+    public const uint XmsMemorySize = 32 * 1024;
 
     /// <summary>
     /// XMS plain old memory.
@@ -60,7 +60,6 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
         _memory = memory;
         _loggerService = loggerService;
         MemoryAsmWriter memoryAsmWriter = new(memory, new(DosDeviceSegment, 0), callbackHandler);
-        memoryAsmWriter.CurrentAddress = new(DosDeviceSegment,0);
         memoryAsmWriter.WriteJumpNear(0x3);
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();

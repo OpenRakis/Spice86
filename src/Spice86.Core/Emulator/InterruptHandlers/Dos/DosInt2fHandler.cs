@@ -58,7 +58,7 @@ public class DosInt2fHandler : InterruptHandler {
             //Get XMS Control Function Address
             case 0x10:
                 State.ES = ExtendedMemoryManager.DosDeviceSegment;
-                State.BX = 0;
+                State.BX = 0x0;
                 break;
             default:
                 if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -67,7 +67,6 @@ public class DosInt2fHandler : InterruptHandler {
                 break;
         }
         SetCarryFlag(false, calledFromVm);
-        State.CX = 0;
     }
 
     /// <summary>
