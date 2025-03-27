@@ -45,7 +45,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// <summary>
     /// XMS plain old memory.
     /// </summary>
-    public Ram XmsRam { get; private set; } = new(XmsMemorySize);
+    public Ram XmsRam { get; private set; } = new(XmsMemorySize * 1024);
 
     /// <summary>
     /// DOS Device Driver Name.
@@ -67,7 +67,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
         memoryAsmWriter.RegisterAndWriteCallback(0x43, Run);
         memoryAsmWriter.WriteIret();
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
-        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize, false));
+        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize * 1024, false));
     }
 
     /// <summary>
@@ -445,7 +445,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// </summary>
     public void QueryAnyFreeExtendedMemory() {
         _state.EAX = LargestFreeBlock / 1024u;
-        _state.ECX = (uint)(XmsMemorySize - 1);
+        _state.ECX = (uint)(XmsMemorySize * 1024 - 1);
         _state.EDX = (uint)(TotalFreeMemory / 1024);
 
         if (_state.EAX == 0) {
@@ -456,7 +456,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     }
 
     /// <inheritdoc/>
-    public uint Size => XmsMemorySize;
+    public uint Size => XmsMemorySize * 1024;
 
     /// <inheritdoc/>
     public byte Read(uint address) {
