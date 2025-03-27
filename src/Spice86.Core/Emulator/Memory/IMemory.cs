@@ -59,7 +59,7 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     ///     Allow a memory mapped device to register for a certain memory range.
     /// </summary>
     /// <param name="baseAddress">The start of the frame</param>B
-    /// <param name="size">The size of the window</param>
+    /// <param name="size">The size of the window, in bytes</param>
     /// <param name="memoryDevice">The memory device to use</param>
     public void RegisterMapping(uint baseAddress, uint size, IMemoryDevice memoryDevice);
 }

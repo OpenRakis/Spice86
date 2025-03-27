@@ -35,7 +35,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     public const ushort DosDeviceSegment = 0xD000;
 
     /// <summary>
-    /// The size of available XMS Memory, in bytes.
+    /// The size of available XMS Memory, in kilobytes.
     /// </summary>
     /// <remarks>
     /// 32 MB for XMS 2.0
@@ -66,7 +66,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.RegisterAndWriteCallback(0x43, Run);
         memoryAsmWriter.WriteIret();
-        memory.RegisterMapping(XmsBaseAddress, XmsMemorySize, this);
+        memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
         _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize, false));
     }
 
