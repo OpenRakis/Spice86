@@ -92,8 +92,68 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
 
     /// <inheritdoc/>
     public void Run() {
-        byte operation = _state.AH;
-        //TOOD: Switch
+        byte operation = _state.AL;
+        switch (operation) {
+            case 0x00:
+                GetVersionNumber();
+                break;
+            case 0x01:
+                RequestHighMemoryArea();
+                break;
+            case 0x02:
+                ReleaseHighMemoryArea();
+                break;
+            case 0x03:
+                GlobalEnableA20();
+                break;
+            case 0x04:
+                GlobalDisableA20();
+                break;
+            case 0x05:
+                EnableLocalA20();
+                break;
+            case 0x06:
+                DisableLocalA20();
+                break;
+            case 0x07:
+                QueryA20();
+                break;
+            case 0x08:
+                QueryFreeExtendedMemory();
+                break;
+            case 0xA:
+                FreeExtendedMemoryBlock();
+                break;
+            case 0xB:
+                MoveExtendedMemoryBlock();
+                break;
+            case 0xC:
+                LockExtendedMemoryBlock();
+                break;
+            case 0xD:
+                UnlockExtendedMemoryBlock();
+                break;
+            case 0xE:
+                GetHandleInformation();
+                break;
+            case 0xF:
+                ReallocateExtendedMemoryBlock();
+                break;
+            case 0x10:
+                RequestUpperMemoryBlock();
+                break;
+            case 0x11:
+                ReleaseUpperMemoryBlock();
+                break;
+        }
+    }
+
+    private void ReleaseUpperMemoryBlock() {
+        throw new NotImplementedException();
+    }
+
+    private void ReallocateExtendedMemoryBlock() {
+        throw new NotImplementedException();
     }
 
     public void GetVersionNumber() {
@@ -437,21 +497,6 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
 
             _state.AX = 1; // Success.
             _memory.A20Gate.IsEnabled = a20State;
-        }
-    }
-
-    /// <summary>
-    /// Queries free memory using 32-bit registers.
-    /// </summary>
-    public void QueryAnyFreeExtendedMemory() {
-        _state.EAX = LargestFreeBlock / 1024u;
-        _state.ECX = (uint)(XmsMemorySize * 1024 - 1);
-        _state.EDX = (uint)(TotalFreeMemory / 1024);
-
-        if (_state.EAX == 0) {
-            _state.BL = 0xA0;
-        } else {
-            _state.BL = 0;
         }
     }
 
