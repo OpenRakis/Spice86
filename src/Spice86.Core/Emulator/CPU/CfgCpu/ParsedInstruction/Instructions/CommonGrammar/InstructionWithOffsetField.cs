@@ -10,7 +10,7 @@ public abstract class InstructionWithOffsetField<T> : CfgInstruction, IInstructi
     public InstructionWithOffsetField(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, InstructionField<T> offsetField) :
         base(address, opcodeField, prefixes) {
         OffsetField = offsetField;
-        FieldsInOrder.Add(OffsetField);
+        AddField(OffsetField);
     }
 
     public InstructionField<T> OffsetField { get; }

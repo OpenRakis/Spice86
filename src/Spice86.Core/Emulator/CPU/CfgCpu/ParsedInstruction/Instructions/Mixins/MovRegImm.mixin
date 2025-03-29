@@ -1,4 +1,5 @@
 @moxy
+@attribute required int Size
 @attribute required string RegisterIndexer
 @attribute required string Type
 @moxy
@@ -6,6 +7,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -22,5 +24,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
         {{Type}} value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.State.GeneralRegisters.UInt{{RegisterIndexer}}[RegisterIndex] = value;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("mov", helper.ToStringRegister(RegisterIndex, {{Size}}), helper.ToString(ValueField));
     }
 }

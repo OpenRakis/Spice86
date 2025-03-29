@@ -52,7 +52,6 @@ public class InstructionsFeederTest {
         // Replacement has a null discriminator byte for offset field -> will not be taken into account when comparing with ram
         var offsetField = new InstructionField<sbyte>(1, 1, 1, -2, ImmutableList.Create((byte?)null), false);
         JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, new List<InstructionPrefix>(), offsetField);
-        res.PostInit();
         return res;
     }
 

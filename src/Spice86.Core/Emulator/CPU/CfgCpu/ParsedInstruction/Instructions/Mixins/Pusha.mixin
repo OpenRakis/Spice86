@@ -7,6 +7,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -27,5 +28,9 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
         helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}SI);
         helper.Stack.Push{{Size}}(helper.State.{{RegisterPrefix}}DI);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("pusha{{ if Size == 32 }}d{{ end }}");
     }
 }

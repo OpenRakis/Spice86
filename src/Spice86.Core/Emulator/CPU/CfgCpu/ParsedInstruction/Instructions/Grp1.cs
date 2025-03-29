@@ -49,19 +49,19 @@ public partial class Grp1AndUnsigned16;
 public partial class Grp1AndUnsigned32;
 
 // CMP (Sub without assigment)
-[Grp1("Sub", 8, "byte", "", false)]
+[Grp1("Sub", 8, "byte", "", false, "cmp")]
 public partial class Grp1Cmp8;
 
-[Grp1("Sub", 16, "sbyte", "(ushort)", false)]
+[Grp1("Sub", 16, "sbyte", "(ushort)", false, "cmp")]
 public partial class Grp1CmpSigned16;
 
-[Grp1("Sub", 32, "sbyte", "(uint)", false)]
+[Grp1("Sub", 32, "sbyte", "(uint)", false, "cmp")]
 public partial class Grp1CmpSigned32;
 
-[Grp1("Sub", 16, "ushort", "", false)]
+[Grp1("Sub", 16, "ushort", "", false, "cmp")]
 public partial class Grp1CmpUnsigned16;
 
-[Grp1("Sub", 32, "uint", "", false)]
+[Grp1("Sub", 32, "uint", "", false, "cmp")]
 public partial class Grp1CmpUnsigned32;
 
 // OR

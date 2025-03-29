@@ -72,13 +72,13 @@ public partial class XorRmReg32;
 
 
 // CMP (Sub without assigment)
-[OpRmReg("Sub", 8, false)]
+[OpRmReg("Sub", 8, false, "cmp")]
 public partial class CmpRmReg8;
 
-[OpRmReg("Sub", 16, false)]
+[OpRmReg("Sub", 16, false, "cmp")]
 public partial class CmpRmReg16;
 
-[OpRmReg("Sub", 32, false)]
+[OpRmReg("Sub", 32, false, "cmp")]
 public partial class CmpRmReg32;
 
 // TEST (And without assigment)

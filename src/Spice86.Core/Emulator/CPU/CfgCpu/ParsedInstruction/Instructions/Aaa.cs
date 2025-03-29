@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 public class Aaa : CfgInstruction {
@@ -23,5 +24,9 @@ public class Aaa : CfgInstruction {
         helper.State.AuxiliaryFlag = finalAuxillaryFlag;
         helper.State.CarryFlag = finalCarryFlag;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("aaa");
     }
 }

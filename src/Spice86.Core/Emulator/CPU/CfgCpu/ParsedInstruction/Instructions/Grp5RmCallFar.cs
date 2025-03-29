@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -16,5 +17,9 @@ public class Grp5RmCallFar : InstructionWithModRm {
         uint ipAddress = helper.ModRm.MandatoryMemoryAddress;
         SegmentedAddress targetAddress = helper.Memory.SegmentedAddress[ipAddress];
         helper.FarCallWithReturnIpNextInstruction(this, targetAddress);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("call far", helper.ToStringMemoryAddress(32, ModRmContext));
     }
 }

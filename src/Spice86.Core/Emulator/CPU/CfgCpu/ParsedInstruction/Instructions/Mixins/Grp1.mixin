@@ -4,10 +4,12 @@
 @attribute required string Type
 @attribute required string FieldTypeCast=""
 @attribute required bool Assign=true
+@attribute required string Mnemonic=null
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -26,5 +28,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
             {{FieldTypeCast}}helper.InstructionFieldValueRetriever.GetFieldValue(ValueField)
         );
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("{{if Mnemonic}}{{Mnemonic}}{{else}}{{Operation}}{{end}}", helper.ToStringRm({{Size}}, ModRmContext), helper.ToString(ValueField));
     }
 }

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -14,5 +15,9 @@ public class Fnstsw : InstructionWithModRm {
         // Set non zero, means no FPU installed when called after FNINIT.
         helper.ModRm.RM16 = 0xFF;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("fnstsw");
     }
 }

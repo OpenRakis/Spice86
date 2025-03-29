@@ -1,0 +1,28 @@
+@moxy
+@attribute required int Size
+@attribute required string LookupRegister
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        uint address = helper.PhysicalAddress(this, helper.State.{{LookupRegister}}) + helper.State.AL;
+        helper.State.AL = helper.Memory.UInt8[address];
+        helper.MoveIpAndSetNextNode(this);
+    }
+    
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("xlat", helper.ToSegmentedPointer(8, SegmentRegisterIndex, "{{LookupRegister}}+AL"));
+    }
+}

@@ -5,6 +5,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -18,6 +19,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.Shld(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.State.CL);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("shld", helper.ToStringRm({{Size}}, ModRmContext), helper.ToStringR({{Size}}, ModRmContext), "CL");
     }
 }
 

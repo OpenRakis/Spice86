@@ -8,6 +8,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -21,6 +22,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.R{{DestSize}} = ({{DestUnsignedType}})({{SourceSignedType}})helper.ModRm.RM{{SourceSize}};
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("movsx", helper.ToStringR({{DestSize}}, ModRmContext), helper.ToStringRm({{SourceSize}}, ModRmContext));
     }
 }
 

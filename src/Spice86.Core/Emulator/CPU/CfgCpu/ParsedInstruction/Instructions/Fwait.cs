@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -8,5 +9,9 @@ using Spice86.Shared.Emulator.Memory;
 public class Fwait : Nop {
 
     public Fwait(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    }
+    
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("fwait");
     }
 }

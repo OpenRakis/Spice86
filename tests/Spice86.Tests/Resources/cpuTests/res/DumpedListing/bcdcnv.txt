@@ -1,0 +1,147 @@
+﻿F000:0000 mov BX,0x0001
+F000:0003 mov CX,0x0000
+F000:0006 mov SP,0x0090
+F000:0009 mov AX,0x000A
+F000:000C aaa
+F000:000D mov word ptr DS:[0x0000],AX
+F000:0010 pushf
+F000:0011 mov AX,0xFFF9
+F000:0014 aaa
+F000:0015 mov word ptr DS:[0x0002],AX
+F000:0018 pushf
+F000:0019 push BX
+F000:001A popf
+F000:001B mov AX,0xFFF9
+F000:001E aaa
+F000:001F mov word ptr DS:[0x0004],AX
+F000:0022 pushf
+F000:0023 mov AX,0x5D50
+F000:0026 aaa
+F000:0027 mov word ptr DS:[0x0006],AX
+F000:002A pushf
+F000:002B mov AX,0x4726
+F000:002E aaa
+F000:002F mov word ptr DS:[0x0008],AX
+F000:0032 pushf
+F000:0033 mov AX,0x000A
+F000:0036 aas
+F000:0037 mov word ptr DS:[0x000A],AX
+F000:003A pushf
+F000:003B mov AX,0xFFF9
+F000:003E aas
+F000:003F mov word ptr DS:[0x000C],AX
+F000:0042 pushf
+F000:0043 push BX
+F000:0044 popf
+F000:0045 mov AX,0xFFF9
+F000:0048 aas
+F000:0049 mov word ptr DS:[0x000E],AX
+F000:004C pushf
+F000:004D mov AX,0xDCC0
+F000:0050 aas
+F000:0051 mov word ptr DS:[0x0010],AX
+F000:0054 pushf
+F000:0055 mov AX,0x5FFB
+F000:0058 aas
+F000:0059 mov word ptr DS:[0x0012],AX
+F000:005C pushf
+F000:005D mov AX,0x00AC
+F000:0060 daa
+F000:0061 mov word ptr DS:[0x0014],AX
+F000:0064 pushf
+F000:0065 mov AX,0xFFF9
+F000:0068 daa
+F000:0069 mov word ptr DS:[0x0016],AX
+F000:006C pushf
+F000:006D push BX
+F000:006E popf
+F000:006F mov AX,0xFFF8
+F000:0072 daa
+F000:0073 mov word ptr DS:[0x0018],AX
+F000:0076 pushf
+F000:0077 push CX
+F000:0078 popf
+F000:0079 mov AX,0xFF8B
+F000:007C daa
+F000:007D mov word ptr DS:[0x001A],AX
+F000:0080 pushf
+F000:0081 push CX
+F000:0082 popf
+F000:0083 mov AX,0x0082
+F000:0086 daa
+F000:0087 mov word ptr DS:[0x001C],AX
+F000:008A pushf
+F000:008B mov AX,0xCD3C
+F000:008E daa
+F000:008F mov word ptr DS:[0x001E],AX
+F000:0092 pushf
+F000:0093 mov AX,0x3F00
+F000:0096 daa
+F000:0097 mov word ptr DS:[0x0020],AX
+F000:009A pushf
+F000:009B mov AX,0x00AC
+F000:009E das
+F000:009F mov word ptr DS:[0x0022],AX
+F000:00A2 pushf
+F000:00A3 mov AX,0xFFF9
+F000:00A6 das
+F000:00A7 mov word ptr DS:[0x0024],AX
+F000:00AA pushf
+F000:00AB push BX
+F000:00AC popf
+F000:00AD mov AX,0xFFF8
+F000:00B0 das
+F000:00B1 mov word ptr DS:[0x0026],AX
+F000:00B4 pushf
+F000:00B5 push CX
+F000:00B6 popf
+F000:00B7 mov AX,0xFF8B
+F000:00BA das
+F000:00BB mov word ptr DS:[0x0028],AX
+F000:00BE pushf
+F000:00BF push CX
+F000:00C0 popf
+F000:00C1 mov AX,0x0082
+F000:00C4 das
+F000:00C5 mov word ptr DS:[0x002A],AX
+F000:00C8 pushf
+F000:00C9 mov AX,0x059A
+F000:00CC das
+F000:00CD mov word ptr DS:[0x002C],AX
+F000:00D0 pushf
+F000:00D1 mov AX,0x54F6
+F000:00D4 das
+F000:00D5 mov word ptr DS:[0x002E],AX
+F000:00D8 pushf
+F000:00D9 mov AX,0xFF7F
+F000:00DC cbw
+F000:00DD mov word ptr DS:[0x0030],AX
+F000:00E0 mov word ptr DS:[0x0032],SI
+F000:00E4 pushf
+F000:00E5 mov AX,0x0080
+F000:00E8 cbw
+F000:00E9 mov word ptr DS:[0x0034],AX
+F000:00EC mov word ptr DS:[0x0036],SI
+F000:00F0 pushf
+F000:00F1 mov AX,0xF1ED
+F000:00F4 cbw
+F000:00F5 mov word ptr DS:[0x0038],AX
+F000:00F8 mov word ptr DS:[0x003A],SI
+F000:00FC pushf
+F000:00FD mov AX,0x8000
+F000:0100 cwd
+F000:0101 mov word ptr DS:[0x003C],AX
+F000:0104 mov word ptr DS:[0x003E],SI
+F000:0108 pushf
+F000:0109 mov AX,0x7FFF
+F000:010C cwd
+F000:010D mov word ptr DS:[0x0040],AX
+F000:0110 mov word ptr DS:[0x0042],SI
+F000:0114 pushf
+F000:0115 mov AX,0x43F1
+F000:0118 cwd
+F000:0119 mov word ptr DS:[0x0044],AX
+F000:011C mov word ptr DS:[0x0046],SI
+F000:0120 pushf
+F000:0121 hlt
+F000:FFF0 jmp near 0x0000

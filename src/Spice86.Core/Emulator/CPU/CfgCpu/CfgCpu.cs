@@ -79,7 +79,11 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     /// </summary>
     public void SignalEntry() {
         _executionContextManager.SignalEntry();
+        // Parse the first instruction and register it as entry point
+        CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.MACHINE, _state.IpSegmentedAddress, null, null);
+        // expected return address from machine start is never defined.
+        _executionContextManager.SignalNewExecutionContext(_state.IpSegmentedAddress, SegmentedAddress.ZERO);
     }
 
     public void SignalEnd() {

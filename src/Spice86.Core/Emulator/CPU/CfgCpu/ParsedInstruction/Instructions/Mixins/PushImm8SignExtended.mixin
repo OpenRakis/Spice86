@@ -7,6 +7,7 @@
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -22,5 +23,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<sbyte> {
         {{ImmExtendedUnsignedType}} valueExtended = ({{ImmExtendedUnsignedType}})({{ImmExtendedSignedType}})value;
         helper.Stack.Push{{Size}}(valueExtended);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("push", helper.ToString(ValueField));
     }
 }

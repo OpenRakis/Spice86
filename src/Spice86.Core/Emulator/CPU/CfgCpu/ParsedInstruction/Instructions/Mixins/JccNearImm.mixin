@@ -2,10 +2,12 @@
 @attribute required int Size
 @attribute required string SignedType
 @attribute required string JumpCondition
+@attribute required string Mnemonic
 @moxy
 namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -22,5 +24,9 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm{{Size}} {
         } else {
             helper.MoveIpAndSetNextNode(this);
         }
+    }
+
+    public override string ToAssemblyString(InstructionRendererHelper helper) {
+        return helper.ToAssemblyString("{{Mnemonic}} {{ if Size == 8 }}short{{else}}near{{ end }}", TargetIpToString(helper));
     }
 }

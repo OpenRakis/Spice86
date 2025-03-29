@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 public abstract class CfgNode : ICfgNode {
@@ -21,4 +22,6 @@ public abstract class CfgNode : ICfgNode {
     public abstract void UpdateSuccessorCache();
 
     public abstract void Execute(InstructionExecutionHelper helper);
+
+    public abstract string ToAssemblyString(InstructionRendererHelper helper);
 }
