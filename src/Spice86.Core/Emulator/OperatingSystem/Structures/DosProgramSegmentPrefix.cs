@@ -11,8 +11,8 @@ public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
-    public void MakeNew(ushort memSize) {
-
+    public DosProgramSegmentPrefix MakeNew(ushort memSize) {
+        throw new NotImplementedException();
     }
 
     public void CloseFiles() {
