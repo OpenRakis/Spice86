@@ -1190,7 +1190,7 @@ public class DosInt21Handler : InterruptHandler {
         LoadExeFileInMemory(exeFile, startSegment);
         ushort pspSegment = (ushort)(startSegment - 0x10);
         SetupCpuForExe(exeFile, startSegment, pspSegment);
-        new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
+        //new ProcessSegmentPrefix(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("Initial CPU State: {CpuState}", State);
         }
@@ -1250,15 +1250,15 @@ public class DosInt21Handler : InterruptHandler {
     }
     
     internal void LoadAndExecComFile(string hostFile, string? arguments, ushort startSegment) {
-        new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(startSegment, arguments);
-        byte[] com = File.ReadAllBytes(hostFile);
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, ComOffset);
-        Memory.LoadData(physicalStartAddress, com);
+        //new ProcessSegmentPrefix(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(startSegment, arguments);
+        //byte[] com = File.ReadAllBytes(hostFile);
+        //uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, ComOffset);
+        //Memory.LoadData(physicalStartAddress, com);
 
-        // Make DS and ES point to the PSP
-        State.DS = startSegment;
-        State.ES = startSegment;
-        SetEntryPoint(startSegment, ComOffset);
-        State.InterruptFlag = true;
+        //// Make DS and ES point to the PSP
+        //State.DS = startSegment;
+        //State.ES = startSegment;
+        //SetEntryPoint(startSegment, ComOffset);
+        //State.InterruptFlag = true;
     }
 }

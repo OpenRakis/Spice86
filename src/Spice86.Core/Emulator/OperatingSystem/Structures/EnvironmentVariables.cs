@@ -12,9 +12,9 @@ public sealed class EnvironmentVariables : IDictionary<string, string> {
     }
 
     /// <summary>
-    /// Generates a null-separated block of environment strings.
+    /// Generates an ASCII encoded null-separated block of environment strings.
     /// </summary>
-    /// <returns>Null-separated block of environment strings.</returns>
+    /// <returns>An ASCII encoded null-separated block of environment strings.</returns>
     public byte[] EnvironmentBlock => Encoding.ASCII.GetBytes(EnvironmentString);
 
     /// <summary>
