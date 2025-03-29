@@ -18,6 +18,7 @@ namespace Spice86.Tests.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 public class CfgNodeFeederTest {
@@ -27,18 +28,21 @@ public class CfgNodeFeederTest {
     private const ushort DefaultValue = 0xFFFF;
     private const ushort NewValue = 0x1234;
     private const int MovRegImm16Length = 3;
-    private static readonly SegmentedAddress ZeroAddress = new(0, 0);
+    private static readonly SegmentedAddress ZeroAddress = SegmentedAddress.ZERO;
     private static readonly SegmentedAddress EndOfMov0Address = new(0, MovRegImm16Length);
 
     private Memory _memory = new(new(), new Ram(64), new A20Gate());
     private State _state = new();
 
-    private CfgNodeFeeder CreateCfgNodeFeeder() {
+    private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), _state);
         _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
-        return new(_memory, _state, emulatorBreakpointsManager, new());
+        FunctionHandler functionHandler = new(_memory, _state, null, new(), loggerService);
+        CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, new());
+        ExecutionContext executionContext = new ExecutionContext(SegmentedAddress.ZERO, 0, functionHandler);
+        return (cfgNodeFeeder, executionContext);
     }
 
     private void WriteMovReg16(SegmentedAddress address, byte opcode, ushort value) {
@@ -76,8 +80,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void ReadInstructionViaParser() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteMovAx(ZeroAddress, DefaultValue);
 
         // Act
@@ -91,8 +94,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void LinkTwoInstructions() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteMovAx(ZeroAddress, DefaultValue);
         WriteMovBx(EndOfMov0Address, DefaultValue);
         ICfgNode movAx = SimulateExecution(cfgNodeFeeder, executionContext);
@@ -110,8 +112,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void MovAxChangedToMovBx() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         ICfgNode movAx0 = SimulateExecution(cfgNodeFeeder, executionContext);
         // Parse second Mov AX and insert it in graph
@@ -142,8 +143,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void MovAxChangedValue() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         // Just parse next and insert it in graph
@@ -152,6 +152,7 @@ public class CfgNodeFeederTest {
         // Act
         // We are still after movAx0 but it changed to MOV AX 1234.
         WriteMovAx(EndOfMov0Address, NewValue);
+        // Execute changed instruction
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
         ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
@@ -162,8 +163,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void MovAxChangedToMovBxThenMovCx() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
@@ -188,8 +188,7 @@ public class CfgNodeFeederTest {
     [Fact]
     public void MovAxChangedToMovBxThenMovAxWithDifferentValue() {
         // Arrange
-        CfgNodeFeeder cfgNodeFeeder = CreateCfgNodeFeeder();
-        ExecutionContext executionContext = new ExecutionContext(0);
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);

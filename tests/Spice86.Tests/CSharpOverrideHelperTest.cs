@@ -21,8 +21,8 @@ public class CSharpOverrideHelperTest {
     private Spice86DependencyInjection CreateDummyProgramExecutor() {
         Spice86DependencyInjection res =  new Spice86Creator("add", false).Create();
         // Setup stack
-        res.Machine.Cpu.State.SS = 0;
-        res.Machine.Cpu.State.SP = 100;
+        res.Machine.CpuState.SS = 0;
+        res.Machine.CpuState.SP = 100;
         return res;
     }
 

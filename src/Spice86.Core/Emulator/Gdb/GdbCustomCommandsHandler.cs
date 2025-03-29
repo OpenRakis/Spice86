@@ -11,7 +11,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.IO;
 using System.Reflection;
 using System.Text;
 
@@ -23,7 +22,7 @@ public class GdbCustomCommandsHandler {
     private readonly ILoggerService _loggerService;
     private readonly RecorderDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
-    private readonly Cpu _cpu;
+    private readonly IFunctionHandlerProvider _functionHandlerProvider;
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -33,7 +32,8 @@ public class GdbCustomCommandsHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
@@ -41,28 +41,28 @@ public class GdbCustomCommandsHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    public GdbCustomCommandsHandler(IMemory memory, MemoryDataExporter memoryDataExporter,
-        Cpu cpu, ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager,
+    public GdbCustomCommandsHandler(IMemory memory, State state, IFunctionHandlerProvider functionHandlerProvider, MemoryDataExporter memoryDataExporter,
+        ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager,
         GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
-        _state = cpu.State;
+        _state = state;
         _memory = memory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _cpu = cpu;
+        _functionHandlerProvider = functionHandlerProvider;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(_cpu.State, executionFlowRecorder, memoryDataExporter, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = new RecorderDataWriter(state, executionFlowRecorder, memoryDataExporter, recordedDataDirectory, _loggerService);
     }
 
     /// <summary>
     /// Handles a custom command passed from GDB.
     /// </summary>
     /// <param name="executionFlowRecorder">The class that records code execution flow.</param>
-    /// <param name="functionHandler">The class that handles function calls.</param>
+    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="command">The command string passed from GDB.</param>
     /// <returns>A response string to be sent back to GDB.</returns>
-    public string HandleCustomCommands(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string command) {
+    public string HandleCustomCommands(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, string command) {
         string[] commandSplit = command.Split(",");
         if (commandSplit.Length != 2) {
             return _gdbIo.GenerateResponse("");
@@ -71,7 +71,7 @@ public class GdbCustomCommandsHandler {
         byte[] customHex = ConvertUtils.HexToByteArray(commandSplit[1]);
         string custom = Encoding.UTF8.GetString(customHex);
         string[] customSplit = custom.Split(" ");
-        return ExecuteCustomCommand(executionFlowRecorder, functionHandler, customSplit);
+        return ExecuteCustomCommand(executionFlowRecorder, functionCatalogue, customSplit);
     }
 
     private string BreakCycles(string[] args) {
@@ -134,26 +134,25 @@ public class GdbCustomCommandsHandler {
     /// </summary>
     /// <returns>A string laying out the call stack.</returns>
     public string DumpCallStack() {
-        FunctionHandler inUse = _cpu.FunctionHandlerInUse;
         StringBuilder sb = new();
-        if (inUse.Equals(_cpu.FunctionHandlerInExternalInterrupt)) {
+        if (_functionHandlerProvider.IsInitialExecutionContext) {
             sb.AppendLine("From external interrupt:");
         }
 
-        sb.Append(inUse.DumpCallStack());
+        sb.Append(_functionHandlerProvider.FunctionHandlerInUse.DumpCallStack());
         return sb.ToString();
     }
 
-    private string DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler) {
+    private string DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
         try {
-            _recordedDataWriter.DumpAll(executionFlowRecorder, functionHandler);
+            _recordedDataWriter.DumpAll(executionFlowRecorder, functionCatalogue);
             return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
         } catch (IOException e) {
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
     }
 
-    private string ExecuteCustomCommand(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, params string[] args) {
+    private string ExecuteCustomCommand(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
         if (command.StartsWith("ram")) {
@@ -166,7 +165,7 @@ public class GdbCustomCommandsHandler {
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
-            "dumpall" => DumpAll(executionFlowRecorder, functionHandler),
+            "dumpall" => DumpAll(executionFlowRecorder, functionCatalogue),
             "breakcycles" => BreakCycles(args),
             "breakcsip" => BreakCsIp(args),
             _ => InvalidCommand(originalCommand),
@@ -258,7 +257,7 @@ Supported custom commands:
 
     private string PeekRet(string[] args) {
         if (args.Length == 1) {
-            return _gdbIo.GenerateMessageToDisplayResponse(_cpu.PeekReturn());
+            return _gdbIo.GenerateMessageToDisplayResponse(_functionHandlerProvider.FunctionHandlerInUse.PeekReturn());
         } else {
             string returnType = args[1];
             bool parsed = Enum.TryParse(typeof(CallType), returnType, out object? callType);
@@ -281,7 +280,7 @@ Supported custom commands:
     /// <param name="returnCallType">The expected call type.</param>
     /// <returns>The return address string.</returns>
     public string PeekReturn(CallType returnCallType) {
-        return SegmentedAddress.ToString(_cpu.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
+        return SegmentedAddress.ToString(_functionHandlerProvider.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(returnCallType));
     }
 
     private string State() {

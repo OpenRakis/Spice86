@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
@@ -42,18 +43,20 @@ public class DosInt21Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, Cpu cpu,
+    public DosInt21Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, Dos dos,
         DosSwappableDataArea dosSwappableDataArea,
         ILoggerService loggerService)
-            : base(memory, cpu, loggerService) {
+            : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosSwappableDataArea = dosSwappableDataArea;
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         _cp850CharSet = Encoding.GetEncoding("ibm850");
@@ -1066,7 +1069,7 @@ public class DosInt21Handler : InterruptHandler {
     private void LogDosError(bool calledFromVm) {
         string returnMessage = "";
         if (calledFromVm) {
-            returnMessage = $"Int will return to {Cpu.PeekReturn()}. ";
+            returnMessage = $"Int will return to {FunctionHandlerProvider.FunctionHandlerInUse.PeekReturn()}. ";
         }
         if (LoggerService.IsEnabled(LogEventLevel.Error)) {
             LoggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, State.ToString());

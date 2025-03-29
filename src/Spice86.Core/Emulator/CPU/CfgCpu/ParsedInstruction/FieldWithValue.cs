@@ -8,6 +8,11 @@ public abstract class FieldWithValue : Discriminator {
     }
 
     /// <summary>
+    /// Physical address of the field in memory
+    /// </summary>
+    public uint PhysicalAddress { get; init; }
+    
+    /// <summary>
     /// When true value can be used for execution.
     /// When false the value has to be retrieved from the memory location of the field because field value is modified by code.
     /// </summary>

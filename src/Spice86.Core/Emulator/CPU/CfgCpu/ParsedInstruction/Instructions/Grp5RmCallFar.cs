@@ -14,7 +14,7 @@ public class Grp5RmCallFar : InstructionWithModRm {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         uint ipAddress = helper.ModRm.MandatoryMemoryAddress;
-        (ushort cs, ushort ip) = helper.Memory.SegmentedAddress[ipAddress];
-        helper.FarCallWithReturnIpNextInstruction(this, cs, ip);
+        SegmentedAddress targetAddress = helper.Memory.SegmentedAddress[ipAddress];
+        helper.FarCallWithReturnIpNextInstruction(this, targetAddress);
     }
 }

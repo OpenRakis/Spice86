@@ -18,20 +18,21 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 /// </summary>
 public class CfgNodeFeeder {
     private readonly State _state;
-    private readonly InstructionsFeeder _instructionsFeeder;
     private readonly NodeLinker _nodeLinker;
     private readonly DiscriminatorReducer _discriminatorReducer;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry) {
         _state = state;
-        _instructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
+        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
         _nodeLinker = new(replacerRegistry);
         _discriminatorReducer = new(replacerRegistry);
     }
 
-    private CfgInstruction CurrentNodeFromInstructionFeeder =>
-        _instructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
+    public InstructionsFeeder InstructionsFeeder { get; }
+
+    public CfgInstruction CurrentNodeFromInstructionFeeder =>
+        InstructionsFeeder.GetInstructionFromMemory(_state.IpSegmentedAddress);
 
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
         // Determine actual node to execute. Graph may not represent what is actually in memory if graph is not complete or if self modifying code
@@ -50,8 +51,8 @@ public class CfgNodeFeeder {
             return CurrentNodeFromInstructionFeeder;
         }
 
-        if (!currentFromGraph.IsAssembly) {
-            // Cannot check if match with memory. Just execute it.
+        if (currentFromGraph.IsLive) {
+            // Instruction is up to date. No need to do anything.
             return currentFromGraph;
         }
 
@@ -73,19 +74,16 @@ public class CfgNodeFeeder {
     }
 
     private ICfgNode CreateDiscriminatedNode(CfgInstruction instruction1, CfgInstruction instruction2) {
-        IList<CfgInstruction> reducedInstructions =
-            _discriminatorReducer.ReduceAll([instruction1, instruction2]);
-        if (reducedInstructions.Count == 1) {
-            return reducedInstructions[0];
+        CfgInstruction? reduced = _discriminatorReducer.ReduceToOne(instruction1, instruction2);
+        if (reduced != null) {
+            return reduced;
         }
 
         DiscriminatedNode res = new DiscriminatedNode(instruction1.Address);
-        foreach (CfgInstruction reducedInstruction in reducedInstructions) {
-            // Make predecessors of instructions point to res instead of instruction1/2
-            _nodeLinker.InsertIntermediatePredecessor(reducedInstruction, res);
-        }
+        // Make predecessors of instructions point to res instead of instruction1/2
+        _nodeLinker.InsertIntermediatePredecessor(instruction1, res);
+        _nodeLinker.InsertIntermediatePredecessor(instruction2, res);
 
-        res.UpdateSuccessorCache();
         return res;
     }
 }

@@ -37,11 +37,11 @@ public class CurrentInstructions : InstructionReplacer {
         return res;
     }
 
-    public override void ReplaceInstruction(CfgInstruction old, CfgInstruction instruction) {
-        SegmentedAddress instructionAddress = instruction.Address;
+    public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
+        SegmentedAddress instructionAddress = newInstruction.Address;
         if (_currentInstructionAtAddress.ContainsKey(instructionAddress)) {
-            ClearCurrentInstruction(old);
-            SetAsCurrent(instruction);
+            ClearCurrentInstruction(oldInstruction);
+            SetAsCurrent(newInstruction);
         }
     }
 
@@ -59,15 +59,20 @@ public class CurrentInstructions : InstructionReplacer {
         SegmentedAddress instructionAddress = instruction.Address;
         List<AddressBreakPoint> breakpoints = new();
         _breakpointsForInstruction.Add(instructionAddress, breakpoints);
-        uint instructionPhysicalAddress = instructionAddress.Linear;
-        for (uint byteAddress = instructionPhysicalAddress;
-             byteAddress < instructionPhysicalAddress + instruction.Length;
-             byteAddress++) {
-            // When reached the breakpoint will clear the cache and the other breakpoints for the instruction
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
-                b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
-            breakpoints.Add(breakPoint);
-            _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+        foreach (FieldWithValue field in instruction.FieldsInOrder) {
+            for (int i = 0; i < field.DiscriminatorValue.Count; i++) {
+                byte? instructionByte = field.DiscriminatorValue[i];
+                if (instructionByte is null) {
+                    // Do not create breakpoints for fields that are not read from memory
+                    continue;
+                }
+
+                uint byteAddress = (uint)(field.PhysicalAddress + i);
+                AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
+                    b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
+                breakpoints.Add(breakPoint);
+                _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+            }
         }
     }
 
@@ -84,6 +89,7 @@ public class CurrentInstructions : InstructionReplacer {
     private void AddInstructionInCurrentCache(CfgInstruction instruction) {
         SegmentedAddress instructionAddress = instruction.Address;
         _currentInstructionAtAddress.Add(instructionAddress, instruction);
+        instruction.SetLive(true);
     }
 
     private void ClearCurrentInstruction(CfgInstruction instruction) {
@@ -97,5 +103,6 @@ public class CurrentInstructions : InstructionReplacer {
         }
 
         _currentInstructionAtAddress.Remove(instruction.Address);
+        instruction.SetLive(false);
     }
 }

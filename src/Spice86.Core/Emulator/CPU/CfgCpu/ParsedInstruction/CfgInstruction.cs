@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
@@ -10,7 +11,12 @@ using System.Linq;
 /// <summary>
 /// Base of all the instructions: Prefixes (optional) and an opcode that can be either one or 2 bytes.
 /// </summary>
-public abstract class CfgInstruction : CfgNode {
+public abstract class CfgInstruction : CfgNode, ICfgInstruction {
+    /// <summary>
+    /// Instructions are born live.
+    /// </summary>
+    private bool _isLive = true;
+
     protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
         opcodeField, new List<InstructionPrefix>()) {
     }
@@ -45,15 +51,20 @@ public abstract class CfgInstruction : CfgNode {
     }
 
     /// <summary>
-    /// Cache of Successors property per address. Maintenance is complex with self modifying code and is done by the InstructionLinker
+    /// <inheritdoc />
     /// </summary>
     public Dictionary<SegmentedAddress, ICfgNode> SuccessorsPerAddress { get; private set; } = new();
+
+    /// <summary>
+    /// <inheritdoc />
+    /// </summary>
+    public Dictionary<InstructionSuccessorType, ISet<ICfgNode>> SuccessorsPerType { get; } = new();
 
     public override void UpdateSuccessorCache() {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);
     }
 
-    public override bool IsAssembly { get => true; }
+    public override bool IsLive => _isLive;
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
@@ -63,6 +74,8 @@ public abstract class CfgInstruction : CfgNode {
     public RepPrefix? RepPrefix { get; }
 
     public byte Length { get; private set; }
+
+    public SegmentedAddress NextInMemoryAddress => new(Address.Segment, (ushort)(Address.Offset + Length));
 
     public List<InstructionPrefix> InstructionPrefixes { get; }
 
@@ -104,6 +117,8 @@ public abstract class CfgInstruction : CfgNode {
             .SelectMany(i => i)
             .ToImmutableList();
     }
-
-// Equals and HashCode to use the discriminator and super methods
+    
+    public void SetLive(bool isLive) {
+        _isLive = isLive;
+    }
 }

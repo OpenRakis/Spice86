@@ -19,8 +19,8 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// </summary>
     /// <param name="interruptVectorTable">The interrupt vector table</param>
     /// <param name="memoryAsmWriter">The class that writes machine code for interrupt handlers</param>
-    /// <param name="functionHandler">The class that tracks and issues functions calls</param>
-    public InterruptInstaller(InterruptVectorTable interruptVectorTable, MemoryAsmWriter memoryAsmWriter, FunctionHandler functionHandler) : base(memoryAsmWriter, functionHandler) {
+    /// <param name="functionCatalogue">List of all functions.</param>
+    public InterruptInstaller(InterruptVectorTable interruptVectorTable, MemoryAsmWriter memoryAsmWriter, FunctionCatalogue functionCatalogue) : base(memoryAsmWriter, functionCatalogue) {
         _interruptVectorTable = interruptVectorTable;
     }
 
@@ -32,7 +32,7 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// <returns>Address of the handler ASM code</returns>
     public SegmentedAddress InstallInterruptHandler(IInterruptHandler interruptHandler) {
         SegmentedAddress handlerAddress = InstallAssemblyRoutine(interruptHandler,
-            $"provided_interrupt_handler_{interruptHandler.VectorNumber}");
+            $"provided_interrupt_handler_{interruptHandler.VectorNumber:X}");
 
         // Define ASM in vector table
         _interruptVectorTable[interruptHandler.VectorNumber] = new(handlerAddress.Segment, handlerAddress.Offset);

@@ -37,8 +37,8 @@ public class RecordedDataReader : RecordedDataIoHandler {
     /// <summary>
     /// Reads the Ghidra symbols data from a file or creates a new one if the file does not exist.
     /// </summary>
-    /// <returns>A dictionary of segmented addresses and their corresponding function information, read from the file or a new instance if the file does not exist.</returns>
-    public IDictionary<SegmentedAddress, FunctionInformation> ReadGhidraSymbolsFromFileOrCreate() {
+    /// <returns>A list of function information, read from the file or a new instance if the file does not exist.</returns>
+    public IEnumerable<FunctionInformation> ReadGhidraSymbolsFromFileOrCreate() {
         return new GhidraSymbolsDumper(_loggerService).ReadFromFileOrCreate(SymbolsFile);
     }
 }

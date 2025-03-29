@@ -27,10 +27,10 @@ public class GhidraSymbolsDumper {
     /// Dumps function information and labels to a file.
     /// </summary>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
-    /// <param name="functionHandler">The class that handles functions calls.</param>
+    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionHandler functionHandler, string destinationFilePath) {
-        ICollection<FunctionInformation> functionInformationsValues = functionHandler.FunctionInformations.Values;
+    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, string destinationFilePath) {
+        ICollection<FunctionInformation> functionInformationsValues = functionCatalogue.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
@@ -80,19 +80,19 @@ public class GhidraSymbolsDumper {
     /// Reads the symbols and labels from the specified file or creates an empty dictionary if the file does not exist.
     /// </summary>
     /// <param name="filePath">The path of the file to read the symbols and labels from.</param>
-    /// <returns>A dictionary containing the symbols and labels.</returns>
-    public IDictionary<SegmentedAddress, FunctionInformation> ReadFromFileOrCreate(string filePath) {
+    /// <returns>A dictionary containing function names from the file.</returns>
+    public  IEnumerable<FunctionInformation>  ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("File doesn't exist");
             }
-            return new Dictionary<SegmentedAddress, FunctionInformation>();
+            return new List<FunctionInformation>();
         }
+
         return File.ReadLines(filePath)
             .Select(ToFunctionInformation)
             .OfType<FunctionInformation>()
-            .Distinct()
-            .ToDictionary(functionInformation => functionInformation.Address, functionInformation => functionInformation);
+            .Distinct();
     }
 
     private FunctionInformation? ToFunctionInformation(string line) {

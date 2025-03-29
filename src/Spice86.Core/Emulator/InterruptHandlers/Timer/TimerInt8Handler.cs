@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -21,10 +22,13 @@ public class TimerInt8Handler : InterruptHandler {
     /// <param name="biosDataArea">The memory mapped BIOS values.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="timer">The programmable Interval Timer chip.</param>
-    public TimerInt8Handler(IMemory memory, Cpu cpu, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public TimerInt8Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, DualPic dualPic, Timer timer, BiosDataArea biosDataArea, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _timer = timer;
         Memory = memory;
         _dualPic = dualPic;

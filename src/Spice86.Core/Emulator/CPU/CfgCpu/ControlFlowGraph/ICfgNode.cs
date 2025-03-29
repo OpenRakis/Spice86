@@ -28,9 +28,16 @@ public interface ICfgNode {
     public SegmentedAddress Address { get; }
 
     /// <summary>
-    /// True when the node represents an assembly instruction that exists or has existed in memory
+    /// Returns whether the node Live.
+    /// Live means the node is in a state aligned with the machine state and can be executed.
+    /// For an instruction, it means it is the same as the memory representation of the instruction.
     /// </summary>
-    public bool IsAssembly { get; }
+    public bool IsLive { get; }
+
+    /// <summary>
+    /// True when the node execution can lead to going back to previous execution context if the next to execute is the correct address
+    /// </summary>
+    public bool CanCauseContextRestore { get; }
 
     /// <summary>
     /// Needs to be called each time a successor is added

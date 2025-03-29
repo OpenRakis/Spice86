@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -24,11 +25,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     ///     VGA BIOS constructor.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="cpu">The emulated CPU.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, Cpu cpu, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService) : base(memory, cpu, loggerService) {
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+        : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
