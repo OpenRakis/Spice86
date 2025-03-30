@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
@@ -55,8 +56,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        ITimeMultiplier pit, IUIDispatcher uiDispatcher, IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
-        Configuration configuration, ILoggerService loggerService, IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel) : base(uiDispatcher, textClipboard) {
+        ITimeMultiplier pit, State state, IUIDispatcher uiDispatcher,
+        IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
+        Configuration configuration, ILoggerService loggerService,
+        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
+        : base(uiDispatcher, textClipboard, state) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();

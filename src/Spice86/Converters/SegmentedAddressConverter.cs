@@ -7,6 +7,7 @@ using Avalonia.Data.Converters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -44,9 +45,9 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         Match match = SegmentedAddressRegex().Match(str);
         if (match.Success)
         {
-            ushort? segment = ParseSegmentOrRegister(match.Groups[1].Value, State);
-            ushort? offset = ParseSegmentOrRegister(match.Groups[2].Value, State);
-            if(segment.HasValue && offset.HasValue) {
+            
+            if(TryParseSegmentOrRegister(match.Groups[1].Value, State, out ushort? segment)
+                && TryParseSegmentOrRegister(match.Groups[2].Value, State, out ushort? offset)) {
                 return new SegmentedAddress(segment.Value, offset.Value);
             }
 
@@ -54,12 +55,14 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
         return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
     }
 
-    internal static ushort? ParseSegmentOrRegister(string value, State? parameter)
+    internal static bool TryParseSegmentOrRegister(string value, State? parameter,
+        [NotNullWhen(true)] out ushort? @ushort)
     {
         if (ushort.TryParse(value, NumberStyles.HexNumber, 
             CultureInfo.InvariantCulture, out ushort result))
         {
-            return result;
+            @ushort = result;
+            return true;
         }
 
         if (parameter is State state)
@@ -69,11 +72,13 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
                 property.PropertyType == typeof(ushort) &&
                 property.GetValue(state) is ushort propertyValue)
             {
-                return propertyValue;
+                @ushort = propertyValue;
+                return true;
             }
         }
 
-        return null;
+        @ushort = null;
+        return false;
     }
 
     [GeneratedRegex(@"^([0-9A-Fa-f]{4}|[a-zA-Z]{2}):([0-9A-Fa-f]{4}|[a-zA-Z]{2})$")]

@@ -12,8 +12,6 @@
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
 	<UserControl.Resources>
-		<converters:AddressStringToLinearMemoryAddressConverter State="{Binding State}"
-			x:Key="AddressStringToLinearMemoryAddressConverter" />
 		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
 	</UserControl.Resources>
 	<Grid>
@@ -82,7 +80,7 @@
 									Grid.Column="1"
                                     Text="{Binding MemoryAddressValue,
 										Mode=TwoWay,
-										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}"
+										}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
                                     Margin="5,0,0,0">
 									<Interaction.Behaviors>
@@ -97,7 +95,7 @@
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
 										Mode=TwoWay,
-										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}"
+										}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0" />
 							</controls:GroupBox>

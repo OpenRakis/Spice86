@@ -6,6 +6,7 @@ using Avalonia.Controls.Templates;
 using Spice86.ViewModels;
 
 using System;
+using System.ComponentModel;
 
 internal sealed class ViewLocator : IDataTemplate {
     public bool SupportsRecycling => false;
@@ -35,6 +36,6 @@ internal sealed class ViewLocator : IDataTemplate {
     }
 
     public bool Match(object? data) {
-        return data is ViewModelBase;
+        return data is INotifyPropertyChanged;
     }
 }

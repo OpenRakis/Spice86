@@ -18,9 +18,6 @@
 	x:DataType="viewModels:MemoryViewModel"
 	mc:Ignorable="d">
 	<UserControl.Resources>
-		<converters:AddressStringToLinearMemoryAddressConverter
-			State="{Binding State}"
-			x:Key="AddressStringToLinearMemoryAddressConverter" />
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
@@ -56,8 +53,7 @@
 					<TextBox
 						MinWidth="100"
 						Grid.Row="0" Grid.Column="1"
-						Text="{Binding StartAddress, Mode=TwoWay, UpdateSourceTrigger=LostFocus,
-							Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
+						Text="{Binding StartAddress, Mode=TwoWay, ,
 							}">
 						<Interaction.Behaviors>
 							<behaviors:UpdateBindingOnEnterBehavior />
@@ -68,8 +64,7 @@
 						MinWidth="100"
 						Grid.Row="1"
 						Grid.Column="1"
-						Text="{Binding EndAddress, Mode=TwoWay,UpdateSourceTrigger=LostFocus,
-							Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
+						Text="{Binding EndAddress, Mode=TwoWay,,
 							}">
 						<Interaction.Behaviors>
 							<behaviors:UpdateBindingOnEnterBehavior />
@@ -115,9 +110,9 @@
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}" />
+							<TextBlock Text="{Binding SelectionRangeStartAddress, }" />
 							<TextBlock Text=" End address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}" />
+							<TextBlock Text="{Binding SelectionRangeEndAddress, }" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
@@ -177,7 +172,6 @@
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
 								Text="{Binding AddressOFoundOccurence,
-									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}
 									}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
@@ -227,8 +221,7 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay,
-									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+								Text="{Binding MemoryEditAddress, Mode=TwoWay, 
 									}">
 								<Interaction.Behaviors>
 									<behaviors:UpdateBindingOnEnterBehavior />
@@ -296,8 +289,7 @@
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding BreakpointRangeStartAddress,
-										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+									Text="{Binding BreakpointRangeStartAddress, 
 										}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
@@ -308,8 +300,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding BreakpointRangeEndAddress,
-										Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+									Text="{Binding BreakpointRangeEndAddress, 
 										}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />

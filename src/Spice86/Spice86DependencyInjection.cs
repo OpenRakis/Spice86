@@ -166,7 +166,8 @@ public class Spice86DependencyInjection : IDisposable {
             hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
                 emulatorStateSerializer);
             mainWindowViewModel = new MainWindowViewModel(
-                timer, uiThreadDispatcher, hostStorageProvider, textClipboard, configuration,
+                timer, state, uiThreadDispatcher, hostStorageProvider,
+                textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel);
         }
 
@@ -282,7 +283,7 @@ public class Spice86DependencyInjection : IDisposable {
                 breakpointsViewModel, pauseHandler, messenger,
                 uiThreadDispatcher, textClipboard,
                 hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false, startAddress: stack.PhysicalAddress);
+                canCloseTab: false, startAddress: ConvertUtils.ToHex32(stack.PhysicalAddress));
 
             debugWindowViewModel = new DebugWindowViewModel(messenger,
                 uiThreadDispatcher, pauseHandler,

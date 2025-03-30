@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 
 public partial class BreakpointViewModel : ViewModelBase {
     private readonly Action _onReached;

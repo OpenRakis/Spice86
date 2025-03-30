@@ -4,16 +4,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Behaviors;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Infrastructure;
 using Spice86.Models.Debugging;
 
 using System.Text.Json;
 
-public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
+public abstract partial class ViewModelWithErrorDialog : AddressValidatorBaseViewModel {
     protected readonly ITextClipboard _textClipboard;
     protected readonly IUIDispatcher _uiDispatcher;
 
-    protected ViewModelWithErrorDialog(IUIDispatcher uiDispatcher, ITextClipboard textClipboard) {
+    protected ViewModelWithErrorDialog(IUIDispatcher uiDispatcher,
+        ITextClipboard textClipboard, State state) : base(state) {
         _uiDispatcher = uiDispatcher;
         _textClipboard = textClipboard;
     }
