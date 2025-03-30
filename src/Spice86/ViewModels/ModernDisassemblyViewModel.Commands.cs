@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 
 public partial class ModernDisassemblyViewModel {
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
@@ -82,7 +83,7 @@ public partial class ModernDisassemblyViewModel {
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task UpdateDisassembly(uint currentInstructionAddress) {
+    private async Task UpdateDisassembly(SegmentedAddress currentInstructionAddress) {
         IsLoading = true;
         Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
 
@@ -115,13 +116,13 @@ public partial class ModernDisassemblyViewModel {
         if (parameter is FunctionInfo functionInfo) {
             _logger.Debug("Go to function: {FunctionName} at address {FunctionAddress:X8}", functionInfo.Name, functionInfo.Address.Linear);
 
-            GoToAddress(functionInfo.Address.Linear);
+            GoToAddress(functionInfo.Address);
         }
     }
 
     [RelayCommand]
-    public void GoToAddress(uint? address) {
-        _logger.Debug("Go to address: {Address:X8}", address);
+    public void GoToAddress(SegmentedAddress? address) {
+        _logger.Debug("Go to address: {Address}", address);
         if (address == null) {
             return;
         }

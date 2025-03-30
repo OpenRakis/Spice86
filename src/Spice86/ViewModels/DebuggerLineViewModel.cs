@@ -64,7 +64,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
-        Address = instruction.Instruction.IP32; // This is the full 32bit physical/linear address of the instruction, not the offset part of a segment:offset pair.
+        Address = SegmentedAddress.Linear;
         // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
         Breakpoint = instruction.Breakpoints.SingleOrDefault(breakpoint => breakpoint.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
 

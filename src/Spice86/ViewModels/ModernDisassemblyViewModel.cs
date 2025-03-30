@@ -306,13 +306,13 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         }
 
         // Capture the current CPU instruction pointer at the moment of pausing
-        uint currentInstructionAddress = State.IpPhysicalAddress;
+        SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
         _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress:X8}", currentInstructionAddress);
 
         EnsureAddressIsLoaded(currentInstructionAddress);
 
         // Set the current instruction address to trigger the view to scroll to it
-        CurrentInstructionAddress = currentInstructionAddress;
+        CurrentInstructionAddress = currentInstructionAddress.Linear;
 
         // Now that we've ensured the instructions are loaded, update the highlighting
         UpdateCurrentInstructionHighlighting();
@@ -324,9 +324,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
         IsPaused = true;
     }
 
-    private DebuggerLineViewModel EnsureAddressIsLoaded(uint address) {
+    private DebuggerLineViewModel EnsureAddressIsLoaded(SegmentedAddress address) {
         // Check if the current instruction address is in our collection
-        if (DebuggerLines.TryGetValue(address, out DebuggerLineViewModel? debuggerLine)) {
+        if (DebuggerLines.TryGetValue(address.Linear, out DebuggerLineViewModel? debuggerLine)) {
             return debuggerLine;
         }
         _logger.Debug("Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly", address);
@@ -344,7 +344,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDis
             _logger.Debug("Disassembly updated, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
 
             // Verify that the current instruction is now in the collection
-            if (!DebuggerLines.TryGetValue(address, out debuggerLine)) {
+            if (!DebuggerLines.TryGetValue(address.Linear, out debuggerLine)) {
                 throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
             }
         } finally {

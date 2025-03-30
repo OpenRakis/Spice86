@@ -23,10 +23,7 @@ internal class InstructionsDecoder {
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functions;
     private readonly BreakpointsViewModel _breakpointsViewModel;
 
-    public InstructionsDecoder(
-        IMemory memory, State state,
-        IDictionary<SegmentedAddress, FunctionInformation> functions,
-        BreakpointsViewModel breakpointsViewModel) {
+    public InstructionsDecoder(IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
         _memory = memory;
         _state = state;
         _functions = functions;
@@ -40,8 +37,7 @@ internal class InstructionsDecoder {
     /// <param name="numberOfInstructionsShown">The number of instructions to decode</param>
     /// <returns>A list of decoded CPU instructions</returns>
     public List<CpuInstructionInfo> DecodeInstructions(uint startAddress, int numberOfInstructionsShown) {
-        CodeReader codeReader = CreateCodeReader(_memory,
-            out CodeMemoryStream emulatedMemoryStream);
+        CodeReader codeReader = CreateCodeReader(_memory, out CodeMemoryStream emulatedMemoryStream);
         using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
         Decoder decoder = InitializeDecoder(codeReader, startAddress);
         int byteOffset = 0;
@@ -49,7 +45,7 @@ internal class InstructionsDecoder {
         var instructions = new List<CpuInstructionInfo>();
         while (instructions.Count < numberOfInstructionsShown) {
             long instructionAddress = codeMemoryStream.Position;
-            if(instructionAddress >= emulatedMemoryStream.Length) {
+            if (instructionAddress >= emulatedMemoryStream.Length) {
                 break;
             }
             decoder.Decode(out Instruction instruction);
@@ -70,15 +66,13 @@ internal class InstructionsDecoder {
                     (uint)instructionAddress,
                     (uint)instruction.Length))} ({instruction.Length})"""
             };
-            KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions
-                .FirstOrDefault(x => x.Key.Linear == instructionAddress);
-            if(functionInformation.Key != default) {
+            KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions.FirstOrDefault(x => x.Key.Linear == instructionAddress);
+            if (functionInformation.Key != default) {
                 instructionInfo.FunctionName = functionInformation.Value.Name;
             }
             instructionInfo.SegmentedAddress = new(_state.CS, (ushort)(_state.IP + byteOffset));
             instructionInfo.Breakpoint = _breakpointsViewModel.GetBreakpoint(instructionInfo);
-            instructionInfo.StringRepresentation =
-                $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
+            instructionInfo.StringRepresentation = $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
             if (instructionAddress == _state.IpPhysicalAddress) {
                 instructionInfo.IsCsIp = true;
             }
@@ -96,52 +90,42 @@ internal class InstructionsDecoder {
     /// <param name="centerAddress">The address to center the decoding around</param>
     /// <param name="blockSize">The size of the memory block around the requested address to decode</param>
     /// <returns>A list of decoded CPU instructions</returns>
-    public Dictionary<uint, EnrichedInstruction> DecodeInstructionsExtended(uint centerAddress, uint blockSize) {
-        // Define the block size to decode (2KB total)
+    public Dictionary<uint, EnrichedInstruction> DecodeInstructionsExtended(SegmentedAddress centerAddress, uint blockSize) {
         uint halfBlockSize = blockSize / 2;
 
-        // Calculate the start address for our memory block (1K before center, but ensure we don't go below 0)
-        uint blockStartAddress = centerAddress > halfBlockSize ? centerAddress - halfBlockSize : 0;
+        // Let's always start at the start of the segment
+        uint blockStartAddress = (uint)(centerAddress.Segment << 4);
+        uint length = Math.Min(Math.Max(blockSize, centerAddress.Offset + halfBlockSize), 0xFFFF);
 
         // Read the memory block
-        byte[] memoryBlock = _memory.ReadRam(blockSize, blockStartAddress);
+        byte[] memoryBlock = _memory.ReadRam(length, blockStartAddress);
 
         // Create a decoder for the memory block
         var codeReader = new ByteArrayCodeReader(memoryBlock);
         var decoder = Decoder.Create(16, codeReader);
 
-        // Decode all instructions in the block
+        // Create a dictionary to hold the instructions
         var instructions = new Dictionary<uint, EnrichedInstruction>();
 
-        // First pass: decode all instructions and build a map of addresses
-        uint currentAddress = blockStartAddress;
-        uint blockEndAddress = blockStartAddress + (uint)memoryBlock.Length;
-
-        while (currentAddress < blockEndAddress) {
-            // Set the IP for the decoder
-            decoder.IP = currentAddress;
-
+        var currentAddress = new SegmentedAddress(centerAddress.Segment, 0);
+        decoder.IP = 0;
+        while (currentAddress.Offset < (uint)memoryBlock.Length) {
             // Decode the instruction
-            try {
-                decoder.Decode(out Instruction instruction);
+            decoder.Decode(out Instruction instruction);
 
-                // Create instruction info
-                EnrichedInstruction enrichedInstruction = new(instruction) {
-                    Bytes = _memory.ReadRam((uint)instruction.Length, currentAddress),
-                    Function = _functions.SingleOrDefault(pair => pair.Key.Linear == currentAddress).Value,
-                    SegmentedAddress = new SegmentedAddress(_state.CS, (ushort)(currentAddress - _state.IpPhysicalAddress + _state.IP)),
-                    Breakpoints = _breakpointsViewModel.Breakpoints.Where(bp => bp.Address == instruction.IP32 && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS).ToList()
-                };
+            // Create instruction info
+            EnrichedInstruction enrichedInstruction = new(instruction) {
+                Bytes = _memory.ReadRam((uint)instruction.Length, currentAddress.Linear),
+                Function = _functions.SingleOrDefault(pair => pair.Key.Linear == currentAddress.Linear).Value,
+                SegmentedAddress = currentAddress,
+                Breakpoints = _breakpointsViewModel.Breakpoints.Where(bp => bp.Address == currentAddress.Linear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS).ToList()
+            };
 
-                // Add to our collection
-                instructions[currentAddress] = enrichedInstruction;
+            // Add to our collection
+            instructions[currentAddress.Linear] = enrichedInstruction;
 
-                // Move to the next instruction
-                currentAddress = instruction.NextIP32;
-            } catch {
-                // If decoding fails, move to the next byte
-                currentAddress++;
-            }
+            // Move to the next instruction
+            currentAddress += (ushort)instruction.Length;
         }
 
         return instructions;
