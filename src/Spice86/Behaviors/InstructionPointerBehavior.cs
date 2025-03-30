@@ -57,11 +57,11 @@ public class InstructionPointerBehavior
 
         // Find the parent control with the view model
         Control? parent = control;
-        IModernDisassemblyViewModel? viewModel = null;
+        IDisassemblyViewModel? viewModel = null;
 
         while (parent != null)
         {
-            if (parent.DataContext is IModernDisassemblyViewModel vm)
+            if (parent.DataContext is IDisassemblyViewModel vm)
             {
                 viewModel = vm;
                 break;

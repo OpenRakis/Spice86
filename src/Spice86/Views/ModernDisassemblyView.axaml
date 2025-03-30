@@ -11,7 +11,7 @@
              xmlns:debugging="clr-namespace:Spice86.Models.Debugging"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.ModernDisassemblyView"
-             x:DataType="viewModels:IModernDisassemblyViewModel"
+             x:DataType="viewModels:IDisassemblyViewModel"
              x:Name="DisassemblyView">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -31,24 +31,21 @@
             <!-- Navigation Controls -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                 <Button Click="GoToCsIpButton_Click" ToolTip.Tip="Go to current CS:IP (F9)" HotKey="F9" x:Name="GoToCsIpButton">
-                    <fluent:SymbolIcon Symbol="Location" Width="16" Height="16" />
-                </Button>
-                <Button Command="{Binding UpdateDisassemblyCommand}" ToolTip.Tip="Refresh view (F5)" HotKey="F5">
-                    <fluent:SymbolIcon Symbol="ArrowSync" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="Location" Width="20" Height="20" />
                 </Button>
                 <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)" HotKey="F11">
-                    <fluent:SymbolIcon Symbol="ArrowStepIn" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="ArrowStepIn" Width="20" Height="20" />
                 </Button>
                 <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)" HotKey="F10">
-                    <fluent:SymbolIcon Symbol="ArrowStepOver" Width="16" Height="16" />
+                    <fluent:SymbolIcon Symbol="ArrowStepOver" Width="20" Height="20" />
                 </Button>
             </StackPanel>
 
             <!-- Address Input -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
                 <TextBlock VerticalAlignment="Center" Text="Address:" />
-                <TextBox Width="120" Text="{Binding CurrentInstructionAddress, StringFormat=0x{0:X}}" />
-                <Button Command="{Binding UpdateDisassemblyCommand}" Content="Go" />
+                <TextBox Width="120" Text="not implemented yet" />
+                <Button Content="Todo" />
             </StackPanel>
 
             <!-- Function Selection -->
@@ -57,30 +54,45 @@
                 <AutoCompleteBox
                     ItemsSource="{Binding Functions}"
                     SelectedItem="{Binding SelectedFunction}"
-                    FilterMode="Custom"
                     ItemFilter="{Binding FunctionFilter}"
                     Watermark="Type to select function"
-                    ItemSelector="{Binding FunctionItemSelector}">
+                    ItemSelector="{Binding FunctionItemSelector}"
+                    GotFocus="OnFunctionSelectionFocus"
+                    KeyDown="OnFunctionSelectionKeyDown"
+                    MinWidth="200">
                     <AutoCompleteBox.ItemTemplate>
                         <DataTemplate DataType="debugging:FunctionInfo">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock>
                                     <Run Text="{Binding Name}" />
-                                    <Run Text=" [" />
-                                    <Run Text="{Binding Address}" />
-                                    <Run Text="]" />
+                                    <Run Text=" [" /><Run Text="{Binding Address}" /><Run Text="]" />
                                 </TextBlock>
                             </StackPanel>
                         </DataTemplate>
                     </AutoCompleteBox.ItemTemplate>
                 </AutoCompleteBox>
-                <Button Command="{Binding GoToFunctionCommand}" CommandParameter="{Binding SelectedFunction}" Content="Go" />
+                <Button x:Name="GoToFunctionButton"
+                        Command="{Binding GoToFunctionCommand}"
+                        CommandParameter="{Binding SelectedFunction}"
+                        IsEnabled="{Binding SelectedFunction, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Content="Go" />
             </StackPanel>
 
-            <!-- View Options -->
+
+            <!-- View management-->
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
-                <Button Command="{Binding NewDisassemblyViewCommand}" ToolTip.Tip="New view">
-                    <fluent:SymbolIcon Symbol="DocumentAdd" Width="16" Height="16" />
+                <Button
+                    HotKey="Ctrl+F4"
+                    ToolTip.Tip="Close view (Ctrl-F4)"
+                    Command="{Binding CloseTabCommand}"
+                    IsEnabled="{Binding CanCloseTab}" >
+                    <fluent:SymbolIcon Symbol="DocumentDismiss" Width="20" Height="20" />
+                    </Button>
+                <Button
+                    HotKey="Ctrl+N"
+                    ToolTip.Tip="New view (Ctrl-n)"
+                    Command="{Binding NewDisassemblyViewCommand}">
+                    <fluent:SymbolIcon Symbol="DocumentAdd" Width="20" Height="20" />
                 </Button>
             </StackPanel>
         </Grid>

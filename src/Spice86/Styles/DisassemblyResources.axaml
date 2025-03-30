@@ -4,42 +4,48 @@
     <!-- Theme variant resources -->
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#F0F0F0" />
+            <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#FF9696" />
+            <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#009660" />
+            <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#969660" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#0000FF" />
+            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#2B91AF" />
             <SolidColorBrush x:Key="DisassemblyKeywordBrush" Color="#0000FF" />
             <SolidColorBrush x:Key="DisassemblyLabelAddressBrush" Color="#2B91AF" />
-            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#2B91AF" />
             <SolidColorBrush x:Key="DisassemblyLabelBrush" Color="#2B91AF" />
-            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#2B91AF" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#E6F0FF" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#0078D7" />
             <SolidColorBrush x:Key="DisassemblyMnemonicBrush" Color="#0000FF" />
             <SolidColorBrush x:Key="DisassemblyNumberBrush" Color="#800080" />
             <SolidColorBrush x:Key="DisassemblyOperatorBrush" Color="#000000" />
             <SolidColorBrush x:Key="DisassemblyPrefixBrush" Color="#0000FF" />
             <SolidColorBrush x:Key="DisassemblyPunctuationBrush" Color="#000000" />
             <SolidColorBrush x:Key="DisassemblyRegisterBrush" Color="#800000" />
+            <SolidColorBrush x:Key="DisassemblySelectorValueBrush" Color="#111111" />
             <SolidColorBrush x:Key="DisassemblyTextBrush" Color="#000000" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#E6F0FF" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#0078D7" />
-            <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#FF9696" />
-            <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#F0F0F0" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#404040" />
+            <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#800000" />
+            <SolidColorBrush x:Key="DisassemblyDataBrush" Color="#006030" />
+            <SolidColorBrush x:Key="DisassemblyDecoratorBrush" Color="#464640" />
             <SolidColorBrush x:Key="DisassemblyDirectiveBrush" Color="#80AAFF" />
+            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#4EC9B0" />
             <SolidColorBrush x:Key="DisassemblyKeywordBrush" Color="#569CD6" />
             <SolidColorBrush x:Key="DisassemblyLabelAddressBrush" Color="#4EC9B0" />
-            <SolidColorBrush x:Key="DisassemblyFunctionAddressBrush" Color="#4EC9B0" />
             <SolidColorBrush x:Key="DisassemblyLabelBrush" Color="#4EC9B0" />
-            <SolidColorBrush x:Key="DisassemblyFunctionBrush" Color="#4EC9B0" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#282850" />
+            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#1E90FF" />
             <SolidColorBrush x:Key="DisassemblyMnemonicBrush" Color="#569CD6" />
             <SolidColorBrush x:Key="DisassemblyNumberBrush" Color="#B5CEA8" />
             <SolidColorBrush x:Key="DisassemblyOperatorBrush" Color="#D4D4D4" />
             <SolidColorBrush x:Key="DisassemblyPrefixBrush" Color="#569CD6" />
             <SolidColorBrush x:Key="DisassemblyPunctuationBrush" Color="#D4D4D4" />
             <SolidColorBrush x:Key="DisassemblyRegisterBrush" Color="#D69D85" />
+            <SolidColorBrush x:Key="DisassemblySelectorValueBrush" Color="#AAAAAA" />
             <SolidColorBrush x:Key="DisassemblyTextBrush" Color="#D4D4D4" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightBrush" Color="#282850" />
-            <SolidColorBrush x:Key="DisassemblyLineHighlightForegroundBrush" Color="#1E90FF" />
-            <SolidColorBrush x:Key="DisassemblyBreakpointEnabledBrush" Color="#800000" />
-            <SolidColorBrush x:Key="DisassemblyBreakpointDisabledBrush" Color="#404040" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

@@ -25,12 +25,11 @@ using Spice86.Shared.Interfaces;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Globalization;
 
 /// <summary>
 ///     Modern implementation of the disassembly view model with improved performance and usability.
 /// </summary>
-public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IModernDisassemblyViewModel, IDisposable {
+public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
@@ -39,7 +38,6 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private readonly IMemory _memory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly State _state;
 
     [ObservableProperty]
     private string? _breakpointAddress;
@@ -57,7 +55,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     private AvaloniaList<FunctionInfo> _functions = [];
 
     [ObservableProperty]
-    private string _header = "Modern Disassembly";
+    private string _header = "Disassembly";
 
     // Flag to track if we're doing a batch update
     private bool _isBatchUpdating;
@@ -105,6 +103,9 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     // Flag to track if the sorted view needs to be updated
     private bool _sortedViewNeedsUpdate = true;
 
+    [ObservableProperty]
+    private State _state;
+
     public ModernDisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
@@ -123,7 +124,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         _pauseHandler = pauseHandler;
         _instructionsDecoder = new InstructionsDecoder(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
-        CanCloseTab = canCloseTab;
+        _canCloseTab = canCloseTab;
         CurrentInstructionAddress = _state.IpPhysicalAddress;
 
         // Initialize the registers view model
@@ -174,11 +175,12 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             if (value != _currentInstructionAddress) {
                 _currentInstructionAddress = value;
                 OnPropertyChanged();
+                UpdateHeader(value);
             }
         }
     }
 
-    IRegistersViewModel IModernDisassemblyViewModel.Registers => Registers;
+    IRegistersViewModel IDisassemblyViewModel.Registers => Registers;
 
     /// <summary>
     ///     Gets a debugger line by its address with O(1) lookup time.
@@ -190,21 +192,38 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     }
 
     // Explicit interface implementations
-    IAsyncRelayCommand IModernDisassemblyViewModel.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
-    IRelayCommand IModernDisassemblyViewModel.CopyLineCommand => CopyLineCommand;
-    IRelayCommand IModernDisassemblyViewModel.StepIntoCommand => StepIntoCommand;
-    IRelayCommand IModernDisassemblyViewModel.StepOverCommand => StepOverCommand;
-    IRelayCommand IModernDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
-    IAsyncRelayCommand IModernDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
-    IRelayCommand IModernDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
-    IRelayCommand<uint> IModernDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;
-    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
-    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
-    IRelayCommand<BreakpointViewModel> IModernDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
-    IRelayCommand<BreakpointViewModel> IModernDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
-    IRelayCommand<DebuggerLineViewModel> IModernDisassemblyViewModel.ToggleBreakpointCommand => ToggleBreakpointCommand;
-    IRelayCommand IModernDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
-    ObservableCollection<DebuggerLineViewModel> IModernDisassemblyViewModel.SortedDebuggerLinesView => SortedDebuggerLinesView;
+    IAsyncRelayCommand IDisassemblyViewModel.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
+    IRelayCommand IDisassemblyViewModel.CopyLineCommand => CopyLineCommand;
+    IRelayCommand IDisassemblyViewModel.StepIntoCommand => StepIntoCommand;
+    IRelayCommand IDisassemblyViewModel.StepOverCommand => StepOverCommand;
+    IRelayCommand IDisassemblyViewModel.GoToFunctionCommand => GoToFunctionCommand;
+    IAsyncRelayCommand IDisassemblyViewModel.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
+    IRelayCommand IDisassemblyViewModel.CloseTabCommand => CloseTabCommand;
+    IRelayCommand<uint> IDisassemblyViewModel.ScrollToAddressCommand => ScrollToAddressCommand;
+    IRelayCommand<DebuggerLineViewModel> IDisassemblyViewModel.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
+    IRelayCommand<DebuggerLineViewModel> IDisassemblyViewModel.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
+    IRelayCommand<BreakpointViewModel> IDisassemblyViewModel.DisableBreakpointCommand => DisableBreakpointCommand;
+    IRelayCommand<BreakpointViewModel> IDisassemblyViewModel.EnableBreakpointCommand => EnableBreakpointCommand;
+    IRelayCommand<DebuggerLineViewModel> IDisassemblyViewModel.ToggleBreakpointCommand => ToggleBreakpointCommand;
+    IRelayCommand IDisassemblyViewModel.MoveCsIpHereCommand => MoveCsIpHereCommand;
+    ObservableCollection<DebuggerLineViewModel> IDisassemblyViewModel.SortedDebuggerLinesView => SortedDebuggerLinesView;
+
+    /// <summary>
+    ///     Defines a filter for the autocomplete functionality, filtering functions based on the search text
+    /// </summary>
+    public AutoCompleteFilterPredicate<object?> FunctionFilter => (search, item) =>
+        string.IsNullOrWhiteSpace(search) || item is FunctionInfo {Name: not null} functionInformation && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     Create the text that is displayed in the textbox when a function is selected.
+    /// </summary>
+    public AutoCompleteSelector<object>? FunctionItemSelector { get; } = (_, item) => {
+        if (item is not FunctionInfo functionInfo) {
+            return "???";
+        }
+
+        return functionInfo.Name is null or "unknown" ? $"unknown [{functionInfo.Address}]" : functionInfo.Name;
+    };
 
     /// <summary>
     ///     Updates the debugger lines in batch to avoid multiple collection change notifications.
@@ -216,7 +235,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
 
             // Add all new items at once
             foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
-                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _state, _breakpointsViewModel);
+                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, State, _breakpointsViewModel);
             }
         } finally {
             _isBatchUpdating = false;
@@ -287,7 +306,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         }
 
         // Capture the current CPU instruction pointer at the moment of pausing
-        uint currentInstructionAddress = _state.IpPhysicalAddress;
+        uint currentInstructionAddress = State.IpPhysicalAddress;
         _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress:X8}", currentInstructionAddress);
 
         EnsureAddressIsLoaded(currentInstructionAddress);
@@ -305,10 +324,10 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
         IsPaused = true;
     }
 
-    private void EnsureAddressIsLoaded(uint address) {
+    private DebuggerLineViewModel EnsureAddressIsLoaded(uint address) {
         // Check if the current instruction address is in our collection
-        if (DebuggerLines.ContainsKey(address)) {
-            return;
+        if (DebuggerLines.TryGetValue(address, out DebuggerLineViewModel? debuggerLine)) {
+            return debuggerLine;
         }
         _logger.Debug("Current address {CurrentInstructionAddress:X8} not found in DebuggerLines, updating disassembly", address);
 
@@ -325,14 +344,14 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             _logger.Debug("Disassembly updated, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
 
             // Verify that the current instruction is now in the collection
-            if (!DebuggerLines.ContainsKey(address)) {
-                _logger.Warning("Current address {CurrentInstructionAddress} still not found in DebuggerLines after update", address);
+            if (!DebuggerLines.TryGetValue(address, out debuggerLine)) {
+                throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
             }
-        } catch (Exception ex) {
-            _logger.Error(ex, "Error updating disassembly");
         } finally {
             IsLoading = false;
         }
+
+        return debuggerLine;
     }
 
     /// <summary>
@@ -357,7 +376,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             // Log the current state for debugging
             _logger.Debug("Updating highlighting: CurrentInstructionAddress={CurrentInstructionAddress}, Previous={PreviousInstructionAddress}", CurrentInstructionAddress,
                 _previousInstructionAddress);
-            _logger.Debug("Current CPU IP: {StateIpPhysicalAddress}", _state.IpPhysicalAddress);
+            _logger.Debug("Current CPU IP: {StateIpPhysicalAddress}", State.IpPhysicalAddress);
 
             // Only update if we have a valid current instruction address
             if (CurrentInstructionAddress != 0) {
@@ -385,129 +404,7 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
     }
 
     private void UpdateHeader(uint? address) {
-        Header = address is null ? "Modern Disassembly" : $"Modern 0x{address:X}";
-    }
-
-    [RelayCommand(CanExecute = nameof(CanCloseTab))]
-    private void CloseTab() {
-        _messenger.Send(new RemoveViewModelMessage<ModernDisassemblyViewModel>(this));
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void StepOver() {
-        if (!DebuggerLines.TryGetValue(CurrentInstructionAddress, out DebuggerLineViewModel? debuggerLine)) {
-            return;
-        }
-
-        // Store the current instruction address before stepping
-        uint currentAddress = CurrentInstructionAddress;
-
-        // Only step over instructions that return
-        if (!debuggerLine.CanBeSteppedOver) {
-            _logger.Debug("Setting unconditional breakpoint for step over");
-
-            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-                // When the breakpoint is hit, pause the emulator
-                Pause("Step over unconditional breakpoint was reached");
-                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, _state.IpPhysicalAddress);
-            }, true);
-
-            _logger.Debug("Resuming execution for step over");
-            _pauseHandler.Resume();
-
-            return;
-        }
-
-        // Calculate the next instruction address
-        uint nextInstructionAddress = debuggerLine.NextAddress;
-
-        // Set the breakpoint at the next instruction address
-        _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-            Pause($"Step over execution breakpoint was reached at address {nextInstructionAddress}");
-            _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, _state.IpPhysicalAddress);
-        }, "Step over breakpoint");
-
-        _logger.Debug("Resuming execution for step over");
-        _pauseHandler.Resume();
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void StepInto() {
-        _logger.Debug("Setting unconditional breakpoint for step into");
-
-        // Store the current instruction address before stepping
-        uint currentAddress = CurrentInstructionAddress;
-
-        _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-            // When the breakpoint is hit, pause the emulator
-            Pause("Step into unconditional breakpoint was reached");
-            _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, _state.IpPhysicalAddress);
-        }, true);
-
-        _logger.Debug("Resuming execution for step into");
-        _pauseHandler.Resume();
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void ToggleBreakpoint(DebuggerLineViewModel debuggerLine) {
-        if (debuggerLine.Breakpoint != null) {
-            // If there's already a breakpoint, toggle it
-            debuggerLine.Breakpoint.Toggle();
-        } else {
-            // If there's no breakpoint, add one
-            _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
-                PauseAndReportAddress(debuggerLine.Address);
-            });
-
-            // The collection changed event will update the debugger line's breakpoint property
-        }
-    }
-
-    [RelayCommand]
-    private async Task NewDisassemblyView() {
-        ModernDisassemblyViewModel disassemblyViewModel = new(
-            _emulatorBreakpointsManager, _memory, _state, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, true) {
-            IsPaused = IsPaused
-        };
-        await Task.Run(() => _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(disassemblyViewModel)));
-    }
-
-    private bool TryParseMemoryAddress(string addressString, out ulong? result) {
-        result = null;
-        if (string.IsNullOrWhiteSpace(addressString)) {
-            return false;
-        }
-
-        // Try to parse as a hexadecimal number
-        if (addressString.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
-            addressString = addressString[2..];
-        }
-
-        if (ulong.TryParse(addressString, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong address)) {
-            result = address;
-
-            return true;
-        }
-
-        return false;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task UpdateDisassembly(uint currentInstructionAddress) {
-        IsLoading = true;
-        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
-
-        // Use the batch update method instead of updating items individually
-        UpdateDebuggerLinesInBatch(enrichedInstructions);
-
-        IsLoading = false;
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task CopyLine() {
-        if (SelectedDebuggerLine is not null) {
-            await _textClipboard.SetTextAsync(SelectedDebuggerLine.ToString());
-        }
+        Header = address is null ? "Disassembly" : $"0x{address:X}";
     }
 
     private void PauseAndReportAddress(uint address) {
@@ -526,88 +423,4 @@ public partial class ModernDisassemblyViewModel : ViewModelWithErrorDialog, IMod
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
     }
-
-    [RelayCommand]
-    private void MoveCsIpHere() {
-        if (SelectedDebuggerLine is null) {
-            return;
-        }
-        _state.CS = SelectedDebuggerLine.SegmentedAddress.Segment;
-        _state.IP = SelectedDebuggerLine.SegmentedAddress.Offset;
-        _pauseHandler.Resume();
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void GoToFunction(object? parameter) {
-        if (parameter is FunctionInfo functionInfo) {
-            Console.WriteLine($"Go to function: {functionInfo.Name} at address {functionInfo.Address.Linear:X8}");
-
-            EnsureAddressIsLoaded(functionInfo.Address.Linear);
-            DebuggerLineViewModel debuggerLine = DebuggerLines[functionInfo.Address.Linear];
-            ScrollToAddress(debuggerLine.Address);
-            SelectedDebuggerLine = debuggerLine;
-        }
-    }
-
-    [RelayCommand]
-    private void ScrollToAddress(uint address) {
-        // Notify the view that we want to scroll to this address
-        // This is a command that will be called from the view
-        // The actual scrolling logic is handled in the view
-        CurrentInstructionAddress = address;
-        OnPropertyChanged(nameof(CurrentInstructionAddress));
-    }
-
-    /// <summary>
-    /// Command to create an execution breakpoint at the selected instruction.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void CreateExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
-        if (debuggerLine.Breakpoint == null) {
-            // Add a new breakpoint
-            _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
-                PauseAndReportAddress(debuggerLine.Address);
-            });
-            // The collection changed event will update the debugger line's breakpoint property
-        }
-    }
-
-    /// <summary>
-    /// Command to remove an execution breakpoint from the selected instruction.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void RemoveExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
-        if (debuggerLine.Breakpoint != null) {
-            _breakpointsViewModel.RemoveBreakpointInternal(debuggerLine.Breakpoint);
-            // The collection changed event will update the debugger line's breakpoint property
-        }
-    }
-
-    /// <summary>
-    /// Command to disable a breakpoint.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void DisableBreakpoint(BreakpointViewModel breakpoint) {
-        breakpoint.Disable();
-    }
-
-    /// <summary>
-    /// Command to enable a breakpoint.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private void EnableBreakpoint(BreakpointViewModel breakpoint) {
-        breakpoint.Enable();
-    }
-
-    /// <summary>
-    /// Defines a filter for the autocomplete functionality, filtering structures based on the search text and their size.
-    /// </summary>
-    public AutoCompleteFilterPredicate<object?> FunctionFilter => (search, item) => search != null
-        && item is FunctionInfo {Name: not null} functionInformation
-        && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Create the text that is displayed in the textbox when a function is selected.
-    /// </summary>
-    public AutoCompleteSelector<object>? FunctionItemSelector { get; } = (_, item) => ((FunctionInfo)item).Name ?? "Unknown";
 }

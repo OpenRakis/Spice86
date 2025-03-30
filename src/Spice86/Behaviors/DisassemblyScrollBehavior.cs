@@ -128,7 +128,7 @@ public class DisassemblyScrollBehavior {
             }
 
             // Get the view model and find the target item
-            if (listBox.DataContext is IModernDisassemblyViewModel viewModel) {
+            if (listBox.DataContext is IDisassemblyViewModel viewModel) {
                 // Get the target item using the O(1) lookup
                 DebuggerLineViewModel? targetItem = viewModel.GetLineByAddress(targetAddress);
                 if (targetItem == null) {

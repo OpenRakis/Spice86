@@ -12,19 +12,22 @@ using System.Collections.Generic;
 public static class FormatterTextKindToBrushConverter {
     // Resource key mapping for dynamic resources
     private static readonly Dictionary<FormatterTextKind, string> ResourceKeys = new() {
+        {FormatterTextKind.Data, "DisassemblyDataBrush"},
+        {FormatterTextKind.Decorator, "DisassemblyDecoratorBrush"},
         {FormatterTextKind.Directive, "DisassemblyDirectiveBrush"},
-        {FormatterTextKind.Keyword, "DisassemblyKeywordBrush"},
-        {FormatterTextKind.LabelAddress, "DisassemblyLabelAddressBrush"},
-        {FormatterTextKind.FunctionAddress, "DisassemblyFunctionAddressBrush"},
-        {FormatterTextKind.Label, "DisassemblyLabelBrush"},
         {FormatterTextKind.Function, "DisassemblyFunctionBrush"},
+        {FormatterTextKind.FunctionAddress, "DisassemblyFunctionAddressBrush"},
+        {FormatterTextKind.Keyword, "DisassemblyKeywordBrush"},
+        {FormatterTextKind.Label, "DisassemblyLabelBrush"},
+        {FormatterTextKind.LabelAddress, "DisassemblyLabelAddressBrush"},
         {FormatterTextKind.Mnemonic, "DisassemblyMnemonicBrush"},
         {FormatterTextKind.Number, "DisassemblyNumberBrush"},
         {FormatterTextKind.Operator, "DisassemblyOperatorBrush"},
         {FormatterTextKind.Prefix, "DisassemblyPrefixBrush"},
         {FormatterTextKind.Punctuation, "DisassemblyPunctuationBrush"},
         {FormatterTextKind.Register, "DisassemblyRegisterBrush"},
-        {FormatterTextKind.Text, "DisassemblyTextBrush"}
+        {FormatterTextKind.SelectorValue, "DisassemblySelectorValueBrush"},
+        {FormatterTextKind.Text, "DisassemblyTextBrush"},
     };
 
     /// <summary>

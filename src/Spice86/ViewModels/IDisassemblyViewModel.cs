@@ -15,7 +15,7 @@ using System.ComponentModel;
 /// This interface defines the contract between the View and ViewModel, allowing for
 /// better testability and decoupling.
 /// </summary>
-public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
+public interface IDisassemblyViewModel : INotifyPropertyChanged {
     /// <summary>
     /// The physical address of the current instruction. This is updated when the emulator pauses.
     /// </summary>
@@ -57,6 +57,11 @@ public interface IModernDisassemblyViewModel : INotifyPropertyChanged {
     /// Indicates whether function information is available.
     /// </summary>
     bool IsFunctionInformationProvided { get; }
+
+    /// <summary>
+    /// Indicates whether the tab can be closed
+    /// </summary>
+    bool CanCloseTab { get; }
 
     /// <summary>
     /// Collection of available functions.

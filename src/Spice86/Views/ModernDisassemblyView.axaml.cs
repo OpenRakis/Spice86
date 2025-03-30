@@ -12,7 +12,7 @@ using Spice86.ViewModels;
 /// View for the modern disassembly interface.
 /// </summary>
 public partial class ModernDisassemblyView : UserControl {
-    private IModernDisassemblyViewModel? _viewModel;
+    private IDisassemblyViewModel? _viewModel;
     
     /// <summary>
     /// Initializes a new instance of the <see cref="ModernDisassemblyView"/> class.
@@ -33,7 +33,7 @@ public partial class ModernDisassemblyView : UserControl {
         }
 
         // Subscribe to the new view model
-        _viewModel = DataContext as IModernDisassemblyViewModel;
+        _viewModel = DataContext as IDisassemblyViewModel;
         if (_viewModel is INotifyPropertyChanged newViewModel) {
             newViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
@@ -72,6 +72,26 @@ public partial class ModernDisassemblyView : UserControl {
         if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine})
         {
             _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Event handler for when the function selection AutoCompleteBox gets focus.
+    /// </summary>
+    /// <param name="sender">The sender object.</param>
+    /// <param name="e">The focus event arguments.</param>
+    private void OnFunctionSelectionFocus(object? sender, GotFocusEventArgs e) {
+        if (sender is AutoCompleteBox autoCompleteBox) {
+            // Clear the text when the AutoCompleteBox gets focus
+            autoCompleteBox.Text = string.Empty;
+        }
+    }
+
+    private void OnFunctionSelectionKeyDown(object? sender, KeyEventArgs e) {
+        if (e.Key == Key.Enter && DataContext is IDisassemblyViewModel viewModel) {
+            // Execute the "Go to Function" command when Enter is pressed
+            viewModel.GoToFunctionCommand.Execute(viewModel.SelectedFunction);
             e.Handled = true;
         }
     }

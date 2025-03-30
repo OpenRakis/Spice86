@@ -94,7 +94,6 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         AlwaysShowSegmentRegister = true,
         HexPrefix = "0x",
         MasmSymbolDisplInBrackets = false,
-        SignedImmediateOperands = true,
     });
 
     /// <summary>
