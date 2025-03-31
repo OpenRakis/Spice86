@@ -34,7 +34,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
 
     public bool ContinuesToNextInstruction => _info.FlowControl == FlowControl.Next;
     public bool CanBeSteppedOver => _info.FlowControl is FlowControl.Call or FlowControl.IndirectCall or FlowControl.Interrupt;
-    public uint NextAddress => _info.NextIP32;
+    public uint NextAddress => (uint)(Address + _info.Length);
     public string Disassembly => _info.ToString();
 
     /// <summary>
