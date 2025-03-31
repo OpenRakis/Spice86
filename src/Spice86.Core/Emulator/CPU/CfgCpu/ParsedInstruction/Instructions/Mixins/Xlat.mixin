@@ -5,10 +5,13 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex {
@@ -21,8 +24,18 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
         helper.State.AL = helper.Memory.UInt8[address];
         helper.MoveIpAndSetNextNode(this);
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("xlat", helper.ToSegmentedPointer(8, SegmentRegisterIndex, "{{LookupRegister}}+AL"));
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.XLAT, 
+            builder.ToSegmentedPointer(
+                builder.UType(8),
+                SegmentRegisterIndex,
+                new BiOperationWithResultNode(builder.AddressType(this),
+                    builder.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
+                    Operation.PLUS,
+                    builder.Accumulator(builder.UType(8))
+                )
+            )
+        );
     }
 }

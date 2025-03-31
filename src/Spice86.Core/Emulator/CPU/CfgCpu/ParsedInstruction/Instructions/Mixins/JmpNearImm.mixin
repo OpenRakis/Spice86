@@ -4,10 +4,13 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{SignedType}}> {
@@ -22,11 +25,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
         helper.JumpNear(this, _targetIp);
     }
 
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("jmp {{ if Size == 8 }}short{{else}}near{{ end }}", TargetIpToString(helper));
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.JMP_{{ if Size == 8 }}SHORT{{else}}NEAR{{ end }}, TargetIpToNode(builder));
     }
     
-    protected string TargetIpToString(InstructionRendererHelper helper) {
-        return helper.ToHex(_targetIp);
+    protected ValueNode TargetIpToNode(AstBuilder builder) {
+        return builder.ToNode(_targetIp);
     }
 }

@@ -1,7 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 
@@ -16,8 +17,8 @@ public class InterruptRet : CfgInstruction, IReturnInstruction {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.HandleInterruptRet(this);
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("iret");
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.IRET);
     }
 }

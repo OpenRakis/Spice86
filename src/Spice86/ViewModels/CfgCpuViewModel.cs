@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -22,7 +23,8 @@ using System.Diagnostics;
 public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IPerformanceMeasurer _performanceMeasurer;
     private readonly ExecutionContextManager _executionContextManager;
-    private readonly InstructionRendererHelper _instructionRendererHelper = new();
+    private readonly AstBuilder _astBuilder = new();
+    private readonly AstInstructionRenderer _astInstructionRenderer = new();
 
     [ObservableProperty] private int _maxNodesToDisplay = 200;
 
@@ -144,5 +146,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
         => (node.Id, successor.Id);
 
     private string GenerateNodeText(ICfgNode node) =>
-        $"{node.Address} / {node.Id} {Environment.NewLine} {node.ToAssemblyString(_instructionRendererHelper)}";
+        $"{node.Address} / {node.Id} {Environment.NewLine} {CfgNodeToAssemblyString(node)}";
+
+    private string CfgNodeToAssemblyString(ICfgNode node) {
+        return _astInstructionRenderer.VisitInstructionNode(node.ToAst(_astBuilder));
+    }
 }

@@ -1,7 +1,8 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -17,8 +18,8 @@ public class CallNearImm : InstructionWithOffsetField<short> {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.NearCallWithReturnIpNextInstruction(this, _targetIp);
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("call near", helper.ToHex(_targetIp));
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.CALL_NEAR, builder.ToNode(_targetIp));
     }
 }

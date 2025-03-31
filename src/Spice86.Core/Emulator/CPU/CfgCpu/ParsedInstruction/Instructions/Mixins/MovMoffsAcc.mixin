@@ -5,8 +5,9 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -21,8 +22,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
         helper.Memory.UInt{{Size}}[helper.GetSegmentedAddress(this)] = helper.State.{{Accumulator}};
         helper.MoveIpAndSetNextNode(this);
     }
-  
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("mov", helper.ToSegmentedPointer({{Size}}, this), "{{Accumulator}}");
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.MOV,
+            builder.ToSegmentedPointer(builder.UType({{Size}}), SegmentRegisterIndex, builder.ToNode(OffsetField)),
+            builder.Accumulator(builder.UType({{Size}})));
     }
 }

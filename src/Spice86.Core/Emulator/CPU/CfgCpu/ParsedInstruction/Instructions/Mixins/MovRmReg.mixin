@@ -4,8 +4,9 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
@@ -21,8 +22,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.MoveIpAndSetNextNode(this);
     }
 
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("mov", helper.ToStringRm({{Size}}, ModRmContext), helper.ToStringR({{Size}}, ModRmContext));
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.MOV,
+            builder.RmToNode(builder.UType({{Size}}), ModRmContext),
+            builder.RToNode(builder.UType({{Size}}), ModRmContext));
     }
 }
 

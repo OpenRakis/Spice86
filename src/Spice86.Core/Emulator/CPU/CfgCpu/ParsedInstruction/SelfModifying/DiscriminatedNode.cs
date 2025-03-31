@@ -1,8 +1,9 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -38,8 +39,8 @@ public class DiscriminatedNode : CfgNode {
 
         helper.NextNode = null;
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("selector");
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.SELECTOR);
     }
 }

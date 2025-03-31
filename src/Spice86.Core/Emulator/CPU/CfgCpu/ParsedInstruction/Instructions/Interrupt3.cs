@@ -1,7 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 public class Interrupt3 : CfgInstruction {
@@ -11,8 +12,8 @@ public class Interrupt3 : CfgInstruction {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.HandleInterruptInstruction(this, 3);
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString("int", "0x03");
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.INT, builder.ToNode((byte)3));
     }
 }

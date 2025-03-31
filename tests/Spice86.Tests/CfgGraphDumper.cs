@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Tests;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -9,11 +11,12 @@ using Spice86.Shared.Emulator.Memory;
 public class CfgGraphDumper {
     public List<string> ToAssemblyListing(Machine machine) {
         List<ICfgNode> nodes = DumpInOrder(machine);
-        InstructionRendererHelper helper = new();
+        AstBuilder astBuilder = new();
+        AstInstructionRenderer renderer = new();
         List<string> res = new();
         foreach (ICfgNode node in nodes) {
             string address = node.Address.ToString();
-            string instruction = node.ToAssemblyString(helper);
+            string instruction = renderer.VisitInstructionNode(node.ToAst(astBuilder));
             res.Add($"{address} {instruction}");
         }
         return res;

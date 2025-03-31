@@ -1,4 +1,4 @@
-﻿F000:0000 mov CX,0x0000
+﻿F000:0000 mov CX,0
 F000:0003 mov BX,0x0040
 F000:0006 mov SP,0x1000
 F000:0009 mov SS,SP
@@ -64,7 +64,7 @@ F000:007E mov DX,0x06FF
 F000:0081 push DX
 F000:0082 popf
 F000:0083 jno short 0x0088
-F000:0088 mov DX,0x0004
+F000:0088 mov DX,4
 F000:008B push DX
 F000:008C popf
 F000:008D jnp short 0x0085
@@ -93,6 +93,6 @@ F000:00BE mov DX,0x0884
 F000:00C1 push DX
 F000:00C2 popf
 F000:00C3 js short 0x00C8
-F000:00C8 mov word ptr DS:[],0x1234
+F000:00C8 mov word ptr DS:[0],0x1234
 F000:00CE hlt
-F000:FFF0 jmp near 0x0000
+F000:FFF0 jmp near 0

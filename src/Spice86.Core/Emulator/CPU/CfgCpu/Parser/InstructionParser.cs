@@ -467,9 +467,9 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC9:
                 return _leaveParser.Parse(context);
             case 0xCA:
-                return new FarRetImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                return new RetFarImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
             case 0xCB:
-                return new FarRet(context.Address, context.OpcodeField);
+                return new RetFar(context.Address, context.OpcodeField);
             case 0xCC:
                 return new Interrupt3(context.Address, context.OpcodeField);
             case 0xCD:

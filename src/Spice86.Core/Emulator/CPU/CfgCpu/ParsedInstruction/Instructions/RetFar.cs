@@ -1,13 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 
-public class FarRet : CfgInstruction, IReturnInstruction {
+public class RetFar : CfgInstruction, IReturnInstruction {
 
-    public FarRet(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public RetFar(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
     }
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
@@ -15,8 +16,8 @@ public class FarRet : CfgInstruction, IReturnInstruction {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.HandleFarRet(this, 0);
     }
-    
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return "ret far";
+
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.RET_FAR);
     }
 }

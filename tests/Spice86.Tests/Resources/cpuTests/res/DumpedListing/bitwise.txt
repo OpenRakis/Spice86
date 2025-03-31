@@ -1,16 +1,16 @@
 ﻿F000:0000 mov AX,0x7659
 F000:0003 mov BX,0x4BB8
 F000:0006 mov CX,0x3C84
-F000:0009 mov word ptr DS:[],0x1B76
-F000:000F mov word ptr DS:[0x0002],0x240B
+F000:0009 mov word ptr DS:[0],0x1B76
+F000:000F mov word ptr DS:[2],0x240B
 F000:0015 mov SP,0x0100
 F000:0018 and BX,BX
 F000:001A pushf
 F000:001B mov word ptr DS:[0x0020],SI
-F000:001F and SI,word ptr DS:[0x0002]
+F000:001F and SI,word ptr DS:[2]
 F000:0023 pushf
 F000:0024 mov word ptr DS:[0x0022],SI
-F000:0028 and word ptr DS:[],SI
+F000:0028 and word ptr DS:[0],SI
 F000:002C pushf
 F000:002D and AX,0x4571
 F000:0030 pushf
@@ -18,15 +18,15 @@ F000:0031 mov word ptr DS:[0x0024],AX
 F000:0034 and BX,0x27E9
 F000:0038 pushf
 F000:0039 mov word ptr DS:[0x0026],SI
-F000:003D and word ptr DS:[0x0002],0x3549
+F000:003D and word ptr DS:[2],0x3549
 F000:0043 pushf
 F000:0044 and AH,AH
 F000:0046 pushf
 F000:0047 mov byte ptr DS:[0x0028],DH
-F000:004B and DH,byte ptr DS:[0x0001]
+F000:004B and DH,byte ptr DS:[1]
 F000:004F pushf
 F000:0050 mov byte ptr DS:[0x0029],DH
-F000:0054 and byte ptr DS:[0x0003],DH
+F000:0054 and byte ptr DS:[3],DH
 F000:0058 pushf
 F000:0059 and AL,0x46
 F000:005B pushf
@@ -34,22 +34,22 @@ F000:005C mov byte ptr DS:[0x002A],AL
 F000:005F and BL,0x2D
 F000:0062 pushf
 F000:0063 mov byte ptr DS:[0x002B],DH
-F000:0067 and byte ptr DS:[0x0002],0xC6
+F000:0067 and byte ptr DS:[2],0xC6
 F000:006C pushf
 F000:006D mov AX,0x05E3
 F000:0070 mov BX,0xF877
 F000:0073 mov CX,0x4AE8
 F000:0076 mov DX,0x3B69
-F000:0079 mov word ptr DS:[0x0004],0x30C0
-F000:007F mov word ptr DS:[0x0006],0x5775
-F000:0085 mov word ptr DS:[0x0008],0xFE66
+F000:0079 mov word ptr DS:[4],0x30C0
+F000:007F mov word ptr DS:[6],0x5775
+F000:0085 mov word ptr DS:[8],0xFE66
 F000:008B or BX,BX
 F000:008D pushf
 F000:008E mov word ptr DS:[0x002C],SI
-F000:0092 or SI,word ptr DS:[0x0004]
+F000:0092 or SI,word ptr DS:[4]
 F000:0096 pushf
 F000:0097 mov word ptr DS:[0x002E],SI
-F000:009B or word ptr DS:[0x0006],SI
+F000:009B or word ptr DS:[6],SI
 F000:009F pushf
 F000:00A0 or AX,0x41C3
 F000:00A3 pushf
@@ -57,15 +57,15 @@ F000:00A4 mov word ptr DS:[0x0030],AX
 F000:00A7 or DX,0xB05D
 F000:00AB pushf
 F000:00AC mov word ptr DS:[0x0032],SI
-F000:00B0 or word ptr DS:[0x0008],0x8D4C
+F000:00B0 or word ptr DS:[8],0x8D4C
 F000:00B6 pushf
 F000:00B7 or AH,AH
 F000:00B9 pushf
 F000:00BA mov byte ptr DS:[0x0034],DH
-F000:00BE or DH,byte ptr DS:[0x0005]
+F000:00BE or DH,byte ptr DS:[5]
 F000:00C2 pushf
 F000:00C3 mov byte ptr DS:[0x0035],DH
-F000:00C7 or byte ptr DS:[0x0006],DH
+F000:00C7 or byte ptr DS:[6],DH
 F000:00CB pushf
 F000:00CC or AL,0x43
 F000:00CE pushf
@@ -73,7 +73,7 @@ F000:00CF mov byte ptr DS:[0x0036],AL
 F000:00D2 or BL,0x57
 F000:00D5 pushf
 F000:00D6 mov byte ptr DS:[0x0037],DH
-F000:00DA or byte ptr DS:[0x0007],0x54
+F000:00DA or byte ptr DS:[7],0x54
 F000:00DF pushf
 F000:00E0 mov AX,0xD0B4
 F000:00E3 mov BX,0x1BB8
@@ -170,4 +170,4 @@ F000:01E9 mov byte ptr DS:[0x0052],DH
 F000:01ED not byte ptr DS:[0x0018]
 F000:01F1 pushf
 F000:01F2 hlt
-F000:FFF0 jmp near 0x0000
+F000:FFF0 jmp near 0

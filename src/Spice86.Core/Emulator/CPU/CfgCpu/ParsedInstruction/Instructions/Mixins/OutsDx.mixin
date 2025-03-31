@@ -5,11 +5,13 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.AST.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex, StringInstruction {
@@ -30,7 +32,13 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
         helper.MoveIpAndSetNextNode(this);
     }
 
-    public override string ToAssemblyString(InstructionRendererHelper helper) {
-        return helper.ToAssemblyString(this, "outs", helper.ToSegmentedPointer({{Size}}, SegmentRegisterIndex, "SI"));
+    public override InstructionNode ToAst(AstBuilder builder) {
+        return new InstructionNode(builder.Rep(this), InstructionOperation.OUTS, 
+            builder.ToSegmentedPointer(
+                builder.UType({{Size}}), 
+                SegmentRegisterIndex,
+                builder.Reg(builder.AddressType(this), RegisterIndex.SiIndex)
+            )
+        );
     }
 }
