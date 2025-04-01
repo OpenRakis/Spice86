@@ -56,7 +56,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             EndAddress = ConvertUtils.ToHex32(_memory.Length);
         }
         CanCloseTab = canCloseTab;
-        IsMemoryRangeValid = GetIsMemoryRangeValid();
+        IsMemoryRangeValid = GetIsMemoryRangeValid(
+            startAddressValue.HasValue ? startAddressValue.Value : 0,
+            endAddressValue.HasValue ? endAddressValue.Value : _memory.Length);
         TryUpdateHeaderAndMemoryDocument();
     }
     public State State => _state;
@@ -105,27 +107,57 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() => _messenger.Send(new RemoveViewModelMessage<MemoryViewModel>(this));
 
-    private bool GetIsMemoryRangeValid() {
-        if(TryParseAddressString(StartAddress, out uint? startAddress) &&
-           TryParseAddressString(EndAddress, out uint? endAddress)) {
-            return startAddress <= endAddress
-            && endAddress >= startAddress &&
-            startAddress != endAddress;
+    private bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress) {
+        return startAddress <= endAddress
+        && endAddress >= startAddress &&
+        startAddress != endAddress;
+    }
+
+    protected bool ValidateAddressRange(string? startAddress, string? endAddress, string textBoxBindedPropertyName) {
+        const string RangeError = "Invalid address range.";
+        const string StartError = "Invalid start address.";
+        const string EndError = "Invalid end address.";
+        bool rangeStatus = false;
+        bool statusStart = TryValidateAddress(startAddress as string, out string? startError);
+        bool statusEnd = TryValidateAddress(endAddress as string, out string? endError);
+        if(statusStart && statusEnd) {
+            if (TryParseAddressString(startAddress, out uint? start) &&
+                TryParseAddressString(endAddress, out uint? end)) {
+                rangeStatus = GetIsMemoryRangeValid(start, end);
+            }
         }
-        return false;
+        if (!rangeStatus || !statusStart || !statusEnd) {
+            if (!_errors.TryGetValue(textBoxBindedPropertyName,
+            out List<string>? values)) {
+                values = new List<string>();
+                _errors[nameof(textBoxBindedPropertyName)] = values;
+            }
+            values.Clear();
+            if (!rangeStatus) {
+                values.Add(RangeError);
+            }
+            if (!statusStart) {
+                values.Add(StartError);
+            }
+            if (!statusEnd) {
+                values.Add(EndError);
+            }
+            OnErrorsChanged(textBoxBindedPropertyName);
+        }
+        return rangeStatus && statusStart && statusEnd;
     }
 
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressProperty(value) &&
-                SetProperty(ref _startAddress, value)) {
-                IsMemoryRangeValid = GetIsMemoryRangeValid();
-                if(IsMemoryRangeValid) {
+            if (ValidateAddressRange(value, EndAddress, nameof(StartAddress))) {
+                IsMemoryRangeValid = true;
+                if (SetProperty(ref _startAddress, value)) {
                     TryUpdateHeaderAndMemoryDocument();
-                } else {
-                    DataMemoryDocument = null;
                 }
+            } else {
+                IsMemoryRangeValid = false;
+                DataMemoryDocument = null;
             }
         }
     }
@@ -142,14 +174,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? EndAddress {
         get => _endAddress;
         set {
-            if (ValidateAddressProperty(value) &&
-                SetProperty(ref _endAddress, value)) {
-                IsMemoryRangeValid = GetIsMemoryRangeValid();
-                if (IsMemoryRangeValid) {
+            if (ValidateAddressRange(StartAddress, value, nameof(EndAddress))) {
+                IsMemoryRangeValid = true;
+                if (SetProperty(ref _endAddress, value)) {
                     TryUpdateHeaderAndMemoryDocument();
-                } else {
-                    DataMemoryDocument = null;
                 }
+            } else {
+                IsMemoryRangeValid = false;
+                DataMemoryDocument = null;
             }
         }
     }
@@ -210,8 +242,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         });
     }
 
+    private bool ConfirmCreateMemoryBreakpointCanExecute() {
+        return ValidateAddressRange(BreakpointRangeStartAddress,
+            BreakpointRangeEndAddress,
+            nameof(BreakpointRangeStartAddress));
+    }
 
-    [RelayCommand]
+
+    [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {
         if (TryParseAddressString(BreakpointRangeStartAddress, out uint? breakpointRangeStartAddress) &&
             TryParseAddressString(BreakpointRangeEndAddress, out uint? breakpointRangeEndAddress)) {

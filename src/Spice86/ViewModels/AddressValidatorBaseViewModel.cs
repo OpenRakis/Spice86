@@ -18,7 +18,7 @@ using System.Text.RegularExpressions;
 public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
     INotifyDataErrorInfo {
     protected readonly State _state;
-    private readonly Dictionary<string, List<string>> _errors = new();
+    protected readonly Dictionary<string, List<string>> _errors = new();
 
     public AddressValidatorBaseViewModel(State state) {
         _state = state;
@@ -27,7 +27,7 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
     [GeneratedRegex(@"^0x[0-9A-Fa-f]{1,8}$")]
     protected static partial Regex HexAddressRegex();
 
-    private bool TryValidateAddress(string? value, out string message) {
+    protected bool TryValidateAddress(string? value, out string message) {
         if (string.IsNullOrWhiteSpace(value)) {
             message = "Address is required";
             return false;
