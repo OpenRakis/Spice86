@@ -273,7 +273,7 @@ public class Spice86DependencyInjection : IDisposable {
                 uiThreadDispatcher);
             MidiViewModel midiViewModel = new(midiDevice);
             StructureViewModelFactory structureViewModelFactory = new(
-                configuration, loggerService, pauseHandler);
+                configuration, state, loggerService, pauseHandler);
             MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
                         breakpointsViewModel, pauseHandler, messenger,
                         uiThreadDispatcher, textClipboard,
