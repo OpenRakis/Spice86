@@ -69,16 +69,15 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
 								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
 								<ComboBox Grid.Column="0" Grid.Row="1"
 									SelectedItem="{Binding SelectedMemoryBreakpointType}"
                                     ItemsSource="{Binding MemoryBreakpointTypes}" />
-								<Label Grid.Column="1" Grid.Row="0" Content="Memory address" />
 								<TextBox
 									Grid.Row="1"
 									Grid.Column="1"
-                                    Text="{Binding MemoryAddressValue,
+                                    Text="{Binding MemoryStartAddress,
 										Mode=TwoWay,
 										}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
@@ -87,10 +86,22 @@
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
 								</TextBox>
+								<TextBox
+									Grid.Row="2"
+									Grid.Column="1"
+									Text="{Binding MemoryEndAddress,
+										Mode=TwoWay,
+										}"
+									Watermark="1000:FFFF (example) or like 'cs:ip'"
+									Margin="5,0,0,0">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
-                                 IsVisible="{Binding IsExecutionBreakpointSelected}">
+                                IsVisible="{Binding IsExecutionBreakpointSelected}">
 							<controls:GroupBox Header="Execution address">
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
@@ -101,7 +112,7 @@
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
-                                 IsVisible="{Binding IsInterruptBreakpointSelected}">
+                                IsVisible="{Binding IsInterruptBreakpointSelected}">
 							<controls:GroupBox Header="Interrupt Number">
 								<TextBox
 									Text="{Binding InterruptNumber,
@@ -112,7 +123,7 @@
 							</controls:GroupBox>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="I/O Port"
-                                 IsVisible="{Binding IsIoPortBreakpointSelected}">
+                                IsVisible="{Binding IsIoPortBreakpointSelected}">
 							<controls:GroupBox Header="I/O Port Number">
 								<TextBox
                                     Text="{Binding IoPortNumber,

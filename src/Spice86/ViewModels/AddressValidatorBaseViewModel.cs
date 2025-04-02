@@ -25,6 +25,45 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
         _state = state;
     }
 
+    protected bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress) {
+        return startAddress <= endAddress
+        && endAddress >= startAddress;
+    }
+
+    protected bool ValidateAddressRange(string? startAddress, string? endAddress, string textBoxBindedPropertyName) {
+        const string RangeError = "Invalid address range.";
+        const string StartError = "Invalid start address.";
+        const string EndError = "Invalid end address.";
+        bool rangeStatus = false;
+        bool statusStart = TryValidateAddress(startAddress as string, out string? startError);
+        bool statusEnd = TryValidateAddress(endAddress as string, out string? endError);
+        if (statusStart && statusEnd) {
+            if (TryParseAddressString(startAddress, out uint? start) &&
+                TryParseAddressString(endAddress, out uint? end)) {
+                rangeStatus = GetIsMemoryRangeValid(start, end);
+            }
+        }
+        if (!rangeStatus || !statusStart || !statusEnd) {
+            if (!_errors.TryGetValue(textBoxBindedPropertyName,
+            out List<string>? values)) {
+                values = new List<string>();
+                _errors[nameof(textBoxBindedPropertyName)] = values;
+            }
+            values.Clear();
+            if (!rangeStatus) {
+                values.Add(RangeError);
+            }
+            if (!statusStart) {
+                values.Add(StartError);
+            }
+            if (!statusEnd) {
+                values.Add(EndError);
+            }
+            OnErrorsChanged(textBoxBindedPropertyName);
+        }
+        return rangeStatus && statusStart && statusEnd;
+    }
+
     private static bool TryParseSegmentOrRegister(string value, State? parameter,
         [NotNullWhen(true)] out ushort? @ushort) {
         if (ushort.TryParse(value, NumberStyles.HexNumber,
