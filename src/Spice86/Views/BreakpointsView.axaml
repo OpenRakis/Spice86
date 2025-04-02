@@ -78,8 +78,7 @@
 									Grid.Row="1"
 									Grid.Column="1"
                                     Text="{Binding MemoryStartAddress,
-										Mode=TwoWay,
-										}"
+										Mode=TwoWay}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
                                     Margin="5,0,0,0">
 									<Interaction.Behaviors>
@@ -90,8 +89,7 @@
 									Grid.Row="2"
 									Grid.Column="1"
 									Text="{Binding MemoryEndAddress,
-										Mode=TwoWay,
-										}"
+										Mode=TwoWay}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0">
 									<Interaction.Behaviors>
@@ -105,8 +103,7 @@
 							<controls:GroupBox Header="Execution address">
 								<TextBox
                                     Text="{Binding ExecutionAddressValue,
-										Mode=TwoWay,
-										}"
+										Mode=TwoWay}"
 									Watermark="1000:FFFF (example) or like 'cs:ip'"
 									Margin="5,0,0,0" />
 							</controls:GroupBox>

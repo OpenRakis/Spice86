@@ -53,8 +53,7 @@
 					<TextBox
 						MinWidth="100"
 						Grid.Row="0" Grid.Column="1"
-						Text="{Binding StartAddress, Mode=TwoWay, ,
-							}">
+						Text="{Binding StartAddress, Mode=TwoWay}">
 						<Interaction.Behaviors>
 							<behaviors:UpdateBindingOnEnterBehavior />
 						</Interaction.Behaviors>
@@ -64,8 +63,7 @@
 						MinWidth="100"
 						Grid.Row="1"
 						Grid.Column="1"
-						Text="{Binding EndAddress, Mode=TwoWay,,
-							}">
+						Text="{Binding EndAddress, Mode=TwoWay}">
 						<Interaction.Behaviors>
 							<behaviors:UpdateBindingOnEnterBehavior />
 						</Interaction.Behaviors>
