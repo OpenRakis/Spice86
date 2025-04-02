@@ -8,6 +8,7 @@ using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
@@ -24,6 +25,31 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
         _state = state;
     }
 
+    private static bool TryParseSegmentOrRegister(string value, State? parameter,
+        [NotNullWhen(true)] out ushort? @ushort) {
+        if (ushort.TryParse(value, NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out ushort result)) {
+            @ushort = result;
+            return true;
+        }
+
+        if (parameter is State state) {
+            PropertyInfo? property = state.GetType().GetProperty(value.ToUpperInvariant());
+            if (property != null &&
+                property.PropertyType == typeof(ushort) &&
+                property.GetValue(state) is ushort propertyValue) {
+                @ushort = propertyValue;
+                return true;
+            }
+        }
+
+        @ushort = null;
+        return false;
+    }
+
+    [GeneratedRegex(@"^([0-9A-Fa-f]{4}|[a-zA-Z]{2}):([0-9A-Fa-f]{4}|[a-zA-Z]{2})$")]
+    private static partial Regex SegmentedAddressRegex();
+
     [GeneratedRegex(@"^0x[0-9A-Fa-f]{1,8}$")]
     protected static partial Regex HexAddressRegex();
 
@@ -33,7 +59,7 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
             return false;
         }
         if (!HexAddressRegex().IsMatch(value) &&
-            !SegmentedAddressConverter.SegmentedAddressRegex().IsMatch(value)) {
+            !SegmentedAddressRegex().IsMatch(value)) {
             message = "Invalid address format";
             return false;
         }
@@ -97,7 +123,7 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
             address = null;
             return false;
         }
-        Match segmentedMatch = SegmentedAddressConverter.SegmentedAddressRegex()
+        Match segmentedMatch = SegmentedAddressRegex()
             .Match(value);
         if (HexAddressRegex().Match(value) is Match hexMatch) {
             string hexValue = hexMatch.Value;
@@ -111,10 +137,10 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
             }
         }
         if (segmentedMatch.Success &&
-            SegmentedAddressConverter.TryParseSegmentOrRegister(
+            TryParseSegmentOrRegister(
             segmentedMatch.Groups[1].Value, _state,
             out ushort? segment) &&
-            SegmentedAddressConverter.TryParseSegmentOrRegister(
+            TryParseSegmentOrRegister(
             segmentedMatch.Groups[2].Value, _state,
             out ushort? offset)) {
             address = MemoryUtils.ToPhysicalAddress(segment.Value,
