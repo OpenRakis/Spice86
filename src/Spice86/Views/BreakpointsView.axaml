@@ -74,28 +74,29 @@
 								<ComboBox Grid.Column="0" Grid.Row="1"
 									SelectedItem="{Binding SelectedMemoryBreakpointType}"
                                     ItemsSource="{Binding MemoryBreakpointTypes}" />
-								<TextBox
-									Grid.Row="1"
-									Grid.Column="1"
-                                    Text="{Binding MemoryStartAddress,
-										Mode=TwoWay}"
-									Watermark="1000:FFFF (example) or like 'cs:ip'"
-                                    Margin="5,0,0,0">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-								<TextBox
-									Grid.Row="2"
-									Grid.Column="1"
-									Text="{Binding MemoryEndAddress,
-										Mode=TwoWay}"
-									Watermark="1000:FFFF (example) or like 'cs:ip'"
-									Margin="5,0,0,0">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
+								<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
+									Header="Memory start address">
+									<TextBox
+										Text="{Binding MemoryStartAddress,
+											Mode=TwoWay}"
+										Watermark="1000:FFFF (example) or like 'cs:ip'">
+										<Interaction.Behaviors>
+											<behaviors:UpdateBindingOnEnterBehavior />
+										</Interaction.Behaviors>
+									</TextBox>
+								</controls:GroupBox>
+								<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
+									Header="Memory end address">
+									<TextBox
+										Text="{Binding MemoryEndAddress,
+											Mode=TwoWay}"
+										Watermark="1000:FFFF (example) or like 'cs:ip'">
+										<Interaction.Behaviors>
+											<behaviors:UpdateBindingOnEnterBehavior />
+										</Interaction.Behaviors>
+									</TextBox>
+								</controls:GroupBox>
+
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
