@@ -15,7 +15,6 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
-using System.Globalization;
 
 public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
