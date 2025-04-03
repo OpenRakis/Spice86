@@ -108,7 +108,7 @@
 					<controls:StatusBarItem FontFamily="RobotoMonoFont">
 						<WrapPanel Orientation="Horizontal">
 							<TextBlock Text="Selection start address: " />
-							<TextBlock Text="{Binding SelectionRangeStartAddress, }" />
+							<TextBlock Text="{Binding SelectionRangeStartAddress }" />
 							<TextBlock Text=" End address: " />
 							<TextBlock Text="{Binding SelectionRangeEndAddress, }" />
 							<TextBlock Text=" Byte Length: " />
