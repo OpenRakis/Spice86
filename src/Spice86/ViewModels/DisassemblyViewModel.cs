@@ -272,7 +272,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private async Task GoToAddress(uint address) {
         StartAddress = ConvertUtils.ToHex32(address);
         await UpdateDisassembly();
-        SelectedInstruction = Instructions.FirstOrDefault();
+        SelectedInstruction = Instructions.FirstOrDefault(x => x.Address == address);
     }
 
     private bool CanExecuteUpdateDisassembly() {
