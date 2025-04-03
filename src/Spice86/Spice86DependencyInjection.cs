@@ -283,7 +283,7 @@ public class Spice86DependencyInjection : IDisposable {
                 breakpointsViewModel, pauseHandler, messenger,
                 uiThreadDispatcher, textClipboard,
                 hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false, startAddress: ConvertUtils.ToHex32(stack.PhysicalAddress));
+                canCloseTab: false);
 
             debugWindowViewModel = new DebugWindowViewModel(messenger,
                 uiThreadDispatcher, pauseHandler,
