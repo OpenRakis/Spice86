@@ -1,11 +1,8 @@
 ﻿namespace Spice86.ViewModels;
 
-using Spice86.Converters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Utils;
 
-using System.Collections;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
@@ -62,16 +59,14 @@ public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModel
         return rangeStatus && statusStart && statusEnd;
     }
 
-    private static bool TryParseSegmentOrRegister(string value, State? parameter,
+    private bool TryParseSegmentOrRegister(string value,
         [NotNullWhen(true)] out ushort? @ushort) {
-        if (parameter is State state) {
-            PropertyInfo? property = state.GetType().GetProperty(value.ToUpperInvariant());
-            if (property != null &&
-                property.PropertyType == typeof(ushort) &&
-                property.GetValue(state) is ushort propertyValue) {
-                @ushort = propertyValue;
-                return true;
-            }
+        PropertyInfo? property = _state.GetType().GetProperty(value.ToUpperInvariant());
+        if (property != null &&
+            property.PropertyType == typeof(ushort) &&
+            property.GetValue(_state) is ushort propertyValue) {
+            @ushort = propertyValue;
+            return true;
         } else if (value.Length == 4 &&
             ushort.TryParse(value, NumberStyles.HexNumber,
             CultureInfo.InvariantCulture, out ushort result)) {
@@ -158,10 +153,10 @@ public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModel
         }
         if (segmentedMatch.Success &&
             TryParseSegmentOrRegister(
-            segmentedMatch.Groups[1].Value, _state,
+            segmentedMatch.Groups[1].Value,
             out ushort? segment) &&
             TryParseSegmentOrRegister(
-            segmentedMatch.Groups[2].Value, _state,
+            segmentedMatch.Groups[2].Value,
             out ushort? offset)) {
             address = MemoryUtils.ToPhysicalAddress(segment.Value,
                 offset.Value);
