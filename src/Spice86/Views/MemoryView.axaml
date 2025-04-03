@@ -298,7 +298,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding MemoryBreakpointEndAddress, 
+									Text="{Binding MemoryBreakpointEndAddress 
 										}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
