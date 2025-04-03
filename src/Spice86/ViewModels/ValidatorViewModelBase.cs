@@ -32,8 +32,9 @@ public abstract partial class ValidatorViewModelBase : ViewModelBase, INotifyDat
             validatedValue = default;
             return false;
         }
-        if (value is not null &&
-            (value is not string stringValue || !string.IsNullOrWhiteSpace(stringValue))) {
+        if (value is not null ||
+            value is string stringValue && !string.IsNullOrWhiteSpace(
+                stringValue)) {
             validatedValue = value;
             return true;
         }
