@@ -259,8 +259,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        StartAddress = ConvertUtils.ToHex32(_state.IpPhysicalAddress);
-        await UpdateDisassembly();
+        await GoToAddress(_state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
