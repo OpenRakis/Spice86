@@ -20,6 +20,8 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using Tmds.DBus.Protocol;
+
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMemory _memory;
@@ -259,7 +261,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        await GoToAddress(_state.IpPhysicalAddress);
+        StartAddress = _state.IpSegmentedAddress.ToString();
+        await UpdateDisassembly();
+        SelectedInstruction = Instructions.FirstOrDefault(x => x.Address == _state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
