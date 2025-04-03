@@ -4,13 +4,13 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.2.5" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.2.5" />
+    <PackageVersion Include="Avalonia" Version="11.2.6" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.2.6" />
     <PackageVersion Include="Avalonia.Controls.PanAndZoom" Version="11.2.0" />
     <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.1" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.2.5" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.5" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.5" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.2.6" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.6" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.6" />
     <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.2.0.14" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.8" />
@@ -36,9 +36,9 @@
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.9" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.9" />
-    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.5" />
-    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.5" />
-    <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.1" />
+    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.6" />
+    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.6" />
+    <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.2" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
