@@ -66,12 +66,6 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
 
     private static bool TryParseSegmentOrRegister(string value, State? parameter,
         [NotNullWhen(true)] out ushort? @ushort) {
-        if (ushort.TryParse(value, NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out ushort result)) {
-            @ushort = result;
-            return true;
-        }
-
         if (parameter is State state) {
             PropertyInfo? property = state.GetType().GetProperty(value.ToUpperInvariant());
             if (property != null &&
@@ -80,6 +74,11 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
                 @ushort = propertyValue;
                 return true;
             }
+        } else if (value.Length == 4 &&
+            ushort.TryParse(value, NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out ushort result)) {
+            @ushort = result;
+            return true;
         }
 
         @ushort = null;
