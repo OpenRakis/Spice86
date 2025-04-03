@@ -403,18 +403,10 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
                 removedOnTrigger), on: true);
     }
 
-    private BreakpointViewModel AddBreakpointInternal(BreakpointViewModel breakpointViewModel) {
+    private void AddBreakpointInternal<T>(T breakpointViewModel) where T : BreakpointViewModel {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
         BreakpointCreated?.Invoke(breakpointViewModel);
-        return breakpointViewModel;
-    }
-
-    private BreakpointRangeViewModel AddBreakpointRangeInternal(BreakpointRangeViewModel breakpointViewModel) {
-        Breakpoints.Add(breakpointViewModel);
-        SelectedBreakpoint = breakpointViewModel;
-        BreakpointCreated?.Invoke(breakpointViewModel);
-        return breakpointViewModel;
     }
 
     public BreakpointViewModel AddAddressBreakpoint(
@@ -428,7 +420,8 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
                     this,
                     _emulatorBreakpointsManager,
                     trigger, type, isRemovedOnTrigger, onReached, comment);
-        return AddBreakpointInternal(breakpointViewModel);
+        AddBreakpointInternal(breakpointViewModel);
+        return breakpointViewModel;
     }
 
     public BreakpointRangeViewModel AddAddressRangeBreakpoint(
@@ -443,7 +436,8 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
                     this,
                     _emulatorBreakpointsManager,
                     trigger, endTrigger, type, isRemovedOnTrigger, onReached, comment);
-        return AddBreakpointRangeInternal(breakpointViewModel);
+        AddBreakpointInternal(breakpointViewModel);
+        return breakpointViewModel;
     }
 
     private void RemoveFirstIfEdited() {
