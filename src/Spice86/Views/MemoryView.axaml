@@ -110,7 +110,7 @@
 							<TextBlock Text="Selection start address: " />
 							<TextBlock Text="{Binding SelectionRangeStartAddress }" />
 							<TextBlock Text=" End address: " />
-							<TextBlock Text="{Binding SelectionRangeEndAddress, }" />
+							<TextBlock Text="{Binding SelectionRangeEndAddress }" />
 							<TextBlock Text=" Byte Length: " />
 							<TextBlock Text="{Binding SelectionRange.Value.ByteLength, StringFormat={}{0:N0}}" />
 						</WrapPanel>
