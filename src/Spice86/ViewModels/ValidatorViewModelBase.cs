@@ -27,7 +27,7 @@ public abstract partial class ValidatorViewModelBase : ViewModelBase, INotifyDat
 
     protected bool TryValidateRequiredPropertyIsNotNull<T>(
         T? value, [NotNullWhen(true)] out T? validatedValue,
-        [CallerMemberName] string? bindedPropertyName = null) {
+            [CallerMemberName] string? bindedPropertyName = null) {
         if (string.IsNullOrWhiteSpace(bindedPropertyName)) {
             validatedValue = default;
             return false;
@@ -38,9 +38,12 @@ public abstract partial class ValidatorViewModelBase : ViewModelBase, INotifyDat
             validatedValue = value;
             return true;
         }
-
-        _errors.Clear();
-        _errors.Add(bindedPropertyName, ["This field is required."]);
+        if (!_errors.TryGetValue(bindedPropertyName, out List<string>? values)) {
+            _errors.Add(bindedPropertyName, ["This field is required."]);
+        } else {
+            values.Clear();
+            values.Add("This field is required.");
+        }
         OnErrorsChanged(bindedPropertyName);
         validatedValue = default;
         return false;

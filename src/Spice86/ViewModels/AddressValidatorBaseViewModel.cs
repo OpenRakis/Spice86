@@ -60,7 +60,7 @@ public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModel
     }
 
     private bool TryParseSegmentOrRegister(string value,
-        [NotNullWhen(true)] out ushort? @ushort) {
+            [NotNullWhen(true)] out ushort? @ushort) {
         PropertyInfo? property = _state.GetType().GetProperty(value.ToUpperInvariant());
         if (property != null &&
             property.PropertyType == typeof(ushort) &&
@@ -122,7 +122,6 @@ public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModel
         } else {
             _errors.Remove(propertyName);
         }
-
         OnErrorsChanged(propertyName);
         return status;
     }
