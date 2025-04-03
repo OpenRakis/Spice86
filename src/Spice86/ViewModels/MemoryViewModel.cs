@@ -161,8 +161,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             uint rangeStart = (uint)(startAddress.Value + SelectionRange.Value.Start.ByteIndex);
             uint rangeEnd = (uint)(startAddress.Value + SelectionRange.Value.End.ByteIndex);
             MemoryBreakpointStartAddress = ConvertUtils.ToHex32(rangeStart);
-            if (rangeStart != rangEnd) {
-                MemoryBreakpointEndAddress = ConvertUtils.ToHex32(rangEnd);
+            if (rangeStart != rangeEnd) {
+                MemoryBreakpointEndAddress = ConvertUtils.ToHex32(rangeEnd);
             }
         }
     }
