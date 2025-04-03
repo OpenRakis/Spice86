@@ -133,7 +133,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = MemoryBreakpointStartAddress = MemoryBreakpointEndAddress =
-            ConvertUtils.ToHex32(State.IpPhysicalAddress);
+            State.IpSegmentedAddress.ToString();
     }
 
     private long? _cyclesValue;
