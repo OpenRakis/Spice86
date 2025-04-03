@@ -14,18 +14,16 @@ using Spice86.Core.Emulator.VM;
 using Spice86.DataTemplates;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
-using Spice86.Shared.Emulator.Memory;
 
 using Structurizer;
 using Structurizer.Types;
-
-using System.Reactive;
 
 /// <summary>
 /// ViewModel for handling the structure view in the application. It manages the display and interaction
 /// with memory structures, including selection, filtering, and updating the view based on the selected structure.
 /// </summary>
-public partial class StructureViewModel : AddressValidatorBaseViewModel, IDisposable {
+public partial class StructureViewModel : ViewModelBase, IDisposable {
+    private readonly State _state;
     private readonly Hydrator _hydrator;
     private readonly IBinaryDocument _originalMemory;
     private readonly StructureInformation? _structureInformation;
@@ -41,7 +39,7 @@ public partial class StructureViewModel : AddressValidatorBaseViewModel, IDispos
     public string? MemoryAddress {
         get => _memoryAddress;
         set {
-            if(ValidateAddressProperty(value)) {
+            if(ValidateAddressProperty(value, _state)) {
                 SetProperty(ref _memoryAddress, value);
                 OnMemoryAddressChanged(value);
             }
@@ -68,7 +66,8 @@ public partial class StructureViewModel : AddressValidatorBaseViewModel, IDispos
     /// <param name="data">The binary document representing the memory to be displayed and interacted with.</param>
     /// <param name="pauseHandler">The pause handler for the emulator</param>
     public StructureViewModel(StructureInformation structureInformation, State state,
-        Hydrator hydrator, IBinaryDocument data, IPauseHandler pauseHandler) : base(state) {
+        Hydrator hydrator, IBinaryDocument data, IPauseHandler pauseHandler) {
+        _state = state;
         _structureInformation = structureInformation;
         _hydrator = hydrator;
         _structureMemory = data;
@@ -144,7 +143,7 @@ public partial class StructureViewModel : AddressValidatorBaseViewModel, IDispos
     partial void OnSelectedStructureChanged(StructType? value) {
         if (value is null) {
             StructureMemory = _originalMemory;
-            if (TryParseAddressString(MemoryAddress, out uint? address)) {
+            if (TryParseAddressString(MemoryAddress, _state, out uint? address)) {
                 RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
             }
         }
@@ -152,7 +151,7 @@ public partial class StructureViewModel : AddressValidatorBaseViewModel, IDispos
     }
 
     private void OnMemoryAddressChanged(string? value) {
-        if (TryParseAddressString(value, out uint? address)) {
+        if (TryParseAddressString(value, _state, out uint? address)) {
             RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
         }
         Update();
@@ -177,7 +176,8 @@ public partial class StructureViewModel : AddressValidatorBaseViewModel, IDispos
         }
 
         // Calculate the offset into the viewed memory.
-        uint offset = IsAddressableMemory && TryParseAddressString(MemoryAddress, out uint? address)
+        uint offset = IsAddressableMemory && TryParseAddressString(MemoryAddress, _state,
+            out uint? address)
             ? address.Value
             : 0;
 

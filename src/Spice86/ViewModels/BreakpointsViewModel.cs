@@ -15,19 +15,20 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
 
-public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
+public partial class BreakpointsViewModel : ViewModelBase {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcher _uiDispatcher;
+    private readonly State _state;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IUIDispatcher uiDispatcher) : base(state) {
+        IUIDispatcher uiDispatcher) {
+        _state = state;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
@@ -152,7 +153,7 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     public string? ExecutionAddressValue {
         get => _executionAddressValue;
         set {
-            if (ValidateAddressProperty(value) &&
+            if (ValidateAddressProperty(value, _state) &&
                 SetProperty(ref _executionAddressValue, value)) {
                 ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
             }
@@ -164,7 +165,7 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            if (ValidateAddressProperty(value) &&
+            if (ValidateAddressProperty(value, _state) &&
                 SetProperty(ref _memoryBreakpointStartAddress, value)) {
                 ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
             }
@@ -216,7 +217,7 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
         if (IsExecutionBreakpointSelected) {
-            if (!TryParseAddressString(ExecutionAddressValue, out uint? executionAddress)) {
+            if (!TryParseAddressString(ExecutionAddressValue, _state,out uint? executionAddress)) {
                 return;
             }
             BreakpointViewModel executionVm = AddAddressBreakpoint(
@@ -229,11 +230,11 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
                 }, "Execution breakpoint");
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            if (TryParseAddressString(MemoryBreakpointStartAddress, out uint? memorystartAddress) &&
-                TryParseAddressString(MemoryBreakpointEndAddress, out uint? memoryEndAddress)) {
+            if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
+                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
                 CreateMemoryBreakpointRangeAtAddresses(memorystartAddress.Value,
                     memoryEndAddress.Value);
-            } else if(TryParseAddressString(MemoryBreakpointStartAddress,
+            } else if(TryParseAddressString(MemoryBreakpointStartAddress, _state,
                 out uint? memoryStartAddressAlone)) {
                  CreateMemoryBreakpointAtAddress(memoryStartAddressAlone.Value);
             }
@@ -313,18 +314,20 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
                 !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress) &&
                 !string.Equals(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress,
                 StringComparison.OrdinalIgnoreCase)) {
-                return ValidateAddressRange(MemoryBreakpointStartAddress,
+                return ValidateAddressRange(_state,
+                    MemoryBreakpointStartAddress,
                 MemoryBreakpointEndAddress,
                 nameof(MemoryBreakpointEndAddress));
             }
             else if (
                 !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress)) {
                 return ValidateAddressProperty(MemoryBreakpointStartAddress,
+                    _state,
                     nameof(MemoryBreakpointStartAddress)) is true;
             }
             return false;
         } else if (IsExecutionBreakpointSelected) {
-            return ValidateAddressProperty(ExecutionAddressValue,
+            return ValidateAddressProperty(ExecutionAddressValue, _state,
                 nameof(ExecutionAddressValue)) is true;
         }
         return false;

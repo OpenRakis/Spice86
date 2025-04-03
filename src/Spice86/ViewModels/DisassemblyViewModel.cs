@@ -20,9 +20,8 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-using Tmds.DBus.Protocol;
-
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
+    private readonly State _state;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMemory _memory;
     private readonly IMessenger _messenger;
@@ -39,7 +38,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         BreakpointsViewModel breakpointsViewModel,
         IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
         IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
-        : base(uiDispatcher, textClipboard, state) {
+        : base(uiDispatcher, textClipboard) {
+        _state = state;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         AreFunctionInformationProvided = functionsInformation.Count > 0;
@@ -126,7 +126,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? BreakpointAddress {
         get => _breakpointAddress;
         set {
-            if (ValidateAddressProperty(value)) {
+            if (ValidateAddressProperty(value, _state)) {
                 SetProperty(ref _breakpointAddress, value);
             }
         }
@@ -146,7 +146,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
-        if (TryParseAddressString(BreakpointAddress, out uint? address)) {
+        if (TryParseAddressString(BreakpointAddress, _state, out uint? address)) {
             BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
                 address.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -173,7 +173,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressProperty(value) &&
+            if (ValidateAddressProperty(value, _state) &&
                 SetProperty(ref _startAddress, value)) {
                 UpdateDisassemblyCommand.NotifyCanExecuteChanged();
             }
@@ -281,7 +281,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool CanExecuteUpdateDisassembly() {
         return IsPaused &&
-            ValidateAddressProperty(StartAddress,
+            ValidateAddressProperty(StartAddress, _state,
             nameof(StartAddress)) is true;
     }
 
@@ -290,7 +290,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        if (!TryParseAddressString(StartAddress, out uint? startAddress)) {
+        if (!TryParseAddressString(StartAddress, _state, out uint? startAddress)) {
             return;
         }
         Instructions.Clear();

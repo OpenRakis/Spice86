@@ -60,7 +60,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
-        : base(uiDispatcher, textClipboard, state) {
+        : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
@@ -71,7 +71,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Background, (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
+            DispatcherPriority.Background,
+            (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
     }
 
     private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
