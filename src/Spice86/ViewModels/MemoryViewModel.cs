@@ -159,7 +159,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         CreatingMemoryBreakpoint = true;
         if (TryParseAddressString(StartAddress, out uint? startAddress) && SelectionRange is not null) {
             uint rangeStart = (uint)(startAddress.Value + SelectionRange.Value.Start.ByteIndex);
-            uint rangEnd = (uint)(startAddress.Value + SelectionRange.Value.End.ByteIndex);
+            uint rangeEnd = (uint)(startAddress.Value + SelectionRange.Value.End.ByteIndex);
             MemoryBreakpointStartAddress = ConvertUtils.ToHex32(rangeStart);
             if (rangeStart != rangEnd) {
                 MemoryBreakpointEndAddress = ConvertUtils.ToHex32(rangEnd);
