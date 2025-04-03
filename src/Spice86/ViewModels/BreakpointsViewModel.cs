@@ -15,6 +15,7 @@ using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 
 public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -139,7 +140,8 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     public long? CyclesValue {
         get => _cyclesValue;
         set {
-            if (SetProperty(ref _cyclesValue, value)) {
+            if (TryValidateRequiredPropertyIsNotNull(value, out long? validatedValue) &&
+                SetProperty(ref _cyclesValue, validatedValue.Value)) {
                 ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
             }
         }
@@ -185,7 +187,8 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     public ushort? IoPortNumber {
         get => _ioPortNumber;
         set {
-            if (SetProperty(ref _ioPortNumber, value)) {
+            if (TryValidateRequiredPropertyIsNotNull(value, out ushort? validatedValue) &&
+                SetProperty(ref _ioPortNumber, validatedValue.Value)) {
                 ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
             }
         }
@@ -196,7 +199,8 @@ public partial class BreakpointsViewModel : AddressValidatorBaseViewModel {
     public int? InterruptNumber {
         get => _interruptNumber;
         set {
-            if (SetProperty(ref _interruptNumber, value)) {
+            if (TryValidateRequiredPropertyIsNotNull(value, out int? validatedValue) &&
+                SetProperty(ref _interruptNumber, validatedValue.Value)) {
                 ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
             }
         }

@@ -136,11 +136,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
-    private double _scale = 1;
+    private double? _scale = 1;
 
-    public double Scale {
+    public double? Scale {
         get => _scale;
-        set => SetProperty(ref _scale, Math.Max(value, 1));
+        set {
+            if(TryValidateRequiredPropertyIsNotNull(value, out double? validatedValue)) {
+                SetProperty(ref _scale, Math.Max(validatedValue.Value, 1));
+            }
+        }
     }
 
     [ObservableProperty]
@@ -249,17 +253,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     [ObservableProperty]
     private string? _mainTitle;
 
-    private double _timeMultiplier = 1;
+    private double? _timeMultiplier = 1;
 
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
-            if (value is null) {
-                return;
+            if (TryValidateRequiredPropertyIsNotNull(value, out double? validatedValue)) {
+                SetProperty(ref _timeMultiplier, validatedValue.Value);
+                _pit?.SetTimeMultiplier(validatedValue.Value);
             }
-
-            SetProperty(ref _timeMultiplier, value.Value);
-            _pit?.SetTimeMultiplier(value.Value);
         }
     }
 

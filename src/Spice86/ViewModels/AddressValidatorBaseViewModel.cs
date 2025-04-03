@@ -16,10 +16,8 @@ using System.Text.RegularExpressions;
 /// Validates a memory address string to ensure it is a valid address. <br/>
 /// Input format can be 0x (HEX) or FFFF:FFFF (SEG:OFF) <br/>
 /// </summary>
-public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
-    INotifyDataErrorInfo {
+public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModelBase {
     protected readonly State _state;
-    protected readonly Dictionary<string, List<string>> _errors = new();
 
     public AddressValidatorBaseViewModel(State state) {
         _state = state;
@@ -132,22 +130,6 @@ public abstract partial class AddressValidatorBaseViewModel : ViewModelBase,
 
         OnErrorsChanged(propertyName);
         return status;
-    }
-
-    public bool HasErrors => _errors.Count > 0;
-
-    public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
-
-    public IEnumerable GetErrors(string? propertyName) {
-        if (propertyName is not null &&
-            _errors.TryGetValue(propertyName, out List<string>? value)) {
-            return value;
-        }
-        return Array.Empty<string>();
-    }
-
-    protected void OnErrorsChanged(string propertyName) {
-        ErrorsChanged?.Invoke(this, new DataErrorsChangedEventArgs(propertyName));
     }
 
     /// <summary>
