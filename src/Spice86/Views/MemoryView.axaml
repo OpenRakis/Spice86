@@ -219,7 +219,7 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay, 
+								Text="{Binding MemoryEditAddress, Mode=TwoWay 
 									}">
 								<Interaction.Behaviors>
 									<behaviors:UpdateBindingOnEnterBehavior />
