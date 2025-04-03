@@ -470,7 +470,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             if (TryParseAddressString(MemoryEditAddress, out uint? address)) {
                 MemoryEditValue = Convert.ToHexString(_memory.ReadRam(
                     (uint)(MemoryEditValue?.Length ?? sizeof(ushort)),
-                        (uint)address.Value));
+                        address.Value));
             }
         } catch (Exception e) {
             ShowError(e);
