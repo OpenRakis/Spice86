@@ -133,7 +133,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = ConvertUtils.ToHex32(_state.IpPhysicalAddress);
+        BreakpointAddress = _state.IpSegmentedAddress.ToString();
     }
 
     [RelayCommand]
