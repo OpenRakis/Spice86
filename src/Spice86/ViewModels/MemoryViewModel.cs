@@ -172,8 +172,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? MemoryBreakpointEndAddress {
         get => _memoryBreakpointEndAddress;
         set {
-            if (ValidateAddressProperty(value) &&
-                SetProperty(ref _memoryBreakpointEndAddress, value)) {
+            if (SetProperty(ref _memoryBreakpointEndAddress, value)) {
                 ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
             }
         }

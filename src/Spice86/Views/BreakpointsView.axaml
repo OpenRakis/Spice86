@@ -77,7 +77,7 @@
 								<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
 									Header="Memory start address">
 									<TextBox
-										Text="{Binding MemoryStartAddress,
+										Text="{Binding MemoryBreakpointStartAddress,
 											Mode=TwoWay}"
 										Watermark="1000:FFFF (example) or like 'cs:ip'">
 										<Interaction.Behaviors>
@@ -88,7 +88,7 @@
 								<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
 									Header="Memory end address">
 									<TextBox
-										Text="{Binding MemoryEndAddress,
+										Text="{Binding MemoryBreakpointEndAddress,
 											Mode=TwoWay}"
 										Watermark="1000:FFFF (example) or like 'cs:ip'">
 										<Interaction.Behaviors>
@@ -96,7 +96,6 @@
 										</Interaction.Behaviors>
 									</TextBox>
 								</controls:GroupBox>
-
 							</Grid>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
