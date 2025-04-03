@@ -30,8 +30,8 @@ public abstract partial class AddressValidatorBaseViewModel : ValidatorViewModel
         const string StartError = "Invalid start address.";
         const string EndError = "Invalid end address.";
         bool rangeStatus = false;
-        bool statusStart = TryValidateAddress(startAddress as string, out string? startError);
-        bool statusEnd = TryValidateAddress(endAddress as string, out string? endError);
+        bool statusStart = TryValidateAddress(startAddress, out _);
+        bool statusEnd = TryValidateAddress(endAddress, out _);
         if (statusStart && statusEnd) {
             if (TryParseAddressString(startAddress, out uint? start) &&
                 TryParseAddressString(endAddress, out uint? end)) {
