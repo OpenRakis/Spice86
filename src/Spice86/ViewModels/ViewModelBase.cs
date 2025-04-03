@@ -14,14 +14,14 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 public abstract partial class ViewModelBase : ObservableObject, INotifyDataErrorInfo {
-    protected readonly Dictionary<string, List<string>> _errors = new();
-    public bool HasErrors => _errors.Count > 0;
+    protected readonly Dictionary<string, List<string>> _validationErrors = new();
+    public bool HasErrors => _validationErrors.Count > 0;
 
     public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 
     public IEnumerable GetErrors(string? propertyName) {
         if (propertyName is not null &&
-            _errors.TryGetValue(propertyName, out List<string>? value)) {
+            _validationErrors.TryGetValue(propertyName, out List<string>? value)) {
             return value;
         }
         return Array.Empty<string>();
@@ -45,8 +45,8 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             validatedValue = value;
             return true;
         }
-        if (!_errors.TryGetValue(bindedPropertyName, out List<string>? values)) {
-            _errors.Add(bindedPropertyName, ["This field is required."]);
+        if (!_validationErrors.TryGetValue(bindedPropertyName, out List<string>? values)) {
+            _validationErrors.Add(bindedPropertyName, ["This field is required."]);
         } else {
             values.Clear();
             values.Add("This field is required.");
@@ -76,10 +76,10 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             }
         }
         if (!rangeStatus || !statusStart || !statusEnd) {
-            if (!_errors.TryGetValue(textBoxBindedPropertyName,
+            if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
             out List<string>? values)) {
                 values = new List<string>();
-                _errors[nameof(textBoxBindedPropertyName)] = values;
+                _validationErrors[nameof(textBoxBindedPropertyName)] = values;
             }
             values.Clear();
             if (!rangeStatus) {
@@ -149,15 +149,15 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
 
         bool status = TryValidateAddress(value as string, state, out string? error);
         if (!status) {
-            if (!_errors.TryGetValue(propertyName,
+            if (!_validationErrors.TryGetValue(propertyName,
                 out List<string>? values)) {
                 values = new List<string>();
-                _errors[propertyName] = values;
+                _validationErrors[propertyName] = values;
             }
             values.Clear();
             values.Add(error);
         } else {
-            _errors.Remove(propertyName);
+            _validationErrors.Remove(propertyName);
         }
         OnErrorsChanged(propertyName);
         return status;

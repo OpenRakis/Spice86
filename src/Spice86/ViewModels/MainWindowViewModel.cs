@@ -261,6 +261,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         get => _timeMultiplier;
         set {
             if (TryValidateRequiredPropertyIsNotNull(value, out double? validatedValue)) {
+                _validationErrors.Clear();
                 SetProperty(ref _timeMultiplier, validatedValue.Value);
                 _pit?.SetTimeMultiplier(validatedValue.Value);
             }
