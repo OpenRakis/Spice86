@@ -169,7 +169,7 @@
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence,
+								Text="{Binding AddressOFoundOccurence
 									}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
