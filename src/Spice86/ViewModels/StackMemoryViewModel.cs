@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Models.Debugging;
+using Spice86.Shared.Utils;
 
 namespace Spice86.ViewModels;
 
@@ -14,8 +14,8 @@ public partial class StackMemoryViewModel : MemoryViewModel {
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler,
         IMessenger messenger, IUIDispatcher uiDispatcher, ITextClipboard textClipboard,
         IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
-        bool canCloseTab = false, LinearMemoryAddress? startAddress = null,
-        LinearMemoryAddress? endAddress = null) :
+        bool canCloseTab = false, string? startAddress = null,
+        string? endAddress = null) :
             base(memory, memoryDataExporter, state, breakpointsViewModel, pauseHandler, messenger,
                 uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
                 canCloseTab, startAddress, endAddress) {
@@ -24,7 +24,7 @@ public partial class StackMemoryViewModel : MemoryViewModel {
     }
     private static void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
         //stack.PhysicalAddress is MemoryUtils.ToPhysicalAddress(state.SS, state.SP)
-        stackMemoryViewModel.StartAddress = stack.PhysicalAddress;
-        stackMemoryViewModel.EndAddress = A20Gate.EndOfHighMemoryArea;
+        stackMemoryViewModel.StartAddress = ConvertUtils.ToHex32(stack.PhysicalAddress);
+        stackMemoryViewModel.EndAddress = ConvertUtils.ToHex32(A20Gate.EndOfHighMemoryArea);
     }
 }

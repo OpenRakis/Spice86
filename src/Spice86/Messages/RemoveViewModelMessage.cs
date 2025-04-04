@@ -1,5 +1,5 @@
 namespace Spice86.Messages;
 
-using Spice86.ViewModels;
+using System.ComponentModel;
 
-public record RemoveViewModelMessage<T>(T ViewModel) where T : ViewModelBase;
+public record RemoveViewModelMessage<T>(T ViewModel) where T : INotifyPropertyChanged;

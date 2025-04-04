@@ -9,11 +9,11 @@ using AvaloniaHex.Document;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.DataTemplates;
 using Spice86.MemoryWrappers;
 using Spice86.Messages;
-using Spice86.Shared.Emulator.Memory;
 
 using Structurizer;
 using Structurizer.Types;
@@ -23,6 +23,7 @@ using Structurizer.Types;
 /// with memory structures, including selection, filtering, and updating the view based on the selected structure.
 /// </summary>
 public partial class StructureViewModel : ViewModelBase, IDisposable {
+    private readonly State _state;
     private readonly Hydrator _hydrator;
     private readonly IBinaryDocument _originalMemory;
     private readonly StructureInformation? _structureInformation;
@@ -33,8 +34,17 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     [ObservableProperty]
     private bool _isAddressableMemory;
 
-    [ObservableProperty]
-    private SegmentedAddress? _memoryAddress;
+    private string? _memoryAddress;
+
+    public string? MemoryAddress {
+        get => _memoryAddress;
+        set {
+            if(ValidateAddressProperty(value, _state)) {
+                SetProperty(ref _memoryAddress, value);
+                OnMemoryAddressChanged(value);
+            }
+        }
+    }
 
     [ObservableProperty]
     private StructType? _selectedStructure;
@@ -51,10 +61,13 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     /// Initializes a new instance of the <see cref="StructureViewModel" /> class.
     /// </summary>
     /// <param name="structureInformation">The structure information containing available structures.</param>
+    /// <param name="state">The emulated CPU registers and flags.</param>
     /// <param name="hydrator">The hydrator used for creating structure members from binary data.</param>
     /// <param name="data">The binary document representing the memory to be displayed and interacted with.</param>
     /// <param name="pauseHandler">The pause handler for the emulator</param>
-    public StructureViewModel(StructureInformation structureInformation, Hydrator hydrator, IBinaryDocument data, IPauseHandler pauseHandler) {
+    public StructureViewModel(StructureInformation structureInformation, State state,
+        Hydrator hydrator, IBinaryDocument data, IPauseHandler pauseHandler) {
+        _state = state;
         _structureInformation = structureInformation;
         _hydrator = hydrator;
         _structureMemory = data;
@@ -130,16 +143,16 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     partial void OnSelectedStructureChanged(StructType? value) {
         if (value is null) {
             StructureMemory = _originalMemory;
-            if (MemoryAddress is { } address) {
-                RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address));
+            if (TryParseAddressString(MemoryAddress, _state, out uint? address)) {
+                RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
             }
         }
         Update();
     }
 
-    partial void OnMemoryAddressChanged(SegmentedAddress? value) {
-        if (value is { } address) {
-            RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address));
+    private void OnMemoryAddressChanged(string? value) {
+        if (TryParseAddressString(value, _state, out uint? address)) {
+            RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
         }
         Update();
     }
@@ -163,8 +176,9 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         }
 
         // Calculate the offset into the viewed memory.
-        uint offset = IsAddressableMemory && MemoryAddress is { } address
-            ? address.Linear
+        uint offset = IsAddressableMemory && TryParseAddressString(MemoryAddress, _state,
+            out uint? address)
+            ? address.Value
             : 0;
 
         byte[] data = new byte[SelectedStructure.Size];
