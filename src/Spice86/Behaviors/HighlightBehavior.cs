@@ -2,6 +2,7 @@ namespace Spice86.Behaviors {
     using Avalonia;
     using Avalonia.Animation;
     using Avalonia.Controls;
+    using Avalonia.Controls.Primitives;
     using Avalonia.Styling;
 
     using Spice86.Converters;
@@ -106,7 +107,7 @@ namespace Spice86.Behaviors {
                     }
                 } else if (e.OldValue.Value) {
                     // Create animation for background fade-out
-                    Animation backgroundAnimation = CreateAnimation(ContentControl.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(),
+                    Animation backgroundAnimation = CreateAnimation(TemplatedControl.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(),
                         HighlightingConverter.GetDefaultBackgroundBrush());
 
                     // Start background animation
@@ -114,7 +115,7 @@ namespace Spice86.Behaviors {
 
                     // If foreground highlighting is enabled, animate it too
                     if (highlightForeground) {
-                        Animation foregroundAnimation = CreateAnimation(ContentControl.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(),
+                        Animation foregroundAnimation = CreateAnimation(TemplatedControl.ForegroundProperty, HighlightingConverter.GetHighlightForegroundBrush(),
                             HighlightingConverter.GetDefaultForegroundBrush());
 
                         // Start foreground animation

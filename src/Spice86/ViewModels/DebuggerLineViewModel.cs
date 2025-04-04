@@ -34,7 +34,8 @@ public partial class DebuggerLineViewModel : ViewModelBase {
 
     public bool ContinuesToNextInstruction => _info.FlowControl == FlowControl.Next;
     public bool CanBeSteppedOver => _info.FlowControl is FlowControl.Call or FlowControl.IndirectCall or FlowControl.Interrupt;
-    public uint NextAddress => (uint)(Address + _info.Length);
+    public uint NextAddress { get; private set; }
+
     public string Disassembly => _info.ToString();
 
     /// <summary>
@@ -42,7 +43,11 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// </summary>
     public List<FormattedTextSegment> DisassemblySegments { get; private set; } = [];
 
-    public bool IsSelected { get; set; }
+    [ObservableProperty]
+    private bool _isSelected;
+
+    [ObservableProperty]
+    private bool? _willJump;
 
     public bool IsCurrentInstruction {
         get => _isCurrentInstruction;
@@ -65,11 +70,41 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
         Address = SegmentedAddress.Linear;
+        NextAddress = (uint)(Address + _info.Length);
+
         // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
         Breakpoint = instruction.Breakpoints.SingleOrDefault(breakpoint => breakpoint.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
 
         // Generate the formatted disassembly text
         GenerateFormattedDisassembly();
+    }
+
+    public void ApplyCpuState() {
+        // Initialize WillJump to null for non-conditional branches
+        WillJump = null;
+        
+        if (_info.FlowControl == FlowControl.ConditionalBranch) {
+            WillJump = _info.ConditionCode switch {
+                ConditionCode.None => false,
+                ConditionCode.o => _cpuState.OverflowFlag,
+                ConditionCode.no => !_cpuState.OverflowFlag,
+                ConditionCode.b => _cpuState.CarryFlag,
+                ConditionCode.ae => !_cpuState.CarryFlag,
+                ConditionCode.e => _cpuState.ZeroFlag,
+                ConditionCode.ne => !_cpuState.ZeroFlag,
+                ConditionCode.be => _cpuState.CarryFlag || _cpuState.ZeroFlag,
+                ConditionCode.a => !_cpuState.CarryFlag && !_cpuState.ZeroFlag,
+                ConditionCode.s => _cpuState.SignFlag,
+                ConditionCode.ns => !_cpuState.SignFlag,
+                ConditionCode.p => _cpuState.ParityFlag,
+                ConditionCode.np => !_cpuState.ParityFlag,
+                ConditionCode.l => _cpuState.SignFlag != _cpuState.OverflowFlag,
+                ConditionCode.ge => _cpuState.SignFlag == _cpuState.OverflowFlag,
+                ConditionCode.le => _cpuState.ZeroFlag || _cpuState.SignFlag != _cpuState.OverflowFlag,
+                ConditionCode.g => !_cpuState.ZeroFlag && _cpuState.SignFlag == _cpuState.OverflowFlag,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
     }
 
     /// <summary>
@@ -102,9 +137,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// <returns>The breakpoint if one exists for this address, otherwise null.</returns>
     public BreakpointViewModel? GetBreakpointFromViewModel() {
         // Find a breakpoint in the BreakpointsViewModel that matches this line's address
-        return _breakpointsViewModel?.Breakpoints.FirstOrDefault(bp =>
-            bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS && 
-            (uint)bp.Address == Address);
+        return _breakpointsViewModel?.Breakpoints.FirstOrDefault(bp => bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS && (uint)bp.Address == Address);
     }
 
     /// <summary>
