@@ -22,9 +22,9 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Registers a new callback that will call the given runnable:
-    ///  - Callback will know its physical address in memory
-    ///  - Callback will be registered in the callback handler
+    /// Registers a new callback that will call the given runnable: <br/>
+    ///  - Callback will know its physical address in memory <br/>
+    ///  - Callback will be registered in the callback handler <br/>
     ///  - Callback instruction referring this callback will be written as ASM
     /// </summary>
     /// <param name="callbackNumber">Callback index</param>
@@ -67,6 +67,11 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(vectorNumber);
     }
 
+    public void WriteJumpNear(uint offset) {
+        WriteUInt8(0xE9);
+        WriteUInt32(offset);
+    }
+
     /// <summary>
     /// Writes a NOP to memory. This instruction does nothing.
     /// </summary>
@@ -75,8 +80,8 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address.
-    /// Throws UnrecoverableException if DefaultAddressValue is not initialized.
+    /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address. <br/>
+    /// Throws UnrecoverableException if DefaultAddressValue is not initialized. <br/>
     /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
     /// </summary>
     /// <returns>Returns the address of the call destination segmented address</returns>
