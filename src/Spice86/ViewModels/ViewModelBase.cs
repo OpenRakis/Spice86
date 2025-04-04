@@ -144,7 +144,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
     protected bool ValidateAddressProperty(object? value, State state, [CallerMemberName]
         string? propertyName = null) {
         if (string.IsNullOrWhiteSpace(propertyName)) {
-            return true;
+            return false;
         }
 
         bool status = TryValidateAddress(value as string, state, out string? error);
