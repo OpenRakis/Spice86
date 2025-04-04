@@ -6,6 +6,15 @@
    - Modify step over functionality to properly handle loop instructions
    - Ensure the debugger doesn't step into loops when using step over
    - Add detection for common loop patterns (LOOP, LOOPE, LOOPNE, etc.)
+   - Also ignore interrupts so we don't end up in the interrupt handler
+
+2. **UI enhancements**
+   - Add tooltip to flags
+   - Add context menu to flags (Set to 0/1)
+
+3. **Comments**
+   - Add tooltip to "function" part of comment
+   - Allow CRUD comments
 
 4. **Branch Visualization**
    - Add indicators for branch instructions (JMP, Jcc, CALL, etc.)
@@ -13,8 +22,12 @@
    - Indicate jump direction (forward/backward) with visual cues
    - Consider adding arrow indicators or color coding
 
+5. **Project files**
+   - Define what data should be part of the state
+   - Add saving current state to file
+   - Add loading previous state
+
 7. **Breakpoint Management** 
-   - Add context menu with options to create/delete breakpoints when right-clicking a line
    - Implement keyboard shortcuts for common breakpoint operations (e.g., F2 to toggle breakpoint)
 
 8. **Segment Visualization**
