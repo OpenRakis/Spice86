@@ -126,8 +126,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? BreakpointAddress {
         get => _breakpointAddress;
         set {
-            if (ValidateAddressProperty(value, _state)) {
-                SetProperty(ref _breakpointAddress, value);
+            if (ValidateAddressProperty(value, _state) &&
+                SetProperty(ref _breakpointAddress, value)) {
+                ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
             }
         }
     }
@@ -143,7 +144,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         CreatingExecutionBreakpoint = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(ConfirmCreateExecutionBreakpointCanExecute))]
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
         if (TryParseAddressString(BreakpointAddress, _state, out uint? address)) {
@@ -154,6 +155,11 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
                     () => PauseAndReportAddress(address.Value));
             UpdateAssemblyLineIfShown(breakpointViewModel);
         }
+    }
+
+    private bool ConfirmCreateExecutionBreakpointCanExecute() {
+        return CreatingExecutionBreakpoint &&
+            TryParseAddressString(BreakpointAddress, _state, out uint? _);
     }
 
     private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
@@ -281,8 +287,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool CanExecuteUpdateDisassembly() {
         return IsPaused &&
-            ValidateAddressProperty(StartAddress, _state,
-            nameof(StartAddress)) is true;
+            TryParseAddressString(StartAddress, _state, out uint? _);
     }
 
     [ObservableProperty]
@@ -372,6 +377,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
 
     private bool CreateExecutionBreakpointHereCanExecute() =>
+        IsPaused &&
         SelectedInstruction?.Breakpoint is not { Type: BreakPointType.CPU_EXECUTION_ADDRESS };
 
     [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]

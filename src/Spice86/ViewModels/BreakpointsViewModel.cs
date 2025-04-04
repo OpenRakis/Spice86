@@ -67,7 +67,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 case BreakPointType.MEMORY_WRITE:
                     MemoryBreakpointEndAddress = MemoryBreakpointStartAddress = ConvertUtils.ToHex32((uint)
                         SelectedBreakpoint.Address);
-                    if(SelectedBreakpoint is BreakpointRangeViewModel range) {
+                    if (SelectedBreakpoint is BreakpointRangeViewModel range) {
                         MemoryBreakpointEndAddress = ConvertUtils.ToHex32((uint)
                             range.EndTrigger);
                     }
@@ -217,7 +217,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
         if (IsExecutionBreakpointSelected) {
-            if (!TryParseAddressString(ExecutionAddressValue, _state,out uint? executionAddress)) {
+            if (!TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
             BreakpointViewModel executionVm = AddAddressBreakpoint(
@@ -234,9 +234,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
                 CreateMemoryBreakpointRangeAtAddresses(memorystartAddress.Value,
                     memoryEndAddress.Value);
-            } else if(TryParseAddressString(MemoryBreakpointStartAddress, _state,
+            } else if (TryParseAddressString(MemoryBreakpointStartAddress, _state,
                 out uint? memoryStartAddressAlone)) {
-                 CreateMemoryBreakpointAtAddress(memoryStartAddressAlone.Value);
+                CreateMemoryBreakpointAtAddress(memoryStartAddressAlone.Value);
             }
         } else if (IsCyclesBreakpointSelected) {
             if (CyclesValue is null) {
@@ -304,31 +304,17 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return TryValidateRequiredPropertyIsNotNull(InterruptNumber, out _, nameof(InterruptNumber));
+            return InterruptNumber is not null;
         } else if (IsIoPortBreakpointSelected) {
-            return TryValidateRequiredPropertyIsNotNull(IoPortNumber, out _, nameof(IoPortNumber));
+            return IoPortNumber is not null;
         } else if (IsCyclesBreakpointSelected) {
-            return TryValidateRequiredPropertyIsNotNull(CyclesValue, out _, nameof(CyclesValue));
+            return CyclesValue is not null;
         } else if (IsMemoryBreakpointSelected) {
-            if (!string.IsNullOrWhiteSpace(MemoryBreakpointEndAddress) &&
-                !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress) &&
-                !string.Equals(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress,
-                StringComparison.OrdinalIgnoreCase)) {
-                return ValidateAddressRange(_state,
-                    MemoryBreakpointStartAddress,
-                MemoryBreakpointEndAddress,
-                nameof(MemoryBreakpointEndAddress));
-            }
-            else if (
-                !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress)) {
-                return ValidateAddressProperty(MemoryBreakpointStartAddress,
-                    _state,
-                    nameof(MemoryBreakpointStartAddress)) is true;
-            }
-            return false;
+            return
+                TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
+                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
         } else if (IsExecutionBreakpointSelected) {
-            return ValidateAddressProperty(ExecutionAddressValue, _state,
-                nameof(ExecutionAddressValue)) is true;
+            return TryParseAddressString(ExecutionAddressValue, _state, out uint? _);
         }
         return false;
     }

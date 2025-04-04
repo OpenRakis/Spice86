@@ -201,19 +201,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public BreakPointType[] BreakpointTypes => [BreakPointType.MEMORY_ACCESS, BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ];
 
     private bool ConfirmCreateMemoryBreakpointCanExecute() {
-        if (!string.IsNullOrWhiteSpace(MemoryBreakpointEndAddress) &&
-                !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress) &&
-                !string.Equals(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress,
-                StringComparison.OrdinalIgnoreCase)) {
-            return ValidateAddressRange(_state, MemoryBreakpointStartAddress,
-            MemoryBreakpointEndAddress,
-            nameof(MemoryBreakpointEndAddress));
-        } else if (
-              !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress)) {
-            return ValidateAddressProperty(MemoryBreakpointStartAddress, _state,
-                nameof(MemoryBreakpointStartAddress)) is true;
-        }
-        return false;
+        return
+            TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
+            TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
     }
 
 
