@@ -304,11 +304,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return InterruptNumber is not null;
+            return TryValidateRequiredPropertyIsNotNull(InterruptNumber, out _, nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
-            return IoPortNumber is not null;
+            return TryValidateRequiredPropertyIsNotNull(IoPortNumber, out _, nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
-            return CyclesValue is not null;
+            return TryValidateRequiredPropertyIsNotNull(CyclesValue, out _, nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
             if (!string.IsNullOrWhiteSpace(MemoryBreakpointEndAddress) &&
                 !string.IsNullOrWhiteSpace(MemoryBreakpointStartAddress) &&
