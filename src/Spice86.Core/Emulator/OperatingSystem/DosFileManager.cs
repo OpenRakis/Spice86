@@ -179,7 +179,7 @@ public class DosFileManager {
         EnumerationOptions enumerationOptions = GetEnumerationOptions(searchAttributes);
 
         try {
-            string? searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
+            string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
             string[] matchingPaths = Directory.GetFileSystemEntries(
                 searchFolder,
                 searchPattern,
@@ -767,7 +767,7 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return PathNotFoundError(dosDirectory);
         }
-
+        bool triedToDeleteCurrentDir;
         try {
             Directory.Delete(fullHostPath);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -776,13 +776,13 @@ public class DosFileManager {
 
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
+            triedToDeleteCurrentDir = true;
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while deleting directory {CaseInsensitivePath}: {Exception}",
+                _loggerService.Warning(e, "Error while deleting directory {FullHostPath}: {Exception}",
                     fullHostPath, e);
             }
         }
-
-        return PathNotFoundError(dosDirectory);
+        return triedToDeleteCurrentDir ? RemoveCurrentDirError(dosDirectory) : PathNotFoundError(dosDirectory);
     }
 
     /// <summary>
