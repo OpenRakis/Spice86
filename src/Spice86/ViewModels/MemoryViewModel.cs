@@ -466,18 +466,22 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         string error = string.Empty;
         if (string.IsNullOrWhiteSpace(value)) {
             error = "This field is required";
-        } else if (!long.TryParse(value, NumberStyles.HexNumber,
+        } else if(!value.StartsWith("0x")) {
+            error = "Hex must start with 0x";
+        } else if (value.Length > 2 &&
+            !long.TryParse(value[2..], NumberStyles.HexNumber,
               CultureInfo.InvariantCulture, out long _)) {
             error = "Hex number could not be parsed";
         }
-        else {
-            return;
-        }
         if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
-            _validationErrors.Add(nameof(MemoryEditValue), [error]);
+            if(!string.IsNullOrWhiteSpace(error)) {
+                _validationErrors.Add(nameof(MemoryEditValue), [error]);
+            }
         } else {
             values.Clear();
-            values.Add(error);
+            if (!string.IsNullOrWhiteSpace(error)) {
+                values.Add(error);
+            }
         }
         OnErrorsChanged(nameof(MemoryEditValue));
     }
@@ -486,10 +490,18 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void EditMemory() {
         IsEditingMemory = true;
         try {
-            if (TryParseAddressString(MemoryEditAddress, _state, out uint? address)) {
-                MemoryEditValue = Convert.ToHexString(_memory.ReadRam(
-                    (uint)(MemoryEditValue?.Length ?? sizeof(ushort)),
-                        address.Value));
+            if (TryParseAddressString(StartAddress, _state,
+                out uint? startAddress)) {
+                if(TryParseAddressString(SelectionRangeStartAddress, _state,
+                    out uint? selectionRangeStartAddress)) {
+                    startAddress = Math.Max(startAddress.Value, selectionRangeStartAddress.Value);
+                }
+                MemoryEditAddress = ConvertUtils.ToHex32(startAddress.Value);
+            }
+            if (TryParseAddressString(MemoryEditAddress, _state,
+                out uint? address)) {
+                uint range  = (uint)Math.Min(SelectionRange?.ByteLength ?? 0, sizeof(ulong));
+                MemoryEditValue = $"0x{Convert.ToHexString(_memory.ReadRam(range, address.Value))}";
             }
         } catch (Exception e) {
             ShowError(e);
@@ -500,22 +512,29 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void CancelMemoryEdit() => IsEditingMemory = false;
 
     private bool ApplyMemoryEditCanExecute() {
-        return !_validationErrors.ContainsKey(nameof(MemoryEditValue)) &&
-            !_validationErrors.ContainsKey(nameof(MemoryEditAddress)) &&
+        return ScanForValidationErrors(nameof(MemoryEditValue),
+            nameof(MemoryEditAddress)) &&
             IsPaused;
     }
 
     [RelayCommand(CanExecute = nameof(ApplyMemoryEditCanExecute))]
     private void ApplyMemoryEdit() {
-        if (string.IsNullOrWhiteSpace(MemoryEditValue) ||
-            !TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
+        if(string.IsNullOrWhiteSpace(MemoryEditValue)) {
+            return;
+        }
+        string memoryEditValue = MemoryEditValue;
+        if (MemoryEditValue.Length > 2 && MemoryEditValue.StartsWith("0x")) {
+            memoryEditValue = MemoryEditValue[2..];
+        }
+        if (!TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
             !GetIsMemoryRangeValid(address, A20Gate.EndOfHighMemoryArea) ||
-            !long.TryParse(MemoryEditValue, NumberStyles.HexNumber,
+            !long.TryParse(memoryEditValue, NumberStyles.HexNumber,
             CultureInfo.InvariantCulture, out long value)) {
             return;
         }
         try {
             DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
+            TryUpdateHeaderAndMemoryDocument();
         } catch (IndexOutOfRangeException e) {
             ShowError(e);
             MemoryEditValue = null;
