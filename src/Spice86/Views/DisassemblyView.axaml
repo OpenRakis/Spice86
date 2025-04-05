@@ -218,10 +218,7 @@
 						Grid.Row="1">
 						<controls:GroupBox Header="Address:">
 							<TextBox
-								Text="{Binding BreakpointAddress,
-									Mode=TwoWay,
-									
-									}"
+								Text="{Binding BreakpointAddress, Mode=TwoWay}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
 								ToolTip.Tip="Hex or linear or segmented address"
 								Margin="5,0,0,0">

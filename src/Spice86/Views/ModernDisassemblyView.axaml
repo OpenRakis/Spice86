@@ -19,6 +19,7 @@
                 <ResourceInclude Source="/Styles/DisassemblyResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
             <converters:JumpIndicatorConverter x:Key="JumpIndicatorConverter" />
@@ -26,12 +27,12 @@
     </UserControl.Resources>
 
     <Grid RowDefinitions="Auto,*">
-        <!-- Top toolbar with improved layout and organization -->
+        <!-- Top toolbar -->
         <Grid Grid.Row="0" IsVisible="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">
 
             <!-- Navigation Controls -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                <Button Click="GoToCsIpButton_Click" ToolTip.Tip="Go to current CS:IP (F9)" HotKey="F9" x:Name="GoToCsIpButton">
+                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP (F9)" HotKey="F9">
                     <fluent:SymbolIcon Symbol="Location" Width="20" Height="20" />
                 </Button>
                 <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)" HotKey="F11">
@@ -45,8 +46,8 @@
             <!-- Address Input -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
                 <TextBlock VerticalAlignment="Center" Text="Address:" />
-                <TextBox Width="120" Text="not implemented yet" />
-                <Button Content="Todo" />
+                <TextBox Width="120" Text="{Binding CurrentInstructionAddress, UpdateSourceTrigger=LostFocus, Converter={StaticResource SegmentedAddressConverter}}" />
+                <Button Content="Go" Command="{Binding GoToAddressCommand}" CommandParameter="{Binding CurrentInstructionAddress}" />
             </StackPanel>
 
             <!-- Function Selection -->
@@ -86,9 +87,9 @@
                     HotKey="Ctrl+F4"
                     ToolTip.Tip="Close view (Ctrl-F4)"
                     Command="{Binding CloseTabCommand}"
-                    IsEnabled="{Binding CanCloseTab}" >
+                    IsEnabled="{Binding CanCloseTab}">
                     <fluent:SymbolIcon Symbol="DocumentDismiss" Width="20" Height="20" />
-                    </Button>
+                </Button>
                 <Button
                     HotKey="Ctrl+N"
                     ToolTip.Tip="New view (Ctrl-n)"
@@ -210,9 +211,9 @@
                                 <SelectableTextBlock Grid.Column="3"
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                                      Margin="12,0,0,0" />
-                                
+
                                 <!-- Jump Indicator -->
-                                <Border Grid.Column="4" 
+                                <Border Grid.Column="4"
                                         IsVisible="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=visibility}"
                                         Background="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=color}"
                                         CornerRadius="2"
@@ -222,7 +223,7 @@
                                     <TextBlock Text="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=text}"
                                                FontSize="10"
                                                FontWeight="Bold"
-                                               Foreground="Black"/>
+                                               Foreground="Black" />
                                 </Border>
 
                                 <!-- Function Name -->

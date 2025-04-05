@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
+using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 using System.Timers;
@@ -20,7 +21,7 @@ public class DisassemblyScrollBehavior {
     public static readonly AttachedProperty<bool> IsEnabledProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, bool>("IsEnabled");
 
     // Attached property for the target address
-    public static readonly AttachedProperty<uint> TargetAddressProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, uint>("TargetAddress");
+    public static readonly AttachedProperty<SegmentedAddress> TargetAddressProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, SegmentedAddress>("TargetAddress");
 
     // Static field to track if we're currently processing a scroll operation
     private static bool _isScrollingInProgress;
@@ -43,11 +44,11 @@ public class DisassemblyScrollBehavior {
         control.SetValue(IsEnabledProperty, value);
     }
 
-    public static uint GetTargetAddress(Control control) {
+    public static SegmentedAddress GetTargetAddress(Control control) {
         return control.GetValue(TargetAddressProperty);
     }
 
-    public static void SetTargetAddress(Control control, uint value) {
+    public static void SetTargetAddress(Control control, SegmentedAddress value) {
         control.SetValue(TargetAddressProperty, value);
     }
 
@@ -64,7 +65,7 @@ public class DisassemblyScrollBehavior {
 
             // If the ListBox is already loaded, check if we need to scroll
             if (listBox.IsLoaded) {
-                uint targetAddress = GetTargetAddress(listBox);
+                uint targetAddress = GetTargetAddress(listBox).Linear;
                 if (targetAddress != 0) {
                     // Delay the scroll to ensure the UI has fully loaded
                     Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
@@ -85,7 +86,7 @@ public class DisassemblyScrollBehavior {
         listBox.Loaded -= OnListBoxLoaded;
 
         // Check if we have a target address for this ListBox
-        uint targetAddress = GetTargetAddress(listBox);
+        uint targetAddress = GetTargetAddress(listBox).Linear;
         if (targetAddress != 0) {
             Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
         }
@@ -96,7 +97,7 @@ public class DisassemblyScrollBehavior {
         if (control is not ListBox listBox || !GetIsEnabled(listBox)) {
             return;
         }
-        uint targetAddress = (uint)e.NewValue!;
+        uint targetAddress = ((SegmentedAddress)e.NewValue!).Linear;
         if (listBox.IsLoaded) {
             ScrollToAddress(listBox, targetAddress);
         } else {
@@ -129,9 +130,8 @@ public class DisassemblyScrollBehavior {
 
             // Get the view model and find the target item
             if (listBox.DataContext is IDisassemblyViewModel viewModel) {
-                // Get the target item using the O(1) lookup
-                DebuggerLineViewModel? targetItem = viewModel.GetLineByAddress(targetAddress);
-                if (targetItem == null) {
+                if (!viewModel.TryGetLineByAddress(targetAddress, out DebuggerLineViewModel? targetItem))
+                {
                     return;
                 }
 

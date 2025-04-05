@@ -4,8 +4,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+
 using System.ComponentModel;
+
 using Spice86.Behaviors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 /// <summary>
@@ -13,7 +16,7 @@ using Spice86.ViewModels;
 /// </summary>
 public partial class ModernDisassemblyView : UserControl {
     private IDisassemblyViewModel? _viewModel;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ModernDisassemblyView"/> class.
     /// </summary>
@@ -39,25 +42,7 @@ public partial class ModernDisassemblyView : UserControl {
         }
     }
 
-    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
-
-    }
-
-    private void ScrollToCurrentInstruction() {
-        if (_viewModel == null) {
-            return;
-        }
-
-        ListBox? disassemblyListBox = this.FindControl<ListBox>("DisassemblyListBox");
-        if (disassemblyListBox == null) {
-            return;
-        }
-
-        // Get the current instruction address from the view model
-        uint currentInstructionAddress = _viewModel.CurrentInstructionAddress;
-        
-        // Scroll to the current instruction address
-        DisassemblyScrollBehavior.ScrollToAddress(disassemblyListBox, currentInstructionAddress);
+    private static void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
     }
 
     /// <summary>
@@ -65,12 +50,18 @@ public partial class ModernDisassemblyView : UserControl {
     /// Directly calls the ScrollToAddress method in the DisassemblyScrollBehavior.
     /// </summary>
     private void GoToCsIpButton_Click(object? sender, RoutedEventArgs e) {
-        ScrollToCurrentInstruction();
+        if (_viewModel is not {CurrentInstructionAddress: not null}) {
+            return;
+        }
+
+        if (this.FindControl<ListBox>("DisassemblyListBox") is { } disassemblyListBox) {
+            // Scroll to the current instruction address
+            DisassemblyScrollBehavior.ScrollToAddress(disassemblyListBox, _viewModel.CurrentInstructionAddress.Value.Linear);
+        }
     }
 
     private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
-        if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine})
-        {
+        if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine}) {
             _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
             e.Handled = true;
         }

@@ -3,163 +3,91 @@ namespace Spice86.ViewModels;
 using Avalonia.Collections;
 using Avalonia.Controls;
 
-using CommunityToolkit.Mvvm.Input;
-
 using Spice86.Models.Debugging;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// Interface for the ModernDisassemblyViewModel to support proper MVVM separation.
-/// This interface defines the contract between the View and ViewModel, allowing for
-/// better testability and decoupling.
+///     Interface for the ModernDisassemblyViewModel to support proper MVVM separation.
+///     This interface defines the contract between the View and ViewModel, allowing for
+///     better testability and decoupling.
 /// </summary>
-public interface IDisassemblyViewModel : INotifyPropertyChanged {
+public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCommands {
     /// <summary>
-    /// The physical address of the current instruction. This is updated when the emulator pauses.
+    ///     The address of the current instruction. This is updated when the emulator pauses.
     /// </summary>
-    uint CurrentInstructionAddress { get; }
+    SegmentedAddress? CurrentInstructionAddress { get; set; }
 
     /// <summary>
-    /// Collection of debugger lines indexed by their physical address.
-    /// </summary>
-    AvaloniaDictionary<uint, DebuggerLineViewModel> DebuggerLines { get; }
-
-    /// <summary>
-    /// Gets a sorted view of the debugger lines for UI display.
+    ///     Gets a sorted view of the debugger lines for UI display.
     /// </summary>
     ObservableCollection<DebuggerLineViewModel> SortedDebuggerLinesView { get; }
 
     /// <summary>
-    /// Gets a debugger line by its address with O(1) lookup time.
-    /// </summary>
-    /// <param name="address">The address to look up.</param>
-    /// <returns>The debugger line if found, otherwise null.</returns>
-    DebuggerLineViewModel? GetLineByAddress(uint address);
-
-    /// <summary>
-    /// The currently selected debugger line in the UI.
+    ///     The currently selected debugger line in the UI.
     /// </summary>
     DebuggerLineViewModel? SelectedDebuggerLine { get; set; }
 
     /// <summary>
-    /// Indicates whether the disassembly is currently loading.
+    ///     Indicates whether the disassembly is currently loading.
     /// </summary>
     bool IsLoading { get; }
 
     /// <summary>
-    /// Indicates whether the emulator is currently paused.
+    ///     Indicates whether the emulator is currently paused.
     /// </summary>
     bool IsPaused { get; }
 
     /// <summary>
-    /// Indicates whether function information is available.
+    ///     Indicates whether function information is available.
     /// </summary>
     bool IsFunctionInformationProvided { get; }
 
     /// <summary>
-    /// Indicates whether the tab can be closed
+    ///     Indicates whether the tab can be closed
     /// </summary>
     bool CanCloseTab { get; }
 
     /// <summary>
-    /// Collection of available functions.
+    ///     Collection of available functions.
     /// </summary>
     AvaloniaList<FunctionInfo> Functions { get; }
 
     /// <summary>
-    /// The currently selected function.
+    ///     The currently selected function.
     /// </summary>
     FunctionInfo? SelectedFunction { get; set; }
 
     /// <summary>
-    /// The header text for the view.
+    ///     The header text for the view.
     /// </summary>
     string Header { get; }
 
     /// <summary>
-    /// The view model for CPU registers.
+    ///     The view model for CPU registers.
     /// </summary>
     IRegistersViewModel Registers { get; }
 
     /// <summary>
-    /// Command to update the disassembly.
-    /// </summary>
-    IAsyncRelayCommand UpdateDisassemblyCommand { get; }
-
-    /// <summary>
-    /// Command to create a new disassembly view.
-    /// </summary>
-    IAsyncRelayCommand NewDisassemblyViewCommand { get; }
-
-    /// <summary>
-    /// Command to copy the selected line.
-    /// </summary>
-    IRelayCommand CopyLineCommand { get; }
-
-    /// <summary>
-    /// Command to step into the current instruction.
-    /// </summary>
-    IRelayCommand StepIntoCommand { get; }
-
-    /// <summary>
-    /// Command to step over the current instruction.
-    /// </summary>
-    IRelayCommand StepOverCommand { get; }
-
-    /// <summary>
-    /// Command to go to a specific function.
-    /// </summary>
-    IRelayCommand GoToFunctionCommand { get; }
-
-    /// <summary>
-    /// Command to close the tab.
-    /// </summary>
-    IRelayCommand CloseTabCommand { get; }
-
-    /// <summary>
-    /// Command to scroll to a specific address.
-    /// </summary>
-    IRelayCommand<uint> ScrollToAddressCommand { get; }
-
-    /// <summary>
-    /// Command to create an execution breakpoint at the current instruction.
-    /// </summary>
-    IRelayCommand<DebuggerLineViewModel> CreateExecutionBreakpointHereCommand { get; }
-
-    /// <summary>
-    /// Command to remove an execution breakpoint at the current instruction.
-    /// </summary>
-    IRelayCommand<DebuggerLineViewModel> RemoveExecutionBreakpointHereCommand { get; }
-
-    /// <summary>
-    /// Command to disable a breakpoint.
-    /// </summary>
-    IRelayCommand<BreakpointViewModel> DisableBreakpointCommand { get; }
-
-    /// <summary>
-    /// Command to enable a breakpoint.
-    /// </summary>
-    IRelayCommand<BreakpointViewModel> EnableBreakpointCommand { get; }
-
-    /// <summary>
-    /// Command to toggle a breakpoint at the current instruction.
-    /// </summary>
-    IRelayCommand<DebuggerLineViewModel> ToggleBreakpointCommand { get; }
-
-    /// <summary>
-    /// Command to move the CS:IP to the current instruction.
-    /// </summary>
-    IRelayCommand MoveCsIpHereCommand { get; }
-
-    /// <summary>
-    /// Defines a filter for the autocomplete functionality, filtering structures based on the search text and their size.
+    ///     Defines a filter for the autocomplete functionality, filtering structures based on the search text and their size.
     /// </summary>
     AutoCompleteFilterPredicate<object?> FunctionFilter { get; }
 
     /// <summary>
-    /// Create the text that is displayed in the textbox when a function is selected.
+    ///     Create the text that is displayed in the textbox when a function is selected.
     /// </summary>
     AutoCompleteSelector<object>? FunctionItemSelector { get; }
+
+    /// <summary>
+    ///    Attempts to get a debugger line by its address
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="debuggerLine"></param>
+    /// <returns></returns>
+    bool TryGetLineByAddress(uint address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine);
+
+    bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine);
 }
