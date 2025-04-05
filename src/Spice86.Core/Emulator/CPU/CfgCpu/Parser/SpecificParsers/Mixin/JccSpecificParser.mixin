@@ -19,18 +19,18 @@ public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
             0x0 => new Jo{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x1 => new Jno{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x2 => new Jb{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0x3 => new Jnb{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0x4 => new Jz{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0x5 => new Jnz{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x3 => new Jae{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x4 => new Je{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0x5 => new Jne{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x6 => new Jbe{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x7 => new Ja{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x8 => new Js{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0x9 => new Jns{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xA => new Jp{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0xB => new Jpo{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xB => new Jnp{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xC => new Jl{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xD => new Jge{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0xE => new Jng{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            0xE => new Jle{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xF => new Jg{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField)
         };
     }

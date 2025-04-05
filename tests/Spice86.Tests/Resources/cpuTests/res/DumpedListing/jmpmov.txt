@@ -1,0 +1,40 @@
+﻿F000:0000 jmp near 0x000E
+F000:000E mov BX,0xF000
+F000:0011 mov DS,BX
+F000:0013 mov AX,word ptr DS:[0xFFF2]
+F000:0016 jmp near AX
+F000:1290 jmp far E342:EBE0
+E342:EBE0 mov BX,0x1000
+E342:EBE3 mov DS,BX
+E342:EBE5 mov AH,0xFB
+E342:EBE7 mov AL,0xE1
+E342:EBE9 mov word ptr DS:[0x2501],AX
+E342:EBEC mov word ptr DS:[0x2600],0x1001
+E342:EBF2 mov SS,word ptr DS:[0x2600]
+E342:EBF6 mov word ptr DS:[0x2601],SS
+E342:EBFA mov DH,byte ptr DS:[0x2601]
+E342:EBFE mov DH,0
+E342:EC00 mov DI,DI
+E342:EC02 mov BP,0x2506
+E342:EC05 jmp near word ptr SS:[BP+DI-22]
+E342:FBE1 mov DX,0xF100
+E342:FBE4 mov AX,0x2536
+E342:FBE7 out DX,AX
+E342:FBE8 mov AX,0x4001
+E342:FBEC mov BX,0x2501
+E342:FBEF mov word ptr DS:[BX],DI
+E342:FBF1 mov DI,2
+E342:FBF4 mov byte ptr DS:[BX+DI],0
+E342:FBF7 mov CH,4
+E342:FBF9 mov CL,CL
+E342:FBFB mov CH,0
+E342:FBFD mov SI,SI
+E342:FBFF mov byte ptr DS:[BX+SI-1],0xF0
+E342:FC03 mov SI,3
+E342:FC06 jmp far dword ptr SS:[BP+SI-24]
+F000:4001 mov AX,word ptr DS:[BX+SI-3]
+F000:4004 mov DX,0
+F000:4007 mov DS,DX
+F000:4009 mov word ptr DS:[0],AX
+F000:400C hlt
+F000:FFF0 jmp near 0
