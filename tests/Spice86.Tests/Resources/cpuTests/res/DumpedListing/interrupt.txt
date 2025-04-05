@@ -1,0 +1,46 @@
+﻿F000:0000 mov DX,0
+F000:0003 mov DS,DX
+F000:0005 mov SP,0x1000
+F000:0008 mov SP,SS
+F000:000A mov word ptr DS:[0x0034],0xEBE0
+F000:0010 mov word ptr DS:[0x0036],0xE342
+F000:0016 mov AX,0x0EFF
+F000:0019 push AX
+F000:001A popf
+F000:001B mov byte ptr DS:[0],0
+F000:0020 int 0x0D
+F000:0022 mov byte ptr DS:[2],2
+F000:0027 jmp near AX
+F000:0CD7 mov byte ptr DS:[3],3
+F000:0CDC pushf
+F000:0CDD pop BX
+F000:0CDE mov word ptr DS:[0x000C],0xEBE0
+F000:0CE4 mov word ptr DS:[0x000E],0xE342
+F000:0CEA int 3
+F000:0CEC mov byte ptr DS:[4],4
+F000:0CF1 mov word ptr DS:[0x0010],0x3001
+F000:0CF7 mov word ptr DS:[0x0012],0xF000
+F000:0CFD into
+E342:EBE0 mov byte ptr DS:[1],1
+E342:EBE5 pushf
+E342:EBE6 pop AX
+E342:EBE7 clc
+E342:EBE8 iret
+F000:3001 mov byte ptr DS:[5],5
+F000:3006 pop CX
+F000:3007 mov CX,0x4002
+F000:300A push CX
+F000:300B iret
+F000:4002 mov byte ptr DS:[6],6
+F000:4007 mov DX,0x04FF
+F000:400A push DX
+F000:400B popf
+F000:400C mov word ptr DS:[0x0010],0x5000
+F000:4012 into
+F000:4013 mov word ptr DS:[8],AX
+F000:4016 mov word ptr DS:[0x000A],SI
+F000:401A mov word ptr DS:[0x000C],SI
+F000:401E mov word ptr DS:[0x000E],SI
+F000:4022 mov word ptr DS:[0x0010],SI
+F000:4026 hlt
+F000:FFF0 jmp near 0

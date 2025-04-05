@@ -163,8 +163,6 @@ public class InstructionParser : BaseInstructionParser {
         InstructionField<ushort> opcodeField = ReadOpcode();
         ParsingContext context = new(address, opcodeField, prefixes);
         CfgInstruction res = ParseCfgInstruction(context);
-
-        res.PostInit();
         return res;
     }
 
@@ -469,9 +467,9 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC9:
                 return _leaveParser.Parse(context);
             case 0xCA:
-                return new FarRetImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                return new RetFarImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
             case 0xCB:
-                return new FarRet(context.Address, context.OpcodeField);
+                return new RetFar(context.Address, context.OpcodeField);
             case 0xCC:
                 return new Interrupt3(context.Address, context.OpcodeField);
             case 0xCD:
@@ -495,7 +493,11 @@ public class InstructionParser : BaseInstructionParser {
             case 0xD6:
                 return new Salc(context.Address, context.OpcodeField);
             case 0xD7:
-                return new Xlat(context.Address, context.OpcodeField, context.Prefixes,
+                if (context.AddressWidthFromPrefixes == BitWidth.DWORD_32) {
+                    return new Xlat32(context.Address, context.OpcodeField, context.Prefixes,
+                        SegmentFromPrefixesOrDs(context));
+                }
+                return new Xlat16(context.Address, context.OpcodeField, context.Prefixes,
                     SegmentFromPrefixesOrDs(context));
             case 0xD8:
                 // FPU stuff

@@ -1,0 +1,91 @@
+﻿F000:0000 mov SP,0x0060
+F000:0003 mov AX,1
+F000:0006 mov BX,2
+F000:0009 cmp AX,AX
+F000:000B mov word ptr DS:[0],AX
+F000:000E mov word ptr DS:[2],SI
+F000:0012 pushf
+F000:0013 mov DX,0xFFFF
+F000:0016 mov word ptr DS:[4],0xFFFF
+F000:001C cmp word ptr DS:[4],SI
+F000:0020 mov word ptr DS:[6],SI
+F000:0024 pushf
+F000:0025 mov CX,0xFFFF
+F000:0028 mov word ptr DS:[8],1
+F000:002E cmp word ptr DS:[8],SI
+F000:0032 mov word ptr DS:[0x000A],SI
+F000:0036 pushf
+F000:0037 mov AX,0x8000
+F000:003A cmp AX,1
+F000:003D mov word ptr DS:[0x000C],AX
+F000:0040 pushf
+F000:0041 mov BP,0x8000
+F000:0044 cmp BP,-1
+F000:0047 mov word ptr DS:[0x000E],SI
+F000:004B pushf
+F000:004C mov SI,0x7F81
+F000:004F cmp SI,0x903C
+F000:0053 mov word ptr DS:[0x0010],SI
+F000:0057 pushf
+F000:0058 mov word ptr DS:[0x0012],0xEFC3
+F000:005E cmp word ptr DS:[0x0012],0xC664
+F000:0064 pushf
+F000:0065 mov word ptr DS:[0x0014],0xE933
+F000:006B cmp word ptr DS:[0x0014],0x64
+F000:0070 pushf
+F000:0071 mov byte ptr DS:[0x0016],1
+F000:0076 cmp byte ptr DS:[0x0016],2
+F000:007B pushf
+F000:007C mov DH,0xFF
+F000:007E cmp DH,0xFF
+F000:0081 mov word ptr DS:[0x0017],SI
+F000:0085 pushf
+F000:0086 mov AL,0xFF
+F000:0088 cmp AL,1
+F000:008A mov word ptr DS:[0x0019],AX
+F000:008D pushf
+F000:008E mov byte ptr DS:[0x001B],0x80
+F000:0093 mov CH,1
+F000:0095 cmp DH,byte ptr DS:[0x001B]
+F000:0099 mov word ptr DS:[0x001C],SI
+F000:009D pushf
+F000:009E mov BL,0x80
+F000:00A0 mov byte ptr DS:[0x001E],0x7F
+F000:00A5 cmp byte ptr DS:[0x001E],DH
+F000:00A9 mov word ptr DS:[0x001F],SI
+F000:00AD pushf
+F000:00AE mov AL,0xBC
+F000:00B0 mov AH,0x8E
+F000:00B2 cmp AH,AH
+F000:00B4 mov word ptr DS:[0x0021],AX
+F000:00B7 pushf
+F000:00B8 mov CX,0
+F000:00BB neg CX
+F000:00BD mov word ptr DS:[0x0022],SI
+F000:00C1 pushf
+F000:00C2 mov word ptr DS:[0x0024],0x7FFF
+F000:00C8 neg word ptr DS:[0x0024]
+F000:00CC pushf
+F000:00CD mov BP,0x8000
+F000:00D0 neg BP
+F000:00D2 mov word ptr DS:[0x0026],SI
+F000:00D6 pushf
+F000:00D7 mov word ptr DS:[0x0028],0xACE9
+F000:00DD neg word ptr DS:[0x0028]
+F000:00E1 pushf
+F000:00E2 mov AH,0
+F000:00E4 neg AH
+F000:00E6 mov word ptr DS:[0x002A],AX
+F000:00E9 pushf
+F000:00EA mov byte ptr DS:[0x002C],0x7F
+F000:00EF neg byte ptr DS:[0x002C]
+F000:00F3 pushf
+F000:00F4 mov CL,0xC9
+F000:00F6 neg CL
+F000:00F8 mov word ptr DS:[0x002D],SI
+F000:00FC pushf
+F000:00FD mov byte ptr DS:[0x002F],0x80
+F000:0102 neg byte ptr DS:[0x002F]
+F000:0106 pushf
+F000:0107 hlt
+F000:FFF0 jmp near 0

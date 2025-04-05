@@ -65,7 +65,7 @@ public class ModRmParser {
     private SibContext ParseSibContext(uint mode) {
         InstructionField<byte> sibByteField = _instructionReader.UInt8.NextField(true);
         byte sibByte = sibByteField.Value;
-        int scale = 1 << (sibByte >> 6 & 0b11);
+        byte scale = (byte)(1 << (sibByte >> 6 & 0b11));
         int indexRegister = sibByte >> 3 & 0b111;
         int baseRegister = sibByte & 0b111;
         SibBase sibBase = ComputeSibBase(baseRegister, mode);

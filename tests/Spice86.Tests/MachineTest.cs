@@ -6,6 +6,7 @@ using Serilog;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
@@ -19,9 +20,12 @@ using System.IO;
 using System.Text;
 
 using Xunit;
+using Xunit.Abstractions;
 
 public class MachineTest
 {
+    private readonly CfgGraphDumper _dumper = new();
+
     static MachineTest()
     {
         Log.Logger = new LoggerConfiguration()
@@ -272,7 +276,16 @@ public class MachineTest
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         CompareMemoryWithExpected(memory, expected, 0, expected.Length);
+        CompareListingWithExpected(binName, enableCfgCpu, machine);
         return machine;
+    }
+
+    private void CompareListingWithExpected(string binName, bool enableCfgCpu, Machine machine) {
+        if (enableCfgCpu) {
+            List<string> expectedLines = GetExpectedListing(binName);
+            List<string> actualLines = _dumper.ToAssemblyListing(machine);
+            Assert.Equal(expectedLines, actualLines);
+        }
     }
 
     /// <summary>
@@ -316,6 +329,7 @@ public class MachineTest
             //test3865.asm stops at 6 tests...?!
             Assert.Equal(6, portValues.Count);
         }
+        CompareListingWithExpected(binName, enableCfgCpu, machine);
     }
 
     private class Test386ButNotProtectedModeHandler : IIOPortHandler {
@@ -371,8 +385,14 @@ public class MachineTest
 
     private static byte[] GetExpected(string binName)
     {
-        string resPath = $"Resources/cpuTests/res/{binName}.bin";
+        string resPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
         return File.ReadAllBytes(resPath);
+    }
+    
+    private static List<string> GetExpectedListing(string binName)
+    {
+        string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
+        return File.ReadAllLines(resPath).ToList();
     }
 
     [AssertionMethod]
