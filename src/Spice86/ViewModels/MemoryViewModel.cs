@@ -1,7 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using AvaloniaHex.Document;
 using AvaloniaHex.Editing;
 
@@ -428,7 +426,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void OnMemoryReadInvalidOperation(Exception exception) {
-        Dispatcher.UIThread.Post(() => ShowError(exception));
+        _uiDispatcher.Post(() => ShowError(exception));
     }
 
     [RelayCommand]
