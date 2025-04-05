@@ -3,6 +3,7 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Collections;
@@ -32,6 +33,23 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             propertyName));
     }
 
+    protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
+        uint limit = A20Gate.EndOfHighMemoryArea,
+        [CallerMemberName] string? bindedTextBoxPropertyName = null) {
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(
+            bindedTextBoxPropertyName);
+        if (TryParseAddressString(value, state, out uint? address) &&
+            !GetIsMemoryRangeValid(address, limit)) {
+            if (!_validationErrors.TryGetValue(bindedTextBoxPropertyName,
+                out List<string>? values)) {
+                values = new List<string>();
+                _validationErrors[bindedTextBoxPropertyName] = values;
+            }
+            values.Clear();
+            values.Add("Value is beyond addressable range");
+        }
+    }
+
     protected void ValidateRequiredPropertyIsNotNull<T>(T? value,
         [CallerMemberName] string? bindedPropertyName = null) {
         if (string.IsNullOrWhiteSpace(bindedPropertyName)) {
@@ -55,7 +73,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         && endAddress >= startAddress;
     }
 
-    protected bool ValidateAddressRange(State state, string? startAddress,
+    protected void ValidateAddressRange(State state, string? startAddress,
         string? endAddress, string textBoxBindedPropertyName) {
         const string RangeError = "Invalid address range.";
         const string StartError = "Invalid start address.";
@@ -87,7 +105,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             }
             OnErrorsChanged(textBoxBindedPropertyName);
         }
-        return statusStart && statusEnd && rangeStatus;
     }
 
     private static bool TryParseSegmentOrRegister(string value, State state,

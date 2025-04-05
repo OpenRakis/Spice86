@@ -153,6 +153,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         get => _executionAddressValue;
         set {
             ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
             SetProperty(ref _executionAddressValue, value);
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
@@ -164,6 +165,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
         get => _memoryBreakpointStartAddress;
         set {
             ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            ValidateAddressRange(_state, value,
+                MemoryBreakpointEndAddress, nameof(MemoryBreakpointStartAddress));
             SetProperty(ref _memoryBreakpointStartAddress, value);
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
@@ -174,9 +178,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointEndAddress {
         get => _memoryBreakpointEndAddress;
         set {
-            if (SetProperty(ref _memoryBreakpointEndAddress, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            ValidateAddressRange(_state, MemoryBreakpointStartAddress,
+                value, nameof(MemoryBreakpointEndAddress));
+            SetProperty(ref _memoryBreakpointEndAddress, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -299,17 +306,17 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return InterruptNumber is not null;
+            return _validationErrors.ContainsKey(nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
-            return IoPortNumber is not null;
+            return _validationErrors.ContainsKey(nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
-            return CyclesValue is not null;
+            return _validationErrors.ContainsKey(nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
             return
-                TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
-                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
+                !_validationErrors.ContainsKey(nameof(MemoryBreakpointStartAddress)) &&
+                !_validationErrors.ContainsKey(nameof(MemoryBreakpointEndAddress));
         } else if (IsExecutionBreakpointSelected) {
-            return TryParseAddressString(ExecutionAddressValue, _state, out uint? _);
+            return !_validationErrors.ContainsKey(nameof(ExecutionAddressValue));
         }
         return false;
     }

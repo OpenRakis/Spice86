@@ -127,6 +127,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         get => _breakpointAddress;
         set {
             ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value, A20Gate.EndOfHighMemoryArea);
             SetProperty(ref _breakpointAddress, value);
             ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
         }
@@ -158,7 +159,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool ConfirmCreateExecutionBreakpointCanExecute() {
         return CreatingExecutionBreakpoint &&
-            TryParseAddressString(BreakpointAddress, _state, out uint? _);
+            !_validationErrors.ContainsKey(nameof(BreakpointAddress));
     }
 
     private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
@@ -179,6 +180,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         get => _startAddress;
         set {
             ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value, A20Gate.EndOfHighMemoryArea);
             SetProperty(ref _startAddress, value);
             UpdateDisassemblyCommand.NotifyCanExecuteChanged();
         }
@@ -285,7 +287,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool UpdateDisassemblyCommandCanExecute() {
         return IsPaused &&
-            TryParseAddressString(StartAddress, _state, out uint? _);
+            !_validationErrors.ContainsKey(nameof(StartAddress));
     }
 
     [ObservableProperty]
