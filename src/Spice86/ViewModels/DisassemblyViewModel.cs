@@ -126,10 +126,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? BreakpointAddress {
         get => _breakpointAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _breakpointAddress, value)) {
-                ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value, A20Gate.EndOfHighMemoryArea);
+            SetProperty(ref _breakpointAddress, value);
+            ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -159,7 +159,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool ConfirmCreateExecutionBreakpointCanExecute() {
         return CreatingExecutionBreakpoint &&
-            TryParseAddressString(BreakpointAddress, _state, out uint? _);
+            !ScanForValidationErrors(nameof(BreakpointAddress));
     }
 
     private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
@@ -179,10 +179,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _startAddress, value)) {
-                UpdateDisassemblyCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value, A20Gate.EndOfHighMemoryArea);
+            SetProperty(ref _startAddress, value);
+            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -285,15 +285,15 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    private bool CanExecuteUpdateDisassembly() {
+    private bool UpdateDisassemblyCommandCanExecute() {
         return IsPaused &&
-            TryParseAddressString(StartAddress, _state, out uint? _);
+            !ScanForValidationErrors(nameof(StartAddress));
     }
 
     [ObservableProperty]
     private bool _isLoading;
 
-    [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
+    [RelayCommand(CanExecute = nameof(UpdateDisassemblyCommandCanExecute))]
     private async Task UpdateDisassembly() {
         if (!TryParseAddressString(StartAddress, _state, out uint? startAddress)) {
             return;

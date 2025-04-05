@@ -39,10 +39,9 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     public string? MemoryAddress {
         get => _memoryAddress;
         set {
-            if(ValidateAddressProperty(value, _state)) {
-                SetProperty(ref _memoryAddress, value);
-                OnMemoryAddressChanged(value);
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _memoryAddress, value);
+            OnMemoryAddressChanged(value);
         }
     }
 
