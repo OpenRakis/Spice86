@@ -263,12 +263,6 @@ public class Spice86DependencyInjection : IDisposable {
                 memory, state,
                 functionCatalogue.FunctionInformations,
                 breakpointsViewModel, pauseHandler,
-                uiThreadDispatcher, messenger, textClipboard);
-            ModernDisassemblyViewModel modernDisassemblyVm = new(
-                emulatorBreakpointsManager,
-                memory, state,
-                functionCatalogue.FunctionInformations,
-                breakpointsViewModel, pauseHandler,
                 uiThreadDispatcher, messenger, textClipboard, loggerService);
             PaletteViewModel paletteViewModel = new(
                 videoState.DacRegisters.ArgbPalette,
@@ -293,7 +287,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             debugWindowViewModel = new DebugWindowViewModel(messenger,
                 uiThreadDispatcher, pauseHandler,
-                breakpointsViewModel, disassemblyVm, modernDisassemblyVm,
+                breakpointsViewModel, disassemblyVm,
                 paletteViewModel, softwareMixerViewModel,
                 videoCardViewModel, cpuViewModel, midiViewModel,
                 cfgCpuViewModel, memoryViewModel, stackMemoryViewModel);

@@ -50,7 +50,7 @@
 				</Button.Content>
 			</Button>
 		</StackPanel>
-		<TabControl TabStripPlacement="Left" Grid.Row="1" SelectedIndex="2">
+		<TabControl TabStripPlacement="Left" Grid.Row="1">
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1" Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
@@ -83,8 +83,6 @@
 						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F3" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
-				<TabControl SelectedIndex="1">
-					<TabItem Header="Classic View">
 						<TabControl ItemsSource="{Binding DisassemblyViewModels}">
 							<TabControl.ItemTemplate>
 								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -93,19 +91,6 @@
 									</TabItem>
 								</DataTemplate>
 							</TabControl.ItemTemplate>
-						</TabControl>
-					</TabItem>
-					<TabItem Header="Modern View">
-						<TabControl ItemsSource="{Binding ModernDisassemblyViewModels}">
-							<TabControl.ItemTemplate>
-								<DataTemplate DataType="{x:Type vm:ModernDisassemblyViewModel}">
-									<TabItem Header="{Binding Header}">
-										<ContentPresenter Content="{Binding}"/>
-									</TabItem>
-								</DataTemplate>
-							</TabControl.ItemTemplate>
-						</TabControl>
-					</TabItem>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F4">

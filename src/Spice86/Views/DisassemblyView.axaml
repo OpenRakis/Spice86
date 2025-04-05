@@ -1,249 +1,250 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
-			 xmlns:models="clr-namespace:Spice86.Models.Debugging"
-			 xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-			 xmlns:userControls="clr-namespace:Spice86.UserControls"
-			 xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
-			 xmlns:behaviors="clr-namespace:Spice86.Behaviors"
-			 xmlns:converters="clr-namespace:Spice86.Converters"
-			 xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
-			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-			 x:Class="Spice86.Views.DisassemblyView"
-			 x:DataType="viewModels:DisassemblyViewModel">
-	<UserControl.Resources>
-		<converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
-		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
-		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
-		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-	</UserControl.Resources>
-	<Grid RowDefinitions="Auto,*">
-		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
-			ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-			IsVisible="{Binding IsPaused}"
-			HorizontalAlignment="Left"
-			VerticalAlignment="Top">
-			<StackPanel Orientation="Vertical" Grid.Column="0">
-				<Button
-					Command="{Binding NewDisassemblyViewCommand}"
-					Content="New Disassembly View"
-					HotKey="Ctrl+T" ToolTip.Tip="Ctrl-T"
-					IsEnabled="{Binding IsPaused}" />
-				<Button
-					HotKey="Ctrl+F4"
-					ToolTip.Tip="Ctrl-F4"
-					Command="{Binding CloseTabCommand}"
-					Content="Close View"
-					IsEnabled="{Binding CanCloseTab}"/>
-			</StackPanel>
-			<StackPanel Orientation="Vertical" Grid.Column="1">
-				<Button Command="{Binding BeginCreateExecutionBreakpointCommand}" Content="Breakpoint..." />
-				<Button Content="Step into" ToolTip.Tip="F11" HotKey="F11" Command="{Binding StepIntoCommand}" />
-				<Button Content="Step over" ToolTip.Tip="F10" HotKey="F10" Command="{Binding StepOverCommand}" />
-			</StackPanel>
-			<StackPanel Orientation="Vertical" Grid.Column="2">
-				<Label HorizontalAlignment="Center" Content="Number of instructions shown" Margin="5" />
-				<NumericUpDown FormatString="0" Minimum="0" Width="100" Margin="5" Name="NumberOfInstructionsShownNumericUpDown" Value="{Binding NumberOfInstructionsShown}" />
-			</StackPanel>
-			<StackPanel Orientation="Vertical" Grid.Column="3">
-				<Label HorizontalAlignment="Center" Content="Start Address" />
-				<TextBox Name="StartAddressTextBox"
-					Width="150"
-					Text="{Binding StartAddress, Mode=TwoWay
-						}">
-					<Interaction.Behaviors>
-						<behaviors:UpdateBindingOnEnterBehavior />
-					</Interaction.Behaviors>
-					</TextBox>
-			</StackPanel>
-			<StackPanel Orientation="Vertical" Grid.Column="4">
-				<Button Content="Go to CS:IP" HotKey="Ctrl+F5" ToolTip.Tip="Ctrl-F5" Command="{Binding GoToCsIpCommand}" />
-				<Label
-					IsVisible="{Binding AreFunctionInformationProvided}">
-					Go to function:
-				</Label>
-				<ComboBox
-					Name="FunctionComboBox"
-					IsVisible="{Binding AreFunctionInformationProvided}"
-					ItemsSource="{Binding Functions}"
-					SelectedItem="{Binding SelectedFunction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-					<ComboBox.ItemTemplate>
-						<DataTemplate x:DataType="models:FunctionInfo">
-							<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="200">
-								<TextBlock Grid.Row="0" Grid.Column="0" TextWrapping="Wrap" Text="{Binding Name}" />
-								<TextBlock Grid.Row="1" Grid.Column="0" TextWrapping="Wrap" Text="{Binding Address, StringFormat={}Address: 0x{0:X4}}" />
-							</Grid>
-						</DataTemplate>
-					</ComboBox.ItemTemplate>
-				</ComboBox>
-			</StackPanel>
-			<Button Grid.Column="5" Content="Refresh" HotKey="Ctrl+R" ToolTip.Tip="Ctrl-R" Command="{Binding UpdateDisassemblyCommand}" />
-		</Grid>
-		<progRing:ProgressRing
-			IsVisible="{Binding IsLoading}"
-			Width="100" Height="100"
-			Grid.Row="0"
-			IsActive="{Binding IsLoading}"
-			HorizontalAlignment="Center"
-			VerticalAlignment="Center"
-			Foreground="Black" />
-		<DataGrid
-			x:Name="DisassemblyDataGrid"
-			IsEnabled="{Binding !IsLoading}"
-			Grid.Row="1"
-			AutoGenerateColumns="False"
-			CanUserReorderColumns="True"
-			CanUserResizeColumns="True"
-			CanUserSortColumns="False"
-			IsReadOnly="True"
-			ColumnWidth="Auto"
-			SelectionMode="Extended"
-			FontSize="12"
-			FontFamily="{StaticResource ResourceKey=RobotoMonoFont}"
-			SelectedItem="{Binding SelectedInstruction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-			IsVisible="{Binding IsPaused}"
-			ItemsSource="{Binding Instructions}">
-			<DataGrid.Columns>
-				<DataGridTemplateColumn Header="Address">
-					<DataGridTemplateColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-							<Setter Property="Background"
-								Value="{ReflectionBinding Breakpoint,
-								Converter={StaticResource BreakpointToBrushConverter}}" />
-						</ControlTheme>
-					</DataGridTemplateColumn.CellTheme>
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate>
-							<WrapPanel Orientation="Horizontal">
-								<TextBox IsReadOnly="True" Text="{ReflectionBinding Address, Mode=OneWay, StringFormat={}0x{0:X}}" />
-							</WrapPanel>
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTemplateColumn Header="CS:IP based address">
-					<DataGridTemplateColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-							<Setter Property="Background"
-								Value="{ReflectionBinding Breakpoint,
-								Converter={StaticResource BreakpointToBrushConverter}}" />
-						</ControlTheme>
-					</DataGridTemplateColumn.CellTheme>
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate>
-							<WrapPanel Orientation="Horizontal">
-								<TextBox IsReadOnly="True" Text="{ReflectionBinding SegmentedAddress, Mode=OneWay}" />
-							</WrapPanel>
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTemplateColumn MaxWidth="300"
-					Header="MASM">
-					<DataGridTemplateColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-							<Setter Property="Background" Value="{ReflectionBinding
-									Converter={StaticResource BoolToBrushConverter}}" />
-						</ControlTheme>
-					</DataGridTemplateColumn.CellTheme>
-					<DataGridTemplateColumn.CellTemplate>
-						<DataTemplate>
-							<TextBox Text="{Binding Mode=OneWay,
-									 Converter={StaticResource InstructionToStringConverter}}"
-									 IsReadOnly="True" />
-						</DataTemplate>
-					</DataGridTemplateColumn.CellTemplate>
-				</DataGridTemplateColumn>
-				<DataGridTextColumn Binding="{Binding Bytes}" Header="Bytes (Length)">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridTextColumn Binding="{Binding SegmentPrefix}" Header="Segment Prefix">
-					<DataGridTextColumn.CellTheme>
-						<ControlTheme TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
-							<Setter Property="FontWeight"
-								Value="{ReflectionBinding IsCsIp,
-								Converter={StaticResource BoolToFontWeightConverter}}" />
-						</ControlTheme>
-					</DataGridTextColumn.CellTheme>
-				</DataGridTextColumn>
-				<DataGridCheckBoxColumn Binding="{Binding IsStackInstruction}" Header="Stack Instruction?" />
-			</DataGrid.Columns>
-			<DataGrid.ContextMenu>
-				<ContextMenu>
-					<MenuItem Header="Copy line (Ctrl-C)" Command="{Binding CopyLineCommand}" />
-					<MenuItem Header="Create execution breakpoint here (F2)" Command="{Binding CreateExecutionBreakpointHereCommand}" />
-					<MenuItem Header="Remove execution breakpoint here (Del)" Command="{Binding RemoveExecutionBreakpointHereCommand}" />
-					<MenuItem Header="Disable breakpoint" Command="{Binding DisableBreakpointCommand}" />
-					<MenuItem Header="Enable breakpoint" Command="{Binding EnableBreakpointCommand}" />
-					<MenuItem Header="Move CS:IP here" Command="{Binding MoveCsIpHereCommand}" />
-				</ContextMenu>
-			</DataGrid.ContextMenu>
-			<DataGrid.Styles>
-				<Style Selector="DataGridColumnHeader">
-					<Setter Property="Padding" Value="0" />
-					<Setter Property="Margin" Value="0" />
-				</Style>
-			</DataGrid.Styles>
-		</DataGrid>
-		<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
-			IsVisible="{Binding CreatingExecutionBreakpoint}"/>
-		<dialogHost:DialogHost IsVisible="{Binding !IsLoading}"
-			Grid.Row="0" Grid.RowSpan="2"
-			Background="{Binding $parent[Window].Background}"
-			CloseOnClickAway="False"
-			IsOpen="{Binding CreatingExecutionBreakpoint}">
-			<dialogHost:DialogHost.DialogContent>
-				<Grid RowDefinitions="Auto,*,Auto">
-					<Label
-						Grid.Row="0"
-						HorizontalAlignment="Center"
-						Content="Creating execution breakpoint"
-						FontWeight="Bold" />
-					<Grid
-						Grid.Row="1">
-						<controls:GroupBox Header="Address:">
-							<TextBox
-								Text="{Binding BreakpointAddress, Mode=TwoWay}"
-								Watermark="1000:FFFF (example) or like 'cs:ip'"
-								ToolTip.Tip="Hex or linear or segmented address"
-								Margin="5,0,0,0">
-								<Interaction.Behaviors>
-									<behaviors:UpdateBindingOnEnterBehavior />
-								</Interaction.Behaviors>
-							</TextBox>
-						</controls:GroupBox>
-					</Grid>
-					<StackPanel
-						Grid.Row="2"
-						HorizontalAlignment="Right"
-						Orientation="Horizontal">
-						<Button
-							Command="{Binding ConfirmCreateExecutionBreakpointCommand}"
-							Content="OK"
-							IsDefault="True" />
-						<Button
-							Command="{Binding CancelCreateExecutionBreakpointCommand}"
-							Content="Cancel"
-							IsCancel="True" />
-					</StackPanel>
-				</Grid>
-			</dialogHost:DialogHost.DialogContent>
-		</dialogHost:DialogHost>
-		<userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
-	</Grid>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Converters"
+             xmlns:behaviors="clr-namespace:Spice86.Behaviors"
+             xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+             xmlns:views="clr-namespace:Spice86.Views"
+             xmlns:debugging="clr-namespace:Spice86.Models.Debugging"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.DisassemblyView"
+             x:DataType="viewModels:IDisassemblyViewModel">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Styles/DisassemblyResources.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
+            <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
+            <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
+            <converters:JumpIndicatorConverter x:Key="JumpIndicatorConverter" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Top toolbar -->
+        <Grid Grid.Row="0" IsVisible="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+
+            <!-- Navigation Controls -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <Button Command="{Binding GoToCsIpCommand}" ToolTip.Tip="Go to current CS:IP (F9)" HotKey="F9">
+                    <fluent:SymbolIcon Symbol="Location" Width="20" Height="20" />
+                </Button>
+                <Button Command="{Binding StepIntoCommand}" ToolTip.Tip="Step into (F11)" HotKey="F11">
+                    <fluent:SymbolIcon Symbol="ArrowStepIn" Width="20" Height="20" />
+                </Button>
+                <Button Command="{Binding StepOverCommand}" ToolTip.Tip="Step over (F10)" HotKey="F10">
+                    <fluent:SymbolIcon Symbol="ArrowStepOver" Width="20" Height="20" />
+                </Button>
+            </StackPanel>
+
+            <!-- Address Input -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+                <TextBlock VerticalAlignment="Center" Text="Address:" />
+                <TextBox Width="120" Text="{Binding CurrentInstructionAddress, UpdateSourceTrigger=LostFocus, Converter={StaticResource SegmentedAddressConverter}}" />
+                <Button Content="Go" Command="{Binding GoToAddressCommand}" CommandParameter="{Binding CurrentInstructionAddress}" />
+            </StackPanel>
+
+            <!-- Function Selection -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" IsVisible="{Binding IsFunctionInformationProvided}">
+                <TextBlock VerticalAlignment="Center" Text="Function:" />
+                <AutoCompleteBox
+                    ItemsSource="{Binding Functions}"
+                    SelectedItem="{Binding SelectedFunction}"
+                    ItemFilter="{Binding FunctionFilter}"
+                    Watermark="Type to select function"
+                    ItemSelector="{Binding FunctionItemSelector}"
+                    GotFocus="OnFunctionSelectionFocus"
+                    KeyDown="OnFunctionSelectionKeyDown"
+                    MinWidth="200">
+                    <AutoCompleteBox.ItemTemplate>
+                        <DataTemplate DataType="debugging:FunctionInfo">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock>
+                                    <Run Text="{Binding Name}" />
+                                    <Run Text=" [" /><Run Text="{Binding Address}" /><Run Text="]" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </AutoCompleteBox.ItemTemplate>
+                </AutoCompleteBox>
+                <Button x:Name="GoToFunctionButton"
+                        Command="{Binding GoToFunctionCommand}"
+                        CommandParameter="{Binding SelectedFunction}"
+                        IsEnabled="{Binding SelectedFunction, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Content="Go" />
+            </StackPanel>
+
+
+            <!-- View management-->
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                <Button
+                    HotKey="Ctrl+F4"
+                    ToolTip.Tip="Close view (Ctrl-F4)"
+                    Command="{Binding CloseTabCommand}"
+                    IsEnabled="{Binding CanCloseTab}">
+                    <fluent:SymbolIcon Symbol="DocumentDismiss" Width="20" Height="20" />
+                </Button>
+                <Button
+                    HotKey="Ctrl+N"
+                    ToolTip.Tip="New view (Ctrl-n)"
+                    Command="{Binding NewDisassemblyViewCommand}">
+                    <fluent:SymbolIcon Symbol="DocumentAdd" Width="20" Height="20" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main content area with disassembly and registers -->
+        <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
+            <!-- Loading indicator -->
+            <progRing:ProgressRing Grid.Column="0"
+                                   Width="40"
+                                   Height="40"
+                                   IsActive="{Binding IsLoading}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SystemAccentColor}" />
+
+            <!-- Disassembly View with Scrolling -->
+            <ListBox Grid.Column="0"
+                     IsVisible="{Binding IsPaused}"
+                     ItemsSource="{Binding SortedDebuggerLinesView}"
+                     Name="DisassemblyListBox"
+                     Background="Transparent"
+                     BorderThickness="1,0,0,0"
+                     BorderBrush="{DynamicResource SemiColorBorder}"
+                     Padding="0,0,16,0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                     SelectedItem="{Binding SelectedDebuggerLine}"
+                     behaviors:DisassemblyScrollBehavior.IsEnabled="True"
+                     behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Create breakpoint here"
+                                  Command="{Binding CreateExecutionBreakpointHereCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}" />
+                        <MenuItem Header="Remove breakpoint"
+                                  Command="{Binding RemoveExecutionBreakpointHereCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <MenuItem Header="Disable breakpoint"
+                                  Command="{Binding DisableBreakpointCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=false}"
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <MenuItem Header="Enable breakpoint"
+                                  Command="{Binding EnableBreakpointCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                  IsEnabled="{Binding SelectedDebuggerLine.Breakpoint.IsEnabled, FallbackValue=false, Converter={x:Static BoolConverters.Not}}" />
+                        <Separator />
+                        <MenuItem Header="Move CS:IP here"
+                                  Command="{Binding MoveCsIpHereCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="4,1" />
+                        <Setter Property="Margin" Value="0" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ContentControl FontFamily="Cascadia Code,Consolas,Menlo,Monaco,monospace"
+                                        behaviors:HighlightBehavior.IsContentHighlighted="{Binding IsCurrentInstruction}"
+                                        FontWeight="{Binding IsCurrentInstruction, Converter={x:Static converters:HighlightingConverter.TrueToBold}}"
+                                        Padding="0"
+                                        Margin="0"
+                                        behaviors:InstructionPointerBehavior.IsEnabled="True">
+                            <ContentControl.Styles>
+                                <Style Selector="SelectableTextBlock">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
+                                    <Setter Property="Background"
+                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
+                                    <Setter Property="behaviors:UseParentListBoxContextMenuBehavior.UseParentContextMenu" Value="True" />
+                                </Style>
+                            </ContentControl.Styles>
+
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*,Auto,2*" Margin="0">
+                                <!-- Breakpoint indicator -->
+                                <Border Grid.Column="0"
+                                        Width="16"
+                                        Height="16"
+                                        Background="Transparent"
+                                        Tapped="OnBreakpointClicked"
+                                        Cursor="Hand">
+                                    <Ellipse
+                                        Width="12"
+                                        Height="12"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Fill="{Binding Breakpoint.IsEnabled, FallbackValue=Transparent, Converter={StaticResource BreakpointColorConverter}}"
+                                        Margin="0,0,4,0" />
+                                </Border>
+
+                                <!-- Address -->
+                                <SelectableTextBlock Grid.Column="1"
+                                                     Text="{Binding SegmentedAddress}"
+                                                     Foreground="#78C9B0"
+                                                     FontWeight="SemiBold"
+                                                     Margin="0,0,6,0" />
+
+                                <!-- Bytes -->
+                                <SelectableTextBlock Grid.Column="2"
+                                                     Text="{Binding ByteString}"
+                                                     Foreground="#B5CEA8"
+                                                     FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                     FontSize="11"
+                                                     Width="110"
+                                                     Margin="6,0,0,0" />
+
+                                <!-- Instruction -->
+                                <SelectableTextBlock Grid.Column="3"
+                                                     Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
+                                                     Margin="12,0,0,0" />
+
+                                <!-- Jump Indicator -->
+                                <Border Grid.Column="4"
+                                        IsVisible="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=visibility}"
+                                        Background="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=color}"
+                                        CornerRadius="2"
+                                        Padding="3,0"
+                                        Margin="8,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=text}"
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="Black" />
+                                </Border>
+
+                                <!-- Function Name -->
+                                <SelectableTextBlock Grid.Column="5"
+                                                     Text="{Binding Function.Name, FallbackValue=''}"
+                                                     Foreground="#9CDCFE"
+                                                     Margin="12,0,0,0" />
+                            </Grid>
+                        </ContentControl>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Register View Panel -->
+            <Border Grid.Column="1"
+                    Width="250"
+                    IsVisible="{Binding IsPaused}"
+                    BorderBrush="{DynamicResource SemiColorBorder}"
+                    BorderThickness="1,0,0,0"
+                    Padding="8">
+                <views:RegistersView DataContext="{Binding Registers}" />
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>

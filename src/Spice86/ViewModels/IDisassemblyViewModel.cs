@@ -11,7 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-///     Interface for the ModernDisassemblyViewModel to support proper MVVM separation.
+///     Interface for the DisassemblyViewModel to support proper MVVM separation.
 ///     This interface defines the contract between the View and ViewModel, allowing for
 ///     better testability and decoupling.
 /// </summary>
@@ -89,5 +89,11 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// <returns></returns>
     bool TryGetLineByAddress(uint address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine);
 
+    /// <summary>
+    ///     Attempts to get a debugger line by its segmented address
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="debuggerLine"></param>
+    /// <returns></returns>
     bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine);
 }

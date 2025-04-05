@@ -8,7 +8,7 @@ using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
-public partial class ModernDisassemblyViewModel : IDisassemblyCommands {
+public partial class DisassemblyViewModel : IDisassemblyCommands {
     // Explicitly implement IDisassemblyCommands interface
     IAsyncRelayCommand IDisassemblyCommands.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
     IAsyncRelayCommand IDisassemblyCommands.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
@@ -28,7 +28,7 @@ public partial class ModernDisassemblyViewModel : IDisassemblyCommands {
 
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
-        _messenger.Send(new RemoveViewModelMessage<ModernDisassemblyViewModel>(this));
+        _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -89,11 +89,11 @@ public partial class ModernDisassemblyViewModel : IDisassemblyCommands {
 
     [RelayCommand]
     private async Task NewDisassemblyView() {
-        ModernDisassemblyViewModel disassemblyViewModel = new(
+        DisassemblyViewModel disassemblyViewModel = new(
             _emulatorBreakpointsManager, _memory, State, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, true) {
             IsPaused = IsPaused
         };
-        await Task.Run(() => _messenger.Send(new AddViewModelMessage<ModernDisassemblyViewModel>(disassemblyViewModel)));
+        await Task.Run(() => _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel)));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]

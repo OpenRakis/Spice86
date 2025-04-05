@@ -1,57 +1,72 @@
-using Avalonia.Controls;
-using Avalonia.Input;
-
-using Spice86.ViewModels;
-
 namespace Spice86.Views;
 
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml;
+
+using System.ComponentModel;
+
+using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels;
+
+/// <summary>
+/// View for the disassembly interface.
+/// </summary>
 public partial class DisassemblyView : UserControl {
+    private IDisassemblyViewModel? _viewModel;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DisassemblyView"/> class.
+    /// </summary>
     public DisassemblyView() {
         InitializeComponent();
-        FunctionComboBox.SelectionChanged += FunctionComboBox_SelectionChanged;
-        StartAddressTextBox.KeyUp += StartAddressTextBox_KeyUp;
-        DisassemblyDataGrid.KeyUp += DisassemblyDataGrid_KeyUp;
-        NumberOfInstructionsShownNumericUpDown.KeyUp += NumberOfInstructionsShownNumericUpDown_KeyUp;
+        DataContextChanged += DisassemblyView_DataContextChanged;
     }
 
-    private void NumberOfInstructionsShownNumericUpDown_KeyUp(object? sender, KeyEventArgs e) {
-        if (DataContext is DisassemblyViewModel viewModel && e.Key == Key.Enter &&
-            viewModel.UpdateDisassemblyCommand.CanExecute(null)) {
-            viewModel.UpdateDisassemblyCommand.Execute(null);
+    private void InitializeComponent() {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    private void DisassemblyView_DataContextChanged(object? sender, EventArgs e) {
+        // Unsubscribe from the old view model if it exists
+        if (_viewModel is INotifyPropertyChanged oldViewModel) {
+            oldViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        // Subscribe to the new view model
+        _viewModel = DataContext as IDisassemblyViewModel;
+        if (_viewModel is INotifyPropertyChanged newViewModel) {
+            newViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
     }
 
-    private void StartAddressTextBox_KeyUp(object? sender, KeyEventArgs e) {
-        ExecUpdateDisassemblyCommand(e, true);
+    private static void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
     }
 
-    private void ExecUpdateDisassemblyCommand(KeyEventArgs e, bool isUsingLinearAddressing) {
-        if (DataContext is DisassemblyViewModel viewModel && e.Key == Key.Enter &&
-            viewModel.UpdateDisassemblyCommand.CanExecute(null)) {
-            viewModel.UpdateDisassemblyCommand.Execute(null);
+    private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
+        if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine}) {
+            _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
+            e.Handled = true;
         }
     }
 
-    private void DisassemblyDataGrid_KeyUp(object? sender, KeyEventArgs e) {
-        if (DataContext is DisassemblyViewModel viewModel) {
-            if(e.Key == Key.C && e.KeyModifiers == KeyModifiers.Control &&
-                viewModel.CopyLineCommand.CanExecute(null)) {
-                viewModel.CopyLineCommand.Execute(null);
-            }
-            if (e.Key == Key.F2 &&
-                viewModel.CreateExecutionBreakpointHereCommand.CanExecute(null)) {
-                viewModel.CreateExecutionBreakpointHereCommand.Execute(null);
-            }
-            if (e.Key == Key.Delete &&
-                viewModel.RemoveExecutionBreakpointHereCommand.CanExecute(null)) {
-                viewModel.RemoveExecutionBreakpointHereCommand.Execute(null);
-            }
+    /// <summary>
+    /// Event handler for when the function selection AutoCompleteBox gets focus.
+    /// </summary>
+    /// <param name="sender">The sender object.</param>
+    /// <param name="e">The focus event arguments.</param>
+    private void OnFunctionSelectionFocus(object? sender, GotFocusEventArgs e) {
+        if (sender is AutoCompleteBox autoCompleteBox) {
+            // Clear the text when the AutoCompleteBox gets focus
+            autoCompleteBox.Text = string.Empty;
         }
     }
 
-    private void FunctionComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e) {
-        if(this.DataContext is DisassemblyViewModel viewModel) {
-            viewModel.GoToFunctionCommand.Execute(FunctionComboBox.SelectedItem);
+    private void OnFunctionSelectionKeyDown(object? sender, KeyEventArgs e) {
+        if (e.Key == Key.Enter && DataContext is IDisassemblyViewModel viewModel) {
+            // Execute the "Go to Function" command when Enter is pressed
+            viewModel.GoToFunctionCommand.Execute(viewModel.SelectedFunction);
+            e.Handled = true;
         }
     }
 }

@@ -20,13 +20,11 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
     }
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        object? result = value switch {
+        return value switch {
             null => null,
             SegmentedAddress segmentedAddress => segmentedAddress.ToString(),
             _ => new BindingNotification(new InvalidCastException(value.ToString()), BindingErrorType.Error)
         };
-        Console.WriteLine("SegmentedAddressConverter.Convert: {0} [{1}]", result, result?.GetType());
-        return result;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
@@ -39,9 +37,7 @@ public partial class SegmentedAddressConverter : AvaloniaObject, IValueConverter
             ushort? segment = ParseSegmentOrRegister(match.Groups[1].Value, State);
             ushort? offset = ParseSegmentOrRegister(match.Groups[2].Value, State);
             if (segment.HasValue && offset.HasValue) {
-                var result = new SegmentedAddress(segment.Value, offset.Value);
-                Console.WriteLine("SegmentedAddressConverter.ConvertBack: {0} [{1}]", result, result.GetType());
-                return result;
+                return new SegmentedAddress(segment.Value, offset.Value);
             }
         }
 
