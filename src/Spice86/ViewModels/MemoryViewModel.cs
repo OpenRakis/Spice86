@@ -470,12 +470,16 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
               CultureInfo.InvariantCulture, out long _)) {
             error = "Hex number could not be parsed";
         }
+        else {
+            return;
+        }
         if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
             _validationErrors.Add(nameof(MemoryEditValue), [error]);
         } else {
             values.Clear();
             values.Add(error);
         }
+        OnErrorsChanged(nameof(MemoryEditValue));
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
