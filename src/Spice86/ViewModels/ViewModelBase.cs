@@ -93,15 +93,14 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             out List<string>? values)) {
                 values = new List<string>();
                 _validationErrors[nameof(textBoxBindedPropertyName)] = values;
+            } else {
+                values.Clear();
             }
-            values.Clear();
             if (!rangeStatus) {
                 values.Add(RangeError);
-            }
-            if (!statusStart) {
+            } else if (!statusStart) {
                 values.Add(StartError);
-            }
-            if (!statusEnd) {
+            } else if (!statusEnd) {
                 values.Add(EndError);
             }
             OnErrorsChanged(textBoxBindedPropertyName);
@@ -163,11 +162,11 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         if (!status) {
             if (!_validationErrors.TryGetValue(propertyName,
                 out List<string>? values)) {
-                values = new List<string>();
-                _validationErrors[propertyName] = values;
+                _validationErrors[propertyName] = [error];
+            } else {
+                values.Clear();
+                values.Add(error);
             }
-            values.Clear();
-            values.Add(error);
         } else {
             _validationErrors.Remove(propertyName);
         }
