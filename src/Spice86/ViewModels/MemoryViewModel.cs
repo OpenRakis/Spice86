@@ -9,6 +9,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
+using Newtonsoft.Json;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
@@ -448,11 +450,36 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         set {
             ValidateAddressProperty(value, _state);
             SetProperty(ref _memoryEditAddress, value);
+            ApplyMemoryEditCommand.NotifyCanExecuteChanged();
         }
     }
 
-    [ObservableProperty]
     private string? _memoryEditValue = "";
+
+    public string? MemoryEditValue {
+        get => _memoryEditValue;
+        set {
+            ValidateMemoryEditValue(value);
+            SetProperty(ref _memoryEditValue, value);
+            ApplyMemoryEditCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void ValidateMemoryEditValue(string? value) {
+        string error = string.Empty;
+        if (string.IsNullOrWhiteSpace(value)) {
+            error = "This field is required";
+        } else if (!long.TryParse(value, NumberStyles.HexNumber,
+              CultureInfo.InvariantCulture, out long _)) {
+            error = "Hex number could not be parsed";
+        }
+        if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
+            _validationErrors.Add(nameof(MemoryEditValue), [error]);
+        } else {
+            values.Clear();
+            values.Add(error);
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void EditMemory() {
@@ -471,7 +498,17 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void CancelMemoryEdit() => IsEditingMemory = false;
 
-    [RelayCommand]
+    private bool ApplyMemoryEditCanExecute() {
+        if (string.IsNullOrWhiteSpace(MemoryEditValue) ||
+            string.IsNullOrWhiteSpace(MemoryEditAddress)) {
+            return false;
+        }
+        return long.TryParse(MemoryEditValue, NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out long value) &&
+            TryParseAddressString(MemoryEditAddress, _state, out uint? _);
+    }
+
+    [RelayCommand(CanExecute = nameof(ApplyMemoryEditCanExecute))]
     private void ApplyMemoryEdit() {
         if (MemoryEditValue is null ||
             !long.TryParse(MemoryEditValue, NumberStyles.HexNumber,
