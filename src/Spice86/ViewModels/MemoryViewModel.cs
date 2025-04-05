@@ -467,8 +467,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         } else if(!value.StartsWith("0x")) {
             error = "Hex must start with 0x";
         } else if (value.Length > 2 &&
-            !long.TryParse(value[2..], NumberStyles.HexNumber,
-              CultureInfo.InvariantCulture, out long _)) {
+            !ConvertUtils.TryParseHexToByteArray(value[2..], out byte[]? _)) {
             error = "Hex number could not be parsed";
         }
         if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
@@ -526,14 +525,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         }
         if (!TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
             !GetIsMemoryRangeValid(address, A20Gate.EndOfHighMemoryArea) ||
-            !long.TryParse(memoryEditValue, NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out long value)) {
+            !ConvertUtils.TryParseHexToByteArray(memoryEditValue, out byte[]? bytes)) {
             return;
         }
         try {
-            DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
+
+            DataMemoryDocument?.WriteBytes(address.Value, bytes);
             TryUpdateHeaderAndMemoryDocument();
-        } catch (IndexOutOfRangeException e) {
+        } catch (Exception e) {
             ShowError(e);
             MemoryEditValue = null;
             MemoryEditAddress = null;
