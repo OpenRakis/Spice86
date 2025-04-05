@@ -1,6 +1,5 @@
 # NativeDosTests
-some assembler and C/C++ example for serveral DOS APIs based on  [Open Watcom V2](https://github.com/open-watcom/open-watcom-v2) toolchain
-
+some assembler and C/C++ example for several DOS APIs based on  [Open Watcom V2](https://github.com/open-watcom/open-watcom-v2) toolchain
 | file | description |
 | ---- | ----------- |
 | build.bat | creates the DOS executables - WATCOM path variable in first line needs to be adjusted |
