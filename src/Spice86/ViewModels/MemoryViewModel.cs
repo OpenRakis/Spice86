@@ -512,7 +512,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void CancelMemoryEdit() => IsEditingMemory = false;
 
     private bool ApplyMemoryEditCanExecute() {
-        return ScanForValidationErrors(nameof(MemoryEditValue),
+        return !ScanForValidationErrors(nameof(MemoryEditValue),
             nameof(MemoryEditAddress)) &&
             IsPaused;
     }
