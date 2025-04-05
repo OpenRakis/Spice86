@@ -75,6 +75,16 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         && endAddress >= startAddress;
     }
 
+    protected bool ScanForValidationErrors(params string[] properties) {
+        foreach (string property in properties) {
+            _validationErrors.TryGetValue(property, out List<string>? values);
+            if (values?.Count > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected void ValidateAddressRange(State state, string? startAddress,
         string? endAddress, string textBoxBindedPropertyName) {
         const string RangeError = "Invalid address range.";
@@ -93,7 +103,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
             out List<string>? values)) {
                 values = new List<string>();
-                _validationErrors[nameof(textBoxBindedPropertyName)] = values;
+                _validationErrors[textBoxBindedPropertyName] = values;
             } else {
                 values.Clear();
             }
