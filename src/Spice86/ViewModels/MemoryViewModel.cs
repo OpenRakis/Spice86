@@ -115,17 +115,16 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             ValidateAddressRange(_state, value, EndAddress,
                 nameof(StartAddress));
             ValidateMemoryAddressIsWithinLimit(_state, value);
-            if (SetProperty(ref _startAddress, value)) {
-                UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
-                TryUpdateHeaderAndMemoryDocument();
-            }
+            SetProperty(ref _startAddress, value);
+            UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
+            TryUpdateHeaderAndMemoryDocument();
         }
     }
 
     private void TryUpdateHeaderAndMemoryDocument() {
-        Header = $"{StartAddress:X} - {EndAddress:X}";
         if (UpdateBinaryDocumentCommand.CanExecute(null)) {
             UpdateBinaryDocumentCommand.Execute(null);
+            Header = $"{StartAddress:X} - {EndAddress:X}";
         }
     }
 
@@ -137,10 +136,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             ValidateAddressRange(_state, StartAddress, value,
                 nameof(EndAddress));
             ValidateMemoryAddressIsWithinLimit(_state, value);
-            if (SetProperty(ref _endAddress, value)) {
-                UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
-                TryUpdateHeaderAndMemoryDocument();
-            }
+            SetProperty(ref _endAddress, value);
+            UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
+            TryUpdateHeaderAndMemoryDocument();
         }
     }
 
