@@ -7,6 +7,8 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -26,12 +28,16 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
         level &= 0x1f;
         {{StackPointerType}} framePtr = helper.State.{{StackPointerRegister}};
         for (int i = 0; i < level; i++) {
-            helper.State.{{BasePointerRegister}} -= {{Size}}/2;
+            helper.State.{{BasePointerRegister}} -= {{Size}}/8;
             helper.Stack.Push{{Size}}(helper.State.{{BasePointerRegister}});
         }
 
         helper.State.{{BasePointerRegister}} = framePtr;
         helper.State.{{StackPointerRegister}} -= storage;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.ENTER{{ if Size == 32 }}W{{ end }}, builder.ToNode(StorageField), builder.ToNode(LevelField));
     }
 }

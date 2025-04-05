@@ -1,8 +1,10 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Shared.Emulator.Memory;
 
 public class Grp4Callback : InstructionWithModRm {
@@ -10,7 +12,7 @@ public class Grp4Callback : InstructionWithModRm {
         ModRmContext modRmContext, InstructionField<byte> callbackNumber) : base(address, opcodeField, prefixes,
         modRmContext) {
         CallbackNumber = callbackNumber;
-        FieldsInOrder.Add(callbackNumber);
+        AddField(callbackNumber);
     }
 
     public InstructionField<byte> CallbackNumber { get; }
@@ -19,5 +21,9 @@ public class Grp4Callback : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.CALLBACK);
     }
 }

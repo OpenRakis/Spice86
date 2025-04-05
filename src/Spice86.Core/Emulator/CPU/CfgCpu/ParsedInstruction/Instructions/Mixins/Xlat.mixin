@@ -1,0 +1,42 @@
+@moxy
+@attribute required int Size
+@attribute required string LookupRegister
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes, segmentRegisterIndex) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        uint address = helper.PhysicalAddress(this, helper.State.{{LookupRegister}}) + helper.State.AL;
+        helper.State.AL = helper.Memory.UInt8[address];
+        helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.XLAT, 
+            builder.ToSegmentedPointer(
+                DataType.UINT8,
+                SegmentRegisterIndex,
+                new BinaryOperationNode(builder.AddressType(this),
+                    builder.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
+                    Operation.PLUS,
+                    builder.Accumulator(DataType.UINT8)
+                )
+            )
+        );
+    }
+}

@@ -7,6 +7,8 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -21,6 +23,12 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.R{{DestSize}} = ({{DestUnsignedType}})({{SourceSignedType}})helper.ModRm.RM{{SourceSize}};
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.MOVSX,
+            builder.RToNode(builder.SType({{DestSize}}), ModRmContext),
+            builder.RmToNode(builder.SType({{SourceSize}}), ModRmContext));
     }
 }
 

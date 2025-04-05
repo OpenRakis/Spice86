@@ -1,10 +1,13 @@
 @moxy
+@attribute required int Size
 @attribute required string RegisterIndexer
 @attribute required string Type
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -22,5 +25,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
         {{Type}} value = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.State.GeneralRegisters.UInt{{RegisterIndexer}}[RegisterIndex] = value;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.MOV,
+            builder.Reg(builder.UType({{Size}}), RegisterIndex),
+            builder.ToNode(ValueField));
     }
 }

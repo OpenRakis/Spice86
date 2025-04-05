@@ -4,10 +4,13 @@
 @attribute required int Size
 @attribute required string Type
 @attribute required bool Assign=true
+@attribute required string Mnemonic=null
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -23,5 +26,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}>
     public override void Execute(InstructionExecutionHelper helper) {
         {{if Assign}}helper.State.{{Accumulator}} = {{end}}helper.Alu{{Size}}.{{Operation}}(helper.State.{{Accumulator}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
+            builder.Accumulator(builder.UType({{Size}})),
+            builder.ToNode(ValueField));
     }
 }

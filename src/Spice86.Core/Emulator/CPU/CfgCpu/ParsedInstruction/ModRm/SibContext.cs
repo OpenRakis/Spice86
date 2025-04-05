@@ -2,7 +2,7 @@
 
 public class SibContext {
     public InstructionField<byte> Sib { get; }
-    public int Scale { get; }
+    public byte Scale { get; }
     public int IndexRegister { get; }
     public int BaseRegister { get; }
     public SibBase SibBase { get; }
@@ -13,7 +13,7 @@ public class SibContext {
 
     public SibContext(
         InstructionField<byte> sib,
-        int scale,
+        byte scale,
         int indexRegister,
         int baseRegister,
         SibBase sibBase,

@@ -163,8 +163,6 @@ public class InstructionParser : BaseInstructionParser {
         InstructionField<ushort> opcodeField = ReadOpcode();
         ParsingContext context = new(address, opcodeField, prefixes);
         CfgInstruction res = ParseCfgInstruction(context);
-
-        res.PostInit();
         return res;
     }
 
@@ -447,9 +445,9 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC1:
                 return _grp2Parser.Parse(context);
             case 0xC2:
-                return new NearRetImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                return new RetNearImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
             case 0xC3:
-                return new NearRet(context.Address, context.OpcodeField);
+                return new RetNear(context.Address, context.OpcodeField);
             case 0xC4:
                 return _lesParser.Parse(context);
             case 0xC5:
@@ -469,9 +467,9 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC9:
                 return _leaveParser.Parse(context);
             case 0xCA:
-                return new FarRetImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                return new RetFarImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
             case 0xCB:
-                return new FarRet(context.Address, context.OpcodeField);
+                return new RetFar(context.Address, context.OpcodeField);
             case 0xCC:
                 return new Interrupt3(context.Address, context.OpcodeField);
             case 0xCD:
@@ -479,7 +477,7 @@ public class InstructionParser : BaseInstructionParser {
             case 0xCE:
                 return new InterruptOverflow(context.Address, context.OpcodeField);
             case 0xCF:
-                return new InterruptRet(context.Address, context.OpcodeField);
+                return new RetInterrupt(context.Address, context.OpcodeField);
             case 0xD0:
                 return _grp2Parser.Parse(context);
             case 0xD1:
@@ -495,7 +493,11 @@ public class InstructionParser : BaseInstructionParser {
             case 0xD6:
                 return new Salc(context.Address, context.OpcodeField);
             case 0xD7:
-                return new Xlat(context.Address, context.OpcodeField, context.Prefixes,
+                if (context.AddressWidthFromPrefixes == BitWidth.DWORD_32) {
+                    return new Xlat32(context.Address, context.OpcodeField, context.Prefixes,
+                        SegmentFromPrefixesOrDs(context));
+                }
+                return new Xlat16(context.Address, context.OpcodeField, context.Prefixes,
                     SegmentFromPrefixesOrDs(context));
             case 0xD8:
                 // FPU stuff

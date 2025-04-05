@@ -1,0 +1,168 @@
+﻿F000:0000 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0002 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0004 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0006 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:0008 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:000A repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:000C repe scas AL,byte ptr ES:[DI]
+F000:000E repe scas AL,byte ptr ES:[DI]
+F000:0010 repne scas AL,byte ptr ES:[DI]
+F000:0012 rep lods AL,byte ptr DS:[SI]
+F000:0014 rep lods AL,byte ptr DS:[SI]
+F000:0016 rep lods AL,byte ptr DS:[SI]
+F000:0018 rep stos byte ptr ES:[DI],AL
+F000:001A rep stos byte ptr ES:[DI],AL
+F000:001C rep stos byte ptr ES:[DI],AL
+F000:001E mov BX,0x0040
+F000:0021 push BX
+F000:0022 popf
+F000:0023 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0025 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0027 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:0029 repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:002B repe scas AL,byte ptr ES:[DI]
+F000:002D repne scas AL,byte ptr ES:[DI]
+F000:002F rep lods AL,byte ptr DS:[SI]
+F000:0031 rep lods AL,byte ptr DS:[SI]
+F000:0033 rep stos byte ptr ES:[DI],AL
+F000:0035 rep stos byte ptr ES:[DI],AL
+F000:0037 mov AX,AX
+F000:0039 mov AH,0x10
+F000:003B jmp near AX
+F000:0102 jmp near 0x304D
+F000:0607 jmp near 0x302F
+F000:0809 jmp near 0x300D
+F000:0FFC jmp near 0x100E
+F000:0FFE jmp near 0x1007
+F000:1000 mov CX,0
+F000:1003 push CX
+F000:1005 jmp near SP
+F000:1007 mov CX,0x110A
+F000:100A push CX
+F000:100C jmp near SP
+F000:100E jmp near CX
+F000:110A mov CX,5
+F000:110D mov DX,0
+F000:1110 push DX
+F000:1111 popf
+F000:1112 pop CX
+F000:1114 mov AX,AX
+F000:1116 mov AH,0x20
+F000:1118 jmp near AX
+F000:122C jmp near 0x4030
+F000:122F jmp near 0x4024
+F000:200A push BX
+F000:200B popf
+F000:200C mov CX,2
+F000:200F mov SI,0x3000
+F000:2012 mov AX,0xF000
+F000:2015 mov DS,AX
+F000:2017 mov AX,0x1000
+F000:201A mov ES,AX
+F000:201C mov DI,0
+F000:201F rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:2021 mov DS,AX
+F000:2023 mov AX,word ptr DS:[0]
+F000:2026 mov BP,BP
+F000:2028 mov word ptr SS:[BP+SI],DX
+F000:202A jcxz short 0x202D
+F000:202D jmp near word ptr DS:[0x3004]
+F000:300D mov AX,0xF000
+F000:3010 mov DS,AX
+F000:3012 mov CX,1
+F000:3015 mov AX,0
+F000:3018 push AX
+F000:3019 popf
+F000:301A rep movs word ptr ES:[DI],word ptr DS:[SI]
+F000:301C mov AX,0x1000
+F000:301F mov DS,AX
+F000:3021 mov AX,word ptr DS:[2]
+F000:3024 mov BP,BP
+F000:3026 mov word ptr SS:[BP+SI],DX
+F000:3028 jcxz short 0x302B
+F000:302B jmp near word ptr DS:[0x3008]
+F000:302F mov AX,0xF000
+F000:3032 mov DS,AX
+F000:3034 mov CX,3
+F000:3037 rep lods AL,byte ptr DS:[SI]
+F000:3039 jmp near AX
+F000:303C mov BX,0x0040
+F000:303F push BX
+F000:3040 popf
+F000:3041 mov AX,0xF000
+F000:3044 mov DS,AX
+F000:3046 mov CX,1
+F000:3049 rep lods AX,word ptr DS:[SI]
+F000:304B jmp near AX
+F000:304D mov CX,2
+F000:3050 mov AX,0x4000
+F000:3053 rep stos word ptr ES:[DI],AX
+F000:3055 mov AX,0x1000
+F000:3058 mov DS,AX
+F000:305A jmp near word ptr DS:[6]
+F000:4000 mov BX,0
+F000:4003 push BX
+F000:4004 popf
+F000:4005 mov CX,4
+F000:4008 rep stos word ptr ES:[DI],AX
+F000:400A jcxz short 0x400D
+F000:400D mov BX,0x0040
+F000:4010 push BX
+F000:4011 popf
+F000:4012 mov CX,0x1234
+F000:4015 mov SI,0x3000
+F000:4018 mov DI,0
+F000:401B mov AX,0xF000
+F000:401E mov DS,AX
+F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+F000:4022 jmp near CX
+F000:4024 mov BX,0x0040
+F000:4027 push BX
+F000:4028 popf
+F000:4029 mov AX,0x0040
+F000:402C repe scas AX,word ptr ES:[DI]
+F000:402E jmp near CX
+F000:4030 mov AX,0x0607
+F000:4033 mov CX,0x5004
+F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+F000:4038 repe scas AX,word ptr ES:[DI]
+F000:403A mov BX,0x0040
+F000:403D push BX
+F000:403E popf
+F000:403F mov SI,0x3000
+F000:4042 mov DI,0
+F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
+F000:4047 repne scas AX,word ptr ES:[DI]
+F000:4049 jmp near CX
+F000:5000 mov CX,2
+F000:5003 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:5005 jcxz short 0x5008
+F000:5008 mov CX,2
+F000:500B rep lods AL,byte ptr DS:[SI]
+F000:500D jcxz short 0x5010
+F000:5010 mov CX,2
+F000:5013 rep stos byte ptr ES:[DI],AL
+F000:5015 jcxz short 0x5018
+F000:5018 mov BX,0
+F000:501B push BX
+F000:501C popf
+F000:501D mov CX,0x6023
+F000:5020 std
+F000:5021 mov DI,6
+F000:5024 mov SI,0x3006
+F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
+F000:5029 mov AX,0x1000
+F000:502C mov BX,0
+F000:502F push BX
+F000:5030 popf
+F000:5031 cld
+F000:5032 repne scas AX,word ptr ES:[DI]
+F000:5034 jmp near CX
+F000:601B mov DX,0
+F000:601E mov DS,DX
+F000:6020 mov word ptr DS:[4],0x1234
+F000:6026 hlt
+F000:F003 jmp near 0x303C
+F000:FFF0 mov SP,0x1000
+F000:FFF3 mov SS,SP
+F000:FFF5 jmp near 0

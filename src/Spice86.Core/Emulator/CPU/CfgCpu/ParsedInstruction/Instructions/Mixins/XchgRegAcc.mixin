@@ -5,6 +5,8 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -18,5 +20,12 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
     public override void Execute(InstructionExecutionHelper helper) {
         (helper.UInt{{Size}}Registers[RegisterIndex], helper.State.{{Accumulator}}) = (helper.State.{{Accumulator}}, helper.UInt{{Size}}Registers[RegisterIndex]);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.XCHG, 
+            builder.Reg(builder.UType({{Size}}), RegisterIndex),
+            builder.Accumulator(builder.UType({{Size}}))
+        );
     }
 }

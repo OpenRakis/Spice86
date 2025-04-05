@@ -2,10 +2,13 @@
 @attribute required string Operation
 @attribute required int Size
 @attribute required bool Assign=true
+@attribute required string Mnemonic=null
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -20,5 +23,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         {{if Assign}}helper.ModRm.R{{Size}} = {{end}}helper.Alu{{Size}}.{{Operation}}(helper.ModRm.R{{Size}}, helper.ModRm.RM{{Size}});
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
+            builder.RToNode(builder.UType({{Size}}), ModRmContext),
+            builder.RmToNode(builder.UType({{Size}}), ModRmContext));
     }
 }

@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
@@ -15,5 +17,9 @@ public class Sahf : CfgInstruction {
         helper.State.ParityFlag = (helper.State.AH & Flags.Parity) == Flags.Parity;
         helper.State.CarryFlag = (helper.State.AH & Flags.Carry) == Flags.Carry;
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.SAHF);
     }
 }

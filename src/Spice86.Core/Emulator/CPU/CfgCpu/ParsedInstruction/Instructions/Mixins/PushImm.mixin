@@ -5,6 +5,8 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -19,5 +21,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{ImmType
     public override void Execute(InstructionExecutionHelper helper) {
         helper.Stack.Push{{Size}}(helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.PUSH, builder.ToNode(ValueField));
     }
 }
