@@ -306,11 +306,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return _validationErrors.ContainsKey(nameof(InterruptNumber));
+            return !_validationErrors.ContainsKey(nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
-            return _validationErrors.ContainsKey(nameof(IoPortNumber));
+            return !_validationErrors.ContainsKey(nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
-            return _validationErrors.ContainsKey(nameof(CyclesValue));
+            return !_validationErrors.ContainsKey(nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
             return
                 !_validationErrors.ContainsKey(nameof(MemoryBreakpointStartAddress)) &&
