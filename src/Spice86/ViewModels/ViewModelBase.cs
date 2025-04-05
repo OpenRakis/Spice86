@@ -99,22 +99,22 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
                 rangeStatus = GetIsMemoryRangeValid(start, end);
             }
         }
-            if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
-            out List<string>? values)) {
-                values = new List<string>();
-                _validationErrors[textBoxBindedPropertyName] = values;
-            } else {
-                values.Clear();
-            }
-            if (!rangeStatus) {
-                values.Add(RangeError);
-            } else if (!statusStart) {
-                values.Add(StartError);
-            } else if (!statusEnd) {
-                values.Add(EndError);
-            }
-            OnErrorsChanged(textBoxBindedPropertyName);
+        if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
+        out List<string>? values)) {
+            values = new List<string>();
+            _validationErrors[textBoxBindedPropertyName] = values;
+        } else {
+            values.Clear();
         }
+        if (!rangeStatus) {
+            values.Add(RangeError);
+        } else if (!statusStart) {
+            values.Add(StartError);
+        } else if (!statusEnd) {
+            values.Add(EndError);
+        }
+        OnErrorsChanged(textBoxBindedPropertyName);
+    }
 
     private static bool TryParseSegmentOrRegister(string value, State state,
             [NotNullWhen(true)] out ushort? @ushort) {

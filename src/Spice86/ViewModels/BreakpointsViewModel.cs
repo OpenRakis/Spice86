@@ -306,17 +306,17 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return !_validationErrors.ContainsKey(nameof(InterruptNumber));
+            return !ScanForValidationErrors(nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
-            return !_validationErrors.ContainsKey(nameof(IoPortNumber));
+            return !ScanForValidationErrors(nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
-            return !_validationErrors.ContainsKey(nameof(CyclesValue));
+            return !ScanForValidationErrors(nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
             return
-                !_validationErrors.ContainsKey(nameof(MemoryBreakpointStartAddress)) &&
-                !_validationErrors.ContainsKey(nameof(MemoryBreakpointEndAddress));
+                !ScanForValidationErrors(nameof(MemoryBreakpointStartAddress)) &&
+                !ScanForValidationErrors(nameof(MemoryBreakpointEndAddress));
         } else if (IsExecutionBreakpointSelected) {
-            return !_validationErrors.ContainsKey(nameof(ExecutionAddressValue));
+            return !ScanForValidationErrors(nameof(ExecutionAddressValue));
         }
         return false;
     }

@@ -98,8 +98,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private string? _startAddress = "0x0";
 
     private bool UpdateBinaryDocumentCanExecute() {
-        return !_validationErrors.ContainsKey(nameof(StartAddress)) &&
-            !_validationErrors.ContainsKey(nameof(EndAddress));
+        return !ScanForValidationErrors(nameof(StartAddress)) &&
+            !ScanForValidationErrors(nameof(EndAddress));
     }
 
     [ObservableProperty]
@@ -196,8 +196,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private bool ConfirmCreateMemoryBreakpointCanExecute() {
         return
-            !_validationErrors.ContainsKey(nameof(MemoryBreakpointStartAddress)) &&
-            !_validationErrors.ContainsKey(nameof(MemoryBreakpointEndAddress));
+            !ScanForValidationErrors(nameof(MemoryBreakpointStartAddress)) &&
+            !ScanForValidationErrors(nameof(MemoryBreakpointEndAddress));
     }
 
 

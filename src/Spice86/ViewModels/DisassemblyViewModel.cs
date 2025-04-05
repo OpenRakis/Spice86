@@ -159,7 +159,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool ConfirmCreateExecutionBreakpointCanExecute() {
         return CreatingExecutionBreakpoint &&
-            !_validationErrors.ContainsKey(nameof(BreakpointAddress));
+            !ScanForValidationErrors(nameof(BreakpointAddress));
     }
 
     private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
@@ -287,7 +287,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     private bool UpdateDisassemblyCommandCanExecute() {
         return IsPaused &&
-            !_validationErrors.ContainsKey(nameof(StartAddress));
+            !ScanForValidationErrors(nameof(StartAddress));
     }
 
     [ObservableProperty]
