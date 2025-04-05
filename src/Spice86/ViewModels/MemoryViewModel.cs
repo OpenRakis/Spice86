@@ -285,7 +285,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [NotifyCanExecuteChangedFor(nameof(GoToFoundOccurenceCommand))]
     private bool _isAddressOfFoundOccurrenceValid;
 
-    [RelayCommand(CanExecute = nameof(IsPaused), FlowExceptionsToTaskScheduler = false, IncludeCancelCommand = true)]
+    [RelayCommand(CanExecute = nameof(IsPaused), FlowExceptionsToTaskScheduler = true, IncludeCancelCommand = true)]
     private async Task SearchMemory(CancellationToken token) {
         if (string.IsNullOrWhiteSpace(MemorySearchValue) || token.IsCancellationRequested) {
             return;
