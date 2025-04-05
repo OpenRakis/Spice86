@@ -9,8 +9,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Newtonsoft.Json;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
