@@ -35,19 +35,20 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
 
     protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
         uint limit = A20Gate.EndOfHighMemoryArea,
-        [CallerMemberName] string? bindedTextBoxPropertyName = null) {
+        [CallerMemberName] string? bindedPropertyName = null) {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(
-            bindedTextBoxPropertyName);
+            bindedPropertyName);
         if (TryParseAddressString(value, state, out uint? address) &&
             !GetIsMemoryRangeValid(address, limit)) {
-            if (!_validationErrors.TryGetValue(bindedTextBoxPropertyName,
+            if (!_validationErrors.TryGetValue(bindedPropertyName,
                 out List<string>? values)) {
                 values = new List<string>();
-                _validationErrors[bindedTextBoxPropertyName] = values;
+                _validationErrors[bindedPropertyName] = values;
             }
             values.Clear();
             values.Add("Value is beyond addressable range");
         }
+        OnErrorsChanged(bindedPropertyName);
     }
 
     protected void ValidateRequiredPropertyIsNotNull<T>(T? value,
