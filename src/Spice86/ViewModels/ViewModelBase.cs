@@ -99,7 +99,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
                 rangeStatus = GetIsMemoryRangeValid(start, end);
             }
         }
-        if (!rangeStatus || !statusStart || !statusEnd) {
             if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
             out List<string>? values)) {
                 values = new List<string>();
@@ -116,7 +115,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             }
             OnErrorsChanged(textBoxBindedPropertyName);
         }
-    }
 
     private static bool TryParseSegmentOrRegister(string value, State state,
             [NotNullWhen(true)] out ushort? @ushort) {
