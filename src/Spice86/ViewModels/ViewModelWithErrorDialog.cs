@@ -13,7 +13,8 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
     protected readonly ITextClipboard _textClipboard;
     protected readonly IUIDispatcher _uiDispatcher;
 
-    protected ViewModelWithErrorDialog(IUIDispatcher uiDispatcher, ITextClipboard textClipboard) {
+    protected ViewModelWithErrorDialog(IUIDispatcher uiDispatcher,
+        ITextClipboard textClipboard) {
         _uiDispatcher = uiDispatcher;
         _textClipboard = textClipboard;
     }

@@ -18,8 +18,6 @@
 		<converters:InstructionToStringConverter x:Key="InstructionToStringConverter" />
 		<converters:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 		<converters:BreakpointToBrushConverter x:Key="BreakpointToBrushConverter" />
-		<converters:AddressStringToLinearMemoryAddressConverter x:Key="AddressStringToLinearMemoryAddressConverter"
-			State="{Binding State}" />
 	</UserControl.Resources>
 	<Grid RowDefinitions="Auto,*">
 		<Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Grid.Row="0"
@@ -53,8 +51,8 @@
 				<Label HorizontalAlignment="Center" Content="Start Address" />
 				<TextBox Name="StartAddressTextBox"
 					Width="150"
-					Text="{Binding StartAddress, Mode=TwoWay,
-						Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus}">
+					Text="{Binding StartAddress, Mode=TwoWay
+						}">
 					<Interaction.Behaviors>
 						<behaviors:UpdateBindingOnEnterBehavior />
 					</Interaction.Behaviors>
@@ -222,7 +220,7 @@
 							<TextBox
 								Text="{Binding BreakpointAddress,
 									Mode=TwoWay,
-									Converter={StaticResource AddressStringToLinearMemoryAddressConverter}, UpdateSourceTrigger=LostFocus
+									
 									}"
 								Watermark="1000:FFFF (example) or like 'cs:ip'"
 								ToolTip.Tip="Hex or linear or segmented address"

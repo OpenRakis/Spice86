@@ -3,6 +3,7 @@ namespace Spice86.Infrastructure;
 using AvaloniaHex.Document;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
@@ -19,6 +20,7 @@ public interface IStructureViewModelFactory {
 public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly Hydrator? _hydrator;
     private readonly Parser? _parser;
+    private readonly State _state;
     private readonly StructurizerSettings _structurizerSettings = new();
     private StructureInformation? _structureInformation;
     private readonly Configuration _configuration;
@@ -27,8 +29,9 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
 
     public event EventHandler? StructureInformationChanged;
 
-    public StructureViewModelFactory(Configuration configuration, ILoggerService logger, IPauseHandler pauseHandler) {
+    public StructureViewModelFactory(Configuration configuration, State state, ILoggerService logger, IPauseHandler pauseHandler) {
         _logger = logger;
+        _state = state;
         _configuration = configuration;
         _pauseHandler = pauseHandler;
 
@@ -50,7 +53,7 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
             throw new InvalidOperationException("Factory not initialized.");
         }
 
-        var viewModel = new StructureViewModel(_structureInformation, _hydrator, data, _pauseHandler);
+        var viewModel = new StructureViewModel(_structureInformation, _state, _hydrator, data, _pauseHandler);
         StructureInformationChanged += viewModel.OnStructureInformationChanged;
 
         return viewModel;

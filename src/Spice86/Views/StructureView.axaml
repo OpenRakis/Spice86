@@ -5,7 +5,6 @@
         xmlns:viewModels="clr-namespace:Spice86.ViewModels"
         xmlns:avaloniaHex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
         xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
-        xmlns:converters="clr-namespace:Spice86.Converters"
         xmlns:types="clr-namespace:Structurizer.Types;assembly=Structurizer"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
@@ -15,9 +14,6 @@
         Title="Structure Viewer"
         Width="1080"
         Height="800">
-    <Window.Resources>
-        <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
-    </Window.Resources>
     <DockPanel Margin="10">
         <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,*" DockPanel.Dock="Top">
             <Label Grid.Column="0" Grid.Row="0"
@@ -29,8 +25,8 @@
             <TextBox
                 Grid.Column="1" Grid.Row="0"
                 IsVisible="{Binding IsAddressableMemory}"
-                Text="{Binding MemoryAddress, Mode=OneWayToSource, Converter={StaticResource SegmentedAddressConverter}}"
-                Watermark="segment:offset" />
+                Text="{Binding MemoryAddress}"
+                Watermark="segment:offset or 0xhex" />
             <Label Grid.Column="0" Grid.Row="1"
                    VerticalAlignment="Center"
                    Margin="0 0 5 0">

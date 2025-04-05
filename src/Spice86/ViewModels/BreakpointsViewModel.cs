@@ -20,18 +20,18 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly State _state;
     private readonly IUIDispatcher _uiDispatcher;
+    private readonly State _state;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IUIDispatcher uiDispatcher) : base() {
+        IUIDispatcher uiDispatcher) {
+        _state = state;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
-        _state = state;
         _uiDispatcher = uiDispatcher;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
@@ -46,7 +46,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
             _mustRemoveSelectedBreakpoint = true;
             switch (SelectedBreakpoint.Type) {
                 case BreakPointType.CPU_EXECUTION_ADDRESS:
-                    ExecutionAddressValue = (uint)SelectedBreakpoint.Address;
+                    ExecutionAddressValue = ConvertUtils.ToHex32((uint)
+                        SelectedBreakpoint.Address);
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
                     break;
                 case BreakPointType.CPU_CYCLES:
@@ -64,7 +65,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 case BreakPointType.MEMORY_ACCESS:
                 case BreakPointType.MEMORY_READ:
                 case BreakPointType.MEMORY_WRITE:
-                    MemoryAddressValue = (uint)SelectedBreakpoint.Address;
+                    MemoryBreakpointEndAddress = MemoryBreakpointStartAddress = ConvertUtils.ToHex32((uint)
+                        SelectedBreakpoint.Address);
+                    if (SelectedBreakpoint is BreakpointRangeViewModel range) {
+                        MemoryBreakpointEndAddress = ConvertUtils.ToHex32((uint)
+                            range.EndTrigger);
+                    }
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
                     break;
@@ -74,7 +80,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     private bool EditSelectedBreakpointCanExecute() => SelectedBreakpoint is not null;
-
 
     public AvaloniaList<BreakpointTypeTabItemViewModel> BreakpointTabs { get; } = new AvaloniaList<BreakpointTypeTabItemViewModel>
     {
@@ -127,24 +132,80 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void BeginCreateBreakpoint() {
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
-        ExecutionAddressValue = MemoryAddressValue = new LinearMemoryAddress(
-            MemoryUtils.ToPhysicalAddress( _state.CS, _state.IP));
+        ExecutionAddressValue = MemoryBreakpointStartAddress = MemoryBreakpointEndAddress =
+            State.IpSegmentedAddress.ToString();
     }
 
-    [ObservableProperty]
     private long? _cyclesValue;
 
-    [ObservableProperty]
-    private LinearMemoryAddress? _executionAddressValue;
+    public long? CyclesValue {
+        get => _cyclesValue;
+        set {
+            if (TryValidateRequiredPropertyIsNotNull(value, out long? validatedValue) &&
+                SetProperty(ref _cyclesValue, validatedValue.Value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
 
-    [ObservableProperty]
-    private LinearMemoryAddress? _memoryAddressValue;
+    private string? _executionAddressValue;
 
-    [ObservableProperty]
+    public string? ExecutionAddressValue {
+        get => _executionAddressValue;
+        set {
+            if (ValidateAddressProperty(value, _state) &&
+                SetProperty(ref _executionAddressValue, value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    private string? _memoryBreakpointStartAddress;
+
+    public string? MemoryBreakpointStartAddress {
+        get => _memoryBreakpointStartAddress;
+        set {
+            if (ValidateAddressProperty(value, _state) &&
+                SetProperty(ref _memoryBreakpointStartAddress, value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    private string? _memoryBreakpointEndAddress;
+
+    public string? MemoryBreakpointEndAddress {
+        get => _memoryBreakpointEndAddress;
+        set {
+            if (SetProperty(ref _memoryBreakpointEndAddress, value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
     private ushort? _ioPortNumber;
 
-    [ObservableProperty]
+    public ushort? IoPortNumber {
+        get => _ioPortNumber;
+        set {
+            if (TryValidateRequiredPropertyIsNotNull(value, out ushort? validatedValue) &&
+                SetProperty(ref _ioPortNumber, validatedValue.Value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
     private int? _interruptNumber;
+
+    public int? InterruptNumber {
+        get => _interruptNumber;
+        set {
+            if (TryValidateRequiredPropertyIsNotNull(value, out int? validatedValue) &&
+                SetProperty(ref _interruptNumber, validatedValue.Value)) {
+                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
 
     [ObservableProperty]
     private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_ACCESS;
@@ -153,33 +214,30 @@ public partial class BreakpointsViewModel : ViewModelBase {
         BreakPointType.MEMORY_ACCESS, BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ
     };
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
         if (IsExecutionBreakpointSelected) {
-            if (ExecutionAddressValue is null) {
+            if (!TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
             BreakpointViewModel executionVm = AddAddressBreakpoint(
-                ExecutionAddressValue.Value,
+                executionAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                 false,
                 () => {
                     PauseAndReportAddress(
-               ExecutionAddressValue.Value);
+               ExecutionAddressValue);
                 }, "Execution breakpoint");
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            if (MemoryAddressValue is null) {
-                return;
+            if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
+                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
+                CreateMemoryBreakpointRangeAtAddresses(memorystartAddress.Value,
+                    memoryEndAddress.Value);
+            } else if (TryParseAddressString(MemoryBreakpointStartAddress, _state,
+                out uint? memoryStartAddressAlone)) {
+                CreateMemoryBreakpointAtAddress(memoryStartAddressAlone.Value);
             }
-            BreakpointViewModel memoryVm = AddAddressBreakpoint(
-               MemoryAddressValue.Value,
-                SelectedMemoryBreakpointType,
-                false,
-                () => {
-                    PauseAndReportAddress(MemoryAddressValue.Value);
-                }, "Memory breakpoint");
-            BreakpointCreated?.Invoke(memoryVm);
         } else if (IsCyclesBreakpointSelected) {
             if (CyclesValue is null) {
                 return;
@@ -221,7 +279,52 @@ public partial class BreakpointsViewModel : ViewModelBase {
         CreatingBreakpoint = false;
     }
 
-    private void PauseAndReportAddress(LinearMemoryAddress address) {
+    internal void CreateMemoryBreakpointAtAddress(uint memoryAddress) {
+        BreakpointViewModel breakpointVm = AddAddressBreakpoint(
+            memoryAddress,
+            SelectedMemoryBreakpointType,
+            false,
+            () => {
+                PauseAndReportAddress(MemoryBreakpointStartAddress);
+            }, "Memory breakpoint");
+        BreakpointCreated?.Invoke(breakpointVm);
+    }
+
+    internal void CreateMemoryBreakpointRangeAtAddresses(uint startAddress, uint endAddress) {
+        BreakpointViewModel breakpointVm = AddAddressRangeBreakpoint(
+            startAddress,
+            endAddress,
+            SelectedMemoryBreakpointType,
+            false,
+            () => {
+                PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
+            }, "Memory breakpoint");
+        BreakpointCreated?.Invoke(breakpointVm);
+    }
+
+    private bool ConfirmBreakpointCreationCanExecute() {
+        if (IsInterruptBreakpointSelected) {
+            return InterruptNumber is not null;
+        } else if (IsIoPortBreakpointSelected) {
+            return IoPortNumber is not null;
+        } else if (IsCyclesBreakpointSelected) {
+            return CyclesValue is not null;
+        } else if (IsMemoryBreakpointSelected) {
+            return
+                TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
+                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
+        } else if (IsExecutionBreakpointSelected) {
+            return TryParseAddressString(ExecutionAddressValue, _state, out uint? _);
+        }
+        return false;
+    }
+
+    private void PauseAndReportAddressRange(string? startAddress, string? endAddress) {
+        string message = $"Execution breakpoint was reached at address range {startAddress} - {endAddress}.";
+        Pause(message);
+    }
+
+    private void PauseAndReportAddress(string? address) {
         string message = $"Execution breakpoint was reached at address {address}.";
         Pause(message);
     }
@@ -289,11 +392,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 removedOnTrigger), on: true);
     }
 
-    private BreakpointViewModel AddBreakpointInternal(BreakpointViewModel breakpointViewModel) {
+    private void AddBreakpointInternal<T>(T breakpointViewModel) where T : BreakpointViewModel {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
         BreakpointCreated?.Invoke(breakpointViewModel);
-        return breakpointViewModel;
     }
 
     public BreakpointViewModel AddAddressBreakpoint(
@@ -307,7 +409,24 @@ public partial class BreakpointsViewModel : ViewModelBase {
                     this,
                     _emulatorBreakpointsManager,
                     trigger, type, isRemovedOnTrigger, onReached, comment);
-        return AddBreakpointInternal(breakpointViewModel);
+        AddBreakpointInternal(breakpointViewModel);
+        return breakpointViewModel;
+    }
+
+    public BreakpointRangeViewModel AddAddressRangeBreakpoint(
+            long trigger,
+            long endTrigger,
+            BreakPointType type,
+            bool isRemovedOnTrigger,
+            Action onReached,
+            string comment = "") {
+        RemoveFirstIfEdited();
+        var breakpointViewModel = new BreakpointRangeViewModel(
+                    this,
+                    _emulatorBreakpointsManager,
+                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, comment);
+        AddBreakpointInternal(breakpointViewModel);
+        return breakpointViewModel;
     }
 
     private void RemoveFirstIfEdited() {

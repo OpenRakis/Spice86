@@ -5,7 +5,9 @@ using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+
 using Iced.Intel;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -19,9 +21,9 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
+    private readonly State _state;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMemory _memory;
-    private readonly State _state;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
@@ -37,13 +39,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         IPauseHandler pauseHandler, IUIDispatcher uiDispatcher,
         IMessenger messenger, ITextClipboard textClipboard, bool canCloseTab = false)
         : base(uiDispatcher, textClipboard) {
+        _state = state;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         AreFunctionInformationProvided = functionsInformation.Count > 0;
         _breakpointsViewModel = breakpointsViewModel;
         _messenger = messenger;
         _memory = memory;
-        _state = state;
         _pauseHandler = pauseHandler;
         _instructionsDecoder = new(memory, state, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
@@ -119,13 +121,22 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [ObservableProperty]
     private bool _creatingExecutionBreakpoint;
 
-    [ObservableProperty]
-    private LinearMemoryAddress? _breakpointAddress;
+    private string? _breakpointAddress;
+
+    public string? BreakpointAddress {
+        get => _breakpointAddress;
+        set {
+            if (ValidateAddressProperty(value, _state) &&
+                SetProperty(ref _breakpointAddress, value)) {
+                ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
 
     [RelayCommand]
     private void BeginCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = true;
-        BreakpointAddress = new(MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP));
+        BreakpointAddress = _state.IpSegmentedAddress.ToString();
     }
 
     [RelayCommand]
@@ -133,17 +144,22 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         CreatingExecutionBreakpoint = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(ConfirmCreateExecutionBreakpointCanExecute))]
     private void ConfirmCreateExecutionBreakpoint() {
         CreatingExecutionBreakpoint = false;
-        if (BreakpointAddress != null) {
+        if (TryParseAddressString(BreakpointAddress, _state, out uint? address)) {
             BreakpointViewModel breakpointViewModel = _breakpointsViewModel.AddAddressBreakpoint(
-                BreakpointAddress.Value,
+                address.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                     isRemovedOnTrigger: false,
-                    () => PauseAndReportAddress(BreakpointAddress.Value));
+                    () => PauseAndReportAddress(address.Value));
             UpdateAssemblyLineIfShown(breakpointViewModel);
         }
+    }
+
+    private bool ConfirmCreateExecutionBreakpointCanExecute() {
+        return CreatingExecutionBreakpoint &&
+            TryParseAddressString(BreakpointAddress, _state, out uint? _);
     }
 
     private void UpdateAssemblyLineIfShown(BreakpointViewModel breakpointViewModel) {
@@ -158,9 +174,17 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [ObservableProperty]
     private int _numberOfInstructionsShown = 50;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
-    private LinearMemoryAddress? _startAddress;
+    private string? _startAddress;
+
+    public string? StartAddress {
+        get => _startAddress;
+        set {
+            if (ValidateAddressProperty(value, _state) &&
+                SetProperty(ref _startAddress, value)) {
+                UpdateDisassemblyCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -216,7 +240,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     private void StepInto() {
         List<CpuInstructionInfo> instructionInfo = _instructionsDecoder.
             DecodeInstructions(_state.IpPhysicalAddress, 1);
-        if(instructionInfo.Count != 0 &&
+        if (instructionInfo.Count != 0 &&
             instructionInfo[0].FlowControl != FlowControl.Next) {
             _didCsIpGoOutOfCurrentListing = true;
         }
@@ -233,7 +257,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         DisassemblyViewModel disassemblyViewModel = new(
             _emulatorBreakpointsManager,
             _memory, _state, _functionsInformation,
-            _breakpointsViewModel, 
+            _breakpointsViewModel,
             _pauseHandler, _uiDispatcher, _messenger,
             _textClipboard, canCloseTab: true) {
             IsPaused = IsPaused
@@ -243,8 +267,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task GoToCsIp() {
-        StartAddress = new(MemoryUtils.ToPhysicalAddress(_state.CS, _state.IP));
-        await GoToAddress(StartAddress.Value);
+        StartAddress = _state.IpSegmentedAddress.ToString();
+        await UpdateDisassembly();
+        SelectedInstruction = Instructions.FirstOrDefault(x => x.Address == _state.IpPhysicalAddress);
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
@@ -254,14 +279,15 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         }
     }
 
-    private async Task GoToAddress(LinearMemoryAddress address) {
-        StartAddress = address;
+    private async Task GoToAddress(uint address) {
+        StartAddress = ConvertUtils.ToHex32(address);
         await UpdateDisassembly();
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
     private bool CanExecuteUpdateDisassembly() {
-        return IsPaused && StartAddress is not null;
+        return IsPaused &&
+            TryParseAddressString(StartAddress, _state, out uint? _);
     }
 
     [ObservableProperty]
@@ -269,8 +295,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
     private async Task UpdateDisassembly() {
-        LinearMemoryAddress? startAddress = StartAddress;
-        if (startAddress is null) {
+        if (!TryParseAddressString(StartAddress, _state, out uint? startAddress)) {
             return;
         }
         Instructions.Clear();
@@ -352,6 +377,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     }
 
     private bool CreateExecutionBreakpointHereCanExecute() =>
+        IsPaused &&
         SelectedInstruction?.Breakpoint is not { Type: BreakPointType.CPU_EXECUTION_ADDRESS };
 
     [RelayCommand(CanExecute = nameof(CreateExecutionBreakpointHereCanExecute))]
