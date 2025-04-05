@@ -143,9 +143,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? Scale {
         get => _scale;
         set {
-            if(TryValidateRequiredPropertyIsNotNull(value, out double? validatedValue)) {
-                SetProperty(ref _scale, Math.Max(validatedValue.Value, 1));
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _scale, Math.Max(value ?? 0, 1));
         }
     }
 
@@ -260,10 +259,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out double? validatedValue)) {
-                _validationErrors.Clear();
-                SetProperty(ref _timeMultiplier, validatedValue.Value);
-                _pit?.SetTimeMultiplier(validatedValue.Value);
+            ValidateRequiredPropertyIsNotNull(value);
+            _validationErrors.Clear();
+            SetProperty(ref _timeMultiplier, value);
+            if (value is not null) {
+                _pit?.SetTimeMultiplier(value.Value);
             }
         }
     }

@@ -126,10 +126,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? BreakpointAddress {
         get => _breakpointAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _breakpointAddress, value)) {
-                ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _breakpointAddress, value);
+            ConfirmCreateExecutionBreakpointCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -179,10 +178,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _startAddress, value)) {
-                UpdateDisassemblyCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _startAddress, value);
+            UpdateDisassemblyCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -285,7 +283,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
         SelectedInstruction = Instructions.FirstOrDefault();
     }
 
-    private bool CanExecuteUpdateDisassembly() {
+    private bool UpdateDisassemblyCommandCanExecute() {
         return IsPaused &&
             TryParseAddressString(StartAddress, _state, out uint? _);
     }
@@ -293,7 +291,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog {
     [ObservableProperty]
     private bool _isLoading;
 
-    [RelayCommand(CanExecute = nameof(CanExecuteUpdateDisassembly))]
+    [RelayCommand(CanExecute = nameof(UpdateDisassemblyCommandCanExecute))]
     private async Task UpdateDisassembly() {
         if (!TryParseAddressString(StartAddress, _state, out uint? startAddress)) {
             return;

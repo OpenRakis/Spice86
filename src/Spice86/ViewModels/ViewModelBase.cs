@@ -32,18 +32,14 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             propertyName));
     }
 
-    protected bool TryValidateRequiredPropertyIsNotNull<T>(
-        T? value, [NotNullWhen(true)] out T? validatedValue,
-            [CallerMemberName] string? bindedPropertyName = null) {
+    protected void ValidateRequiredPropertyIsNotNull<T>(T? value,
+        [CallerMemberName] string? bindedPropertyName = null) {
         if (string.IsNullOrWhiteSpace(bindedPropertyName)) {
-            validatedValue = default;
-            return false;
+            return;
         }
         if (value is not null ||
             value is string stringValue && !string.IsNullOrWhiteSpace(
                 stringValue)) {
-            validatedValue = value;
-            return true;
         }
         if (!_validationErrors.TryGetValue(bindedPropertyName, out List<string>? values)) {
             _validationErrors.Add(bindedPropertyName, ["This field is required."]);
@@ -52,8 +48,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             values.Add("This field is required.");
         }
         OnErrorsChanged(bindedPropertyName);
-        validatedValue = default;
-        return false;
     }
 
     protected bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress) {
@@ -93,7 +87,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             }
             OnErrorsChanged(textBoxBindedPropertyName);
         }
-        return rangeStatus && statusStart && statusEnd;
+        return statusStart && statusEnd && rangeStatus;
     }
 
     private static bool TryParseSegmentOrRegister(string value, State state,
@@ -141,10 +135,10 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         return true;
     }
 
-    protected bool ValidateAddressProperty(object? value, State state, [CallerMemberName]
+    protected void ValidateAddressProperty(object? value, State state, [CallerMemberName]
         string? propertyName = null) {
         if (string.IsNullOrWhiteSpace(propertyName)) {
-            return false;
+            return;
         }
 
         bool status = TryValidateAddress(value as string, state, out string? error);
@@ -160,13 +154,13 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             _validationErrors.Remove(propertyName);
         }
         OnErrorsChanged(propertyName);
-        return status;
     }
 
     /// <summary>
     /// Tries to parse the address string into a uint address.
     /// </summary>
     /// <param name="value">The user input.</param>
+    /// <param name="state">The emulated CPU registers and flags.</param>
     /// <param name="address">The parsed address. <c>null</c> if we return <c>false</c></param>
     /// <returns>A boolean value indicating success or error, along with the address out variable.</returns>
     protected static bool TryParseAddressString(string? value, State state, [NotNullWhen(true)] out uint? address) {

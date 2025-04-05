@@ -115,16 +115,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressRange(_state,value, EndAddress,
-                nameof(StartAddress))) {
-                IsMemoryRangeValid = true;
-                if (SetProperty(ref _startAddress, value)) {
-                    TryUpdateHeaderAndMemoryDocument();
-                }
-            } else {
-                IsMemoryRangeValid = false;
-                DataMemoryDocument = null;
+            ValidateAddressRange(_state, value, EndAddress,
+                nameof(StartAddress));
+            IsMemoryRangeValid = true;
+            if (SetProperty(ref _startAddress, value)) {
+                TryUpdateHeaderAndMemoryDocument();
             }
+            IsMemoryRangeValid = false;
+            DataMemoryDocument = null;
         }
     }
 
@@ -186,10 +184,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _memoryBreakpointStartAddress, value)) {
-                ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _memoryBreakpointStartAddress, value);
+            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -211,9 +208,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void ConfirmCreateMemoryBreakpoint() {
         if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress) &&
             TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress)) {
-                _breakpointsViewModel.CreateMemoryBreakpointRangeAtAddresses(
-                    breakpointRangeStartAddress.Value,
-                    breakpointRangeEndAddress.Value);
+            _breakpointsViewModel.CreateMemoryBreakpointRangeAtAddresses(
+                breakpointRangeStartAddress.Value,
+                breakpointRangeEndAddress.Value);
         } else if (breakpointRangeStartAddress != null) {
             _breakpointsViewModel.CreateMemoryBreakpointAtAddress(breakpointRangeStartAddress.Value);
         }
@@ -449,9 +446,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? MemoryEditAddress {
         get => _memoryEditAddress;
         set {
-            if (ValidateAddressProperty(value, _state)) {
-                SetProperty(ref _memoryEditAddress, value);
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _memoryEditAddress, value);
         }
     }
 

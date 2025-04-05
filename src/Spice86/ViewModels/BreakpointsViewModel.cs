@@ -141,10 +141,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public long? CyclesValue {
         get => _cyclesValue;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out long? validatedValue) &&
-                SetProperty(ref _cyclesValue, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _cyclesValue, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -153,10 +152,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? ExecutionAddressValue {
         get => _executionAddressValue;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _executionAddressValue, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _executionAddressValue, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -165,10 +163,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _memoryBreakpointStartAddress, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            SetProperty(ref _memoryBreakpointStartAddress, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -188,10 +185,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public ushort? IoPortNumber {
         get => _ioPortNumber;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out ushort? validatedValue) &&
-                SetProperty(ref _ioPortNumber, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _ioPortNumber, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -200,10 +196,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public int? InterruptNumber {
         get => _interruptNumber;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out int? validatedValue) &&
-                SetProperty(ref _interruptNumber, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _interruptNumber, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
