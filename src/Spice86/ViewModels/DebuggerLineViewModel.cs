@@ -77,62 +77,6 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     /// </summary>
     public List<FormattedTextSegment> DisassemblySegments { get; private set; } = [];
 
-    public void ApplyCpuState() {
-        // Initialize WillJump to null for non-conditional branches
-        WillJump = null;
-
-        if (_info.FlowControl == FlowControl.ConditionalBranch) {
-            WillJump = _info.ConditionCode switch {
-                ConditionCode.None => false,
-                ConditionCode.o => _cpuState.OverflowFlag,
-                ConditionCode.no => !_cpuState.OverflowFlag,
-                ConditionCode.b => _cpuState.CarryFlag,
-                ConditionCode.ae => !_cpuState.CarryFlag,
-                ConditionCode.e => _cpuState.ZeroFlag,
-                ConditionCode.ne => !_cpuState.ZeroFlag,
-                ConditionCode.be => _cpuState.CarryFlag || _cpuState.ZeroFlag,
-                ConditionCode.a => !_cpuState.CarryFlag && !_cpuState.ZeroFlag,
-                ConditionCode.s => _cpuState.SignFlag,
-                ConditionCode.ns => !_cpuState.SignFlag,
-                ConditionCode.p => _cpuState.ParityFlag,
-                ConditionCode.np => !_cpuState.ParityFlag,
-                ConditionCode.l => _cpuState.SignFlag != _cpuState.OverflowFlag,
-                ConditionCode.ge => _cpuState.SignFlag == _cpuState.OverflowFlag,
-                ConditionCode.le => _cpuState.ZeroFlag || _cpuState.SignFlag != _cpuState.OverflowFlag,
-                ConditionCode.g => !_cpuState.ZeroFlag && _cpuState.SignFlag == _cpuState.OverflowFlag,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            if (WillJump.HasValue && WillJump.Value) {
-                if (_info.IsJccShortOrNear) {
-                    // If the instruction is a conditional branch, calculate the next address based on the jump target
-                    ushort segment = _cpuState.CS;
-                    uint offset = (uint)_info.NearBranchTarget;
-                    NextAddress = (uint)((segment << 4) + offset);
-                }
-            }
-        } else if (_info.FlowControl == FlowControl.UnconditionalBranch) {
-            // If the instruction is an unconditional branch, set the next address to the target address
-            if (_info.IsJmpShortOrNear) {
-                ushort segment = _cpuState.CS;
-                uint offset = (uint)_info.NearBranchTarget;
-                NextAddress = (uint)((segment << 4) + offset);
-            } else if (_info.IsJmpFar) {
-                Console.WriteLine("***** DEBUG *****");
-                Console.WriteLine("Far jump detected");
-                Console.WriteLine(JsonSerializer.Serialize(_info));
-                Console.WriteLine("****************");
-            }
-        }
-    }
-
-    /// <summary>
-    ///     Updates the IsCurrentInstruction property based on the current CPU state.
-    /// </summary>
-    public void UpdateIsCurrentInstruction() {
-        bool newValue = Address == _cpuState.IpPhysicalAddress;
-        IsCurrentInstruction = newValue;
-    }
-
     /// <summary>
     ///     Generates a formatted representation of the disassembly with syntax highlighting.
     /// </summary>

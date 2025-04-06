@@ -36,24 +36,24 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
         SegmentedAddress currentAddress = State.IpSegmentedAddress;
         DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
 
-        // if (!debuggerLine.CanBeSteppedOver) {
-        //     _logger.Debug("Setting unconditional breakpoint for step over");
-        //
-        //     _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
-        //         Pause("Step over unconditional breakpoint was reached");
-        //         _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
-        //     }, true);
-        //
-        //     _logger.Debug("Resuming execution for step over");
-        //     _pauseHandler.Resume();
-        //
-        //     return;
-        // }
+        if (!debuggerLine.CanBeSteppedOver) {
+            _logger.Debug("Setting unconditional breakpoint for step over");
+
+            _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
+                Pause("Step over unconditional breakpoint was reached");
+                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
+            }, true);
+
+            _logger.Debug("Resuming execution for step over");
+            _pauseHandler.Resume();
+
+            return;
+        }
 
         uint nextInstructionAddress = debuggerLine.NextAddress;
 
         _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
-            Pause($"Step over execution breakpoint was reached at address {nextInstructionAddress}");
+            Pause($"Step over execution breakpoint was reached");
             _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
         }, "Step over breakpoint");
 

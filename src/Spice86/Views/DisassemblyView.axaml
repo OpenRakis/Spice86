@@ -21,7 +21,6 @@
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextSegmentsConverter x:Key="FormattedTextSegmentsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
-            <converters:JumpIndicatorConverter x:Key="JumpIndicatorConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -173,7 +172,7 @@
                                 </Style>
                             </ContentControl.Styles>
 
-                            <Grid ColumnDefinitions="Auto, Auto, *,4*,Auto,2*" Margin="0">
+                            <Grid ColumnDefinitions="Auto, Auto, *,4*,2*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
                                         Width="16"
@@ -210,20 +209,6 @@
                                 <SelectableTextBlock Grid.Column="3"
                                                      Inlines="{Binding DisassemblySegments, Converter={StaticResource FormattedTextSegmentsConverter}}"
                                                      Margin="12,0,0,0" />
-
-                                <!-- Jump Indicator -->
-                                <Border Grid.Column="4"
-                                        IsVisible="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=visibility}"
-                                        Background="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=color}"
-                                        CornerRadius="2"
-                                        Padding="3,0"
-                                        Margin="8,0"
-                                        VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding WillJump, Converter={StaticResource JumpIndicatorConverter}, ConverterParameter=text}"
-                                               FontSize="10"
-                                               FontWeight="Bold"
-                                               Foreground="Black" />
-                                </Border>
 
                                 <!-- Function Name -->
                                 <SelectableTextBlock Grid.Column="5"

@@ -278,8 +278,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
         _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
 
-        DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentInstructionAddress);
-        debuggerLine.ApplyCpuState();
+        EnsureAddressIsLoaded(currentInstructionAddress);
 
         // Set the current instruction address to trigger the view to scroll to it
         CurrentInstructionAddress = currentInstructionAddress;
