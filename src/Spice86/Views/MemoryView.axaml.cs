@@ -1,6 +1,7 @@
 namespace Spice86.Views;
 
 using Avalonia.Controls;
+using Avalonia.Input;
 
 using AvaloniaHex;
 
@@ -12,6 +13,15 @@ public partial class MemoryView : UserControl {
         // Subscribe to the DataContextChanged event to ensure that the ViewModel's event handler
         // is connected to the HexEditor's Selection.RangeChanged event after the DataContext is set.
         DataContextChanged += OnDataContextChanged;
+
+        this.HexViewer.DoubleTapped += OnHexViewerDoubleTapped;
+    }
+
+    private void OnHexViewerDoubleTapped(object? sender, TappedEventArgs e) {
+        if(DataContext is MemoryViewModel viewModel &&
+            viewModel.EditMemoryCommand.CanExecute(null)) {
+            viewModel.EditMemoryCommand.Execute(null);
+        }
     }
 
     /// <summary>

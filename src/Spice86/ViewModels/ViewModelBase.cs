@@ -3,6 +3,7 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Collections;
@@ -32,18 +33,33 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             propertyName));
     }
 
-    protected bool TryValidateRequiredPropertyIsNotNull<T>(
-        T? value, [NotNullWhen(true)] out T? validatedValue,
-            [CallerMemberName] string? bindedPropertyName = null) {
+    protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
+        uint limit = A20Gate.EndOfHighMemoryArea,
+        [CallerMemberName] string? bindedPropertyName = null) {
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(
+            bindedPropertyName);
+        if (TryParseAddressString(value, state, out uint? address) &&
+            !GetIsMemoryRangeValid(address, limit)) {
+            if (!_validationErrors.TryGetValue(bindedPropertyName,
+                out List<string>? values)) {
+                values = new List<string>();
+                _validationErrors[bindedPropertyName] = values;
+            }
+            values.Clear();
+            values.Add("Value is beyond addressable range");
+        }
+        OnErrorsChanged(bindedPropertyName);
+    }
+
+    protected void ValidateRequiredPropertyIsNotNull<T>(T? value,
+        [CallerMemberName] string? bindedPropertyName = null) {
         if (string.IsNullOrWhiteSpace(bindedPropertyName)) {
-            validatedValue = default;
-            return false;
+            return;
         }
         if (value is not null ||
-            value is string stringValue && !string.IsNullOrWhiteSpace(
-                stringValue)) {
-            validatedValue = value;
-            return true;
+            (value is string stringValue && !string.IsNullOrWhiteSpace(
+                stringValue))) {
+            return;
         }
         if (!_validationErrors.TryGetValue(bindedPropertyName, out List<string>? values)) {
             _validationErrors.Add(bindedPropertyName, ["This field is required."]);
@@ -52,8 +68,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             values.Add("This field is required.");
         }
         OnErrorsChanged(bindedPropertyName);
-        validatedValue = default;
-        return false;
     }
 
     protected bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress) {
@@ -61,7 +75,17 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         && endAddress >= startAddress;
     }
 
-    protected bool ValidateAddressRange(State state, string? startAddress,
+    protected bool ScanForValidationErrors(params string[] properties) {
+        foreach (string property in properties) {
+            _validationErrors.TryGetValue(property, out List<string>? values);
+            if (values?.Count > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected void ValidateAddressRange(State state, string? startAddress,
         string? endAddress, string textBoxBindedPropertyName) {
         const string RangeError = "Invalid address range.";
         const string StartError = "Invalid start address.";
@@ -75,25 +99,21 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
                 rangeStatus = GetIsMemoryRangeValid(start, end);
             }
         }
-        if (!rangeStatus || !statusStart || !statusEnd) {
-            if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
-            out List<string>? values)) {
-                values = new List<string>();
-                _validationErrors[nameof(textBoxBindedPropertyName)] = values;
-            }
+        if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,
+        out List<string>? values)) {
+            values = new List<string>();
+            _validationErrors[textBoxBindedPropertyName] = values;
+        } else {
             values.Clear();
-            if (!rangeStatus) {
-                values.Add(RangeError);
-            }
-            if (!statusStart) {
-                values.Add(StartError);
-            }
-            if (!statusEnd) {
-                values.Add(EndError);
-            }
-            OnErrorsChanged(textBoxBindedPropertyName);
         }
-        return rangeStatus && statusStart && statusEnd;
+        if (!rangeStatus) {
+            values.Add(RangeError);
+        } else if (!statusStart) {
+            values.Add(StartError);
+        } else if (!statusEnd) {
+            values.Add(EndError);
+        }
+        OnErrorsChanged(textBoxBindedPropertyName);
     }
 
     private static bool TryParseSegmentOrRegister(string value, State state,
@@ -141,32 +161,32 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         return true;
     }
 
-    protected bool ValidateAddressProperty(object? value, State state, [CallerMemberName]
+    protected void ValidateAddressProperty(object? value, State state, [CallerMemberName]
         string? propertyName = null) {
         if (string.IsNullOrWhiteSpace(propertyName)) {
-            return false;
+            return;
         }
 
         bool status = TryValidateAddress(value as string, state, out string? error);
         if (!status) {
             if (!_validationErrors.TryGetValue(propertyName,
                 out List<string>? values)) {
-                values = new List<string>();
-                _validationErrors[propertyName] = values;
+                _validationErrors[propertyName] = [error];
+            } else {
+                values.Clear();
+                values.Add(error);
             }
-            values.Clear();
-            values.Add(error);
         } else {
             _validationErrors.Remove(propertyName);
         }
         OnErrorsChanged(propertyName);
-        return status;
     }
 
     /// <summary>
     /// Tries to parse the address string into a uint address.
     /// </summary>
     /// <param name="value">The user input.</param>
+    /// <param name="state">The emulated CPU registers and flags.</param>
     /// <param name="address">The parsed address. <c>null</c> if we return <c>false</c></param>
     /// <returns>A boolean value indicating success or error, along with the address out variable.</returns>
     protected static bool TryParseAddressString(string? value, State state, [NotNullWhen(true)] out uint? address) {

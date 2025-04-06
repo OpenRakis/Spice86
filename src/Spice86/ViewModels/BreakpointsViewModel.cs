@@ -141,10 +141,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public long? CyclesValue {
         get => _cyclesValue;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out long? validatedValue) &&
-                SetProperty(ref _cyclesValue, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _cyclesValue, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -153,10 +152,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? ExecutionAddressValue {
         get => _executionAddressValue;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _executionAddressValue, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _executionAddressValue, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -165,10 +164,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _memoryBreakpointStartAddress, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            ValidateAddressRange(_state, value,
+                MemoryBreakpointEndAddress, nameof(MemoryBreakpointStartAddress));
+            SetProperty(ref _memoryBreakpointStartAddress, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -177,9 +178,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointEndAddress {
         get => _memoryBreakpointEndAddress;
         set {
-            if (SetProperty(ref _memoryBreakpointEndAddress, value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            ValidateAddressRange(_state, MemoryBreakpointStartAddress,
+                value, nameof(MemoryBreakpointEndAddress));
+            SetProperty(ref _memoryBreakpointEndAddress, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -188,10 +192,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public ushort? IoPortNumber {
         get => _ioPortNumber;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out ushort? validatedValue) &&
-                SetProperty(ref _ioPortNumber, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _ioPortNumber, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -200,10 +203,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public int? InterruptNumber {
         get => _interruptNumber;
         set {
-            if (TryValidateRequiredPropertyIsNotNull(value, out int? validatedValue) &&
-                SetProperty(ref _interruptNumber, validatedValue.Value)) {
-                ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-            }
+            ValidateRequiredPropertyIsNotNull(value);
+            SetProperty(ref _interruptNumber, value);
+            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -304,17 +306,17 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
-            return InterruptNumber is not null;
+            return !ScanForValidationErrors(nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
-            return IoPortNumber is not null;
+            return !ScanForValidationErrors(nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
-            return CyclesValue is not null;
+            return !ScanForValidationErrors(nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
             return
-                TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
-                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
+                !ScanForValidationErrors(nameof(MemoryBreakpointStartAddress)) &&
+                !ScanForValidationErrors(nameof(MemoryBreakpointEndAddress));
         } else if (IsExecutionBreakpointSelected) {
-            return TryParseAddressString(ExecutionAddressValue, _state, out uint? _);
+            return !ScanForValidationErrors(nameof(ExecutionAddressValue));
         }
         return false;
     }

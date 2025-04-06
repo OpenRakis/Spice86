@@ -1,7 +1,5 @@
 ﻿namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using AvaloniaHex.Document;
 using AvaloniaHex.Editing;
 
@@ -61,9 +59,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             EndAddress = ConvertUtils.ToHex32(_memory.Length);
         }
         CanCloseTab = canCloseTab;
-        IsMemoryRangeValid = GetIsMemoryRangeValid(
-            startAddressValue.HasValue ? startAddressValue.Value : 0,
-            endAddressValue.HasValue ? endAddressValue.Value : _memory.Length);
         TryUpdateHeaderAndMemoryDocument();
     }
     public State State => _state;
@@ -100,10 +95,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private string? _startAddress = "0x0";
 
-    [NotifyCanExecuteChangedFor(nameof(UpdateBinaryDocumentCommand))]
-    [NotifyCanExecuteChangedFor(nameof(DumpMemoryCommand))]
-    [ObservableProperty]
-    private bool _isMemoryRangeValid;
+    private bool UpdateBinaryDocumentCanExecute() {
+        return !ScanForValidationErrors(nameof(StartAddress)) &&
+            !ScanForValidationErrors(nameof(EndAddress));
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CloseTabCommand))]
@@ -115,23 +110,19 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? StartAddress {
         get => _startAddress;
         set {
-            if (ValidateAddressRange(_state,value, EndAddress,
-                nameof(StartAddress))) {
-                IsMemoryRangeValid = true;
-                if (SetProperty(ref _startAddress, value)) {
-                    TryUpdateHeaderAndMemoryDocument();
-                }
-            } else {
-                IsMemoryRangeValid = false;
-                DataMemoryDocument = null;
-            }
+            ValidateAddressRange(_state, value, EndAddress,
+                nameof(StartAddress));
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _startAddress, value);
+            UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
+            TryUpdateHeaderAndMemoryDocument();
         }
     }
 
     private void TryUpdateHeaderAndMemoryDocument() {
-        Header = $"{StartAddress:X} - {EndAddress:X}";
         if (UpdateBinaryDocumentCommand.CanExecute(null)) {
             UpdateBinaryDocumentCommand.Execute(null);
+            Header = $"{StartAddress:X} - {EndAddress:X}";
         }
     }
 
@@ -140,16 +131,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? EndAddress {
         get => _endAddress;
         set {
-            if (ValidateAddressRange(_state, StartAddress, value,
-                nameof(EndAddress))) {
-                IsMemoryRangeValid = true;
-                if (SetProperty(ref _endAddress, value)) {
-                    TryUpdateHeaderAndMemoryDocument();
-                }
-            } else {
-                IsMemoryRangeValid = false;
-                DataMemoryDocument = null;
-            }
+            ValidateAddressRange(_state, StartAddress, value,
+                nameof(EndAddress));
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _endAddress, value);
+            UpdateBinaryDocumentCommand.NotifyCanExecuteChanged();
+            TryUpdateHeaderAndMemoryDocument();
         }
     }
 
@@ -177,19 +164,24 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? MemoryBreakpointEndAddress {
         get => _memoryBreakpointEndAddress;
         set {
-            if (SetProperty(ref _memoryBreakpointEndAddress, value)) {
-                ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateAddressRange(_state, MemoryBreakpointEndAddress, value,
+                nameof(MemoryBreakpointEndAddress));
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _memoryBreakpointEndAddress, value);
+            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
         }
     }
 
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            if (ValidateAddressProperty(value, _state) &&
-                SetProperty(ref _memoryBreakpointStartAddress, value)) {
-                ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateAddressRange(_state, value, MemoryBreakpointEndAddress,
+                nameof(MemoryBreakpointStartAddress));
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _memoryBreakpointStartAddress, value);
+            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -202,18 +194,19 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private bool ConfirmCreateMemoryBreakpointCanExecute() {
         return
-            TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? _) &&
-            TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? _);
+            !ScanForValidationErrors(nameof(MemoryBreakpointStartAddress)) &&
+            !ScanForValidationErrors(nameof(MemoryBreakpointEndAddress));
     }
 
 
     [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {
         if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress) &&
-            TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress)) {
-                _breakpointsViewModel.CreateMemoryBreakpointRangeAtAddresses(
-                    breakpointRangeStartAddress.Value,
-                    breakpointRangeEndAddress.Value);
+            TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress) &&
+            GetIsMemoryRangeValid(breakpointRangeStartAddress, breakpointRangeEndAddress)) {
+            _breakpointsViewModel.CreateMemoryBreakpointRangeAtAddresses(
+                breakpointRangeStartAddress.Value,
+                breakpointRangeEndAddress.Value);
         } else if (breakpointRangeStartAddress != null) {
             _breakpointsViewModel.CreateMemoryBreakpointAtAddress(breakpointRangeStartAddress.Value);
         }
@@ -288,7 +281,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [NotifyCanExecuteChangedFor(nameof(GoToFoundOccurenceCommand))]
     private bool _isAddressOfFoundOccurrenceValid;
 
-    [RelayCommand(CanExecute = nameof(IsPaused), FlowExceptionsToTaskScheduler = false, IncludeCancelCommand = true)]
+    [RelayCommand(CanExecute = nameof(IsPaused), FlowExceptionsToTaskScheduler = true, IncludeCancelCommand = true)]
     private async Task SearchMemory(CancellationToken token) {
         if (string.IsNullOrWhiteSpace(MemorySearchValue) || token.IsCancellationRequested) {
             return;
@@ -420,11 +413,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _messenger.Send(new AddViewModelMessage<MemoryViewModel>(memoryViewModel));
     }
 
-    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
+    [RelayCommand(CanExecute = nameof(UpdateBinaryDocumentCanExecute))]
     private void UpdateBinaryDocument() {
         if (!TryParseAddressString(StartAddress, _state, out uint? startAddress) ||
             !TryParseAddressString(EndAddress, _state, out uint? endAddress) ||
-            !IsMemoryRangeValid) {
+            !GetIsMemoryRangeValid(startAddress, endAddress)) {
             return;
         }
         DataMemoryDocument = new DataMemoryDocument(_memory,
@@ -433,10 +426,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private void OnMemoryReadInvalidOperation(Exception exception) {
-        Dispatcher.UIThread.Post(() => ShowError(exception));
+        _uiDispatcher.Post(() => ShowError(exception));
     }
 
-    [RelayCommand(CanExecute = nameof(IsMemoryRangeValid))]
+    [RelayCommand]
     private async Task DumpMemory() {
         await _storageProvider.SaveBinaryFile(_memoryDataExporter.GenerateToolingCompliantRamDump());
     }
@@ -449,23 +442,63 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public string? MemoryEditAddress {
         get => _memoryEditAddress;
         set {
-            if (ValidateAddressProperty(value, _state)) {
-                SetProperty(ref _memoryEditAddress, value);
-            }
+            ValidateAddressProperty(value, _state);
+            ValidateMemoryAddressIsWithinLimit(_state, value);
+            SetProperty(ref _memoryEditAddress, value);
+            ApplyMemoryEditCommand.NotifyCanExecuteChanged();
         }
     }
 
-    [ObservableProperty]
     private string? _memoryEditValue = "";
+
+    public string? MemoryEditValue {
+        get => _memoryEditValue;
+        set {
+            ValidateMemoryEditValue(value);
+            SetProperty(ref _memoryEditValue, value);
+            ApplyMemoryEditCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void ValidateMemoryEditValue(string? value) {
+        string error = string.Empty;
+        if (string.IsNullOrWhiteSpace(value)) {
+            error = "This field is required";
+        } else if(!value.StartsWith("0x")) {
+            error = "Hex must start with 0x";
+        } else if (value.Length > 2 &&
+            !ConvertUtils.TryParseHexToByteArray(value[2..], out byte[]? _)) {
+            error = "Hex number could not be parsed";
+        }
+        if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
+            if(!string.IsNullOrWhiteSpace(error)) {
+                _validationErrors.Add(nameof(MemoryEditValue), [error]);
+            }
+        } else {
+            values.Clear();
+            if (!string.IsNullOrWhiteSpace(error)) {
+                values.Add(error);
+            }
+        }
+        OnErrorsChanged(nameof(MemoryEditValue));
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void EditMemory() {
         IsEditingMemory = true;
         try {
-            if (TryParseAddressString(MemoryEditAddress, _state, out uint? address)) {
-                MemoryEditValue = Convert.ToHexString(_memory.ReadRam(
-                    (uint)(MemoryEditValue?.Length ?? sizeof(ushort)),
-                        address.Value));
+            if (TryParseAddressString(StartAddress, _state,
+                out uint? startAddress)) {
+                if(TryParseAddressString(SelectionRangeStartAddress, _state,
+                    out uint? selectionRangeStartAddress)) {
+                    startAddress = Math.Max(startAddress.Value, selectionRangeStartAddress.Value);
+                }
+                MemoryEditAddress = ConvertUtils.ToHex32(startAddress.Value);
+            }
+            if (TryParseAddressString(MemoryEditAddress, _state,
+                out uint? address)) {
+                uint range  = (uint)Math.Min(SelectionRange?.ByteLength ?? 0, sizeof(ulong));
+                MemoryEditValue = $"0x{Convert.ToHexString(_memory.ReadRam(range, address.Value))}";
             }
         } catch (Exception e) {
             ShowError(e);
@@ -475,18 +508,31 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void CancelMemoryEdit() => IsEditingMemory = false;
 
-    [RelayCommand]
+    private bool ApplyMemoryEditCanExecute() {
+        return !ScanForValidationErrors(nameof(MemoryEditValue),
+            nameof(MemoryEditAddress)) &&
+            IsPaused;
+    }
+
+    [RelayCommand(CanExecute = nameof(ApplyMemoryEditCanExecute))]
     private void ApplyMemoryEdit() {
-        if (MemoryEditValue is null ||
-            !long.TryParse(MemoryEditValue, NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out long value)) {
+        if(string.IsNullOrWhiteSpace(MemoryEditValue)) {
+            return;
+        }
+        string memoryEditValue = MemoryEditValue;
+        if (MemoryEditValue.Length > 2 && MemoryEditValue.StartsWith("0x")) {
+            memoryEditValue = MemoryEditValue[2..];
+        }
+        if (!TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
+            !GetIsMemoryRangeValid(address, A20Gate.EndOfHighMemoryArea) ||
+            !ConvertUtils.TryParseHexToByteArray(memoryEditValue, out byte[]? bytes)) {
             return;
         }
         try {
-            if (TryParseAddressString(MemoryEditAddress, _state, out uint? address)) {
-                DataMemoryDocument?.WriteBytes(address.Value, BitConverter.GetBytes(value));
-            }
-        } catch (IndexOutOfRangeException e) {
+
+            DataMemoryDocument?.WriteBytes(address.Value, bytes);
+            TryUpdateHeaderAndMemoryDocument();
+        } catch (Exception e) {
             ShowError(e);
             MemoryEditValue = null;
             MemoryEditAddress = null;
