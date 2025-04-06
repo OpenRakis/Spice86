@@ -39,7 +39,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         ArgumentNullException.ThrowIfNullOrWhiteSpace(
             bindedPropertyName);
         if (TryParseAddressString(value, state, out uint? address) &&
-            !GetIsMemoryRangeValid(address, limit)) {
+            !GetIsMemoryRangeValid(address, limit, 0)) {
             if (!_validationErrors.TryGetValue(bindedPropertyName,
                 out List<string>? values)) {
                 values = new List<string>();
@@ -70,9 +70,11 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         OnErrorsChanged(bindedPropertyName);
     }
 
-    protected bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress) {
-        return startAddress <= endAddress
-        && endAddress >= startAddress;
+    protected bool GetIsMemoryRangeValid(uint? startAddress, uint? endAddress, uint minRangeWidth) {
+        if (startAddress is null || endAddress is null) {
+            return false;
+        }
+        return Math.Abs(endAddress.Value - startAddress.Value) >= minRangeWidth;
     }
 
     protected bool ScanForValidationErrors(params string[] properties) {
@@ -86,7 +88,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
     }
 
     protected void ValidateAddressRange(State state, string? startAddress,
-        string? endAddress, string textBoxBindedPropertyName) {
+        string? endAddress, uint minRangeWidth, string textBoxBindedPropertyName) {
         const string RangeError = "Invalid address range.";
         const string StartError = "Invalid start address.";
         const string EndError = "Invalid end address.";
@@ -96,7 +98,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         if (statusStart && statusEnd) {
             if (TryParseAddressString(startAddress, state, out uint? start) &&
                 TryParseAddressString(endAddress, state, out uint? end)) {
-                rangeStatus = GetIsMemoryRangeValid(start, end);
+                rangeStatus = GetIsMemoryRangeValid(start, end, minRangeWidth);
             }
         }
         if (!_validationErrors.TryGetValue(textBoxBindedPropertyName,

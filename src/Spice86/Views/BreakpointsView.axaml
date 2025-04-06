@@ -4,16 +4,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-             xmlns:converters="clr-namespace:Spice86.Converters"
 			 xmlns:behaviors="clr-namespace:Spice86.Behaviors"
              xmlns:controls="clr-namespace:Spice86.Controls;assembly=Spice86"
              xmlns:userControls="clr-namespace:Spice86.UserControls;assembly=Spice86"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.BreakpointsView"
              x:DataType="viewModels:BreakpointsViewModel">
-	<UserControl.Resources>
-		<converters:HexadecimalStringToNumberConverter x:Key="HexadecimalStringToNumberConverter" />
-	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -113,8 +109,7 @@
 							<controls:GroupBox Header="Interrupt Number">
 								<TextBox
 									Text="{Binding InterruptNumber,
-										Mode=TwoWay,
-										Converter={StaticResource HexadecimalStringToNumberConverter}}"
+										Mode=TwoWay}"
 									Margin="5,0,0,0"
 									Watermark="hexadecimal number"/>
 							</controls:GroupBox>
@@ -124,8 +119,7 @@
 							<controls:GroupBox Header="I/O Port Number">
 								<TextBox
                                     Text="{Binding IoPortNumber,
-										Mode=TwoWay,
-										Converter={StaticResource HexadecimalStringToNumberConverter}}"
+										Mode=TwoWay}"
                                     Margin="5,0,0,0"
 									Watermark="hexadecimal number"/>
 							</controls:GroupBox>
