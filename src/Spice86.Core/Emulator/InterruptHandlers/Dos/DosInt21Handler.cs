@@ -25,6 +25,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 /// <summary>
 /// Implementation of the DOS INT21H services.
@@ -930,7 +931,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table. <br/>
+    /// Sets a new interrupt vector from an existing one in the Interrupt Vector Table. <br/>
     /// Be sure to call <see cref="GetInterruptVector"/> first to get the current vector address. <br/>
     /// Params: <br/>
     /// - AL: Vector Number <br/>
@@ -949,7 +950,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table.
+    /// Sets a new interrupt vector from an existing one in the Interrupt Vector Table.
     /// </summary>
     /// <param name="vectorNumber">The vector number the new vector will answer to.</param>
     /// <param name="segment">The address of the new interrupt vector, segment part.</param>
