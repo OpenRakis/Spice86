@@ -5,7 +5,7 @@ using Iced.Intel;
 /// <summary>
 /// Thread-safe formatter output that doesn't create UI elements.
 /// </summary>
-public class ThreadSafeFormatterOutput : FormatterOutput {
+public class FormattedTextSegmentsOutput : FormatterOutput {
     /// <summary>
     /// Gets the list of formatted text segments.
     /// </summary>

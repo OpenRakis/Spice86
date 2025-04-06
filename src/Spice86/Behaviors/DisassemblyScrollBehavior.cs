@@ -130,8 +130,7 @@ public class DisassemblyScrollBehavior {
 
             // Get the view model and find the target item
             if (listBox.DataContext is IDisassemblyViewModel viewModel) {
-                if (!viewModel.TryGetLineByAddress(targetAddress, out DebuggerLineViewModel? targetItem))
-                {
+                if (!viewModel.TryGetLineByAddress(targetAddress, out DebuggerLineViewModel? targetItem)) {
                     return;
                 }
 
@@ -214,7 +213,7 @@ public class DisassemblyScrollBehavior {
         int currentFrame = 0;
         int totalFrames = (int)(AnimationDuration.TotalMilliseconds / (1000.0 / AnimationFramesPerSecond));
 
-        timer.Elapsed += (sender, e) => {
+        timer.Elapsed += (_, _) => {
             // Calculate progress (0.0 to 1.0)
             currentFrame++;
             double progress = Math.Min(1.0, currentFrame / (double)totalFrames);

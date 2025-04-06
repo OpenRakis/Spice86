@@ -22,8 +22,7 @@ public static class ConverterUtilities {
         // Try to get the resource from the current application
         ThemeVariant currentTheme = Application.Current.ActualThemeVariant;
 
-        if (Application.Current.TryGetResource(resourceKey, currentTheme, out object? resource) 
-            && resource is IBrush brush) {
+        if (Application.Current.TryGetResource(resourceKey, currentTheme, out object? resource) && resource is IBrush brush) {
             return brush;
         }
 

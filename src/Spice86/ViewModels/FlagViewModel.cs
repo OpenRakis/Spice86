@@ -7,8 +7,7 @@ using Spice86.Core.Emulator.CPU;
 /// <summary>
 /// View model for a CPU flag value.
 /// </summary>
-public partial class FlagViewModel : ObservableObject
-{
+public partial class FlagViewModel : ObservableObject {
     private readonly State _state;
     private readonly Func<State, bool> _valueGetter;
     private bool _previousValue;
@@ -34,8 +33,7 @@ public partial class FlagViewModel : ObservableObject
     /// <param name="name">The name of the flag.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="valueGetter">Function to get the flag value from the CPU state.</param>
-    public FlagViewModel(string name, State state, Func<State, bool> valueGetter)
-    {
+    public FlagViewModel(string name, State state, Func<State, bool> valueGetter) {
         Name = name;
         _state = state;
         _valueGetter = valueGetter;
@@ -47,8 +45,7 @@ public partial class FlagViewModel : ObservableObject
     /// <summary>
     /// Updates the flag value from the CPU state and checks if it has changed.
     /// </summary>
-    public void Update()
-    {
+    public void Update() {
         _previousValue = Value;
         Value = _valueGetter(_state);
         HasChanged = _previousValue != Value;
@@ -59,8 +56,7 @@ public partial class FlagViewModel : ObservableObject
     /// <summary>
     /// Resets the change detection.
     /// </summary>
-    public void ResetChangeDetection()
-    {
+    public void ResetChangeDetection() {
         _previousValue = Value;
         HasChanged = false;
         OnPropertyChanged(nameof(HasChanged));

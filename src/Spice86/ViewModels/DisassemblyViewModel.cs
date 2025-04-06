@@ -108,7 +108,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
-        _instructionsDecoder = new InstructionsDecoder(memory, state, functionsInformation, breakpointsViewModel);
+        _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
         CurrentInstructionAddress = _state.IpSegmentedAddress;

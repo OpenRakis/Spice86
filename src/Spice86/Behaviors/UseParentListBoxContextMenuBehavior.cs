@@ -2,59 +2,59 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace Spice86.Behaviors {
-    public class UseParentListBoxContextMenuBehavior {
-        public static readonly AttachedProperty<bool> UseParentContextMenuProperty = AvaloniaProperty.RegisterAttached<Control, bool>("UseParentContextMenu", typeof(UseParentListBoxContextMenuBehavior));
+namespace Spice86.Behaviors;
 
-        static UseParentListBoxContextMenuBehavior() {
-            UseParentContextMenuProperty.Changed.AddClassHandler<Control>((control, e) => {
-                if (e.NewValue is true) {
-                    control.AddHandler(Control.ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
-                } else {
-                    control.RemoveHandler(Control.ContextRequestedEvent, OnContextRequested);
-                }
-            });
-        }
+public class UseParentListBoxContextMenuBehavior {
+    public static readonly AttachedProperty<bool> UseParentContextMenuProperty = AvaloniaProperty.RegisterAttached<Control, bool>("UseParentContextMenu", typeof(UseParentListBoxContextMenuBehavior));
 
-        private static void OnContextRequested(object? sender, ContextRequestedEventArgs e) {
-            if (sender is Control control) {
-                e.Handled = true;
+    static UseParentListBoxContextMenuBehavior() {
+        UseParentContextMenuProperty.Changed.AddClassHandler<Control>((control, e) => {
+            if (e.NewValue is true) {
+                control.AddHandler(Control.ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
+            } else {
+                control.RemoveHandler(Control.ContextRequestedEvent, OnContextRequested);
+            }
+        });
+    }
 
-                // Find parent ListBox and the associated ListBoxItem
-                Control? parent = control;
-                ListBox? listBox = null;
-                ListBoxItem? listBoxItem = null;
+    private static void OnContextRequested(object? sender, ContextRequestedEventArgs e) {
+        if (sender is Control control) {
+            e.Handled = true;
 
-                while (parent != null) {
-                    if (parent is ListBoxItem lbi) {
-                        listBoxItem = lbi;
-                    }
+            // Find parent ListBox and the associated ListBoxItem
+            Control? parent = control;
+            ListBox? listBox = null;
+            ListBoxItem? listBoxItem = null;
 
-                    if (parent is ListBox lb) {
-                        listBox = lb;
-
-                        break;
-                    }
-
-                    parent = parent.Parent as Control;
+            while (parent != null) {
+                if (parent is ListBoxItem lbi) {
+                    listBoxItem = lbi;
                 }
 
-                if (listBox?.ContextMenu != null && listBoxItem != null) {
-                    // Important: Select the item we right-clicked on
-                    listBox.SelectedItem = listBoxItem.DataContext;
+                if (parent is ListBox lb) {
+                    listBox = lb;
 
-                    // Open the context menu
-                    listBox.ContextMenu.Open(listBox);
+                    break;
                 }
+
+                parent = parent.Parent as Control;
+            }
+
+            if (listBox?.ContextMenu != null && listBoxItem != null) {
+                // Important: Select the item we right-clicked on
+                listBox.SelectedItem = listBoxItem.DataContext;
+
+                // Open the context menu
+                listBox.ContextMenu.Open(listBox);
             }
         }
+    }
 
-        public static void SetUseParentContextMenu(Control element, bool value) {
-            element.SetValue(UseParentContextMenuProperty, value);
-        }
+    public static void SetUseParentContextMenu(Control element, bool value) {
+        element.SetValue(UseParentContextMenuProperty, value);
+    }
 
-        public static bool GetUseParentContextMenu(Control element) {
-            return element.GetValue(UseParentContextMenuProperty);
-        }
+    public static bool GetUseParentContextMenu(Control element) {
+        return element.GetValue(UseParentContextMenuProperty);
     }
 }

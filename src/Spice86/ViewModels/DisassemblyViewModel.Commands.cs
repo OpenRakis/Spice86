@@ -99,7 +99,7 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private async Task UpdateDisassembly(SegmentedAddress currentInstructionAddress) {
         IsLoading = true;
-        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructionsExtended(currentInstructionAddress, 2048));
+        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructions(currentInstructionAddress, 2048));
 
         UpdateDebuggerLinesInBatch(enrichedInstructions);
 

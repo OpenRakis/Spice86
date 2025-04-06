@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Messages;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
@@ -435,10 +434,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
             DeleteBreakpoint(SelectedBreakpoint);
             _mustRemoveSelectedBreakpoint = false;
         }
-    }
-
-    public BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.FirstOrDefault(x => x.IsForCpuInstruction(instructionInfo));
     }
 
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;

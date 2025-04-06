@@ -137,7 +137,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     ///     Generates a formatted representation of the disassembly with syntax highlighting.
     /// </summary>
     private void GenerateFormattedDisassembly() {
-        var output = new ThreadSafeFormatterOutput();
+        var output = new FormattedTextSegmentsOutput();
         _formatter.Format(_info, output);
         DisassemblySegments = output.Segments;
     }
@@ -158,5 +158,9 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         if (_breakpointsViewModel != null) {
             Breakpoint = GetBreakpointFromViewModel();
         }
+    }
+
+    public override string ToString() {
+        return $"{SegmentedAddress} {Disassembly} [{ByteString}]";
     }
 }

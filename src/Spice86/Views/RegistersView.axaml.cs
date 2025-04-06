@@ -2,8 +2,10 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+
 using System;
 using System.ComponentModel;
+
 using Spice86.ViewModels;
 
 /// <summary>
@@ -11,7 +13,7 @@ using Spice86.ViewModels;
 /// </summary>
 public partial class RegistersView : UserControl {
     private IRegistersViewModel? _viewModel;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RegistersView"/> class.
     /// </summary>
@@ -26,14 +28,14 @@ public partial class RegistersView : UserControl {
 
     private void RegistersView_DataContextChanged(object? sender, EventArgs e) {
         // Unsubscribe from the old view model if it exists
-        if (_viewModel is INotifyPropertyChanged oldViewModel) {
-            oldViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        if (_viewModel != null) {
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         // Subscribe to the new view model
         _viewModel = DataContext as IRegistersViewModel;
-        if (_viewModel is INotifyPropertyChanged newViewModel) {
-            newViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        if (_viewModel != null) {
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
     }
 

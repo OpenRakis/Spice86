@@ -6,7 +6,6 @@ using Avalonia.Markup.Xaml;
 
 using System.ComponentModel;
 
-using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 /// <summary>
@@ -29,14 +28,14 @@ public partial class DisassemblyView : UserControl {
 
     private void DisassemblyView_DataContextChanged(object? sender, EventArgs e) {
         // Unsubscribe from the old view model if it exists
-        if (_viewModel is INotifyPropertyChanged oldViewModel) {
-            oldViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        if (_viewModel != null) {
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         // Subscribe to the new view model
         _viewModel = DataContext as IDisassemblyViewModel;
-        if (_viewModel is INotifyPropertyChanged newViewModel) {
-            newViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        if (_viewModel != null) {
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
     }
 

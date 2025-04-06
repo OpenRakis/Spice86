@@ -36,20 +36,20 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <!-- General purpose 32-bit registers (EAX, EBX, etc.) upper word -->
                                     <SelectableTextBlock Text="{Binding UpperWordHex}"
-                                               FontFamily="Consolas,Menlo,Monaco,monospace"
-                                               behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
+                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
 
                                     <!-- High byte (AH, BH, etc.) -->
                                     <SelectableTextBlock Text="{Binding HighByteHex}"
-                                               FontFamily="Consolas,Menlo,Monaco,monospace"
-                                               behaviors:HighlightBehavior.IsHighlighted="{Binding HighByteChanged}"
-                                               Margin="4,0,0,0" />
+                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding HighByteChanged}"
+                                                         Margin="4,0,0,0" />
 
                                     <!-- Low byte (AL, BL, etc.) -->
                                     <SelectableTextBlock Text="{Binding LowByteHex}"
-                                               FontFamily="Consolas,Menlo,Monaco,monospace"
-                                               behaviors:HighlightBehavior.IsHighlighted="{Binding LowByteChanged}"
-                                               Margin="4,0,0,0" />
+                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowByteChanged}"
+                                                         Margin="4,0,0,0" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>
