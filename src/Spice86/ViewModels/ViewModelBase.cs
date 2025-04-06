@@ -56,16 +56,17 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         if (string.IsNullOrWhiteSpace(bindedPropertyName)) {
             return;
         }
-        if (value is not null ||
-            (value is string stringValue && !string.IsNullOrWhiteSpace(
+        if (value is null ||
+            (value is string stringValue && string.IsNullOrWhiteSpace(
                 stringValue))) {
-            return;
-        }
-        if (!_validationErrors.TryGetValue(bindedPropertyName, out List<string>? values)) {
-            _validationErrors.Add(bindedPropertyName, ["This field is required."]);
+            if (!_validationErrors.TryGetValue(bindedPropertyName, out List<string>? values)) {
+                _validationErrors.Add(bindedPropertyName, ["This field is required."]);
+            } else {
+                values.Clear();
+                values.Add("This field is required.");
+            }
         } else {
-            values.Clear();
-            values.Add("This field is required.");
+            _validationErrors.Remove(bindedPropertyName);
         }
         OnErrorsChanged(bindedPropertyName);
     }
