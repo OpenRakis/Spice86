@@ -273,7 +273,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         State.DS = 0x8010;
         // From DOSBox source code...
-        State.BX = (ushort) (0x8010 + _dosFileManager.DefaultDrive * 9);
+        State.BX = (ushort)(0x8010 + _dosFileManager.DefaultDrive * 9);
         State.AH = 0;
     }
 
@@ -286,7 +286,7 @@ public class DosInt21Handler : InterruptHandler {
             case 0: //Get country specific information
                 uint dest = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
                 Memory.LoadData(dest, BitConverter.GetBytes((ushort)_dos.CurrentCountryId));
-                State.AX = (ushort) (State.BX + 1);
+                State.AX = (ushort)(State.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;
             default: //Set country code
@@ -490,7 +490,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <param name="dosFileOperationResult">The DOS File operation result to check for error status</param>
     private void SetAxToZeroOnSuccess(DosFileOperationResult dosFileOperationResult) {
-        if (!dosFileOperationResult.IsError){
+        if (!dosFileOperationResult.IsError) {
             State.AX = 0;
         }
     }
@@ -905,7 +905,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     private string ConvertSingleDosChar(byte characterByte) {
-        ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] {characterByte};
+        ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] { characterByte };
         return _cp850CharSet.GetString(sourceAsArray);
     }
 
@@ -937,7 +937,7 @@ public class DosInt21Handler : InterruptHandler {
         Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
         SetCarryFlag(false, calledFromVm);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
-        if(!result.IsError) {
+        if (!result.IsError) {
             State.AX = 0x0100;
         }
         SetStateFromDosFileOperationResult(calledFromVm, result);
@@ -1030,40 +1030,25 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
     public void IoControl(bool calledFromVm) {
-        byte op = State.AL;
-        ushort handle = State.BX;
+        byte reg_al = State.AL;
+        ushort reg_bx = State.BX;
+        ushort reg_cx = State.CX;
+        ushort reg_dx = State.DX;
+        ushort reg_ds = State.DS;
 
-        SetCarryFlag(false, calledFromVm);
-
-        switch (op) {
-            case 0: {
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("GET DEVICE INFORMATION for handle {Handle}", handle);
-                    }
-
-                    if (handle < _devices.Count) {
-                        IVirtualDevice device = _devices[handle];
-                        // @TODO: use the device and it's attributes to fill the response
-                    }
-                    State.DX = handle < _devices.Count ? (ushort)0x80D3 : (ushort)0x0002;
-                    break;
-                }
-            case 1: {
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("SET DEVICE INFORMATION for handle {Handle} (unimplemented)", handle);
-                    }
-                    break;
-                }
-            case 0xE: {
-                    ushort driveNumber = State.BL;
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("GET LOGICAL DRIVE FOR PHYSICAL DRIVE {DriveNumber}", driveNumber);
-                    }
-                    // Only one drive
-                    State.AL = 0;
-                    break;
-                }
-            default: throw new UnhandledOperationException(State, $"IO Control operation unhandled: {op}");
+        if (_dosFileManager.IoControl(
+            reg_al, reg_bx, reg_cx, reg_dx, reg_ds,
+            out ushort reg_ax,
+            out ushort reg_dx_out,
+            out byte reg_al_out,
+            out byte reg_ah_out)) {
+            State.AX = reg_ax;
+            State.DX = reg_dx_out;
+            State.AL = reg_al_out;
+            State.AH = reg_ah_out;
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            SetCarryFlag(true, calledFromVm);
         }
     }
 
