@@ -13,7 +13,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 /// Next node to execute is normally the next node from the graph but several checks are done to make sure it is really it:
 ///  - The node is not null (otherwise it is taken from memory)
 ///  - If the node is an assembly node, it is the same as what is currently in memory, otherwise it means self modifying code is being detected
-///  - If self modifying code is being detected, Discriminator node is being injected instead.
+///  - If self modifying code is being detected, Selector node is being injected instead.
 /// Once the node to execute is determined, it is linked to the previously executed node in the execution context if possible.
 /// </summary>
 public class CfgNodeFeeder {
@@ -67,19 +67,19 @@ public class CfgNodeFeeder {
             throw new UnhandledCfgDiscrepancyException("Nodes from memory and from graph don't have the same address. This should never happen.");
         }
 
-        // Graph and memory are not aligned ... Need to inject Node with discriminator
-        // If previous was Discriminated and current was not in its successors we would not be there because 
-        // currentFromGraph would have been null and the linker would then link it to DiscriminatedNode
-        return CreateDiscriminatedNode(fromMemory, (CfgInstruction)currentFromGraph);
+        // Graph and memory are not aligned ... Need to inject Node with discriminator to select the right one from memory at exec time.
+        // If previous was Selector and current was not in its successors we would not be there because 
+        // currentFromGraph would have been null and the linker would then link it to SelectorNode
+        return CreateSelectorNode(fromMemory, (CfgInstruction)currentFromGraph);
     }
 
-    private ICfgNode CreateDiscriminatedNode(CfgInstruction instruction1, CfgInstruction instruction2) {
+    private ICfgNode CreateSelectorNode(CfgInstruction instruction1, CfgInstruction instruction2) {
         CfgInstruction? reduced = _discriminatorReducer.ReduceToOne(instruction1, instruction2);
         if (reduced != null) {
             return reduced;
         }
 
-        DiscriminatedNode res = new DiscriminatedNode(instruction1.Address);
+        SelectorNode res = new SelectorNode(instruction1.Address);
         // Make predecessors of instructions point to res instead of instruction1/2
         _nodeLinker.InsertIntermediatePredecessor(instruction1, res);
         _nodeLinker.InsertIntermediatePredecessor(instruction2, res);
