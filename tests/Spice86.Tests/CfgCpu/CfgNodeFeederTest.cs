@@ -123,21 +123,20 @@ public class CfgNodeFeederTest {
         // Some time later second Mov AX changes to Mov BX and we are about to execute it, graph says next is Mov AX but this is no the case.
         WriteMovBx(EndOfMov0Address, DefaultValue);
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
-        ICfgNode discriminated = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        SelectorNode selectorNode = AssertIsSelectorNode(cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext));
 
         // Assert
-        // Mov AX0 is not anymore linked to mov ax1, there is a discriminator node between them.
+        // Mov AX0 is not anymore linked to mov ax1, there is a selector node between them.
         AssertDoesNotLinkTo(movAx0, movAx1);
-        // Check the discriminator node is there
-        DiscriminatedNode discriminatedNode = AssertIsDiscriminatedNode(discriminated);
-        AssertLinksTo(movAx0, discriminatedNode);
-        // Check discriminator node also contains Mov BX
-        ICfgNode movBx = discriminated.Successors.First(node => !ReferenceEquals(node, movAx1));
+        // Check the selector node is there
+        AssertLinksTo(movAx0, selectorNode);
+        // Check selector node also contains Mov BX
+        ICfgNode movBx = selectorNode.Successors.First(node => !ReferenceEquals(node, movAx1));
         MovRegImm16 movBxRegImm16 = AssertIsMovBx(movBx);
         MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1);
         AssertUsesValue(movBxRegImm16, DefaultValue);
-        AssertSuccessorAtDiscriminator(discriminatedNode, movBxRegImm16);
-        AssertSuccessorAtDiscriminator(discriminatedNode, movAx1RegImm16);
+        AssertSuccessorAtDiscriminator(selectorNode, movBxRegImm16);
+        AssertSuccessorAtDiscriminator(selectorNode, movAx1RegImm16);
     }
 
     [Fact]
@@ -169,10 +168,10 @@ public class CfgNodeFeederTest {
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
         WriteMovBx(EndOfMov0Address, DefaultValue);
-        ICfgNode discriminated = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        ICfgNode selector = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
         WriteMovCx(EndOfMov0Address, DefaultValue);
         // CPU executed discriminator but Mov CX was in memory => no successor of the discriminator matched
-        executionContext.LastExecuted = discriminated;
+        executionContext.LastExecuted = selector;
         executionContext.NodeToExecuteNextAccordingToGraph = null;
 
         // Act
@@ -180,9 +179,9 @@ public class CfgNodeFeederTest {
         ICfgNode movCx = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        DiscriminatedNode discriminatedNode = AssertIsDiscriminatedNode(discriminated);
+        SelectorNode selectorNode = AssertIsSelectorNode(selector);
         MovRegImm16 movCxRegImm16 = AssertIsMovCx(movCx);
-        AssertSuccessorAtDiscriminator(discriminatedNode, movCxRegImm16);
+        AssertSuccessorAtDiscriminator(selectorNode, movCxRegImm16);
     }
 
     [Fact]
@@ -192,14 +191,14 @@ public class CfgNodeFeederTest {
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
-        // Code goes back to mov AX1 but it has been changed to MOV BX, discriminated node should have been created
+        // Code goes back to mov AX1 but it has been changed to MOV BX, selector node should have been created
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
         WriteMovBx(EndOfMov0Address, DefaultValue);
-        ICfgNode discriminated = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        ICfgNode selector = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
         // Then write MOV AX back but with a different value
         WriteMovAx(EndOfMov0Address, NewValue);
-        // CPU executed discriminator node, and determined Mov AX was next according to graph since it was in memory => should match with initial mov AX
-        executionContext.LastExecuted = discriminated;
+        // CPU executed selector node, and determined Mov AX was next according to graph since it was in memory => should match with initial mov AX
+        executionContext.LastExecuted = selector;
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
 
         // Act
@@ -210,7 +209,7 @@ public class CfgNodeFeederTest {
     }
 
     [AssertionMethod]
-    private static void AssertSuccessorAtDiscriminator(DiscriminatedNode predecessor, CfgInstruction expectedSuccessor) {
+    private static void AssertSuccessorAtDiscriminator(SelectorNode predecessor, CfgInstruction expectedSuccessor) {
         AssertLinksTo(predecessor, expectedSuccessor);
         Assert.Equal(expectedSuccessor, predecessor.SuccessorsPerDiscriminator[expectedSuccessor.Discriminator]);
     }
@@ -234,9 +233,9 @@ public class CfgNodeFeederTest {
     }
 
     [AssertionMethod]
-    private static DiscriminatedNode AssertIsDiscriminatedNode(ICfgNode discriminated) {
-        Assert.Equal(typeof(DiscriminatedNode), discriminated.GetType());
-        return (DiscriminatedNode)discriminated;
+    private static SelectorNode AssertIsSelectorNode(ICfgNode selector) {
+        Assert.Equal(typeof(SelectorNode), selector.GetType());
+        return (SelectorNode)selector;
     }
 
     private static void AssertUsesValue(MovRegImm16 node, ushort expectedValue) {

@@ -12,10 +12,7 @@ using System.Linq;
 /// Node that precedes self modifying code divergence point.
 /// To decide what is next node in the graph, the only way is to compare discriminators in SuccessorsPerDiscriminator with actual memory content. 
 /// </summary>
-public class DiscriminatedNode : CfgNode {
-    public DiscriminatedNode(SegmentedAddress address) : base(address) {
-    }
-
+public class SelectorNode(SegmentedAddress address) : CfgNode(address) {
     public override bool IsLive => true;
 
     public Dictionary<Discriminator, CfgInstruction> SuccessorsPerDiscriminator { get; private set; } =

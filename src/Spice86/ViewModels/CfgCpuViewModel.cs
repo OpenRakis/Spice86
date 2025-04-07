@@ -9,9 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.VM;
@@ -23,8 +21,7 @@ using System.Diagnostics;
 public partial class CfgCpuViewModel : ViewModelBase {
     private readonly IPerformanceMeasurer _performanceMeasurer;
     private readonly ExecutionContextManager _executionContextManager;
-    private readonly AstBuilder _astBuilder = new();
-    private readonly AstInstructionRenderer _astInstructionRenderer = new();
+    private readonly NodeToString _nodeToString = new();
 
     [ObservableProperty] private int _maxNodesToDisplay = 200;
 
@@ -131,8 +128,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
                 break;
             }
-            case DiscriminatedNode discriminatedNode: {
-                Discriminator discriminator = discriminatedNode.SuccessorsPerDiscriminator
+            case SelectorNode selectorNode: {
+                Discriminator discriminator = selectorNode.SuccessorsPerDiscriminator
                     .FirstOrDefault(x => x.Value == successor).Key;
                 label = discriminator.ToString();
                 break;
@@ -145,10 +142,5 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private static (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor)
         => (node.Id, successor.Id);
 
-    private string GenerateNodeText(ICfgNode node) =>
-        $"{node.Address} / {node.Id} {Environment.NewLine} {CfgNodeToAssemblyString(node)}";
-
-    private string CfgNodeToAssemblyString(ICfgNode node) {
-        return _astInstructionRenderer.VisitInstructionNode(node.ToInstructionAst(_astBuilder));
-    }
+    private string GenerateNodeText(ICfgNode node) => $"{_nodeToString.ToHeaderString(node)}{Environment.NewLine}{_nodeToString.ToAssemblyString(node)}";
 }
