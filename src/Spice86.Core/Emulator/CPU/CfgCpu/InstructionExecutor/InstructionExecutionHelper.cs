@@ -73,6 +73,13 @@ public class InstructionExecutionHelper {
     public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, ushort offset) {
         return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), offset);
     }
+    
+    public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, uint offset) {
+        if (offset > 0xFFFF) {
+            throw new CpuGeneralProtectionFaultException("Offset overflows 16 bits");
+        }
+        return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), (ushort)offset);
+    }
 
     public ushort UShortOffsetValue(IInstructionWithOffsetField<ushort> instruction) {
         return InstructionFieldValueRetriever.GetFieldValue(instruction.OffsetField);
@@ -82,12 +89,6 @@ public class InstructionExecutionHelper {
         ushort segment = SegmentValue(instruction);
         ushort offset = UShortOffsetValue(instruction);
         return new SegmentedAddress(segment, offset);
-    }
-
-    public void JumpNearOffset(CfgInstruction instruction, int offset) {
-        MoveIpToEndOfInstruction(instruction);
-        State.IP = (ushort)(State.IP + offset);
-        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
@@ -103,20 +104,13 @@ public class InstructionExecutionHelper {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void NearCallOffset(CfgInstruction instruction, int offset) {
-        MoveIpToEndOfInstruction(instruction);
-        ushort callIP = (ushort)(State.IP + offset);
-        NearCall(instruction, State.IP, callIP);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCallWithReturnIpNextInstruction(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         NearCall(instruction, State.IP, callIP);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void NearCall(CfgInstruction instruction, ushort returnIP, ushort callIP) {
+    private void NearCall(CfgInstruction instruction, ushort returnIP, ushort callIP) {
         Stack.Push16(returnIP);
         HandleCall(instruction, CallType.NEAR, new SegmentedAddress(State.CS, returnIP),  new SegmentedAddress(State.CS, callIP));
     }

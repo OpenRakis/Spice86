@@ -10,8 +10,8 @@ public abstract class EnterInstruction : CfgInstruction {
         InstructionField<byte> levelField) : base(address, opcodeField, prefixes) {
         StorageField = storageField;
         LevelField = levelField;
-        FieldsInOrder.Add(StorageField);
-        FieldsInOrder.Add(LevelField);
+        AddField(StorageField);
+        AddField(LevelField);
     }
     public InstructionField<ushort> StorageField { get; }
     public InstructionField<byte> LevelField { get; }

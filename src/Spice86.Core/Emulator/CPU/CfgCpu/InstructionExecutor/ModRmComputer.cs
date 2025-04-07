@@ -123,7 +123,7 @@ public class ModRmComputer {
         SibContext sibContext = ModRmContext.SibContext;
         uint @base = ComputeSibBase(sibContext);
         uint index = ComputeSibIndex(sibContext);
-        return (uint)(@base + sibContext.Scale * index);
+        return @base + sibContext.Scale * index;
     }
 
     private uint ComputeSibBase(SibContext sibContext) {

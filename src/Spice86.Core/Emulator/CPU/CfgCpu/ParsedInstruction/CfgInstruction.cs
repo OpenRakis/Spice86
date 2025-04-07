@@ -39,14 +39,14 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
         }
 
         OpcodeField = opcodeField;
-        FieldsInOrder.AddRange(PrefixFields);
-        FieldsInOrder.Add(OpcodeField);
+        AddFields(PrefixFields);
+        AddField(OpcodeField);
     }
 
     /// <summary>
     /// To call after constructor to calculate instruction length
     /// </summary>
-    public void PostInit() {
+    private void UpdateLength() {
         Length = (byte)FieldsInOrder.Sum(field => field.Length);
     }
 
@@ -67,6 +67,15 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public override bool IsLive => _isLive;
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
+
+    protected void AddField(FieldWithValue fieldWithValue) {
+        FieldsInOrder.Add(fieldWithValue);
+        UpdateLength();
+    }
+    
+    protected void AddFields(IEnumerable<FieldWithValue> fieldWithValues) {
+        fieldWithValues.ToList().ForEach(AddField);
+    }
 
     public SegmentOverrideInstructionPrefix? SegmentOverrideInstructionPrefix { get; }
     public OperandSize32Prefix? OperandSize32Prefix { get; }

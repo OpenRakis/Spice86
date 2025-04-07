@@ -6,7 +6,7 @@ using Spice86.Shared.Emulator.Memory;
 public abstract class InstructionWithModRm : CfgInstruction {
     public InstructionWithModRm(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes) {
         ModRmContext = modRmContext;
-        FieldsInOrder.AddRange(ModRmContext.FieldsInOrder);
+        AddFields(ModRmContext.FieldsInOrder);
     }
     public ModRmContext ModRmContext { get; init; }
 }

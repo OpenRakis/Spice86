@@ -13,7 +13,7 @@ public abstract class InstructionWithValueField<T> : CfgInstruction, IInstructio
         InstructionField<T> valueField) :
         base(address, opcodeField, prefixes) {
         ValueField = valueField;
-        FieldsInOrder.Add(ValueField);
+        AddField(ValueField);
     }
     
     protected InstructionWithValueField(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<T> valueField) : this(address,

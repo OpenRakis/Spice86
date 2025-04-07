@@ -9,7 +9,7 @@ public abstract class InstructionWithSegmentedAddressField : CfgInstruction {
         InstructionField<SegmentedAddress> segmentedAddressField) :
         base(address, opcodeField) {
         SegmentedAddressField = segmentedAddressField;
-        FieldsInOrder.Add(segmentedAddressField);
+        AddField(segmentedAddressField);
     }
 
     public InstructionField<SegmentedAddress> SegmentedAddressField { get; }

@@ -11,7 +11,7 @@ public abstract class InstructionWithModRmAndValueField<T> : InstructionWithModR
     protected InstructionWithModRmAndValueField(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         ModRmContext modRmContext, InstructionField<T> valueField) : base(address, opcodeField, prefixes, modRmContext) {
         ValueField = valueField;
-        FieldsInOrder.Add(ValueField);
+        AddField(ValueField);
     }
 
     public InstructionField<T> ValueField { get; }

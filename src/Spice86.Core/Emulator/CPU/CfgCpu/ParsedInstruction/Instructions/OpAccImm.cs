@@ -71,22 +71,22 @@ public partial class XorAccImm16;
 public partial class XorAccImm32;
 
 // CMP (Sub without assigment)
-[OpAccImm("Sub", "AL", 8, "byte", false)]
+[OpAccImm("Sub", "AL", 8, "byte", false, "cmp")]
 public partial class CmpAccImm8;
 
-[OpAccImm("Sub", "AX", 16, "ushort", false)]
+[OpAccImm("Sub", "AX", 16, "ushort", false, "cmp")]
 public partial class CmpAccImm16;
 
-[OpAccImm("Sub", "EAX", 32, "uint", false)]
+[OpAccImm("Sub", "EAX", 32, "uint", false, "cmp")]
 public partial class CmpAccImm32;
 
 
 // Test (Sub without assigment)
-[OpAccImm("And", "AL", 8, "byte", false)]
+[OpAccImm("And", "AL", 8, "byte", false, "test")]
 public partial class TestAccImm8;
 
-[OpAccImm("And", "AX", 16, "ushort", false)]
+[OpAccImm("And", "AX", 16, "ushort", false, "test")]
 public partial class TestAccImm16;
 
-[OpAccImm("And", "EAX", 32, "uint", false)]
+[OpAccImm("And", "EAX", 32, "uint", false, "test")]
 public partial class TestAccImm32;

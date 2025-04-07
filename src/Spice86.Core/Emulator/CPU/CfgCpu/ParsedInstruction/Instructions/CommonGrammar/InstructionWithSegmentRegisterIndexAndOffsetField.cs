@@ -8,7 +8,7 @@ public abstract class InstructionWithSegmentRegisterIndexAndOffsetField<T>: CfgI
     protected InstructionWithSegmentRegisterIndexAndOffsetField(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, int segmentRegisterIndex, InstructionField<T> offsetField) : base(address, opcodeField, prefixes) {
         SegmentRegisterIndex = segmentRegisterIndex;
         OffsetField = offsetField;
-        FieldsInOrder.Add(offsetField);
+        AddField(offsetField);
     }
     
     public int SegmentRegisterIndex { get; }

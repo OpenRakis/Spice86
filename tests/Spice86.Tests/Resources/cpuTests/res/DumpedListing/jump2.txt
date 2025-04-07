@@ -1,0 +1,39 @@
+﻿F000:0000 mov BX,0xF000
+F000:0003 mov DS,BX
+F000:0005 mov AX,0x1290
+F000:0008 mov CX,5
+F000:000B push CX
+F000:000C loop 0x000B
+F000:000E call near AX
+F000:0010 ret near
+F000:1290 mov CX,0xFFFF
+F000:1293 loope 0x1290
+F000:1295 mov DX,0x0040
+F000:1298 push DX
+F000:1299 popf
+F000:129A loope 0x129D
+F000:129D call far E342:EBE0
+F000:12A2 jcxz short 0x129D
+F000:12A4 mov CX,0
+F000:12A7 jcxz short 0x12AA
+F000:12AA ret near 0x000A
+E342:EBE0 call near word ptr DS:[0x3000]
+E342:EBE4 mov DX,0
+E342:EBE7 push DX
+E342:EBE8 popf
+E342:EBE9 mov CX,1
+E342:EBEC loopne 0xEBE9
+E342:EBEE loopne 0xEBF1
+E342:EBF1 ret far
+E342:FDE0 mov BX,0x2FF0
+E342:FDE3 mov SI,0x0010
+E342:FDE6 push DX
+E342:FDE7 call far dword ptr DS:[BX+SI+2]
+E342:FDEA ret near
+F000:4000 ret far 2
+F000:FFF0 mov SP,0x1000
+F000:FFF3 mov SS,SP
+F000:FFF5 call near 0
+F000:FFF8 mov DS,CX
+F000:FFFA mov word ptr DS:[0],SI
+F000:FFFE hlt

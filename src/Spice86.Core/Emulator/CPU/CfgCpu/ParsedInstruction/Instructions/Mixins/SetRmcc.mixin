@@ -1,9 +1,13 @@
 @moxy
 @attribute required string Condition
+@attribute required string ConditionInMnemonic
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -19,6 +23,11 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         State state = helper.State;
         helper.ModRm.RM8 = (byte)(({{Condition}}) ? 1 : 0);
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.SET{{ConditionInMnemonic | string.upcase }},
+        builder.RmToNode(DataType.UINT8, ModRmContext));
     }
 }
 

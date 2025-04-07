@@ -4,6 +4,8 @@
 
 namespace {{ moxy.Class.Namespace }};
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
@@ -19,6 +21,13 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.Shld(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
         helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.SHLD,
+        builder.RmToNode(builder.UType({{Size}}), ModRmContext),
+        builder.RToNode(builder.UType({{Size}}), ModRmContext),
+        builder.ToNode(ValueField));
     }
 }
 

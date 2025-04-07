@@ -1,6 +1,9 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -50,4 +53,10 @@ public interface ICfgNode {
     /// <param name="helper">InstructionExecutionHelper instance providing access to the outside</param>
     public void Execute(InstructionExecutionHelper helper);
 
+    /// <summary>
+    /// Builds an Abstract Syntax Tree representing the grammar of the assembly instruction
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <returns></returns>
+    public InstructionNode ToInstructionAst(AstBuilder builder);
 }
