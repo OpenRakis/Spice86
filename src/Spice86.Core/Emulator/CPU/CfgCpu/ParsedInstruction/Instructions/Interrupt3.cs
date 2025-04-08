@@ -14,6 +14,6 @@ public class Interrupt3 : CfgInstruction {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.INT, builder.ToNode((byte)3));
+        return new InstructionNode(InstructionOperation.INT, builder.Constant.ToNode((byte)3));
     }
 }

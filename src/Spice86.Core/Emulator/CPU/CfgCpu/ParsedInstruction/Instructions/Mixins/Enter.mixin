@@ -38,6 +38,6 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.ENTER{{ if Size == 32 }}W{{ end }}, builder.ToNode(StorageField), builder.ToNode(LevelField));
+        return new InstructionNode(InstructionOperation.ENTER{{ if Size == 32 }}W{{ end }}, builder.InstructionField.ToNode(StorageField), builder.InstructionField.ToNode(LevelField));
     }
 }

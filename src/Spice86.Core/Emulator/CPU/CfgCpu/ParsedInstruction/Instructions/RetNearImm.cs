@@ -19,6 +19,6 @@ public class RetNearImm : InstructionWithValueField<ushort>, IReturnInstruction 
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.RET_NEAR, builder.ToNode(ValueField)!);
+        return new InstructionNode(InstructionOperation.RET_NEAR, builder.InstructionField.ToNode(ValueField)!);
     }
 }

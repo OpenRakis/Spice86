@@ -27,6 +27,6 @@ public class MovSregRm16 : InstructionWithModRm {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.MOV, builder.SReg(ModRmContext.RegisterIndex), builder.RmToNode(DataType.UINT16, ModRmContext));
+        return new InstructionNode(InstructionOperation.MOV, builder.Register.SReg(ModRmContext.RegisterIndex), builder.ModRm.RmToNode(DataType.UINT16, ModRmContext));
     }
 }

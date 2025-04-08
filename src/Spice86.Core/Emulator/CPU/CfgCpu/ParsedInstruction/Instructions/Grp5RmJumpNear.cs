@@ -21,6 +21,6 @@ public class Grp5RmJumpNear : InstructionWithModRm {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.JMP_NEAR, builder.RmToNode(DataType.UINT16, ModRmContext));
+        return new InstructionNode(InstructionOperation.JMP_NEAR, builder.ModRm.RmToNode(DataType.UINT16, ModRmContext));
     }
 }

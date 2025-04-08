@@ -25,9 +25,9 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.SHLD,
-        builder.RmToNode(builder.UType({{Size}}), ModRmContext),
-        builder.RToNode(builder.UType({{Size}}), ModRmContext),
-        builder.Reg8(RegisterIndex.CxIndex));
+        builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
+        builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
+        builder.Register.Reg8(RegisterIndex.CxIndex));
     }
 }
 

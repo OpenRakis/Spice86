@@ -16,6 +16,6 @@ public class Interrupt : InstructionWithValueField<byte> {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.INT, builder.ToNode(ValueField)!);
+        return new InstructionNode(InstructionOperation.INT, builder.InstructionField.ToNode(ValueField)!);
     }
 }

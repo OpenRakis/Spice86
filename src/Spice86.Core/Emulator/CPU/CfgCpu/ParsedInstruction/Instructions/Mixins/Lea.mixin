@@ -23,6 +23,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.LEA, builder.RToNode(builder.UType({{Size}}), ModRmContext), builder.ModRmMemoryOffsetToNode(ModRmContext));
+        return new InstructionNode(InstructionOperation.LEA, builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext), builder.ModRm.MemoryOffsetToNode(ModRmContext));
     }
 }

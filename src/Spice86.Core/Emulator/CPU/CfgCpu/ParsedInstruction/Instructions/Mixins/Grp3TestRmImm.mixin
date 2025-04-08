@@ -26,7 +26,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<{
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.TEST, builder.RmToNode(builder.UType({{Size}}), ModRmContext), builder.ToNode(ValueField));
+        return new InstructionNode(InstructionOperation.TEST, builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext), builder.InstructionField.ToNode(ValueField));
     }
 }
 

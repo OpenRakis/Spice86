@@ -19,6 +19,6 @@ public class RetFarImm : InstructionWithValueField<ushort>, IReturnInstruction {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.RET_FAR, builder.ToNode(ValueField)!);
+        return new InstructionNode(InstructionOperation.RET_FAR, builder.InstructionField.ToNode(ValueField)!);
     }
 }

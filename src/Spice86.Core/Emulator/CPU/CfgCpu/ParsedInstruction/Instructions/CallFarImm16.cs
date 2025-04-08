@@ -20,6 +20,6 @@ public class CallFarImm16 : InstructionWithSegmentedAddressField {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.CALL_FAR, builder.ToNode(SegmentedAddressField));
+        return new InstructionNode(InstructionOperation.CALL_FAR, builder.InstructionField.ToNode(SegmentedAddressField));
     }
 }
