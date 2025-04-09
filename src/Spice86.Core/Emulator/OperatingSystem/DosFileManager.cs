@@ -663,12 +663,14 @@ public class DosFileManager {
 
     private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
 
-    private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string matchingFileSystemEntry, ushort? searchAttributes = null) {
+    private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
+        string matchingFileSystemEntry, ushort? searchAttributes = null) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
 
-        FileSystemInfo entryInfo = Directory.Exists(matchingFileSystemEntry) ? new DirectoryInfo(matchingFileSystemEntry) : new FileInfo(matchingFileSystemEntry);
+        FileSystemInfo entryInfo = Directory.Exists(matchingFileSystemEntry) ?
+            new DirectoryInfo(matchingFileSystemEntry) : new FileInfo(matchingFileSystemEntry);
         DateTime creationZonedDateTime = entryInfo.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
