@@ -1028,20 +1028,13 @@ public class DosFileManager {
             return false;
         }
 
-        CharacterDevice? characterDevice = _dosVirtualDevices.OfType<CharacterDevice>()
-            .FirstOrDefault(device =>
-                device.Segment == bufferSegment && device.Offset == bufferOffset);
-        if (characterDevice == null) {
-            return false;
-        }
-
         // Perform the read operation
         try {
             // Calculate the physical address in memory
             uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
 
             // Read data from the device
-            using Stream stream = characterDevice.OpenStream("r");
+            using Stream stream = openFile.RandomAccessFile;
             if (!stream.CanRead) {
                 return false;
             }
@@ -1055,7 +1048,11 @@ public class DosFileManager {
             // Set the number of bytes read
             bytesRead = (ushort)actualBytesRead;
             return true;
-        } catch (IOException) {
+        } catch (IOException e) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(e, "Error while reading from DOS device or file {FileHandle}: {Exception}",
+                    fileHandle, e);
+            }
             return false;
         }
     }
