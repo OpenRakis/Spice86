@@ -30,7 +30,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<{{Type}}>
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
-            builder.Accumulator(builder.UType({{Size}})),
-            builder.ToNode(ValueField));
+            builder.Register.Accumulator(builder.UType({{Size}})),
+            builder.InstructionField.ToNode(ValueField));
     }
 }

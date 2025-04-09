@@ -25,7 +25,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.MOV,
-            builder.ToSegmentedPointer(builder.UType({{Size}}), SegmentRegisterIndex, builder.ToNode(OffsetField)),
-            builder.Accumulator(builder.UType({{Size}})));
+            builder.Pointer.ToSegmentedPointer(builder.UType({{Size}}), SegmentRegisterIndex, builder.InstructionField.ToNode(OffsetField)),
+            builder.Register.Accumulator(builder.UType({{Size}})));
     }
 }

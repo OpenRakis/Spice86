@@ -24,6 +24,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.{{Operation | string.upcase}}, builder.Reg(builder.UType({{Size}}), RegisterIndex));
+        return new InstructionNode(InstructionOperation.{{Operation | string.upcase}}, builder.Register.Reg(builder.UType({{Size}}), RegisterIndex));
     }
 }

@@ -28,13 +28,13 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.XLAT, 
-            builder.ToSegmentedPointer(
+            builder.Pointer.ToSegmentedPointer(
                 DataType.UINT8,
                 SegmentRegisterIndex,
                 new BinaryOperationNode(builder.AddressType(this),
-                    builder.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
+                    builder.Register.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
                     Operation.PLUS,
-                    builder.Accumulator(DataType.UINT8)
+                    builder.Register.Accumulator(DataType.UINT8)
                 )
             )
         );

@@ -34,10 +34,10 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(builder.Rep(this), InstructionOperation.OUTS, 
-            builder.ToSegmentedPointer(
+            builder.Pointer.ToSegmentedPointer(
                 builder.UType({{Size}}), 
                 SegmentRegisterIndex,
-                builder.Reg(builder.AddressType(this), RegisterIndex.SiIndex)
+                builder.Register.Reg(builder.AddressType(this), RegisterIndex.SiIndex)
             )
         );
     }

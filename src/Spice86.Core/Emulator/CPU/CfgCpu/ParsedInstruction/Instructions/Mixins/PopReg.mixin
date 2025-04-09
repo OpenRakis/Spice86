@@ -30,6 +30,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithRegisterIndex {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.POP,
-        builder.{{ if IsSegment }}SReg({{else}}Reg(builder.UType({{Size}}), {{end}}RegisterIndex));
+        builder.Register.{{ if IsSegment }}SReg({{else}}Reg(builder.UType({{Size}}), {{end}}RegisterIndex));
     }
 }

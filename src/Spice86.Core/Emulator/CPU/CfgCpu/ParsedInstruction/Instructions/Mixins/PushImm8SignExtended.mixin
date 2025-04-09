@@ -27,6 +27,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<sbyte> {
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.PUSH, builder.ToNode(ValueField));
+        return new InstructionNode(InstructionOperation.PUSH, builder.InstructionField.ToNode(ValueField));
     }
 }

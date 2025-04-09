@@ -30,6 +30,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     }
     
     protected ValueNode TargetIpToNode(AstBuilder builder) {
-        return builder.ToNode(_targetIp);
+        return builder.Constant.ToNode(_targetIp);
     }
 }

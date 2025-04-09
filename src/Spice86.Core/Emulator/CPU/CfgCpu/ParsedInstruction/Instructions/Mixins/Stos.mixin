@@ -33,12 +33,12 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction, StringInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(builder.Rep(this), InstructionOperation.STOS, 
-            builder.ToSegmentedPointer(
+            builder.Pointer.ToSegmentedPointer(
                 builder.UType({{Size}}), 
                 SegmentRegisterIndex.EsIndex,
-                builder.Reg(builder.AddressType(this), RegisterIndex.DiIndex)
+                builder.Register.Reg(builder.AddressType(this), RegisterIndex.DiIndex)
             ),
-            builder.Accumulator(builder.UType({{Size}}))
+            builder.Register.Accumulator(builder.UType({{Size}}))
         );
     }
 }

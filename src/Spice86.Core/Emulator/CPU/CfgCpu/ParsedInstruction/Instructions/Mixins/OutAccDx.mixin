@@ -25,7 +25,7 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.OUT,
-            builder.Reg16(RegisterIndex.DxIndex),
-            builder.Accumulator(builder.UType({{Size}})));
+            builder.Register.Reg16(RegisterIndex.DxIndex),
+            builder.Register.Accumulator(builder.UType({{Size}})));
     }
 }

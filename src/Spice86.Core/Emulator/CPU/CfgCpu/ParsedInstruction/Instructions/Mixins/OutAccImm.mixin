@@ -26,7 +26,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueField<byte> {
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.OUT,
-            builder.ToNode(ValueField),
-            builder.Accumulator(builder.UType({{Size}})));
+            builder.InstructionField.ToNode(ValueField),
+            builder.Register.Accumulator(builder.UType({{Size}})));
     }
 }

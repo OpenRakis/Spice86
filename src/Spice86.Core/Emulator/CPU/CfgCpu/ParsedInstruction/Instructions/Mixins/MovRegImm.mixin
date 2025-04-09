@@ -29,7 +29,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.MOV,
-            builder.Reg(builder.UType({{Size}}), RegisterIndex),
-            builder.ToNode(ValueField));
+            builder.Register.Reg(builder.UType({{Size}}), RegisterIndex),
+            builder.InstructionField.ToNode(ValueField));
     }
 }
