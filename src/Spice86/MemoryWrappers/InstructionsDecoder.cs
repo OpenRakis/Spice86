@@ -18,20 +18,23 @@ using System.Linq;
 /// </summary>
 internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
     /// <summary>
-    /// Enhanced decoder that supports bidirectional decoding and custom formatting for modern views.
+    /// Decodes instructions around a center address with specified byte ranges before and after.
     /// </summary>
     /// <param name="centerAddress">The address to center the decoding around</param>
-    /// <param name="blockSize">The size of the memory block around the requested address to decode</param>
-    /// <returns>A list of decoded CPU instructions</returns>
-    public Dictionary<uint, EnrichedInstruction> DecodeInstructions(SegmentedAddress centerAddress, uint blockSize) {
-        uint halfBlockSize = blockSize / 2;
+    /// <param name="bytesBefore">Number of bytes to decode before the center address</param>
+    /// <param name="bytesAfter">Number of bytes to decode after the center address</param>
+    /// <returns>A dictionary of decoded instructions indexed by their linear addresses</returns>
+    public Dictionary<uint, EnrichedInstruction> DecodeInstructions(SegmentedAddress centerAddress, uint bytesBefore, uint bytesAfter) {
+        // Calculate start address (going back by bytesBeforeCenter)
+        uint startSegmentOffset = bytesBefore > centerAddress.Offset ? 0 : centerAddress.Offset - bytesBefore;
+        var startAddress = new SegmentedAddress(centerAddress.Segment, (ushort)startSegmentOffset);
 
-        // Let's always start at the start of the segment
-        var currentAddress = new SegmentedAddress(centerAddress.Segment, 0);
-        uint length = Math.Min(Math.Max(blockSize, centerAddress.Offset + halfBlockSize), 0xFFFF);
+        // Calculate total length to read
+        uint totalLength = bytesBefore + bytesAfter;
+        totalLength = Math.Min(totalLength, A20Gate.EndOfHighMemoryArea - startAddress.Linear);
 
         // Read the memory block
-        byte[] memoryBlock = memory.ReadRam(length, currentAddress.Linear);
+        byte[] memoryBlock = memory.ReadRam(totalLength, startAddress.Linear);
 
         // Create a decoder for the memory block
         var codeReader = new ByteArrayCodeReader(memoryBlock);
@@ -41,11 +44,16 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
         var instructions = new Dictionary<uint, EnrichedInstruction>();
 
         decoder.IP = 0;
-        while (currentAddress.Offset < (uint)memoryBlock.Length) {
+
+        // Current address tracker
+        SegmentedAddress currentAddress = startAddress;
+        const uint maxInstrLength = 15; // Maximum x86 instruction length
+        // Decode until we reach the end of the memory block
+        while (currentAddress.Offset < startAddress.Offset + totalLength - maxInstrLength) {
             // Decode the instruction
             decoder.Decode(out Instruction instruction);
 
-            // Create instruction info
+            // Create enriched instruction
             EnrichedInstruction enrichedInstruction = new(instruction) {
                 Bytes = memory.ReadRam((uint)instruction.Length, currentAddress.Linear),
                 Function = functions.SingleOrDefault(pair => pair.Key.Linear == currentAddress.Linear).Value,

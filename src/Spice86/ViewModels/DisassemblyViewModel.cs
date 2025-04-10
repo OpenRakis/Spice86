@@ -72,7 +72,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private bool _isLoading;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(UpdateDisassemblyCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepIntoCommand))]
     [NotifyCanExecuteChangedFor(nameof(StepOverCommand))]
     private bool _isPaused;
@@ -165,8 +164,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     public bool TryGetLineByAddress(uint address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine) {
         return DebuggerLines.TryGetValue(address, out debuggerLine);
     }
+
     public bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine) {
-        return DebuggerLines.TryGetValue(address.Linear, out debuggerLine);
+        return TryGetLineByAddress(address.Linear, out debuggerLine);
     }
 
     /// <summary>
@@ -199,6 +199,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// </summary>
     /// <param name="enrichedInstructions">The dictionary of instructions to add.</param>
     private void UpdateDebuggerLinesInBatch(Dictionary<uint, EnrichedInstruction> enrichedInstructions) {
+        // Ensure we're on the UI thread
+        if (!Dispatcher.UIThread.CheckAccess()) {
+            Dispatcher.UIThread.Post(() => UpdateDebuggerLinesInBatch(enrichedInstructions));
+
+            return;
+        }
         try {
             _isBatchUpdating = true;
 
@@ -295,22 +301,24 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         if (TryGetLineByAddress(address, out DebuggerLineViewModel? debuggerLine)) {
             return debuggerLine;
         }
-        _logger.Debug("Current address {CurrentInstructionAddress} not found in DebuggerLines, updating disassembly", address);
+        _logger.Debug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
 
-        // We need to ensure the disassembly is updated synchronously before continuing
         try {
             IsLoading = true;
 
-            // Use Task.Run and Wait to execute the async method synchronously
-            // This ensures the instructions are loaded before we continue
-            Task.Run(async () => {
-                await UpdateDisassembly(address);
-            }).Wait();
+            // Decode the instructions
+            _logger.Debug("Decoding instructions for address {Address}", address);
+            Dictionary<uint, EnrichedInstruction> instructions = _instructionsDecoder.DecodeInstructions(address, 256, 512);
+            _logger.Debug("Decoded {Count} instructions", instructions.Count);
 
-            _logger.Debug("Disassembly updated, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
+            UpdateDebuggerLinesInBatch(instructions);
+
+            _logger.Debug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
 
             // Verify that the current instruction is now in the collection
             if (!TryGetLineByAddress(address, out debuggerLine)) {
+                _logger.Error("Address {Address} still not found after loading instructions", address);
+
                 throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
             }
         } finally {
@@ -340,8 +348,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
         try {
             // Log the current state for debugging
-            _logger.Debug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress,
-                _previousInstructionAddress);
+            _logger.Debug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
 
             DebuggerLineViewModel currentLine = EnsureAddressIsLoaded(State.IpSegmentedAddress);
             currentLine.IsCurrentInstruction = true;

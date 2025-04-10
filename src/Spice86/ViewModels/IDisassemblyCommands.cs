@@ -9,11 +9,6 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public interface IDisassemblyCommands {
     /// <summary>
-    ///     Command to update the disassembly.
-    /// </summary>
-    IAsyncRelayCommand UpdateDisassemblyCommand { get; }
-
-    /// <summary>
     ///     Command to create a new disassembly view.
     /// </summary>
     IAsyncRelayCommand NewDisassemblyViewCommand { get; }

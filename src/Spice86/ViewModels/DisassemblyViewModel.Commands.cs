@@ -10,7 +10,6 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class DisassemblyViewModel : IDisassemblyCommands {
     // Explicitly implement IDisassemblyCommands interface
-    IAsyncRelayCommand IDisassemblyCommands.UpdateDisassemblyCommand => UpdateDisassemblyCommand;
     IAsyncRelayCommand IDisassemblyCommands.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
     IRelayCommand IDisassemblyCommands.CopyLineCommand => CopyLineCommand;
     IRelayCommand IDisassemblyCommands.StepIntoCommand => StepIntoCommand;
@@ -94,16 +93,6 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
             IsPaused = IsPaused
         };
         await Task.Run(() => _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel)));
-    }
-
-    [RelayCommand(CanExecute = nameof(IsPaused))]
-    private async Task UpdateDisassembly(SegmentedAddress currentInstructionAddress) {
-        IsLoading = true;
-        Dictionary<uint, EnrichedInstruction> enrichedInstructions = await Task.Run(() => _instructionsDecoder.DecodeInstructions(currentInstructionAddress, 2048));
-
-        UpdateDebuggerLinesInBatch(enrichedInstructions);
-
-        IsLoading = false;
     }
 
     [RelayCommand]
