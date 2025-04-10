@@ -137,7 +137,8 @@ public class Spice86DependencyInjection : IDisposable {
             new BiosEquipmentDeterminationInt11Handler(memory, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler =
             new SystemBiosInt12Handler(memory, functionHandlerProvider, stack, state, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, functionHandlerProvider, stack, state, a20Gate,
+        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(
+            memory,  functionHandlerProvider, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
         SystemClockInt1AHandler systemClockInt1AHandler =
             new SystemClockInt1AHandler(memory, functionHandlerProvider, stack, state, loggerService, timerInt8Handler);
@@ -184,9 +185,10 @@ public class Spice86DependencyInjection : IDisposable {
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-            configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+        Dos dos = new Dos(configuration, memory, stack, state, a20Gate,
+            callbackHandler, functionHandlerProvider, keyboardInt16Handler,
+            vgaFunctionality, new Dictionary<string, string>
+                { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
