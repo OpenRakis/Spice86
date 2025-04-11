@@ -140,14 +140,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
     /// </summary>
     public void ReadCharacterFromStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
 
-        using Stream stream = stdAux.OpenStream("r");
-        if (stream.CanRead) {
-            State.AL = (byte)stream.ReadByte();
+        if (aux.CanRead) {
+            State.AL = (byte)aux.ReadByte();
         } else {
             State.AL = 0x0;
         }
@@ -157,14 +157,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
     public void WriteCharacterToStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
 
-        using Stream stream = stdAux.OpenStream("w");
-        if (stream.CanWrite) {
-            stream.WriteByte(State.AL);
+        if (stdAux.CanWrite) {
+            stdAux.WriteByte(State.AL);
         }
     }
 
@@ -172,14 +172,13 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the printer device.
     /// </summary>
     public void PrinterOutput() {
-        IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
-        if (prn is not CharacterDevice printer) {
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "PRN" });
+        if (aux is not CharacterDevice stdAux) {
             return;
         }
-
-        using Stream stream = printer.OpenStream("w");
-        if (stream.CanWrite) {
-            stream.WriteByte(State.AL);
+        if (stdAux.CanWrite) {
+            stdAux.Write(State.AL);
         }
     }
 
@@ -193,8 +192,7 @@ public class DosInt21Handler : InterruptHandler {
             return;
         }
 
-        using Stream stream = device.OpenStream("r");
-        if (stream.CanRead) {
+        if (device.CanRead) {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
@@ -206,14 +204,15 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
         CharacterDevice device = _dos.CurrentConsoleDevice;
-        if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
+        if (!device.Attributes.HasFlag(
+                DeviceAttributes.Character |
+                DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
         }
 
-        using Stream stream = device.OpenStream("r");
-        if (stream.CanRead) {
-            int input = stream.ReadByte();
+        if (device.CanRead) {
+            int input = device.ReadByte();
             if (input == -1) {
                 State.AL = 0;
             } else {
@@ -741,7 +740,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void MoveFilePointerUsingHandle(bool calledFromVm) {
-        byte originOfMove = State.AL;
+        SeekOrigin originOfMove = (SeekOrigin)State.AL;
         ushort fileHandle = State.BX;
         uint offset = (uint)(State.CX << 16 | State.DX);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -1030,22 +1029,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
     public void IoControl(bool calledFromVm) {
-        byte reg_al = State.AL;
-        ushort reg_bx = State.BX;
-        ushort reg_cx = State.CX;
-        ushort reg_dx = State.DX;
-        ushort reg_ds = State.DS;
-
-        if (_dosFileManager.IoControl(
-            reg_al, reg_bx, reg_cx, reg_dx, reg_ds,
-            out ushort reg_ax,
-            out ushort reg_dx_out,
-            out byte reg_al_out,
-            out byte reg_ah_out)) {
-            State.AX = reg_ax;
-            State.DX = reg_dx_out;
-            State.AL = reg_al_out;
-            State.AH = reg_ah_out;
+        if (_dosFileManager.IoControl(State)) {
             SetCarryFlag(false, calledFromVm);
         } else {
             SetCarryFlag(true, calledFromVm);
