@@ -16,4 +16,10 @@ public class EnrichedInstruction(Instruction instruction) {
     public FunctionInformation? Function { get; init; }
     public SegmentedAddress SegmentedAddress { get; init; }
     public List<BreakpointViewModel> Breakpoints { get; init; } = [];
+    
+    /// <summary>
+    /// Gets or sets a custom formatted representation of the instruction.
+    /// If null, the default formatting from Iced will be used.
+    /// </summary>
+    public List<FormattedTextSegment>? FormattedInstruction { get; init; }
 }

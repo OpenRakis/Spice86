@@ -4,20 +4,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Iced.Intel;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
-
-using System.Text.Json;
 
 /// <summary>
 ///     View model for a line in the debugger.
 /// </summary>
 public partial class DebuggerLineViewModel : ViewModelBase {
     private readonly BreakpointsViewModel? _breakpointsViewModel;
-    private readonly State _cpuState;
 
     private readonly Formatter _formatter = new MasmFormatter(new FormatterOptions {
         AddLeadingZeroToHexNumbers = false,
@@ -27,6 +23,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     });
 
     private readonly Instruction _info;
+    private readonly List<FormattedTextSegment>? _customFormattedInstruction;
 
     [ObservableProperty]
     private BreakpointViewModel? _breakpoint;
@@ -40,15 +37,15 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     [ObservableProperty]
     private bool? _willJump;
 
-    public DebuggerLineViewModel(EnrichedInstruction instruction, State cpuState, BreakpointsViewModel? breakpointsViewModel = null) {
+    public DebuggerLineViewModel(EnrichedInstruction instruction, BreakpointsViewModel? breakpointsViewModel = null) {
         _info = instruction.Instruction;
-        _cpuState = cpuState;
         _breakpointsViewModel = breakpointsViewModel;
         ByteString = string.Join(' ', instruction.Bytes.Select(b => b.ToString("X2")));
         Function = instruction.Function;
         SegmentedAddress = instruction.SegmentedAddress;
         Address = SegmentedAddress.Linear;
         NextAddress = (uint)(Address + _info.Length);
+        _customFormattedInstruction = instruction.FormattedInstruction;
 
         // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
         Breakpoint = instruction.Breakpoints.SingleOrDefault(breakpoint => breakpoint.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
@@ -70,7 +67,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     public bool CanBeSteppedOver => _info.FlowControl is FlowControl.Call or FlowControl.IndirectCall or FlowControl.Interrupt;
     public uint NextAddress { get; private set; }
 
-    public string Disassembly => _info.ToString();
+    public string Disassembly => _customFormattedInstruction != null ? string.Join(' ', _customFormattedInstruction.Select(segment => segment.Text)) : _info.ToString();
 
     /// <summary>
     ///     Gets a collection of formatted text segments for the disassembly with syntax highlighting.
@@ -81,9 +78,15 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     ///     Generates a formatted representation of the disassembly with syntax highlighting.
     /// </summary>
     private void GenerateFormattedDisassembly() {
-        var output = new FormattedTextSegmentsOutput();
-        _formatter.Format(_info, output);
-        DisassemblySegments = output.Segments;
+        if (_customFormattedInstruction != null) {
+            // Use custom formatting for special opcodes
+            DisassemblySegments = _customFormattedInstruction;
+        } else {
+            // Use standard Iced formatting for normal instructions
+            var output = new FormattedTextSegmentsOutput();
+            _formatter.Format(_info, output);
+            DisassemblySegments = output.Segments;
+        }
     }
 
     /// <summary>

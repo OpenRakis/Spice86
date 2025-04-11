@@ -96,4 +96,16 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// <param name="debuggerLine"></param>
     /// <returns></returns>
     bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine);
+
+    /// <summary>
+    /// Activates the view model, subscribing to pause events and loading initial data if needed.
+    /// This should be called when the view becomes visible.
+    /// </summary>
+    void Activate();
+
+    /// <summary>
+    /// Deactivates the view model, unsubscribing from pause events to prevent unnecessary updates.
+    /// This should be called when the view is hidden.
+    /// </summary>
+    void Deactivate();
 }

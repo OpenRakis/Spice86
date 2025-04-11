@@ -46,6 +46,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private bool _sortedViewNeedsUpdate = true;
     // Track the previous instruction address for highlighting updates
     private SegmentedAddress? _previousInstructionAddress;
+    // Flag to track if the view is active/visible
+    private bool _isActive;
 
     [ObservableProperty]
     private string? _breakpointAddress;
@@ -110,12 +112,44 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
-        CurrentInstructionAddress = _state.IpSegmentedAddress;
 
         // Initialize the registers view model
         _registers = new RegistersViewModel(state);
 
-        EnableEventHandlers();
+        _breakpointsViewModel.Breakpoints.CollectionChanged += Breakpoints_CollectionChanged;
+    }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the disassembly view is active/visible.
+    /// When true, the view model will react to pause events.
+    /// </summary>
+    public bool IsActive {
+        get => _isActive;
+        set {
+            if (_isActive == value) {
+                return;
+            }
+            _isActive = value;
+            
+            if (_isActive) {
+                // Subscribe to pause events when the view becomes active
+                _pauseHandler.Paused += OnPaused;
+                _pauseHandler.Resumed += OnResumed;
+                
+                // If already paused, update the view
+                if (_pauseHandler.IsPaused) {
+                    OnPaused();
+                } else {
+                    // If not paused, still set the current instruction address to show something
+                    // but only when the view becomes active
+                    CurrentInstructionAddress = State.IpSegmentedAddress;
+                }
+            } else {
+                // Unsubscribe from pause events when the view becomes inactive
+                _pauseHandler.Paused -= OnPaused;
+                _pauseHandler.Resumed -= OnResumed;
+            }
+        }
     }
 
     /// <summary>
@@ -154,7 +188,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 _currentInstructionAddress = value;
                 OnPropertyChanged();
                 UpdateHeader(value);
-                UpdateCpuInstructionHighlighting();
+                
+                if (_isActive) {
+                    UpdateCpuInstructionHighlighting();
+                }
             }
         }
     }
@@ -190,7 +227,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     ///     Clean up event handlers when the view model is disposed.
     /// </summary>
     public void Dispose() {
-        DisableEventHandlers();
+        // Make sure to unsubscribe from all events
+        IsActive = false;
+        _breakpointsViewModel.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
         GC.SuppressFinalize(this);
     }
 
@@ -210,7 +249,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
             // Add all new items at once
             foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
-                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, State, _breakpointsViewModel);
+                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _breakpointsViewModel);
             }
         } finally {
             _isBatchUpdating = false;
@@ -236,22 +275,6 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         }
     }
 
-    private void EnableEventHandlers() {
-        _pauseHandler.Paused += OnPaused;
-        _pauseHandler.Resumed += OnResumed;
-
-        // Subscribe to collection changes in the BreakpointsViewModel
-        _breakpointsViewModel.Breakpoints.CollectionChanged += Breakpoints_CollectionChanged;
-    }
-
-    private void DisableEventHandlers() {
-        _pauseHandler.Paused -= OnPaused;
-        _pauseHandler.Resumed -= OnResumed;
-
-        // Unsubscribe from collection changes
-        _breakpointsViewModel.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
-    }
-
     private void Breakpoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
         // Ensure we're on the UI thread
         if (!Dispatcher.UIThread.CheckAccess()) {
@@ -273,6 +296,11 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     private void OnPaused() {
+        // Only process if the view is active
+        if (!_isActive) {
+            return;
+        }
+        
         // Ensure we're on the UI thread
         if (!Dispatcher.UIThread.CheckAccess()) {
             Dispatcher.UIThread.Post(OnPaused);
@@ -376,5 +404,21 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
+    }
+
+    /// <summary>
+    /// Activates the view model, subscribing to pause events and loading initial data if needed.
+    /// This should be called when the view becomes visible.
+    /// </summary>
+    public void Activate() {
+        IsActive = true;
+    }
+
+    /// <summary>
+    /// Deactivates the view model, unsubscribing from pause events to prevent unnecessary updates.
+    /// This should be called when the view is hidden.
+    /// </summary>
+    public void Deactivate() {
+        IsActive = false;
     }
 }

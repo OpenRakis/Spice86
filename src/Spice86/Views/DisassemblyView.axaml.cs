@@ -20,6 +20,10 @@ public partial class DisassemblyView : UserControl {
     public DisassemblyView() {
         InitializeComponent();
         DataContextChanged += DisassemblyView_DataContextChanged;
+        
+        // Subscribe to attached/detached events
+        AttachedToVisualTree += DisassemblyView_AttachedToVisualTree;
+        DetachedFromVisualTree += DisassemblyView_DetachedFromVisualTree;
     }
 
     private void InitializeComponent() {
@@ -37,6 +41,16 @@ public partial class DisassemblyView : UserControl {
         if (_viewModel != null) {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
+    }
+    
+    private void DisassemblyView_AttachedToVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        // Activate the view model when the view is attached to the visual tree
+        _viewModel?.Activate();
+    }
+
+    private void DisassemblyView_DetachedFromVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
+        // Deactivate the view model when the view is detached from the visual tree
+        _viewModel?.Deactivate();
     }
 
     private static void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) {
@@ -62,9 +76,9 @@ public partial class DisassemblyView : UserControl {
     }
 
     private void OnFunctionSelectionKeyDown(object? sender, KeyEventArgs e) {
-        if (e.Key == Key.Enter && DataContext is IDisassemblyViewModel viewModel) {
+        if (e.Key == Key.Enter && _viewModel != null) {
             // Execute the "Go to Function" command when Enter is pressed
-            viewModel.GoToFunctionCommand.Execute(viewModel.SelectedFunction);
+            _viewModel.GoToFunctionCommand.Execute(_viewModel.SelectedFunction);
             e.Handled = true;
         }
     }
