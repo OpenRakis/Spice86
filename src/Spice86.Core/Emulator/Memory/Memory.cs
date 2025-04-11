@@ -54,6 +54,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         if (length == 0) {
             length = (uint)_memoryDevices.Length;
         }
+        length = Math.Min(length, (uint)_memoryDevices.Length - offset);
         byte[] copy = new byte[length];
         for (uint address = 0; address < copy.Length; address++) {
             copy[address] = _memoryDevices[address + offset].Read(address + offset);
@@ -63,7 +64,8 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     
     /// <inheritdoc />
     public void WriteRam(byte[] array, uint offset = 0) {
-        for (uint address = 0; address < array.Length; address++) {
+        var length = Math.Min(array.Length, (uint)_memoryDevices.Length - offset);
+        for (uint address = 0; address < length; address++) {
             _memoryDevices[address + offset].Write(address + offset, array[address]);
         }
     }
