@@ -5,22 +5,21 @@ using Spice86.Core.Emulator.Memory;
 /// <summary>
 /// Represents a file that has been opened by DOS.
 /// </summary>
-public class OpenFile {
+public class DosFile : VirtualFileBase {
     private readonly int _descriptor;
     private readonly List<MemoryRange> _loadedMemoryRanges = new();
-    private readonly string _name;
-    private readonly Stream _randomAccessFile;
+    private readonly Stream _randomAccessStream;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OpenFile"/> class.
+    /// Initializes a new instance of the <see cref="DosFile"/> class.
     /// </summary>
     /// <param name="name">The name of the file.</param>
     /// <param name="descriptor">The file descriptor used by DOS.</param>
     /// <param name="randomAccessFile">The stream used for random access to the file.</param>
-    public OpenFile(string name, int descriptor, Stream randomAccessFile) {
-        _name = name;
+    public DosFile(string name, int descriptor, Stream randomAccessFile) {
+        Name = name;
         _descriptor = descriptor;
-        _randomAccessFile = randomAccessFile;
+        _randomAccessStream = randomAccessFile;
     }
 
     /// <summary>
@@ -62,13 +61,46 @@ public class OpenFile {
     /// </summary>
     public IList<MemoryRange> LoadedMemoryRanges => _loadedMemoryRanges;
 
-    /// <summary>
-    /// Gets the name of the file.
-    /// </summary>
-    public string Name => _name;
+    public virtual bool IsOnReadOnlyMedium { get; }
 
+    public ushort Time { get; set; }
+
+    public ushort Date { get; set; }
+
+    public byte Flags { get; set; }
+
+    public byte Drive { get; set; } = 0xff; //unset
+    public override string Name { get; set; }
+    public override ushort Information { get; }
+    public override bool CanRead { get; }
+    public override bool CanSeek { get; }
+    public override bool CanWrite { get; }
+    public override long Length { get; }
+    public override long Position { get; set; }
     /// <summary>
-    /// Gets the stream used for random access to the file.
+    /// Closes the file.
     /// </summary>
-    public Stream RandomAccessFile => _randomAccessFile;
+    public override void Close() {
+        _randomAccessStream.Close();
+    }
+
+    public override void Flush() {
+        _randomAccessStream.Flush();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) {
+        return _randomAccessStream.Read(buffer, offset, count);
+    }
+
+    public override void SetLength(long value) {
+        _randomAccessStream.SetLength(value);
+    }
+
+    public override void Write(byte[] buffer, int offset, int count) {
+        _randomAccessStream.Write(buffer, offset, count);
+    }
+
+    public override long Seek(long offset, SeekOrigin origin) {
+        return _randomAccessStream.Seek(offset, origin);
+    }
 }

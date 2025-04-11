@@ -12,28 +12,26 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class ConsoleDevice : CharacterDevice {
     private readonly State _state;
-    private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly KeyboardStreamedInput _keyboardStreamedInput;
+    private readonly Stream _writeStream;
+    private readonly Stream _readStream;
 
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(State state, IVgaFunctionality vgaFunctionality, KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes, string name, ILoggerService loggerService) : base(attributes, name, loggerService) {
+    public ConsoleDevice(State state, IVgaFunctionality vgaFunctionality,
+        KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes,
+        string name, ILoggerService loggerService)
+        : base(attributes, name, loggerService) {
         _state = state;
-        _vgaFunctionality = vgaFunctionality;
-        _keyboardStreamedInput = keyboardStreamedInput;
+        _writeStream = new KeyboardStream(keyboardStreamedInput);
+        _readStream = new ScreenStream(_state, vgaFunctionality);
     }
 
-    /// <inheritdoc />
-    public override Stream OpenStream(string openMode) {
-        switch (openMode) {
-            case "w":
-                return new ScreenStream(_state, _vgaFunctionality);
-            case "r":
-                return new KeyboardStream(_keyboardStreamedInput);
-            default:
-                Logger.Error("Invalid open mode for console device: {Mode}", openMode);
-                return new DeviceStream(Name, openMode, Logger);
-        }
+    public override int Read(byte[] buffer, int offset, int count) {
+        return _readStream.Read(buffer, offset, count);
+    }
+
+    public override void Write(byte[] buffer, int offset, int count) {
+        _writeStream.Write(buffer, offset, count);
     }
 }

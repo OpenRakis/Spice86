@@ -171,7 +171,7 @@ public class Dos {
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
-        AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
+        AddDevice(new BlockDevice("",DeviceAttributes.FatDevice, 1));
     }
 
     /// <summary>
