@@ -165,10 +165,12 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
+        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput,
+            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
         AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
+        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock,
+            "CLOCK", _loggerService));
         AddDevice(new BlockDevice("",DeviceAttributes.FatDevice, 1));
     }
 
