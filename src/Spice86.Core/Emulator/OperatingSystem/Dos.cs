@@ -152,17 +152,15 @@ public class Dos {
 
     private void OpenDefaultFileHandles() {
         if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
-            FileManager.OpenDevice(con, "r", "STDIN");
-            FileManager.OpenDevice(con, "w", "STDOUT");
-            FileManager.OpenDevice(con, "w", "STDERR");
+            FileManager.OpenDevice(con);
         }
 
         if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
-            FileManager.OpenDevice(aux, "rw", "STDAUX");
+            FileManager.OpenDevice(aux);
         }
 
         if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
-            FileManager.OpenDevice(prn, "w", "STDPRN");
+            FileManager.OpenDevice(prn);
         }
     }
 
