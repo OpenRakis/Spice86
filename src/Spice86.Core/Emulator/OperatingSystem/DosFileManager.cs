@@ -386,7 +386,7 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
             }
-            return OpenDeviceInternal(device, openMode);
+            return OpenDeviceInternal(device);
         }
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
@@ -405,22 +405,19 @@ public class DosFileManager {
     /// Returns a handle to a DOS <see cref="CharacterDevice"/>
     /// </summary>
     /// <param name="device">The character device</param>
-    /// <param name="openMode">Open in Read, Write, or Read+Write mode.</param>
-    /// <param name="name">The name of the device, such as "STDIN" for the standard input.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenDevice(CharacterDevice device, string openMode, string name) {
-        return OpenDeviceInternal(device, openMode, name);
+    public DosFileOperationResult OpenDevice(CharacterDevice device) {
+        return OpenDeviceInternal(device);
     }
 
-    private DosFileOperationResult OpenDeviceInternal(CharacterDevice device, string openMode, string? name = null) {
+    private DosFileOperationResult OpenDeviceInternal(CharacterDevice device) {
         int? freeIndex = FindNextFreeFileIndex();
         if (freeIndex == null) {
             return NoFreeHandleError();
         }
 
-        Stream stream = device;
         ushort dosIndex = (ushort)freeIndex.Value;
-        SetOpenFile(dosIndex, new DosFile(name ?? device.Name, dosIndex, stream));
+        SetOpenFile(dosIndex, device);
 
         return DosFileOperationResult.Value16(dosIndex);
     }
