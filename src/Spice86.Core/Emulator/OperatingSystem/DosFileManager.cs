@@ -643,19 +643,6 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    private static uint Seek(Stream randomAccessFile, byte originOfMove, uint offset) {
-        SeekOrigin seekOrigin = originOfMove switch {
-            0 => SeekOrigin.Begin,
-            1 => SeekOrigin.Current,
-            2 => SeekOrigin.End,
-            _ => throw new ArgumentOutOfRangeException(nameof(originOfMove),
-            $"Invalid origin of move in DOS File Manager {nameof(MoveFilePointerUsingHandle)} function")
-        };
-
-        var newOffset = randomAccessFile.Seek(offset, seekOrigin);
-        return (uint)newOffset;
-    }
-
     private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) => OpenFiles[fileHandle] = openFile;
 
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
