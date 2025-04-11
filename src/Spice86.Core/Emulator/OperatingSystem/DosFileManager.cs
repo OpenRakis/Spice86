@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -36,7 +37,7 @@ public class DosFileManager {
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
-    public OpenFile?[] OpenFiles { get; } = new OpenFile[MaxOpenFiles];
+    public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[MaxOpenFiles];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
@@ -68,8 +69,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException">If the host OS refuses to close the file.</exception>
     public DosFileOperationResult CloseFile(ushort fileHandle) {
-        OpenFile? file = GetOpenFile(fileHandle);
-        if (file == null) {
+        if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -81,7 +81,7 @@ public class DosFileManager {
         try {
             if (CountHandles(file) == 0) {
                 // Only close the file if no other handle to it exist.
-                file.RandomAccessFile.Close();
+                file.Close();
             }
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while closing file", e);
@@ -129,8 +129,7 @@ public class DosFileManager {
     /// <param name="fileHandle">The handle to a file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult DuplicateFileHandle(ushort fileHandle) {
-        OpenFile? file = GetOpenFile(fileHandle);
-        if (file == null) {
+        if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -354,19 +353,17 @@ public class DosFileManager {
     /// <param name="fileHandle">The handle to the file.</param>
     /// <param name="offset">Number of bytes to move.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult MoveFilePointerUsingHandle(byte originOfMove, ushort fileHandle, uint offset) {
-        OpenFile? file = GetOpenFile(fileHandle);
-        if (file == null) {
+    public DosFileOperationResult MoveFilePointerUsingHandle(SeekOrigin originOfMove, ushort fileHandle, uint offset) {
+        if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
-        Stream randomAccessFile = file.RandomAccessFile;
         try {
-            uint newOffset = Seek(randomAccessFile, originOfMove, offset);
-            return DosFileOperationResult.Value32(newOffset);
+            long newOffset = file.Seek(offset, originOfMove);
+            return DosFileOperationResult.Value32((uint)newOffset);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred while seeking file {Error}", e);
@@ -421,9 +418,9 @@ public class DosFileManager {
             return NoFreeHandleError();
         }
 
-        Stream stream = device.OpenStream(openMode);
+        Stream stream = device;
         ushort dosIndex = (ushort)freeIndex.Value;
-        SetOpenFile(dosIndex, new OpenFile(name ?? device.Name, dosIndex, stream));
+        SetOpenFile(dosIndex, new DosFile(name ?? device.Name, dosIndex, stream));
 
         return DosFileOperationResult.Value16(dosIndex);
     }
@@ -436,8 +433,7 @@ public class DosFileManager {
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
-        OpenFile? file = GetOpenFile(fileHandle);
-        if (file == null) {
+        if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -448,7 +444,7 @@ public class DosFileManager {
         byte[] buffer = new byte[readLength];
         int actualReadLength;
         try {
-            actualReadLength = file.RandomAccessFile.Read(buffer, 0, readLength);
+            actualReadLength = file.Read(buffer, 0, readLength);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while reading file", e);
         }
@@ -500,7 +496,7 @@ public class DosFileManager {
             return DosFileOperationResult.Value16(writeLength);
         }
 
-        OpenFile? file = GetOpenFile(fileHandle);
+        DosFile? file = GetOpenFile(fileHandle) as DosFile;
         if (file == null) {
             return FileNotOpenedError(fileHandle);
         }
@@ -508,7 +504,7 @@ public class DosFileManager {
         try {
             // Do not access Ram property directly to trigger breakpoints if needed
             Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
-            file.RandomAccessFile.Write(data);
+            file.Write(data);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
@@ -516,7 +512,7 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(writeLength);
     }
 
-    private int CountHandles(OpenFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
+    private int CountHandles(DosFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
 
     private DosFileOperationResult FileAccessDeniedError(string? filename) {
         return FileOperationErrorWithLog($"File {filename} already in use!", ErrorCode.AccessDenied);
@@ -561,7 +557,7 @@ public class DosFileManager {
 
     private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
-    private OpenFile? GetOpenFile(ushort fileHandle) {
+    private IVirtualFile? GetOpenFile(ushort fileHandle) {
         if (fileHandle >= OpenFiles.Length) {
             return null;
         }
@@ -637,7 +633,9 @@ public class DosFileManager {
             }
 
             if (randomAccessFile != null) {
-                SetOpenFile(dosIndex, new OpenFile(dosFileName, dosIndex, randomAccessFile));
+                SetOpenFile(dosIndex, new DosFile(dosFileName, dosIndex, randomAccessFile) {
+                    Drive = _dosPathResolver.CurrentDriveIndex
+                });
             }
         } catch (FileNotFoundException) {
             return FileNotFoundError(dosFileName);
@@ -661,7 +659,7 @@ public class DosFileManager {
         return (uint)newOffset;
     }
 
-    private void SetOpenFile(ushort fileHandle, OpenFile? openFile) => OpenFiles[fileHandle] = openFile;
+    private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) => OpenFiles[fileHandle] = openFile;
 
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
         string matchingFileSystemEntry, ushort? searchAttributes = null) {
@@ -797,26 +795,19 @@ public class DosFileManager {
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) =>
         _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
 
-    public bool IoControl(byte reg_al, ushort reg_bx, ushort reg_cx,
-        ushort reg_dx, ushort reg_ds, out ushort reg_ax, out ushort reg_dx_out,
-        out byte reg_al_out, out byte reg_ah_out) {
-        reg_ax = 0;
-        reg_dx_out = 0;
-        reg_al_out = 0;
-        reg_ah_out = 0;
-
+    public bool IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
 
-        if (reg_al is < 4 or 0x06 or 0x07 or
+        if (state.AL is < 4 or 0x06 or 0x07 or
             0x0a or 0x0c or 0x10) {
-            handle = (byte)reg_bx;
+            handle = (byte)state.BX;
             if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
                 return false;
             }
-        } else if (reg_al < 0x12) {
-            if (reg_al != 0x0b) {
-                drive = (byte)(reg_bx == 0 ? DefaultDrive : reg_bx - 1);
+        } else if (state.AL < 0x12) {
+            if (state.AL != 0x0b) {
+                drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
                 if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters || _dosVirtualDevices[drive] == null)) {
                     return false;
                 }
@@ -825,21 +816,23 @@ public class DosFileManager {
             return false;
         }
 
-        switch (reg_al) {
+        switch (state.AL) {
             case 0x00:      /* Get Device Information */
-            //if (Files[handle]->GetInformation() & 0x8000) {	//Check for device
-            //	reg_dx = Files[handle]->GetInformation() & ~EXT_DEVICE_BIT;
-            //} else {
-            //	uint8_t hdrive=Files[handle]->GetDrive();
-            //	if (hdrive==0xff) {
-            //		LOG(LOG_IOCTL,LOG_NORMAL)("00:No drive set");
-            //		hdrive=2;	// defaulting to C:
-            //	}
-            //	/* return drive number in lower 5 bits for block devices */
-            //	reg_dx=(Files[handle]->GetInformation()&0xffe0)|hdrive;
-            //}
-            //reg_ax=reg_dx; //Destroyed officially
-            //return true;
+                VirtualFileBase? fileOrDevice = OpenFiles[handle];
+                if (fileOrDevice is VirtualDeviceBase virtualDevice) {
+                    state.DX = (ushort)virtualDevice.Information;
+                } else if(fileOrDevice is DosFile dosFile)  {
+                    byte sourceDrive = dosFile.Drive;
+                    if (sourceDrive == 0xff) {
+                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("No drive set for file handle {FileHandle}", handle);
+                        }
+                        sourceDrive = 0x2; // defaulting to C:
+                    }
+                    state.DX = (ushort)((dosFile.Information & 0xffe0) | sourceDrive);
+                }
+                state.AX = state.DX; // Destroyed officially
+                return true;
             case 0x01:      /* Set Device Information */
             //if (reg_dh != 0) {
             //	DOS_SetError(DOSERR_DATA_INVALID);
@@ -857,10 +850,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x02:      /* Read from Device Control Channel */
-
-
-                return ReadFromDeviceControlChannel(handle, reg_cx, reg_dx,
-                    reg_ds, out reg_dx_out);
+                throw new NotImplementedException();
             case 0x03:      /* Write to Device Control Channel */
             //if (Files[handle]->GetInformation() & 0xc000) {
             //	/* is character device with IOCTL support */
@@ -922,7 +912,7 @@ public class DosFileManager {
                 //	// undocumented bits from device attribute word
                 //	// TODO Set bit 9 on drives that don't support direct I/O
                 //}
-                reg_ax = 0x300;
+                state.AX = 0x300;
                 return true;
             case 0x0B:      /* Set sharing retry count */
                 //if (reg_dx==0) {
@@ -1014,50 +1004,6 @@ public class DosFileManager {
     /// </summary>
     /// <param name="driveIndex">The index of the drive. 0x0: A:, 0x1: B:, ...</param>
     public void SelectDefaultDrive(byte driveIndex) => _dosPathResolver.CurrentDriveIndex = driveIndex;
-
-
-    public bool ReadFromDeviceControlChannel(ushort fileHandle, ushort bufferSegment,
-        ushort bufferOffset, ushort bufferLength, out ushort bytesRead) {
-        bytesRead = 0;
-
-        // Validate the file handle
-        if (fileHandle >= OpenFiles.Length || OpenFiles[fileHandle] == null) {
-            return false;
-        }
-
-        OpenFile? openFile = OpenFiles[fileHandle];
-        if (openFile == null) {
-            return false;
-        }
-
-        // Perform the read operation
-        try {
-            // Calculate the physical address in memory
-            uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
-
-            // Read data from the device
-            using Stream stream = openFile.RandomAccessFile;
-            if (!stream.CanRead) {
-                return false;
-            }
-
-            byte[] buffer = new byte[bufferLength];
-            int actualBytesRead = stream.Read(buffer, 0, bufferLength);
-
-            // Write the data to memory
-            _memory.LoadData(bufferAddress, buffer, actualBytesRead);
-
-            // Set the number of bytes read
-            bytesRead = (ushort)actualBytesRead;
-            return true;
-        } catch (IOException e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while reading from DOS device or file {FileHandle}: {Exception}",
-                    fileHandle, e);
-            }
-            return false;
-        }
-    }
 
     /// <summary>
     /// Gets the number of potentially valid drive letters
