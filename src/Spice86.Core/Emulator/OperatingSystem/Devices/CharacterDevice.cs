@@ -4,17 +4,13 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 /// <summary>
 /// Character devices are things like the console, the printer, the clock, etc.
 /// </summary>
 public class CharacterDevice : VirtualDeviceBase {
-    /// <summary>
-    /// The logging service.
-    /// </summary>
-    protected readonly ILoggerService Logger;
-
     /// <summary>
     /// Create a new character device.
     /// </summary>
@@ -23,9 +19,10 @@ public class CharacterDevice : VirtualDeviceBase {
     /// <param name="loggerService">The logging service.</param>
     /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
-    public CharacterDevice(DeviceAttributes attributes, string name,
-        ILoggerService loggerService, ushort strategy = 0, ushort interrupt = 0)
-        : base(attributes, strategy, interrupt) {
+    public CharacterDevice(ILoggerService loggerService,
+        DeviceAttributes attributes, string name, ushort strategy = 0,
+        ushort interrupt = 0)
+        : base(loggerService, attributes, strategy, interrupt) {
         Attributes |= DeviceAttributes.Character;
         Name = name.Length > 8 ? name[..8] : name;
         Logger = loggerService;
@@ -63,11 +60,13 @@ public class CharacterDevice : VirtualDeviceBase {
         throw new NotImplementedException();
     }
 
-    public override bool TryReadFromControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public override bool TryReadFromControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
-    public override bool TryWriteToControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public override bool TryWriteToControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
