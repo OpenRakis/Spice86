@@ -159,8 +159,11 @@ public class DosFileManager {
         dta.Drive = DefaultDrive;
         dta.EntryCountWithinSearchResults = 0;
 
-        if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(x => x.Name.Equals(fileSpec, StringComparison.OrdinalIgnoreCase)) is { } characterDevice) {
-            if (!TryUpdateDosTransferAreaWithFileMatch(dta, characterDevice.Name, out DosFileOperationResult status, searchAttributes)) {
+        if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(
+            x => x.IsName(fileSpec)) is { } characterDevice) {
+            if (!TryUpdateDosTransferAreaWithFileMatch(dta,
+                characterDevice.Name,
+                out DosFileOperationResult status, searchAttributes)) {
                 return status;
             }
             _activeFileSearches.Add(dta.SearchId, (characterDevice.Name, fileSpec));
