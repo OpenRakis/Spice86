@@ -1,8 +1,10 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Shared.Interfaces;
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 /// <summary>
@@ -28,15 +30,17 @@ internal class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// Create a new virtual device.
     /// </summary>
+    /// <param name="loggerService">The logging implementation.</param>
     /// <param name="name">The name or label of the block device.</param>
     /// <param name="attributes">The device attributes.</param>
     /// <param name="unitCount">The amount of disks this device has.</param>
     /// <param name="signature">The string identifier.</param>
     /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
-    public BlockDevice(string name, DeviceAttributes attributes, byte unitCount,
+    public BlockDevice(ILoggerService loggerService, string name,
+        DeviceAttributes attributes, byte unitCount,
         string signature = "", ushort strategy = 0, ushort interrupt = 0)
-        : base(attributes, strategy, interrupt) {
+        : base(loggerService, attributes, strategy, interrupt) {
         Attributes &= ~DeviceAttributes.Character;
         UnitCount = unitCount;
         Name = name;
@@ -59,11 +63,13 @@ internal class BlockDevice : VirtualDeviceBase {
         throw new NotImplementedException();
     }
 
-    public override bool TryReadFromControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public override bool TryReadFromControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
-    public override bool TryWriteToControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public override bool TryWriteToControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
