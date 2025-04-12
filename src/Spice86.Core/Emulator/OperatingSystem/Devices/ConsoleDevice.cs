@@ -19,14 +19,42 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(State state, IVgaFunctionality vgaFunctionality,
-        KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes,
-        string name, ILoggerService loggerService)
-        : base(attributes, name, loggerService) {
+    public ConsoleDevice(ILoggerService loggerService, State state,
+        IVgaFunctionality vgaFunctionality,
+        KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes)
+        : base(loggerService, attributes, "CON") {
         _state = state;
         _keyboardStreamedInput = keyboardStreamedInput;
         _writeStream = new KeyboardStream(keyboardStreamedInput);
         _readStream = new ScreenStream(_state, vgaFunctionality);
+    }
+
+    public override string Name => "CON";
+
+    public override bool CanSeek => false;
+
+    public override bool CanRead => true;
+
+    public override bool CanWrite => true;
+
+    public override long Length => _readStream.Length;
+
+    public override long Position {
+        get => _readStream.Position;
+        set => _readStream.Position = value;
+    }
+
+    public override void SetLength(long value) {
+        _readStream.SetLength(value);
+    }
+
+    public override void Flush() {
+        _readStream.Flush();
+        _writeStream.Flush();
+    }
+
+    public override long Seek(long offset, SeekOrigin origin) {
+        return _readStream.Seek(offset, origin);
     }
 
     public override int Read(byte[] buffer, int offset, int count) {

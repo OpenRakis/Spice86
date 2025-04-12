@@ -165,13 +165,15 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput,
-            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock,
-            "CLOCK", _loggerService));
-        AddDevice(new BlockDevice("",DeviceAttributes.FatDevice, 1));
+        AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality, _keyboardStreamedInput,
+            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
+        AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
+        AddDevice(new PrinterDevice(_loggerService, _state));
+        AddDevice(new AuxDevice(_loggerService));
+        AddDevice(new ClockDevice(_loggerService,
+            DeviceAttributes.Character | DeviceAttributes.CurrentClock,
+            _memory));
+        AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
     }
 
     /// <summary>
@@ -197,7 +199,7 @@ public class Dos {
         _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
-            var characterDevice = (CharacterDevice)device;
+            var characterDevice = (VirtualDeviceBase)device;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
         } else {
