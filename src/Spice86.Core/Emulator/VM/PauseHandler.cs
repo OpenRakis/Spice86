@@ -57,7 +57,7 @@ public class PauseHandler : IDisposable, IPauseHandler {
 
     /// <inheritdoc />
     public void RequestPause(string? reason = null) {
-        _loggerService.Debug("Pause requested by thread '{Thread}': {Reason}",
+        _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke();
         _pausing = true;
