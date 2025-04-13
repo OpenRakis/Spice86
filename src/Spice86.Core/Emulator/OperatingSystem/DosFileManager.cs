@@ -807,7 +807,7 @@ public class DosFileManager {
             case 0x00:      /* Get Device Information */
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is VirtualDeviceBase virtualDevice) {
-                    state.DX = virtualDevice.Information;
+                    state.DX = (ushort)(virtualDevice.Information & ~0x0200);
                 } else if(fileOrDevice is DosFile dosFile)  {
                     byte sourceDrive = dosFile.Drive;
                     if (sourceDrive == 0xff) {
