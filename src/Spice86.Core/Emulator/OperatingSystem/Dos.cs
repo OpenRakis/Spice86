@@ -155,11 +155,11 @@ public class Dos {
             FileManager.OpenDevice(con);
         }
 
-        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" or AuxDevice.Alias }) is CharacterDevice aux) {
             FileManager.OpenDevice(aux);
         }
 
-        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
+        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" or PrinterDevice.Alias }) is CharacterDevice prn) {
             FileManager.OpenDevice(prn);
         }
     }
