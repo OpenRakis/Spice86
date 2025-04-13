@@ -19,10 +19,14 @@ using System.Linq;
 /// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Disk Transfer Area.
 /// </summary>
 public class DosFileManager {
-    private static readonly char[] _directoryChars = { DosPathResolver.DirectorySeparatorChar, DosPathResolver.AltDirectorySeparatorChar };
-    private const int MaxOpenFiles = 20;
+    private static readonly char[] _directoryChars = {
+        DosPathResolver.DirectorySeparatorChar,
+        DosPathResolver.AltDirectorySeparatorChar };
+
+    private const int MaxOpenFiles = 255;
     private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
+    private readonly Dos _dos;
 
     private ushort _diskTransferAreaAddressOffset;
 
@@ -51,12 +55,14 @@ public class DosFileManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="dos">The DOS kernel.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    public DosFileManager(IMemory memory, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+    public DosFileManager(IMemory memory, Dos dos, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
+        _dos = dos;
         _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
@@ -384,7 +390,8 @@ public class DosFileManager {
     public DosFileOperationResult OpenFile(string fileName, byte accessMode) {
         string openMode = FileOpenMode[accessMode];
 
-        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>().FirstOrDefault(device => device.Name == fileName);
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
+            .FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
@@ -789,17 +796,21 @@ public class DosFileManager {
         if (state.AL is < 4 or 0x06 or 0x07 or
             0x0a or 0x0c or 0x10) {
             handle = (byte)state.BX;
-            if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
+            if (handle >= MaxOpenFiles || handle > OpenFiles.Length ||
+                OpenFiles[handle] == null) {
+                _dos.ErrorCode = ErrorCode.InvalidHandle;
                 return false;
             }
         } else if (state.AL < 0x12) {
             if (state.AL != 0x0b) {
                 drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
                 if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters || _dosVirtualDevices[drive] == null)) {
+                    _dos.ErrorCode = ErrorCode.InvalidDrive;
                     return false;
                 }
             }
         } else {
+            _dos.ErrorCode = ErrorCode.FunctionNumberInvalid;
             return false;
         }
 
