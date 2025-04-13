@@ -1032,6 +1032,8 @@ public class DosInt21Handler : InterruptHandler {
         if (_dosFileManager.IoControl(State)) {
             SetCarryFlag(false, calledFromVm);
         } else {
+            LogDosError(calledFromVm);
+            State.AX = (ushort)_dos.ErrorCode;
             SetCarryFlag(true, calledFromVm);
         }
     }

@@ -1,15 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 
 public class PrinterDevice : NullDevice {
-    private readonly State _state;
-    public PrinterDevice(ILoggerService loggerService, State state,
+    private readonly Dos _dos;
+    public PrinterDevice(ILoggerService loggerService, Dos dos,
         ushort strategy = 0, ushort interrupt = 0)
         : base(loggerService, DeviceAttributes.Character, strategy, interrupt) {
-        _state = state;
+        _dos = dos;
     }
 
     public override string Name => "LPT1";
@@ -19,8 +18,7 @@ public class PrinterDevice : NullDevice {
     public override ushort Information => 0x80A0;
 
     public override int Read(byte[] buffer, int offset, int count) {
-        //TODO: Use DOS_SetError function (that sets DOS_Block.Error) once DOS processes management is implemented
-        _state.AX = (ushort)ErrorCode.AccessDenied;
+        _dos.ErrorCode = ErrorCode.AccessDenied;
         return base.Read(buffer, offset, count);
     }
 }

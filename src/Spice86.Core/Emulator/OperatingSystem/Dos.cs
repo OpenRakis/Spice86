@@ -30,6 +30,11 @@ public class Dos {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public ErrorCode ErrorCode { get; set; }
+
+    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -120,7 +125,7 @@ public class Dos {
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+        FileManager = new DosFileManager(_memory, this, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
@@ -168,7 +173,7 @@ public class Dos {
         AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality, _keyboardStreamedInput,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
         AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
-        AddDevice(new PrinterDevice(_loggerService, _state));
+        AddDevice(new PrinterDevice(_loggerService, this));
         AddDevice(new AuxDevice(_loggerService));
         AddDevice(new ClockDevice(_loggerService,
             DeviceAttributes.Character | DeviceAttributes.CurrentClock,
