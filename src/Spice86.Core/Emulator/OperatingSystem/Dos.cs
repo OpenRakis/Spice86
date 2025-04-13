@@ -123,7 +123,7 @@ public class Dos {
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+        FileManager = new DosFileManager(_memory, this, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         DosTables = new(memory);
 
@@ -174,7 +174,7 @@ public class Dos {
         AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality, _keyboardStreamedInput,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
         AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
-        AddDevice(new PrinterDevice(_loggerService, _state));
+        AddDevice(new PrinterDevice(_loggerService, this));
         AddDevice(new AuxDevice(_loggerService));
         AddDevice(new ClockDevice(_loggerService,
             DeviceAttributes.Character | DeviceAttributes.CurrentClock,
