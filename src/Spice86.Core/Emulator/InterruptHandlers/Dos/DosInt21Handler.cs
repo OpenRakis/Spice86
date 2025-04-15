@@ -1029,13 +1029,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
     public void IoControl(bool calledFromVm) {
-        if (_dosFileManager.IoControl(State)) {
-            SetCarryFlag(false, calledFromVm);
-        } else {
-            LogDosError(calledFromVm);
-            State.AX = (ushort)_dos.ErrorCode;
-            SetCarryFlag(true, calledFromVm);
-        }
+        DosFileOperationResult result = _dosFileManager.IoControl(State);
+        SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
     private void LogDosError(bool calledFromVm) {
@@ -1048,6 +1043,8 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
+
+    //TODO: use this instead of global DOS error code.
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);
