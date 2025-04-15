@@ -1016,7 +1016,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Provides three operations: get device information, set device information, and get logical drive for physical drive. <br/>
+    /// Provides MS-DOS drivers based IOCTL operations, such as: get device information, set device information, get logical drive for physical drive... <br/>
     /// <para>
     /// AL = 0: Get device information from the device handle in BX. Returns result in DX. TODO: Implement it entirely. <br/>
     /// AL = 1: Set device information. Does nothing. TODO: Implement it. <br/>
