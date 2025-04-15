@@ -123,7 +123,7 @@ public class Dos {
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, this, cDriveFolderPath, executablePath,
+        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         DosTables = new(memory);
 
