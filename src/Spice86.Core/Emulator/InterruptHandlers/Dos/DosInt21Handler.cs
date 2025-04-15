@@ -112,6 +112,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x43, () => GetSetFileAttributes(true));
         AddAction(0x44, () => IoControl(true));
         AddAction(0x45, () => DuplicateFileHandle(true));
+        AddAction(0x46, () => ForceDuplicateFileHandle(true));
         AddAction(0x47, () => GetCurrentDirectory(true));
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
@@ -461,6 +462,27 @@ public class DosInt21Handler : InterruptHandler {
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.DuplicateFileHandle(fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+    }
+
+    /// <summary>
+    /// Force duplicates a file handle. The handle is in BX. The new handle is in DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void ForceDuplicateFileHandle(bool calledFromVm) {
+        ushort fileHandle = State.BX;
+        ushort newHandle = State.DX;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FORCE DUPLICATE FILE HANDLE. {FileHandle}, {NewHandle}", fileHandle, newHandle);
+        }
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ForceDuplicateFileHandle(fileHandle, newHandle);
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        if (!dosFileOperationResult.IsError) {
+            State.AX = State.CX; // Not all sources agree on this, but it seems to be the case.
+        }
     }
 
     /// <summary>
