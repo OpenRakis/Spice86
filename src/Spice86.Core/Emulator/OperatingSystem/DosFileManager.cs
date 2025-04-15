@@ -23,10 +23,8 @@ public class DosFileManager {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
 
-    private const int MaxOpenFiles = 255;
     private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
-    private readonly Dos _dos;
 
     private ushort _diskTransferAreaAddressOffset;
 
@@ -41,7 +39,7 @@ public class DosFileManager {
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
-    public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[MaxOpenFiles];
+    public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
@@ -55,14 +53,12 @@ public class DosFileManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="dos">The DOS kernel.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    public DosFileManager(IMemory memory, Dos dos, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+    public DosFileManager(IMemory memory, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
-        _dos = dos;
         _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
@@ -564,14 +560,14 @@ public class DosFileManager {
 
     private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
-    private IVirtualFile? GetOpenFile(ushort fileHandle) {
-        if (fileHandle >= OpenFiles.Length) {
+    private VirtualFileBase? GetOpenFile(ushort fileHandle) {
+        if (!IsValidFileHandle(fileHandle)) {
             return null;
         }
         return OpenFiles[fileHandle];
     }
 
-    private static bool IsValidFileHandle(ushort fileHandle) => fileHandle <= MaxOpenFiles;
+    private bool IsValidFileHandle(ushort fileHandle) => fileHandle <= OpenFiles.Length;
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -789,36 +785,33 @@ public class DosFileManager {
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) =>
         _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
 
-    public bool IoControl(State state) {
+    public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
 
         if (state.AL is < 4 or 0x06 or 0x07 or
             0x0a or 0x0c or 0x10) {
             handle = (byte)state.BX;
-            if (handle >= MaxOpenFiles || handle > OpenFiles.Length ||
+            if (handle >= OpenFiles.Length ||
                 OpenFiles[handle] == null) {
-                _dos.ErrorCode = ErrorCode.InvalidHandle;
-                return false;
+                return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
             }
         } else if (state.AL < 0x12) {
             if (state.AL != 0x0b) {
                 drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
                 if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters || _dosVirtualDevices[drive] == null)) {
-                    _dos.ErrorCode = ErrorCode.InvalidDrive;
-                    return false;
+                return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
                 }
             }
         } else {
-            _dos.ErrorCode = ErrorCode.FunctionNumberInvalid;
-            return false;
+            return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
         }
 
         switch (state.AL) {
             case 0x00:      /* Get Device Information */
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is VirtualDeviceBase virtualDevice) {
-                    state.DX = (ushort)(virtualDevice.Information & ~0x0200);
+                    state.DX = virtualDevice.Information;
                 } else if(fileOrDevice is DosFile dosFile)  {
                     byte sourceDrive = dosFile.Drive;
                     if (sourceDrive == 0xff) {
@@ -827,11 +820,11 @@ public class DosFileManager {
                         }
                         sourceDrive = 0x2; // defaulting to C:
                     }
-                    state.DX = (ushort)((dosFile.Information & 0xffe0) | sourceDrive);
+                    return DosFileOperationResult.Value16((ushort)((dosFile.Information & 0xffe0) | sourceDrive));
                 }
-                state.AX = state.DX; // Destroyed officially
-                return true;
+                break;
             case 0x01:      /* Set Device Information */
+                throw new NotImplementedException();
             //if (reg_dh != 0) {
             //	DOS_SetError(DOSERR_DATA_INVALID);
             //	return false;
@@ -865,6 +858,7 @@ public class DosFileManager {
             //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
             //return false;
             case 0x06:      /* Get Input Status */
+                throw new NotImplementedException();
             //if (Files[handle]->GetInformation() & 0x8000) {		//Check for device
             //	reg_al=(Files[handle]->GetInformation() & 0x40) ? 0x0 : 0xff;
             //} else { // FILE
@@ -882,6 +876,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x07:      /* Get Output Status */
+                throw new NotImplementedException();
             //if (Files[handle]->GetInformation() & EXT_DEVICE_BIT) {
             //	const auto device_ptr = dynamic_cast<DOS_Device*>(
             //	        Files[handle].get());
@@ -893,6 +888,7 @@ public class DosFileManager {
             //reg_al = 0xff;
             //return true;
             case 0x08:      /* Check if block device removable */
+                throw new NotImplementedException();
             ///* cdrom drives and drive a&b are removable */
             //if (drive < 2) reg_ax=0;
             //else if (!Drives[drive]->IsRemovable()) reg_ax=1;
@@ -902,6 +898,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x09:      /* Check if block device remote */
+                throw new NotImplementedException();
                 //if ((drive >= 2) && Drives[drive]->IsRemote()) {
                 //	reg_dx=0x1000;	// device is remote
                 //	// undocumented bits always clear
@@ -910,15 +907,14 @@ public class DosFileManager {
                 //	// undocumented bits from device attribute word
                 //	// TODO Set bit 9 on drives that don't support direct I/O
                 //}
-                state.AX = 0x300;
-                return true;
             case 0x0B:      /* Set sharing retry count */
+                throw new NotImplementedException();
                 //if (reg_dx==0) {
                 //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
                 //	return false;
                 //}
-                return true;
             case 0x0D:      /* Generic block device request */
+                throw new NotImplementedException();
             //{
             //	if (drive < 2 && !Drives[drive]) {
             //		DOS_SetError(DOSERR_ACCESS_DENIED);
@@ -975,6 +971,7 @@ public class DosFileManager {
             //	return true;
             //}
             case 0x0E:          /* Get Logical Drive Map */
+                throw new NotImplementedException();
                 //if (drive < 2) {
                 //	if (Drives[drive]) reg_al=drive+1;
                 //	else reg_al=1;
@@ -983,13 +980,12 @@ public class DosFileManager {
                 //	return false;
                 //} else reg_al=0;	/* Only 1 logical drive assigned */
                 //reg_ah=0x07;
-                return true;
             default:
+                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
                 //LOG(LOG_DOSMISC,LOG_ERROR)("DOS:IOCTL Call %2X unhandled",reg_al);
                 //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-                break;
         }
-        return false;
+        return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
     }
 
     /// <summary>
