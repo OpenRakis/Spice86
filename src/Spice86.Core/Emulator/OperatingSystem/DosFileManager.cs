@@ -129,6 +129,32 @@ public class DosFileManager {
     /// Gets another file handle for the same file
     /// </summary>
     /// <param name="fileHandle">The handle to a file.</param>
+    /// <param name="newHandle">The new handle to a file.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
+    public DosFileOperationResult ForceDuplicateFileHandle(ushort fileHandle, ushort newHandle) {
+        if(fileHandle == newHandle) {
+            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+        }
+        if(!IsValidFileHandle(newHandle)) {
+            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+        }
+        if(OpenFiles[newHandle] != null) {
+            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+        }
+        if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
+            return FileNotOpenedError(fileHandle);
+        }
+        if(newHandle < OpenFiles.Length && OpenFiles[newHandle] != null) {
+            CloseFile(newHandle);
+        }
+        SetOpenFile(newHandle, file);
+        return DosFileOperationResult.NoValue();
+    }
+
+    /// <summary>
+    /// Gets another file handle for the same file
+    /// </summary>
+    /// <param name="fileHandle">The handle to a file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult DuplicateFileHandle(ushort fileHandle) {
         if (GetOpenFile(fileHandle) is not DosFile file) {
@@ -800,7 +826,7 @@ public class DosFileManager {
             if (state.AL != 0x0b) {
                 drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
                 if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters || _dosVirtualDevices[drive] == null)) {
-                return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
+                    return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
                 }
             }
         } else {
@@ -812,10 +838,10 @@ public class DosFileManager {
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is VirtualDeviceBase virtualDevice) {
                     state.DX = virtualDevice.Information;
-                } else if(fileOrDevice is DosFile dosFile)  {
+                } else if (fileOrDevice is DosFile dosFile) {
                     byte sourceDrive = dosFile.Drive;
                     if (sourceDrive == 0xff) {
-                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("No drive set for file handle {FileHandle}", handle);
                         }
                         sourceDrive = 0x2; // defaulting to C:
@@ -899,20 +925,20 @@ public class DosFileManager {
             //return true;
             case 0x09:      /* Check if block device remote */
                 throw new NotImplementedException();
-                //if ((drive >= 2) && Drives[drive]->IsRemote()) {
-                //	reg_dx=0x1000;	// device is remote
-                //	// undocumented bits always clear
-                //} else {
-                //	reg_dx=0x0802;	// Open/Close supported; 32bit access supported (any use? fixes Fable installer)
-                //	// undocumented bits from device attribute word
-                //	// TODO Set bit 9 on drives that don't support direct I/O
-                //}
+            //if ((drive >= 2) && Drives[drive]->IsRemote()) {
+            //	reg_dx=0x1000;	// device is remote
+            //	// undocumented bits always clear
+            //} else {
+            //	reg_dx=0x0802;	// Open/Close supported; 32bit access supported (any use? fixes Fable installer)
+            //	// undocumented bits from device attribute word
+            //	// TODO Set bit 9 on drives that don't support direct I/O
+            //}
             case 0x0B:      /* Set sharing retry count */
                 throw new NotImplementedException();
-                //if (reg_dx==0) {
-                //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-                //	return false;
-                //}
+            //if (reg_dx==0) {
+            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+            //	return false;
+            //}
             case 0x0D:      /* Generic block device request */
                 throw new NotImplementedException();
             //{
@@ -972,14 +998,14 @@ public class DosFileManager {
             //}
             case 0x0E:          /* Get Logical Drive Map */
                 throw new NotImplementedException();
-                //if (drive < 2) {
-                //	if (Drives[drive]) reg_al=drive+1;
-                //	else reg_al=1;
-                //} else if (Drives[drive]->IsRemovable()) {
-                //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-                //	return false;
-                //} else reg_al=0;	/* Only 1 logical drive assigned */
-                //reg_ah=0x07;
+            //if (drive < 2) {
+            //	if (Drives[drive]) reg_al=drive+1;
+            //	else reg_al=1;
+            //} else if (Drives[drive]->IsRemovable()) {
+            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+            //	return false;
+            //} else reg_al=0;	/* Only 1 logical drive assigned */
+            //reg_ah=0x07;
             default:
                 return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
                 //LOG(LOG_DOSMISC,LOG_ERROR)("DOS:IOCTL Call %2X unhandled",reg_al);
