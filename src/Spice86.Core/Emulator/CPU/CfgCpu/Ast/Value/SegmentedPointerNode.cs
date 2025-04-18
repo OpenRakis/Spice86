@@ -2,7 +2,7 @@
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 
-public class SegmentedPointer(DataType dataType, ValueNode segment, ValueNode offset) : ValueNode(dataType) {
+public class SegmentedPointerNode(DataType dataType, ValueNode segment, ValueNode offset) : ValueNode(dataType) {
     public ValueNode Segment { get; } = segment;
     public ValueNode Offset { get; } = offset;
     

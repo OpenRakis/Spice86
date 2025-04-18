@@ -48,7 +48,7 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
 
         ValueNode? displacement = ModRmDisplacementToNode(modRmContext);
         ValueNode? offset = ModRmOffsetToNode(modRmContext);
-        ValueNode? result = BiOperationWithResultNode(new DataType(modRmContext.AddressSize, false), offset, Operation.PLUS,
+        ValueNode? result = BiOperationWithResultNode(new DataType(modRmContext.AddressSize, false), offset, BinaryOperation.PLUS,
             displacement);
         return result ?? new ConstantNode(new DataType(modRmContext.AddressSize, false), 0);
     }
@@ -97,8 +97,8 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
         // base + scale * index
         ValueNode scaleNode = new ConstantNode(DataType.UINT8, sibContext.Scale);
         ValueNode? indexExpression =
-            BiOperationWithResultNode(DataType.UINT32, scaleNode, Operation.MULTIPLY, indexNode);
-        return BiOperationWithResultNode(DataType.UINT32, baseNode, Operation.PLUS, indexExpression);
+            BiOperationWithResultNode(DataType.UINT32, scaleNode, BinaryOperation.MULTIPLY, indexNode);
+        return BiOperationWithResultNode(DataType.UINT32, baseNode, BinaryOperation.PLUS, indexExpression);
     }
 
     private ValueNode? SibBaseToNode(SibContext sibContext) {
@@ -133,16 +133,16 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     }
 
     private ValueNode PlusRegs16(RegisterIndex registerIndex1, RegisterIndex registerIndex2) {
-        return new BinaryOperationNode(DataType.UINT16, Register.Reg16(registerIndex1), Operation.PLUS,
+        return new BinaryOperationNode(DataType.UINT16, Register.Reg16(registerIndex1), BinaryOperation.PLUS,
             Register.Reg16(registerIndex2));
     }
 
     private ValueNode? BiOperationWithResultNode(DataType dataType,
         ValueNode? parameter1,
-        Operation operation,
+        BinaryOperation binaryOperation,
         ValueNode? parameter2) {
         if (parameter1 != null && parameter2 != null) {
-            return new BinaryOperationNode(dataType, parameter1, operation, parameter2);
+            return new BinaryOperationNode(dataType, parameter1, binaryOperation, parameter2);
         }
 
         if (parameter1 == null) {

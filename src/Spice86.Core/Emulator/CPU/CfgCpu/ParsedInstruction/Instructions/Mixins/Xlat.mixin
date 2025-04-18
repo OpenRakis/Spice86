@@ -33,7 +33,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithSegmentRegisterIndex
                 SegmentRegisterIndex,
                 new BinaryOperationNode(builder.AddressType(this),
                     builder.Register.Reg(builder.AddressType(this), RegisterIndex.BxIndex),
-                    Operation.PLUS,
+                    BinaryOperation.PLUS,
                     builder.Register.Accumulator(DataType.UINT8)
                 )
             )

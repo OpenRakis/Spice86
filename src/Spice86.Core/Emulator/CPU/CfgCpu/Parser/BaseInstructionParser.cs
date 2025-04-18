@@ -2,7 +2,9 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 
 public class BaseInstructionParser {
@@ -58,7 +60,7 @@ public class BaseInstructionParser {
         return ((value >> bitIndex) & 1) == 1;
     }
 
-    protected static InvalidOperationException CreateUnsupportedBitWidthException(BitWidth bitWidth) {
-        return new InvalidOperationException($"Unsupported bit width {bitWidth}");
+    protected static UnsupportedBitWidthException CreateUnsupportedBitWidthException(BitWidth bitWidth) {
+        return new UnsupportedBitWidthException(bitWidth);
     }
 }

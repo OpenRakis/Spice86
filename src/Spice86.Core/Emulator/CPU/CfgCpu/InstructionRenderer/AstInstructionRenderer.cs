@@ -17,7 +17,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         return _registerRenderer.ToStringSegmentRegister(node.RegisterIndex);
     }
 
-    public string VisitSegmentedPointer(SegmentedPointer node) {
+    public string VisitSegmentedPointer(SegmentedPointerNode node) {
         string offset = node.Offset.Accept(this);
         string segment = node.Segment.Accept(this);
 
@@ -77,14 +77,19 @@ public class AstInstructionRenderer : IAstVisitor<string> {
 
     public string VisitBinaryOperationNode(BinaryOperationNode node) {
         string left = node.Left.Accept(this);
-        if (IsZero(node.Right) && node.Operation == Operation.PLUS) {
+        if (IsZero(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left;
         }
         string right = node.Right.Accept(this);
-        if (IsNegative(node.Right) && node.Operation == Operation.PLUS) {
+        if (IsNegative(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left + right;
         }
-        return left + OperationToString(node.Operation) + right;
+        return left + OperationToString(node.BinaryOperation) + right;
+    }
+    
+    public string VisitUnaryOperationNode(UnaryOperationNode node) {
+        string value = node.Value.Accept(this);
+        return OperationToString(node.UnaryOperation) + value;
     }
 
     private bool IsZero(ValueNode valueNode) {
@@ -109,11 +114,21 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         return mnemonic + " " + string.Join(",", node.Parameters.Select(param => param.Accept(this)));
     }
 
-    private string OperationToString(Operation operation) {
-        return operation switch {
-            Operation.PLUS => "+",
-            Operation.MULTIPLY => "*",
-            _ => throw new InvalidOperationException($"Unsupported AST operation {operation}")
+    private string OperationToString(BinaryOperation binaryOperation) {
+        return binaryOperation switch {
+            BinaryOperation.PLUS => "+",
+            BinaryOperation.MULTIPLY => "*",
+            BinaryOperation.EQUAL => "==",
+            BinaryOperation.NOT_EQUAL => "!=",
+            BinaryOperation.ASSIGN => "=",
+            _ => throw new InvalidOperationException($"Unsupported AST operation {binaryOperation}")
+        };
+    }
+    
+    private string OperationToString(UnaryOperation unaryOperation) {
+        return unaryOperation switch {
+            UnaryOperation.NOT => "!",
+            _ => throw new InvalidOperationException($"Unsupported AST operation {unaryOperation}")
         };
     }
 
