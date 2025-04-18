@@ -1,9 +1,17 @@
 namespace Spice86.Tests.CfgCpu.ModRm;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Linq.Expressions;
 
 using Xunit;
 
@@ -285,5 +293,17 @@ public class ModRmExecutorTest {
         }
         // Should have failed with exception since displacement is more than 16 bits
         Assert.Fail();
+    }
+
+    [Fact]
+    public void ExecuteAst() {
+        AstExpressionBuilder expressionBuilder = new();
+        ConstantNode one = new ConstantNode(DataType.UINT32, 1);
+        AbsolutePointerNode pointer = new AbsolutePointerNode(DataType.UINT8, one);
+        Expression expression = pointer.Accept(expressionBuilder);
+        Expression expression2 = Expression.Assign(expression, Expression.Constant((byte)0xF8, typeof(byte)));
+        Action<State, Memory> func = expressionBuilder.ToLambda(expression2).Compile();
+        func(_modRmHelper.State, _modRmHelper.Memory);
+        Assert.Equal(0xF8, _modRmHelper.Memory[1]);
     }
 }
