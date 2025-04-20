@@ -31,12 +31,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// </summary>
     public const int MPU401_STATUS_COMMAND_PORT = 0x301;
 
-
-    /// <summary>
-    /// The port number for checking if data is available to be read from the DSP.
-    /// </summary>
-    public const int DSP_DATA_AVAILABLE_PORT_NUMBER = 0x22E;
-
     /// <summary>
     /// The port number for reading data from the DSP.
     /// </summary>
@@ -53,19 +47,14 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public const int IGNORE_PORT = 0x0227;
 
     /// <summary>
-    /// The port number for checking the status of the DSP write buffer.
-    /// </summary>
-    public const int DSP_WRITE_BUFFER_STATUS_PORT_NUMBER = 0x22C;
-
-    /// <summary>
     /// The port used to set the DSP status.
     /// </summary>
-    public const int DSP_WRITE_STATUS = 0x0C;
+    public const int DSP_WRITE_STATUS = 0x22C;
 
     /// <summary>
     /// The port used to get the DSP status.
     /// </summary>
-    public const int DSP_READ_STATUS = 0x0E;
+    public const int DSP_READ_STATUS = 0x22E;
 
     /// <summary>
     /// The port number for sending FM music data to the left FM music channel.
@@ -370,10 +359,8 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(DSP_READ_STATUS, this);
         ioPortDispatcher.AddIOPortHandler(DSP_WRITE_STATUS, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_BUFFER_STATUS_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_DATA_AVAILABLE_PORT_NUMBER, this);
         ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
 
         ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
