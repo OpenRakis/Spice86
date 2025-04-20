@@ -956,7 +956,6 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.SI), currentDir);
         }
         Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
-        SetCarryFlag(false, calledFromVm);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
         if (!result.IsError) {
             State.AX = 0x0100;
