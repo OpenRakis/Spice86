@@ -5,7 +5,6 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-using System.Collections.Frozen;
 using System.Collections.ObjectModel;
 
 /// <summary>
@@ -21,13 +20,6 @@ public class DmaController : DefaultIOPortHandler {
     private readonly List<DmaChannel> _dmaDeviceChannels = new();
     private readonly List<DmaChannel> _channels = new(8);
     private readonly IMemory _memory;
-
-    private static readonly FrozenSet<int> _otherOutputPorts = new int[] {
-            ModeRegister8,
-            ModeRegister16,
-            MaskRegister8,
-            MaskRegister16,
-            ClearBytePointerFlipFlop}.ToFrozenSet();
 
     private static readonly int[] AllPorts = [
         0x87, 0x00, 0x01,
@@ -95,7 +87,8 @@ public class DmaController : DefaultIOPortHandler {
                 ModeRegister8,
                 ModeRegister16,
                 MaskRegister8,
-                MaskRegister16
+                MaskRegister16,
+                ClearBytePointerFlipFlop,
             };
 
             return ports.AsReadOnly();
