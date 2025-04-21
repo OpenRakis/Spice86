@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -121,7 +122,7 @@ public class Dos {
         _memory = memory;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        AddDefaultDevices();
+        VirtualFileBase[] dosDevices = AddDefaultDevices();
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
@@ -147,7 +148,11 @@ public class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        OpenDefaultFileHandles();
+        if (!initializeDos) {
+            return;
+        }
+
+        OpenDefaultFileHandles(dosDevices);
 
         if (enableEms) {
             Ems = new(_memory, functionHandlerProvider, stack, state, this, _loggerService);
@@ -158,30 +163,28 @@ public class Dos {
         }
     }
 
-    private void OpenDefaultFileHandles() {
-        if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
-            FileManager.OpenDevice(con);
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" or AuxDevice.Alias }) is CharacterDevice aux) {
-            FileManager.OpenDevice(aux);
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" or PrinterDevice.Alias }) is CharacterDevice prn) {
-            FileManager.OpenDevice(prn);
+    private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
+        foreach (VirtualFileBase fileDevice in fileDevices) {
+            FileManager.OpenDevice(fileDevice);
         }
     }
 
-    private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
-            _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
-        AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
-        AddDevice(new PrinterDevice(_loggerService, this));
-        AddDevice(new AuxDevice(_loggerService));
-        AddDevice(new ClockDevice(_loggerService,
+    private VirtualFileBase[] AddDefaultDevices() {
+        var consoleDevice = new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
+            _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
+        AddDevice(consoleDevice);
+        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
+        AddDevice(nulDevice);
+        var printerDevice = new PrinterDevice(_loggerService, this);
+        AddDevice(printerDevice);
+        var auxDevice = new AuxDevice(_loggerService);
+        AddDevice(auxDevice);
+        var clockDevice = new ClockDevice(_loggerService,
             DeviceAttributes.Character | DeviceAttributes.CurrentClock,
-            _memory));
+            _memory);
+        AddDevice(clockDevice);
         AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
+        return [consoleDevice, nulDevice, printerDevice];
     }
 
     /// <summary>
