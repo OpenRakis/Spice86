@@ -11,58 +11,59 @@ using Spice86.Shared.Interfaces;
 /// Represents the console device.
 /// </summary>
 public class ConsoleDevice : CharacterDevice {
-    private readonly State _state;
-    private readonly Stream _writeStream;
-    private readonly Stream _readStream;
+    private readonly KeyboardStream _keyboardStream;
     private readonly KeyboardStreamedInput _keyboardStreamedInput;
+    private readonly ScreenStream _screenStream;
 
     /// <summary>
     /// Create a new console device.
     /// </summary>
     public ConsoleDevice(ILoggerService loggerService, State state,
-        IVgaFunctionality vgaFunctionality,
-        KeyboardStreamedInput keyboardStreamedInput, DeviceAttributes attributes)
+        IVgaFunctionality vgaFunctionality, KeyboardStreamedInput keyboardStreamedInput,
+        DeviceAttributes attributes)
         : base(loggerService, attributes, "CON") {
-        _state = state;
         _keyboardStreamedInput = keyboardStreamedInput;
-        _writeStream = new KeyboardStream(keyboardStreamedInput);
-        _readStream = new ScreenStream(_state, vgaFunctionality);
+        _keyboardStream = new KeyboardStream(keyboardStreamedInput);
+        _screenStream = new ScreenStream(state, vgaFunctionality);
     }
 
     public override string Name => "CON";
 
-    public override bool CanSeek => false;
+    public override bool CanSeek => _screenStream.CanSeek;
 
-    public override bool CanRead => true;
+    public override bool CanRead => _keyboardStream.CanRead;
 
-    public override bool CanWrite => true;
+    public override bool CanWrite => _screenStream.CanWrite;
 
-    public override long Length => _readStream.Length;
+    public override long Length => _keyboardStream.Length;
 
     public override long Position {
-        get => _readStream.Position;
-        set => _readStream.Position = value;
+        get => _keyboardStream.Position;
+        set => _keyboardStream.Position = value;
     }
 
     public override void SetLength(long value) {
-        _readStream.SetLength(value);
+        _keyboardStream.SetLength(value);
     }
 
     public override void Flush() {
-        _readStream.Flush();
-        _writeStream.Flush();
+        _keyboardStream.Flush();
+        _screenStream.Flush();
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
-        return _readStream.Seek(offset, origin);
+        return _screenStream.Seek(offset, origin);
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
-        return _readStream.Read(buffer, offset, count);
+        if (!_keyboardStreamedInput.HasInput) {
+            return -1;
+        }
+        return _keyboardStream.Read(buffer, offset, count);
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
-        _writeStream.Write(buffer, offset, count);
+        _screenStream.Write(buffer, offset, count);
     }
 
     public override ushort Information {

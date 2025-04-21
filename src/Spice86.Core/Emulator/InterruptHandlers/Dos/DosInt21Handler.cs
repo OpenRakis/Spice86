@@ -213,12 +213,14 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         if (device.CanRead) {
-            int input = device.ReadByte();
+            var input = device.ReadByte();
             if (input == -1) {
                 State.AL = 0;
             } else {
                 State.AL = (byte)input;
             }
+        } else {
+            State.AL = 0;
         }
     }
 
