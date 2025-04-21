@@ -105,7 +105,6 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string to write</param>
     /// <param name="maxLength">The maximum length to write</param>
-    /// <exception cref="UnrecoverableException"></exception>
     public virtual void SetZeroTerminatedString(uint address, string value, int maxLength) {
         if (value.Length + 1 > maxLength && !string.IsNullOrEmpty(value)) {
             throw new UnrecoverableException(
