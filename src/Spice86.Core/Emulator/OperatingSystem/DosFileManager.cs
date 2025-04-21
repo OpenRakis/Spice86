@@ -851,22 +851,15 @@ public class DosFileManager {
                 }
                 break;
             case 0x01:      /* Set Device Information */
-                throw new NotImplementedException();
-            //if (reg_dh != 0) {
-            //	DOS_SetError(DOSERR_DATA_INVALID);
-            //	return false;
-            //} else {
-            //	if (Files[handle]->GetInformation() & 0x8000) {	//Check for device
-            //		const auto device_ptr = dynamic_cast<DOS_Device*>(
-            //		        Files[handle].get());
-            //		assert(device_ptr);
-            //		reg_al = device_ptr->GetStatus(true);
-            //	} else {
-            //		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //		return false;
-            //	}
-            //}
-            //return true;
+                if(state.DH != 0) {
+                    return DosFileOperationResult.Error(ErrorCode.DataInvalid);
+                }
+                if (OpenFiles[handle] is VirtualDeviceBase device) {
+                    state.AL = device.GetStatus(state.DX > 0);
+                } else {
+                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                }
+                break;
             case 0x02:      /* Read from Device Control Channel */
                 throw new NotImplementedException();
             case 0x03:      /* Write to Device Control Channel */
@@ -998,15 +991,18 @@ public class DosFileManager {
             //	return true;
             //}
             case 0x0E:          /* Get Logical Drive Map */
-                throw new NotImplementedException();
-            //if (drive < 2) {
-            //	if (Drives[drive]) reg_al=drive+1;
-            //	else reg_al=1;
-            //} else if (Drives[drive]->IsRemovable()) {
-            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //	return false;
-            //} else reg_al=0;	/* Only 1 logical drive assigned */
-            //reg_ah=0x07;
+                /* TODO: We only have C:, so only 1 logical drive assigned! */
+                state.AL = 0x0;
+                state.AH = 0x07;
+                return DosFileOperationResult.NoValue();
+                //if (drive < 2) {
+                //	if (Drives[drive]) reg_al=drive+1;
+                //	else reg_al=1;
+                //} else if (Drives[drive]->IsRemovable()) {
+                //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+                //	return false;
+                //} else reg_al=0;	/* Only 1 logical drive assigned */
+                //reg_ah=0x07;
             default:
                 return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
                 //LOG(LOG_DOSMISC,LOG_ERROR)("DOS:IOCTL Call %2X unhandled",reg_al);
