@@ -170,8 +170,8 @@ public class Dos {
     }
 
     private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality, _keyboardStreamedInput,
-            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
+        AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
+            _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
         AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
         AddDevice(new PrinterDevice(_loggerService, this));
         AddDevice(new AuxDevice(_loggerService));
