@@ -219,7 +219,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         if (device.CanRead) {
-            int input = device.ReadByte();
+            var input = device.ReadByte();
             if (input == -1) {
                 State.AL = 0;
                 if (LoggerService.IsEnabled(LogEventLevel.Information)) {
@@ -233,6 +233,8 @@ public class DosInt21Handler : InterruptHandler {
                         nameof(DirectStandardInputWithoutEcho), State.AL);
                 }
             }
+        } else {
+            State.AL = 0;
         }
     }
 

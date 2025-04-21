@@ -38,6 +38,9 @@ public class KeyboardStream : Stream {
 
     /// <inheritdoc />
     public override int Read(byte[] buffer, int offset, int count) {
+        if(!_keyboardStreamedInput.HasInput) {
+            return -1;
+        }
         int read = 0;
 
         for (int i = offset; i < Math.Min(buffer.Length, count); i++) {
