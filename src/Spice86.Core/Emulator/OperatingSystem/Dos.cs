@@ -175,10 +175,6 @@ public class Dos {
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
-        var clockDevice = new ClockDevice(_loggerService,
-            DeviceAttributes.Character | DeviceAttributes.CurrentClock,
-            _memory);
-        AddDevice(clockDevice);
         AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
         return [consoleDevice, nulDevice, printerDevice];
     }
