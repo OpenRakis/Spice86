@@ -22,11 +22,11 @@ public class ClockDevice : CharacterDevice {
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
     public ClockDevice(ILoggerService loggerService, DeviceAttributes attributes,
         IMemory memory, ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, attributes, "CLOCK", strategy, interrupt) {
+        : base(loggerService, attributes, "CLOCK$", strategy, interrupt) {
         _memory = memory;
     }
 
-    public override string Name => "CLOCK";
+    public override string Name => "CLOCK$";
 
     public override bool CanRead => true;
 
