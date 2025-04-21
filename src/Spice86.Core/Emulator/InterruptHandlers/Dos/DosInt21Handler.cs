@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -25,7 +24,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Xml.Linq;
 
 /// <summary>
 /// Implementation of the DOS INT21H services.
@@ -1142,7 +1140,6 @@ public class DosInt21Handler : InterruptHandler {
     }
 
 
-    //TODO: use this instead of global DOS error code.
     private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);

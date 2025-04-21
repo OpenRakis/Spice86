@@ -31,11 +31,6 @@ public class Dos {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
 
     /// <summary>
-    /// Gets or sets the last DOS error code.
-    /// </summary>
-    public ErrorCode ErrorCode { get; set; }
-
-    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -175,7 +170,7 @@ public class Dos {
         AddDevice(consoleDevice);
         var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
         AddDevice(nulDevice);
-        var printerDevice = new PrinterDevice(_loggerService, this);
+        var printerDevice = new PrinterDevice(_loggerService);
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
