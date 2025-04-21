@@ -57,7 +57,7 @@ public class ScreenStream : Stream {
 
     /// <inheritdoc />
     public override void Write(byte[] buffer, int offset, int count) {
-        byte[] bytesToWrite = buffer.Skip(offset).Take(count).ToArray();
+        byte[] bytesToWrite = [.. buffer.Skip(offset).Take(count)];
         byte originalAl = _state.AL;
         foreach (byte character in bytesToWrite) {
             _vgaFunctionality.WriteTextInTeletypeMode(new CharacterPlusAttribute((char)character, 0x07, false));
