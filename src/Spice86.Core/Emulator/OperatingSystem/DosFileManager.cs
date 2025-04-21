@@ -438,11 +438,11 @@ public class DosFileManager {
     /// </summary>
     /// <param name="device">The character device</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenDevice(CharacterDevice device) {
+    public DosFileOperationResult OpenDevice(VirtualFileBase device) {
         return OpenDeviceInternal(device);
     }
 
-    private DosFileOperationResult OpenDeviceInternal(CharacterDevice device) {
+    private DosFileOperationResult OpenDeviceInternal(VirtualFileBase device) {
         int? freeIndex = FindNextFreeFileIndex();
         if (freeIndex == null) {
             return NoFreeHandleError();
