@@ -100,7 +100,7 @@ public abstract class Indexable : IIndexable {
     }
 
     /// <summary>
-    /// Writes a string directly to memory.
+    /// Writes a string directly to memory, encoded as ASCII and terminated with a zero byte.
     /// </summary>
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string to write</param>
@@ -112,14 +112,8 @@ public abstract class Indexable : IIndexable {
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
 
-        int i = 0;
-        Span<byte> charBytes = Encoding.ASCII.GetBytes(value);
-        for (; i < charBytes.Length; i++) {
-            byte character = charBytes[i];
-            UInt8[(uint)(address + i)] = character;
-        }
-
-        UInt8[(uint)(address + i)] = 0;
+        byte[] charBytes = [.. Encoding.ASCII.GetBytes(value), .. new byte[] { 0 }];
+        LoadData(address, charBytes);
     }
 
     /// <summary>
