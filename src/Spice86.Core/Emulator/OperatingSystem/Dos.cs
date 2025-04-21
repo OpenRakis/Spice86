@@ -26,8 +26,8 @@ public class Dos {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
 
     /// <summary>
     /// Gets or sets the last DOS error code.
@@ -114,13 +114,16 @@ public class Dos {
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
+        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath,
+        bool initializeDos, bool enableEms, IDictionary<string, string> envVars,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
+        _keyboardInt16Handler = keyboardInt16Handler;
         _memory = memory;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
         AddDefaultDevices();
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
@@ -171,7 +174,7 @@ public class Dos {
 
     private void AddDefaultDevices() {
         AddDevice(new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
-            _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
+            _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout));
         AddDevice(new NullDevice(_loggerService, DeviceAttributes.Character));
         AddDevice(new PrinterDevice(_loggerService, this));
         AddDevice(new AuxDevice(_loggerService));
