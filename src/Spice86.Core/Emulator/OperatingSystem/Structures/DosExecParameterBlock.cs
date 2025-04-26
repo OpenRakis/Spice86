@@ -3,10 +3,10 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
-/// This structure is used by function INT 21H 0x4B (LOAD AND EXEC PROGRAM). <br/>
+/// This structure is used by function INT 21H 0x4B (LOAD AND/OR EXEC PROGRAM). <br/>
 /// Programs that call this function pass a pointer to this structure as a parameter in ES:BX. <br/>
-/// <remarks>In DOSBox source code, this is the DOS_ParamBlock</remarks>
 /// </summary>
+/// <remarks>In DOSBox source code, this is the DOS_ParamBlock</remarks>
 internal class DosExecParameterBlock : DosMemoryControlBlock {
     public DosExecParameterBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
