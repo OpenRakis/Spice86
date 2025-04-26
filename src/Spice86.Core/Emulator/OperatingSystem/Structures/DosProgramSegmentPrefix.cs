@@ -5,7 +5,8 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Utils;
 
 /// <summary>
-/// Represents the Program Segment Prefix (PSP)
+/// Represents the Program Segment Prefix (PSP).<br/>
+/// It is a data structure used by DOS to store information about a program's execution environment.
 /// </summary>
 public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
