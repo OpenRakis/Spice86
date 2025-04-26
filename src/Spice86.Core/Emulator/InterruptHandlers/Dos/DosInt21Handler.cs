@@ -1178,7 +1178,6 @@ public class DosInt21Handler : InterruptHandler {
         LoadExeFileInMemory(exeFile, startSegment);
         ushort pspSegment = (ushort)(startSegment - 0x10);
         SetupCpuForExe(exeFile, startSegment, pspSegment);
-        //new ProcessSegmentPrefix(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("Initial CPU State: {CpuState}", State);
         }
