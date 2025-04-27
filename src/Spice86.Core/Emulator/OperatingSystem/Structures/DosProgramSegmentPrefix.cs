@@ -33,11 +33,7 @@ public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
 
     }
 
-    public override string? GetEnvironmentVariable(string variableName) {
-        throw new NotImplementedException();
-    }
-
-    public override void SetEnvironmentVariable(string variableName, string value) {
+    public override string? GetEnvironmentValue(string entry) {
         throw new NotImplementedException();
     }
 
