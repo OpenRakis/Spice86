@@ -445,7 +445,7 @@ public class Spice86DependencyInjection : IDisposable {
         cpuFunctionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
     }
 
-    private static IDictionary<SegmentedAddress, FunctionInformation>
+    private static Dictionary<SegmentedAddress, FunctionInformation>
         ReadFunctionOverrides(Configuration configuration, Machine machine,
         ILoggerService loggerService) {
         if (configuration.OverrideSupplier != null) {
