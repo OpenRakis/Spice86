@@ -63,25 +63,33 @@ public class Spice86DependencyInjection : IDisposable {
     public Spice86DependencyInjection(Configuration configuration) {
         LoggerService loggerService = new LoggerService();
         SetLoggingLevel(loggerService, configuration);
+
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
+
         ExecutionFlowRecorder executionFlowRecorder =
             reader.ReadExecutionFlowRecorderFromFileOrCreate(
                 configuration.DumpDataOnExit is not false);
         State state = new();
+
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
+
         IOPortDispatcher ioPortDispatcher = new(
             emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService,
             configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
+
         A20Gate a20Gate = new(configuration.A20Gate);
+
         Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb:
                 (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
+
         var dualPic = new DualPic(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort,
             configuration.InitializeDOS is false, loggerService);
@@ -95,6 +103,7 @@ public class Spice86DependencyInjection : IDisposable {
             executionFlowRecorder, functionCatalogue, loggerService);
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
             executionFlowRecorder, functionCatalogue, loggerService);
+
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
@@ -122,53 +131,23 @@ public class Spice86DependencyInjection : IDisposable {
             new(memory, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
-        Joystick joystick = new Joystick(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+        CreateVideoCardSupportClasses(configuration, loggerService, state, ioPortDispatcher,
+            memory, biosDataArea, interruptVectorTable, stack,
+            functionHandlerProvider,
+            out VideoState videoState,
+            out VgaIoPortHandler videoInt10Handler,
+            out Renderer vgaRenderer,
+            out VgaRom vgaRom,
+            out VgaFunctionality vgaFunctionality,
+            out VgaBios vgaBios);
 
-        VideoState videoState = new();
-        VgaIoPortHandler videoInt10Handler = new(state, ioPortDispatcher, loggerService, videoState,
-            configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState);
-
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        Midi midiDevice = new Midi(configuration, softwareMixer, state,
-            ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
-            configuration.FailOnUnhandledPort, loggerService);
-
-        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
-            ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
-
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
-            5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaController, dualPic,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
-
-        GravisUltraSound gravisUltraSound =
-            new GravisUltraSound(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
-
-        VgaRom vgaRom = new();
-        VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
-            interruptVectorTable, ioPortDispatcher,
-            biosDataArea, vgaRom,
-            bootUpInTextMode: configuration.InitializeDOS is true);
-        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
-            state, vgaFunctionality, biosDataArea, loggerService);
-
-        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler =
-            new BiosEquipmentDeterminationInt11Handler(memory,
-            functionHandlerProvider, stack, state, loggerService);
-        SystemBiosInt12Handler systemBiosInt12Handler =
-            new SystemBiosInt12Handler(memory, functionHandlerProvider, stack,
-            state, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new (memory,
-            functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
-        SystemClockInt1AHandler systemClockInt1AHandler =
-            new SystemClockInt1AHandler(memory, functionHandlerProvider, stack,
-            state, loggerService, timerInt8Handler);
+        CreateBiosInterruptHandlers(configuration, loggerService, state,
+            a20Gate, memory, biosDataArea, stack, functionHandlerProvider,
+            timerInt8Handler,
+            out BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
+            out SystemBiosInt12Handler systemBiosInt12Handler,
+            out SystemBiosInt15Handler systemBiosInt15Handler,
+            out SystemClockInt1AHandler systemClockInt1AHandler);
 
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
             configuration, configuration.RecordedDataDirectory, loggerService);
@@ -176,51 +155,30 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
-        MainWindowViewModel? mainWindowViewModel = null;
-        MainWindow? mainWindow = null;
-        ClassicDesktopStyleApplicationLifetime? desktop = null;
-        ITextClipboard? textClipboard = null;
-        IHostStorageProvider? hostStorageProvider = null;
-        IUIDispatcher? uiThreadDispatcher = null;
-
-        if (!configuration.HeadlessMode) {
-            desktop = CreateDesktopApp();
-            uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiThreadDispatcher);
-            mainWindow = new() {
-                PerformanceViewModel = performanceViewModel
-            };
-            textClipboard = new TextClipboard(mainWindow.Clipboard);
-            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
-                emulatorStateSerializer);
-            mainWindowViewModel = new MainWindowViewModel(
-                timer, state, uiThreadDispatcher, hostStorageProvider,
-                textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
-        }
+        CreateMainWindow(configuration, loggerService, pauseHandler, state,
+            timer, emulatorStateSerializer, out MainWindowViewModel? mainWindowViewModel,
+            out MainWindow? mainWindow, out ClassicDesktopStyleApplicationLifetime? desktop,
+            out ITextClipboard? textClipboard, out IHostStorageProvider? hostStorageProvider,
+            out IUIDispatcher? uiThreadDispatcher);
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
-        Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            mainWindowViewModel, configuration.FailOnUnhandledPort);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
-            state, dualPic, keyboard, biosDataArea, loggerService);
-        Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, 
-            configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
 
-        MouseDriver mouseDriver =
-            new MouseDriver(cpu, memory, mouse, mainWindowViewModel,
-            vgaFunctionality, loggerService);
+        CreateInputDevices(configuration, loggerService, state,
+            ioPortDispatcher, a20Gate, memory, biosDataArea, dualPic, stack, cpu,
+            functionHandlerProvider, vgaFunctionality, mainWindowViewModel,
+            out Keyboard keyboard, out BiosKeyboardInt9Handler biosKeyboardInt9Handler,
+            out Mouse mouse, out MouseDriver mouseDriver,
+            out KeyboardInt16Handler keyboardInt16Handler,
+            out Joystick joystick);
 
-        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
-            memory, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-            configuration.Exe, configuration.InitializeDOS is not false,
-            configuration.Ems,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            loggerService);
+        CreateSoundDevices(configuration, loggerService, pauseHandler, state,
+            ioPortDispatcher, dualPic, timer, dmaController, out SoftwareMixer softwareMixer,
+            out Midi midiDevice, out PcSpeaker pcSpeaker, out SoundBlaster soundBlaster,
+            out GravisUltraSound gravisUltraSound);
+
+        Dos dos = CreateDiskOperatingSystem(configuration, loggerService, state,
+            memory, stack, functionHandlerProvider, vgaFunctionality,
+            keyboardInt16Handler, soundBlaster);
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
@@ -256,7 +214,7 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler,
             biosKeyboardInt9Handler, mouseDriver, keyboardInt16Handler, dos);
 
-        DebugWindowViewModel? debugWindowViewModel = CreateGui(configuration,
+        DebugWindowViewModel? debugWindowViewModel = CreateInternalDebuggerViewModel(configuration,
             loggerService, pauseHandler, state, emulatorBreakpointsManager,
             memory, stack, functionCatalogue, cfgCpu, videoState, vgaRenderer,
             softwareMixer, midiDevice, memoryDataExporter, textClipboard,
@@ -282,8 +240,148 @@ public class Spice86DependencyInjection : IDisposable {
         _mainWindowViewModel = mainWindowViewModel;
     }
 
-    private static DebugWindowViewModel? CreateGui(Configuration configuration,
+    private static Dos CreateDiskOperatingSystem(Configuration configuration,
+        LoggerService loggerService, State state, Memory memory, Stack stack,
+        IFunctionHandlerProvider functionHandlerProvider,
+        VgaFunctionality vgaFunctionality,
+        KeyboardInt16Handler keyboardInt16Handler, SoundBlaster soundBlaster) {
+        return new Dos(memory, functionHandlerProvider, stack, state,
+                    keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+                    configuration.Exe,
+                    configuration.InitializeDOS is not false,
+                    configuration.Ems,
+                    new Dictionary<string, string> { { "BLASTER",
+                            soundBlaster.BlasterString } },
+                    loggerService);
+    }
+
+    private static void CreateMainWindow(Configuration configuration,
         LoggerService loggerService, IPauseHandler pauseHandler, State state,
+        Timer timer, EmulatorStateSerializer emulatorStateSerializer,
+        out MainWindowViewModel? mainWindowViewModel,
+        out MainWindow? mainWindow,
+        out ClassicDesktopStyleApplicationLifetime? desktop,
+        out ITextClipboard? textClipboard,
+        out IHostStorageProvider? hostStorageProvider,
+        out IUIDispatcher? uiThreadDispatcher) {
+        mainWindowViewModel = null;
+        mainWindow = null;
+        desktop = null;
+        textClipboard = null;
+        hostStorageProvider = null;
+        uiThreadDispatcher = null;
+        if (!configuration.HeadlessMode) {
+            desktop = CreateDesktopApp();
+            uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
+            PerformanceViewModel performanceViewModel = new(state, pauseHandler,
+                uiThreadDispatcher);
+            mainWindow = new() {
+                PerformanceViewModel = performanceViewModel
+            };
+            textClipboard = new TextClipboard(mainWindow.Clipboard);
+            hostStorageProvider = new HostStorageProvider(
+                mainWindow.StorageProvider, configuration, emulatorStateSerializer);
+            mainWindowViewModel = new MainWindowViewModel(
+                timer, state, uiThreadDispatcher, hostStorageProvider,
+                textClipboard, configuration,
+                loggerService, pauseHandler, performanceViewModel);
+        }
+    }
+
+    private static void CreateBiosInterruptHandlers(Configuration configuration,
+        LoggerService loggerService, State state, A20Gate a20Gate,
+        Memory memory, BiosDataArea biosDataArea, Stack stack,
+        IFunctionHandlerProvider functionHandlerProvider,
+        TimerInt8Handler timerInt8Handler,
+        out BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
+        out SystemBiosInt12Handler systemBiosInt12Handler,
+        out SystemBiosInt15Handler systemBiosInt15Handler,
+        out SystemClockInt1AHandler systemClockInt1AHandler) {
+        biosEquipmentDeterminationInt11Handler = new BiosEquipmentDeterminationInt11Handler(memory,
+                    functionHandlerProvider, stack, state, loggerService);
+        systemBiosInt12Handler = new SystemBiosInt12Handler(memory, functionHandlerProvider, stack,
+                    state, biosDataArea, loggerService);
+        systemBiosInt15Handler = new(memory,
+                    functionHandlerProvider, stack, state, a20Gate,
+                    configuration.InitializeDOS is not false, loggerService);
+        systemClockInt1AHandler = new SystemClockInt1AHandler(memory, functionHandlerProvider, stack,
+                    state, loggerService, timerInt8Handler);
+    }
+
+    private static void CreateVideoCardSupportClasses(Configuration configuration,
+        LoggerService loggerService, State state,
+        IOPortDispatcher ioPortDispatcher, Memory memory,
+        BiosDataArea biosDataArea, InterruptVectorTable interruptVectorTable,
+        Stack stack, IFunctionHandlerProvider functionHandlerProvider,
+        out VideoState videoState, out VgaIoPortHandler videoInt10Handler,
+        out Renderer vgaRenderer, out VgaRom vgaRom,
+        out VgaFunctionality vgaFunctionality, out VgaBios vgaBios) {
+        videoState = new();
+        videoInt10Handler = new(state, ioPortDispatcher, loggerService, videoState,
+                    configuration.FailOnUnhandledPort);
+        vgaRenderer = new(memory, videoState);
+        vgaRom = new();
+        vgaFunctionality = new VgaFunctionality(memory,
+            interruptVectorTable, ioPortDispatcher,
+            biosDataArea, vgaRom,
+            bootUpInTextMode: configuration.InitializeDOS is true);
+        vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
+            state, vgaFunctionality, biosDataArea, loggerService);
+    }
+
+    private static void CreateInputDevices(Configuration configuration,
+        LoggerService loggerService, State state,
+        IOPortDispatcher ioPortDispatcher, A20Gate a20Gate, Memory memory,
+        BiosDataArea biosDataArea, DualPic dualPic, Stack stack, Cpu cpu,
+        IFunctionHandlerProvider functionHandlerProvider,
+        VgaFunctionality vgaFunctionality, MainWindowViewModel? mainWindowViewModel,
+        out Keyboard keyboard,
+        out BiosKeyboardInt9Handler biosKeyboardInt9Handler,
+        out Mouse mouse,
+        out MouseDriver mouseDriver,
+        out KeyboardInt16Handler keyboardInt16Handler,
+        out Joystick joystick) {
+        keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+                    mainWindowViewModel, configuration.FailOnUnhandledPort);
+        biosKeyboardInt9Handler = new BiosKeyboardInt9Handler(memory,
+            functionHandlerProvider, stack, state, dualPic, keyboard,
+            biosDataArea, loggerService);
+        mouse = new Mouse(state, dualPic, mainWindowViewModel,
+                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
+        mouseDriver = new MouseDriver(cpu, memory, mouse, mainWindowViewModel,
+            vgaFunctionality, loggerService);
+        keyboardInt16Handler = new KeyboardInt16Handler(
+            memory, functionHandlerProvider, stack, state, loggerService,
+            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+        joystick = new Joystick(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService);
+    }
+
+    private static void CreateSoundDevices(Configuration configuration,
+        LoggerService loggerService, IPauseHandler pauseHandler, State state,
+        IOPortDispatcher ioPortDispatcher, DualPic dualPic, Timer timer,
+        DmaController dmaController, out SoftwareMixer softwareMixer,
+        out Midi midiDevice, out PcSpeaker pcSpeaker,
+        out SoundBlaster soundBlaster, out GravisUltraSound gravisUltraSound) {
+        softwareMixer = new(loggerService, configuration.AudioEngine);
+        midiDevice = new Midi(configuration, softwareMixer, state,
+                    ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+                    configuration.FailOnUnhandledPort, loggerService);
+        pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
+            ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
+            5, 1, 5, SbType.Sb16);
+        soundBlaster = new SoundBlaster(ioPortDispatcher,
+            softwareMixer, state, dmaController, dualPic,
+            configuration.FailOnUnhandledPort,
+            loggerService, soundBlasterHardwareConfig, pauseHandler);
+        gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService);
+    }
+
+    private static DebugWindowViewModel? CreateInternalDebuggerViewModel(
+        Configuration configuration, LoggerService loggerService,
+        IPauseHandler pauseHandler, State state,
         EmulatorBreakpointsManager emulatorBreakpointsManager, Memory memory,
         Stack stack, FunctionCatalogue functionCatalogue, CfgCpu cfgCpu,
         VideoState videoState, Renderer vgaRenderer,
