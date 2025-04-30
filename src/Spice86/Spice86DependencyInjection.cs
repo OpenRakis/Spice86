@@ -41,6 +41,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
+using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -59,7 +60,8 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly MainWindowViewModel? _mainWindowViewModel;
     private bool _disposed;
 
-    public Spice86DependencyInjection(ILoggerService loggerService, Configuration configuration) {
+    public Spice86DependencyInjection(Configuration configuration) {
+        LoggerService loggerService = new LoggerService();
         SetLoggingLevel(loggerService, configuration);
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 

@@ -30,12 +30,11 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        ILoggerService loggerService = new LoggerService();
         Configuration? configuration = new CommandLineParser().ParseCommandLine(args);
         if (configuration == null) {
             return;
         }
-        using Spice86DependencyInjection spice86DependencyInjection = new(loggerService, configuration);
+        using Spice86DependencyInjection spice86DependencyInjection = new(configuration);
         spice86DependencyInjection.Start();
     }
 }
