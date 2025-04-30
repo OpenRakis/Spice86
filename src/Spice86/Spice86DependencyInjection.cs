@@ -94,7 +94,9 @@ public class Spice86DependencyInjection : IDisposable {
 
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
-        loggerService.Information("Execution will be done with " + (configuration.CfgCpu ? "CFG CPU" : "regular CPU"));
+        if(loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Execution will be done with " + (configuration.CfgCpu ? "CFG CPU" : "regular CPU"));
+        }
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
