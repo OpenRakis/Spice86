@@ -69,7 +69,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
-        RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
+        RecordedDataReader reader = new(configuration.RecordedDataDirectory,
+            loggerService);
 
         ExecutionFlowRecorder executionFlowRecorder =
             reader.ReadExecutionFlowRecorderFromFileOrCreate(
