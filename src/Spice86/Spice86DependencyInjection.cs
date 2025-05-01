@@ -80,8 +80,8 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
 
         IOPortDispatcher ioPortDispatcher = new(
-            emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService,
-            configuration.FailOnUnhandledPort);
+            emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
+            loggerService, configuration.FailOnUnhandledPort);
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
 
         A20Gate a20Gate = new(configuration.A20Gate);
