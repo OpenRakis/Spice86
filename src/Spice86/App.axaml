@@ -8,8 +8,6 @@
 
 	<Application.Resources>
 		<ResourceDictionary>
-			<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
-			<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceInclude Source="avares://Spice86/Assets/ControlThemes.axaml" />
 			</ResourceDictionary.MergedDictionaries>

@@ -14,6 +14,10 @@
         Title="Structure Viewer"
         Width="1080"
         Height="800">
+	<Window.Resources>
+		<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
+		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
+	</Window.Resources>
 	<Window.Styles>
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />

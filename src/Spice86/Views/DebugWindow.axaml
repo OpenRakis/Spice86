@@ -21,6 +21,10 @@
 	Height="768"
 	Icon="/Assets/Debug.ico"
 	mc:Ignorable="d">
+	<Window.Resources>
+		<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
+		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
+	</Window.Resources>
 	<Design.DataContext>
 		<vm:DebugWindowViewModel />
 	</Design.DataContext>
