@@ -3,6 +3,7 @@
 using Spice86.Logging;
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
+using Avalonia;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -34,7 +35,15 @@ public class Program {
         if (configuration == null) {
             return;
         }
-        using Spice86DependencyInjection spice86DependencyInjection = new(configuration);
+        using Spice86DependencyInjection spice86DependencyInjection = new(configuration,
+            configuration.HeadlessMode ? null : BuildAvaloniaApp());
         spice86DependencyInjection.Start();
     }
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
 }

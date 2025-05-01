@@ -55,12 +55,15 @@ using Spice86.Views;
 public class Spice86DependencyInjection : IDisposable {
     private readonly Configuration _configuration;
     private readonly ClassicDesktopStyleApplicationLifetime? _desktop;
+    private readonly AppBuilder? _appBuilder;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
     private readonly MainWindowViewModel? _mainWindowViewModel;
     private bool _disposed;
 
-    public Spice86DependencyInjection(Configuration configuration) {
+    public Spice86DependencyInjection(Configuration configuration,
+        AppBuilder? appBuilder = null) {
+        _appBuilder = appBuilder;
         LoggerService loggerService = new LoggerService();
         SetLoggingLevel(loggerService, configuration);
 
@@ -255,7 +258,7 @@ public class Spice86DependencyInjection : IDisposable {
                     loggerService);
     }
 
-    private static void CreateMainWindow(Configuration configuration,
+    private void CreateMainWindow(Configuration configuration,
         LoggerService loggerService, IPauseHandler pauseHandler, State state,
         Timer timer, EmulatorStateSerializer emulatorStateSerializer,
         out MainWindowViewModel? mainWindowViewModel,
@@ -270,8 +273,8 @@ public class Spice86DependencyInjection : IDisposable {
         textClipboard = null;
         hostStorageProvider = null;
         uiThreadDispatcher = null;
-        if (!configuration.HeadlessMode) {
-            desktop = CreateDesktopApp();
+        if (!configuration.HeadlessMode && _appBuilder is not null) {
+            desktop = CreateDesktopApp(_appBuilder);
             uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
             PerformanceViewModel performanceViewModel = new(state, pauseHandler,
                 uiThreadDispatcher);
@@ -551,11 +554,7 @@ public class Spice86DependencyInjection : IDisposable {
         return new Dictionary<SegmentedAddress, FunctionInformation>();
     }
 
-    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp() {
-        AppBuilder appBuilder = AppBuilder.Configure(() => new App())
-            .UsePlatformDetect()
-            .LogToTrace()
-            .WithInterFont();
+    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp(AppBuilder appBuilder) {
         ClassicDesktopStyleApplicationLifetime desktop = new() {
             ShutdownMode = ShutdownMode.OnMainWindowClose
         };
