@@ -23,7 +23,9 @@
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
-
+	<UserControl.Styles>
+    	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+	</UserControl.Styles>
     <Grid RowDefinitions="Auto,*">
         <!-- Top toolbar -->
         <Grid Grid.Row="0" IsVisible="{Binding IsPaused}" Margin="4" ColumnDefinitions="Auto,Auto,Auto,*,Auto">

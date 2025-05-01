@@ -17,7 +17,6 @@
 	</Application.Resources>
 
 	<Application.Styles>
-		<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
 		<dialogHostAvalonia:DialogHostStyles />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 		<semi:SemiTheme Locale="en-US" />
