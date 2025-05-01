@@ -119,9 +119,8 @@ public class Spice86DependencyInjection : IDisposable {
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            IInstructionExecutor cpuType = configuration.CfgCpu ? cfgCpu : cpu;
-            loggerService.Information(
-                "Execution will be done with @CpuType", cpuType);
+            string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
+            loggerService.Information("Execution will be done with {CpuType}", cpuType);
         }
 
         // IO devices
