@@ -12,7 +12,7 @@
 			<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceInclude Source="avares://Spice86/Assets/ControlThemes.axaml" />
-			</ResourceDictionary.MergedDictionaries>    
+			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
 
@@ -22,7 +22,6 @@
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 		<semi:SemiTheme Locale="en-US" />
 		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
-		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 		<StyleInclude Source="Styles/Spice86.axaml" />
 	</Application.Styles>
 
