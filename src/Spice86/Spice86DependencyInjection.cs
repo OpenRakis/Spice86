@@ -225,7 +225,7 @@ public class Spice86DependencyInjection : IDisposable {
             softwareMixer, midiDevice, memoryDataExporter, textClipboard,
             hostStorageProvider, uiThreadDispatcher);
 
-        if (desktop != null && mainWindow != null && uiThreadDispatcher != null) {
+        if (desktop != null && mainWindow != null) {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
             mainWindow.Loaded += (_, _) => {
