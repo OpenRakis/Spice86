@@ -1,7 +1,6 @@
 namespace Spice86;
 
 using Avalonia;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 
 /// <summary>
@@ -13,9 +12,4 @@ internal partial class App : Application {
     /// Initializes the Spice86 UI.
     /// </summary>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
-    
-    public override void OnFrameworkInitializationCompleted() {
-        
-        base.OnFrameworkInitializationCompleted();
-    }
 }
