@@ -503,7 +503,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
-    private static void SetLoggingLevel(ILoggerService loggerService, Configuration configuration) {
+    private static void SetLoggingLevel(LoggerService loggerService, Configuration configuration) {
         if (configuration.SilencedLogs) {
             loggerService.AreLogsSilenced = true;
         } else if (configuration.WarningLogs) {
@@ -543,9 +543,8 @@ public class Spice86DependencyInjection : IDisposable {
         cpuFunctionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
     }
 
-    private static Dictionary<SegmentedAddress, FunctionInformation>
-        ReadFunctionOverrides(Configuration configuration, Machine machine,
-        ILoggerService loggerService) {
+    private static Dictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(
+        Configuration configuration, Machine machine, ILoggerService loggerService) {
         if (configuration.OverrideSupplier != null) {
             return GenerateFunctionInformations(loggerService, configuration, machine);
         }
