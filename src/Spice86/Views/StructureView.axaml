@@ -15,6 +15,7 @@
         Width="1080"
         Height="800">
 	<Window.Styles>
+		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 	</Window.Styles>
     <DockPanel Margin="10">

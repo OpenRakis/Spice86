@@ -27,6 +27,9 @@
 	<Window.DataTemplates>
 		<local:ViewLocator />
 	</Window.DataTemplates>
+	<Window.Styles>
+		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
+	</Window.Styles>
 	<Grid RowDefinitions="Auto,*,Auto">
 		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
 			<Button
