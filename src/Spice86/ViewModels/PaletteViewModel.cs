@@ -17,11 +17,6 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel 
     private readonly Dictionary<uint, Color> ColorsCache = new();
     public PaletteViewModel(ArgbPalette argbPalette, IUIDispatcher uiDispatcher) {
         _argbPalette = argbPalette;
-        uiDispatcher.Post(() => {
-            for (int i = 0; i < 256; i++) {
-                _palette.Add(new() { Fill = new SolidColorBrush() });
-            }
-        });
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Background, UpdateValues);
     }
 
@@ -39,6 +34,12 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel 
     private AvaloniaList<Rectangle> _palette = new();
 
     private void UpdateColors(ArgbPalette palette) {
+        if(Palette.Count == 0) {
+            for (int i = 0; i < 256; i++) {
+                Palette.Add(new() { Fill = new SolidColorBrush() });
+            }
+        }
+
         try {
             for (int i = 0; i < Palette.Count; i++) {
                 Rectangle rectangle = Palette[i];
