@@ -19,6 +19,7 @@
 		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
 	</Window.Resources>
 	<Window.Styles>
+		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 	</Window.Styles>
