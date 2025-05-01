@@ -119,8 +119,9 @@ public class Spice86DependencyInjection : IDisposable {
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            IInstructionExecutor cpuType = configuration.CfgCpu ? cfgCpu : cpu;
             loggerService.Information(
-                $"Execution will be done with {(configuration.CfgCpu ? "CFG CPU" : "regular CPU")}");
+                "Execution will be done with @CpuType", cpuType);
         }
 
         // IO devices
@@ -224,10 +225,10 @@ public class Spice86DependencyInjection : IDisposable {
             softwareMixer, midiDevice, memoryDataExporter, textClipboard,
             hostStorageProvider, uiThreadDispatcher);
 
-        if (desktop != null && mainWindow != null) {
+        if (desktop != null && mainWindow != null && uiThreadDispatcher != null) {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
-            desktop.Startup += (_, _) => {
+            mainWindow.Loaded += (_, _) => {
                 // DebugWindow is not shown. Therefore, the instance is not used.
                 // But with the alternative ctor it will be in the OwnedWindows collection.
                 // This is for the ShowInternalDebuggerBehavior.
