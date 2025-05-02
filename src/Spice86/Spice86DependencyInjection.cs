@@ -68,6 +68,9 @@ public class Spice86DependencyInjection : IDisposable {
         LoggerService loggerService = new LoggerService();
         _loggerService = loggerService;
 
+        // Only in this class we ignore the logging level,
+        // we always log the startup sequence
+
         _loggerService.Information("Spice86 starting...");
 
         SetLoggingLevel(loggerService, configuration);
