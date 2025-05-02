@@ -323,7 +323,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindow.Loaded += (_, _) => {
                 Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                     debugWindowViewModel;
-                loggerService.Information("Debug view mdoel registered...");
+                loggerService.Information("Debug view model registered...");
             };
         }
 
