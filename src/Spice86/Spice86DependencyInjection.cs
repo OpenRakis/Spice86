@@ -324,8 +324,7 @@ public class Spice86DependencyInjection : IDisposable {
             && debugWindowViewModel != null) {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
-            mainWindow.Loaded += (_, _) => OnMainWindowLoaded(debugWindowViewModel,
-                mainWindow);
+            mainWindow.Loaded += (_, _) => OnMainWindowLoaded(debugWindowViewModel);
             mainWindowViewModel.UserInterfaceInitialized += () => {
                 _loggerService.Information("User interface fully initialized...");
             };
@@ -347,8 +346,7 @@ public class Spice86DependencyInjection : IDisposable {
     /// The latter delays the loading of the app.
     /// </summary>
     /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
-    private void OnMainWindowLoaded(DebugWindowViewModel debugWindowViewModel,
-        MainWindow mainWindow) {
+    private void OnMainWindowLoaded(DebugWindowViewModel debugWindowViewModel) {
         // Add resources programmatically
         IResourceDictionary appResources = Application.Current!.Resources;
 
