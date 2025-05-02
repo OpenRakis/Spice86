@@ -374,8 +374,6 @@ public class Spice86DependencyInjection : IDisposable {
             Spice86StylesSource)) {
             Source = new Uri(Spice86StylesSource)
         });
-
-        mainWindow.InvalidateMeasure();
     }
 
     private static Dos CreateDiskOperatingSystem(Configuration configuration,
