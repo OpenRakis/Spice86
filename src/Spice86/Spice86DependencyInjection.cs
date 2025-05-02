@@ -56,7 +56,7 @@ using Spice86.Views;
 public class Spice86DependencyInjection : IDisposable {
     private const string Spice86ControlThemesSource = "avares://Spice86/Assets/ControlThemes.axaml";
     private const string Spice86StylesSource = "avares://Spice86/Styles/Spice86.axaml";
-    private readonly ILoggerService _loggerService;
+    private readonly LoggerService _loggerService;
     private readonly Configuration _configuration;
     private readonly ClassicDesktopStyleApplicationLifetime? _desktop;
     private readonly AppBuilder? _appBuilder;
