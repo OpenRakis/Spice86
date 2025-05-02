@@ -318,12 +318,8 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
             mainWindow.Loaded += (_, _) => {
-                // DebugWindow is not shown. Therefore, the instance is not used.
-                // But with the alternative ctor it will be in the OwnedWindows collection.
-                // This is for the ShowInternalDebuggerBehavior.
-                _ = new DebugWindow(owner: mainWindow) {
-                    DataContext = debugWindowViewModel
-                };
+                Application.Current!.Resources[nameof(DebugWindowViewModel)] =
+                    debugWindowViewModel;
                 loggerService.Information("Debug window created...");
             };
         }
