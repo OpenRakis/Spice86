@@ -6,18 +6,8 @@
     xmlns:semi="https://irihi.tech/semi"
 	RequestedThemeVariant="Default">
 
-	<Application.Resources>
-		<ResourceDictionary>
-			<ResourceDictionary.MergedDictionaries>
-				<ResourceInclude Source="avares://Spice86/Assets/ControlThemes.axaml" />
-			</ResourceDictionary.MergedDictionaries>
-		</ResourceDictionary>
-	</Application.Resources>
-
 	<Application.Styles>
-		<dialogHostAvalonia:DialogHostStyles />
 		<semi:SemiTheme Locale="en-US" />
-		<StyleInclude Source="Styles/Spice86.axaml" />
 	</Application.Styles>
 
 </Application>

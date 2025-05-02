@@ -3,9 +3,13 @@ namespace Spice86;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
+
+using Semi.Avalonia;
 
 using Serilog.Events;
 
@@ -49,10 +53,14 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.Views;
 
+using System.Globalization;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
 public class Spice86DependencyInjection : IDisposable {
+    private const string Spice86ControlThemesSource = "avares://Spice86/Assets/ControlThemes.axaml";
+    private const string Spice86StylesSource = "avares://Spice86/Styles/Spice86.axaml";
     private readonly ILoggerService _loggerService;
     private readonly Configuration _configuration;
     private readonly ClassicDesktopStyleApplicationLifetime? _desktop;
@@ -141,7 +149,7 @@ public class Spice86DependencyInjection : IDisposable {
         _loggerService.Information("Interrupt vector table created...");
 
         Stack stack = new(memory, state);
-        
+
         _loggerService.Information("Stack created...");
 
         IEnumerable<FunctionInformation> functionInformationsData = reader.ReadGhidraSymbolsFromFileOrCreate();
@@ -317,14 +325,12 @@ public class Spice86DependencyInjection : IDisposable {
 
         _loggerService.Information("Debug window view model created...");
 
-        if (desktop != null && mainWindow != null && mainWindowViewModel != null) {
+        if (desktop != null && mainWindow != null && mainWindowViewModel != null
+            && debugWindowViewModel != null) {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
-            mainWindow.Loaded += (_, _) => {
-                Application.Current!.Resources[nameof(DebugWindowViewModel)] =
-                    debugWindowViewModel;
-                _loggerService.Information("Debug view model registered...");
-            };
+            mainWindow.Loaded += (_, _) => OnMainWindowLoaded(debugWindowViewModel,
+                mainWindow);
             mainWindowViewModel.UserInterfaceInitialized += () => {
                 _loggerService.Information("User interface fully initialized...");
             };
@@ -337,6 +343,38 @@ public class Spice86DependencyInjection : IDisposable {
         _mainWindowViewModel = mainWindowViewModel;
 
         _loggerService.Information("Spice86 dependency injection ctor end.");
+    }
+
+    /// <summary>
+    /// Event handler for the main window loaded event.
+    /// A one-time event that enables us to delay-load *some* App resources programmatically.
+    /// If possible, it's preferable to do this, rather than including them in App.xaml.
+    /// The latter delays the loading of the app.
+    /// </summary>
+    private void OnMainWindowLoaded(DebugWindowViewModel debugWindowViewModel,
+        MainWindow mainWindow) {
+        // Add resources programmatically
+        IResourceDictionary appResources = Application.Current!.Resources;
+
+        var controlThemes = new ResourceInclude(new Uri(
+            Spice86ControlThemesSource)) {
+            Source = new Uri(Spice86ControlThemesSource)
+        };
+        appResources.MergedDictionaries.Add(controlThemes);
+
+        appResources[nameof(DebugWindowViewModel)] = debugWindowViewModel;
+
+        _loggerService.Information("Debug view model registered...");
+
+        Avalonia.Styling.Styles appStyles = Application.Current!.Styles;
+
+        appStyles.Add(new DialogHostAvalonia.DialogHostStyles());
+        appStyles.Add(new StyleInclude(new Uri(
+            Spice86StylesSource)) {
+            Source = new Uri(Spice86StylesSource)
+        });
+
+        mainWindow.InvalidateMeasure();
     }
 
     private static Dos CreateDiskOperatingSystem(Configuration configuration,
