@@ -76,8 +76,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         _loggerService.Information("Spice86 starting...");
 
-        SetLoggingLevel(loggerService, configuration);
-
         _loggerService.Information("Set logging level...");
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
@@ -337,6 +335,7 @@ public class Spice86DependencyInjection : IDisposable {
         _mainWindowViewModel = mainWindowViewModel;
 
         _loggerService.Information("Spice86 dependency injection ctor end.");
+        SetLoggingLevel(loggerService, configuration);
     }
 
     /// <summary>
