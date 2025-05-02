@@ -395,7 +395,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     private void EmulatorThread() {
         try {
+            if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Starting emulator thread...");
+                _loggerService.Information("UI is fully initialized and signals it to the video render...");
+            }
             UserInterfaceInitialized?.Invoke();
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Emulation exited. Closing main window...");
+            }
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         } catch (Exception e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
