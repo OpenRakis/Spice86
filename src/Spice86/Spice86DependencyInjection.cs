@@ -3,13 +3,10 @@ namespace Spice86;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
-
-using Semi.Avalonia;
 
 using Serilog.Events;
 
@@ -52,8 +49,6 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.Views;
-
-using System.Globalization;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -351,7 +346,7 @@ public class Spice86DependencyInjection : IDisposable {
     /// If possible, it's preferable to do this, rather than including them in App.xaml.
     /// The latter delays the loading of the app.
     /// </summary>
-    /// <remarks><see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
+    /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
     private void OnMainWindowLoaded(DebugWindowViewModel debugWindowViewModel,
         MainWindow mainWindow) {
         // Add resources programmatically
@@ -369,7 +364,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         Avalonia.Styling.Styles appStyles = Application.Current!.Styles;
 
-        appStyles.Add(new DialogHostAvalonia.DialogHostStyles());
         appStyles.Add(new StyleInclude(new Uri(
             Spice86StylesSource)) {
             Source = new Uri(Spice86StylesSource)
