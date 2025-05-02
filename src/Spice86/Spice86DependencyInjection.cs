@@ -351,6 +351,7 @@ public class Spice86DependencyInjection : IDisposable {
     /// If possible, it's preferable to do this, rather than including them in App.xaml.
     /// The latter delays the loading of the app.
     /// </summary>
+    /// <remarks><see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
     private void OnMainWindowLoaded(DebugWindowViewModel debugWindowViewModel,
         MainWindow mainWindow) {
         // Add resources programmatically
