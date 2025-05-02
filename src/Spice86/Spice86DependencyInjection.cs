@@ -70,114 +70,135 @@ public class Spice86DependencyInjection : IDisposable {
         _appBuilder = appBuilder;
         LoggerService loggerService = new LoggerService();
         _loggerService = loggerService;
+        SetLoggingLevel(loggerService, configuration);
 
-        // Only in this class we ignore the logging level,
-        // we always log the startup sequence
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Spice86 starting...");
 
-        _loggerService.Information("Spice86 starting...");
-
-        _loggerService.Information("Set logging level...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Set logging level...");
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
-        _loggerService.Information("Pause handler created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Pause handler created...");
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory,
             loggerService);
 
-        _loggerService.Information("Recorded data reader created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Recorded data reader created...");
 
         ExecutionFlowRecorder executionFlowRecorder =
             reader.ReadExecutionFlowRecorderFromFileOrCreate(
                 configuration.DumpDataOnExit is not false);
 
-        _loggerService.Information("Execution flow recorder created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Execution flow recorder created...");
 
         State state = new();
 
-        _loggerService.Information("State created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("State created...");
 
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
 
-        _loggerService.Information("Emulator breakpoints manager created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Emulator breakpoints manager created...");
 
         IOPortDispatcher ioPortDispatcher = new(
             emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
 
-        _loggerService.Information("IO port dispatcher created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("IO port dispatcher created...");
 
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
 
-        _loggerService.Information("RAM created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("RAM created...");
 
         A20Gate a20Gate = new(configuration.A20Gate);
 
-        _loggerService.Information("A20 gate created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("A20 gate created...");
 
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints,
+        Memory memory = new(emulatorBreakpointsManager.
+            MemoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
 
-        _loggerService.Information("Memory bus created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Memory bus created...");
 
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb:
                 (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
-        _loggerService.Information("BIOS data area created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("BIOS data area created...");
 
         var dualPic = new DualPic(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort,
             configuration.InitializeDOS is false, loggerService);
 
-        _loggerService.Information("Dual PIC created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Dual PIC created...");
 
         CallbackHandler callbackHandler = new(state, loggerService);
 
-        _loggerService.Information("Callback handler created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Callback handler created...");
 
         InterruptVectorTable interruptVectorTable = new(memory);
 
-        _loggerService.Information("Interrupt vector table created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Interrupt vector table created...");
 
         Stack stack = new(memory, state);
 
-        _loggerService.Information("Stack created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Stack created...");
 
         IEnumerable<FunctionInformation> functionInformationsData = reader.ReadGhidraSymbolsFromFileOrCreate();
 
-        _loggerService.Information("Function information data read...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function information data read...");
 
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(
             functionInformationsData);
 
-        _loggerService.Information("Function catalogue created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function catalogue created...");
 
         FunctionHandler functionHandler = new(memory, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
-        _loggerService.Information("Function handler created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function handler created...");
 
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
-        _loggerService.Information("Function handler in external interrupt created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function handler in external interrupt created...");
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
-        _loggerService.Information("CPU created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("CPU created...");
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
 
-        _loggerService.Information("CfgCpu created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("CfgCpu created...");
 
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
             loggerService.Information("Execution will be done with {CpuType}", cpuType);
         }
@@ -187,19 +208,22 @@ public class Spice86DependencyInjection : IDisposable {
             new CounterConfiguratorFactory(configuration,
             state, pauseHandler, loggerService), loggerService, dualPic);
 
-        _loggerService.Information("Timer created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Timer created...");
 
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
             dualPic, timer, biosDataArea, loggerService);
 
-        _loggerService.Information("Timer int8 handler created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Timer int8 handler created...");
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
-        _loggerService.Information("DMA controller created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("DMA controller created...");
 
         CreateVideoCardSupportClasses(configuration, loggerService, state, ioPortDispatcher,
             memory, biosDataArea, interruptVectorTable, stack,
@@ -211,7 +235,8 @@ public class Spice86DependencyInjection : IDisposable {
             out VgaFunctionality vgaFunctionality,
             out VgaBios vgaBios);
 
-        _loggerService.Information("Video card support classes created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Video card support classes created...");
 
         CreateBiosInterruptHandlers(configuration, loggerService, state,
             a20Gate, memory, biosDataArea, stack, functionHandlerProvider,
@@ -221,17 +246,20 @@ public class Spice86DependencyInjection : IDisposable {
             out SystemBiosInt15Handler systemBiosInt15Handler,
             out SystemClockInt1AHandler systemClockInt1AHandler);
 
-        _loggerService.Information("BIOS interrupt handlers created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("BIOS interrupt handlers created...");
 
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
             configuration, configuration.RecordedDataDirectory, loggerService);
 
-        _loggerService.Information("Memory data exporter created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Memory data exporter created...");
 
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
-        _loggerService.Information("Emulator state serializer created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Emulator state serializer created...");
 
         CreateMainWindow(configuration, loggerService, pauseHandler, state,
             timer, emulatorStateSerializer, out MainWindowViewModel? mainWindowViewModel,
@@ -241,7 +269,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
 
-        _loggerService.Information("VGA card created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("VGA card created...");
 
         CreateInputDevices(configuration, loggerService, state,
             ioPortDispatcher, a20Gate, memory, biosDataArea, dualPic, stack, cpu,
@@ -251,20 +280,23 @@ public class Spice86DependencyInjection : IDisposable {
             out KeyboardInt16Handler keyboardInt16Handler,
             out Joystick joystick);
 
-        _loggerService.Information("Input devices created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Input devices created...");
 
         CreateSoundDevices(configuration, loggerService, pauseHandler, state,
             ioPortDispatcher, dualPic, timer, dmaController, out SoftwareMixer softwareMixer,
             out Midi midiDevice, out PcSpeaker pcSpeaker, out SoundBlaster soundBlaster,
             out GravisUltraSound gravisUltraSound);
 
-        _loggerService.Information("Sound devices created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Sound devices created...");
 
         Dos dos = CreateDiskOperatingSystem(configuration, loggerService, state,
             memory, stack, functionHandlerProvider, vgaFunctionality,
             keyboardInt16Handler, soundBlaster);
 
-        _loggerService.Information("Disk operating system created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Disk operating system created...");
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
@@ -281,17 +313,20 @@ public class Spice86DependencyInjection : IDisposable {
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
-        _loggerService.Information("Machine created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Machine created...");
 
         DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
             ReadFunctionOverrides(configuration, machine, loggerService));
 
-        _loggerService.Information("Function overrides added...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function overrides added...");
 
         InitializeFunctionHandlers(configuration, functionHandler,
             functionHandlerInExternalInterrupt);
 
-        _loggerService.Information("Function handlers initialized...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Function handlers initialized...");
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
             emulatorStateSerializer, memory, functionHandlerProvider,
@@ -299,7 +334,8 @@ public class Spice86DependencyInjection : IDisposable {
             functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
             mainWindowViewModel, dmaController, loggerService);
 
-        _loggerService.Information("Program executor created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Program executor created...");
 
         CreateBiosAndDosInterruptHandlers(configuration, loggerService,
             state, memory, dualPic, callbackHandler, interruptVectorTable,
@@ -308,7 +344,8 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler,
             biosKeyboardInt9Handler, mouseDriver, keyboardInt16Handler, dos);
 
-        _loggerService.Information("BIOS and DOS interrupt handlers created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("BIOS and DOS interrupt handlers created...");
 
         DebugWindowViewModel? debugWindowViewModel = CreateInternalDebuggerViewModel(configuration,
             loggerService, pauseHandler, state, emulatorBreakpointsManager,
@@ -316,7 +353,8 @@ public class Spice86DependencyInjection : IDisposable {
             softwareMixer, midiDevice, memoryDataExporter, textClipboard,
             hostStorageProvider, uiThreadDispatcher);
 
-        _loggerService.Information("Debug window view model created...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Debug window view model created...");
 
         if (desktop != null && mainWindow != null && mainWindowViewModel != null
             && debugWindowViewModel != null) {
@@ -324,7 +362,8 @@ public class Spice86DependencyInjection : IDisposable {
             desktop.MainWindow = mainWindow;
             mainWindow.Loaded += (_, _) => OnMainWindowLoaded(debugWindowViewModel);
             mainWindowViewModel.UserInterfaceInitialized += () => {
-                _loggerService.Information("User interface fully initialized...");
+                if (_loggerService.IsEnabled(LogEventLevel.Information))
+                    _loggerService.Information("User interface fully initialized...");
             };
         }
 
@@ -334,8 +373,8 @@ public class Spice86DependencyInjection : IDisposable {
         _desktop = desktop;
         _mainWindowViewModel = mainWindowViewModel;
 
-        _loggerService.Information("Spice86 dependency injection ctor end.");
-        SetLoggingLevel(loggerService, configuration);
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Spice86 dependency injection ctor end.");
     }
 
     /// <summary>
@@ -357,7 +396,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         appResources[nameof(DebugWindowViewModel)] = debugWindowViewModel;
 
-        _loggerService.Information("Debug view model registered...");
+        if (_loggerService.IsEnabled(LogEventLevel.Information))
+            _loggerService.Information("Debug view model registered...");
 
         Avalonia.Styling.Styles appStyles = Application.Current!.Styles;
 
@@ -399,26 +439,33 @@ public class Spice86DependencyInjection : IDisposable {
         uiThreadDispatcher = null;
         if (!configuration.HeadlessMode && _appBuilder is not null) {
             desktop = CreateDesktopApp(_appBuilder);
-            _loggerService.Information("Desktop App class instance created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Desktop App class instance created...");
             uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            _loggerService.Information("UI thread dispatcher wrapper created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("UI thread dispatcher wrapper created...");
             PerformanceViewModel performanceViewModel = new(state, pauseHandler,
                 uiThreadDispatcher);
-            _loggerService.Information("Performance view model created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Performance view model created...");
             mainWindow = new() {
                 PerformanceViewModel = performanceViewModel
             };
-            _loggerService.Information("Main window created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Main window created...");
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-            _loggerService.Information("Text clipboard wrapper created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Text clipboard wrapper created...");
             hostStorageProvider = new HostStorageProvider(
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer);
-            _loggerService.Information("Host storage provider wrapper created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Host storage provider wrapper created...");
             mainWindowViewModel = new MainWindowViewModel(
                 timer, state, uiThreadDispatcher, hostStorageProvider,
                 textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel);
-            _loggerService.Information("Main window view model created...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Main window view model created...");
         }
     }
 
@@ -631,10 +678,12 @@ public class Spice86DependencyInjection : IDisposable {
 
     public void Start() {
         if (_configuration.HeadlessMode) {
-            _loggerService.Information("Finally starting headless mode...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Finally starting headless mode...");
             ProgramExecutor.Run();
         } else {
-            _loggerService.Information("Finally starting UI...");
+            if (_loggerService.IsEnabled(LogEventLevel.Information))
+                _loggerService.Information("Finally starting UI...");
             _desktop?.Start(Environment.GetCommandLineArgs());
         }
     }
