@@ -326,7 +326,6 @@ public class Spice86DependencyInjection : IDisposable {
                 };
                 loggerService.Information("Debug window created...");
             };
-            loggerService.Information("Main window created...");
         }
 
         Machine = machine;
