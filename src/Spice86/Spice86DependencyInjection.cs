@@ -317,13 +317,16 @@ public class Spice86DependencyInjection : IDisposable {
 
         _loggerService.Information("Debug window view model created...");
 
-        if (desktop != null && mainWindow != null) {
+        if (desktop != null && mainWindow != null && mainWindowViewModel != null) {
             mainWindow.DataContext = mainWindowViewModel;
             desktop.MainWindow = mainWindow;
             mainWindow.Loaded += (_, _) => {
                 Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                     debugWindowViewModel;
-                loggerService.Information("Debug view model registered...");
+                _loggerService.Information("Debug view model registered...");
+            };
+            mainWindowViewModel.UserInterfaceInitialized += () => {
+                _loggerService.Information("User interface fully initialized...");
             };
         }
 
