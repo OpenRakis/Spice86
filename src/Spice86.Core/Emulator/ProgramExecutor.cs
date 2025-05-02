@@ -98,6 +98,9 @@ public sealed class ProgramExecutor : IDisposable {
     /// Starts the loaded program.
     /// </summary>
     public void Run() {
+        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Starting the emulation loop");
+        }
         if (_gdbServer is not null) {
             _gdbServer?.StartServerAndWait();
         } else if (_configuration.Debug) {
