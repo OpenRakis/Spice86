@@ -27,7 +27,6 @@ internal partial class App : Application {
     public override void OnFrameworkInitializationCompleted() {
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            // This is the main window of the application.
             MainWindow mainWindow = new();
             desktop.MainWindow = mainWindow;
             mainWindow.IsEnabled = false;
