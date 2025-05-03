@@ -35,9 +35,13 @@ public class Program {
         if (configuration == null) {
             return;
         }
-        using Spice86DependencyInjection spice86DependencyInjection = new(configuration,
-            configuration.HeadlessMode ? null : BuildAvaloniaApp());
-        spice86DependencyInjection.Start();
+        if (configuration.HeadlessMode) {
+            Spice86DependencyInjection spice86DependencyInjection = new(configuration);
+            spice86DependencyInjection.Start();
+        } else {
+            // Run in GUI mode
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

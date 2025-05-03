@@ -13,7 +13,6 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
@@ -34,6 +33,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly PerformanceViewModel _performanceViewModel;
+    private readonly Spice86DependencyInjection _spice86DependencyInjection;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -56,11 +56,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        ITimeMultiplier pit, State state, IUIDispatcher uiDispatcher,
+        Spice86DependencyInjection spice86DependencyInjection,
+        ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
         : base(uiDispatcher, textClipboard) {
+        _spice86DependencyInjection = spice86DependencyInjection;
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
@@ -347,6 +349,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
+
+                _spice86DependencyInjection.Dispose();
 
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
