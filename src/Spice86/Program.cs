@@ -37,7 +37,7 @@ public class Program {
         }
         if (configuration.HeadlessMode) {
             Spice86DependencyInjection spice86DependencyInjection = new(configuration);
-            spice86DependencyInjection.Start();
+            spice86DependencyInjection.HeadlessModeStart();
         } else {
             // Run in GUI mode
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

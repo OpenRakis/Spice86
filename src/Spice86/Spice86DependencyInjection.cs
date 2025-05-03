@@ -533,7 +533,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
-    public void Start() {
+    public void HeadlessModeStart() {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Finally starting headless mode...");
         }
