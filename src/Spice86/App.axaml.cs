@@ -65,7 +65,7 @@ internal partial class App : Application {
     private static void LoadAppResources() {
         IResourceDictionary appResources = Application.Current!.Resources;
 
-        var controlThemes = new ResourceInclude(new Uri(
+        ResourceInclude controlThemes = new ResourceInclude(new Uri(
             Spice86ControlThemesSource)) {
             Source = new Uri(Spice86ControlThemesSource)
         };
