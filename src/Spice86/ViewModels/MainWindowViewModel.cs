@@ -325,7 +325,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         GC.SuppressFinalize(this);
     }
 
-    public event Action? Disposing;
+    internal event Action? Disposing;
     
     private void Dispose(bool disposing) {
         if (!_disposed) {
