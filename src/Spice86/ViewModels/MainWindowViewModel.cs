@@ -33,7 +33,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly PerformanceViewModel _performanceViewModel;
-    private readonly Spice86DependencyInjection _spice86DependencyInjection;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -56,13 +55,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        Spice86DependencyInjection spice86DependencyInjection,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
         : base(uiDispatcher, textClipboard) {
-        _spice86DependencyInjection = spice86DependencyInjection;
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
@@ -327,6 +324,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+
+    public event Action? Disposing;
     
     private void Dispose(bool disposing) {
         if (!_disposed) {
@@ -349,8 +348,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
-
-                _spice86DependencyInjection.Dispose();
+                Disposing?.Invoke();
 
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();

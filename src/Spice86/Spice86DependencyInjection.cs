@@ -307,11 +307,10 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindow.PerformanceViewModel = performanceViewModel;
 
-            mainWindowViewModel = new(this,
+            mainWindowViewModel = new(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel);
         }
-
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
 
