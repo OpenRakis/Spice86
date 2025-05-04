@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.Styling;
+using Avalonia.Threading;
 
 using Spice86.Core.CLI;
 using Spice86.ViewModels;
@@ -27,7 +28,9 @@ internal partial class App : Application {
     public override void OnFrameworkInitializationCompleted() {
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            MainWindow mainWindow = new();
+            MainWindow mainWindow = new() {
+                DataContext = this
+            };
             desktop.MainWindow = mainWindow;
             mainWindow.IsEnabled = false;
             mainWindow.Loaded += (_, _) => OnMainWindowLoaded(mainWindow);
@@ -44,22 +47,24 @@ internal partial class App : Application {
     /// This event-handler also enables us to load the UI first, and then start the emulator here.
     /// </summary>
     /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
-    private void OnMainWindowLoaded(MainWindow mainWindow) {
-        LoadAppResources();
+    private async void OnMainWindowLoaded(MainWindow mainWindow) {
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            LoadAppResources();
 
-        Configuration configuration = new CommandLineParser().ParseCommandLine(
-                Environment.GetCommandLineArgs())!;
-        Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
-        if (mainWindow.DataContext is MainWindowViewModel mainVm) {
-            mainWindow.IsEnabled = true;
-            mainVm.CloseMainWindow += (_, _) => mainWindow.Close();
-            mainVm.InvalidateBitmap += mainWindow.Image.InvalidateVisual;
-            mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
-            mainWindow.Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, mainWindow.Image);
-            mainWindow.Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, mainWindow.Image);
-            mainVm.StartEmulator();
-            mainVm.Disposing += dependencyInjection.Dispose;
-        }
+            Configuration configuration = new CommandLineParser().ParseCommandLine(
+                    Environment.GetCommandLineArgs())!;
+            Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
+            if (mainWindow.DataContext is MainWindowViewModel mainVm) {
+                mainWindow.IsEnabled = true;
+                mainVm.CloseMainWindow += (_, _) => mainWindow.Close();
+                mainVm.InvalidateBitmap += mainWindow.Image.InvalidateVisual;
+                mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
+                mainWindow.Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, mainWindow.Image);
+                mainWindow.Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, mainWindow.Image);
+                mainVm.StartEmulator();
+                mainVm.Disposing += dependencyInjection.Dispose;
+            }
+        }, DispatcherPriority.ContextIdle);
     }
 
     private static void LoadAppResources() {
@@ -77,5 +82,13 @@ internal partial class App : Application {
             Spice86StylesSource)) {
             Source = new Uri(Spice86StylesSource)
         });
+    }
+
+    public static StyledProperty<string> StatusMessageProperty =
+        AvaloniaProperty.Register<App, string>(nameof(StatusMessage), defaultValue: "Loading...");
+
+    public string StatusMessage {
+        get => GetValue(StatusMessageProperty);
+        set => SetValue(StatusMessageProperty, value);
     }
 }
