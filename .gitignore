@@ -379,3 +379,7 @@ MigrationBackup/
 
 #VSharp
 VSharp.*
+
+#AI guidelines
+.windsurfrules
+Knowledge/

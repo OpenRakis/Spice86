@@ -1,9 +1,9 @@
 namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class BreakpointViewModel : ViewModelBase {
@@ -81,6 +81,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         return _breakPoint;
     }
 
+    [RelayCommand]
     public void Enable() {
         if (IsEnabled) {
             return;
@@ -91,6 +92,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         OnPropertyChanged(nameof(IsEnabled));
     }
 
+    [RelayCommand]
     public void Disable() {
         if (!IsEnabled) {
             return;
@@ -99,13 +101,5 @@ public partial class BreakpointViewModel : ViewModelBase {
             on: false);
         _isEnabled = false;
         OnPropertyChanged(nameof(IsEnabled));
-    }
-
-    internal bool IsForCpuInstruction(CpuInstructionInfo instructionInfo) {
-        return Address == instructionInfo.Address &&
-            (Type == BreakPointType.CPU_EXECUTION_ADDRESS ||
-            Type == BreakPointType.MEMORY_READ ||
-            Type == BreakPointType.MEMORY_WRITE ||
-            Type == BreakPointType.MEMORY_ACCESS);
     }
 }
