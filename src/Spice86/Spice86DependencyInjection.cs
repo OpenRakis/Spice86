@@ -184,7 +184,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
+            keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
@@ -206,9 +207,10 @@ public class Spice86DependencyInjection : IDisposable {
         InitializeFunctionHandlers(configuration, functionHandler, functionHandlerInExternalInterrupt);
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, functionHandlerProvider, instructionExecutor, memoryDataExporter, state,
-            timer, dos, functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
-            mainWindowViewModel,
+            emulatorStateSerializer, memory, functionHandlerProvider,
+            instructionExecutor, memoryDataExporter, state,
+            timer, dos.DosInt21Handler, functionHandler,
+            functionCatalogue, executionFlowRecorder, pauseHandler, mainWindowViewModel,
             dmaController,
             loggerService);
 
