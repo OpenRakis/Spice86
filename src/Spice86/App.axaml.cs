@@ -28,12 +28,12 @@ internal partial class App : Application {
     public override void OnFrameworkInitializationCompleted() {
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
-            MainWindow mainWindow = new() {
-                DataContext = this
-            };
-            desktop.MainWindow = mainWindow;
-            mainWindow.IsEnabled = false;
-            mainWindow.Loaded += (_, _) => OnMainWindowLoaded(mainWindow);
+            // Show splash screen window
+            SplashWindow splashWindow = new SplashWindow();
+            desktop.MainWindow = splashWindow;
+            splashWindow.Loaded += (_, _) => OnSplashWindowLoaded(desktop,
+                splashWindow);
+            splashWindow.Show();
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -47,15 +47,15 @@ internal partial class App : Application {
     /// This event-handler also enables us to load the UI first, and then start the emulator here.
     /// </summary>
     /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
-    private async void OnMainWindowLoaded(MainWindow mainWindow) {
+    private async void OnSplashWindowLoaded(
+        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splashWindow) {
         await Dispatcher.UIThread.InvokeAsync(() => {
             LoadAppResources();
-
+            MainWindow mainWindow = new();
             Configuration configuration = new CommandLineParser().ParseCommandLine(
                     Environment.GetCommandLineArgs())!;
             Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
             if (mainWindow.DataContext is MainWindowViewModel mainVm) {
-                mainWindow.IsEnabled = true;
                 mainVm.CloseMainWindow += (_, _) => mainWindow.Close();
                 mainVm.InvalidateBitmap += mainWindow.Image.InvalidateVisual;
                 mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
@@ -64,6 +64,9 @@ internal partial class App : Application {
                 mainVm.StartEmulator();
                 mainVm.Disposing += dependencyInjection.Dispose;
             }
+            desktop.MainWindow = mainWindow;
+            mainWindow.Show();
+            splashWindow.Close();
         }, DispatcherPriority.ContextIdle);
     }
 
@@ -82,13 +85,5 @@ internal partial class App : Application {
             Spice86StylesSource)) {
             Source = new Uri(Spice86StylesSource)
         });
-    }
-
-    public static StyledProperty<string> StatusMessageProperty =
-        AvaloniaProperty.Register<App, string>(nameof(StatusMessage), defaultValue: "Loading...");
-
-    public string StatusMessage {
-        get => GetValue(StatusMessageProperty);
-        set => SetValue(StatusMessageProperty, value);
     }
 }
