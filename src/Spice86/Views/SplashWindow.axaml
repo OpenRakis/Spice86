@@ -1,12 +1,20 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"		xmlns:avaloniaprogressring="using:AvaloniaProgressRing"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Spice86.SplashWindow"
 		WindowStartupLocation="CenterScreen"
 		CanResize="False"
 		SystemDecorations="None"
-		SizeToContent="WidthAndHeight">
-  Loading Spice86. Plase wait...
+		Width="320"
+		Height="200">
+	<Window.Styles>
+		<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+	</Window.Styles>
+	<Grid RowDefinitions="*,Auto">
+		<avaloniaprogressring:ProgressRing Grid.Row="0" Width="100" Height="100"
+			Foreground="DarkOrange" IsActive="True" IsVisible="True" />
+		<Label FontWeight="SemiBold" HorizontalAlignment="Center" Grid.Row="1" Content="Loading..." />
+	</Grid>
 </Window>

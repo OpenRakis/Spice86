@@ -49,7 +49,7 @@ internal partial class App : Application {
     /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
     private async void OnSplashWindowLoaded(
         IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splashWindow) {
-        await Dispatcher.UIThread.InvokeAsync(() => {
+        await Dispatcher.UIThread.InvokeAsync(async () => {
             LoadAppResources();
             MainWindow mainWindow = new();
             Configuration configuration = new CommandLineParser().ParseCommandLine(
