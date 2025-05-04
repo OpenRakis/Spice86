@@ -10,7 +10,7 @@
 
 Spice86 is a tool to execute, reverse engineer and rewrite real mode DOS programs for which source code is not available.
 
-Release are available [on Nuget](https://www.nuget.org/packages/Spice86/).
+Releases are available [on Nuget](https://www.nuget.org/packages/Spice86/).
 
 Pre-releases are also available [on the Release page](https://github.com/OpenRakis/Spice86/releases/tag/latest)
 
