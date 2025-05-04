@@ -21,12 +21,19 @@
 	Height="768"
 	Icon="/Assets/Debug.ico"
 	mc:Ignorable="d">
+	<Window.Resources>
+		<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Assets#Roboto Mono</FontFamily>
+		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
+	</Window.Resources>
 	<Design.DataContext>
 		<vm:DebugWindowViewModel />
 	</Design.DataContext>
 	<Window.DataTemplates>
 		<local:ViewLocator />
 	</Window.DataTemplates>
+	<Window.Styles>
+		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
+	</Window.Styles>
 	<Grid RowDefinitions="Auto,*,Auto">
 		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
 			<Button
@@ -83,14 +90,14 @@
 						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F3" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
-				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
-					<TabControl.ItemTemplate>
-						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-							<TabItem Header="{Binding Header}">
-								<ContentPresenter Content="{Binding}"/>
-							</TabItem>
-						</DataTemplate>
-					</TabControl.ItemTemplate>
+						<TabControl ItemsSource="{Binding DisassemblyViewModels}">
+							<TabControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+									<TabItem Header="{Binding Header}">
+										<ContentPresenter Content="{Binding}"/>
+									</TabItem>
+								</DataTemplate>
+							</TabControl.ItemTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F4">

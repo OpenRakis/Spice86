@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Messages;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Utils;
 
 using System.Collections.ObjectModel;
@@ -445,10 +444,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
     }
 
-    public BreakpointViewModel? GetBreakpoint(CpuInstructionInfo instructionInfo) {
-        return Breakpoints.FirstOrDefault(x => x.IsForCpuInstruction(instructionInfo));
-    }
-
     private bool RemoveBreakpointCanExecute() => SelectedBreakpoint is not null;
 
     [RelayCommand(CanExecute = nameof(RemoveBreakpointCanExecute))]
@@ -467,5 +462,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
         breakpoint.Disable();
         Breakpoints.Remove(breakpoint);
         BreakpointDeleted?.Invoke(breakpoint);
+    }
+
+    /// Retrieves all execution breakpoints at the specified linear address.
+    /// <param name="addressLinear">The linear address where execution breakpoints are to be retrieved.</param>
+    /// <returns>An enumerable collection of breakpoints that are of type CPU_EXECUTION_ADDRESS and match the specified address.</returns>
+    public IEnumerable<BreakpointViewModel> GetExecutionBreakPointsAtAddress(uint addressLinear) {
+        return Breakpoints.Where(bp => bp.Address == addressLinear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
     }
 }

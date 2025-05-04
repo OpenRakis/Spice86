@@ -20,6 +20,10 @@ public class UIDispatcher : IUIDispatcher {
     public void Post(Action callback, DispatcherPriority priority = default) {
         _dispatcher.Post(callback, priority);
     }
+
+    public bool CheckAccess() {
+        return _dispatcher.CheckAccess();
+    }
 }
 
 /// <summary>
@@ -40,4 +44,10 @@ public interface IUIDispatcher {
     /// <param name="callback">The code to run.</param>
     /// <param name="priority">The priority attached to the code.</param>
     void Post(Action callback, DispatcherPriority priority = default);
+
+    /// <summary>
+    /// Determines whether the calling thread is the UI thread.
+    /// </summary>
+    /// <returns><c>true</c> if the calling thread is the UI thread; otherwise, <c>false</c>.</returns>
+    bool CheckAccess();
 }

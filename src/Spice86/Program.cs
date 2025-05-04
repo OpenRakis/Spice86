@@ -3,6 +3,7 @@
 using Spice86.Logging;
 using Spice86.Core.CLI;
 using Spice86.Shared.Interfaces;
+using Avalonia;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -30,12 +31,23 @@ public class Program {
     /// <param name="args">The command-line arguments.</param>
     [STAThread]
     public static void Main(string[] args) {
-        ILoggerService loggerService = new LoggerService();
         Configuration? configuration = new CommandLineParser().ParseCommandLine(args);
         if (configuration == null) {
             return;
         }
-        using Spice86DependencyInjection spice86DependencyInjection = new(loggerService, configuration);
-        spice86DependencyInjection.Start();
+        if (configuration.HeadlessMode) {
+            Spice86DependencyInjection spice86DependencyInjection = new(configuration);
+            spice86DependencyInjection.HeadlessModeStart();
+        } else {
+            // Run in GUI mode
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
     }
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
 }

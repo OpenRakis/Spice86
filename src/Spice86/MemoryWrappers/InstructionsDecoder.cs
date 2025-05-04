@@ -1,95 +1,182 @@
-﻿namespace Spice86.MemoryWrappers;
+namespace Spice86.MemoryWrappers;
 
 using Iced.Intel;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
-internal class InstructionsDecoder {
-    private readonly IMemory _memory;
-    private readonly State _state;
-    private readonly IDictionary<SegmentedAddress, FunctionInformation> _functions;
-    private readonly BreakpointsViewModel _breakpointsViewModel;
+/// <summary>
+/// Decoder for x86 instructions that provides formatted output for disassembly views.
+/// </summary>
+internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
+    /// <summary>
+    /// Length of the callback opcode sequence (FE 38 XX)
+    /// </summary>
+    private const int CallbackOpcodeLength = 3;
 
-    public InstructionsDecoder(
-        IMemory memory, State state,
-        IDictionary<SegmentedAddress, FunctionInformation> functions,
-        BreakpointsViewModel breakpointsViewModel) {
-        _memory = memory;
-        _state = state;
-        _functions = functions;
-        _breakpointsViewModel = breakpointsViewModel;
-    }
+    private const DecoderOptions DecoderOptions = Iced.Intel.DecoderOptions.Loadall286 | Iced.Intel.DecoderOptions.Loadall386;
 
-    public List<CpuInstructionInfo> DecodeInstructions(uint startAddress,
-        int numberOfInstructionsShown) {
-        CodeReader codeReader = CreateCodeReader(_memory,
-            out CodeMemoryStream emulatedMemoryStream);
-        using CodeMemoryStream codeMemoryStream = emulatedMemoryStream;
-        Decoder decoder = InitializeDecoder(codeReader, startAddress);
-        int byteOffset = 0;
-        codeMemoryStream.Position = startAddress;
-        var instructions = new List<CpuInstructionInfo>();
-        while (instructions.Count < numberOfInstructionsShown) {
-            long instructionAddress = codeMemoryStream.Position;
-            if(instructionAddress >= emulatedMemoryStream.Length) {
-                break;
-            }
-            decoder.Decode(out Instruction instruction);
-            CpuInstructionInfo instructionInfo = new() {
-                Instruction = instruction,
-                Address = (uint)instructionAddress,
-                AddressInformation = $"{instructionAddress} (0x{_state.CS:x4}:{(ushort)(_state.IP + byteOffset):X4})",
-                Length = instruction.Length,
-                IP16 = instruction.IP16,
-                IP32 = instruction.IP32,
-                MemorySegment = instruction.MemorySegment,
-                SegmentPrefix = instruction.SegmentPrefix,
-                IsStackInstruction = instruction.IsStackInstruction,
-                IsIPRelativeMemoryOperand = instruction.IsIPRelativeMemoryOperand,
-                IPRelativeMemoryAddress = instruction.IPRelativeMemoryAddress,
-                FlowControl = instruction.FlowControl,
-                Bytes = $"""{Convert.ToHexString(_memory.GetData(
-                    (uint)instructionAddress,
-                    (uint)instruction.Length))} ({instruction.Length})"""
-            };
-            KeyValuePair<SegmentedAddress, FunctionInformation> functionInformation = _functions
-                .FirstOrDefault(x => x.Key.Linear == instructionAddress);
-            if(functionInformation.Key != default) {
-                instructionInfo.FunctionName = functionInformation.Value.Name;
-            }
-            instructionInfo.SegmentedAddress = new(_state.CS, (ushort)(_state.IP + byteOffset));
-            instructionInfo.Breakpoint = _breakpointsViewModel.GetBreakpoint(instructionInfo);
-            instructionInfo.StringRepresentation =
-                $"{instructionInfo.Address:X4} ({instructionInfo.SegmentedAddress}): {instruction} ({instructionInfo.Bytes})";
-            if (instructionAddress == _state.IpPhysicalAddress) {
-                instructionInfo.IsCsIp = true;
-            }
+    /// <summary>
+    /// Decodes instructions around a center address with specified byte ranges before and after.
+    /// </summary>
+    /// <param name="centerAddress">The address to center the decoding around</param>
+    /// <param name="bytesBefore">Number of bytes to decode before the center address</param>
+    /// <param name="bytesAfter">Number of bytes to decode after the center address</param>
+    /// <returns>A dictionary of decoded instructions indexed by their linear addresses</returns>
+    public Dictionary<uint, EnrichedInstruction> DecodeInstructions(SegmentedAddress centerAddress, uint bytesBefore, uint bytesAfter) {
+        // Calculate start address (going back by bytesBeforeCenter)
+        uint startSegmentOffset = bytesBefore > centerAddress.Offset ? 0 : centerAddress.Offset - bytesBefore;
+        var startAddress = new SegmentedAddress(centerAddress.Segment, (ushort)startSegmentOffset);
 
-            instructions.Add(instructionInfo);
-            byteOffset += instruction.Length;
-        }
+        // Calculate total length to read
+        uint totalLength = bytesBefore + bytesAfter;
+        totalLength = Math.Min(totalLength, A20Gate.EndOfHighMemoryArea - startAddress.Linear);
+
+        // Read the memory block
+        byte[] memoryBlock = memory.ReadRam(totalLength, startAddress.Linear);
+
+        // Create a dictionary to hold the instructions
+        var instructions = new Dictionary<uint, EnrichedInstruction>();
+
+        // Calculate the offset of the center address within the memory block
+        int centerAddressOffset = (int)(centerAddress.Linear - startAddress.Linear);
+
+        // First, decode instructions before the center address
+        DecodeInstructionsBefore(memoryBlock, centerAddressOffset, startAddress, centerAddress, instructions);
+
+        // Then, decode instructions from the center address onward
+        // This will overwrite any overlapping instructions from the first pass
+        DecodeInstructionsFrom(memoryBlock, centerAddressOffset, (int)(totalLength - centerAddressOffset), centerAddress, instructions);
 
         return instructions;
     }
 
-    private static Decoder InitializeDecoder(CodeReader codeReader, uint currentIp) {
-        Decoder decoder = Decoder.Create(16, codeReader, currentIp,
-            DecoderOptions.Loadall286 | DecoderOptions.Loadall386);
-        return decoder;
+    /// <summary>
+    /// Checks if the bytes at the given offset match the callback opcode pattern (FE 38 XX).
+    /// </summary>
+    private static bool IsCallbackOpcode(byte[] memoryBlock, int offset, out byte opcodeIndex) {
+        opcodeIndex = 0;
+
+        if (offset + 2 >= memoryBlock.Length) {
+            return false;
+        }
+
+        if (memoryBlock[offset] == 0xFE && memoryBlock[offset + 1] == 0x38) {
+            opcodeIndex = memoryBlock[offset + 2];
+
+            return true;
+        }
+
+        return false;
     }
 
-    private static CodeReader CreateCodeReader(IMemory memory, out CodeMemoryStream codeMemoryStream) {
-        codeMemoryStream = new CodeMemoryStream(memory);
-        CodeReader codeReader = new StreamCodeReader(codeMemoryStream);
-        return codeReader;
+    /// <summary>
+    /// Creates an enriched instruction for a callback opcode at the given address.
+    /// </summary>
+    private EnrichedInstruction CreateCallbackOpcodeInstruction(SegmentedAddress address, byte callbackIndex) {
+        var customInstruction = new Instruction {
+            Code = Code.INVALID,
+            Length = CallbackOpcodeLength
+        };
+
+        return new EnrichedInstruction(customInstruction) {
+            Bytes = memory.ReadRam(CallbackOpcodeLength, address.Linear),
+            Function = functions.SingleOrDefault(pair => pair.Key.Linear == address.Linear).Value,
+            SegmentedAddress = address,
+            Breakpoints = breakpointsViewModel.GetExecutionBreakPointsAtAddress(address.Linear).ToImmutableList(),
+            InstructionFormatOverride = [
+                new FormattedTextSegment {
+                    Text = "Spice86 callback ",
+                    Kind = FormatterTextKind.Directive
+                },
+                new FormattedTextSegment {
+                    Text = callbackIndex.ToString().PadLeft(3),
+                    Kind = FormatterTextKind.Function
+                }
+            ]
+        };
+    }
+
+    /// <summary>
+    /// Creates a standard enriched instruction from a decoded instruction at the given address.
+    /// </summary>
+    private EnrichedInstruction CreateStandardInstruction(Instruction instruction, SegmentedAddress address) {
+        return new EnrichedInstruction(instruction) {
+            Bytes = memory.ReadRam((uint)instruction.Length, address.Linear),
+            Function = functions.SingleOrDefault(pair => pair.Key.Linear == address.Linear).Value,
+            SegmentedAddress = address,
+            Breakpoints = breakpointsViewModel.GetExecutionBreakPointsAtAddress(address.Linear).ToImmutableList(),
+        };
+    }
+
+    /// <summary>
+    /// Decodes instructions before the center address, stopping if we would overlap with the center address.
+    /// </summary>
+    private void DecodeInstructionsBefore(byte[] memoryBlock, int centerOffset, SegmentedAddress startAddress, SegmentedAddress centerAddress, Dictionary<uint, EnrichedInstruction> instructions) {
+        if (centerOffset <= 0) {
+            return;
+        }
+
+        var codeReader = new ByteArrayCodeReader(memoryBlock, 0, centerOffset);
+        var decoder = Decoder.Create(16, codeReader, DecoderOptions);
+        decoder.IP = startAddress.Offset;
+        SegmentedAddress currentAddress = startAddress;
+
+        // Decode instructions before the center address
+        while (codeReader.Position < centerOffset && currentAddress.Linear < centerAddress.Linear) {
+            int currentOffset = codeReader.Position;
+
+            if (IsCallbackOpcode(memoryBlock, currentOffset, out byte callbackIndex)) {
+                instructions[currentAddress.Linear] = CreateCallbackOpcodeInstruction(currentAddress, callbackIndex);
+                codeReader.Position += CallbackOpcodeLength;
+                currentAddress += CallbackOpcodeLength;
+            } else {
+                decoder.Decode(out Instruction instruction);
+                // Check if this instruction would overlap with the center address
+                if (currentAddress.Linear + instruction.Length > centerAddress.Linear) {
+                    break;
+                }
+                instructions[currentAddress.Linear] = CreateStandardInstruction(instruction, currentAddress);
+                currentAddress += (ushort)instruction.Length;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Decodes instructions starting from a specific offset in the memory block.
+    /// </summary>
+    private void DecodeInstructionsFrom(byte[] memoryBlock, int startOffset, int maxLength, SegmentedAddress startingAddress, Dictionary<uint, EnrichedInstruction> instructions) {
+        if (startOffset >= memoryBlock.Length || maxLength <= 0) {
+            return;
+        }
+
+        var codeReader = new ByteArrayCodeReader(memoryBlock, startOffset, maxLength);
+        var decoder = Decoder.Create(16, codeReader, DecoderOptions);
+        decoder.IP = startingAddress.Offset;
+        SegmentedAddress currentAddress = startingAddress;
+
+        // Decode instructions from the starting address
+        while (codeReader.Position < maxLength && startOffset + codeReader.Position < memoryBlock.Length) {
+            int currentOffset = startOffset + codeReader.Position;
+
+            if (IsCallbackOpcode(memoryBlock, currentOffset, out byte callbackIndex)) {
+                instructions[currentAddress.Linear] = CreateCallbackOpcodeInstruction(currentAddress, callbackIndex);
+                codeReader.Position += CallbackOpcodeLength;
+                currentAddress += CallbackOpcodeLength;
+            } else {
+                decoder.Decode(out Instruction instruction);
+                instructions[currentAddress.Linear] = CreateStandardInstruction(instruction, currentAddress);
+                currentAddress += (ushort)instruction.Length;
+            }
+        }
     }
 }
