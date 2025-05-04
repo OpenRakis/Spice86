@@ -13,7 +13,6 @@ using System.Collections.Immutable;
 /// </summary>
 /// <param name="Instruction">The Iced assembly instruction</param>
 public record EnrichedInstruction(Instruction Instruction) {
-    public Instruction Instruction { get; } = Instruction;
     public byte[] Bytes { get; init; } = [];
     public FunctionInformation? Function { get; init; }
     public SegmentedAddress SegmentedAddress { get; init; }
