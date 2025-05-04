@@ -1,5 +1,6 @@
 namespace Spice86.Views;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 
@@ -18,7 +19,15 @@ internal partial class MainWindow : Window {
         this.Menu.GotFocus += OnMenuGotFocus;
     }
 
-    public PerformanceViewModel? PerformanceViewModel { get; init; }
+    public static readonly StyledProperty<PerformanceViewModel?> PerformanceViewModelProperty =
+        AvaloniaProperty.Register<MainWindow, PerformanceViewModel?>(nameof(PerformanceViewModel),
+            defaultValue: null);
+
+    public PerformanceViewModel? PerformanceViewModel {
+        get => GetValue(PerformanceViewModelProperty);
+        set => SetValue(PerformanceViewModelProperty, value);
+    }
+
 
     private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
         FocusOnVideoBuffer();
@@ -45,12 +54,6 @@ internal partial class MainWindow : Window {
             return;
         }
         mainVm.CloseMainWindow += (_, _) => Close();
-        mainVm.InvalidateBitmap += Image.InvalidateVisual;
-        Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, Image);
-        Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, Image);
-        Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, Image);
-        FocusOnVideoBuffer();
-        mainVm.StartEmulator();
     }
 
     protected override void OnKeyUp(KeyEventArgs e) {
@@ -68,5 +71,10 @@ internal partial class MainWindow : Window {
     protected override void OnClosing(WindowClosingEventArgs e) {
         (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
         base.OnClosing(e);
+    }
+
+    protected override void OnClosed(EventArgs e) {
+        (DataContext as IDisposable)?.Dispose();
+        base.OnClosed(e);
     }
 }

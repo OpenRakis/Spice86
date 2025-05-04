@@ -1,11 +1,8 @@
 namespace Spice86.Tests;
 
-using NSubstitute;
-
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 
 using System;
 
@@ -37,8 +34,7 @@ public class Spice86Creator {
     }
 
     public Spice86DependencyInjection Create() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
-        Spice86DependencyInjection res = new(loggerService, _configuration);
+        Spice86DependencyInjection res = new(_configuration);
         res.Machine.CpuState.Flags.IsDOSBoxCompatible = false;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,

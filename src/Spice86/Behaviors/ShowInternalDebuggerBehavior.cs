@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Xaml.Interactivity;
 
+using Spice86.ViewModels;
 using Spice86.Views;
 
 using System.Diagnostics.CodeAnalysis;
@@ -45,6 +46,7 @@ internal class ShowInternalDebuggerBehavior : Behavior<Control> {
         if (TryShowDebugWindow(appWindows, out DebugWindow? appDebugWindow)) {
             _debugWindowDataContext = appDebugWindow.DataContext;
         } else {
+            _debugWindowDataContext ??= Application.Current.Resources[(nameof(DebugWindowViewModel))];
             DebugWindow debugWindow = new() {
                 DataContext = _debugWindowDataContext
             };

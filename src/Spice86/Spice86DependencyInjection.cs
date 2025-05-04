@@ -1,8 +1,6 @@
 namespace Spice86;
 
 using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
@@ -41,6 +39,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
+using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -48,174 +47,457 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.Views;
 
+using System;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
 public class Spice86DependencyInjection : IDisposable {
-    private readonly Configuration _configuration;
-    private readonly ClassicDesktopStyleApplicationLifetime? _desktop;
+    private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
-    private readonly MainWindowViewModel? _mainWindowViewModel;
     private bool _disposed;
 
-    public Spice86DependencyInjection(ILoggerService loggerService, Configuration configuration) {
+    public Spice86DependencyInjection(Configuration configuration)
+        : this(configuration, null) {
+    }
+
+    internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow) {
+        LoggerService loggerService = new LoggerService();
+        _loggerService = loggerService;
         SetLoggingLevel(loggerService, configuration);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Spice86 starting...");
+        }
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Set logging level...");
+        }
+
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
-        RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Pause handler created...");
+        }
+
+        RecordedDataReader reader = new(configuration.RecordedDataDirectory,
+            loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Recorded data reader created...");
+        }
+
         ExecutionFlowRecorder executionFlowRecorder =
-            reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
+            reader.ReadExecutionFlowRecorderFromFileOrCreate(
+                configuration.DumpDataOnExit is not false);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Execution flow recorder created...");
+        }
+
         State state = new();
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("State created...");
+        }
+
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator breakpoints manager created...");
+        }
+
+        IOPortDispatcher ioPortDispatcher = new(
+            emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
+            loggerService, configuration.FailOnUnhandledPort);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("IO port dispatcher created...");
+        }
+
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("RAM created...");
+        }
+
         A20Gate a20Gate = new(configuration.A20Gate);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("A20 gate created...");
+        }
+
+        Memory memory = new(emulatorBreakpointsManager.
+            MemoryReadWriteBreakpoints,
+            ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Memory bus created...");
+        }
+
         var biosDataArea =
-            new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort,
+            new BiosDataArea(memory, conventionalMemorySizeKb:
+                (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("BIOS data area created...");
+        }
+
+        var dualPic = new DualPic(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort,
             configuration.InitializeDOS is false, loggerService);
 
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Dual PIC created...");
+        }
+
         CallbackHandler callbackHandler = new(state, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Callback handler created...");
+        }
+
         InterruptVectorTable interruptVectorTable = new(memory);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Interrupt vector table created...");
+        }
+
         Stack stack = new(memory, state);
-        FunctionCatalogue functionCatalogue = new FunctionCatalogue(reader.ReadGhidraSymbolsFromFileOrCreate());
-        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, functionCatalogue, loggerService);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Stack created...");
+        }
+
+        IEnumerable<FunctionInformation> functionInformationsData =
+            reader.ReadGhidraSymbolsFromFileOrCreate();
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Function information data read...");
+        }
+
+        FunctionCatalogue functionCatalogue = new FunctionCatalogue(
+            functionInformationsData);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Function catalogue created...");
+        }
+
+        FunctionHandler functionHandler = new(memory, state,
+            executionFlowRecorder, functionCatalogue, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Function handler created...");
+        }
+
+        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
+            executionFlowRecorder, functionCatalogue, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Function handler in external interrupt created...");
+        }
+
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler, dualPic, emulatorBreakpointsManager, functionCatalogue,
-            loggerService);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("CPU created...");
+        }
+
+        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
+            dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("CfgCpu created...");
+        }
 
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
-        loggerService.Information("Execution will be done with " + (configuration.CfgCpu ? "CFG CPU" : "regular CPU"));
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
+            loggerService.Information("Execution will be done with {CpuType}", cpuType);
+        }
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+            new CounterConfiguratorFactory(configuration,
+            state, pauseHandler, loggerService), loggerService, dualPic);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Timer created...");
+        }
+
         TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, functionHandlerProvider, stack, state, dualPic, timer, biosDataArea, loggerService);
+            new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
+            dualPic, timer, biosDataArea, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Timer int8 handler created...");
+        }
 
         DmaController dmaController =
-            new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
-        Joystick joystick = new Joystick(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
-        VideoState videoState = new();
-        VgaIoPortHandler videoInt10Handler = new(state, ioPortDispatcher, loggerService, videoState,
-            configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState);
-
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        Midi midiDevice = new Midi(configuration, softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+            new(memory, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
-        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2), ioPortDispatcher, pauseHandler, loggerService,
-            configuration.FailOnUnhandledPort);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("DMA controller created...");
+        }
 
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaController, dualPic,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
-
-        GravisUltraSound gravisUltraSound =
-            new GravisUltraSound(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
+        VideoState videoState = new();
+        VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
+            loggerService, videoState, configuration.FailOnUnhandledPort);
+        Renderer vgaRenderer = new(memory, videoState);
         VgaRom vgaRom = new();
-        VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
+        VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
+            interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
-        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack, state, vgaFunctionality, biosDataArea, loggerService);
+        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
+            state, vgaFunctionality, biosDataArea, loggerService);
 
-        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler =
-            new BiosEquipmentDeterminationInt11Handler(memory, functionHandlerProvider, stack, state, loggerService);
-        SystemBiosInt12Handler systemBiosInt12Handler =
-            new SystemBiosInt12Handler(memory, functionHandlerProvider, stack, state, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
-        SystemClockInt1AHandler systemClockInt1AHandler =
-            new SystemClockInt1AHandler(memory, functionHandlerProvider, stack, state, loggerService, timerInt8Handler);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Video card support classes created...");
+        }
+
+        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
+                    functionHandlerProvider, stack, state, loggerService);
+        SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
+                    state, biosDataArea, loggerService);
+        SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
+                    functionHandlerProvider, stack, state, a20Gate,
+                    configuration.InitializeDOS is not false, loggerService);
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
+                    state, loggerService, timerInt8Handler);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("BIOS interrupt handlers created...");
+        }
 
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
             configuration, configuration.RecordedDataDirectory, loggerService);
 
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Memory data exporter created...");
+        }
+
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionFlowRecorder, functionCatalogue, loggerService);
 
-        MainWindowViewModel? mainWindowViewModel = null;
-        MainWindow? mainWindow = null;
-        ClassicDesktopStyleApplicationLifetime? desktop = null;
-        ITextClipboard? textClipboard = null;
-        IHostStorageProvider? hostStorageProvider = null;
-        IUIDispatcher? uiThreadDispatcher = null;
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator state serializer created...");
+        }
 
-        if (!configuration.HeadlessMode) {
-            desktop = CreateDesktopApp();
-            uiThreadDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            PerformanceViewModel performanceViewModel = new(state, pauseHandler, uiThreadDispatcher);
-            mainWindow = new() {
-                PerformanceViewModel = performanceViewModel
-            };
+        MainWindowViewModel? mainWindowViewModel = null;
+        UIDispatcher? uiDispatcher = null;
+        HostStorageProvider? hostStorageProvider = null;
+        TextClipboard? textClipboard = null;
+
+        if(mainWindow != null) {
+            uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
+            hostStorageProvider = new HostStorageProvider(
+                mainWindow.StorageProvider, configuration, emulatorStateSerializer);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-            hostStorageProvider = new HostStorageProvider(mainWindow.StorageProvider, configuration,
-                emulatorStateSerializer);
-            mainWindowViewModel = new MainWindowViewModel(
-                timer, state, uiThreadDispatcher, hostStorageProvider,
-                textClipboard, configuration,
+
+            PerformanceViewModel performanceViewModel = new(
+                state, pauseHandler, uiDispatcher);
+
+            mainWindow.PerformanceViewModel = performanceViewModel;
+
+            mainWindowViewModel = new(
+                timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel);
         }
 
         VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
-        Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            mainWindowViewModel, configuration.FailOnUnhandledPort);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack, state, dualPic, keyboard, biosDataArea, loggerService);
-        Mouse mouse = new Mouse(state, dualPic, mainWindowViewModel, configuration.Mouse, loggerService,
-            configuration.FailOnUnhandledPort);
 
-        MouseDriver mouseDriver =
-            new MouseDriver(cpu, memory, mouse, mainWindowViewModel, vgaFunctionality, loggerService);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("VGA card created...");
+        }
 
-        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
+        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+                    mainWindowViewModel, configuration.FailOnUnhandledPort);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
+            functionHandlerProvider, stack, state, dualPic, keyboard,
+            biosDataArea, loggerService);
+        Mouse mouse = new(state, dualPic, mainWindowViewModel,
+                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
+        MouseDriver mouseDriver = new(cpu, memory, mouse, mainWindowViewModel,
+            vgaFunctionality, loggerService);
+        KeyboardInt16Handler keyboardInt16Handler = new(
+            memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
-            configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+        Joystick joystick = new(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Input devices created...");
+        }
+
+        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
+        Midi midiDevice = new Midi(configuration, softwareMixer, state,
+                    ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+                    configuration.FailOnUnhandledPort, loggerService);
+        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
+            ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
+            5, 1, 5, SbType.Sb16);
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher,
+            softwareMixer, state, dmaController, dualPic,
+            configuration.FailOnUnhandledPort,
+            loggerService, soundBlasterHardwareConfig, pauseHandler);
+        GravisUltraSound gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Sound devices created...");
+        }
+
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
+            keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+            configuration.Exe,
+            configuration.InitializeDOS is not false,
+            configuration.Ems,
+            new Dictionary<string, string> { { "BLASTER",
+                    soundBlaster.BlasterString } },
             loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Disk operating system created...");
+        }
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
             callbackHandler, cpu,
             cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, keyboard, keyboardInt16Handler, emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
-            dualPic, soundBlaster, systemBiosInt12Handler, systemBiosInt15Handler, systemClockInt1AHandler,
+            joystick, keyboard, keyboardInt16Handler,
+            emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
+            dualPic, soundBlaster, systemBiosInt12Handler,
+            systemBiosInt15Handler, systemClockInt1AHandler,
             timer,
             timerInt8Handler,
-            vgaCard, videoState, videoInt10Handler, vgaRenderer, vgaBios, vgaRom,
+            vgaCard, videoState, vgaIoPortHandler,
+            vgaRenderer, vgaBios, vgaRom,
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
-        DictionaryUtils.AddAll(functionCatalogue.FunctionInformations, ReadFunctionOverrides(configuration, machine, loggerService));
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Machine created...");
+        }
 
-        InitializeFunctionHandlers(configuration, functionHandler, functionHandlerInExternalInterrupt);
+        DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
+            ReadFunctionOverrides(configuration, machine, loggerService));
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Function overrides added...");
+        }
+
+        bool useCodeOverride = configuration.UseCodeOverrideOption;
+        functionHandler.UseCodeOverride = useCodeOverride;
+        functionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
 
         ProgramExecutor programExecutor = new(configuration, emulatorBreakpointsManager,
-            emulatorStateSerializer, memory, functionHandlerProvider, instructionExecutor, memoryDataExporter, state,
-            timer, dos, functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
-            mainWindowViewModel,
-            dmaController,
-            loggerService);
+            emulatorStateSerializer, memory, functionHandlerProvider,
+            instructionExecutor, memoryDataExporter, state, timer, dos,
+            functionHandler, functionCatalogue, executionFlowRecorder, pauseHandler,
+            mainWindowViewModel, dmaController, loggerService);
 
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Program executor created...");
+        }
+
+        InstallBiosAndDosInterruptHandlers(configuration, loggerService,
+            state, memory, dualPic, callbackHandler, interruptVectorTable,
+            stack, functionCatalogue, functionHandlerProvider, timerInt8Handler,
+            vgaBios, biosEquipmentDeterminationInt11Handler, systemBiosInt12Handler,
+            systemBiosInt15Handler, systemClockInt1AHandler,
+            biosKeyboardInt9Handler, mouseDriver, keyboardInt16Handler, dos);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("BIOS and DOS interrupt handlers created...");
+        }
+
+        Machine = machine;
+        ProgramExecutor = programExecutor;
+
+        if (mainWindow != null && uiDispatcher != null &&
+            hostStorageProvider != null && textClipboard != null) {
+            IMessenger messenger = WeakReferenceMessenger.Default;
+
+            BreakpointsViewModel breakpointsViewModel = new(
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher);
+
+        DisassemblyViewModel disassemblyViewModel = new(
+            emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
+            breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
+            canCloseTab: false);
+
+            PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
+                uiDispatcher);
+
+            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
+
+            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
+
+            CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
+
+            MidiViewModel midiViewModel = new(midiDevice);
+
+            CfgCpuViewModel cfgCpuViewModel = new(configuration, cfgCpu.ExecutionContextManager,
+                pauseHandler, new PerformanceMeasurer());
+
+            StructureViewModelFactory structureViewModelFactory = new(configuration,
+                state, loggerService, pauseHandler);
+
+            MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
+                breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
+                textClipboard, hostStorageProvider, structureViewModelFactory,
+                canCloseTab: false);
+
+            StackMemoryViewModel stackMemoryViewModel = new(memory, memoryDataExporter, state, stack,
+                breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
+                textClipboard, hostStorageProvider, structureViewModelFactory,
+                canCloseTab: false);
+
+            DebugWindowViewModel debugWindowViewModel = new(
+                WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
+                breakpointsViewModel, disassemblyViewModel,
+                paletteViewModel, softwareMixerViewModel, videoCardViewModel,
+                cpuViewModel, midiViewModel, cfgCpuViewModel, memoryViewModel,
+                stackMemoryViewModel);
+
+            Application.Current!.Resources[nameof(DebugWindowViewModel)] =
+                debugWindowViewModel;
+            mainWindow.DataContext = mainWindowViewModel;
+        }
+    }
+
+    private static void InstallBiosAndDosInterruptHandlers(
+        Configuration configuration,
+        LoggerService loggerService, State state, Memory memory,
+        DualPic dualPic, CallbackHandler callbackHandler,
+        InterruptVectorTable interruptVectorTable, Stack stack,
+        FunctionCatalogue functionCatalogue,
+        IFunctionHandlerProvider functionHandlerProvider,
+        TimerInt8Handler timerInt8Handler, VgaBios vgaBios,
+        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
+        SystemBiosInt12Handler systemBiosInt12Handler,
+        SystemBiosInt15Handler systemBiosInt15Handler,
+        SystemClockInt1AHandler systemClockInt1AHandler,
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler,
+        MouseDriver mouseDriver, KeyboardInt16Handler keyboardInt16Handler,
+        Dos dos) {
         if (configuration.InitializeDOS is not false) {
-            // memoryAsmWriter is common to InterruptInstaller and AssemblyRoutineInstaller so that they both write at the same address (Bios Segment F000)
+            // memoryAsmWriter is common to InterruptInstaller and
+            // AssemblyRoutineInstaller so that they both write at the
+            // same address (Bios Segment F000)
             MemoryAsmWriter memoryAsmWriter = new(memory,
-                new SegmentedAddress(configuration.ProvidedAsmHandlersSegment, 0), callbackHandler);
+                new SegmentedAddress(
+                    configuration.ProvidedAsmHandlersSegment, 0),
+                callbackHandler);
             InterruptInstaller interruptInstaller =
                 new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
             AssemblyRoutineInstaller assemblyRoutineInstaller =
@@ -238,90 +520,27 @@ public class Spice86DependencyInjection : IDisposable {
                 interruptInstaller.InstallInterruptHandler(dos.Ems);
             }
 
-            var mouseInt33Handler = new MouseInt33Handler(memory, functionHandlerProvider, stack, state, loggerService, mouseDriver);
+            var mouseInt33Handler = new MouseInt33Handler(memory,
+                functionHandlerProvider, stack, state, loggerService, mouseDriver);
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             var mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
 
-            SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver");
+            SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.
+                InstallAssemblyRoutine(mouseDriver, "provided_mouse_driver");
             mouseIrq12Handler.SetMouseDriverAddress(mouseDriverAddress);
         }
-
-        DebugWindowViewModel? debugWindowViewModel = null;
-        if (textClipboard != null && hostStorageProvider != null && uiThreadDispatcher != null) {
-            IMessenger messenger = WeakReferenceMessenger.Default;
-
-
-            BreakpointsViewModel breakpointsViewModel = new(state, pauseHandler,
-                messenger, emulatorBreakpointsManager, uiThreadDispatcher);
-            CfgCpuViewModel cfgCpuViewModel = new(configuration,
-                cfgCpu.ExecutionContextManager,
-                pauseHandler, new PerformanceMeasurer());
-            DisassemblyViewModel disassemblyVm = new(
-                emulatorBreakpointsManager,
-                memory, state,
-                functionCatalogue.FunctionInformations,
-                breakpointsViewModel, pauseHandler,
-                uiThreadDispatcher, messenger, textClipboard, loggerService);
-            PaletteViewModel paletteViewModel = new(
-                videoState.DacRegisters.ArgbPalette,
-                uiThreadDispatcher);
-            SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
-            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
-            CpuViewModel cpuViewModel = new(state, memory, pauseHandler,
-                uiThreadDispatcher);
-            MidiViewModel midiViewModel = new(midiDevice);
-            StructureViewModelFactory structureViewModelFactory = new(
-                configuration, state, loggerService, pauseHandler);
-            MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
-                        breakpointsViewModel, pauseHandler, messenger,
-                        uiThreadDispatcher, textClipboard,
-                        hostStorageProvider, structureViewModelFactory);
-            StackMemoryViewModel stackMemoryViewModel = new(memory,
-                memoryDataExporter, state, stack,
-                breakpointsViewModel, pauseHandler, messenger,
-                uiThreadDispatcher, textClipboard,
-                hostStorageProvider, structureViewModelFactory,
-                canCloseTab: false);
-
-            debugWindowViewModel = new DebugWindowViewModel(messenger,
-                uiThreadDispatcher, pauseHandler,
-                breakpointsViewModel, disassemblyVm,
-                paletteViewModel, softwareMixerViewModel,
-                videoCardViewModel, cpuViewModel, midiViewModel,
-                cfgCpuViewModel, memoryViewModel, stackMemoryViewModel);
-        }
-
-        if (desktop != null && mainWindow != null) {
-            mainWindow.DataContext = mainWindowViewModel;
-            desktop.MainWindow = mainWindow;
-            desktop.Startup += (_, _) => {
-                // DebugWindow is not shown. Therefore, the instance is not used.
-                // But with the alternative ctor it will be in the OwnedWindows collection.
-                // This is for the ShowInternalDebuggerBehavior.
-                _ = new DebugWindow(owner: mainWindow) {
-                    DataContext = debugWindowViewModel
-                };
-            };
-        }
-
-        Machine = machine;
-        ProgramExecutor = programExecutor;
-        _configuration = configuration;
-        _desktop = desktop;
-        _mainWindowViewModel = mainWindowViewModel;
     }
 
-    public void Start() {
-        if (_configuration.HeadlessMode) {
-            ProgramExecutor.Run();
-        } else {
-            _desktop?.Start(Environment.GetCommandLineArgs());
+    public void HeadlessModeStart() {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Finally starting headless mode...");
         }
+        ProgramExecutor.Run();
     }
 
-    private static void SetLoggingLevel(ILoggerService loggerService, Configuration configuration) {
+    private static void SetLoggingLevel(LoggerService loggerService, Configuration configuration) {
         if (configuration.SilencedLogs) {
             loggerService.AreLogsSilenced = true;
         } else if (configuration.WarningLogs) {
@@ -339,42 +558,25 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            loggerService.Verbose("Override supplied: {OverrideSupplier}", configuration.OverrideSupplier);
+            loggerService.Verbose("Override supplied: {OverrideSupplier}",
+                configuration.OverrideSupplier);
         }
 
-        foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in configuration.OverrideSupplier
-            .GenerateFunctionInformations(loggerService, configuration, configuration.ProgramEntryPointSegment, machine)) {
+        foreach (KeyValuePair<SegmentedAddress, FunctionInformation> element in
+            configuration.OverrideSupplier.GenerateFunctionInformations(
+                loggerService, configuration, configuration.ProgramEntryPointSegment,
+                machine)) {
             res.Add(element.Key, element.Value);
         }
 
         return res;
     }
-
-    private static void InitializeFunctionHandlers(Configuration configuration, FunctionHandler cpuFunctionHandler,
-        FunctionHandler cpuFunctionHandlerInExternalInterrupt) {
-        bool useCodeOverride = configuration.UseCodeOverrideOption;
-        cpuFunctionHandler.UseCodeOverride = useCodeOverride;
-        cpuFunctionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
-    }
-
-    private static IDictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(Configuration configuration, Machine machine,
-        ILoggerService loggerService) {
+    private static Dictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(
+        Configuration configuration, Machine machine, ILoggerService loggerService) {
         if (configuration.OverrideSupplier != null) {
             return GenerateFunctionInformations(loggerService, configuration, machine);
         }
         return new Dictionary<SegmentedAddress, FunctionInformation>();
-    }
-
-    private static ClassicDesktopStyleApplicationLifetime CreateDesktopApp() {
-        AppBuilder appBuilder = AppBuilder.Configure(() => new App())
-            .UsePlatformDetect()
-            .LogToTrace()
-            .WithInterFont();
-        ClassicDesktopStyleApplicationLifetime desktop = new ClassicDesktopStyleApplicationLifetime {
-            ShutdownMode = ShutdownMode.OnMainWindowClose
-        };
-        appBuilder.SetupWithLifetime(desktop);
-        return desktop;
     }
 
     /// <inheritdoc cref="IDisposable" />
@@ -389,10 +591,7 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.Dispose();
                 Machine.Dispose();
-                _mainWindowViewModel?.Dispose();
-                _desktop?.Dispose();
             }
-
             _disposed = true;
         }
     }

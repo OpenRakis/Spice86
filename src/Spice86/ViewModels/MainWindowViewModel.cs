@@ -13,7 +13,6 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
@@ -56,7 +55,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal event EventHandler? CloseMainWindow;
 
     public MainWindowViewModel(
-        ITimeMultiplier pit, State state, IUIDispatcher uiDispatcher,
+        ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
@@ -325,6 +324,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+
+    internal event Action? Disposing;
     
     private void Dispose(bool disposing) {
         if (!_disposed) {
@@ -347,6 +348,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
+                Disposing?.Invoke();
 
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
@@ -396,6 +398,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private void EmulatorThread() {
         try {
             UserInterfaceInitialized?.Invoke();
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Emulation exited. Closing main window...");
+            }
             _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
         } catch (Exception e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
