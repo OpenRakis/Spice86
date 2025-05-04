@@ -8,14 +8,15 @@
 		WindowStartupLocation="CenterScreen"
 		CanResize="False"
 		SystemDecorations="None"
-		Width="320"
-		Height="200">
-	<Window.Styles>
-		<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
-	</Window.Styles>
-	<Grid RowDefinitions="*,Auto">
-		<avaloniaprogressring:ProgressRing Grid.Row="0" Width="100" Height="100"
-			Foreground="DarkOrange" IsActive="True" IsVisible="True" />
-		<Label FontWeight="SemiBold" HorizontalAlignment="Center" Grid.Row="1" Content="Loading..." />
-	</Grid>
+		SizeToContent="WidthAndHeight">
+	<DockPanel>
+		<ProgressBar DockPanel.Dock="Top"
+			Minimum="0" Maximum="100" Value="70"
+			MinWidth="200"
+			MinHeight="10"
+			HorizontalAlignment="Stretch"
+			VerticalAlignment="Center"
+			ShowProgressText="True"/>
+		<Label DockPanel.Dock="Bottom" FontWeight="SemiBold" HorizontalAlignment="Center" Content="Loading..." />
+	</DockPanel>
 </Window>
