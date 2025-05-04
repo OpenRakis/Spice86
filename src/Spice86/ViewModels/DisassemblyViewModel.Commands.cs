@@ -3,28 +3,14 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Messages;
 using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
-public partial class DisassemblyViewModel : IDisassemblyCommands {
-    // Explicitly implement IDisassemblyCommands interface
-    IAsyncRelayCommand IDisassemblyCommands.NewDisassemblyViewCommand => NewDisassemblyViewCommand;
-    IRelayCommand IDisassemblyCommands.CopyLineCommand => CopyLineCommand;
-    IRelayCommand IDisassemblyCommands.StepIntoCommand => StepIntoCommand;
-    IRelayCommand IDisassemblyCommands.StepOverCommand => StepOverCommand;
-    IRelayCommand IDisassemblyCommands.GoToFunctionCommand => GoToFunctionCommand;
-    IRelayCommand IDisassemblyCommands.GoToCsIpCommand => GoToCsIpCommand;
-    IRelayCommand<SegmentedAddress?> IDisassemblyCommands.GoToAddressCommand => GoToAddressCommand;
-    IRelayCommand IDisassemblyCommands.CloseTabCommand => CloseTabCommand;
-    IRelayCommand<DebuggerLineViewModel> IDisassemblyCommands.CreateExecutionBreakpointHereCommand => CreateExecutionBreakpointHereCommand;
-    IRelayCommand<DebuggerLineViewModel> IDisassemblyCommands.RemoveExecutionBreakpointHereCommand => RemoveExecutionBreakpointHereCommand;
-    IRelayCommand<BreakpointViewModel> IDisassemblyCommands.DisableBreakpointCommand => DisableBreakpointCommand;
-    IRelayCommand<BreakpointViewModel> IDisassemblyCommands.EnableBreakpointCommand => EnableBreakpointCommand;
-    IRelayCommand<DebuggerLineViewModel> IDisassemblyCommands.ToggleBreakpointCommand => ToggleBreakpointCommand;
-    IRelayCommand IDisassemblyCommands.MoveCsIpHereCommand => MoveCsIpHereCommand;
-
+public partial class DisassemblyViewModel {
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
         _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
@@ -36,14 +22,20 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
         DebuggerLineViewModel debuggerLine = EnsureAddressIsLoaded(currentAddress);
 
         if (!debuggerLine.CanBeSteppedOver) {
-            _logger.Debug("Setting unconditional breakpoint for step over");
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Setting unconditional breakpoint for step over");
+            }
 
             _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
                 Pause("Step over unconditional breakpoint was reached");
-                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
+                if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                    _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}", currentAddress, State.IpPhysicalAddress);
+                }
             }, true);
 
-            _logger.Debug("Resuming execution for step over");
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Resuming execution for step over");
+            }
             _pauseHandler.Resume();
 
             return;
@@ -53,25 +45,35 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
 
         _breakpointsViewModel.AddAddressBreakpoint(nextInstructionAddress, BreakPointType.CPU_EXECUTION_ADDRESS, true, () => {
             Pause($"Step over execution breakpoint was reached");
-            _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            }
         }, "Step over breakpoint");
 
-        _logger.Debug("Resuming execution for step over");
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Resuming execution for step over");
+        }
         _pauseHandler.Resume();
     }
 
     [RelayCommand(CanExecute = nameof(IsPaused))]
     private void StepInto() {
-        _logger.Debug("Setting unconditional breakpoint for step into");
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Setting unconditional breakpoint for step into");
+        }
 
         SegmentedAddress? currentAddress = State.IpSegmentedAddress;
 
         _breakpointsViewModel.AddUnconditionalBreakpoint(() => {
             Pause("Step into unconditional breakpoint was reached");
-            _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                _logger.Debug("Step into breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+            }
         }, true);
 
-        _logger.Debug("Resuming execution for step into");
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Resuming execution for step into");
+        }
         _pauseHandler.Resume();
     }
 
@@ -87,19 +89,12 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
     }
 
     [RelayCommand]
-    private async Task NewDisassemblyView() {
+    private void NewDisassemblyView() {
         DisassemblyViewModel disassemblyViewModel = new(
             _emulatorBreakpointsManager, _memory, State, _functionsInformation, _breakpointsViewModel, _pauseHandler, _uiDispatcher, _messenger, _textClipboard, _logger, true) {
             IsPaused = IsPaused
         };
-        await Task.Run(() => _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel)));
-    }
-
-    [RelayCommand]
-    private async Task CopyLine() {
-        if (SelectedDebuggerLine is not null) {
-            await _textClipboard.SetTextAsync(SelectedDebuggerLine.ToString());
-        }
+        _messenger.Send(new AddViewModelMessage<DisassemblyViewModel>(disassemblyViewModel));
     }
 
     [RelayCommand]
@@ -115,12 +110,11 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
     }
 
     [RelayCommand]
-    private void GoToFunction(object? parameter) {
-        if (parameter is FunctionInfo functionInfo) {
+    private void GoToFunction(FunctionInfo functionInfo) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Go to function: {FunctionName} at address {FunctionAddress:X8}", functionInfo.Name, functionInfo.Address.Linear);
-
-            GoToAddress(functionInfo.Address);
         }
+        GoToAddress(functionInfo.Address);
     }
 
     [RelayCommand]
@@ -130,7 +124,9 @@ public partial class DisassemblyViewModel : IDisassemblyCommands {
 
     [RelayCommand]
     public void GoToAddress(SegmentedAddress? address) {
-        _logger.Debug("Go to address: {Address}", address);
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Go to address: {Address}", address);
+        }
         if (address == null) {
             return;
         }

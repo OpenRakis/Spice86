@@ -2,6 +2,7 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -11,12 +12,7 @@ public interface IDisassemblyCommands {
     /// <summary>
     ///     Command to create a new disassembly view.
     /// </summary>
-    IAsyncRelayCommand NewDisassemblyViewCommand { get; }
-
-    /// <summary>
-    ///     Command to copy the selected line.
-    /// </summary>
-    IRelayCommand CopyLineCommand { get; }
+    IRelayCommand NewDisassemblyViewCommand { get; }
 
     /// <summary>
     ///     Command to step into the current instruction.
@@ -31,7 +27,7 @@ public interface IDisassemblyCommands {
     /// <summary>
     ///     Command to go to a specific function.
     /// </summary>
-    IRelayCommand GoToFunctionCommand { get; }
+    IRelayCommand<FunctionInfo> GoToFunctionCommand { get; }
 
     /// <summary>
     ///     Command to go to the current CS:IP location

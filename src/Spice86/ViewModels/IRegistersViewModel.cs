@@ -32,9 +32,4 @@ public interface IRegistersViewModel : INotifyPropertyChanged {
     /// Updates all register values from the CPU state.
     /// </summary>
     void Update();
-
-    /// <summary>
-    /// Resets the change detection for all registers.
-    /// </summary>
-    void ResetChangeDetection();
 }

@@ -57,10 +57,13 @@ public partial class DisassemblyView : UserControl {
     }
 
     private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
-        if (sender is Control {DataContext: DebuggerLineViewModel debuggerLine}) {
-            _viewModel?.ToggleBreakpointCommand.Execute(debuggerLine);
-            e.Handled = true;
+        if (sender is not Control {DataContext: DebuggerLineViewModel debuggerLine}
+            || _viewModel == null
+            || !_viewModel.ToggleBreakpointCommand.CanExecute(debuggerLine)) {
+            return;
         }
+        _viewModel.ToggleBreakpointCommand.Execute(debuggerLine);
+        e.Handled = true;
     }
 
     /// <summary>
@@ -78,8 +81,10 @@ public partial class DisassemblyView : UserControl {
     private void OnFunctionSelectionKeyDown(object? sender, KeyEventArgs e) {
         if (e.Key == Key.Enter && _viewModel != null) {
             // Execute the "Go to Function" command when Enter is pressed
-            _viewModel.GoToFunctionCommand.Execute(_viewModel.SelectedFunction);
-            e.Handled = true;
+            if (_viewModel.GoToFunctionCommand.CanExecute(_viewModel.SelectedFunction)) {
+                _viewModel.GoToFunctionCommand.Execute(_viewModel.SelectedFunction);
+                e.Handled = true;
+            }
         }
     }
 }

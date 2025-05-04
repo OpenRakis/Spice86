@@ -22,57 +22,68 @@ public partial class RegisterViewModel : ObservableObject {
     /// <summary>
     /// Gets the current value of the register.
     /// </summary>
-    public uint Value { get; private set; }
+    [ObservableProperty]
+    private uint _value;
 
     /// <summary>
     /// Gets the hexadecimal representation of the register value.
     /// </summary>
-    public string HexValue => $"{Value:X4}";
+    [ObservableProperty]
+    private string _hexValue;
 
     /// <summary>
     /// Gets a value indicating whether the register value has changed since the last update.
     /// </summary>
-    public bool HasChanged { get; private set; }
+    [ObservableProperty]
+    private bool _hasChanged;
 
     /// <summary>
     /// Gets a value indicating whether the low byte (bits 0-7) has changed.
     /// </summary>
-    public bool LowByteChanged { get; private set; }
+    [ObservableProperty]
+    private bool _lowByteChanged;
 
     /// <summary>
     /// Gets a value indicating whether the high byte (bits 8-15) has changed.
     /// </summary>
-    public bool HighByteChanged { get; private set; }
+    [ObservableProperty]
+    private bool _highByteChanged;
 
     /// <summary>
     /// Gets a value indicating whether the upper word (bits 16-31) has changed.
     /// </summary>
-    public bool UpperWordChanged { get; private set; }
+    [ObservableProperty]
+    private bool _upperWordChanged;
 
     /// <summary>
     /// Gets a value indicating whether the lower word (bits 0-15) has changed.
     /// </summary>
-    public bool LowerWordChanged { get; private set; }
+    [ObservableProperty]
+    private bool _lowerWordChanged;
 
     /// <summary>
     /// Gets the low byte (bits 0-7) in hexadecimal.
     /// </summary>
-    public string LowByteHex => $"{Value & 0xFF:X2}";
+    [ObservableProperty]
+    private string _lowByteHex;
 
     /// <summary>
     /// Gets the high byte (bits 8-15) in hexadecimal.
     /// </summary>
-    public string HighByteHex => $"{Value >> 8 & 0xFF:X2}";
+    [ObservableProperty]
+    private string _highByteHex;
 
     /// <summary>
     /// Gets the upper word (bits 16-31) in hexadecimal.
     /// </summary>
-    public string UpperWordHex => $"{Value >> 16 & 0xFFFF:X4}";
+    [ObservableProperty]
+    private string _upperWordHex;
 
     /// <summary>
     /// Gets the lower word (bits 0-15) in hexadecimal.
     /// </summary>
-    public string LowerWordHex => $"{Value & 0x0000FFFF:X4}";
+    [ObservableProperty]
+    private string _lowerWordHex;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegisterViewModel"/> class.
@@ -84,13 +95,13 @@ public partial class RegisterViewModel : ObservableObject {
         Name = name;
         _state = state;
         _valueGetter = valueGetter;
-        Value = _valueGetter(state);
-        _previousValue = Value;
-        HasChanged = false;
-        LowByteChanged = false;
-        HighByteChanged = false;
-        UpperWordChanged = false;
-        LowerWordChanged = false;
+        _value = _valueGetter(state);
+        _previousValue = _value;
+        _hexValue = $"{_value:X4}";
+        _upperWordHex = $"{_value >> 16 & 0xFFFF:X4}";
+        _lowerWordHex = $"{_value & 0xFFFF:X4}";
+        _highByteHex = $"{_value >> 8 & 0xFF:X2}";
+        _lowByteHex = $"{_value & 0xFF:X2}";
     }
 
     /// <summary>
@@ -100,43 +111,46 @@ public partial class RegisterViewModel : ObservableObject {
         _previousValue = Value;
         Value = _valueGetter(_state);
 
+        uint changedBits = _previousValue ^ Value;
+
         // Check overall change
-        HasChanged = _previousValue != Value;
+        HasChanged = changedBits != 0;
+        if (!HasChanged) {
+            UpperWordChanged = false;
+            LowerWordChanged = false;
+            HighByteChanged = false;
+            LowByteChanged = false;
 
-        // Check byte-level changes
-        LowByteChanged = (Value & 0xFF) != (_previousValue & 0xFF);
-        HighByteChanged = (Value >> 8 & 0xFF) != (_previousValue >> 8 & 0xFF);
-        UpperWordChanged = (Value >> 16 & 0xFFFF) != (_previousValue >> 16 & 0xFFFF);
-        LowerWordChanged = (Value & 0x0000FFFF) != (_previousValue & 0x0000FFFF);
+            return;
+        }
+        HexValue = $"{Value:X4}";
 
-        OnPropertyChanged(nameof(Value));
-        OnPropertyChanged(nameof(HexValue));
-        OnPropertyChanged(nameof(HasChanged));
-        OnPropertyChanged(nameof(LowByteHex));
-        OnPropertyChanged(nameof(HighByteHex));
-        OnPropertyChanged(nameof(UpperWordHex));
-        OnPropertyChanged(nameof(LowerWordHex));
-        OnPropertyChanged(nameof(LowByteChanged));
-        OnPropertyChanged(nameof(HighByteChanged));
-        OnPropertyChanged(nameof(UpperWordChanged));
-        OnPropertyChanged(nameof(LowerWordChanged));
-    }
+        // Check upper word
+        UpperWordChanged = (changedBits & 0xFFFF0000) != 0;
+        if (UpperWordChanged) {
+            UpperWordHex = $"{Value >> 16 & 0xFFFF:X4}";
+        }
 
-    /// <summary>
-    /// Resets the change detection.
-    /// </summary>
-    public void ResetChangeDetection() {
-        _previousValue = Value;
-        HasChanged = false;
-        LowByteChanged = false;
-        HighByteChanged = false;
-        UpperWordChanged = false;
-        LowerWordChanged = false;
+        // Check lower word
+        LowerWordChanged = (changedBits & 0xFFFF) != 0;
+        if (!LowerWordChanged) {
+            HighByteChanged = false;
+            LowByteChanged = false;
 
-        OnPropertyChanged(nameof(HasChanged));
-        OnPropertyChanged(nameof(LowByteChanged));
-        OnPropertyChanged(nameof(HighByteChanged));
-        OnPropertyChanged(nameof(UpperWordChanged));
-        OnPropertyChanged(nameof(LowerWordChanged));
+            return;
+        }
+        LowerWordHex = $"{Value & 0xFFFF:X4}";
+
+        // Check high byte
+        HighByteChanged = (changedBits & 0xFF00) != 0;
+        if (HighByteChanged) {
+            HighByteHex = $"{Value >> 8 & 0xFF:X2}";
+        }
+
+        // Check low byte
+        LowByteChanged = (changedBits & 0xFF) != 0;
+        if (LowByteChanged) {
+            LowByteHex = $"{Value & 0xFF:X2}";
+        }
     }
 }

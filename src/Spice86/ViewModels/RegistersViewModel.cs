@@ -95,25 +95,4 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
             flag.Update();
         }
     }
-
-    /// <summary>
-    /// Resets the change detection for all registers.
-    /// </summary>
-    public void ResetChangeDetection() {
-        foreach (RegisterViewModel register in GeneralRegisters) {
-            register.ResetChangeDetection();
-        }
-
-        foreach (RegisterViewModel register in SegmentRegisters) {
-            register.ResetChangeDetection();
-        }
-
-        foreach (RegisterViewModel register in PointerRegisters) {
-            register.ResetChangeDetection();
-        }
-
-        foreach (FlagViewModel flag in Flags) {
-            flag.ResetChangeDetection();
-        }
-    }
 }

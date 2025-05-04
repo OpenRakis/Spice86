@@ -26,12 +26,11 @@ public class InstructionPointerBehavior {
     // Handler for when IsEnabled property changes
     private static void OnIsEnabledChanged(Control control, AvaloniaPropertyChangedEventArgs e) {
         bool isEnabled = (bool)e.NewValue!;
+
+        control.PointerPressed -= OnPointerPressed;
+
         if (isEnabled) {
-            // Subscribe to pointer events
             control.PointerPressed += OnPointerPressed;
-        } else {
-            // Unsubscribe from pointer events
-            control.PointerPressed -= OnPointerPressed;
         }
     }
 

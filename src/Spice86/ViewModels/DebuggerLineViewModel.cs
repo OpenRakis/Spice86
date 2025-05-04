@@ -45,7 +45,7 @@ public partial class DebuggerLineViewModel : ViewModelBase {
         SegmentedAddress = instruction.SegmentedAddress;
         Address = SegmentedAddress.Linear;
         NextAddress = (uint)(Address + _info.Length);
-        _customFormattedInstruction = instruction.FormattedInstruction;
+        _customFormattedInstruction = instruction.InstructionFormatOverride;
 
         // We expect there to be at most 1 execution breakpoint per line, so we use SingleOrDefault.
         Breakpoint = instruction.Breakpoints.SingleOrDefault(breakpoint => breakpoint.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
@@ -90,20 +90,11 @@ public partial class DebuggerLineViewModel : ViewModelBase {
     }
 
     /// <summary>
-    ///     Gets the current breakpoint for this line from the BreakpointsViewModel.
-    /// </summary>
-    /// <returns>The breakpoint if one exists for this address, otherwise null.</returns>
-    public BreakpointViewModel? GetBreakpointFromViewModel() {
-        // Find a breakpoint in the BreakpointsViewModel that matches this line's address
-        return _breakpointsViewModel?.Breakpoints.FirstOrDefault(bp => bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS && (uint)bp.Address == Address);
-    }
-
-    /// <summary>
     ///     Updates the Breakpoint property with the current value from the BreakpointsViewModel.
     /// </summary>
     public void UpdateBreakpointFromViewModel() {
         if (_breakpointsViewModel != null) {
-            Breakpoint = GetBreakpointFromViewModel();
+            Breakpoint = _breakpointsViewModel.GetExecutionBreakPointsAtAddress(Address).FirstOrDefault();
         }
     }
 

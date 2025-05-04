@@ -20,12 +20,14 @@ public partial class FlagViewModel : ObservableObject {
     /// <summary>
     /// Gets the current value of the flag.
     /// </summary>
-    public bool Value { get; private set; }
+    [ObservableProperty]
+    private bool _value;
 
     /// <summary>
     /// Gets a value indicating whether the flag value has changed since the last update.
     /// </summary>
-    public bool HasChanged { get; private set; }
+    [ObservableProperty]
+    private bool _hasChanged;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FlagViewModel"/> class.
@@ -37,9 +39,9 @@ public partial class FlagViewModel : ObservableObject {
         Name = name;
         _state = state;
         _valueGetter = valueGetter;
-        Value = _valueGetter(state);
-        _previousValue = Value;
-        HasChanged = false;
+        _value = _valueGetter(state);
+        _previousValue = _value;
+        _hasChanged = false;
     }
 
     /// <summary>
@@ -49,16 +51,5 @@ public partial class FlagViewModel : ObservableObject {
         _previousValue = Value;
         Value = _valueGetter(_state);
         HasChanged = _previousValue != Value;
-        OnPropertyChanged(nameof(Value));
-        OnPropertyChanged(nameof(HasChanged));
-    }
-
-    /// <summary>
-    /// Resets the change detection.
-    /// </summary>
-    public void ResetChangeDetection() {
-        _previousValue = Value;
-        HasChanged = false;
-        OnPropertyChanged(nameof(HasChanged));
     }
 }

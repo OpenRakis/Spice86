@@ -1,6 +1,7 @@
 namespace Spice86.Converters;
 
 using Avalonia.Controls.Documents;
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Threading;
 
@@ -51,6 +52,6 @@ public class FormattedTextSegmentsConverter : IValueConverter {
     /// Not implemented.
     /// </summary>
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) {
-        throw new NotImplementedException();
+        return BindingOperations.DoNothing;
     }
 }

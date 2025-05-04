@@ -457,4 +457,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
         Breakpoints.Remove(breakpoint);
         BreakpointDeleted?.Invoke(breakpoint);
     }
+
+    /// Retrieves all execution breakpoints at the specified linear address.
+    /// <param name="addressLinear">The linear address where execution breakpoints are to be retrieved.</param>
+    /// <returns>An enumerable collection of breakpoints that are of type CPU_EXECUTION_ADDRESS and match the specified address.</returns>
+    public IEnumerable<BreakpointViewModel> GetExecutionBreakPointsAtAddress(uint addressLinear) {
+        return Breakpoints.Where(bp => bp.Address == addressLinear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
+    }
 }

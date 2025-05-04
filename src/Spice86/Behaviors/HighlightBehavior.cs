@@ -55,7 +55,7 @@ public static class HighlightBehavior {
                 Animation backgroundAnimation = CreateAnimation(TextBlock.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                backgroundAnimation.RunAsync(textBlock);
+                _ = backgroundAnimation.RunAsync(textBlock);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
@@ -63,7 +63,7 @@ public static class HighlightBehavior {
                         HighlightingConverter.GetDefaultForegroundBrush());
 
                     // Start foreground animation
-                    foregroundAnimation.RunAsync(textBlock);
+                    _ = foregroundAnimation.RunAsync(textBlock);
                 }
             }
         }
@@ -104,7 +104,7 @@ public static class HighlightBehavior {
                     HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                backgroundAnimation.RunAsync(contentControl);
+                _ = backgroundAnimation.RunAsync(contentControl);
 
                 // If foreground highlighting is enabled, animate it too
                 if (highlightForeground) {
@@ -112,7 +112,7 @@ public static class HighlightBehavior {
                         HighlightingConverter.GetDefaultForegroundBrush());
 
                     // Start foreground animation
-                    foregroundAnimation.RunAsync(contentControl);
+                    _ = foregroundAnimation.RunAsync(contentControl);
                 }
             }
         }
@@ -136,7 +136,7 @@ public static class HighlightBehavior {
                 Animation backgroundAnimation = CreateAnimation(Panel.BackgroundProperty, HighlightingConverter.GetHighlightBackgroundBrush(), HighlightingConverter.GetDefaultBackgroundBrush());
 
                 // Start background animation
-                backgroundAnimation.RunAsync(panel);
+                _ = backgroundAnimation.RunAsync(panel);
             }
         }
     }

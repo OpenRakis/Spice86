@@ -101,8 +101,8 @@
         <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
             <!-- Loading indicator -->
             <progRing:ProgressRing Grid.Column="0"
-                                   Width="40"
-                                   Height="40"
+                                   MinWidth="40"
+                                   MinHeight="40"
                                    IsActive="{Binding IsLoading}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
@@ -175,14 +175,14 @@
                             <Grid ColumnDefinitions="Auto, Auto, *,4*,2*" Margin="0">
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
-                                        Width="16"
-                                        Height="16"
+                                        MinWidth="16"
+                                        MinHeight="16"
                                         Background="Transparent"
                                         Tapped="OnBreakpointClicked"
                                         Cursor="Hand">
                                     <Ellipse
-                                        Width="12"
-                                        Height="12"
+                                        MinWidth="12"
+                                        MinHeight="12"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Fill="{Binding Breakpoint.IsEnabled, FallbackValue=Transparent, Converter={StaticResource BreakpointColorConverter}}"
@@ -202,7 +202,7 @@
                                                      Foreground="#B5CEA8"
                                                      FontFamily="Consolas,Menlo,Monaco,monospace"
                                                      FontSize="11"
-                                                     Width="110"
+                                                     MinWidth="110"
                                                      Margin="6,0,0,0" />
 
                                 <!-- Instruction -->
@@ -223,7 +223,7 @@
 
             <!-- Register View Panel -->
             <Border Grid.Column="1"
-                    Width="250"
+                    MinWidth="250"
                     IsVisible="{Binding IsPaused}"
                     BorderBrush="{DynamicResource SemiColorBorder}"
                     BorderThickness="1,0,0,0"

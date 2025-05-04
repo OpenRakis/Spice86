@@ -11,16 +11,19 @@ using System.Globalization;
 
 internal class BreakpointColorConverter : IValueConverter {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) {
+        const string disassemblybreakpointenabledbrush = "DisassemblyBreakpointEnabledBrush";
+        const string disassemblybreakpointdisabledbrush = "DisassemblyBreakpointDisabledBrush";
+
         if (value is bool isEnabled) {
             return isEnabled
-                ? ConverterUtilities.GetResourceBrush("DisassemblyBreakpointEnabledBrush", Brushes.Red)
-                : ConverterUtilities.GetResourceBrush("DisassemblyBreakpointDisabledBrush", Brushes.Gray);
+                ? ConverterUtilities.GetResourceBrush(disassemblybreakpointenabledbrush, Brushes.Red)
+                : ConverterUtilities.GetResourceBrush(disassemblybreakpointdisabledbrush, Brushes.Gray);
         }
 
         if (value is BreakpointViewModel breakpoint) {
             return breakpoint.IsEnabled
-                ? ConverterUtilities.GetResourceBrush("DisassemblyBreakpointEnabledBrush", Brushes.Red)
-                : ConverterUtilities.GetResourceBrush("DisassemblyBreakpointDisabledBrush", Brushes.Gray);
+                ? ConverterUtilities.GetResourceBrush(disassemblybreakpointenabledbrush, Brushes.Red)
+                : ConverterUtilities.GetResourceBrush(disassemblybreakpointdisabledbrush, Brushes.Gray);
         }
 
         return Brushes.Transparent;

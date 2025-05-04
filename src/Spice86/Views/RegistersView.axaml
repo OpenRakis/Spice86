@@ -31,7 +31,7 @@
                                 <TextBlock Grid.Column="0"
                                            Text="{Binding Name}"
                                            FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Width="40"
+                                           MinWidth="40"
                                            Foreground="#78C9B0" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <!-- General purpose 32-bit registers (EAX, EBX, etc.) upper word -->
@@ -73,7 +73,7 @@
                                 <TextBlock Grid.Column="0"
                                            Text="{Binding Name}"
                                            FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Width="40"
+                                           MinWidth="40"
                                            Foreground="#78C9B0" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <!-- Pointer registers (ESI, EDI, etc.) upper word -->
@@ -110,7 +110,7 @@
                                 <TextBlock Grid.Column="0"
                                            Text="{Binding Name}"
                                            FontFamily="Consolas,Menlo,Monaco,monospace"
-                                           Width="40"
+                                           MinWidth="40"
                                            Foreground="#78C9B0" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <!-- For Segment registers always show 16 bit -->
