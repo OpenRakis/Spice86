@@ -2,21 +2,24 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:avaloniaprogressring="using:AvaloniaProgressRing"
+		xmlns:viewModels="clr-namespace:Spice86.ViewModels;assembly=Spice86"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="Spice86.SplashWindow"
+        x:Class="Spice86.Views.SplashWindow"
 		WindowStartupLocation="CenterScreen"
 		CanResize="False"
+		CornerRadius="4"
 		SystemDecorations="None"
+		x:DataType="{x:Type viewModels:SplashWindowViewModel}"
 		SizeToContent="WidthAndHeight">
 	<DockPanel>
 		<ProgressBar DockPanel.Dock="Top"
-			Minimum="0" Maximum="100" Value="70"
+			Minimum="0" Maximum="100" Value="{CompiledBinding Progress}"
 			MinWidth="200"
 			MinHeight="10"
 			HorizontalAlignment="Stretch"
 			VerticalAlignment="Center"
 			ShowProgressText="True"/>
-		<Label DockPanel.Dock="Bottom" FontWeight="SemiBold" HorizontalAlignment="Center" Content="Loading..." />
+		<Label DockPanel.Dock="Bottom" FontWeight="SemiBold" HorizontalAlignment="Center"
+			   Content="{CompiledBinding SplashText}" />
 	</DockPanel>
 </Window>

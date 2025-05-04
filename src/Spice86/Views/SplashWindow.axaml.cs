@@ -1,8 +1,6 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace Spice86;
+namespace Spice86.Views;
 
 public partial class SplashWindow : Window
 {

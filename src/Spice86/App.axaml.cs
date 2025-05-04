@@ -28,11 +28,14 @@ internal partial class App : Application {
     public override void OnFrameworkInitializationCompleted() {
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) {
+            SplashWindowViewModel splashViewModel = new SplashWindowViewModel();
             // Show splash screen window
-            SplashWindow splashWindow = new SplashWindow();
+            SplashWindow splashWindow = new SplashWindow() {
+                DataContext = splashViewModel
+            };
             desktop.MainWindow = splashWindow;
             splashWindow.Loaded += (_, _) => OnSplashWindowLoaded(desktop,
-                splashWindow);
+                splashWindow, splashViewModel);
             splashWindow.Show();
         }
 
@@ -48,26 +51,41 @@ internal partial class App : Application {
     /// </summary>
     /// <remarks>For example, <see cref="Semi" /> theme is in App.xaml and not here. Otherwise the application theme is wrong.</remarks>
     private async void OnSplashWindowLoaded(
-        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splashWindow) {
-        await Dispatcher.UIThread.InvokeAsync(() => {
+        IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splashWindow,
+        SplashWindowViewModel splashViewModel) {
+        await Dispatcher.UIThread.InvokeAsync(async () => {
+            await ReportProgress(splashViewModel, "Loading resources...", 10);
             LoadAppResources();
             MainWindow mainWindow = new();
+            await ReportProgress(splashViewModel, "MainWindow instantiated...", 10);
             Configuration configuration = new CommandLineParser().ParseCommandLine(
                     Environment.GetCommandLineArgs())!;
+            await ReportProgress(splashViewModel, "Configuration instantiated...", 10);
             Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
+            await ReportProgress(splashViewModel, "Dependency injection done...", 10);
             if (mainWindow.DataContext is MainWindowViewModel mainVm) {
                 mainVm.CloseMainWindow += (_, _) => mainWindow.Close();
                 mainVm.InvalidateBitmap += mainWindow.Image.InvalidateVisual;
                 mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
                 mainWindow.Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, mainWindow.Image);
                 mainWindow.Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, mainWindow.Image);
+                await ReportProgress(splashViewModel, "Starting emulator thread...", 10);
                 mainVm.StartEmulator();
                 mainVm.Disposing += dependencyInjection.Dispose;
             }
+            await ReportProgress(splashViewModel, "Switching to Main Window...", 30);
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
             splashWindow.Close();
         }, DispatcherPriority.ContextIdle);
+    }
+
+    private static async Task ReportProgress(
+        SplashWindowViewModel splashViewModel, string message, int progress) {
+        await Dispatcher.UIThread.InvokeAsync(() => {
+            splashViewModel.SplashText = message;
+            splashViewModel.Progress += progress;
+        }, DispatcherPriority.Background);
     }
 
     private static void LoadAppResources() {
