@@ -81,10 +81,6 @@ Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 - it supports most of the commands you need to debug.
 - it also provides custom GDB commands to do dynamic analysis.
 
-### Alternative to GDB
-
-Alternatively, Spice86 has a [home-grown debugger](https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger).
-
 ### Connecting to GDB
 You need to specify a port for the GDB server to start when launching Spice86:
 ```
@@ -274,7 +270,7 @@ Along with the mandatory path to your DOS program, passed with the --ExePath arg
 
 ## Debugger
 
-Spice86 comes with a built-in debugger that can be used to debug the emulated program. It is a simple debugger that allows you to inspect the memory, the disassembly, the registers, and the stack.
+Spice86 comes with a [built-in debugger](https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger). that can be used to debug the emulated program. It is a simple debugger that allows you to inspect the memory, the disassembly, the registers, and the stack.
 
 ### Structure viewer
 
