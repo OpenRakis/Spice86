@@ -59,7 +59,7 @@ internal partial class App : Application {
             MainWindow mainWindow = new();
             await ReportProgress(splashViewModel, "MainWindow instantiated...", 10);
             Configuration configuration = new CommandLineParser().ParseCommandLine(
-                    Environment.GetCommandLineArgs())!;
+                    desktop.Args!)!;
             await ReportProgress(splashViewModel, "Configuration instantiated...", 10);
             Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
             await ReportProgress(splashViewModel, "Dependency injection done...", 10);
