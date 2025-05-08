@@ -5,9 +5,9 @@ using Iced.Intel;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
+using Spice86.ViewModels.Debugging;
 
 using System;
 using System.Collections.Generic;

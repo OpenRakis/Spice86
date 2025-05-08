@@ -1,4 +1,4 @@
-namespace Spice86.Models.Debugging;
+namespace Spice86.ViewModels.Debugging;
 
 using Iced.Intel;
 
