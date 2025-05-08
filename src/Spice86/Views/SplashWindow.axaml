@@ -9,17 +9,14 @@
 		CanResize="False"
 		CornerRadius="4"
 		SystemDecorations="None"
-		x:DataType="{x:Type viewModels:SplashWindowViewModel}"
 		SizeToContent="WidthAndHeight">
 	<DockPanel>
 		<ProgressBar DockPanel.Dock="Top"
-			Minimum="0" Maximum="100" Value="{CompiledBinding Progress}"
-			MinWidth="200"
-			MinHeight="10"
+			IsIndeterminate="True"
 			HorizontalAlignment="Stretch"
 			VerticalAlignment="Center"
-			ShowProgressText="True"/>
+			/>
 		<Label DockPanel.Dock="Bottom" FontWeight="SemiBold" HorizontalAlignment="Center"
-			   Content="{CompiledBinding SplashText}" />
+			   Content="Loading Spice86..." />
 	</DockPanel>
 </Window>
