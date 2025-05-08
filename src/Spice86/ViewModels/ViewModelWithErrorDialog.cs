@@ -41,11 +41,24 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
     private Exception? _exception;
     
     [RelayCommand]
-    public async Task CopyExceptionToClipboard() {
-        if(Exception is not null) {
-            await _textClipboard.SetTextAsync(
-                JsonSerializer.Serialize(
-                    new ExceptionInfo(Exception.TargetSite?.ToString(), Exception.Message, Exception.StackTrace)));
+    public async Task CopyExceptionToClipboard()
+    {
+        if (Exception is not null)
+        {
+            JsonSerializerOptions options = new()
+            {
+                WriteIndented = true
+            };
+            using MemoryStream memoryStream = new();
+            await JsonSerializer.SerializeAsync(
+                memoryStream,
+                new ExceptionInfo(Exception.TargetSite?.ToString(),
+                    Exception.Message, Exception.StackTrace),
+                options);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using StreamReader reader = new(memoryStream);
+            string serializedException = await reader.ReadToEndAsync();
+            await _textClipboard.SetTextAsync(serializedException);
         }
     }
 }
