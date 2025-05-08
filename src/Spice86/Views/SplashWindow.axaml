@@ -8,15 +8,21 @@
 		WindowStartupLocation="CenterScreen"
 		CanResize="False"
 		CornerRadius="4"
-		SystemDecorations="None"
-		SizeToContent="WidthAndHeight">
+		Width="150"
+		Height="100"
+		SystemDecorations="None">
 	<DockPanel>
+		<Label DockPanel.Dock="Bottom"
+			FontWeight="SemiBold"
+			HorizontalAlignment="Center"
+			Content="Loading Spice86..." />
 		<ProgressBar DockPanel.Dock="Top"
 			IsIndeterminate="True"
 			HorizontalAlignment="Stretch"
+			VerticalAlignment="Center" />
+		<Image Source="avares://Spice86/Assets/Spice86.ico"
+			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
-			/>
-		<Label DockPanel.Dock="Bottom" FontWeight="SemiBold" HorizontalAlignment="Center"
-			   Content="Loading Spice86..." />
+			Width="32" Height="32" />
 	</DockPanel>
 </Window>
