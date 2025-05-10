@@ -25,8 +25,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     public SystemClockInt1AHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, TimerInt8Handler timerHandler)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _timerHandler = timerHandler;
-        AddAction(0x00, SetSystemClockCounter);
-        AddAction(0x01, GetSystemClockCounter);
+		AddAction(0x00, GetSystemClockCounter);
+        AddAction(0x01, SetSystemClockCounter); 
         AddAction(0x81, TandySoundSystemUnhandled);
         AddAction(0x82, TandySoundSystemUnhandled);
         AddAction(0x83, TandySoundSystemUnhandled);
