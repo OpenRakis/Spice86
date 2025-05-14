@@ -9,14 +9,14 @@
     <PackageVersion Include="Avalonia.Controls.PanAndZoom" Version="11.2.0" />
     <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.1" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.0" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.2.8" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.0" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.0" />
     <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.3.0" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.8" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.2.4" />
-    <PackageVersion Include="bodong.PropertyModels" Version="11.2.4" />
+    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.0" />
+    <PackageVersion Include="bodong.PropertyModels" Version="11.3.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
@@ -24,10 +24,10 @@
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.9.2" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.298" />
+    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.300" />
     <PackageVersion Include="Iced" Version="1.21.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
-    <PackageVersion Include="JvE.Structurizer" Version="1.0.1" />
+    <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
     <PackageVersion Include="MeltySynth" Version="2.4.1" />
     <PackageVersion Include="Morris.Moxy" Version="1.10" />
     <PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
@@ -45,8 +45,8 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Memory.Data" Version="9.0.4" />
-    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.4" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.4" />
+    <PackageVersion Include="System.Memory.Data" Version="9.0.5" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.5" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.5" />
   </ItemGroup>
 </Project>
