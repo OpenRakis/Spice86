@@ -166,17 +166,17 @@ public class Dos {
     }
 
     private VirtualFileBase[] AddDefaultDevices() {
+        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
+        AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
             _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
-        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
-        AddDevice(nulDevice);
         var printerDevice = new PrinterDevice(_loggerService, this);
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
         AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
-        return [consoleDevice, nulDevice, printerDevice];
+        return [nulDevice, consoleDevice, printerDevice];
     }
 
     /// <summary>
