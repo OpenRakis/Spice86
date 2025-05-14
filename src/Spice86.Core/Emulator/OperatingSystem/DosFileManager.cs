@@ -847,9 +847,11 @@ public class DosFileManager {
                         }
                         sourceDrive = 0x2; // defaulting to C:
                     }
-                    return DosFileOperationResult.Value16((ushort)((dosFile.Information & 0xffe0) | sourceDrive));
+                    ushort dosFileInfo = (ushort)((dosFile.Information & 0xffe0) | sourceDrive);
+                    state.DX = dosFileInfo;
+                    return DosFileOperationResult.Value16(dosFileInfo);
                 }
-                break;
+                return DosFileOperationResult.Value16(state.DX);
             case 0x01:      /* Set Device Information */
                 if(state.DH != 0) {
                     return DosFileOperationResult.Error(ErrorCode.DataInvalid);
