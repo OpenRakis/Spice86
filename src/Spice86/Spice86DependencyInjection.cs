@@ -255,7 +255,7 @@ public class Spice86DependencyInjection : IDisposable {
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
-            bootUpInTextMode: configuration.InitializeDOS is true);
+            bootUpInTextMode: configuration.InitializeDOS is not false);
         VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
             state, vgaFunctionality, biosDataArea, loggerService);
 
