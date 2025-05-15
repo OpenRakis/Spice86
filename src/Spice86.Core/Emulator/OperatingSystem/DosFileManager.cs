@@ -817,7 +817,6 @@ public class DosFileManager {
 
         if (state.AL is < 4 or 0x06 or 0x07 or
             0x0a or 0x0c or 0x10) {
-            //FIXME: This is wrong, we need the PSP and its files table, and implement GetRealHandle...
             handle = (byte)state.BX;
             if (handle >= OpenFiles.Length ||
                 OpenFiles[handle] == null) {
