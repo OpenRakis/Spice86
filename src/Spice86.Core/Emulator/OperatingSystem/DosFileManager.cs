@@ -825,7 +825,8 @@ public class DosFileManager {
         } else if (state.AL < 0x12) {
             if (state.AL != 0x0b) {
                 drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
-                if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters || _dosPathResolver.DriveMap.Count < (drive + 1))) {
+                if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters ||
+                    _dosPathResolver.DriveMap.Count < (drive + 1))) {
                     return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
                 }
             }
