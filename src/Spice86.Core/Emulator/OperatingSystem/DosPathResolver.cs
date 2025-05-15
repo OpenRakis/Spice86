@@ -24,12 +24,10 @@ internal class DosPathResolver {
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="currentDrive">The drive in use on emulator startup. Defaults to C.</param>
     public DosPathResolver(string? cDriveFolderPath, string? executablePath, char currentDrive = 'C') {
-        _driveMap = InitializeDriveMap(cDriveFolderPath, executablePath);
+        DriveMap = InitializeDriveMap(cDriveFolderPath, executablePath);
         _currentDrive = currentDrive;
-        SetCurrentDirValue(_currentDrive, _driveMap[_currentDrive].MountedHostDirectory, $@"{currentDrive}:\");
+        SetCurrentDirValue(_currentDrive, DriveMap[_currentDrive].MountedHostDirectory, $@"{currentDrive}:\");
     }
-
-    private readonly Dictionary<char, MountedFolder> _driveMap;
 
     /// <summary>
     /// The current DOS drive in use.
@@ -41,11 +39,11 @@ internal class DosPathResolver {
     /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
         //0 = default drive
-        if (driveNumber == 0 && _driveMap.Count > 0) {
-            MountedFolder mountedFolder = _driveMap[_currentDrive];
+        if (driveNumber == 0 && DriveMap.Count > 0) {
+            MountedFolder mountedFolder = DriveMap[_currentDrive];
             currentDir = mountedFolder.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
-        } else if (_driveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
+        } else if (DriveMap.TryGetValue(DriveLetters[driveNumber - 1], out MountedFolder? mountedFolder)) {
             currentDir = mountedFolder.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         }
@@ -102,17 +100,17 @@ internal class DosPathResolver {
                 return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
             }
         }
-        return _driveMap[_currentDrive].DosDriveRootPath;
+        return DriveMap[_currentDrive].DosDriveRootPath;
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, _driveMap[driveLetter]) ||
+            !IsWithinMountPoint(hostFullPath, DriveMap[driveLetter]) ||
             Encoding.ASCII.GetByteCount(fullDosPath) > MaxPathLength) {
             return DosFileOperationResult.Error(ErrorCode.PathNotFound);
         }
 
-        _driveMap[driveLetter].CurrentDosDirectory = fullDosPath[3..];
+        DriveMap[driveLetter].CurrentDosDirectory = fullDosPath[3..];
         return DosFileOperationResult.NoValue();
     }
 
@@ -170,7 +168,7 @@ internal class DosPathResolver {
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
         if(string.IsNullOrWhiteSpace(parentPath)) {
-            parentPath = GetFullCurrentDosPathOnDrive(_driveMap[_currentDrive]);
+            parentPath = GetFullCurrentDosPathOnDrive(DriveMap[_currentDrive]);
         }
         string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
@@ -185,11 +183,11 @@ internal class DosPathResolver {
             if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
                 length = 3;
             }
-            return (_driveMap[_currentDrive].MountedHostDirectory, dosPath[length..]);
+            return (DriveMap[_currentDrive].MountedHostDirectory, dosPath[length..]);
         } else if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
-            return (_driveMap[dosPath[0]].MountedHostDirectory, dosPath[2..]);
+            return (DriveMap[dosPath[0]].MountedHostDirectory, dosPath[2..]);
         } else {
-            return (_driveMap[_currentDrive].MountedHostDirectory, dosPath);
+            return (DriveMap[_currentDrive].MountedHostDirectory, dosPath);
         }
     }
 
@@ -281,10 +279,12 @@ internal class DosPathResolver {
         get {
             // At least A: and B:
             byte driveLetters = 2;
-            driveLetters += (byte)_driveMap.TakeWhile(x => x.Key != 'A' && x.Key != 'B').Count();
+            driveLetters += (byte)DriveMap.TakeWhile(x => x.Key != 'A' && x.Key != 'B').Count();
             return driveLetters;
         }
     }
+
+    public Dictionary<char, MountedFolder> DriveMap { get; init; }
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&
