@@ -157,7 +157,7 @@ public class DosFileManager {
     /// <param name="fileHandle">The handle to a file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult DuplicateFileHandle(ushort fileHandle) {
-        if (GetOpenFile(fileHandle) is not DosFile file) {
+        if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -385,7 +385,7 @@ public class DosFileManager {
     /// <param name="offset">Number of bytes to move.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult MoveFilePointerUsingHandle(SeekOrigin originOfMove, ushort fileHandle, uint offset) {
-        if (GetOpenFile(fileHandle) is not DosFile file) {
+        if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -462,7 +462,7 @@ public class DosFileManager {
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
-        if (GetOpenFile(fileHandle) is not DosFile file) {
+        if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
 
@@ -485,7 +485,9 @@ public class DosFileManager {
 
         if (actualReadLength > 0) {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
-            file.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.Name));
+            if(file is DosFile actualFile) {
+                actualFile.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.Name));
+            }
         }
 
         return DosFileOperationResult.Value16((ushort)actualReadLength);
