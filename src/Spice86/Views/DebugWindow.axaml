@@ -32,6 +32,8 @@
 		<local:ViewLocator />
 	</Window.DataTemplates>
 	<Window.Styles>
+		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
+		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 	</Window.Styles>
 	<Grid RowDefinitions="Auto,*,Auto">
