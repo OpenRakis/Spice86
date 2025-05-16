@@ -4,8 +4,6 @@ using Avalonia.Input;
 
 using Spice86.ViewModels;
 
-using System;
-
 public partial class BreakpointsView : UserControl
 {
     public BreakpointsView()
