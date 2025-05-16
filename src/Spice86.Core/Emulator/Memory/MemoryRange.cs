@@ -39,7 +39,7 @@ public class MemoryRange {
     /// <returns>A new instance of the <see cref="MemoryRange"/> class.</returns>
     public static MemoryRange FromSegment(ushort segment, ushort startOffset, ushort length, string name) {
         uint start = MemoryUtils.ToPhysicalAddress(segment, startOffset);
-        uint end = MemoryUtils.ToPhysicalAddress(segment, (ushort)(startOffset + length));
+        uint end = MemoryUtils.ToPhysicalAddress(segment, startOffset) + length;
         return new MemoryRange(start, end, name);
     }
 
