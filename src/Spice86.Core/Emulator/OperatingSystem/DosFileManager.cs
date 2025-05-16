@@ -486,7 +486,8 @@ public class DosFileManager {
         if (actualReadLength > 0) {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
             if(file is DosFile actualFile) {
-                actualFile.AddMemoryRange(new MemoryRange(targetAddress, (uint)(targetAddress + actualReadLength - 1), file.Name));
+                actualFile.AddMemoryRange(new MemoryRange(targetAddress, 
+                    (uint)(targetAddress + actualReadLength - 1), file.Name));
             }
         }
 
