@@ -478,7 +478,7 @@ public class DosFileManager {
             throw new UnrecoverableException("IOException while reading file", e);
         }
 
-        if (actualReadLength == -1) {
+        if (actualReadLength < 1) {
             // EOF
             return DosFileOperationResult.Value16(0);
         }
