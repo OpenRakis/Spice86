@@ -783,22 +783,32 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to delete</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
-        string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
-        if (string.IsNullOrWhiteSpace(fullHostPath)) {
+        string? hostDirToDelete = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
+
+        if (string.IsNullOrWhiteSpace(hostDirToDelete) ||
+            Directory.Exists(hostDirToDelete)) {
             return PathNotFoundError(dosDirectory);
         }
 
+        _dosPathResolver.GetCurrentDosDirectory(_dosPathResolver.CurrentDriveIndex, out string currentDir);
+        string? currentHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(currentDir);
+
+        if (!string.IsNullOrWhiteSpace(currentHostPath) &&
+            currentHostPath.StartsWith(hostDirToDelete, StringComparison.OrdinalIgnoreCase)) {
+            return RemoveCurrentDirError(dosDirectory);
+        }
+
         try {
-            Directory.Delete(fullHostPath);
+            Directory.Delete(hostDirToDelete);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Deleted dir: {DeletedDirPath}", fullHostPath);
+                _loggerService.Information("Deleted dir: {DeletedDirPath}", hostDirToDelete);
             }
 
             return DosFileOperationResult.NoValue();
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while deleting directory {CaseInsensitivePath}: {Exception}",
-                    fullHostPath, e);
+                    hostDirToDelete, e);
             }
         }
 
