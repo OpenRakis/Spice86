@@ -756,7 +756,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error. BX is set to zero on error. <br/>
-    /// Possible error code in AX: 0x08 (Insufficient memory).
+    /// Possible error code in AX: 0x08 (Insufficient memory). <br/>
+    /// On success, AX is set to the new block segment.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
@@ -766,8 +767,10 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
                 requestedSize, blockSegment);
         }
-        SetCarryFlag(false, calledFromVm);
-        if (!_dosMemoryManager.ModifyBlock((ushort)(blockSegment - 1), requestedSize)) {
+        if (_dosMemoryManager.ModifyBlock(blockSegment, requestedSize)) {
+            State.AX = blockSegment;
+            SetCarryFlag(false, calledFromVm);
+        } else {
             LogDosError(calledFromVm);
             // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
