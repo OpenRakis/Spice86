@@ -129,7 +129,7 @@ public class DosMemoryManager {
     /// <param name="requestedSize">The new size for the MCB, in bytes.</param>
     /// <returns>Whether the operation was successful.</returns>
     public bool ModifyBlock(ushort blockSegment, ushort requestedSize) {
-        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
             return false;
         }
