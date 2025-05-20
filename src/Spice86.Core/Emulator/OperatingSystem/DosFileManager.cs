@@ -876,24 +876,25 @@ public class DosFileManager {
                 }
                 break;
             case 0x02:      /* Read from Device Control Channel */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Read from Device Control Channel");
             case 0x03:      /* Write to Device Control Channel */
-            //if (Files[handle]->GetInformation() & 0xc000) {
-            //	/* is character device with IOCTL support */
-            //	PhysPt bufptr=PhysicalMake(SegValue(ds),reg_dx);
-            //	uint16_t retcode=0;
-            //	const auto device_ptr = dynamic_cast<DOS_Device*>(
-            //	        Files[handle].get());
-            //	assert(device_ptr);
-            //	if (device_ptr->WriteToControlChannel(bufptr, reg_cx, &retcode)) {
-            //		reg_ax = retcode;
-            //		return true;
-            //	}
-            //}
-            //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //return false;
+                //if (Files[handle]->GetInformation() & 0xc000) {
+                //	/* is character device with IOCTL support */
+                //	PhysPt bufptr=PhysicalMake(SegValue(ds),reg_dx);
+                //	uint16_t retcode=0;
+                //	const auto device_ptr = dynamic_cast<DOS_Device*>(
+                //	        Files[handle].get());
+                //	assert(device_ptr);
+                //	if (device_ptr->WriteToControlChannel(bufptr, reg_cx, &retcode)) {
+                //		reg_ax = retcode;
+                //		return true;
+                //	}
+                //}
+                //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+                //return false;
+                throw new NotImplementedException("IOCTL: Write to Device Control Channel");
             case 0x06:      /* Get Input Status */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Get Input Status");
             //if (Files[handle]->GetInformation() & 0x8000) {		//Check for device
             //	reg_al=(Files[handle]->GetInformation() & 0x40) ? 0x0 : 0xff;
             //} else { // FILE
@@ -911,7 +912,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x07:      /* Get Output Status */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Get Output Status");
             //if (Files[handle]->GetInformation() & EXT_DEVICE_BIT) {
             //	const auto device_ptr = dynamic_cast<DOS_Device*>(
             //	        Files[handle].get());
@@ -923,7 +924,7 @@ public class DosFileManager {
             //reg_al = 0xff;
             //return true;
             case 0x08:      /* Check if block device removable */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Check if block device removable");
             ///* cdrom drives and drive a&b are removable */
             //if (drive < 2) reg_ax=0;
             //else if (!Drives[drive]->IsRemovable()) reg_ax=1;
@@ -933,7 +934,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x09:      /* Check if block device remote */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Check if block device remot");
             //if ((drive >= 2) && Drives[drive]->IsRemote()) {
             //	reg_dx=0x1000;	// device is remote
             //	// undocumented bits always clear
@@ -943,13 +944,13 @@ public class DosFileManager {
             //	// TODO Set bit 9 on drives that don't support direct I/O
             //}
             case 0x0B:      /* Set sharing retry count */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Set sharing retry count");
             //if (reg_dx==0) {
             //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
             //	return false;
             //}
             case 0x0D:      /* Generic block device request */
-                throw new NotImplementedException();
+                throw new NotImplementedException("IOCTL: Generic block device request");
             //{
             //	if (drive < 2 && !Drives[drive]) {
             //		DOS_SetError(DOSERR_ACCESS_DENIED);
@@ -1007,6 +1008,9 @@ public class DosFileManager {
             //}
             case 0x0E:          /* Get Logical Drive Map */
                 /* TODO: We only have C:, so only 1 logical drive assigned! */
+                if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Get logical drive map: returns C: only hard drive!");
+                }
                 state.AL = 0x0;
                 state.AH = 0x07;
                 return DosFileOperationResult.NoValue();
@@ -1019,9 +1023,10 @@ public class DosFileManager {
                 //} else reg_al=0;	/* Only 1 logical drive assigned */
                 //reg_ah=0x07;
             default:
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("IOCTL: Invalid function number {IoctlFunc}", state.AL);
+                }
                 return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
-                //LOG(LOG_DOSMISC,LOG_ERROR)("DOS:IOCTL Call %2X unhandled",reg_al);
-                //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
         }
         return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
     }
