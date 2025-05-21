@@ -962,12 +962,12 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     private string ConvertSingleDosChar(byte characterByte) {
-        ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] { characterByte };
+        ReadOnlySpan<byte> sourceAsArray = [characterByte];
         return _cp850CharSet.GetString(sourceAsArray);
     }
 
-    private string ConvertDosChars(IEnumerable<byte> characterBytes) {
-        return _cp850CharSet.GetString(characterBytes.ToArray());
+    private string ConvertDosChars(Span<byte> characterBytes) {
+        return _cp850CharSet.GetString(characterBytes);
     }
 
     /// <summary>
@@ -1011,11 +1011,11 @@ public class DosInt21Handler : InterruptHandler {
     public string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
         uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
         StringBuilder stringBuilder = new();
-        List<byte> sourceArray = new();
+        List<byte> sourceList = new();
         while (memory.UInt8[stringStart] != end) {
-            sourceArray.Add(memory.UInt8[stringStart++]);
+            sourceList.Add(memory.UInt8[stringStart++]);
         }
-        string convertedString = ConvertDosChars(sourceArray);
+        string convertedString = ConvertDosChars(sourceList.ToArray());
         stringBuilder.Append(convertedString);
         return stringBuilder.ToString();
     }
