@@ -129,6 +129,10 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <returns>The Y part of the virtual coordinates.</returns>
     double GetLastPressedY(MouseButton button);
 
+    double GetLastReleasedX(MouseButton button);
+    double GetLastReleasedY(MouseButton button);
+    int GetButtonsReleaseCount(MouseButton button);
+
     /// <summary>
     ///     Resets the mouse driver to default values.
     /// </summary>
