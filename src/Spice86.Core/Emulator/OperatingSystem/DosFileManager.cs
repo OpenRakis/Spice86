@@ -523,12 +523,9 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
             }
-
-            // Fake that we wrote, this could be used to write to stdout / stderr ...
-            return DosFileOperationResult.Value16(writeLength);
         }
 
-        DosFile? file = GetOpenFile(fileHandle) as DosFile;
+        VirtualFileBase? file = GetOpenFile(fileHandle);
         if (file == null) {
             return FileNotOpenedError(fileHandle);
         }
