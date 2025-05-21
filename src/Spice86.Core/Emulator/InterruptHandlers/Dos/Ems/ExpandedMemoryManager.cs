@@ -25,7 +25,7 @@ using System.Linq;
 /// <remarks>This is a LIM standard implementation. Which means there's no
 /// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler {
+public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
     /// DOS programs can detect the presence of an EMS handler by looking for it <br/>
@@ -94,6 +94,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public IDictionary<int, EmmHandle> EmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
+    public uint DeviceNumber { get; set; } = 0;
+    public ushort Segment { get; set; } = 0;
+    public ushort Offset { get; set; } = 0;
+    public DeviceAttributes Attributes { get; set; } = DeviceAttributes.Ioctl;
+    public ushort StrategyEntryPoint { get; set; } = 0;
+    public ushort InterruptEntryPoint { get; set; } = 0;
+    public string Name { get; set; }
+    public ushort Information => 0xc0c0; //Lifted from DOSBox.
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -105,8 +114,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Dos dos, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        var device = new CharacterDevice(loggerService, DeviceAttributes.Ioctl, EmsIdentifier);
-        dos.AddDevice(device, DosDeviceSegment, 0x0000);
+        dos.AddDevice(this);
         FillDispatchTable();
 
         // Allocation of system handle 0.
@@ -118,6 +126,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
             EmmPageFrame.Add(i, emmRegister);
             Memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
+        Name = EmsIdentifier;
     }
 
     /// <inheritdoc />
@@ -164,6 +173,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 LoggerService.Error("EMS function not provided: {@Function}", operation);
             }
             State.AH = EmmStatus.EmmFunctionNotSupported;
+            return;
         }
         Run(operation);
     }
@@ -788,5 +798,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void SetHandleName(ushort handle, string name) {
         EmmHandles[handle].Name = name;
+    }
+
+    public byte GetStatus(bool inputFlag) {
+        return 0;
+    }
+
+    public bool TryReadFromControlChannel(uint address, ushort size, out ushort? returnCode) {
+        returnCode = null;
+        return false;
+    }
+
+    public bool TryWriteToControlChannel(uint address, ushort size, out ushort? returnCode) {
+        returnCode = null;
+        return false;
     }
 }
