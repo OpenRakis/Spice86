@@ -210,6 +210,30 @@ public class MouseDriver : IMouseDriver {
         return new MouseStatus(x, y, buttonFlags);
     }
 
+
+    public double GetLastReleasedX(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+    public double GetLastReleasedY(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+    public int GetButtonsReleaseCount(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        int count = _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? value) ? value.PressCount : 0;
+
+        // Reset the count after reading
+        _buttonsReleaseCounts[mouseButton].PressCount = 0;
+
+        return count;
+    }
+
     /// <inheritdoc />
     public double GetLastReleasedX(MouseButton button) {
         MouseButton mouseButton = (MouseButton)button;
