@@ -1000,6 +1000,8 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
+    private const ushort MaxDosStringLength = 256;
+
     /// <summary>
     /// Gets a string from the memory at the given segment and offset, until the given end character is found.
     /// </summary>
@@ -1009,15 +1011,20 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="end">The end character. Usually zero.</param>
     /// <returns>The string from memory.</returns>
     public string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
-        uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
-        StringBuilder stringBuilder = new();
-        List<byte> sourceList = new();
-        while (memory.UInt8[stringStart] != end) {
-            sourceList.Add(memory.UInt8[stringStart++]);
+        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
+        int length = MaxDosStringLength;
+        Span<byte> data = stackalloc byte[MaxDosStringLength];
+        int dataIndex = 0;
+        while (length-- != 0) {
+            byte memByte = memory.UInt8[address++];
+            if (memByte == end || dataIndex >= MaxDosStringLength) {
+                break;
+            }
+            data[dataIndex++] = memByte;
         }
-        string convertedString = ConvertDosChars(sourceList.ToArray());
-        stringBuilder.Append(convertedString);
-        return stringBuilder.ToString();
+        data[dataIndex] = 0; // Null terminate the string
+        string convertedString = ConvertDosChars(data[..dataIndex]);
+        return convertedString;
     }
 
     /// <summary>
