@@ -205,8 +205,7 @@ public class Dos {
             var characterDevice = (VirtualDeviceBase)device;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
-        } else {
-            var blockDevice = (BlockDevice)device;
+        } else if(device is BlockDevice blockDevice) {
             _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
             index++;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
