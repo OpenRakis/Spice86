@@ -130,6 +130,32 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     double GetLastPressedY(MouseButton button);
 
     /// <summary>
+    /// Retrieves the X-coordinate of the last position where the specified mouse button was released.
+    /// </summary>
+    /// <param name="button">The mouse button for which the last released X-coordinate is requested.</param>
+    /// <returns>The X-coordinate of the last release position for the specified mouse button.  Returns 0 if the button has not
+    /// been released or if no data is available.</returns>
+    double GetLastReleasedX(MouseButton button);
+
+    /// <summary>
+    /// Retrieves the Y-coordinate of the last release event for the specified mouse button.
+    /// </summary>
+    /// <param name="button">The mouse button for which to retrieve the last release Y-coordinate.</param>
+    /// <returns>The Y-coordinate of the last release event for the specified mouse button. Returns 0 if the button has not been
+    /// released or if no data is available.</returns>
+    double GetLastReleasedY(MouseButton button);
+
+    /// <summary>
+    /// Retrieves the number of times the specified mouse button was released since the last call to this method.
+    /// </summary>
+    /// <remarks>After calling this method, the release count for the specified mouse button is reset to
+    /// 0.</remarks>
+    /// <param name="button">The mouse button for which the release count is requested.</param>
+    /// <returns>The number of times the specified mouse button was released. Returns 0 if the button has not been released or if
+    /// no data is available.</returns>
+    int GetButtonsReleaseCount(MouseButton button);
+
+    /// <summary>
     ///     Resets the mouse driver to default values.
     /// </summary>
     void Reset();

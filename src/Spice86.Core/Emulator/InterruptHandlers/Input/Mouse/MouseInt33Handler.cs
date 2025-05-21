@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 ///     Interface between the mouse and the emulator.<br />
 ///     Re-implements int33.<br />
@@ -147,6 +149,47 @@ public class MouseInt33Handler : InterruptHandler {
     ///         bit 0 = left button down   (BX &amp; 1) == 1 <br/>
     ///         bit 1 = right button down  (BX &amp; 2) == 2 <br/>
     ///         bit 2 = center button down (BX &amp; 4) == 4 <br/>
+    ///     BX    Count of times that button was released since last call <br/>
+    ///     CX    X coordinate (horizontal)    divide by 8 for text column <br/>
+    ///     DX    Y coordinate (vertical)      divide by 8 for text line <br/>
+    /// ────────────────────────────────────────────────────────────────── <br/>
+    /// Info: This obtains <br/>
+    /// * The current button status. <br/>
+    /// * The number of times the specified button (in BX) has been released since the last call to this function.. <br/>
+    /// * The X,Y coordinates of the pointer at the time of the most recent release of that button. <br/><br/>
+    ///
+    /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
+    ///        you must divide each value by 8 to get a character column,row. <br/>
+    /// </summary>
+    public void QueryButtonReleasedCounter() {
+        if(!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
+            ReturnNothingInCpuRegsiters();
+            return;
+        }
+        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        State.AX = (ushort)status.ButtonFlags;
+        State.BX = (ushort)_mouseDriver.GetButtonsReleaseCount(button);
+        State.CX = (ushort)_mouseDriver.GetLastReleasedX(button);
+        State.DX = (ushort)_mouseDriver.GetLastReleasedY(button);
+    }
+
+    private static bool TryGetMouseButtonIndex(ushort bx, out MouseButton button) {
+        button = bx switch {
+            0 => MouseButton.Left,
+            1 => MouseButton.Right,
+            2 => MouseButton.Middle,
+            _ => MouseButton.None
+        };
+        return button != MouseButton.None;
+    }
+
+    /// <summary>
+    /// Expects: BX Button to query (0=left, 1=right, 2=center) <br/>
+    /// Returns: <br/>
+    ///     AX    Button status: <br/>
+    ///         bit 0 = left button down   (BX &amp; 1) == 1 <br/>
+    ///         bit 1 = right button down  (BX &amp; 2) == 2 <br/>
+    ///         bit 2 = center button down (BX &amp; 4) == 4 <br/>
     ///     BX    Count of times that button was pressed since last call <br/>
     ///     CX    X coordinate (horizontal)    divide by 8 for text column <br/>
     ///     DX    Y coordinate (vertical)      divide by 8 for text line <br/>
@@ -163,25 +206,25 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     private void QueryButtonPressedCounter() {
-        ushort bx = State.BX;
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
-        MouseButton button = bx switch {
-            0 => MouseButton.Left,
-            1 => MouseButton.Right,
-            2 => MouseButton.Middle,
-            _ => MouseButton.None
-        };
-        if(button == MouseButton.None) {
-            State.AX = 0;
-            State.BX = 0;
-            State.CX = 0;
-            State.DX = 0;
+        if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
             return;
         }
+        if (button == MouseButton.None) {
+            ReturnNothingInCpuRegsiters();
+            return;
+        }
+        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
         State.CX = (ushort)_mouseDriver.GetLastPressedX(button);
         State.DX = (ushort)_mouseDriver.GetLastPressedY(button);
+    }
+
+    private void ReturnNothingInCpuRegsiters() {
+        State.AX = 0;
+        State.BX = 0;
+        State.CX = 0;
+        State.DX = 0;
     }
 
     /// <summary>
@@ -510,6 +553,7 @@ public class MouseInt33Handler : InterruptHandler {
         AddAction(0x03, GetMousePositionAndStatus);
         AddAction(0x04, SetMouseCursorPosition);
         AddAction(0x0005, QueryButtonPressedCounter);
+        AddAction(0x6, QueryButtonReleasedCounter);
         AddAction(0x07, SetMouseHorizontalMinMaxPosition);
         AddAction(0x08, SetMouseVerticalMinMaxPosition);
         AddAction(0x0B, GetMotionDistance);

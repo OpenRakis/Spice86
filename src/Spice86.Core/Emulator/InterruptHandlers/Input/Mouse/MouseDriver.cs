@@ -29,6 +29,12 @@ public class MouseDriver : IMouseDriver {
         { MouseButton.Middle, new() }
     };
 
+    private readonly Dictionary<MouseButton, MouseButtonPressCount> _buttonsReleaseCounts = new() {
+        { MouseButton.Left, new() },
+        { MouseButton.Right, new() },
+        { MouseButton.Middle, new() }
+    };
+
 
     private const byte BeforeUserHandlerExecutionCallbackNumber = 0xFE;
     private const byte AfterUserHandlerExecutionCallbackNumber = 0xFF;
@@ -55,14 +61,16 @@ public class MouseDriver : IMouseDriver {
     /// <param name="mouseDevice">The mouse device / hardware</param>
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
-    /// <param name="loggerService">The logger</param>
-    public MouseDriver(Cpu cpu, IIndexable memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
+    /// <param name="loggerService">The service used to log messages, such as runtime warnings.</param>
+    public MouseDriver(Cpu cpu, IIndexable memory, IMouseDevice mouseDevice,
+        IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
         _state = cpu.State;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
         _gui = gui;
         if (_gui is not null) {
-            _gui.MouseButtonUp += OnMouseButtonUp;
+            _gui.MouseButtonUp += OnMouseButtonReleased;
+            _gui.MouseButtonDown += OnMouseButtonPressed;
         }
         _vgaFunctions = vgaFunctions;
 
@@ -70,14 +78,16 @@ public class MouseDriver : IMouseDriver {
         _userHandlerAddressSwitcher = new(memory);
         Reset();
     }
-    private void OnMouseButtonUp(object? sender, MouseButtonEventArgs e) {
-        MouseButton button = e.Button switch {
-            MouseButton.Left => MouseButton.Left,
-            MouseButton.Right => MouseButton.Right,
-            MouseButton.Middle => MouseButton.Middle,
-            _ => throw new ArgumentOutOfRangeException(nameof(e))
-        };
 
+    private void OnMouseButtonReleased(object? sender, MouseButtonEventArgs e) {
+        MouseButton button = e.Button;
+        _buttonsReleaseCounts[button].PressCount++;
+        _buttonsReleaseCounts[button].LastPressedX = _mouseDevice.MouseXRelative;
+        _buttonsReleaseCounts[button].LastPressedY = _mouseDevice.MouseYRelative;
+    }
+
+    private void OnMouseButtonPressed(object? sender, MouseButtonEventArgs e) {
+        MouseButton button = e.Button;
         _buttonsPressCounts[button].PressCount++;
         _buttonsPressCounts[button].LastPressedX = _mouseDevice.MouseXRelative;
         _buttonsPressCounts[button].LastPressedY = _mouseDevice.MouseYRelative;
@@ -201,6 +211,34 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
+    public double GetLastReleasedX(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+
+    /// <inheritdoc />
+    public double GetLastReleasedY(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        return _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
+    }
+
+
+    /// <inheritdoc />
+    public int GetButtonsReleaseCount(MouseButton button) {
+        MouseButton mouseButton = (MouseButton)button;
+        int count = _buttonsReleaseCounts.TryGetValue(mouseButton,
+            out MouseButtonPressCount? value) ? value.PressCount : 0;
+
+        // Reset the count after reading
+        _buttonsReleaseCounts[mouseButton].PressCount = 0;
+
+        return count;
+    }
+
+    /// <inheritdoc />
     public int GetButtonPressCount(MouseButton button) {
         MouseButton mouseButton = (MouseButton)button;
         int count = _buttonsPressCounts.TryGetValue(mouseButton,
@@ -278,11 +316,14 @@ public class MouseDriver : IMouseDriver {
         VerticalMickeysPerPixel = 16;
         DoubleSpeedThreshold = 64;
 
-        foreach (MouseButton button in _buttonsPressCounts.Keys) {
-            _buttonsPressCounts[button].PressCount = 0;
-            _buttonsPressCounts[button].LastPressedX = 0;
-            _buttonsPressCounts[button].LastPressedY = 0;
-        }
+        ResetCounters(_buttonsPressCounts);
+        ResetCounters(_buttonsReleaseCounts);
+    }
+
+    private void ResetCounters(Dictionary<MouseButton, MouseButtonPressCount> dict) {
+        dict[MouseButton.Left].PressCount = 0;
+        dict[MouseButton.Right].LastPressedX = 0;
+        dict[MouseButton.Middle].LastPressedY = 0;
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
