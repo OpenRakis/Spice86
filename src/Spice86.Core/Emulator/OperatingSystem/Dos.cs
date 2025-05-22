@@ -129,13 +129,15 @@ public class Dos {
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+        DosStringDecoder dosStringDecoder = new(memory, state);
+
+        FileManager = new DosFileManager(_memory, dosStringDecoder, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, _vgaFunctionality, this,
-            dosSwappableDataArea,
+            dosSwappableDataArea, dosStringDecoder,
             _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);

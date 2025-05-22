@@ -25,7 +25,6 @@ using System.Text;
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
@@ -38,6 +37,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly DosSwappableDataArea _dosSwappableDataArea;
+    private readonly DosStringDecoder _dosStringDecoder;
 
     /// <summary>
     /// Initializes a new instance.
@@ -55,12 +55,11 @@ public class DosInt21Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, Dos dos,
-        DosSwappableDataArea dosSwappableDataArea,
+        DosSwappableDataArea dosSwappableDataArea, DosStringDecoder dosStringDecoder,
         ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosSwappableDataArea = dosSwappableDataArea;
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        _cp850CharSet = Encoding.GetEncoding("ibm850");
+        _dosStringDecoder = dosStringDecoder;
         _dos = dos;
         _vgaFunctionality = vgaFunctionality;
         _keyboardInt16Handler = keyboardInt16Handler;
@@ -106,7 +105,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3D, () => OpenFile(true));
         AddAction(0x3E, () => CloseFile(true));
         AddAction(0x3F, () => ReadFile(true));
-        AddAction(0x40, () => WriteFileUsingHandle(true));
+        AddAction(0x40, () => WriteToFileOrDevice(true));
         AddAction(0x41, () => RemoveFile(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
         AddAction(0x43, () => GetSetFileAttributes(true));
@@ -230,7 +229,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void CreateDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(
-            GetZeroTerminatedStringAtDsDx());
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -240,7 +239,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveFile(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(
-            GetZeroTerminatedStringAtDsDx());
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -250,7 +249,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveDirectory(bool calledFromVm) {
         DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(
-            GetZeroTerminatedStringAtDsDx());
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -344,7 +343,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void ChangeCurrentDirectory(bool calledFromVm) {
-        string newDirectory = GetZeroTerminatedStringAtDsDx();
+        string newDirectory = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET CURRENT DIRECTORY: {NewDirectory}", newDirectory);
         }
@@ -388,7 +387,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void CreateFileUsingHandle(bool calledFromVm) {
-        string fileName = GetZeroTerminatedStringAtDsDx();
+        string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         ushort fileAttribute = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("CREATE FILE USING HANDLE: {FileName} with attribute {FileAttribute}",
@@ -446,7 +445,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DisplayOutput() {
         byte characterByte = State.DL;
-        string character = ConvertSingleDosChar(characterByte);
+        string character = _dosStringDecoder.ConvertSingleDosChar(characterByte);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("PRINT CHR: {CharacterByte} ({Character})",
                 ConvertUtils.ToHex8(characterByte), character);
@@ -511,7 +510,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindFirstMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetZeroTerminatedStringAtDsDx();
+        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FIND FIRST MATCHING FILE {Attributes}, {FileSpec}",
                 ConvertUtils.ToHex16(attributes), fileSpec);
@@ -543,7 +542,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindNextMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetZeroTerminatedStringAtDsDx();
+        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}",
                 ConvertUtils.ToHex16(attributes), fileSpec);
@@ -811,7 +810,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void OpenFile(bool calledFromVm) {
-        string fileName = GetZeroTerminatedStringAtDsDx();
+        string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         byte rwAccessMode = (byte)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -830,7 +829,7 @@ public class DosInt21Handler : InterruptHandler {
     public void PrintString() {
         ushort segment = State.DS;
         ushort offset = State.DX;
-        string str = GetDosString(Memory, segment, offset, '$');
+        string str = _dosStringDecoder.GetDosString(segment, offset, '$');
 
         _vgaFunctionality.WriteString(str);
 
@@ -946,7 +945,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the called was called by the emulator.</param>
-    public void WriteFileUsingHandle(bool calledFromVm) {
+    public void WriteToFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort writeLength = State.CX;
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
@@ -957,17 +956,8 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.WriteFileUsingHandle(fileHandle, writeLength, bufferAddress);
+            _dosFileManager.WriteToFileOrDevice(fileHandle, writeLength, bufferAddress);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-    }
-
-    private string ConvertSingleDosChar(byte characterByte) {
-        ReadOnlySpan<byte> sourceAsArray = [characterByte];
-        return _cp850CharSet.GetString(sourceAsArray);
-    }
-
-    private string ConvertDosChars(Span<byte> characterBytes) {
-        return _cp850CharSet.GetString(characterBytes);
     }
 
     /// <summary>
@@ -1000,33 +990,6 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
-    private const ushort MaxDosStringLength = 256;
-
-    /// <summary>
-    /// Gets a string from the memory at the given segment and offset, until the given end character is found.
-    /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="segment">The segment part of the start address.</param>
-    /// <param name="offset">The offset part of the start address.</param>
-    /// <param name="end">The end character. Usually zero.</param>
-    /// <returns>The string from memory.</returns>
-    public string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
-        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        int length = MaxDosStringLength;
-        Span<byte> data = stackalloc byte[MaxDosStringLength];
-        int dataIndex = 0;
-        while (length-- != 0) {
-            byte memByte = memory.UInt8[address++];
-            if (memByte == end || dataIndex >= MaxDosStringLength) {
-                break;
-            }
-            data[dataIndex++] = memByte;
-        }
-        data[dataIndex] = 0; // Null terminate the string
-        string convertedString = ConvertDosChars(data[..dataIndex]);
-        return convertedString;
-    }
-
     /// <summary>
     /// Gets (AL: 0) or sets (AL: 1) file attributes for the file identified via its file path at DS:DX.
     /// TODO: The Set File Attributes operation is not implemented.
@@ -1040,7 +1003,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
-        string dosFileName = GetZeroTerminatedStringAtDsDx();
+        string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
@@ -1071,14 +1034,6 @@ public class DosInt21Handler : InterruptHandler {
                 }
             default: throw new UnhandledOperationException(State, "getSetFileAttribute operation unhandled: " + op);
         }
-    }
-
-    /// <summary>
-    /// Gets a zero terminated string from the memory at DS:DX.
-    /// </summary>
-    /// <returns>The string from memory.</returns>
-    public string GetZeroTerminatedStringAtDsDx() {
-        return GetDosString(Memory, State.DS, State.DX, '\0');
     }
 
     /// <summary>
