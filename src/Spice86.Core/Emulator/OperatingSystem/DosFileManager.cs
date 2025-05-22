@@ -36,6 +36,8 @@ public class DosFileManager {
 
     private readonly Dictionary<byte, (string FileSystemEntry, string FileSpec)> _activeFileSearches = new();
 
+    private readonly DosStringDecoder _dosStringDecoder;
+
     /// <summary>
     /// All the files opened by DOS.
     /// </summary>
@@ -53,12 +55,15 @@ public class DosFileManager {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="dosStringDecoder">A helper class to encode/decode DOS strings.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    public DosFileManager(IMemory memory, string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+    public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
+        string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
+        _dosStringDecoder = dosStringDecoder;
         _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
@@ -518,7 +523,7 @@ public class DosFileManager {
     /// <param name="writeLength">The length of the data to write.</param>
     /// <param name="bufferAddress">The address of the buffer containing the data to write.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> object representing the result of the operation.</returns>
-    public DosFileOperationResult WriteFileUsingHandle(ushort fileHandle, ushort writeLength, uint bufferAddress) {
+    public DosFileOperationResult WriteToFileOrDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
         if (!IsValidFileHandle(fileHandle)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
@@ -533,6 +538,12 @@ public class DosFileManager {
         try {
             // Do not access Ram property directly to trigger breakpoints if needed
             Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
+
+            if(_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Writing to file or device content: {Name} {Bytes} {CodePage850String}",
+                    file.Name, data.ToArray(), _dosStringDecoder.ConvertDosChars(data));
+            }
+
             file.Write(data);
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
