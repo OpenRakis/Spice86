@@ -25,7 +25,6 @@ using System.Text;
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private readonly Encoding _cp850CharSet;
 
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
@@ -38,6 +37,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly DosSwappableDataArea _dosSwappableDataArea;
+    private readonly DosStringDecoder _dosStringDecoder;
 
     /// <summary>
     /// Initializes a new instance.
@@ -51,15 +51,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+    public DosInt21Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler,
         IVgaFunctionality vgaFunctionality, Dos dos,
-        DosSwappableDataArea dosSwappableDataArea,
+        DosSwappableDataArea dosSwappableDataArea, DosStringDecoder dosStringDecoder,
         ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosSwappableDataArea = dosSwappableDataArea;
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        _cp850CharSet = Encoding.GetEncoding("ibm850");
+        _dosStringDecoder = dosStringDecoder;
         _dos = dos;
         _vgaFunctionality = vgaFunctionality;
         _keyboardInt16Handler = keyboardInt16Handler;
@@ -105,12 +105,13 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3D, () => OpenFile(true));
         AddAction(0x3E, () => CloseFile(true));
         AddAction(0x3F, () => ReadFile(true));
-        AddAction(0x40, () => WriteFileUsingHandle(true));
+        AddAction(0x40, () => WriteToFileOrDevice(true));
         AddAction(0x41, () => RemoveFile(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
         AddAction(0x43, () => GetSetFileAttributes(true));
         AddAction(0x44, () => IoControl(true));
         AddAction(0x45, () => DuplicateFileHandle(true));
+        AddAction(0x46, () => ForceDuplicateFileHandle(true));
         AddAction(0x47, () => GetCurrentDirectory(true));
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
@@ -139,14 +140,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
     /// </summary>
     public void ReadCharacterFromStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
 
-        using Stream stream = stdAux.OpenStream("r");
-        if (stream.CanRead) {
-            State.AL = (byte)stream.ReadByte();
+        if (aux.CanRead) {
+            State.AL = (byte)aux.ReadByte();
         } else {
             State.AL = 0x0;
         }
@@ -156,14 +157,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
     public void WriteCharacterToStdAux() {
-        IVirtualDevice? aux = _dos.Devices.Find(x => x is CharacterDevice { Name: "AUX" });
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
         if (aux is not CharacterDevice stdAux) {
             return;
         }
 
-        using Stream stream = stdAux.OpenStream("w");
-        if (stream.CanWrite) {
-            stream.WriteByte(State.AL);
+        if (stdAux.CanWrite) {
+            stdAux.WriteByte(State.AL);
         }
     }
 
@@ -171,14 +172,13 @@ public class DosInt21Handler : InterruptHandler {
     /// Writes a character from the AL register to the printer device.
     /// </summary>
     public void PrinterOutput() {
-        IVirtualDevice? prn = _dos.Devices.Find(x => x is CharacterDevice { Name: "PRN" });
-        if (prn is not CharacterDevice printer) {
+        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
+            .FirstOrDefault(x => x is CharacterDevice { Name: "PRN" });
+        if (aux is not CharacterDevice stdAux) {
             return;
         }
-
-        using Stream stream = printer.OpenStream("w");
-        if (stream.CanWrite) {
-            stream.WriteByte(State.AL);
+        if (stdAux.CanWrite) {
+            stdAux.Write(State.AL);
         }
     }
 
@@ -192,8 +192,7 @@ public class DosInt21Handler : InterruptHandler {
             return;
         }
 
-        using Stream stream = device.OpenStream("r");
-        if (stream.CanRead) {
+        if (device.CanRead) {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
@@ -205,19 +204,22 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
         CharacterDevice device = _dos.CurrentConsoleDevice;
-        if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
+        if (!device.Attributes.HasFlag(
+                DeviceAttributes.Character |
+                DeviceAttributes.CurrentStdin)) {
             State.AL = 0x0;
             return;
         }
 
-        using Stream stream = device.OpenStream("r");
-        if (stream.CanRead) {
-            int input = stream.ReadByte();
+        if (device.CanRead) {
+            var input = device.ReadByte();
             if (input == -1) {
                 State.AL = 0;
             } else {
                 State.AL = (byte)input;
             }
+        } else {
+            State.AL = 0;
         }
     }
 
@@ -226,7 +228,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void CreateDirectory(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(GetZeroTerminatedStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateDirectory(
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -235,7 +238,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveFile(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(GetZeroTerminatedStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveFile(
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -244,21 +248,27 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void RemoveDirectory(bool calledFromVm) {
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(GetZeroTerminatedStringAtDsDx());
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.RemoveDirectory(
+            _dosStringDecoder.GetZeroTerminatedStringAtDsDx());
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     /// <summary>
-    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), and drive parameter block address for the default drive (in BX). <br/>
+    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), <br/>
+    /// and drive parameter block address for the default drive (in BX). <br/>
     /// Sets the AH register to 0.
-    /// TODO: Implement it for real. This is just a stub that returns the same information as <see cref="GetAllocationInfoForDefaultDrive"/> as we can only mount C: !
     /// </summary>
+    /// <remarks>
+    /// TODO: Implement it for real. This is just a stub that returns the same information<br/>
+    /// as <see cref="GetAllocationInfoForDefaultDrive"/> as we can only mount C: !
+    /// </remarks>
     public void GetAllocationInfoForAnyDrive() {
         GetAllocationInfoForDefaultDrive();
     }
 
     /// <summary>
-    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS), and drive parameter block address for the default drive (in BX). <br/>
+    /// Returns the bytes per sector (in CX), sectors per cluster (in AX), total clusters (in DX), media id (in DS),<br/>
+    /// and drive parameter block address for the default drive (in BX). <br/>
     /// Sets the AH register to 0. <br/>
     /// Notes: always returns the same values.
     /// </summary>
@@ -272,7 +282,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         State.DS = 0x8010;
         // From DOSBox source code...
-        State.BX = (ushort) (0x8010 + _dosFileManager.DefaultDrive * 9);
+        State.BX = (ushort)(0x8010 + _dosFileManager.DefaultDrive * 9);
         State.AH = 0;
     }
 
@@ -285,7 +295,7 @@ public class DosInt21Handler : InterruptHandler {
             case 0: //Get country specific information
                 uint dest = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
                 Memory.LoadData(dest, BitConverter.GetBytes((ushort)_dos.CurrentCountryId));
-                State.AX = (ushort) (State.BX + 1);
+                State.AX = (ushort)(State.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;
             default: //Set country code
@@ -311,7 +321,9 @@ public class DosInt21Handler : InterruptHandler {
         LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
         SetCarryFlag(false, calledFromVm);
         DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSize);
-        if (res == null) {
+        if (res != null) {
+            State.AX = res.UsableSpaceSegment;
+        } else {
             LogDosError(calledFromVm);
             // did not find something good, error
             SetCarryFlag(true, calledFromVm);
@@ -319,9 +331,7 @@ public class DosInt21Handler : InterruptHandler {
             // INSUFFICIENT MEMORY
             State.AX = 0x08;
             State.BX = largest.Size;
-            return;
         }
-        State.AX = res.UsableSpaceSegment;
     }
 
     /// <summary>
@@ -333,7 +343,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void ChangeCurrentDirectory(bool calledFromVm) {
-        string newDirectory = GetZeroTerminatedStringAtDsDx();
+        string newDirectory = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET CURRENT DIRECTORY: {NewDirectory}", newDirectory);
         }
@@ -363,7 +373,8 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("CLOSE FILE handle {FileHandle}", ConvertUtils.ToHex(fileHandle));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFile(fileHandle);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFile(
+            fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -376,10 +387,11 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void CreateFileUsingHandle(bool calledFromVm) {
-        string fileName = GetZeroTerminatedStringAtDsDx();
+        string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         ushort fileAttribute = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("CREATE FILE USING HANDLE: {FileName} with attribute {FileAttribute}", fileName, fileAttribute);
+            LoggerService.Verbose("CREATE FILE USING HANDLE: {FileName} with attribute {FileAttribute}",
+                fileName, fileAttribute);
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateFileUsingHandle(fileName, fileAttribute);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
@@ -412,7 +424,8 @@ public class DosInt21Handler : InterruptHandler {
         } else {
             // Output
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                LoggerService.Verbose("DIRECT CONSOLE IO, {Character}, {Ascii}", character, ConvertUtils.ToChar(character));
+                LoggerService.Verbose("DIRECT CONSOLE IO, {Character}, {Ascii}",
+                    character, ConvertUtils.ToChar(character));
             }
         }
     }
@@ -432,9 +445,10 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DisplayOutput() {
         byte characterByte = State.DL;
-        string character = ConvertSingleDosChar(characterByte);
+        string character = _dosStringDecoder.ConvertSingleDosChar(characterByte);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("PRINT CHR: {CharacterByte} ({Character})", ConvertUtils.ToHex8(characterByte), character);
+            LoggerService.Verbose("PRINT CHR: {CharacterByte} ({Character})",
+                ConvertUtils.ToHex8(characterByte), character);
         }
         if (characterByte == '\r') {
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -464,6 +478,28 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Force duplicates a file handle. The handle is in BX. The new handle is in DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void ForceDuplicateFileHandle(bool calledFromVm) {
+        ushort fileHandle = State.BX;
+        ushort newHandle = State.DX;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FORCE DUPLICATE FILE HANDLE. {FileHandle}, {NewHandle}",
+                fileHandle, newHandle);
+        }
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ForceDuplicateFileHandle(fileHandle, newHandle);
+        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        if (!dosFileOperationResult.IsError) {
+            State.AX = State.CX; // Not all sources agree on this, but it seems to be the case.
+        }
+    }
+
+    /// <summary>
     /// Finds the first file matching the DOS file spec pointed by DS:DX and the attributes in CX. <br/>
     /// </summary>
     /// <returns>
@@ -474,9 +510,10 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindFirstMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetZeroTerminatedStringAtDsDx();
+        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FIND FIRST MATCHING FILE {Attributes}, {FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
+            LoggerService.Verbose("FIND FIRST MATCHING FILE {Attributes}, {FileSpec}",
+                ConvertUtils.ToHex16(attributes), fileSpec);
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindFirstMatchingFile(fileSpec, attributes);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
@@ -489,7 +526,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <param name="dosFileOperationResult">The DOS File operation result to check for error status</param>
     private void SetAxToZeroOnSuccess(DosFileOperationResult dosFileOperationResult) {
-        if (!dosFileOperationResult.IsError){
+        if (!dosFileOperationResult.IsError) {
             State.AX = 0;
         }
     }
@@ -505,9 +542,10 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindNextMatchingFile(bool calledFromVm) {
         ushort attributes = State.CX;
-        string fileSpec = GetZeroTerminatedStringAtDsDx();
+        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}", ConvertUtils.ToHex16(attributes), fileSpec);
+            LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}",
+                ConvertUtils.ToHex16(attributes), fileSpec);
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
@@ -525,7 +563,8 @@ public class DosInt21Handler : InterruptHandler {
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FREE ALLOCATED MEMORY {BlockSegment}", blockSegment);
+            LoggerService.Verbose("FREE ALLOCATED MEMORY {BlockSegment}",
+                blockSegment);
         }
         SetCarryFlag(false, calledFromVm);
         if (!_dosMemoryManager.FreeMemoryBlock((ushort)(blockSegment - 1))) {
@@ -607,7 +646,8 @@ public class DosInt21Handler : InterruptHandler {
     public void GetFreeDiskSpace() {
         byte driveNumber = State.DL;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET FREE DISK SPACE FOR DRIVE {DriveNumber}", driveNumber);
+            LoggerService.Verbose("GET FREE DISK SPACE FOR DRIVE {DriveNumber}",
+                driveNumber);
         }
         // 127 sectors per cluster
         State.AX = 0x7F;
@@ -637,7 +677,8 @@ public class DosInt21Handler : InterruptHandler {
         byte vectorNumber = State.AL;
         (ushort segment, ushort offset) = _interruptVectorTable[vectorNumber];
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}", ConvertUtils.ToHex8(vectorNumber),
+            LoggerService.Verbose("GET INTERRUPT VECTOR INT {VectorInt}, got {SegmentedAddress}",
+                ConvertUtils.ToHex8(vectorNumber),
                 ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
         }
         State.ES = segment;
@@ -654,7 +695,8 @@ public class DosInt21Handler : InterruptHandler {
         ushort pspSegment = _dosMemoryManager.PspSegment;
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET PSP ADDRESS {PspSegment}", ConvertUtils.ToHex16(pspSegment));
+            LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
+                ConvertUtils.ToHex16(pspSegment));
         }
     }
 
@@ -677,7 +719,8 @@ public class DosInt21Handler : InterruptHandler {
             // SET
             _isCtrlCFlag = State.DL == 1;
         } else {
-            throw new UnhandledOperationException(State, "Ctrl-C get/set operation unhandled: " + op);
+            throw new UnhandledOperationException(State,
+                "Ctrl-C get/set operation unhandled: " + op);
         }
     }
 
@@ -712,22 +755,27 @@ public class DosInt21Handler : InterruptHandler {
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error. BX is set to zero on error. <br/>
-    /// Possible error code in AX: 0x08 (Insufficient memory).
+    /// Possible error code in AX: 0x08 (Insufficient memory). <br/>
+    /// On success, AX is set to the new block segment.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
         ushort requestedSize = State.BX;
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}", requestedSize, blockSegment);
+            LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
+                requestedSize, blockSegment);
         }
-        SetCarryFlag(false, calledFromVm);
-        if (!_dosMemoryManager.ModifyBlock((ushort)(blockSegment - 1), requestedSize)) {
+        if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSize,
+            out DosMemoryControlBlock? modifiedBlock)) {
+            State.AX = modifiedBlock.UsableSpaceSegment;
+            SetCarryFlag(false, calledFromVm);
+        } else {
             LogDosError(calledFromVm);
             // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
             State.AX = 0x08;
-            State.BX = 0;
+            State.BX = requestedSize;
         }
     }
 
@@ -740,12 +788,12 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void MoveFilePointerUsingHandle(bool calledFromVm) {
-        byte originOfMove = State.AL;
+        SeekOrigin originOfMove = (SeekOrigin)State.AL;
         ushort fileHandle = State.BX;
         uint offset = (uint)(State.CX << 16 | State.DX);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", originOfMove, fileHandle,
-            offset);
+            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
+                originOfMove, fileHandle, offset);
         }
 
         DosFileOperationResult dosFileOperationResult =
@@ -762,14 +810,16 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void OpenFile(bool calledFromVm) {
-        string fileName = GetZeroTerminatedStringAtDsDx();
+        string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         byte rwAccessMode = (byte)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMod} (rwAccessMode:{RwAccessMode})", fileName, ConvertUtils.ToHex8(accessMode),
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMod} (rwAccessMode:{RwAccessMode})", 
+                fileName, ConvertUtils.ToHex8(accessMode),
                 ConvertUtils.ToHex8(rwAccessMode));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFile(fileName, rwAccessMode);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFile(
+            fileName, rwAccessMode);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -779,7 +829,7 @@ public class DosInt21Handler : InterruptHandler {
     public void PrintString() {
         ushort segment = State.DS;
         ushort offset = State.DX;
-        string str = GetDosString(Memory, segment, offset, '$');
+        string str = _dosStringDecoder.GetDosString(segment, offset, '$');
 
         _vgaFunctionality.WriteString(str);
 
@@ -812,11 +862,13 @@ public class DosInt21Handler : InterruptHandler {
         ushort fileHandle = State.BX;
         ushort readLength = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("READ FROM FILE handle {FileHandle} length {ReadLength} to {DsDx}", fileHandle, readLength,
+            LoggerService.Verbose("READ FROM FILE handle {FileHandle} length {ReadLength} to {DsDx}",
+                fileHandle, readLength,
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(fileHandle, readLength, targetMemory);
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(
+            fileHandle, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -848,13 +900,14 @@ public class DosInt21Handler : InterruptHandler {
         ushort offset = State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET DTA (DISK TRANSFER ADDRESS) DS:DX {DsDxSegmentOffset}",
-                ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
+                ConvertUtils.ToSegmentedAddressRepresentation(
+                    segment, offset));
         }
         _dosFileManager.SetDiskTransferAreaAddress(segment, offset);
     }
 
     /// <summary>
-    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table. <br/>
+    /// Sets a new interrupt vector from an existing one in the Interrupt Vector Table. <br/>
     /// Be sure to call <see cref="GetInterruptVector"/> first to get the current vector address. <br/>
     /// Params: <br/>
     /// - AL: Vector Number <br/>
@@ -865,15 +918,17 @@ public class DosInt21Handler : InterruptHandler {
         ushort segment = State.DS;
         ushort offset = State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SET INTERRUPT VECTOR FOR INT {VectorNumber} at address {SegmentOffset}", ConvertUtils.ToHex(vectorNumber),
-                ConvertUtils.ToSegmentedAddressRepresentation(segment, offset));
+            LoggerService.Verbose("SET INTERRUPT VECTOR FOR INT {VectorNumber} at address {SegmentOffset}",
+                ConvertUtils.ToHex(vectorNumber),
+                ConvertUtils.ToSegmentedAddressRepresentation(
+                    segment, offset));
         }
 
         SetInterruptVector(vectorNumber, segment, offset);
     }
 
     /// <summary>
-    /// Sets a new interrupt vector from an existing on in the Interrupt Vector Table.
+    /// Sets a new interrupt vector from an existing one in the Interrupt Vector Table.
     /// </summary>
     /// <param name="vectorNumber">The vector number the new vector will answer to.</param>
     /// <param name="segment">The address of the new interrupt vector, segment part.</param>
@@ -890,26 +945,19 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the called was called by the emulator.</param>
-    public void WriteFileUsingHandle(bool calledFromVm) {
+    public void WriteToFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort writeLength = State.CX;
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("WRITE TO FILE handle {FileHandle} length {WriteLength} from {DsDx}", ConvertUtils.ToHex(fileHandle),
-                ConvertUtils.ToHex(writeLength), ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+            LoggerService.Verbose("WRITE TO FILE handle {FileHandle} length {WriteLength} from {DsDx}",
+                ConvertUtils.ToHex(fileHandle),
+                ConvertUtils.ToHex(writeLength),
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.WriteFileUsingHandle(fileHandle, writeLength, bufferAddress);
+            _dosFileManager.WriteToFileOrDevice(fileHandle, writeLength, bufferAddress);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-    }
-
-    private string ConvertSingleDosChar(byte characterByte) {
-        ReadOnlySpan<byte> sourceAsArray = stackalloc byte[] {characterByte};
-        return _cp850CharSet.GetString(sourceAsArray);
-    }
-
-    private string ConvertDosChars(IEnumerable<byte> characterBytes) {
-        return _cp850CharSet.GetString(characterBytes.ToArray());
     }
 
     /// <summary>
@@ -931,35 +979,15 @@ public class DosInt21Handler : InterruptHandler {
         DosFileOperationResult result = _dosFileManager.GetCurrentDir(State.DL, out string currentDir);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}: {CurrentDpsDirectory}",
-                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.SI), currentDir);
+                ConvertUtils.ToSegmentedAddressRepresentation(
+                    State.DS, State.SI), currentDir);
         }
         Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
-        SetCarryFlag(false, calledFromVm);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
-        if(!result.IsError) {
+        if (!result.IsError) {
             State.AX = 0x0100;
         }
         SetStateFromDosFileOperationResult(calledFromVm, result);
-    }
-
-    /// <summary>
-    /// Gets a string from the memory at the given segment and offset, until the given end character is found.
-    /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="segment">The segment part of the start address.</param>
-    /// <param name="offset">The offset part of the start address.</param>
-    /// <param name="end">The end character. Usually zero.</param>
-    /// <returns>The string from memory.</returns>
-    public string GetDosString(IMemory memory, ushort segment, ushort offset, char end) {
-        uint stringStart = MemoryUtils.ToPhysicalAddress(segment, offset);
-        StringBuilder stringBuilder = new();
-        List<byte> sourceArray = new();
-        while (memory.UInt8[stringStart] != end) {
-            sourceArray.Add(memory.UInt8[stringStart++]);
-        }
-        string convertedString = ConvertDosChars(sourceArray);
-        stringBuilder.Append(convertedString);
-        return stringBuilder.ToString();
     }
 
     /// <summary>
@@ -975,7 +1003,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
-        string dosFileName = GetZeroTerminatedStringAtDsDx();
+        string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
@@ -999,7 +1027,8 @@ public class DosInt21Handler : InterruptHandler {
             case 1: {
                     ushort attribute = State.CX;
                     if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("SET FILE ATTRIBUTE {FileName}, {Attribute}", fileName, attribute);
+                        LoggerService.Verbose("SET FILE ATTRIBUTE {FileName}, {Attribute}",
+                            fileName, attribute);
                     }
                     break;
                 }
@@ -1008,62 +1037,24 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets a zero terminated string from the memory at DS:DX.
-    /// </summary>
-    /// <returns>The string from memory.</returns>
-    public string GetZeroTerminatedStringAtDsDx() {
-        return GetDosString(Memory, State.DS, State.DX, '\0');
-    }
-
-    /// <summary>
-    /// Provides three operations: get device information, set device information, and get logical drive for physical drive. <br/>
+    /// Provides MS-DOS drivers based IOCTL operations, such as: get device information, set device information, get logical drive for physical drive... <br/>
     /// <para>
     /// AL = 0: Get device information from the device handle in BX. Returns result in DX. TODO: Implement it entirely. <br/>
     /// AL = 1: Set device information. Does nothing. TODO: Implement it. <br/>
-    /// AL = 0xE: Get logical drive for physical drive. Always returns 0 in AL for only one drive. TODO: Update it once we mount more than just C: ! <br/> <br/>
+    /// AL = 0xE: Get logical drive for physical drive. Always returns 0 in AL for only one drive.
     /// </para>
     /// </summary>
+    /// <remarks>
+    ///  TODO: Update it once we mount more than just C: !
+    ///  </remarks>
     /// <returns>
     /// Always indicates success by clearing the carry flag.
     /// </returns>
     /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
     /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
     public void IoControl(bool calledFromVm) {
-        byte op = State.AL;
-        ushort handle = State.BX;
-
-        SetCarryFlag(false, calledFromVm);
-
-        switch (op) {
-            case 0: {
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("GET DEVICE INFORMATION for handle {Handle}", handle);
-                    }
-
-                    if (handle < _devices.Count) {
-                        IVirtualDevice device = _devices[handle];
-                        // @TODO: use the device and it's attributes to fill the response
-                    }
-                    State.DX = handle < _devices.Count ? (ushort)0x80D3 : (ushort)0x0002;
-                    break;
-                }
-            case 1: {
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("SET DEVICE INFORMATION for handle {Handle} (unimplemented)", handle);
-                    }
-                    break;
-                }
-            case 0xE: {
-                    ushort driveNumber = State.BL;
-                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        LoggerService.Verbose("GET LOGICAL DRIVE FOR PHYSICAL DRIVE {DriveNumber}", driveNumber);
-                    }
-                    // Only one drive
-                    State.AL = 0;
-                    break;
-                }
-            default: throw new UnhandledOperationException(State, $"IO Control operation unhandled: {op}");
-        }
+        DosFileOperationResult result = _dosFileManager.IoControl(State);
+        SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
     private void LogDosError(bool calledFromVm) {
@@ -1072,11 +1063,15 @@ public class DosInt21Handler : InterruptHandler {
             returnMessage = $"Int will return to {FunctionHandlerProvider.FunctionHandlerInUse.PeekReturn()}. ";
         }
         if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}", returnMessage, State.ToString());
+            LoggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}",
+                returnMessage, State.ToString());
         }
     }
 
-    private void SetStateFromDosFileOperationResult(bool calledFromVm, DosFileOperationResult dosFileOperationResult) {
+
+    //TODO: use this instead of global DOS error code.
+    private void SetStateFromDosFileOperationResult(bool calledFromVm,
+        DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);

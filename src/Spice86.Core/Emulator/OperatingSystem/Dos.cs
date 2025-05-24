@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -26,8 +27,13 @@ public class Dos {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
+
+    /// <summary>
+    /// Gets or sets the last DOS error code.
+    /// </summary>
+    public ErrorCode ErrorCode { get; set; }
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -109,24 +115,29 @@ public class Dos {
     /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
+        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath,
+        bool initializeDos, bool enableEms, IDictionary<string, string> envVars,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
+        _keyboardInt16Handler = keyboardInt16Handler;
         _memory = memory;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
-        AddDefaultDevices();
+        VirtualFileBase[] dosDevices = AddDefaultDevices();
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+        DosStringDecoder dosStringDecoder = new(memory, state);
+
+        FileManager = new DosFileManager(_memory, dosStringDecoder, cDriveFolderPath, executablePath,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, _vgaFunctionality, this,
-            dosSwappableDataArea,
+            dosSwappableDataArea, dosStringDecoder,
             _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
@@ -139,7 +150,7 @@ public class Dos {
             return;
         }
 
-        OpenDefaultFileHandles();
+        OpenDefaultFileHandles(dosDevices);
 
         if (enableEms) {
             Ems = new(_memory, functionHandlerProvider, stack, state, this, _loggerService);
@@ -150,28 +161,24 @@ public class Dos {
         }
     }
 
-    private void OpenDefaultFileHandles() {
-        if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
-            FileManager.OpenDevice(con, "r", "STDIN");
-            FileManager.OpenDevice(con, "w", "STDOUT");
-            FileManager.OpenDevice(con, "w", "STDERR");
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
-            FileManager.OpenDevice(aux, "rw", "STDAUX");
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
-            FileManager.OpenDevice(prn, "w", "STDPRN");
+    private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
+        foreach (VirtualFileBase fileDevice in fileDevices) {
+            FileManager.OpenDevice(fileDevice);
         }
     }
 
-    private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
-        AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
+    private VirtualFileBase[] AddDefaultDevices() {
+        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
+        AddDevice(nulDevice);
+        var consoleDevice = new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
+            _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
+        AddDevice(consoleDevice);
+        var printerDevice = new PrinterDevice(_loggerService, this);
+        AddDevice(printerDevice);
+        var auxDevice = new AuxDevice(_loggerService);
+        AddDevice(auxDevice);
+        AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
+        return [nulDevice, consoleDevice, printerDevice];
     }
 
     /// <summary>
@@ -197,11 +204,10 @@ public class Dos {
         _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
-            var characterDevice = (CharacterDevice)device;
+            var characterDevice = (VirtualDeviceBase)device;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
                 Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
-        } else {
-            var blockDevice = (BlockDevice)device;
+        } else if(device is BlockDevice blockDevice) {
             _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
             index++;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
