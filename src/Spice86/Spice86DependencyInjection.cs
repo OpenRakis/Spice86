@@ -272,6 +272,8 @@ public class Spice86DependencyInjection : IDisposable {
                     configuration.InitializeDOS is not false, loggerService);
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
                     state, loggerService, timerInt8Handler);
+        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
+            functionHandlerProvider, stack, state, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -413,7 +415,7 @@ public class Spice86DependencyInjection : IDisposable {
             state, memory, dualPic, callbackHandler, interruptVectorTable,
             stack, functionCatalogue, functionHandlerProvider, timerInt8Handler,
             vgaBios, biosEquipmentDeterminationInt11Handler, systemBiosInt12Handler,
-            systemBiosInt15Handler, systemClockInt1AHandler,
+            systemBiosInt15Handler, systemClockInt1AHandler, systemBiosInt13Handler,
             biosKeyboardInt9Handler, mouseDriver, keyboardInt16Handler, dos);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -487,6 +489,7 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt12Handler systemBiosInt12Handler,
         SystemBiosInt15Handler systemBiosInt15Handler,
         SystemClockInt1AHandler systemClockInt1AHandler,
+        SystemBiosInt13Handler systemBiosInt13Handler,
         BiosKeyboardInt9Handler biosKeyboardInt9Handler,
         MouseDriver mouseDriver, KeyboardInt16Handler keyboardInt16Handler,
         Dos dos) {
@@ -512,6 +515,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
+            interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
