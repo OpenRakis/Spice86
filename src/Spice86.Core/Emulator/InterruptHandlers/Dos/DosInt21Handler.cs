@@ -321,7 +321,9 @@ public class DosInt21Handler : InterruptHandler {
         LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
         SetCarryFlag(false, calledFromVm);
         DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSize);
-        if (res == null) {
+        if (res != null) {
+            State.AX = res.UsableSpaceSegment;
+        } else {
             LogDosError(calledFromVm);
             // did not find something good, error
             SetCarryFlag(true, calledFromVm);
@@ -329,9 +331,7 @@ public class DosInt21Handler : InterruptHandler {
             // INSUFFICIENT MEMORY
             State.AX = 0x08;
             State.BX = largest.Size;
-            return;
         }
-        State.AX = res.UsableSpaceSegment;
     }
 
     /// <summary>
