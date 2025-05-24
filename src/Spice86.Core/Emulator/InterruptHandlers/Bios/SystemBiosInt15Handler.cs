@@ -23,7 +23,10 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public SystemBiosInt15Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, A20Gate a20Gate, bool initializeResetVector, ILoggerService loggerService)
+    public SystemBiosInt15Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack,
+        State state, A20Gate a20Gate, bool initializeResetVector,
+        ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         if (initializeResetVector) {
@@ -85,7 +88,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
             default:
                 if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("Unrecognized command in AL for {MethodName}", nameof(ToggleA20GateOrGetStatus));
+                    LoggerService.Error("Unrecognized command in AL for {MethodName}", 
+                        nameof(ToggleA20GateOrGetStatus));
                 }
                 break;
         }
