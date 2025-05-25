@@ -5,6 +5,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -67,6 +68,39 @@ public class DosFileManager {
         _dosPathResolver = new(cDriveFolderPath, executablePath);
         _memory = memory;
         _dosVirtualDevices = dosVirtualDevices;
+    }
+
+    /// <summary>
+    /// Gets the standard input, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdin"/> attribute.
+    /// </summary>
+    /// <returns>The standard input device, or <c>null</c> if not found.</returns>
+    public bool TryGetStandardInput([NotNullWhen(true)] out CharacterDevice? device) {
+        bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdin, out device);
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the standard output, which is the first open character device with the <see cref="DeviceAttributes.CurrentStdout"/> attribute.
+    /// </summary>
+    /// <returns>The standard output device, or <c>null</c> if not found.</returns>
+    public bool TryGetStandardOutput([NotNullWhen(true)] out CharacterDevice? device) {
+        bool result = TryGetOpenDeviceWithAttributes<CharacterDevice>(DeviceAttributes.CurrentStdout, out device);
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the device file handle of the first open character device with the specified attributes.
+    /// </summary>
+    /// <param name="attributes">The device attributes, such as <see cref="DeviceAttributes.CurrentStdin"/>. <br/>
+    /// There can be several.</param>
+    /// <param name="device">The DOS device if found, or <c>null</c> if not found.</param>
+    /// <returns>Whether the DOS Device was found.</returns>
+    public bool TryGetOpenDeviceWithAttributes<T>(DeviceAttributes attributes,
+        [NotNullWhen(true)] out T? device) where T : IVirtualDevice {
+        device = OpenFiles.OfType<T>().FirstOrDefault(x => x is
+            CharacterDevice device &&
+            device.Attributes.HasFlag(attributes));
+        return device is not null;
     }
 
     /// <summary>
@@ -884,6 +918,7 @@ public class DosFileManager {
                 }
                 break;
             case 0x02:      /* Read from Device Control Channel */
+                //TODO: if it is the PrinterDevice, check for CanRead => false => return ErrorCode.AccessDenied
                 throw new NotImplementedException("IOCTL: Read from Device Control Channel");
             case 0x03:      /* Write to Device Control Channel */
                 //if (Files[handle]->GetInformation() & 0xc000) {
@@ -942,7 +977,7 @@ public class DosFileManager {
             //}
             //return true;
             case 0x09:      /* Check if block device remote */
-                throw new NotImplementedException("IOCTL: Check if block device remot");
+                throw new NotImplementedException("IOCTL: Check if block device remote");
             //if ((drive >= 2) && Drives[drive]->IsRemote()) {
             //	reg_dx=0x1000;	// device is remote
             //	// undocumented bits always clear
@@ -1017,7 +1052,7 @@ public class DosFileManager {
             case 0x0E:          /* Get Logical Drive Map */
                 /* TODO: We only have C:, so only 1 logical drive assigned! */
                 if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("Get logical drive map: returns C: only hard drive!");
+                    _loggerService.Warning("Get logical drive map: returns only the C: hard drive!");
                 }
                 state.AL = 0x0;
                 state.AH = 0x07;
