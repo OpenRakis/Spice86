@@ -44,7 +44,7 @@ public class ConsoleDevice : CharacterDevice {
 
     public override bool CanSeek => _screenStream.CanSeek;
 
-    public override bool CanRead => HasInput;
+    public override bool CanRead => true;
 
     public override bool CanWrite => _screenStream.CanWrite;
 

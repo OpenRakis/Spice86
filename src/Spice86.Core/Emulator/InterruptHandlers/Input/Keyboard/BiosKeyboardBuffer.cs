@@ -81,6 +81,15 @@ public class BiosKeyboardBuffer {
     }
 
     /// <summary>
+    /// Flushes the buffer, resetting the head and tail addresses to the start of the buffer.
+    /// </summary>
+    public void Flush() {
+        // Reset the head and tail addresses to the start of the buffer
+        HeadAddress = StartAddress;
+        TailAddress = StartAddress;
+    }
+
+    /// <summary>
     /// Dequeues the most recent key code from the buffer
     /// </summary>
     /// <returns>the keycode or null if buffer was empty</returns>

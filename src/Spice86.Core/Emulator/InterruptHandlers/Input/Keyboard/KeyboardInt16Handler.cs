@@ -87,6 +87,13 @@ public class KeyboardInt16Handler : InterruptHandler {
         return _biosKeyboardBuffer.DequeueKeyCode();
     }
 
+    /// <summary>
+    /// Tells the BIOS keyboard buffer to flush its contents, setting the head and tail addresses to the start of the buffer.
+    /// </summary>
+    public void FlushKeyboardBuffer() {
+        _biosKeyboardBuffer.Flush();
+    }
+
     /// <inheritdoc/>
     public override void Run() {
         byte operation = State.AH;

@@ -3,7 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
@@ -18,26 +17,25 @@ using Spice86.Shared.Utils;
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-
+    private const int CarriageReturn = 13;
+    private const int BackSpace = 8;
+    private const int LineFeed = 10;
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
-    private bool _isCtrlCFlag;
-
-    private StringBuilder _displayOutputBuilder = new();
     private readonly DosFileManager _dosFileManager;
-    private readonly List<IVirtualDevice> _devices;
-    private readonly Dos _dos;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
-    private readonly IVgaFunctionality _vgaFunctionality;
     private readonly DosSwappableDataArea _dosSwappableDataArea;
     private readonly DosStringDecoder _dosStringDecoder;
+    private readonly CountryInfo _countryInfo;
+
+    private byte _lastDisplayOutputCharacter = 0x0;
+    private bool _isCtrlCFlag;
 
     /// <summary>
     /// Initializes a new instance.
@@ -47,25 +45,25 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
-    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="dos">The DOS kernel.</param>
+    /// <param name="countryInfo">The DOS kernel's global region settings.</param>
     /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
+    /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
+    /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
+    /// <param name="dosFileManager">The DOS class responsible for file and device-as-file access.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, Dos dos,
+        KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosSwappableDataArea dosSwappableDataArea, DosStringDecoder dosStringDecoder,
+        DosMemoryManager dosMemoryManager, DosFileManager dosFileManager,
         ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosSwappableDataArea = dosSwappableDataArea;
+        _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
-        _dos = dos;
-        _vgaFunctionality = vgaFunctionality;
         _keyboardInt16Handler = keyboardInt16Handler;
-        _dosMemoryManager = dos.MemoryManager;
-        _dosFileManager = dos.FileManager;
-        _devices = dos.Devices;
+        _dosMemoryManager = dosMemoryManager;
+        _dosFileManager = dosFileManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
@@ -80,6 +78,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x07, DirectStandardInputWithoutEcho);
         AddAction(0x08, DirectStandardInputWithoutEcho);
         AddAction(0x09, PrintString);
+        AddAction(0x0A, BufferedInput);
         AddAction(0x0B, CheckStandardInputStatus);
         AddAction(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction);
         AddAction(0x0D, DiskReset);
@@ -139,14 +138,13 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Reads a character from the standard auxiliary device (usually the keyboard) and stores it in AL.
     /// </summary>
+    /// <remarks>
+    /// Standard AUX is usually the first serial port (COM1). <br/>
+    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// </remarks>
     public void ReadCharacterFromStdAux() {
-        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
-            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
-        if (aux is not CharacterDevice stdAux) {
-            return;
-        }
-
-        if (aux.CanRead) {
+        if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
+            out AuxDevice? aux) && aux.CanRead is true) {
             State.AL = (byte)aux.ReadByte();
         } else {
             State.AL = 0x0;
@@ -156,29 +154,30 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Writes a character from the AL register to the standard auxiliary device.
     /// </summary>
+    /// <remarks>
+    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// </remarks>
     public void WriteCharacterToStdAux() {
-        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
-            .FirstOrDefault(x => x is CharacterDevice { Name: "AUX" });
-        if (aux is not CharacterDevice stdAux) {
-            return;
-        }
-
-        if (stdAux.CanWrite) {
-            stdAux.WriteByte(State.AL);
+        if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
+            out AuxDevice? aux) && aux.CanWrite is true) {
+            aux.WriteByte(State.AL);
         }
     }
 
     /// <summary>
     /// Writes a character from the AL register to the printer device.
     /// </summary>
+    /// <remarks>
+    /// Standard printer is usually the first parallel port (LPT1), but may be redirected, as usual with any device in DOS 2+. <br/>
+    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens. <br/>
+    /// TODO: If the printer is busy, this function will wait. <br/>
+    /// </remarks>
     public void PrinterOutput() {
-        CharacterDevice? aux = _dos.Devices.OfType<CharacterDevice>()
-            .FirstOrDefault(x => x is CharacterDevice { Name: "PRN" });
-        if (aux is not CharacterDevice stdAux) {
-            return;
-        }
-        if (stdAux.CanWrite) {
-            stdAux.Write(State.AL);
+        if (_dosFileManager.TryGetOpenDeviceWithAttributes(DeviceAttributes.Character,
+            out PrinterDevice? prn) && prn.CanWrite is true) {
+            prn.Write(State.AL);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("DOS INT21H PrinterOutput: Cannot write to printer device.");
         }
     }
 
@@ -186,13 +185,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
     /// </summary>
     public void CheckStandardInputStatus() {
-        CharacterDevice device = _dos.CurrentConsoleDevice;
-        if (!device.Attributes.HasFlag(DeviceAttributes.Character | DeviceAttributes.CurrentStdin)) {
-            State.AL = 0x0;
-            return;
-        }
-
-        if (device.CanRead) {
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? device) &&
+            device?.CanRead is true) {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
@@ -203,20 +197,14 @@ public class DosInt21Handler : InterruptHandler {
     /// Copies a character from the standard input to _state.AL, without echo on the standard output.
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
-        CharacterDevice device = _dos.CurrentConsoleDevice;
-        if (!device.Attributes.HasFlag(
-                DeviceAttributes.Character |
-                DeviceAttributes.CurrentStdin)) {
-            State.AL = 0x0;
-            return;
-        }
-
-        if (device.CanRead) {
-            var input = device.ReadByte();
-            if (input == -1) {
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
+            stdIn?.CanRead is true) {
+            byte[] bytes = new byte[1];
+            var readCount = stdIn.Read(bytes, 0, 1);
+            if (readCount < 1) {
                 State.AL = 0;
             } else {
-                State.AL = (byte)input;
+                State.AL = bytes[0];
             }
         } else {
             State.AL = 0;
@@ -294,7 +282,7 @@ public class DosInt21Handler : InterruptHandler {
         switch (State.AL) {
             case 0: //Get country specific information
                 uint dest = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-                Memory.LoadData(dest, BitConverter.GetBytes((ushort)_dos.CurrentCountryId));
+                Memory.LoadData(dest, BitConverter.GetBytes((ushort)_countryInfo.Country));
                 State.AX = (ushort)(State.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;
@@ -357,6 +345,10 @@ public class DosInt21Handler : InterruptHandler {
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
         LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
+        if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
+            _keyboardInt16Handler.FlushKeyboardBuffer();
+            return;
+        }
         Run(operation);
     }
 
@@ -398,10 +390,69 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Performs an IO control operation. <br/>
-    /// TODO: Read from STDIN is not implemented.
-    /// TODO: Print to STDOUT only prints to the log, not to the standard output.
+    /// Implements the INT21H function 0x3D, which reads standard input DOS Device and outputs it to the standard output DOS Device. <br/>
     /// </summary>
+    /// <remarks>
+    /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// </remarks>
+    public void BufferedInput() {
+        uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        DosInputBuffer inputBufferHolder = new DosInputBuffer(Memory, address);
+        int readCount = 0;
+        if (inputBufferHolder.Length < 1 ||
+            !_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
+            !_dosFileManager.TryGetStandardOutput(out CharacterDevice? standardOutput)) {
+            return;
+        }
+        inputBufferHolder.Characters = string.Empty;
+
+        while (standardInput.CanRead) {
+            byte[] inputBuffer = new byte[1];
+            if(standardInput.CanRead) {
+                readCount = standardInput.Read(inputBuffer, 0, 1);
+            }
+            if (readCount < 1) {
+                break; // No input available, exit the loop.
+            }
+            byte c = inputBuffer[0];
+            if (c == LineFeed) {
+                continue;
+            }
+
+            if (c == BackSpace) {
+                if (readCount != 0) { //Something to backspace.
+                    // STDOUT treats backspace as non-destructive.
+                    standardOutput.Write(c);
+                    c = Encoding.ASCII.GetBytes(" ")[0];
+                    standardOutput.Write(c);
+                    c = BackSpace;
+                    standardOutput.Write(c);
+                    --readCount;
+                }
+                continue;
+            }
+            if (readCount == inputBufferHolder.Length && c != CarriageReturn) { //input buffer full and not CR
+                const byte bell = 7;
+                standardOutput.Write(bell);
+                continue;
+            }
+            if(standardOutput.CanWrite) {
+                standardOutput.Write(c);
+            }
+            inputBufferHolder.Characters += c;
+            if (c == CarriageReturn) {
+                break;
+            }
+        }
+        inputBufferHolder.ReadCount = (byte)(readCount < 0 ? 0 : (byte)readCount);
+    }
+
+    /// <summary>
+    /// Performs an IO control operation. <br/>
+    /// </summary>
+    /// <remarks>
+    /// Does not check fpr Ctrl-C or Ctrl-Break <br/>
+    /// </remarks>
     /// <returns>
     /// If there is no keycode pending in the keyboard controller buffer, ZF is cleared and AL is set to 0. <br/>
     /// Otherwise, the Zero flag is cleared and the keycode is in AL.
@@ -410,23 +461,38 @@ public class DosInt21Handler : InterruptHandler {
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
-            LoggerService.Debug("DIRECT CONSOLE IO, INPUT REQUESTED");
-            // Read from STDIN, not implemented, return no character ready
-            ushort? scancode = _keyboardInt16Handler.GetNextKeyCode();
-            if (scancode == null) {
+            if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
+            }
+            if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
+                && stdIn.CanRead) {
+                byte[] bytes = new byte[1];
+                var readCount = stdIn.Read(bytes, 0, 1);
+                if (readCount < 1) {
+                    // No input available, set AL to 0 and ZF to 1.
+                    SetZeroFlag(true, calledFromVm);
+                    State.AL = 0;
+                    return;
+                }
+                SetZeroFlag(false, calledFromVm);
+                State.AL = bytes[0];
+            } else {
                 SetZeroFlag(true, calledFromVm);
                 State.AL = 0;
-            } else {
-                byte ascii = (byte)scancode.Value;
-                SetZeroFlag(false, calledFromVm);
-                State.AL = ascii;
             }
         } else {
             // Output
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                LoggerService.Verbose("DIRECT CONSOLE IO, {Character}, {Ascii}",
+                LoggerService.Verbose("DOS INT21H DirectConsoleIo, OUTPUT REQUESTED: {Character}, {Ascii}",
                     character, ConvertUtils.ToChar(character));
             }
+            if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
+                && stdOut.CanWrite) {
+                stdOut.Write(character);
+            } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("DOS INT21H DirectConsoleIo: Cannot write to standard output device.");
+            }
+
         }
     }
 
@@ -440,9 +506,14 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Puts the character in DL in the internal string buffer named _displayOutputBuilder.<br/>
-    /// TODO: This is only a stub that prints nothing on screen.
+    /// Writes the character from the DL register to the standard output device. <br/>
     /// </summary>
+    /// <returns>
+    /// The last character output in the AL register, despite the docs saying that nothing is returned. <br/>
+    /// </returns>
+    /// <remarks>
+    /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// </remarks>
     public void DisplayOutput() {
         byte characterByte = State.DL;
         string character = _dosStringDecoder.ConvertSingleDosChar(characterByte);
@@ -450,14 +521,15 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("PRINT CHR: {CharacterByte} ({Character})",
                 ConvertUtils.ToHex8(characterByte), character);
         }
-        if (characterByte == '\r') {
-            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                LoggerService.Verbose("PRINT CHR LINE BREAK: {DisplayOutputBuilder}", _displayOutputBuilder);
-            }
-            _displayOutputBuilder = new StringBuilder();
-        } else if (characterByte != '\n') {
-            _displayOutputBuilder.Append(character);
+        if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut) &&
+            stdOut.CanWrite) {
+            // Write to the standard output device
+            stdOut.Write(characterByte);
+        } else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
         }
+        State.AL = _lastDisplayOutputCharacter;
+        _lastDisplayOutputCharacter = characterByte;
     }
 
     /// <summary>
@@ -824,17 +896,22 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Prints a dollar terminated string pointed by DS:DX to the screen at the current cursor position and page.
+    /// Prints a dollar terminated string pointed by DS:DX to the standard output.
     /// </summary>
     public void PrintString() {
         ushort segment = State.DS;
         ushort offset = State.DX;
         string str = _dosStringDecoder.GetDosString(segment, offset, '$');
 
-        _vgaFunctionality.WriteString(str);
-
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("PRINT STRING: {String}", str);
+        }
+        if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
+            && stdOut.CanWrite) {
+            // Write to the standard output device
+            stdOut.Write(Encoding.ASCII.GetBytes(str));
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("DOS INT21H PrintString: Cannot write to standard output device.");
         }
     }
 
@@ -1068,8 +1145,6 @@ public class DosInt21Handler : InterruptHandler {
         }
     }
 
-
-    //TODO: use this instead of global DOS error code.
     private void SetStateFromDosFileOperationResult(bool calledFromVm,
         DosFileOperationResult dosFileOperationResult) {
         if (dosFileOperationResult.IsError) {

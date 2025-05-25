@@ -3,8 +3,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -31,11 +29,6 @@ public class Dos {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
 
     /// <summary>
-    /// Gets or sets the last DOS error code.
-    /// </summary>
-    public ErrorCode ErrorCode { get; set; }
-
-    /// <summary>
     /// Gets the INT 20h DOS services.
     /// </summary>
     public DosInt20Handler DosInt20Handler { get; }
@@ -54,11 +47,6 @@ public class Dos {
     /// Gets the INT 28h DOS services.
     /// </summary>
     public DosInt28Handler DosInt28Handler { get; }
-
-    /// <summary>
-    /// Gets the country ID from the CountryInfo table
-    /// </summary>
-    public byte CurrentCountryId => CountryInfo.Country;
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -136,9 +124,9 @@ public class Dos {
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, _vgaFunctionality, this,
+            keyboardInt16Handler, CountryInfo,
             dosSwappableDataArea, dosStringDecoder,
-            _loggerService);
+            MemoryManager, FileManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
@@ -173,7 +161,7 @@ public class Dos {
         var consoleDevice = new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
             _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
-        var printerDevice = new PrinterDevice(_loggerService, this);
+        var printerDevice = new PrinterDevice(_loggerService);
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
