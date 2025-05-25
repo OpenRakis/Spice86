@@ -451,7 +451,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Performs an IO control operation. <br/>
     /// </summary>
     /// <remarks>
-    /// Does not check fpr Ctrl-C or Ctrl-Break <br/>
+    /// Does not check for Ctrl-C or Ctrl-Break <br/>
     /// </remarks>
     /// <returns>
     /// On output, returns the character in AL, despite the docs saying that nothing is returned. <br/>
