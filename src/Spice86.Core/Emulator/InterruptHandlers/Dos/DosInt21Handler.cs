@@ -454,6 +454,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Does not check fpr Ctrl-C or Ctrl-Break <br/>
     /// </remarks>
     /// <returns>
+    /// On output, returns the character in AL, despite the docs saying that nothing is returned. <br/>
+    /// On input, AL is set to 0 when no input is available, despite this being not documented. <br/>
     /// If there is no keycode pending in the keyboard controller buffer, ZF is cleared and AL is set to 0. <br/>
     /// Otherwise, the Zero flag is cleared and the keycode is in AL.
     /// </returns>
@@ -489,6 +491,7 @@ public class DosInt21Handler : InterruptHandler {
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
                 stdOut.Write(character);
+                State.AL = character;
             } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("DOS INT21H DirectConsoleIo: Cannot write to standard output device.");
             }
