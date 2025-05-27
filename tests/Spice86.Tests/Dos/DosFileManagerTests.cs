@@ -190,8 +190,10 @@ public class DosFileManagerTests {
         VgaCard vgaCard = new(null, vgaRenderer, loggerService);
         Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
             null, configuration.FailOnUnhandledPort);
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack, state, dualPic, keyboard, biosDataArea, loggerService);
+            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
+            state, dualPic, keyboard, biosDataArea, biosKeyboardBuffer, loggerService);
         Mouse mouse = new Mouse(state, dualPic, null, configuration.Mouse, loggerService,
             configuration.FailOnUnhandledPort);
 
@@ -201,7 +203,9 @@ public class DosFileManagerTests {
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
+            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
+            vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);

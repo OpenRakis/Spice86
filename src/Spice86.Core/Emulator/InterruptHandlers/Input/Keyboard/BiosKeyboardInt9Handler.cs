@@ -26,12 +26,16 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="keyboard">The keyboard controller.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values.</param>
+    /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public BiosKeyboardInt9Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public BiosKeyboardInt9Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack,
+        State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea,
+        BiosKeyboardBuffer biosKeyboardBuffer, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _keyboard = keyboard;
         _dualPic = dualPic;
-        BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        BiosKeyboardBuffer = biosKeyboardBuffer;
         BiosKeyboardBuffer.Init();
     }
 

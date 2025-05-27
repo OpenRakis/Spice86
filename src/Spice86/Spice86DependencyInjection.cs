@@ -322,9 +322,10 @@ public class Spice86DependencyInjection : IDisposable {
 
         Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
                     mainWindowViewModel, configuration.FailOnUnhandledPort);
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
             functionHandlerProvider, stack, state, dualPic, keyboard,
-            biosDataArea, loggerService);
+            biosDataArea, biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, dualPic, mainWindowViewModel,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(cpu, memory, mouse, mainWindowViewModel,
@@ -358,13 +359,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Sound devices created...");
         }
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, vgaFunctionality, configuration.CDrive,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, biosKeyboardBuffer,
+            keyboardInt16Handler, biosDataArea, vgaFunctionality, configuration.CDrive,
             configuration.Exe,
             configuration.InitializeDOS is not false,
             configuration.Ems,
-            new Dictionary<string, string> { { "BLASTER",
-                    soundBlaster.BlasterString } },
+            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
