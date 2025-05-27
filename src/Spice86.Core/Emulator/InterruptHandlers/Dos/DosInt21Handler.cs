@@ -185,8 +185,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Returns 0xFF in AL if input character is available in the standard input, 0 otherwise.
     /// </summary>
     public void CheckStandardInputStatus() {
-        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? device) &&
-            device?.CanRead is true) {
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
+            stdIn.CanRead) {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
@@ -198,7 +198,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
         if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
-            stdIn?.CanRead is true) {
+            stdIn.CanRead) {
             byte[] bytes = new byte[1];
             var readCount = stdIn.Read(bytes, 0, 1);
             if (readCount < 1) {
@@ -406,7 +406,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         inputBufferHolder.Characters = string.Empty;
 
-        while (standardInput.CanRead) {
+        for (; ;) {
             byte[] inputBuffer = new byte[1];
             if(standardInput.CanRead) {
                 readCount = standardInput.Read(inputBuffer, 0, 1);

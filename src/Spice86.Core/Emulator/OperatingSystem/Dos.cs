@@ -22,11 +22,12 @@ using System.Text;
 /// </summary>
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
+    private readonly BiosDataArea _biosDataArea;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
-    private readonly KeyboardInt16Handler _keyboardInt16Handler;
+    private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -100,17 +101,21 @@ public class Dos {
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
+    /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
+    /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
+        Stack stack, State state, BiosKeyboardBuffer biosKeyboardBuffer,
+        KeyboardInt16Handler keyboardInt16Handler, BiosDataArea biosDataArea,
         IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath,
         bool initializeDos, bool enableEms, IDictionary<string, string> envVars,
         ILoggerService loggerService) {
         _loggerService = loggerService;
-        _keyboardInt16Handler = keyboardInt16Handler;
+        _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
+        _biosDataArea = biosDataArea;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
         VirtualFileBase[] dosDevices = AddDefaultDevices();
@@ -158,8 +163,9 @@ public class Dos {
     private VirtualFileBase[] AddDefaultDevices() {
         var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
         AddDevice(nulDevice);
-        var consoleDevice = new ConsoleDevice(_loggerService, _state, _vgaFunctionality,
-            _keyboardInt16Handler, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
+        var consoleDevice = new ConsoleDevice(_loggerService, _state, _biosDataArea,
+            _vgaFunctionality, _biosKeyboardBuffer,
+            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService);
         AddDevice(printerDevice);
