@@ -178,7 +178,7 @@ public class Dos {
     /// <summary>
     /// Add a device to memory so that the information can be read by both DOS and programs.
     /// </summary>
-    /// <param name="device">The character or block device to add</param>
+    /// <param name="device">The DOS Device driver to add.</param>
     /// <param name="segment">The segment part of the segmented address for the DOS device header.</param>
     /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
