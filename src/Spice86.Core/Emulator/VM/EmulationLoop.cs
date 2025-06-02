@@ -1,15 +1,15 @@
 namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
-using Spice86.Shared.Diagnostics;
-using System.Diagnostics;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Runs the emulation loop in a dedicated thread. <br/>
