@@ -36,6 +36,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <summary>
     /// Returns in the AX register the pending key code.
     /// </summary>
+    /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
     public void GetKeystroke() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
