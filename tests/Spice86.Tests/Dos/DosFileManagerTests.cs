@@ -31,8 +31,8 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Logging;
 using Spice86.Shared.Interfaces;
-using Spice86.ViewModels;
 
 using Xunit;
 
@@ -144,13 +144,6 @@ public class DosFileManagerTests {
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
-        Joystick joystick = new Joystick(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
-        VideoState videoState = new();
-        VgaIoPortHandler videoInt10Handler = new(state, ioPortDispatcher, loggerService, videoState,
-            configuration.FailOnUnhandledPort);
-        Renderer vgaRenderer = new(memory, videoState);
-
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         Midi midiDevice = new Midi(configuration, softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -163,47 +156,26 @@ public class DosFileManagerTests {
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
 
-        GravisUltraSound gravisUltraSound =
-            new GravisUltraSound(state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
-
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory, interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
-        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack, state, vgaFunctionality, biosDataArea, loggerService);
 
-        BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler =
-            new BiosEquipmentDeterminationInt11Handler(memory, functionHandlerProvider, stack, state, loggerService);
-        SystemBiosInt12Handler systemBiosInt12Handler =
-            new SystemBiosInt12Handler(memory, functionHandlerProvider, stack, state, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(memory, functionHandlerProvider, stack, state, a20Gate,
-            configuration.InitializeDOS is not false, loggerService);
-        SystemClockInt1AHandler systemClockInt1AHandler =
-            new SystemClockInt1AHandler(memory, functionHandlerProvider, stack, state, loggerService, timerInt8Handler);
-
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
-            configuration, configuration.RecordedDataDirectory, loggerService);
-
-        EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
-        executionFlowRecorder, functionCatalogue, loggerService);
-
-        VgaCard vgaCard = new(null, vgaRenderer, loggerService);
         Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
             null, configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosDataArea, biosKeyboardBuffer, loggerService);
-        Mouse mouse = new Mouse(state, dualPic, null, configuration.Mouse, loggerService,
-            configuration.FailOnUnhandledPort);
-
-        MouseDriver mouseDriver =
-            new MouseDriver(cpu, memory, mouse, null, vgaFunctionality, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
+        EmulationLoop emulationLoop = new EmulationLoop(loggerService,
+            functionHandler, instructionExecutor, state, timer,
+            emulatorBreakpointsManager, dmaController, pauseHandler);
+
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoop, biosKeyboardCallback: null, emulatorBreakpointsManager,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,

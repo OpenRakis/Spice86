@@ -56,15 +56,15 @@ public class MouseDriver : IMouseDriver {
     /// <summary>
     ///     Create a new instance of the mouse driver.
     /// </summary>
-    /// <param name="cpu">Cpu instance to use for calling functions and saving/restoring registers</param>
+    /// <param name="state">The CPU registers and flags.</param>
     /// <param name="memory">Memory instance to look into the interrupt vector table</param>
     /// <param name="mouseDevice">The mouse device / hardware</param>
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The service used to log messages, such as runtime warnings.</param>
-    public MouseDriver(Cpu cpu, IIndexable memory, IMouseDevice mouseDevice,
+    public MouseDriver(State state, IIndexable memory, IMouseDevice mouseDevice,
         IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
-        _state = cpu.State;
+        _state = state;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
         _gui = gui;
@@ -208,30 +208,6 @@ public class MouseDriver : IMouseDriver {
         int y = LinearInterpolate(_mouseDevice.MouseYRelative, CurrentMinY, CurrentMaxY);
         ushort buttonFlags = (ushort)((_mouseDevice.IsLeftButtonDown ? 1 : 0) | (_mouseDevice.IsRightButtonDown ? 2 : 0) | (_mouseDevice.IsMiddleButtonDown ? 4 : 0));
         return new MouseStatus(x, y, buttonFlags);
-    }
-
-
-    public double GetLastReleasedX(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
-        return _buttonsReleaseCounts.TryGetValue(mouseButton,
-            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
-    }
-
-    public double GetLastReleasedY(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
-        return _buttonsReleaseCounts.TryGetValue(mouseButton,
-            out MouseButtonPressCount? position) ? position.LastPressedX : 0;
-    }
-
-    public int GetButtonsReleaseCount(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
-        int count = _buttonsReleaseCounts.TryGetValue(mouseButton,
-            out MouseButtonPressCount? value) ? value.PressCount : 0;
-
-        // Reset the count after reading
-        _buttonsReleaseCounts[mouseButton].PressCount = 0;
-
-        return count;
     }
 
     /// <inheritdoc />

@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -96,15 +97,26 @@ public class EmulationLoop {
         _stopwatch.Start();
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
-            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
-            _pauseHandler.WaitIfPaused();
-            _cpu.ExecuteNext();
-            _performanceMeasurer.UpdateValue(_cpuState.Cycles);
-            _timer.Tick();
-            _dmaController.PerformDmaTransfers();
+            RunOnce();
         }
         _stopwatch.Stop();
         OutputPerfStats();
+    }
+
+    private void RunOnce() {
+        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+        _pauseHandler.WaitIfPaused();
+        _cpu.ExecuteNext();
+        _performanceMeasurer.UpdateValue(_cpuState.Cycles);
+        _timer.Tick();
+        _dmaController.PerformDmaTransfers();
+    }
+
+    public void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
+        _cpuState.IpSegmentedAddress = startAddress;
+        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
+            RunOnce();
+        }
     }
 
     private void OutputPerfStats() {

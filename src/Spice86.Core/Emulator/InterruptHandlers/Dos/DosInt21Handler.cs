@@ -23,9 +23,6 @@ using System.Text;
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
-    private const int CarriageReturn = 13;
-    private const int BackSpace = 8;
-    private const int LineFeed = 10;
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
@@ -399,39 +396,38 @@ public class DosInt21Handler : InterruptHandler {
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         DosInputBuffer inputBufferHolder = new DosInputBuffer(Memory, address);
         int readCount = 0;
-        if (inputBufferHolder.Length < 1 ||
-            !_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
+        if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
             !_dosFileManager.TryGetStandardOutput(out CharacterDevice? standardOutput)) {
             return;
         }
         inputBufferHolder.Characters = string.Empty;
 
-        for (; ;) {
+        while(State.IsRunning) {
             byte[] inputBuffer = new byte[1];
             if(standardInput.CanRead) {
                 readCount = standardInput.Read(inputBuffer, 0, 1);
             }
             if (readCount < 1) {
-                break; // No input available, exit the loop.
+                break; // No further input available, exit the loop.
             }
             byte c = inputBuffer[0];
-            if (c == LineFeed) {
+            if (c == (byte)AsciiControlCodes.LineFeed) {
                 continue;
             }
 
-            if (c == BackSpace) {
+            if (c == (byte)AsciiControlCodes.Backspace) {
                 if (readCount != 0) { //Something to backspace.
                     // STDOUT treats backspace as non-destructive.
                     standardOutput.Write(c);
                     c = Encoding.ASCII.GetBytes(" ")[0];
                     standardOutput.Write(c);
-                    c = BackSpace;
+                    c = (byte)AsciiControlCodes.Backspace;
                     standardOutput.Write(c);
                     --readCount;
                 }
                 continue;
             }
-            if (readCount == inputBufferHolder.Length && c != CarriageReturn) { //input buffer full and not CR
+            if (readCount == inputBufferHolder.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
                 const byte bell = 7;
                 standardOutput.Write(bell);
                 continue;
@@ -440,7 +436,7 @@ public class DosInt21Handler : InterruptHandler {
                 standardOutput.Write(c);
             }
             inputBufferHolder.Characters += c;
-            if (c == CarriageReturn) {
+            if (c == (byte)AsciiControlCodes.CarriageReturn) {
                 break;
             }
         }
