@@ -13,21 +13,27 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
+    private readonly BiosDataArea _biosDataArea;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="biosDataArea">The BIOS data structure holding state information.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    public KeyboardInt16Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+    public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
+        AddAction(0x02, () => GetShiftFlags());
     }
 
     /// <inheritdoc/>
@@ -47,6 +53,13 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
         State.AX = keyCode.Value;
+    }
+
+    public void GetShiftFlags() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET SHIFT FLAGS");
+        }
+        State.AL = _biosDataArea.KeyboardStatusFlag;
     }
 
     /// <summary>
