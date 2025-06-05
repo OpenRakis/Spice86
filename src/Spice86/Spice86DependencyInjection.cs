@@ -331,7 +331,7 @@ public class Spice86DependencyInjection : IDisposable {
         MouseDriver mouseDriver = new(state, memory, mouse, mainWindowViewModel,
             vgaFunctionality, loggerService);
         KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, functionHandlerProvider, stack, state, loggerService,
+            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
