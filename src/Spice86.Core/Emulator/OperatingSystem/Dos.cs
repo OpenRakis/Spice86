@@ -33,7 +33,6 @@ public class Dos {
     private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly SegmentedAddress? _biosKeyboardCallback;
 
     /// <summary>
@@ -115,11 +114,10 @@ public class Dos {
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, EmulationLoop emulationLoop, SegmentedAddress? biosKeyboardCallback,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, BiosKeyboardBuffer biosKeyboardBuffer,
-        KeyboardInt16Handler keyboardInt16Handler, BiosDataArea biosDataArea,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath,
-        bool initializeDos, bool enableEms, IDictionary<string, string> envVars,
-        ILoggerService loggerService) {
+        BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
+        BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
+        string? cDriveFolderPath, string? executablePath, bool initializeDos,
+        bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _biosKeyboardCallback = biosKeyboardCallback;
@@ -128,7 +126,6 @@ public class Dos {
         _state = state;
         _stack = stack;
         _emulationLoop = emulationLoop;
-        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _vgaFunctionality = vgaFunctionality;
         VirtualFileBase[] dosDevices = AddDefaultDevices();
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
@@ -176,7 +173,7 @@ public class Dos {
         var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_loggerService, _state, _stack, _biosKeyboardCallback,
-            _emulationLoop, _emulatorBreakpointsManager, _biosDataArea, _vgaFunctionality,
+            _emulationLoop, _biosDataArea, _vgaFunctionality,
             _biosKeyboardBuffer, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService);
