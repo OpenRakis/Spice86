@@ -33,7 +33,7 @@ public class DosInputBuffer : MemoryBasedDataStructure {
     /// Actual characters read from the input buffer, including Carriage Return.
     /// </summary>
     public string Characters {
-        get => GetZeroTerminatedString(ActualInputStringOffset, ReadCount);
-        set => SetZeroTerminatedString(ActualInputStringOffset, value, ReadCount);
+        get => GetZeroTerminatedString(ActualInputStringOffset, 255);
+        set => SetZeroTerminatedString(ActualInputStringOffset, value, 255);
     }
 }

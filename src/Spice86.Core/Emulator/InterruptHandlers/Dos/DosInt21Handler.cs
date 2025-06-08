@@ -404,9 +404,7 @@ public class DosInt21Handler : InterruptHandler {
 
         while(State.IsRunning) {
             byte[] inputBuffer = new byte[1];
-            if(standardInput.CanRead) {
-                readCount = standardInput.Read(inputBuffer, 0, 1);
-            }
+            readCount = standardInput.Read(inputBuffer, 0, 1);
             if (readCount < 1) {
                 break; // No further input available, exit the loop.
             }
@@ -427,7 +425,7 @@ public class DosInt21Handler : InterruptHandler {
                 }
                 continue;
             }
-            if (readCount == inputBufferHolder.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
+            if (readCount >= inputBufferHolder.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
                 const byte bell = 7;
                 standardOutput.Write(bell);
                 continue;
