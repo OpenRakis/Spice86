@@ -325,7 +325,7 @@ public class Spice86DependencyInjection : IDisposable {
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
             functionHandlerProvider, stack, state, dualPic, keyboard,
-            biosDataArea, biosKeyboardBuffer, loggerService);
+            biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, dualPic, mainWindowViewModel,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(state, memory, mouse, mainWindowViewModel,
