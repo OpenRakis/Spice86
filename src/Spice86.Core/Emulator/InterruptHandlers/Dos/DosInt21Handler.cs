@@ -484,7 +484,13 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
+                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                    consoleDeviceBefore.DirectOutput = true;
+                }
                 stdOut.Write(character);
+                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                    consoleDeviceAfter.DirectOutput = false;
+                }
                 State.AL = character;
             } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("DOS INT21H DirectConsoleIo: Cannot write to standard output device.");
