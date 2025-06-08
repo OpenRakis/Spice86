@@ -556,11 +556,16 @@ public class ConsoleDevice : CharacterDevice {
 
     public override ushort Information {
         get {
-            if (_biosKeybardBuffer.IsEmpty) {
-                return NoInputAvailable; // No input available
-            } else {
-                return InputAvailable; // Input available
+            if (_biosKeybardBuffer.IsEmpty && _readCache is 0) {
+                return NoInputAvailable;
             }
+
+            if(_readCache is not 0 || _biosKeybardBuffer.PeekKeyCode() is not null) {
+                return InputAvailable;
+            }
+
+            _biosKeybardBuffer.Flush();
+            return NoInputAvailable;
         }
     }
 
