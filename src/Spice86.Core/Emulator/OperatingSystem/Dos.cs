@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -13,7 +14,6 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -28,12 +28,10 @@ public class Dos {
     private readonly BiosDataArea _biosDataArea;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly Stack _stack;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
-    private readonly EmulationLoop _emulationLoop;
-    private readonly SegmentedAddress? _biosKeyboardCallback;
+    private readonly MachineCodeCallback _machineCodeCallback;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -113,19 +111,17 @@ public class Dos {
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, EmulationLoop emulationLoop, SegmentedAddress? biosKeyboardCallback,
+        Stack stack, State state, MachineCodeCallback machineCodeCallback,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         string? cDriveFolderPath, string? executablePath, bool initializeDos,
         bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        _biosKeyboardCallback = biosKeyboardCallback;
+        _machineCodeCallback = machineCodeCallback;
         _memory = memory;
         _biosDataArea = biosDataArea;
         _state = state;
-        _stack = stack;
-        _emulationLoop = emulationLoop;
         _vgaFunctionality = vgaFunctionality;
         VirtualFileBase[] dosDevices = AddDefaultDevices();
         DosSwappableDataArea dosSwappableDataArea = new(_memory,
@@ -172,8 +168,8 @@ public class Dos {
     private VirtualFileBase[] AddDefaultDevices() {
         var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
         AddDevice(nulDevice);
-        var consoleDevice = new ConsoleDevice(_loggerService, _state, _stack, _biosKeyboardCallback,
-            _emulationLoop, _biosDataArea, _vgaFunctionality,
+        var consoleDevice = new ConsoleDevice(_loggerService, _state,
+            _machineCodeCallback, _biosDataArea, _vgaFunctionality,
             _biosKeyboardBuffer, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService);
