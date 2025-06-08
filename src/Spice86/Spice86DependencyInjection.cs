@@ -400,7 +400,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoop, keyboardInt16HandlerAddress, emulatorBreakpointsManager, biosKeyboardBuffer,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoop, keyboardInt16HandlerAddress, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality, configuration.CDrive,
             configuration.Exe,
             configuration.InitializeDOS is not false,
