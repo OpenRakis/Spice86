@@ -4,14 +4,13 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.VM;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -25,14 +24,11 @@ public class ConsoleDevice : CharacterDevice {
     private byte _readCache = 0;
     public const int InputAvailable = 0x80D3;
     public const int NoInputAvailable = 0x8093;
-    private readonly EmulationLoop _emulationLoop;
     private readonly BiosDataArea _biosDataArea;
-    private readonly SegmentedAddress? _biosKeyboardCallback;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
+    private readonly MachineCodeCallback _machineCodeCallback;
     private readonly State _state;
-    private readonly Stack _stack;
-    private readonly NonLinearFlow _nonLinearFlow;
     private readonly Ansi _ansi = new Ansi();
     private class Ansi {
         public const int ANSI_DATA_LENGTH = 10;
@@ -50,19 +46,16 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(ILoggerService loggerService, State state, Stack stack,
-        SegmentedAddress? biosKeyboardCallback, EmulationLoop emulationLoop,
-        BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        BiosKeyboardBuffer biosKeyboardBuffer, DeviceAttributes attributes)
+    public ConsoleDevice(ILoggerService loggerService, State state,
+        MachineCodeCallback machineCodeCallback, BiosDataArea biosDataArea,
+        IVgaFunctionality vgaFunctionality, BiosKeyboardBuffer biosKeyboardBuffer,
+        DeviceAttributes attributes)
         : base(loggerService, attributes, "CON") {
         _biosKeybardBuffer = biosKeyboardBuffer;
-        _biosKeyboardCallback = biosKeyboardCallback;
+        _machineCodeCallback = machineCodeCallback;
         _state = state;
-        _stack = stack;
-        _emulationLoop = emulationLoop;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
-        _nonLinearFlow = new NonLinearFlow(_state, _stack);
         vgaFunctionality.VideoModeChanged += OnVideModeChanged;
         _currentMode = vgaFunctionality.GetCurrentMode();
     }
@@ -110,49 +103,8 @@ public class ConsoleDevice : CharacterDevice {
         set => throw new NotSupportedException("Console device does not support setting position.");
     }
 
-    private class NonLinearFlow {
-        private readonly Stack _stack;
-        private readonly State _state;
-
-        public NonLinearFlow(State state, Stack stack) {
-            _state = state;
-            _stack = stack;
-        }
-
-        public void InterruptCall(SegmentedAddress targetAddress, SegmentedAddress expectedReturnAddress) {
-            _stack.Push16(_state.Flags.FlagRegister16);
-            FarCall(targetAddress, expectedReturnAddress);
-
-        }
-
-        void FarCall(SegmentedAddress targetAddress, SegmentedAddress expectedReturnAddress) {
-            _stack.PushSegmentedAddress(expectedReturnAddress);
-            _state.IpSegmentedAddress = targetAddress;
-        }
-
-        void NearCall(ushort targetOffset, ushort expectedReturnOffset) {
-            _state.IP = targetOffset;
-            _stack.Push16(expectedReturnOffset);
-        }
-    }
-
-    private (byte ScanCode, byte AsciiCharacter) ReadKeyboardInterrupt() {
-        if (_biosKeyboardCallback is null) {
-            return (0,0); // No keyboard callback defined
-        }
-        SegmentedAddress expectedReturnAddress = _state.IpSegmentedAddress;
-        // Wait for keypress
-        ushort keyStroke;
-        do {
-            _nonLinearFlow.InterruptCall(_biosKeyboardCallback.Value, expectedReturnAddress);
-            _emulationLoop.RunFromUntil(_biosKeyboardCallback.Value, expectedReturnAddress);
-            keyStroke = _state.AX;
-        } while (keyStroke is 0 && _state.IsRunning);
-        return (_state.AH, _state.AL);
-    }
-
     public override int Read(byte[] buffer, int offset, int count) {
-        if(count == 0 || offset > buffer.Length || buffer.Length == 0 || _biosKeyboardCallback is null) {
+        if(count == 0 || offset > buffer.Length || buffer.Length == 0) {
             return 0;
         }
         ushort oldAx = _state.AX;
@@ -168,7 +120,7 @@ public class ConsoleDevice : CharacterDevice {
         while(index < buffer.Length && readCount < count) {
             // Function 0: Read keystroke
             _state.AH = 0x0;
-            (byte ScanCode, byte AsciiCharacter) = ReadKeyboardInterrupt();
+            byte AsciiCharacter = _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
             switch (AsciiCharacter) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;

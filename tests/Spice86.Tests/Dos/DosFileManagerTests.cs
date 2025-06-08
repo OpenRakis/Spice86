@@ -168,7 +168,8 @@ public class DosFileManagerTests {
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler);
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoop, biosKeyboardCallback: null,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
+            new MachineCodeCallback(interruptVectorTable, state, stack, emulationLoop),
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,
