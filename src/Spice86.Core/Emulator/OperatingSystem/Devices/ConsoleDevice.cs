@@ -78,7 +78,7 @@ public class ConsoleDevice : CharacterDevice, IAssemblyRoutineWriter {
 
     public override bool CanSeek => false;
 
-    public override bool CanRead => true;
+    public override bool CanRead => _biosKeybardBuffer.IsEmpty is false;
 
     public override bool CanWrite => true;
 
