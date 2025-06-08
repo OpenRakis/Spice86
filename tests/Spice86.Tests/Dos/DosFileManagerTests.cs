@@ -7,22 +7,16 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Input.Joystick;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
-using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
@@ -31,7 +25,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -166,7 +159,7 @@ public class DosFileManagerTests {
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
-            state, dualPic, keyboard, biosDataArea, biosKeyboardBuffer, loggerService);
+            state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);

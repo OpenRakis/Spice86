@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
@@ -12,9 +14,11 @@ using Spice86.Shared.Interfaces;
 /// Basic implementation of a keyboard
 /// </summary>
 public sealed class Keyboard : DefaultIOPortHandler {
+    private readonly ILoggerService _loggerService;
     private readonly IGui? _gui;
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
+    private KeyboardEventArgs? _lastKeyUpOrKeyDownEvent;
 
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
@@ -43,6 +47,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public Keyboard(State state, IOPortDispatcher ioPortDispatcher, A20Gate a20Gate, DualPic dualPic,
         ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        _loggerService = loggerService;
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;
@@ -54,27 +59,46 @@ public sealed class Keyboard : DefaultIOPortHandler {
     }
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = e;
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Keyboard key down event: {KeyboardKeyDownEvent}", e);
+        }
         _dualPic.ProcessInterruptRequest(1);
+        _lastKeyUpOrKeyDownEvent = e;
+        KeyUp?.Invoke(e);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
-        LastKeyboardInput = e;
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Keyboard key down event: {KeyboardKeyDownEvent}", e);
+        }
         _dualPic.ProcessInterruptRequest(1);
+        _lastKeyUpOrKeyDownEvent = e;
+        KeyDown?.Invoke(e);
     }
 
     /// <summary>
-    /// The latest keyboard event data (refreshed on KeyUp or on KeyDown)
+    /// Event fired on KeyUp from the GUI.
     /// </summary>
-    public KeyboardEventArgs LastKeyboardInput { get; private set; } = KeyboardEventArgs.None;
+    public event Action<KeyboardEventArgs>? KeyUp;
+
+    /// <summary>
+    /// Event fired on KeyDown from the GUI.
+    /// </summary>
+
+    public event Action<KeyboardEventArgs>? KeyDown;
+
+    private byte? ReadLastScanCodeAndReset() {
+        byte? scancode = _lastKeyUpOrKeyDownEvent?.ScanCode;
+        _lastKeyUpOrKeyDownEvent = null;
+        return scancode;
+    }
 
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
-        byte? scancode = LastKeyboardInput.ScanCode;
-        scancode ??= 0;
+        byte scancode = ReadLastScanCodeAndReset() ?? 0;
 
         return port switch {
-            KeyboardPorts.Data => scancode.Value,
+            KeyboardPorts.Data => scancode,
             // keyboard not locked, self-test completed.
             KeyboardPorts.StatusRegister => SystemTestStatusMask | KeyboardEnableStatusMask,
             _ => 0
@@ -97,7 +121,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
                 if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
                     Command = (KeyboardCommand)value;
                 } else {
-                    throw new UnrecoverableException("Keyboard command not recognized or not implemented.");
+                    throw new NotImplementedException("Keyboard command not recognized or not implemented.");
                 }
                 break;
             default:

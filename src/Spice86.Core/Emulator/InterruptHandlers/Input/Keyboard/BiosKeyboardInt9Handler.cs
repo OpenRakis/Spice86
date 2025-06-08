@@ -7,14 +7,18 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of BIOS keyboard buffer handler (interrupt 0x9)
+/// Hardware interrupt handler for the BIOS keyboard interrupt (INT 0x09).
+/// <remarks>Acknowledges IRQ 1 (keyboard) after writing the key code to the BIOS keyboard buffer.</remarks>
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
     private readonly DualPic _dualPic;
+    private readonly ILoggerService _loggerService;
+    private KeyboardEventArgs? _keyboardEvent;
 
     /// <summary>
     /// Initializes a new instance.
@@ -25,18 +29,19 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="keyboard">The keyboard controller.</param>
-    /// <param name="biosDataArea">The memory mapped BIOS values.</param>
     /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea,
+        State state, DualPic dualPic, Keyboard keyboard,
         BiosKeyboardBuffer biosKeyboardBuffer, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _loggerService = loggerService;
         _keyboard = keyboard;
         _dualPic = dualPic;
         BiosKeyboardBuffer = biosKeyboardBuffer;
-        BiosKeyboardBuffer.Init();
+        _keyboard.KeyUp += OnKeyUp;
+        _keyboard.KeyDown += OnKeyDown;
     }
 
     /// <summary>
@@ -47,19 +52,44 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x9;
 
+    private void OnKeyDown(KeyboardEventArgs e) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("BIOS hardware INT9H, key down event: {BiosInt9KeyDownEvent}", e);
+        }
+        _keyboardEvent = e;
+        RunInternal(e);
+    }
+
+    private void OnKeyUp(KeyboardEventArgs e) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("BIOS hardware INT9H, key up event: {BiosInt9KeyUpEvent}", e);
+        }
+        _keyboardEvent = e;
+        RunInternal(e);
+    }
+
     /// <inheritdoc />
     public override void Run() {
-        if (_keyboard.LastKeyboardInput.ScanCode is null) {
+        if (_keyboardEvent is null) {
             return;
         }
 
-        byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
+        RunInternal(_keyboardEvent.Value);
+    }
 
-        if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
+    private void RunInternal(KeyboardEventArgs keyboardEvent) {
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("BIOS hardware INT9H, running keyboard interrupt handler.");
         }
 
-        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(_keyboard.LastKeyboardInput.ScanCode.Value << 8 | ascii));
+        byte ascii = keyboardEvent.AsciiCode ?? 0;
+        byte scanCode = keyboardEvent.ScanCode ?? 0;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("BIOS hardware INT9H, ascii key received: {BiosInt9AsciiKeyKeyReceived}", ascii);
+        }
+
+        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));
         _dualPic.AcknowledgeInterrupt(1);
     }
 }

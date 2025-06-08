@@ -5,13 +5,16 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
+    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
 
@@ -29,6 +32,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _loggerService = loggerService;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
@@ -38,6 +42,10 @@ public class KeyboardInt16Handler : InterruptHandler {
 
     /// <inheritdoc/>
     public override byte VectorNumber => 0x16;
+
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        return base.WriteAssemblyInRam(memoryAsmWriter);
+    }
 
     /// <summary>
     /// Returns in the AX register the pending key code.
