@@ -17,19 +17,21 @@ public class MachineCodeCallback {
         _emulationLoop = emulationLoop;
         _interruptVectorTable = ivt;
         _biosKeyboardCallback = _interruptVectorTable[0x16];
-        
     }
 
     internal byte ReadBiosInt16HGetKeyStroke() {
         SegmentedAddress expectedReturnAddress = _state.IpSegmentedAddress;
         // Wait for keypress
         ushort keyStroke;
+        byte oldAh = _state.AH;
         do {
             _nonLinearFlow.InterruptCall(_biosKeyboardCallback, expectedReturnAddress);
             _state.AH = 0x00; // Function 0x0: GetKeyStroke
             _emulationLoop.RunFromUntil(_biosKeyboardCallback, expectedReturnAddress);
             keyStroke = _state.AX;
         } while (keyStroke is 0 && _state.IsRunning);
-        return _state.AL;
+        byte scanCode = _state.AL;
+        _state.AH = oldAh;
+        return scanCode;
     }
 }
