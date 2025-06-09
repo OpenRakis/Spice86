@@ -183,7 +183,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void CheckStandardInputStatus() {
         if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
-            stdIn.CanRead) {
+            stdIn.Information == ConsoleDevice.InputAvailable) {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
@@ -461,7 +461,7 @@ public class DosInt21Handler : InterruptHandler {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
-                && stdIn.CanRead) {
+                && stdIn.Information == ConsoleDevice.InputAvailable) {
                 byte[] bytes = new byte[1];
                 var readCount = stdIn.Read(bytes, 0, 1);
                 if (readCount < 1) {
