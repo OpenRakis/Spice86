@@ -7,18 +7,14 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Hardware interrupt handler for the BIOS keyboard interrupt (INT 0x09).
-/// <remarks>Acknowledges IRQ 1 (keyboard) after writing the key code to the BIOS keyboard buffer.</remarks>
+/// Crude implementation of BIOS keyboard buffer handler (interrupt 0x9)
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
     private readonly DualPic _dualPic;
-    private readonly ILoggerService _loggerService;
-    private KeyboardEventArgs? _keyboardEvent;
 
     /// <summary>
     /// Initializes a new instance.
@@ -36,12 +32,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         State state, DualPic dualPic, Keyboard keyboard,
         BiosKeyboardBuffer biosKeyboardBuffer, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _loggerService = loggerService;
         _keyboard = keyboard;
         _dualPic = dualPic;
         BiosKeyboardBuffer = biosKeyboardBuffer;
-        _keyboard.KeyUp += OnKeyUp;
-        _keyboard.KeyDown += OnKeyDown;
     }
 
     /// <summary>
@@ -52,41 +45,13 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x9;
 
-    private void OnKeyDown(KeyboardEventArgs e) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BIOS hardware INT9H, key down event: {BiosInt9KeyDownEvent}", e);
-        }
-        _keyboardEvent = e;
-        RunInternal(e);
-    }
-
-    private void OnKeyUp(KeyboardEventArgs e) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BIOS hardware INT9H, key up event: {BiosInt9KeyUpEvent}", e);
-        }
-        _keyboardEvent = e;
-        RunInternal(e);
-    }
-
     /// <inheritdoc />
     public override void Run() {
-        if (_keyboardEvent is null) {
-            return;
-        }
+        byte ascii = _keyboard.KeyboardEvent?.AsciiCode ?? 0;
+        byte scanCode = _keyboard.KeyboardEvent?.ScanCode ?? 0;
 
-        RunInternal(_keyboardEvent.Value);
-    }
-
-    private void RunInternal(KeyboardEventArgs keyboardEvent) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BIOS hardware INT9H, running keyboard interrupt handler.");
-        }
-
-        byte ascii = keyboardEvent.AsciiCode ?? 0;
-        byte scanCode = keyboardEvent.ScanCode ?? 0;
-
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BIOS hardware INT9H, ascii key received: {BiosInt9AsciiKeyKeyReceived}", ascii);
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
         }
 
         BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));

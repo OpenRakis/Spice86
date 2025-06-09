@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -14,7 +13,6 @@ using Spice86.Shared.Interfaces;
 /// Basic implementation of a keyboard
 /// </summary>
 public sealed class Keyboard : DefaultIOPortHandler {
-    private readonly ILoggerService _loggerService;
     private readonly IGui? _gui;
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
@@ -47,7 +45,6 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public Keyboard(State state, IOPortDispatcher ioPortDispatcher, A20Gate a20Gate, DualPic dualPic,
         ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
-        _loggerService = loggerService;
         _gui = gui;
         _a20Gate = a20Gate;
         _dualPic = dualPic;
@@ -64,7 +61,6 @@ public sealed class Keyboard : DefaultIOPortHandler {
         }
         _dualPic.ProcessInterruptRequest(1);
         _lastKeyUpOrKeyDownEvent = e;
-        KeyUp?.Invoke(e);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
@@ -73,19 +69,9 @@ public sealed class Keyboard : DefaultIOPortHandler {
         }
         _dualPic.ProcessInterruptRequest(1);
         _lastKeyUpOrKeyDownEvent = e;
-        KeyDown?.Invoke(e);
     }
 
-    /// <summary>
-    /// Event fired on KeyUp from the GUI.
-    /// </summary>
-    public event Action<KeyboardEventArgs>? KeyUp;
-
-    /// <summary>
-    /// Event fired on KeyDown from the GUI.
-    /// </summary>
-
-    public event Action<KeyboardEventArgs>? KeyDown;
+    public KeyboardEventArgs? KeyboardEvent => _lastKeyUpOrKeyDownEvent;
 
     private byte? ReadLastScanCodeAndReset() {
         byte? scancode = _lastKeyUpOrKeyDownEvent?.ScanCode;
