@@ -27,7 +27,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
-    private readonly DosSwappableDataArea _dosSwappableDataArea;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
 
@@ -43,7 +42,6 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
-    /// <param name="dosSwappableDataArea">The structure holding the INDOS flag, for DOS critical sections.</param>
     /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for file and device-as-file access.</param>
@@ -51,11 +49,9 @@ public class DosInt21Handler : InterruptHandler {
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
-        DosSwappableDataArea dosSwappableDataArea, DosStringDecoder dosStringDecoder,
-        DosMemoryManager dosMemoryManager, DosFileManager dosFileManager,
-        ILoggerService loggerService)
+        DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
+        DosFileManager dosFileManager, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _dosSwappableDataArea = dosSwappableDataArea;
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
