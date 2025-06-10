@@ -134,8 +134,7 @@ public class Dos {
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, CountryInfo,
-            dosSwappableDataArea, dosStringDecoder,
+            keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
