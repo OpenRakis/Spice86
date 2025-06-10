@@ -831,7 +831,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is cleared on success. <br/>
     /// CF is set on error. BX is set to zero on error. <br/>
     /// Possible error code in AX: 0x08 (Insufficient memory). <br/>
-    /// On success, AX is set to the new block segment.
+    /// On success, AX is set to the size of the MCB, which is at least equal to the requested size.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
@@ -843,7 +843,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSize,
             out DosMemoryControlBlock? modifiedBlock)) {
-            State.AX = modifiedBlock.UsableSpaceSegment;
+            State.AX = requestedSize;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);
