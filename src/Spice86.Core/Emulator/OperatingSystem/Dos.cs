@@ -31,7 +31,7 @@ public class Dos {
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
-    private readonly MachineCodeCallback _machineCodeCallback;
+    private readonly EmulationLoopRecalls _machineCodeCallback;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -111,7 +111,7 @@ public class Dos {
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, MachineCodeCallback machineCodeCallback,
+        Stack stack, State state, EmulationLoopRecalls machineCodeCallback,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         string? cDriveFolderPath, string? executablePath, bool initializeDos,
