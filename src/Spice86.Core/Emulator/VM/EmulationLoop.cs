@@ -112,7 +112,7 @@ public class EmulationLoop {
         _dmaController.PerformDmaTransfers();
     }
 
-    public void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
+    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
         _cpuState.IpSegmentedAddress = startAddress;
         while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
             RunOnce();
