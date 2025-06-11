@@ -6,7 +6,6 @@
 		xmlns:converters="clr-namespace:Spice86.Converters"
 		xmlns:local="clr-namespace:Spice86;assembly=Spice86"
 		xmlns:b="clr-namespace:Spice86.Behaviors"
-		xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
 		xmlns:userControls="clr-namespace:Spice86.UserControls"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 		xmlns:controls="clr-namespace:Spice86.Controls"
@@ -40,9 +39,9 @@
 							<Label Content="Internal Debugger" />
 						</StackPanel>
 					</MenuItem.Header>
-					<i:Interaction.Behaviors>
+					<Interaction.Behaviors>
 						<b:ShowInternalDebuggerBehavior />
-					</i:Interaction.Behaviors>
+					</Interaction.Behaviors>
 				</MenuItem>
 				<MenuItem>
 					<MenuItem.Header>

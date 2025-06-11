@@ -27,7 +27,7 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
-    <PackageReference Include="Avalonia.Xaml.Behaviors" />
+    <PackageReference Include="Xaml.Behaviors.Avalonia" />
     <PackageReference Include="AvaloniaGraphControl" />
     <PackageReference Include="AvaloniaHex" />
     <PackageReference Include="bodong.Avalonia.PropertyGrid" />
@@ -42,6 +42,7 @@
     <PackageReference Include="Semi.Avalonia.DataGrid" />
     <PackageReference Include="Semi.Avalonia.TreeDataGrid" />
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Xaml.Behaviors.Avalonia" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />

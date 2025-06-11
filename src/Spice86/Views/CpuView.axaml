@@ -13,8 +13,7 @@
         <Grid ColumnDefinitions="*,*,*">
             <controls:GroupBox Grid.Column="0" Header="Registers and misc">
                 <pgc:PropertyGrid
-                    DataContext="{CompiledBinding State}"
-                    ShowTitle="False">
+                    DataContext="{CompiledBinding State}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
                     </TextElement.FontFamily>
@@ -22,8 +21,7 @@
             </controls:GroupBox>
             <controls:GroupBox Grid.Column="1" Header="Flag Registers">
                 <pgc:PropertyGrid
-                    DataContext="{CompiledBinding Flags}"
-                    ShowTitle="False">
+                    DataContext="{CompiledBinding Flags}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
                     </TextElement.FontFamily>

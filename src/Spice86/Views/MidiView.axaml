@@ -12,8 +12,7 @@
         <WrapPanel>
             <controls:GroupBox Header="Ports">
                 <pgc:PropertyGrid
-                    DataContext="{CompiledBinding Midi}"
-                    ShowTitle="False">
+                    DataContext="{CompiledBinding Midi}">
                     <TextElement.FontFamily>
                         <OnPlatform Default="{StaticResource RobotoMonoFont}" />
                     </TextElement.FontFamily>

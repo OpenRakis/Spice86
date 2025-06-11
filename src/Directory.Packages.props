@@ -4,27 +4,26 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.0" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.0" />
+    <PackageVersion Include="Avalonia" Version="11.3.1" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.1" />
     <PackageVersion Include="Avalonia.Controls.PanAndZoom" Version="11.3.0" />
     <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.1" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.3.0" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.0" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.0" />
-    <PackageVersion Include="Avalonia.Xaml.Behaviors" Version="11.3.0.1" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.3.1" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.1" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.1" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.8" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.0.3" />
-    <PackageVersion Include="bodong.PropertyModels" Version="11.3.0.2" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.1" />
+    <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.1.4" />
+    <PackageVersion Include="bodong.PropertyModels" Version="11.3.1.1" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
-    <PackageVersion Include="DialogHost.Avalonia" Version="0.9.2" />
+    <PackageVersion Include="DialogHost.Avalonia" Version="0.9.3" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.300" />
+    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.302" />
     <PackageVersion Include="Iced" Version="1.21.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
@@ -36,17 +35,18 @@
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.12.9" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.9" />
-    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.7" />
-    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.7" />
-    <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.3" />
-    <PackageVersion Include="Serilog" Version="4.2.0" />
+    <PackageVersion Include="Semi.Avalonia" Version="11.2.1.8" />
+    <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.2.1.8" />
+    <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.4" />
+    <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Memory.Data" Version="9.0.5" />
-    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.5" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.5" />
+    <PackageVersion Include="System.Memory.Data" Version="9.0.6" />
+    <PackageVersion Include="System.Text.Encoding.CodePages" Version="9.0.6" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.6" />
+    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.0.10" />
   </ItemGroup>
 </Project>
