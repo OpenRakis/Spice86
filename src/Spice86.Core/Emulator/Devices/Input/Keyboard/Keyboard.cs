@@ -16,7 +16,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     private readonly IGui? _gui;
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
-    private KeyboardEventArgs? _lastKeyUpOrKeyDownEvent;
+    private KeyboardEventArgs _lastKeyUpOrKeyDownEvent = KeyboardEventArgs.None;
 
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
@@ -59,36 +59,36 @@ public sealed class Keyboard : DefaultIOPortHandler {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Keyboard key down event: {KeyboardKeyDownEvent}", e);
         }
-        _dualPic.ProcessInterruptRequest(1);
         _lastKeyUpOrKeyDownEvent = e;
+        _dualPic.ProcessInterruptRequest(1);
     }
 
     private void OnKeyUp(object? sender, KeyboardEventArgs e) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Keyboard key down event: {KeyboardKeyDownEvent}", e);
         }
-        _dualPic.ProcessInterruptRequest(1);
         _lastKeyUpOrKeyDownEvent = e;
+        _dualPic.ProcessInterruptRequest(1);
     }
 
-    public KeyboardEventArgs? KeyboardEvent => _lastKeyUpOrKeyDownEvent;
+    public KeyboardEventArgs KeyboardEvent => _lastKeyUpOrKeyDownEvent;
 
-    private byte? ReadLastScanCodeAndReset() {
-        byte? scancode = _lastKeyUpOrKeyDownEvent?.ScanCode;
-        _lastKeyUpOrKeyDownEvent = null;
+    private byte? ReadLastScanCode() {
+        byte? scancode = _lastKeyUpOrKeyDownEvent.ScanCode;
         return scancode;
     }
 
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
-        byte scancode = ReadLastScanCodeAndReset() ?? 0;
+        byte scancode = ReadLastScanCode() ?? 0;
 
-        return port switch {
+        byte returnValue = port switch {
             KeyboardPorts.Data => scancode,
             // keyboard not locked, self-test completed.
             KeyboardPorts.StatusRegister => SystemTestStatusMask | KeyboardEnableStatusMask,
-            _ => 0
+            _ => base.ReadByte(port),
         };
+        return returnValue;
     }
 
     /// <inheritdoc />
