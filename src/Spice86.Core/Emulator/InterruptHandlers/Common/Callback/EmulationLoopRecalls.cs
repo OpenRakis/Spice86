@@ -27,7 +27,7 @@ public class EmulationLoopRecalls {
     /// <summary>
     /// Waits for a keypress, until we can get a keyboard scan code in the AL register from the INT16H BIOS Function 0x0 <see cref="KeyboardInt16Handler.GetKeystroke" />.
     /// </summary>
-    /// <returns>Sets the scancode in the AL register, and also returns it.</returns>
+    /// <returns>Returns the scancode byte.</returns>
     public byte ReadBiosInt16HGetKeyStroke() {
         SegmentedAddress expectedReturnAddress = _state.IpSegmentedAddress;
         // Wait for keypress
