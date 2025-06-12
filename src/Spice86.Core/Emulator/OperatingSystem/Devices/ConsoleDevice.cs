@@ -120,8 +120,8 @@ public class ConsoleDevice : CharacterDevice {
         while(index < buffer.Length && readCount < count) {
             // Function 0: Read keystroke
             _state.AH = 0x0;
-            byte AsciiCharacter = _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
-            switch (AsciiCharacter) {
+            byte scanCode = _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
+            switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
                     readCount++;
