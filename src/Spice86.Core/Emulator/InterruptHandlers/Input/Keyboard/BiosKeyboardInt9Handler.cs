@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of BIOS keyboard buffer handler (interrupt 0x9)
+/// Crude implementation of BIOS keyboard buffer handler (hardware interrupt 0x9)
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
@@ -47,11 +47,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte ascii = _keyboard.KeyboardEvent?.AsciiCode ?? 0;
-        byte scanCode = _keyboard.KeyboardEvent?.ScanCode ?? 0;
+        byte scanCode = _keyboard.KeyboardEvent.ScanCode ?? 0;
+        byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
+            LoggerService.Verbose("{BiosInt9KeyReceived}", scanCode);
         }
 
         BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));
