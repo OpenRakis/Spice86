@@ -150,7 +150,8 @@ public class Dos {
         OpenDefaultFileHandles(dosDevices);
 
         if (enableEms) {
-            Ems = new(_memory, functionHandlerProvider, stack, state, this, _loggerService);
+            Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
+            AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
