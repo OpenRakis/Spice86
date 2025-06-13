@@ -97,7 +97,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public uint DeviceNumber { get; set; } = 0;
     public ushort Segment { get; set; } = 0;
     public ushort Offset { get; set; } = 0;
-    public DeviceAttributes Attributes { get; set; } = DeviceAttributes.Ioctl;
+    public DeviceAttributes Attributes { get; set; } = DeviceAttributes.Ioctl | DeviceAttributes.Character;
     public ushort StrategyEntryPoint { get; set; } = 0;
     public ushort InterruptEntryPoint { get; set; } = 0;
     public string Name { get; set; }
@@ -114,7 +114,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Dos dos, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        dos.AddDevice(this);
+        Name = EmsIdentifier;
         FillDispatchTable();
 
         // Allocation of system handle 0.
@@ -126,7 +126,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             EmmPageFrame.Add(i, emmRegister);
             Memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
-        Name = EmsIdentifier;
+        dos.AddDevice(this, DosDeviceSegment, 0);
     }
 
     /// <inheritdoc />
