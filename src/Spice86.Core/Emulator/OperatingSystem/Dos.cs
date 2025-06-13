@@ -202,9 +202,8 @@ public class Dos {
         _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
-            var characterDevice = (VirtualDeviceBase)device;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
-                Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
+                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
         } else if(device is BlockDevice blockDevice) {
             _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
             index++;
