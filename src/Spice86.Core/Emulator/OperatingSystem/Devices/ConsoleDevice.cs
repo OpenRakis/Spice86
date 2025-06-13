@@ -27,7 +27,7 @@ public class ConsoleDevice : CharacterDevice {
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly EmulationLoopRecalls _machineCodeCallback;
+    private readonly EmulationLoopRecalls _emulationLoopRecalls;
     private readonly State _state;
     private readonly Ansi _ansi = new Ansi();
     private class Ansi {
@@ -47,12 +47,12 @@ public class ConsoleDevice : CharacterDevice {
     /// Create a new console device.
     /// </summary>
     public ConsoleDevice(ILoggerService loggerService, State state,
-        EmulationLoopRecalls machineCodeCallback, BiosDataArea biosDataArea,
+        EmulationLoopRecalls emulationLoopRecalls, BiosDataArea biosDataArea,
         IVgaFunctionality vgaFunctionality, BiosKeyboardBuffer biosKeyboardBuffer,
         DeviceAttributes attributes)
         : base(loggerService, attributes, "CON") {
         _biosKeybardBuffer = biosKeyboardBuffer;
-        _machineCodeCallback = machineCodeCallback;
+        _emulationLoopRecalls = emulationLoopRecalls;
         _state = state;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
@@ -207,7 +207,7 @@ public class ConsoleDevice : CharacterDevice {
     /// <returns>The scancode byte, coming from either the BIOS keyboard buffer or directly from the INT16H software interrupt.</returns>
     private byte GetOrWaitForScanCode() {
         byte? scanCode = (byte?)_biosKeybardBuffer.DequeueKeyCode();
-        scanCode ??= _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
+        scanCode ??= _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
         return scanCode.Value;
     }
 
