@@ -31,7 +31,7 @@ public class Dos {
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
-    private readonly EmulationLoopRecalls _machineCodeCallback;
+    private readonly EmulationLoopRecalls _emulationLoopRecalls;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -111,14 +111,14 @@ public class Dos {
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
     public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, EmulationLoopRecalls machineCodeCallback,
+        Stack stack, State state, EmulationLoopRecalls emulationLoopRecalls,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         string? cDriveFolderPath, string? executablePath, bool initializeDos,
         bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        _machineCodeCallback = machineCodeCallback;
+        _emulationLoopRecalls = emulationLoopRecalls;
         _memory = memory;
         _biosDataArea = biosDataArea;
         _state = state;
@@ -169,7 +169,7 @@ public class Dos {
         var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_loggerService, _state,
-            _machineCodeCallback, _biosDataArea, _vgaFunctionality,
+            _emulationLoopRecalls, _biosDataArea, _vgaFunctionality,
             _biosKeyboardBuffer, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService);
