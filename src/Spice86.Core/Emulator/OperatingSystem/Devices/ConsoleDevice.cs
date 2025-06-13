@@ -120,19 +120,19 @@ public class ConsoleDevice : CharacterDevice {
         while(index < buffer.Length && readCount < count) {
             // Function 0: Read keystroke
             _state.AH = 0x0;
-            byte scanCode = _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
+            byte? scanCode = GetOrWaitForScanCode();
             switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
                     readCount++;
 
                     //It's only expanded if there is room for it
-                    if(index > buffer.Length) {
+                    if (index > buffer.Length) {
                         buffer[index++] = (byte)AsciiControlCodes.LineFeed;
                         readCount++;
                     }
                     _state.AX = oldAx;
-                    if(Echo) {
+                    if (Echo) {
                         // Maybe don't do this (no need for it actually)
                         // (but it's compatible)
                         OutputWithNoAttributes(AsciiControlCodes.LineFeed);
@@ -140,10 +140,10 @@ public class ConsoleDevice : CharacterDevice {
                     }
                     break;
                 case (byte)AsciiControlCodes.Backspace:
-                    if(buffer.Length == 1) {
+                    if (buffer.Length == 1) {
                         buffer[index++] = _state.AL;
                         readCount++;
-                    }else if(index > 0) {
+                    } else if (index > 0) {
                         buffer[index--] = 0;
                         readCount--;
                         OutputWithNoAttributes(AsciiControlCodes.Backspace);
@@ -158,14 +158,14 @@ public class ConsoleDevice : CharacterDevice {
                     // This probably won't run until we implement different
                     // variant of the IBM PC clone architecture and call function 0x10 instead of 0x0.
                     // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
-                    if(_state.AH != 0) {
+                    if (_state.AH != 0) {
                         // Extended key if _state.AH is not 0x0
                         buffer[index++] = _state.AL;
                         readCount++;
                     } else {
                         buffer[index++] = 0;
                         readCount++;
-                        if(buffer.Length > index) {
+                        if (buffer.Length > index) {
                             buffer[index++] = _state.AH;
                             readCount++;
                         } else {
@@ -177,7 +177,7 @@ public class ConsoleDevice : CharacterDevice {
                     // Extended keys in the INT 16H 0x0 function call case
                     buffer[index++] = _state.AL;
                     readCount++;
-                    if(buffer.Length > index) {
+                    if (buffer.Length > index) {
                         buffer[index++] = _state.AH;
                         readCount++;
                     } else {
@@ -196,6 +196,19 @@ public class ConsoleDevice : CharacterDevice {
         }
         _state.AX = oldAx; // Restore AX
         return readCount;
+    }
+
+    /// <summary>
+    /// Tries to shortcut the emulation loop recall by reading memory first. <br/>
+    /// If nothing is available, we wait for the scan code in the AL register.
+    /// <remarks>This is different from FreeDOS and DOS, which just wait directly. <br/>
+    /// May break some TSRs which rely on the ability to intercept this.</remarks>
+    /// </summary>
+    /// <returns>The scancode byte, coming from either the BIOS keyboard buffer or directly from the INT16H software interrupt.</returns>
+    private byte GetOrWaitForScanCode() {
+        byte? scanCode = (byte?)_biosKeybardBuffer.DequeueKeyCode();
+        scanCode ??= _machineCodeCallback.ReadBiosInt16HGetKeyStroke();
+        return scanCode.Value;
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
