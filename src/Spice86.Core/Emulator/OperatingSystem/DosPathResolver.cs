@@ -25,7 +25,6 @@ internal class DosPathResolver {
     /// <param name="dosDriveManager">The shared class to get all mounted DOS drives.</param>
     public DosPathResolver(DosDriveManager dosDriveManager) {
         _dosDriveManager = dosDriveManager;
-        SetCurrentDirValue(_dosDriveManager.CurrentDriveLetter, _dosDriveManager.CurrentDrive.MountedHostDirectory, $@"{_dosDriveManager.CurrentDriveIndex}:\");
     }
 
     /// <summary>
@@ -37,16 +36,20 @@ internal class DosPathResolver {
             IVirtualDrive IVirtualDrive = _dosDriveManager.CurrentDrive;
             currentDir = IVirtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
-        } else if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAt(driveNumber).Key, out IVirtualDrive? IVirtualDrive)) {
-            currentDir = IVirtualDrive.CurrentDosDirectory;
-            return DosFileOperationResult.NoValue();
+        } else {
+            char driveLetter = DosDriveManager.DriveLetters.Keys.ElementAtOrDefault(driveNumber - 1);
+            if (_dosDriveManager.TryGetValue(driveLetter,
+                        out IVirtualDrive? virtualDrive)) {
+                currentDir = virtualDrive.CurrentDosDirectory;
+                return DosFileOperationResult.NoValue();
+            }
         }
         currentDir = "";
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
     }
 
-    private static string GetFullCurrentDosPathOnDrive(IVirtualDrive IVirtualDrive) =>
-        Path.Combine($"{IVirtualDrive.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}", IVirtualDrive.CurrentDosDirectory);
+    private static string GetFullCurrentDosPathOnDrive(IVirtualDrive virtualDrive) =>
+        Path.Combine($"{virtualDrive.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
@@ -57,7 +60,7 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private static bool IsWithinMountPoint(string hostFullPath, IVirtualDrive IVirtualDrive) => hostFullPath.StartsWith(IVirtualDrive.MountedHostDirectory);
+    private static bool IsWithinMountPoint(string hostFullPath, IVirtualDrive virtualDrive) => hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
 
     /// <summary>
     /// Sets the current DOS folder.
@@ -153,7 +156,7 @@ internal class DosPathResolver {
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
         if(string.IsNullOrWhiteSpace(parentPath)) {
-            parentPath = GetFullCurrentDosPathOnDrive(_dosDriveManager[_dosDriveManager.CurrentDriveLetter]);
+            parentPath = GetFullCurrentDosPathOnDrive(_dosDriveManager.CurrentDrive);
         }
         string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
@@ -168,11 +171,11 @@ internal class DosPathResolver {
             if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
                 length = 3;
             }
-            return (_dosDriveManager[_dosDriveManager.CurrentDriveLetter].MountedHostDirectory, dosPath[length..]);
+            return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath[length..]);
         } else if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
             return (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..]);
         } else {
-            return (_dosDriveManager[_dosDriveManager.CurrentDriveLetter].MountedHostDirectory, dosPath);
+            return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
         }
     }
 
@@ -241,16 +244,6 @@ internal class DosPathResolver {
         (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
     }
-
-    public byte NumberOfPotentiallyValidDriveLetters {
-        get {
-            // At least A: and B:
-            byte driveLetters = 2;
-            driveLetters += (byte)_dosDriveManager.TakeWhile(x => x.Key is not 'A' and not 'B').Count();
-            return driveLetters;
-        }
-    }
-
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&

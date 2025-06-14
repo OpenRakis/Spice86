@@ -224,7 +224,7 @@ public class DosFileManager {
 
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         dta.SearchId = GenerateNewKey();
-        dta.Drive = DefaultDrive;
+        dta.Drive = _dosDriveManager.CurrentDriveIndex;
         dta.EntryCountWithinSearchResults = 0;
 
         if (_dosVirtualDevices.OfType<CharacterDevice>().SingleOrDefault(
@@ -358,7 +358,7 @@ public class DosFileManager {
     public DosFileOperationResult FindNextMatchingFile() {
         DosDiskTransferArea dta = GetDosDiskTransferArea();
         ushort searchDrive = dta.Drive;
-        if (searchDrive >= 26 || searchDrive > _dosPathResolver.NumberOfPotentiallyValidDriveLetters) {
+        if (searchDrive >= 26 || searchDrive > _dosDriveManager.NumberOfPotentiallyValidDriveLetters) {
             return FileOperationErrorWithLog("Search on an invalid drive", ErrorCode.NoMoreMatchingFiles);
         }
 
@@ -463,6 +463,9 @@ public class DosFileManager {
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
+            if(_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("DOS: File not found! {DosFilePathNotFound} {AccessMode}", fileName, accessMode);
+            }
             return FileNotFoundError($"'{fileName}'");
         }
 
@@ -735,7 +738,7 @@ public class DosFileManager {
         DateTime creationZonedDateTime = entryInfo.CreationTimeUtc;
         DateTime creationLocalDate = creationZonedDateTime.ToLocalTime();
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
-        dta.Drive = DefaultDrive;
+        dta.Drive = _dosDriveManager.CurrentDriveIndex;
         dta.SearchAttributes = searchAttributes ?? dta.SearchAttributes;
         dta.FileAttributes = (byte)entryInfo.Attributes;
         dta.FileDate = ToDosDate(creationLocalDate);
@@ -881,8 +884,8 @@ public class DosFileManager {
             }
         } else if (state.AL < 0x12) {
             if (state.AL != 0x0b) {
-                drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
-                if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters ||
+                drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : state.BX - 1);
+                if (drive >= 2 && (drive >= _dosDriveManager.NumberOfPotentiallyValidDriveLetters ||
                     _dosDriveManager.Count < (drive + 1))) {
                     return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
                 }
@@ -1075,20 +1078,4 @@ public class DosFileManager {
         }
         return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
     }
-
-    /// <summary>
-    /// Gets the current default drive. 0x0: A:, 0x1: B:, ...
-    /// </summary>
-    public byte DefaultDrive => _dosDriveManager.CurrentDriveIndex;
-
-    /// <summary>
-    /// Selects the DOS default drive.
-    /// </summary>
-    /// <param name="driveIndex">The index of the drive. 0x0: A:, 0x1: B:, ...</param>
-    public void SelectDefaultDrive(byte driveIndex) => _dosDriveManager.SetCurrentDrive(driveIndex);
-
-    /// <summary>
-    /// Gets the number of potentially valid drive letters
-    /// </summary>
-    public byte NumberOfPotentiallyValidDriveLetters => _dosPathResolver.NumberOfPotentiallyValidDriveLetters;
 }
