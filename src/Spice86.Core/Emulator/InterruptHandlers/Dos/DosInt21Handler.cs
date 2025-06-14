@@ -24,6 +24,7 @@ using System.Text;
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
+    private readonly DosDriveManager _dosDriveManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
@@ -44,19 +45,21 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
     /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
-    /// <param name="dosFileManager">The DOS class responsible for file and device-as-file access.</param>
+    /// <param name="dosFileManager">The DOS class responsible for DOS drive access.</param>
+    /// <param name="dosDriveManager">The DOS class responsible for file and device-as-file access.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
+        _dosDriveManager = dosDriveManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
@@ -265,7 +268,7 @@ public class DosInt21Handler : InterruptHandler {
         // Media Id
         State.DS = 0x8010;
         // From DOSBox source code...
-        State.BX = (ushort)(0x8010 + _dosFileManager.DefaultDrive * 9);
+        State.BX = (ushort)(0x8010 + _dosDriveManager.CurrentDriveIndex * 9);
         State.AH = 0;
     }
 
@@ -658,7 +661,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET CURRENT DEFAULT DRIVE");
         }
-        State.AL = _dosFileManager.DefaultDrive;
+        State.AL = _dosDriveManager.CurrentDriveIndex;
     }
 
     /// <summary>
@@ -981,11 +984,11 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        _dosFileManager.SelectDefaultDrive(State.DL);
+        _dosDriveManager.SetCurrentDrive(State.DL);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SELECT DEFAULT DRIVE {DefaultDrive}", _dosFileManager.DefaultDrive);
+            LoggerService.Verbose("SELECT DEFAULT DRIVE {@DefaultDrive}", _dosDriveManager.CurrentDrive);
         }
-        State.AL = _dosFileManager.NumberOfPotentiallyValidDriveLetters;
+        State.AL = _dosDriveManager.NumberOfPotentiallyValidDriveLetters;
     }
 
     /// <summary>

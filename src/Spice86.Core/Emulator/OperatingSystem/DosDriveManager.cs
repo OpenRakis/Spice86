@@ -4,8 +4,8 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
 using System.Collections;
-using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
@@ -13,7 +13,7 @@ using System.Linq;
 /// The class responsible for centralizing all the mounted DOS drives.
 /// </summary>
 public class DosDriveManager : IDictionary<char, IVirtualDrive> {
-    public Dictionary<char, IVirtualDrive> _driveMap { get; init; } = new Dictionary<char, IVirtualDrive>();
+    private SortedDictionary<char, IVirtualDrive> _driveMap = new();
 
     /// <summary>
     /// Initializes a new instance.
@@ -43,17 +43,38 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
     public char CurrentDriveLetter => CurrentDrive.DriveLetter;
 
 
-    internal static readonly FrozenDictionary<char, byte> DriveLetters =
-        new Dictionary<char, byte> {
-            ['A'] = 0, ['B'] = 1, ['C'] = 2, ['D'] = 3, ['E'] = 4, ['F'] = 5, ['G'] = 6, ['H'] = 7,
-            ['I'] = 8, ['J'] = 9, ['K'] = 10, ['L'] = 11, ['M'] = 12, ['N'] = 13, ['O'] = 14, ['P'] = 15,
-            ['Q'] = 16, ['R'] = 17, ['S'] = 18, ['T'] = 19, ['U'] = 20, ['V'] = 21, ['W'] = 22, ['X'] = 23,
-            ['Y'] = 24, ['Z'] = 25
-        }.ToFrozenDictionary();
+    internal static readonly ImmutableSortedDictionary<char, byte> DriveLetters = new Dictionary<char, byte>() {
+            { 'A', 0 },
+            { 'B', 1 },
+            { 'C', 2 },
+            { 'D', 3 },
+            { 'E', 4 },
+            { 'F', 5 },
+            { 'G', 6 },
+            { 'H', 7 },
+            { 'I', 8 },
+            { 'J', 9 },
+            { 'K', 10 },
+            { 'L', 11 },
+            { 'M', 12 },
+            { 'N', 13 },
+            { 'O', 14 },
+            { 'P', 15 },
+            { 'Q', 16 },
+            { 'R', 17 },
+            { 'S', 18 },
+            { 'T', 19 },
+            { 'U', 20 },
+            { 'V', 21 },
+            { 'W', 22 },
+            { 'X', 23 },
+            { 'Y', 24 },
+            { 'Z', 25 }
+        }.ToImmutableSortedDictionary();
 
 
     /// <summary>
-    /// Gets the current DOS drive, as a zero based index.
+    /// Gets the current DOS drive zero based index.
     /// </summary>
     public byte CurrentDriveIndex => DriveLetters[CurrentDrive.DriveLetter];
 
@@ -67,6 +88,12 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
         return _driveMap.ElementAtOrDefault(zeroBasedIndex).Value is not NullDrive;
     }
 
+    public byte NumberOfPotentiallyValidDriveLetters {
+        get {
+            // At least A: and B:
+            return (byte)_driveMap.Count;
+        }
+    }
 
     public ICollection<char> Keys => ((IDictionary<char, IVirtualDrive>)_driveMap).Keys;
 
