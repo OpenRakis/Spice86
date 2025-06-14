@@ -54,6 +54,11 @@ public class Dos {
     public DosDiskInt25Handler DosInt25Handler { get; }
 
     /// <summary>
+    /// Gets the INT26H DOS Disk services stub.
+    /// </summary>
+    public DosDiskInt26Handler DosInt26Handler { get; }
+
+    /// <summary>
     /// Gets the INT 28h DOS services.
     /// </summary>
     public DosInt28Handler DosInt28Handler { get; }
@@ -145,6 +150,7 @@ public class Dos {
             MemoryManager, FileManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt25Handler = new DosDiskInt25Handler(_memory, dosDriveManager, functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, dosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
