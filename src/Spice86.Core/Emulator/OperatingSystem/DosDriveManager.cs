@@ -25,8 +25,10 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
+        _driveMap.Add('A', new NullDrive('A', true, "A:"));
+        _driveMap.Add('B', new NullDrive('B', true, "B:"));
         _driveMap.Add('C', new MountedFolder('C', cDriveFolderPath));
-        CurrentDrive = _driveMap.First().Value;
+        CurrentDrive = _driveMap.ElementAt(2).Value;
     }
 
     public void SetCurrentDrive(ushort zeroBasedDriveIndex) {
@@ -59,7 +61,10 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
         if(zeroBasedIndex > DriveLetters.Count - 1) {
             return false;
         }
-        return _driveMap.ContainsKey(DriveLetters.ElementAt(zeroBasedIndex).Key);
+        if (zeroBasedIndex > _driveMap.Count - 1) {
+            return false;
+        }
+        return _driveMap.ElementAtOrDefault(zeroBasedIndex).Value is not NullDrive;
     }
 
 
@@ -73,7 +78,8 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
 
     public IVirtualDrive this[char key] { get => ((IDictionary<char, IVirtualDrive>)_driveMap)[key]; set => ((IDictionary<char, IVirtualDrive>)_driveMap)[key] = value; }
 
-    public const int MaxDriveCount = 25;
+
+    public const int MaxDriveCount = 26;
 
     public void Add(char key, IVirtualDrive value) {
         ((IDictionary<char, IVirtualDrive>)_driveMap).Add(key, value);

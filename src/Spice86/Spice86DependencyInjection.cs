@@ -415,6 +415,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt21Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt2FHandler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt25Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
             if (dos.Ems is not null) {
                 interruptInstaller.InstallInterruptHandler(dos.Ems);
