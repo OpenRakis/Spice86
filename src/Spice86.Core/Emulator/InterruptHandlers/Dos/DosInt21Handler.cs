@@ -85,6 +85,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x2C, GetTime);
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
+        AddAction(0x31, TerminateAndStayResident);
         AddAction(0x33, GetSetControlBreak);
         AddAction(0x34, GetInDosFlagAddress);
         AddAction(0x35, GetInterruptVector);
@@ -706,6 +707,10 @@ public class DosInt21Handler : InterruptHandler {
         // DOS OEM KEY 0x00000
         State.BL = 0x00;
         State.CX = 0x00;
+    }
+
+    private void TerminateAndStayResident() {
+        throw new NotImplementedException("TSR Support is not implemented");
     }
 
     /// <summary>
