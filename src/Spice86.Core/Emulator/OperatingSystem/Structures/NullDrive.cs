@@ -1,4 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+
+
 internal class NullDrive : IVirtualDrive {
     private readonly char _driveLetter;
     private readonly bool _isRemovable;
