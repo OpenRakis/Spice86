@@ -100,6 +100,7 @@ public class Dos {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="emulationLoopRecalls">The class used to wait for interrupts without blocking the emulation loop.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
@@ -128,8 +129,9 @@ public class Dos {
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
+        DosDriveManager dosDriveManager = new(cDriveFolderPath, executablePath);
 
-        FileManager = new DosFileManager(_memory, dosStringDecoder, cDriveFolderPath, executablePath,
+        FileManager = new DosFileManager(_memory, dosStringDecoder, dosDriveManager,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
