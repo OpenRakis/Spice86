@@ -176,7 +176,8 @@ public class DosFileManagerTests {
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 
-        return new DosFileManager(memory, new DosStringDecoder(memory, state), configuration.CDrive,
-            configuration.Exe, loggerService, dos.Devices);
+        DosDriveManager dosDriveManager = new(configuration.CDrive, configuration.Exe);
+
+        return new DosFileManager(memory, new DosStringDecoder(memory, state), dosDriveManager, loggerService, dos.Devices);
     }
 }

@@ -5,7 +5,6 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -23,6 +22,8 @@ public class DosFileManager {
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
+
+    private readonly DosDriveManager _dosDriveManager;
 
     private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
@@ -57,16 +58,16 @@ public class DosFileManager {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="dosStringDecoder">A helper class to encode/decode DOS strings.</param>
-    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
-    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
+    /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        string? cDriveFolderPath, string? executablePath, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
-        _dosPathResolver = new(cDriveFolderPath, executablePath);
+        _dosPathResolver = new(dosDriveManager);
         _memory = memory;
+        _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
     }
 
@@ -709,7 +710,7 @@ public class DosFileManager {
 
             if (randomAccessFile != null) {
                 SetOpenFile(dosIndex, new DosFile(dosFileName, dosIndex, randomAccessFile) {
-                    Drive = _dosPathResolver.CurrentDriveIndex
+                    Drive = _dosDriveManager.CurrentDriveIndex
                 });
             }
         } catch (FileNotFoundException) {
@@ -833,7 +834,7 @@ public class DosFileManager {
             return PathNotFoundError(dosDirectory);
         }
 
-        _dosPathResolver.GetCurrentDosDirectory(_dosPathResolver.CurrentDriveIndex, out string currentDir);
+        _dosPathResolver.GetCurrentDosDirectory(_dosDriveManager.CurrentDriveIndex, out string currentDir);
         string? currentHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(currentDir);
 
         if (!string.IsNullOrWhiteSpace(currentHostPath) &&
@@ -882,7 +883,7 @@ public class DosFileManager {
             if (state.AL != 0x0b) {
                 drive = (byte)(state.BX == 0 ? DefaultDrive : state.BX - 1);
                 if (drive >= 2 && (drive >= NumberOfPotentiallyValidDriveLetters ||
-                    _dosPathResolver.DriveMap.Count < (drive + 1))) {
+                    _dosDriveManager.Count < (drive + 1))) {
                     return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
                 }
             }
@@ -1078,13 +1079,13 @@ public class DosFileManager {
     /// <summary>
     /// Gets the current default drive. 0x0: A:, 0x1: B:, ...
     /// </summary>
-    public byte DefaultDrive => _dosPathResolver.CurrentDriveIndex;
+    public byte DefaultDrive => _dosDriveManager.CurrentDriveIndex;
 
     /// <summary>
     /// Selects the DOS default drive.
     /// </summary>
     /// <param name="driveIndex">The index of the drive. 0x0: A:, 0x1: B:, ...</param>
-    public void SelectDefaultDrive(byte driveIndex) => _dosPathResolver.CurrentDriveIndex = driveIndex;
+    public void SelectDefaultDrive(byte driveIndex) => _dosDriveManager.SetCurrentDrive(driveIndex);
 
     /// <summary>
     /// Gets the number of potentially valid drive letters

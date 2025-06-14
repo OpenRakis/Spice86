@@ -1,9 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+
 /// <summary>
 /// Represents a host folder used as a drive by DOS.
 /// </summary>
-public class MountedFolder {
+public class MountedFolder : IVirtualDrive {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -34,4 +36,7 @@ public class MountedFolder {
     /// The current DOS directory in use on the drive.
     /// </summary>
     public string CurrentDosDirectory { get; set; }
+    public string? Label { get; set; }
+    public bool IsRemovable => false;
+    public bool IsReadOnlyMedium => false;
 }
