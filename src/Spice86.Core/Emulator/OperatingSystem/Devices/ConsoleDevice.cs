@@ -121,6 +121,9 @@ public class ConsoleDevice : CharacterDevice {
             // Function 0: Read keystroke
             _state.AH = 0x0;
             byte? scanCode = GetOrWaitForScanCode();
+            if(scanCode is null) {
+                break;
+            }
             switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
@@ -141,7 +144,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Backspace:
                     if (buffer.Length == 1) {
-                        buffer[index++] = _state.AL;
+                        buffer[index++] = scanCode.Value;
                         readCount++;
                     } else if (index > 0) {
                         buffer[index--] = 0;
@@ -160,7 +163,7 @@ public class ConsoleDevice : CharacterDevice {
                     // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
                     if (_state.AH != 0) {
                         // Extended key if _state.AH is not 0x0
-                        buffer[index++] = _state.AL;
+                        buffer[index++] = scanCode.Value;
                         readCount++;
                     } else {
                         buffer[index++] = 0;
@@ -175,7 +178,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Null:
                     // Extended keys in the INT 16H 0x0 function call case
-                    buffer[index++] = _state.AL;
+                    buffer[index++] = scanCode.Value;
                     readCount++;
                     if (buffer.Length > index) {
                         buffer[index++] = _state.AH;
@@ -185,13 +188,13 @@ public class ConsoleDevice : CharacterDevice {
                     }
                     break;
                 default:
-                    buffer[index++] = _state.AL;
+                    buffer[index++] = scanCode.Value;
                     readCount++;
                     break;
             }
             if (Echo) {
                 // What to do if buffer.Length == 1 and character is BackSpace ?
-                OutputWithNoAttributes(_state.AL);
+                OutputWithNoAttributes(scanCode.Value);
             }
         }
         _state.AX = oldAx; // Restore AX
