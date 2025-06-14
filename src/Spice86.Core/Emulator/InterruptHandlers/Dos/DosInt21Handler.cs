@@ -109,6 +109,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
         AddAction(0x4A, () => ModifyMemoryBlock(true));
+        AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
@@ -709,6 +710,10 @@ public class DosInt21Handler : InterruptHandler {
         State.CX = 0x00;
     }
 
+    /// <summary>
+    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// </summary>
+    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
     private void TerminateAndStayResident() {
         throw new NotImplementedException("TSR Support is not implemented");
     }
@@ -853,6 +858,16 @@ public class DosInt21Handler : InterruptHandler {
             State.AX = 0x08;
             State.BX = requestedSize;
         }
+    }
+
+    /// <summary>
+    /// Either only load a program or overlay, or load it and run it.
+    /// </summary>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
+    /// <exception cref="NotImplementedException">This function is not implemented</exception>
+    public void LoadAndOrExecute(bool calledFromVm) {
+        string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
+        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
     }
 
     /// <summary>
