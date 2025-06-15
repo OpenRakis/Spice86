@@ -458,7 +458,7 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
             }
-            return OpenDeviceInternal(device);
+            return OpenDevice(device);
         }
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
@@ -482,10 +482,6 @@ public class DosFileManager {
     /// <param name="device">The character device</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenDevice(VirtualFileBase device) {
-        return OpenDeviceInternal(device);
-    }
-
-    private DosFileOperationResult OpenDeviceInternal(VirtualFileBase device) {
         int? freeIndex = FindNextFreeFileIndex();
         if (freeIndex == null) {
             return NoFreeHandleError();
