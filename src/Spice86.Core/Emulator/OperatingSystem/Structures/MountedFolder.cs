@@ -26,4 +26,6 @@ public class MountedFolder : IVirtualDrive {
     public bool IsRemovable => false;
 
     public bool IsReadOnlyMedium => false;
+
+    public bool IsRemote => false;
 }

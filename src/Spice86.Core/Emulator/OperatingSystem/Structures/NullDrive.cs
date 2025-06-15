@@ -17,4 +17,6 @@ internal class NullDrive : IVirtualDrive {
     public string MountedHostDirectory { get; init; } = "";
     public string CurrentDosDirectory { get; set; } = "";
     public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
+
+    public bool IsRemote => false;
 }
