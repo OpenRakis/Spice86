@@ -476,6 +476,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
+        if (!HasRunnable(operation) && LoggerService.IsEnabled(LogEventLevel.Error)) {
+            LoggerService.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
+        }
         Run(operation);
     }
 
