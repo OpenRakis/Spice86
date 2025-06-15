@@ -23,6 +23,11 @@ public interface IVideoInt10Handler : IInterruptHandler {
     VideoFunctionalityInfo GetFunctionalityInfo();
 
     /// <summary>
+    ///     Runs a standard VESA (Video Electronics Standards Association) sub-function identifed by the AL register.
+    /// </summary>
+    void RunVesaSubFunction();
+
+    /// <summary>
     ///     Combines the video display.
     /// </summary>
     void GetSetDisplayCombinationCode();
