@@ -49,7 +49,7 @@ internal class DosPathResolver {
     }
 
     private static string GetFullCurrentDosPathOnDrive(IVirtualDrive virtualDrive) =>
-        Path.Combine($"{virtualDrive.DosDriveRootPath}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
+        Path.Combine($"{virtualDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
@@ -88,7 +88,7 @@ internal class DosPathResolver {
                 return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
             }
         }
-        return _dosDriveManager.CurrentDrive.DosDriveRootPath;
+        return _dosDriveManager.CurrentDrive.DosVolume;
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
