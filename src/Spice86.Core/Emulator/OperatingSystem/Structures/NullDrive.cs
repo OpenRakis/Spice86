@@ -1,15 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
-
+/// <inheritdoc cref="IVirtualDrive" />
 internal class NullDrive : IVirtualDrive {
     private readonly char _driveLetter;
     private readonly bool _isRemovable;
-    private readonly string _dosDriveRootPath;
 
-    public NullDrive(char driveLetter, bool isRemovable, string dosDriveRootPath) {
+    public NullDrive(char driveLetter, bool isRemovable) {
         _driveLetter = driveLetter;
         _isRemovable = isRemovable;
-        _dosDriveRootPath = dosDriveRootPath;
     }
 
     public string? Label { get; set; }
@@ -18,5 +16,5 @@ internal class NullDrive : IVirtualDrive {
     public char DriveLetter => _driveLetter;
     public string MountedHostDirectory { get; init; } = "";
     public string CurrentDosDirectory { get; set; } = "";
-    public string DosDriveRootPath => _dosDriveRootPath;
+    public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
 }

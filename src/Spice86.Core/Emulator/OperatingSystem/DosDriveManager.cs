@@ -25,8 +25,8 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
-        _driveMap.Add('A', new NullDrive('A', true, "A:"));
-        _driveMap.Add('B', new NullDrive('B', true, "B:"));
+        _driveMap.Add('A', new NullDrive('A', true));
+        _driveMap.Add('B', new NullDrive('B', true));
         _driveMap.Add('C', new MountedFolder('C', cDriveFolderPath));
         CurrentDrive = _driveMap.ElementAt(2).Value;
     }

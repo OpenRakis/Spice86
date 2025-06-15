@@ -1,5 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+
+/// <summary>
+/// Represents a host folder used as a drive by DOS.
+/// </summary>
 public interface IVirtualDrive {
+    /// <summary>
+    /// Gets or sets the DOS label.
+    /// </summary>
+    /// <remarks>11 ASCII encoded characters limit.</remarks>
     public string? Label { get; set; }
 
     /// <summary>
@@ -23,12 +31,12 @@ public interface IVirtualDrive {
     public string MountedHostDirectory { get; init; }
 
     /// <summary>
-    /// The current DOS directory in use on the drive.
+    /// Gets the absolute path to the current DOS directory in use on the drive.
     /// </summary>
     public string CurrentDosDirectory { get; set; }
 
     /// <summary>
-    /// Gets the DOS drive root path.
+    /// Gets the DOS assigned drive letter, with a volume separator character appended to it.
     /// </summary>
-    public string DosDriveRootPath { get; }
+    public string DosVolume { get; }
 }
