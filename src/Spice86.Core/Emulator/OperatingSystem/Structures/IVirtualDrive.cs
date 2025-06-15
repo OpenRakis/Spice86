@@ -39,4 +39,9 @@ public interface IVirtualDrive {
     /// Gets the DOS assigned drive letter, with a volume separator character appended to it.
     /// </summary>
     public string DosVolume { get; }
+
+    /// <summary>
+    /// Gets if it is a network drive. Not supported, always <see langword="false" />
+    /// </summary>
+    public bool IsRemote { get; }
 }
