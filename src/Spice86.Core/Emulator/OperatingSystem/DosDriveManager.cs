@@ -13,7 +13,7 @@ using System.Linq;
 /// The class responsible for centralizing all the mounted DOS drives.
 /// </summary>
 public class DosDriveManager : IDictionary<char, IVirtualDrive> {
-    private SortedDictionary<char, IVirtualDrive> _driveMap = new();
+    private readonly SortedDictionary<char, IVirtualDrive> _driveMap = new();
 
     /// <summary>
     /// Initializes a new instance.
