@@ -22,6 +22,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -59,7 +60,7 @@ public class DosFileManagerTests {
         DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
 
         // Act
-        DosFileOperationResult result = dosFileManager.OpenFile("C.txt", 1);
+        DosFileOperationResult result = dosFileManager.OpenFile("C.txt", FileAccessMode.WriteOnly);
 
         // Assert
         result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));

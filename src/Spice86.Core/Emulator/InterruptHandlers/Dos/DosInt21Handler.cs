@@ -907,14 +907,14 @@ public class DosInt21Handler : InterruptHandler {
     public void OpenFile(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
-        byte rwAccessMode = (byte)(accessMode & 0b111);
+        FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMod} (rwAccessMode:{RwAccessMode})", 
-                fileName, ConvertUtils.ToHex8(accessMode),
-                ConvertUtils.ToHex8(rwAccessMode));
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}", 
+                fileName, fileAccessMode,
+                ConvertUtils.ToHex8(State.AL));
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFile(
-            fileName, rwAccessMode);
+            fileName, fileAccessMode);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 

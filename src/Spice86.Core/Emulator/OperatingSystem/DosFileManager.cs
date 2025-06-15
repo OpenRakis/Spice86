@@ -25,7 +25,6 @@ public class DosFileManager {
 
     private readonly DosDriveManager _dosDriveManager;
 
-    private static readonly Dictionary<byte, string> FileOpenMode = new();
     private readonly ILoggerService _loggerService;
 
     private ushort _diskTransferAreaAddressOffset;
@@ -46,12 +45,6 @@ public class DosFileManager {
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
-
-    static DosFileManager() {
-        FileOpenMode.Add(0x00, "r");
-        FileOpenMode.Add(0x01, "w");
-        FileOpenMode.Add(0x02, "rw");
-    }
 
     /// <summary>
     /// Initializes a new instance.
@@ -162,7 +155,7 @@ public class DosFileManager {
             testFileStream?.Dispose();
         }
 
-        return OpenFileInternal(fileName, prefixedPath, "rw");
+        return OpenFileInternal(fileName, prefixedPath, FileAccessMode.ReadWrite);
     }
 
     /// <summary>
@@ -172,19 +165,19 @@ public class DosFileManager {
     /// <param name="newHandle">The new handle to a file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ForceDuplicateFileHandle(ushort fileHandle, ushort newHandle) {
-        if(fileHandle == newHandle) {
+        if (fileHandle == newHandle) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
-        if(!IsValidFileHandle(newHandle)) {
+        if (!IsValidFileHandle(newHandle)) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
-        if(OpenFiles[newHandle] != null) {
+        if (OpenFiles[newHandle] != null) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
-        if(newHandle < OpenFiles.Length && OpenFiles[newHandle] != null) {
+        if (newHandle < OpenFiles.Length && OpenFiles[newHandle] != null) {
             CloseFile(newHandle);
         }
         SetOpenFile(newHandle, file);
@@ -449,31 +442,29 @@ public class DosFileManager {
     /// <param name="fileName">The name of the file to open.</param>
     /// <param name="accessMode">The access mode (read, write, or read+write)</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenFile(string fileName, byte accessMode) {
-        string openMode = FileOpenMode[accessMode];
-
+    public DosFileOperationResult OpenFile(string fileName, FileAccessMode accessMode) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.Name == fileName);
         if (device is not null) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, openMode);
+                _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, accessMode);
             }
             return OpenDevice(device);
         }
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
-            if(_loggerService.IsEnabled(LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("DOS: File not found! {DosFilePathNotFound} {AccessMode}", fileName, accessMode);
             }
             return FileNotFoundError($"'{fileName}'");
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, openMode);
+            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, accessMode);
         }
 
-        return OpenFileInternal(fileName, hostFileName, openMode);
+        return OpenFileInternal(fileName, hostFileName, accessMode);
     }
 
     /// <summary>
@@ -524,8 +515,8 @@ public class DosFileManager {
 
         if (actualReadLength > 0) {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
-            if(file is DosFile actualFile) {
-                actualFile.AddMemoryRange(new MemoryRange(targetAddress, 
+            if (file is DosFile actualFile) {
+                actualFile.AddMemoryRange(new MemoryRange(targetAddress,
                     (uint)(targetAddress + actualReadLength - 1), file.Name));
             }
         }
@@ -664,7 +655,7 @@ public class DosFileManager {
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
     }
 
-    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, string openMode) {
+    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
             return FileNotFoundError(dosFileName);
@@ -679,7 +670,7 @@ public class DosFileManager {
         try {
             Stream? randomAccessFile = null;
             switch (openMode) {
-                case "r": {
+                case FileAccessMode.ReadOnly: {
                         string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.OpenRead(hostFileName);
@@ -691,10 +682,10 @@ public class DosFileManager {
 
                         break;
                     }
-                case "w":
+                case FileAccessMode.WriteOnly:
                     randomAccessFile = File.OpenWrite(hostFileName);
                     break;
-                case "rw": {
+                case FileAccessMode.ReadWrite: {
                         string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName, FileMode.Open);
@@ -909,7 +900,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Value16(state.DX);
             case 0x01:      /* Set Device Information */
-                if(state.DH != 0) {
+                if (state.DH != 0) {
                     return DosFileOperationResult.Error(ErrorCode.DataInvalid);
                 }
                 if (OpenFiles[handle] is VirtualDeviceBase device) {
@@ -1052,20 +1043,20 @@ public class DosFileManager {
             //}
             case 0x0E:          /* Get Logical Drive Map */
                 /* TODO: We only have C:, so only 1 logical drive assigned! */
-                if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("Get logical drive map: returns only the C: hard drive!");
                 }
                 state.AL = 0x0;
                 state.AH = 0x07;
                 return DosFileOperationResult.NoValue();
-                //if (drive < 2) {
-                //	if (Drives[drive]) reg_al=drive+1;
-                //	else reg_al=1;
-                //} else if (Drives[drive]->IsRemovable()) {
-                //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-                //	return false;
-                //} else reg_al=0;	/* Only 1 logical drive assigned */
-                //reg_ah=0x07;
+            //if (drive < 2) {
+            //	if (Drives[drive]) reg_al=drive+1;
+            //	else reg_al=1;
+            //} else if (Drives[drive]->IsRemovable()) {
+            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
+            //	return false;
+            //} else reg_al=0;	/* Only 1 logical drive assigned */
+            //reg_ah=0x07;
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("IOCTL: Invalid function number {IoctlFunc}", state.AL);
