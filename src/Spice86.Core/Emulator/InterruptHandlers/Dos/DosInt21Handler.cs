@@ -17,6 +17,7 @@ using Spice86.Shared.Utils;
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -984,7 +985,12 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        _dosDriveManager.SetCurrentDrive(State.DL);
+        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out IVirtualDrive? mountedDrive)) {
+            _dosDriveManager.CurrentDrive = mountedDrive;
+        } 
+        if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
+            LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
+        }
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SELECT DEFAULT DRIVE {@DefaultDrive}", _dosDriveManager.CurrentDrive);
         }

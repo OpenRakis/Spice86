@@ -31,11 +31,7 @@ public class DosDriveManager : IDictionary<char, IVirtualDrive> {
         CurrentDrive = _driveMap.ElementAt(2).Value;
     }
 
-    public void SetCurrentDrive(ushort zeroBasedDriveIndex) {
-        CurrentDrive = _driveMap.ElementAt(zeroBasedDriveIndex).Value;
-    }
-
-    public IVirtualDrive CurrentDrive { get; private set; }
+    public IVirtualDrive CurrentDrive { get; set; }
 
     /// <summary>
     /// Gets the current DOS drive letter.
