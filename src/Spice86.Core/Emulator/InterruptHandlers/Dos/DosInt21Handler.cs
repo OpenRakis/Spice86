@@ -343,7 +343,9 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
-        LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
+        if(LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
+        }
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
             _keyboardInt16Handler.FlushKeyboardBuffer();
             return;
