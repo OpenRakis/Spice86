@@ -13,6 +13,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -802,12 +803,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         return 0;
     }
 
-    public bool TryReadFromControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
         returnCode = null;
         return false;
     }
 
-    public bool TryWriteToControlChannel(uint address, ushort size, out ushort? returnCode) {
+    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
         returnCode = null;
         return false;
     }

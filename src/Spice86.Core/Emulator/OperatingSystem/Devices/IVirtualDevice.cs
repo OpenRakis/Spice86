@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 /// The interface for all DOS virtual devices.
 /// </summary>
@@ -10,9 +12,9 @@ public interface IVirtualDevice : IVirtualFile {
 
     public byte GetStatus(bool inputFlag);
 
-    public bool TryReadFromControlChannel(uint address, ushort size, out ushort? returnCode);
+    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
 
-    public bool TryWriteToControlChannel(uint address, ushort size, out ushort? returnCode);
+    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
 
     public uint DeviceNumber { get; set; }
 

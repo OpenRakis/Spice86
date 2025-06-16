@@ -5,11 +5,13 @@ using Serilog.Events;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 
-public class PrinterDevice : NullDevice {
+using System.IO;
+
+public class PrinterDevice : CharacterDevice {
 
     public PrinterDevice(ILoggerService loggerService,
         ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, DeviceAttributes.Character, strategy, interrupt) {
+        : base(loggerService, DeviceAttributes.Character, "LPT1", strategy, interrupt) {
     }
 
     public override string Name => "LPT1";
@@ -33,6 +35,29 @@ public class PrinterDevice : NullDevice {
         if(Logger.IsEnabled(LogEventLevel.Information)) {
             Logger.Information("Writing to printer: {Output}", output);
         }
-        base.Write(buffer, offset, count);
+    }
+
+    public override void Flush() {
+        if (Logger.IsEnabled(LogEventLevel.Information)) {
+            Logger.Information("Flushing printer");
+        }
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) {
+        if (Logger.IsEnabled(LogEventLevel.Information)) {
+            Logger.Information("Reading printer");
+        }
+        return 0;
+    }
+
+    public override long Seek(long offset, SeekOrigin origin) {
+        if (Logger.IsEnabled(LogEventLevel.Information)) {
+            Logger.Information("Seeking printer");
+        }
+        return 0;
+    }
+
+    public override void SetLength(long value) {
+        return;
     }
 }

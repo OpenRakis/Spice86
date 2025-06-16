@@ -8,12 +8,15 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Disk Transfer Area.
@@ -903,166 +906,181 @@ public class DosFileManager {
                 if (state.DH != 0) {
                     return DosFileOperationResult.Error(ErrorCode.DataInvalid);
                 }
-                if (OpenFiles[handle] is VirtualDeviceBase device) {
-                    state.AL = device.GetStatus(state.DX > 0);
+                if (OpenFiles[handle] is IVirtualDevice device && (device.Information & 0x8000) > 9) {
+                    state.AL = device.GetStatus(true);
                 } else {
                     return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
                 }
-                break;
-            case 0x02:      /* Read from Device Control Channel */
-                //TODO: if it is the PrinterDevice, check for CanRead => false => return ErrorCode.AccessDenied
-                throw new NotImplementedException("IOCTL: Read from Device Control Channel");
-            case 0x03:      /* Write to Device Control Channel */
-                //if (Files[handle]->GetInformation() & 0xc000) {
-                //	/* is character device with IOCTL support */
-                //	PhysPt bufptr=PhysicalMake(SegValue(ds),reg_dx);
-                //	uint16_t retcode=0;
-                //	const auto device_ptr = dynamic_cast<DOS_Device*>(
-                //	        Files[handle].get());
-                //	assert(device_ptr);
-                //	if (device_ptr->WriteToControlChannel(bufptr, reg_cx, &retcode)) {
-                //		reg_ax = retcode;
-                //		return true;
-                //	}
-                //}
-                //DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-                //return false;
-                throw new NotImplementedException("IOCTL: Write to Device Control Channel");
-            case 0x06:      /* Get Input Status */
-                throw new NotImplementedException("IOCTL: Get Input Status");
-            //if (Files[handle]->GetInformation() & 0x8000) {		//Check for device
-            //	reg_al=(Files[handle]->GetInformation() & 0x40) ? 0x0 : 0xff;
-            //} else { // FILE
-            //	uint32_t oldlocation=0;
-            //	Files[handle]->Seek(&oldlocation, DOS_SEEK_CUR);
-            //	uint32_t endlocation=0;
-            //	Files[handle]->Seek(&endlocation, DOS_SEEK_END);
-            //	if(oldlocation < endlocation){//Still data available
-            //		reg_al=0xff;
-            //	} else {
-            //		reg_al=0x0; //EOF or beyond
-            //	}
-            //	Files[handle]->Seek(&oldlocation, DOS_SEEK_SET); //restore filelocation
-            //	LOG(LOG_IOCTL,LOG_NORMAL)("06:Used Get Input Status on regular file with handle %u",handle);
-            //}
-            //return true;
-            case 0x07:      /* Get Output Status */
-                throw new NotImplementedException("IOCTL: Get Output Status");
-            //if (Files[handle]->GetInformation() & EXT_DEVICE_BIT) {
-            //	const auto device_ptr = dynamic_cast<DOS_Device*>(
-            //	        Files[handle].get());
-            //	assert(device_ptr);
-            //	reg_al = device_ptr->GetStatus(false);
-            //	return true;
-            //}
-            //LOG(LOG_IOCTL, LOG_NORMAL)("07:Fakes output status is ready for handle %u", handle);
-            //reg_al = 0xff;
-            //return true;
-            case 0x08:      /* Check if block device removable */
-                throw new NotImplementedException("IOCTL: Check if block device removable");
-            ///* cdrom drives and drive a&b are removable */
-            //if (drive < 2) reg_ax=0;
-            //else if (!Drives[drive]->IsRemovable()) reg_ax=1;
-            //else {
-            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //	return false;
-            //}
-            //return true;
-            case 0x09:      /* Check if block device remote */
-                throw new NotImplementedException("IOCTL: Check if block device remote");
-            //if ((drive >= 2) && Drives[drive]->IsRemote()) {
-            //	reg_dx=0x1000;	// device is remote
-            //	// undocumented bits always clear
-            //} else {
-            //	reg_dx=0x0802;	// Open/Close supported; 32bit access supported (any use? fixes Fable installer)
-            //	// undocumented bits from device attribute word
-            //	// TODO Set bit 9 on drives that don't support direct I/O
-            //}
-            case 0x0B:      /* Set sharing retry count */
-                throw new NotImplementedException("IOCTL: Set sharing retry count");
-            //if (reg_dx==0) {
-            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //	return false;
-            //}
-            case 0x0D:      /* Generic block device request */
-                throw new NotImplementedException("IOCTL: Generic block device request");
-            //{
-            //	if (drive < 2 && !Drives[drive]) {
-            //		DOS_SetError(DOSERR_ACCESS_DENIED);
-            //		return false;
-            //	}
-            //	if (reg_ch != 0x08 || Drives[drive]->IsRemovable()) {
-            //		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //		return false;
-            //	}
-            //	PhysPt ptr	= SegPhys(ds)+reg_dx;
-            //	switch (reg_cl) {
-            //	case 0x60:		/* Get Device parameters */
-            //		//mem_writeb(ptr+0,0);					// special functions (call value)
-            //		mem_writeb(ptr+1,(drive>=2)?0x05:0x07);	// type: hard disk(5), 1.44 floppy(7)
-            //		mem_writew(ptr+2,(drive>=2)?0x01:0x00);	// attributes: bit 0 set for nonremovable
-            //		mem_writew(ptr+4,0x0000);				// num of cylinders
-            //		mem_writeb(ptr+6,0x00);					// media type (00=other type)
-            //		// bios parameter block following
-            //		mem_writew(ptr+7,0x0200);				// bytes per sector (Win3 File Mgr. uses it)
-            //		break;
-            //	case 0x46:	/* Set volume serial number */
-            //		break;
-            //	case 0x66:	/* Get volume serial number */
-            //		{			
-            //			char const* bufin=Drives[drive]->GetLabel();
-            //			char buffer[11];memset(buffer,' ',11);
-
-            //			char const* find_ext=strchr(bufin,'.');
-            //			if (find_ext) {
-            //				Bitu size=(Bitu)(find_ext-bufin);
-            //				if (size>8) size=8;
-            //				memcpy(buffer,bufin,size);
-            //				find_ext++;
-            //				memcpy(buffer+8,find_ext,(strlen(find_ext)>3) ? 3 : strlen(find_ext)); 
-            //			} else {
-            //				memcpy(buffer,bufin,(strlen(bufin) > 8) ? 8 : strlen(bufin));
-            //			}
-
-            //			char buf2[8]={ 'F','A','T','1','6',' ',' ',' '};
-            //			if(drive<2) buf2[4] = '2'; //FAT12 for floppies
-
-            //			//mem_writew(ptr+0,0);			//Info level (call value)
-            //			mem_writed(ptr+2,0x1234);		//Serial number
-            //			MEM_BlockWrite(ptr+6,buffer,11);//volumename
-            //			MEM_BlockWrite(ptr+0x11,buf2,8);//filesystem
-            //		}
-            //		break;
-            //	default	:	
-            //		LOG(LOG_IOCTL,LOG_ERROR)("DOS:IOCTL Call 0D:%2X Drive %2X unhandled",reg_cl,drive);
-            //		DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //		return false;
-            //	}
-            //	reg_ax=0;
-            //	return true;
-            //}
-            case 0x0E:          /* Get Logical Drive Map */
-                /* TODO: We only have C:, so only 1 logical drive assigned! */
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("Get logical drive map: returns only the C: hard drive!");
-                }
-                state.AL = 0x0;
-                state.AH = 0x07;
                 return DosFileOperationResult.NoValue();
-            //if (drive < 2) {
-            //	if (Drives[drive]) reg_al=drive+1;
-            //	else reg_al=1;
-            //} else if (Drives[drive]->IsRemovable()) {
-            //	DOS_SetError(DOSERR_FUNCTION_NUMBER_INVALID);
-            //	return false;
-            //} else reg_al=0;	/* Only 1 logical drive assigned */
-            //reg_ah=0x07;
+            case 0x02:      /* Read from Device Control Channel */
+                if (OpenFiles[handle] is IVirtualDevice readDevice &&
+                    (readDevice.Information & 0xc000) > 0) {
+                    if (readDevice is PrinterDevice printer && !printer.CanRead) {
+                        return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                    }
+                    uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+                    if (readDevice.TryReadFromControlChannel(buffer, state.CX, out ushort? returnCode)) {
+                        state.AX = returnCode.Value;
+                        return DosFileOperationResult.NoValue();
+                    }
+                }
+                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+            case 0x03:      /* Write to Device Control Channel */
+                if (OpenFiles[handle] is IVirtualDevice writtenDevice &&
+                    (writtenDevice.Information & 0xc000) > 0) {
+                    /* is character device with IOCTL support */
+                    if (writtenDevice is PrinterDevice printer && !printer.CanWrite) {
+                        return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                    }
+                    uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+                    if (writtenDevice.TryWriteToControlChannel(buffer, state.CX, out ushort? returnCode)) {
+                        state.AX = returnCode.Value;
+                        return DosFileOperationResult.NoValue();
+                    }
+                }
+                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+            case 0x06:      /* Get Input Status */
+                if (OpenFiles[handle] is IVirtualDevice inputDevice) {
+                    if ((inputDevice.Information & 0x8000) > 0) {
+                        if (((inputDevice.Information & 0x40) > 0)) {
+                            state.AL = 0;
+                        } else {
+                            state.AL = 0xFF;
+                        }
+                    }
+                } else if (OpenFiles[handle] is VirtualFileBase file) {
+                    long oldLocation = file.Position;
+                    file.Seek(file.Position, SeekOrigin.End);
+                    long endLocation = file.Position;
+                    if (oldLocation < endLocation) { //Still data available
+                        state.AL = 0xff;
+                    } else {
+                        state.AL = 0x0; //EOF or beyond
+                    }
+                    file.Seek(oldLocation, SeekOrigin.Begin); //restore filelocation
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information(
+                            "DOS IOCTL: Get input status: Operation done one regular file with handle {Handle}",
+                            handle);
+                    }
+                }
+                return DosFileOperationResult.NoValue();
+            case 0x07:      /* Get Output Status */
+                if (OpenFiles[handle] is IVirtualDevice outputDevice &&
+                    (outputDevice.Information & 0x0200) > 0) {
+                    state.AL = outputDevice.GetStatus(false);
+                }
+                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                    _loggerService.Information(
+                        "DOS IOCTL: Get output status: Fakes output status is ready for handle {Handle}",
+                        handle);
+                }
+                state.AL = 0xFF;
+                return DosFileOperationResult.NoValue();
+
+            case 0x08:      /* Check if block device removable */
+                //* cdrom drives and drive A and B are removable */
+                if (drive < 2) {
+                    state.AX = 0;
+                } else if (!_dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
+                    state.AX = 1;
+                } else {
+                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                }
+                return DosFileOperationResult.NoValue();
+            case 0x09:      /* Check if block device remote */
+                if ((drive >= 2) && _dosDriveManager.ElementAt(drive).Value.IsRemote) {
+                    state.DX = 0x1000;  // device is remote
+                                        // undocumented bits always clear
+                } else {
+                    state.DX = 0x0802;  // Open/Close supported; 32bit access supported (any use? fixes Fable installer)
+                                        // undocumented bits from device attribute word
+                                        // TODO Set bit 9 on drives that don't support direct I/O
+                }
+                return DosFileOperationResult.NoValue();
+            case 0x0B:      /* Set sharing retry count */
+                if (state.DX == 0) {
+                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                }
+                return DosFileOperationResult.NoValue();
+            case 0x0D:      /* Generic block device request */
+                if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is not BlockDevice) {
+                    return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                }
+                if (state.CH != 0x08 || _dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
+                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                }
+                uint ptr = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+
+                switch (state.CL) {
+                    case 0x60:  // Get Device Parameters
+                        _memory.UInt8[ptr + 1] = (byte)(drive >= 2 ? 0x05 : 0x07);  // type
+                        _memory.UInt16[ptr + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
+                        _memory.UInt16[ptr + 4] = 0x0000;                            // cylinders
+                        _memory.UInt8[ptr + 6] = 0x00;                              // media type
+                        _memory.UInt16[ptr + 7] = 0x0200;                            // bytes per sector
+                        break;
+
+                    case 0x46:  // Set Volume Serial Number (not yet implemented)
+                                // TODO: pull new serial from DS:DX buffer and store it somewhere
+                        break;
+
+                    case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
+                    {
+                            // 1) Build the 11-byte volume label (padded with spaces)
+                            // 1) pull the raw label (or default), split name/ext
+                            IVirtualDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            string rawLabel = (driveInfo.Label ?? "LABEL").ToUpperInvariant();
+                            string[] parts = rawLabel.Split(['.'], 2);
+                            string name = parts[0];
+                            string ext = parts.Length > 1 ? parts[1] : "";
+
+                            // 2) build the 11-byte volume label
+                            var sbLabel = new StringBuilder(11);
+                            sbLabel.Append(name.Length > 8 ? name[..8] : name);
+                            sbLabel.Append(ext.Length > 3 ? ext[..3] : ext);
+                            if (sbLabel.Length < 11)
+                                sbLabel.Append(' ', 11 - sbLabel.Length);
+
+                            // 3) build the 8-byte FS ID (FAT16 or FAT12 for floppies)
+                            var sbFs = new StringBuilder(8);
+                            sbFs.Append(drive < 2 ? "FAT12" : "FAT16");
+                            if (sbFs.Length < 8)
+                                sbFs.Append(' ', 8 - sbFs.Length);
+
+                            // 4) write serial, label, fs-id into emulated memory
+                            _memory.UInt32[ptr + 2] = 0x1234; // serial
+                            _memory.SetZeroTerminatedString(ptr + 6, sbLabel.ToString(), sbLabel.Length + 1);
+                            _memory.SetZeroTerminatedString(ptr + 0x11, sbFs.ToString(), sbFs.Length + 1);
+                            break;
+                        }
+
+                    default:
+                        _loggerService.Error(
+                          "DOS IOCTL Call 0D:{0:X2} Drive {1:X2} unhandled", state.CL, drive);
+                        return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                }
+                state.AX = 0;
+                return DosFileOperationResult.NoValue();
+            case 0x0E:          /* Get Logical Drive Map */
+                if (drive < 2) {
+                    if (_dosDriveManager.HasDriveAtIndex(drive)) {
+                        state.AL = (byte)(drive + 1);
+                    } else {
+                        state.AL = 1;
+                    }
+                } else if (_dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
+                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                } else { /* Only 1 logical drive assigned */
+                    state.AL = 0;
+                    state.AH = 0x07;
+                }
+                return DosFileOperationResult.NoValue();
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("IOCTL: Invalid function number {IoctlFunc}", state.AL);
                 }
                 return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
         }
-        return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
     }
 }
