@@ -250,15 +250,14 @@ public class Spice86DependencyInjection : IDisposable {
         VideoState videoState = new();
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
             loggerService, videoState, configuration.FailOnUnhandledPort);
-        VideoMemory videoMemory = new(videoState);
-        Renderer vgaRenderer = new(memory, videoState, videoMemory);
+        Renderer vgaRenderer = new(memory, videoState);
         VgaRom vgaRom = new();
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is not false);
         VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
-            state, vgaRom, videoMemory, vgaFunctionality, biosDataArea, loggerService);
+            state, vgaFunctionality, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Video card support classes created...");

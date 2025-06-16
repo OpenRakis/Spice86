@@ -13,8 +13,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Reflection;
-
 /// <summary>
 ///     A VGA BIOS implementation.
 /// </summary>
@@ -22,8 +20,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
-    private readonly VgaRom _vgaRom;
-    private readonly IMemoryDevice _videoMemory;
 
     /// <summary>
     ///     VGA BIOS constructor.
@@ -32,21 +28,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="vgaRom">The video card's read only information.</param>
-    /// <param name="videoMemory">The video card's own memory.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack,  State state, VgaRom vgaRom, IMemoryDevice videoMemory,
-        IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea,
-        ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        _vgaRom = vgaRom;
-        _videoMemory = videoMemory;
         if(_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
@@ -55,8 +44,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         InitializeBiosArea();
         InitializeStaticFunctionalityTable();
     }
-
-    private bool UsesOldVbeStandard = false;
 
     /// <summary>
     ///     The interrupt vector this class handles.
@@ -481,27 +468,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
     }
 
-    public void RunVesaSubFunction() {
-        byte operation = State.AL;
-
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT10H: VESA function call, experimental! {Operation}", State.AL);
-        }
-
-        State.AL = 0x4f;
-        switch (operation) {
-            // Get SVGA Information
-            case 0:
-                State.AH = GetSvgaInformation();
-                break;
-            default:
-                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("INT10H: Unsupported VESA function call! {Operation}", operation);
-                }
-                throw new NotImplementedException($"VESA function number {operation} not implemented");
-        }
-    }
-
     /// <summary>
     ///     Runs the specified video BIOS function.
     /// </summary>
@@ -618,76 +584,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         _vgaFunctions.SetFontBlockSpecifier(fontBlock);
     }
 
-    private byte GetSvgaInformation() {
-        ushort segment = State.ES;
-        ushort offset = State.DI;
-
-        uint buffer = MemoryUtils.ToPhysicalAddress(segment, offset);
-
-        uint id = Memory.UInt32[buffer];
-
-        bool vbe2 = (((id == 0x56424532) || (id == 0x32454256)) &&
-                           !UsesOldVbeStandard);
-
-        int vbe_bufsize = vbe2 ? 0x200 : 0x100;
-        for (int i = 0; i < vbe_bufsize; i++) {
-            Memory.UInt8[buffer + i] = 0;
-        }
-
-        // Identification
-        const string VesaString = "VESA";
-        Memory.SetZeroTerminatedString(buffer, VesaString, VesaString.Length + 1);
-
-        // VESA version
-        const ushort vesa_v1_2 = 0x0102;
-        const ushort vesa_v2_0 = 0x0200;
-
-        ushort vesa_version = UsesOldVbeStandard ? vesa_v1_2 : vesa_v2_0;
-        Memory.UInt16[buffer + 0x04] = vesa_version;
-
-        if (vbe2) {
-            ushort vbe2MemoryPosition = (ushort)(256 + offset);
-
-            // OEM string
-            Memory.UInt32[buffer + 0x06] = MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition);
-            const string OemString = "S3 Incorporated. Trio64";
-            Memory.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition), OemString, OemString.Length + 1);
-
-            // VBE 2 software revision
-            Memory.UInt16[buffer + 0x14] =  0x200;
-
-            // Vendor name
-            Memory.UInt32[buffer + 0x16] = MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition);
-            const string VendorName = "The Spice86 Team";
-            Memory.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition), VendorName, VendorName.Length + 1);
-
-            // Product name
-            Memory.UInt32[buffer + 0x1a] = MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition);
-            Memory.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition), nameof(Spice86), nameof(Spice86).Length + 1);
-
-            // Product revision
-            Memory.UInt32[buffer + 0x1e] = MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition);
-            string productRevision = Assembly.GetEntryAssembly()?.GetName().Version?.Major.ToString() ?? "1.0";
-            Memory.SetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(segment, vbe2MemoryPosition), productRevision, productRevision.Length + 1);
-        } else {
-            //TODO: OEM string pointer into ROM
-            //Memory.UInt32[buffer + 0x06] = _vgaRom.OemString;
-        }
-
-        // Capabilities and flags
-        Memory.UInt32[buffer + 0x0a] = 0x0;
-
-        // VESA mode list
-        //FIXME: This is a pointer to the ROM VesaMode field, not a direct value;
-        Memory.UInt32[buffer + 0x0e] = 0; //'Compatible' in DOSox
-
-        // Memory size in 64KB blocks
-        Memory.UInt16[buffer + 0x12 ] = (ushort)(_videoMemory.Size / (64 * 1024));
-
-
-        return 0;
-    }
-
     private void FillDispatchTable() {
         AddAction(0x00, SetVideoMode);
         AddAction(0x01, SetCursorType);
@@ -711,7 +607,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         AddAction(0x13, WriteString);
         AddAction(0x1A, GetSetDisplayCombinationCode);
         AddAction(0x1B, () => GetFunctionalityInfo());
-        AddAction(0x4F, RunVesaSubFunction);
     }
 
     /// <inheritdoc />

@@ -10,7 +10,7 @@ using System.Diagnostics;
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
-    private readonly IVideoMemory _memory;
+    private readonly VideoMemory _memory;
     private readonly IVideoState _state;
 
     /// <summary>
@@ -18,11 +18,10 @@ public class Renderer : IVgaRenderer {
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
-    /// <param name="videoMemory">The memory containing video data.</param>
-    public Renderer(IMemory memory, IVideoState state, IVideoMemory videoMemory) {
+    public Renderer(IMemory memory, IVideoState state) {
         _state = state;
-        _memory = videoMemory;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
+        _memory = new VideoMemory(_state);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 
