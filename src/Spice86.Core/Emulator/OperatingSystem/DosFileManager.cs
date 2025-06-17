@@ -1029,8 +1029,8 @@ public class DosFileManager {
                     {
                             // 1) Build the 11-byte volume label (padded with spaces)
                             // 1) pull the raw label (or default), split name/ext
-                            IVirtualDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            string rawLabel = (driveInfo.Label ?? "LABEL").ToUpperInvariant();
+                            FolderDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            string rawLabel = driveInfo.Label.ToUpperInvariant();
                             string[] parts = rawLabel.Split(['.'], 2);
                             string name = parts[0];
                             string ext = parts.Length > 1 ? parts[1] : "";

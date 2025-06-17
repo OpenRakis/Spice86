@@ -64,6 +64,11 @@ public class Dos {
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
+    /// The class that handles DOS drives, as a sorted dictionnary.
+    /// </summary>
+    public DosDriveManager DosDriveManager { get; }
+
+    /// <summary>
     /// Gets the list of virtual devices.
     /// </summary>
     public readonly List<IVirtualDevice> Devices = new();
@@ -97,6 +102,11 @@ public class Dos {
     /// Gets the current DOS master environment variables.
     /// </summary>
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+
+    /// <summary>
+    /// The movable data transfer area for DOS applications.
+    /// </summary>
+    public DosSwappableDataArea DosSwappableDataArea { get; }
 
     /// <summary>
     /// The EMS device driver.
@@ -134,23 +144,23 @@ public class Dos {
         _biosDataArea = biosDataArea;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
+        DosDriveManager = new(_loggerService, cDriveFolderPath, executablePath);
         VirtualFileBase[] dosDevices = AddDefaultDevices();
-        DosSwappableDataArea dosSwappableDataArea = new(_memory,
+        DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
-        DosDriveManager dosDriveManager = new(cDriveFolderPath, executablePath);
 
-        FileManager = new DosFileManager(_memory, dosStringDecoder, dosDriveManager,
+        FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, dosDriveManager, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt25Handler = new DosDiskInt25Handler(_memory, dosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt26Handler = new DosDiskInt26Handler(_memory, dosDriveManager, functionHandlerProvider, stack, state, _loggerService);
+        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -190,7 +200,9 @@ public class Dos {
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
-        AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
+        foreach(BlockDevice blockDevice in DosDriveManager.Values) {
+            AddDevice(blockDevice);
+        }
         return [nulDevice, consoleDevice, printerDevice];
     }
 

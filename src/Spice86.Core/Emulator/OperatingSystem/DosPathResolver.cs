@@ -33,13 +33,13 @@ internal class DosPathResolver {
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
         //0 = default drive
         if (driveNumber == 0 && _dosDriveManager.Count > 0) {
-            IVirtualDrive IVirtualDrive = _dosDriveManager.CurrentDrive;
-            currentDir = IVirtualDrive.CurrentDosDirectory;
+            FolderDrive VirtualDrive = _dosDriveManager.CurrentDrive;
+            currentDir = VirtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else {
             char driveLetter = DosDriveManager.DriveLetters.Keys.ElementAtOrDefault(driveNumber - 1);
             if (_dosDriveManager.TryGetValue(driveLetter,
-                        out IVirtualDrive? virtualDrive)) {
+                        out FolderDrive? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
@@ -48,7 +48,7 @@ internal class DosPathResolver {
         return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
     }
 
-    private static string GetFullCurrentDosPathOnDrive(IVirtualDrive virtualDrive) =>
+    private static string GetFullCurrentDosPathOnDrive(FolderDrive virtualDrive) =>
         Path.Combine($"{virtualDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
@@ -60,7 +60,7 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private static bool IsWithinMountPoint(string hostFullPath, IVirtualDrive virtualDrive) => hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
+    private static bool IsWithinMountPoint(string hostFullPath, FolderDrive virtualDrive) => hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
 
     /// <summary>
     /// Sets the current DOS folder.
