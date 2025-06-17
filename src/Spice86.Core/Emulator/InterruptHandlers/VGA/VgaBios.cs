@@ -607,6 +607,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         AddAction(0x13, WriteString);
         AddAction(0x1A, GetSetDisplayCombinationCode);
         AddAction(0x1B, () => GetFunctionalityInfo());
+        AddAction(0x4F, VesaFunctions);
+    }
+
+    public void VesaFunctions() {
+        if(_logger.IsEnabled(LogEventLevel.Warning)) {
+            // This can be valid, video cards came to the scene before VESA was a standard.
+            // It seems some games can expect that (eg. Rules of Engagement 2)
+            //TODO: Implement at least VESA 1.2
+            _logger.Warning("Emulated program tried to call VESA functions. Not implemented, moving on!");
+        }
     }
 
     /// <inheritdoc />
