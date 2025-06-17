@@ -1,22 +1,18 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
-/// <inheritdoc cref="IVirtualDrive" />
-internal class NullDrive : IVirtualDrive {
-    private readonly char _driveLetter;
-    private readonly bool _isRemovable;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Shared.Interfaces;
 
-    public NullDrive(char driveLetter, bool isRemovable) {
-        _driveLetter = driveLetter;
-        _isRemovable = isRemovable;
+/// <summary>
+/// Represents an empty drive.
+/// </summary>
+public sealed class NullDrive : FolderDrive {
+    public NullDrive(ILoggerService loggerService, string name,
+        byte unitCount, string signature = "",
+        ushort strategy = 0, ushort interrupt = 0)
+        : base(loggerService, name, unitCount, signature,
+            strategy, interrupt) {
     }
 
-    public string? Label { get; set; }
-    public bool IsRemovable => _isRemovable;
-    public bool IsReadOnlyMedium { get; }
-    public char DriveLetter => _driveLetter;
-    public string MountedHostDirectory { get; init; } = "";
-    public string CurrentDosDirectory { get; set; } = "";
-    public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
-
-    public bool IsRemote => false;
+    public override bool IsRemovable => true;
 }

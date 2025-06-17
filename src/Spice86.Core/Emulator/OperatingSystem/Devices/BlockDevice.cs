@@ -10,7 +10,7 @@ using System.IO;
 /// <summary>
 /// Block devices are things like hard drives, floppy drives, etc.
 /// </summary>
-internal class BlockDevice : VirtualDeviceBase {
+public class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// The number of units (disks) that this device has.
     /// </summary>
