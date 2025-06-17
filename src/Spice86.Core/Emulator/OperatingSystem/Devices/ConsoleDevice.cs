@@ -264,8 +264,6 @@ public class ConsoleDevice : CharacterDevice {
                 _ansi.IsEnabled = true;
             }
 
-            page = _biosDataArea.CurrentVideoPage;
-
             switch ((char)chr) {
                 case '0':
                 case '1':
@@ -284,7 +282,7 @@ public class ConsoleDevice : CharacterDevice {
                     // Till a max of NUMBER_ANSI_DATA
                     _ansi.NumberOfArg++;
                     break;
-                case 'm': // SGR
+                case 'm': // SGR (we re-use i on purpose)
                     for (i = 0; i <= _ansi.NumberOfArg; i++) {
                         switch (_ansi.Data[i]) {
                             case 0: // Normal
@@ -372,7 +370,8 @@ public class ConsoleDevice : CharacterDevice {
                                 _ansi.Attribute &= 0x8f;
                                 _ansi.Attribute |= 0x70;
                                 break;
-                            default: break;
+                            default:
+                                break;
                         }
                     }
                     ClearAnsi();
@@ -458,12 +457,10 @@ public class ConsoleDevice : CharacterDevice {
                     if (_ansi.Data[0] == 0) {
                         _ansi.Data[0] = 2;
                     }
-                    if (_ansi.Data[0] != 2) {
-                        // Every version behaves like type 2
-                        if(Logger.IsEnabled(LogEventLevel.Information)) {
-                            Logger.Information("ANSI: {EscapceSequence} called : not supported handling as 2",
-                                $"Esc{_ansi.Data[0]:d}J");
-                        }
+                    // Every version behaves like type 2
+                    if (_ansi.Data[0] != 2 && Logger.IsEnabled(LogEventLevel.Information)) {
+                        Logger.Information("ANSI: {EscapceSequence} called : not supported handling as 2",
+                            $"Esc{_ansi.Data[0]:d}J");
                     }
                     _vgaFunctionality.SetActivePage(page);
                     _vgaFunctionality.VerifyScroll(0, 0, 0, 255, 255, 0, _ansi.Attribute);
