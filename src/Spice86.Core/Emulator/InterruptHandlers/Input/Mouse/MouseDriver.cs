@@ -239,7 +239,7 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public int GetButtonPressCount(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
+        MouseButton mouseButton = button;
         int count = _buttonsPressCounts.TryGetValue(mouseButton,
             out MouseButtonPressCount? value) ? value.PressCount : 0;
 
@@ -251,14 +251,14 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public double GetLastPressedX(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
+        MouseButton mouseButton = button;
         return _buttonsPressCounts.TryGetValue(mouseButton,
             out MouseButtonPressCount? position) ? position.LastPressedX : 0;
     }
 
     /// <inheritdoc />
     public double GetLastPressedY(MouseButton button) {
-        MouseButton mouseButton = (MouseButton)button;
+        MouseButton mouseButton = button;
         return _buttonsPressCounts.TryGetValue(mouseButton,
             out MouseButtonPressCount? position) ? position.LastPressedX : 0;
     }
