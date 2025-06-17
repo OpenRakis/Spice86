@@ -369,9 +369,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Emulation loop created...");
         }
 
-        SegmentedAddress? keyboardInt16HandlerAddress = null;
-        BiosMouseInt74Handler? mouseIrq12Handler = null;
-
         // memoryAsmWriter is common to InterruptInstaller and
         // AssemblyRoutineInstaller so that they both write at the
         // same address (Bios Segment F000)
@@ -384,6 +381,7 @@ public class Spice86DependencyInjection : IDisposable {
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
 
+        BiosMouseInt74Handler? mouseIrq12Handler = null;
         if (configuration.InitializeDOS is not false) {
             // Register the BIOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(vgaBios);
@@ -392,7 +390,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt12Handler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
-            keyboardInt16HandlerAddress = interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
+            interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
