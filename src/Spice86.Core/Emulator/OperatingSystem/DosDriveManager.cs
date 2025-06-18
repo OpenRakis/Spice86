@@ -13,8 +13,8 @@ using System.Linq;
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
 /// </summary>
-public class DosDriveManager : IDictionary<char, FolderDrive> {
-    private readonly SortedDictionary<char, FolderDrive> _driveMap = new();
+public class DosDriveManager : IDictionary<char, VirtualDrive> {
+    private readonly SortedDictionary<char, VirtualDrive?> _driveMap = new();
     private readonly ILoggerService _loggerService;
 
     /// <summary>
@@ -29,10 +29,10 @@ public class DosDriveManager : IDictionary<char, FolderDrive> {
         }
         _loggerService = loggerService;
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
-        _driveMap.Add('A', new NullDrive(_loggerService, "Empty floppy A", 0) { DriveLetter = 'A', MountedHostDirectory = "", CurrentDosDirectory = "" });
-        _driveMap.Add('B', new NullDrive(_loggerService, "Empty floppy A", 1) { DriveLetter = 'A', MountedHostDirectory = "", CurrentDosDirectory = "" });
-        _driveMap.Add('C', new FolderDrive(_loggerService, "First hard disk drive", 2) { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
-        CurrentDrive = _driveMap.ElementAt(2).Value;
+        _driveMap.Add('A', null);
+        _driveMap.Add('B', null);
+        _driveMap.Add('C', new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath, CurrentDosDirectory = "" });
+        CurrentDrive = _driveMap.ElementAt(2).Value!;
         if(loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", _driveMap.Values);
         }
@@ -41,13 +41,7 @@ public class DosDriveManager : IDictionary<char, FolderDrive> {
     /// <summary>
     /// The currently selected drive.
     /// </summary>
-    public FolderDrive CurrentDrive { get; set; }
-
-    /// <summary>
-    /// Gets the current DOS drive letter.
-    /// </summary>
-    public char CurrentDriveLetter => CurrentDrive.DriveLetter;
-
+    public VirtualDrive CurrentDrive { get; set; }
 
     internal static readonly ImmutableSortedDictionary<char, byte> DriveLetters = new Dictionary<char, byte>() {
             { 'A', 0 },
@@ -85,13 +79,10 @@ public class DosDriveManager : IDictionary<char, FolderDrive> {
     public byte CurrentDriveIndex => DriveLetters[CurrentDrive.DriveLetter];
 
     internal bool HasDriveAtIndex(ushort zeroBasedIndex) {
-        if(zeroBasedIndex > DriveLetters.Count - 1) {
-            return false;
-        }
         if (zeroBasedIndex > _driveMap.Count - 1) {
             return false;
         }
-        return _driveMap.ElementAtOrDefault(zeroBasedIndex).Value is not NullDrive;
+        return true;
     }
 
     public byte NumberOfPotentiallyValidDriveLetters {
@@ -101,57 +92,57 @@ public class DosDriveManager : IDictionary<char, FolderDrive> {
         }
     }
 
-    public ICollection<char> Keys => ((IDictionary<char, FolderDrive>)_driveMap).Keys;
+    public ICollection<char> Keys => ((IDictionary<char, VirtualDrive>)_driveMap).Keys;
 
-    public ICollection<FolderDrive> Values => ((IDictionary<char, FolderDrive>)_driveMap).Values;
+    public ICollection<VirtualDrive> Values => ((IDictionary<char, VirtualDrive>)_driveMap).Values;
 
-    public int Count => ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).Count;
+    public int Count => ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).Count;
 
-    public bool IsReadOnly => ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).IsReadOnly;
+    public bool IsReadOnly => ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).IsReadOnly;
 
-    public FolderDrive this[char key] { get => ((IDictionary<char, FolderDrive>)_driveMap)[key]; set => ((IDictionary<char, FolderDrive>)_driveMap)[key] = value; }
+    public VirtualDrive this[char key] { get => ((IDictionary<char, VirtualDrive>)_driveMap)[key]; set => ((IDictionary<char, VirtualDrive>)_driveMap)[key] = value; }
 
 
     public const int MaxDriveCount = 26;
 
-    public void Add(char key, FolderDrive value) {
-        ((IDictionary<char, FolderDrive>)_driveMap).Add(key, value);
+    public void Add(char key, VirtualDrive value) {
+        ((IDictionary<char, VirtualDrive>)_driveMap).Add(key, value);
     }
 
     public bool ContainsKey(char key) {
-        return ((IDictionary<char, FolderDrive>)_driveMap).ContainsKey(key);
+        return ((IDictionary<char, VirtualDrive>)_driveMap).ContainsKey(key);
     }
 
     public bool Remove(char key) {
-        return ((IDictionary<char, FolderDrive>)_driveMap).Remove(key);
+        return ((IDictionary<char, VirtualDrive>)_driveMap).Remove(key);
     }
 
-    public bool TryGetValue(char key, [MaybeNullWhen(false)] out FolderDrive value) {
-        return ((IDictionary<char, FolderDrive>)_driveMap).TryGetValue(key, out value);
+    public bool TryGetValue(char key, [MaybeNullWhen(false)] out VirtualDrive value) {
+        return ((IDictionary<char, VirtualDrive>)_driveMap).TryGetValue(key, out value);
     }
 
-    public void Add(KeyValuePair<char, FolderDrive> item) {
-        ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).Add(item);
+    public void Add(KeyValuePair<char, VirtualDrive> item) {
+        ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).Add(item);
     }
 
     public void Clear() {
-        ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).Clear();
+        ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).Clear();
     }
 
-    public bool Contains(KeyValuePair<char, FolderDrive> item) {
-        return ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).Contains(item);
+    public bool Contains(KeyValuePair<char, VirtualDrive> item) {
+        return ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).Contains(item);
     }
 
-    public void CopyTo(KeyValuePair<char, FolderDrive>[] array, int arrayIndex) {
-        ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).CopyTo(array, arrayIndex);
+    public void CopyTo(KeyValuePair<char, VirtualDrive>[] array, int arrayIndex) {
+        ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).CopyTo(array, arrayIndex);
     }
 
-    public bool Remove(KeyValuePair<char, FolderDrive> item) {
-        return ((ICollection<KeyValuePair<char, FolderDrive>>)_driveMap).Remove(item);
+    public bool Remove(KeyValuePair<char, VirtualDrive> item) {
+        return ((ICollection<KeyValuePair<char, VirtualDrive>>)_driveMap).Remove(item);
     }
 
-    public IEnumerator<KeyValuePair<char, FolderDrive>> GetEnumerator() {
-        return ((IEnumerable<KeyValuePair<char, FolderDrive>>)_driveMap).GetEnumerator();
+    public IEnumerator<KeyValuePair<char, VirtualDrive>> GetEnumerator() {
+        return ((IEnumerable<KeyValuePair<char, VirtualDrive>>)_driveMap).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator() {

@@ -1004,7 +1004,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
             case 0x0D:      /* Generic block device request */
-                if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is not BlockDevice) {
+                if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is null) {
                     return DosFileOperationResult.Error(ErrorCode.AccessDenied);
                 }
                 if (state.CH != 0x08 || _dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
@@ -1029,7 +1029,7 @@ public class DosFileManager {
                     {
                             // 1) Build the 11-byte volume label (padded with spaces)
                             // 1) pull the raw label (or default), split name/ext
-                            FolderDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            VirtualDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
                             string rawLabel = driveInfo.Label.ToUpperInvariant();
                             string[] parts = rawLabel.Split(['.'], 2);
                             string name = parts[0];

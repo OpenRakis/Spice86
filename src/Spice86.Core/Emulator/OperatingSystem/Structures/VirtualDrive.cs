@@ -1,20 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
-
-using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Shared.Interfaces;
-
 /// <summary>
 /// Represents a host folder used as a drive by DOS.
 /// </summary>
-public class FolderDrive : BlockDevice {
-    public FolderDrive(ILoggerService loggerService, string name,
-        byte unitCount, string signature = "",
-        ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, name, DeviceAttributes.FatDevice, unitCount, signature, strategy,
-            interrupt) {
-    }
-
+public class VirtualDrive {
     /// <summary>
     /// Gets or sets the DOS label.
     /// </summary>
