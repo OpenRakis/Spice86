@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -16,7 +15,6 @@ using Spice86.Shared.Utils;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 /// <summary>
 /// The class that implements DOS file operations, such as finding files, allocating file handles, and updating the Disk Transfer Area.
