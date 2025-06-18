@@ -3,6 +3,8 @@
 /// Represents a disk image mounted as a floppy disk drive.
 /// </summary>
 /// <remarks>Unimplemented.</remarks>
-public sealed class FloppyDiskDrive : VirtualDrive {
-    public override bool IsRemovable => true;
+public class FloppyDiskDrive : DosDriveBase {
+    public FloppyDiskDrive() {
+        IsRemovable = true;
+    }
 }
