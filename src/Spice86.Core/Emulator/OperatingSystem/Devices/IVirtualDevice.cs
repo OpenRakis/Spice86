@@ -10,6 +10,11 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public interface IVirtualDevice : IVirtualFile {
 
+    /// <summary>
+    /// Gets the device status
+    /// </summary>
+    /// <param name="inputFlag">Whether it's for input data or output data</param>
+    /// <returns>The DOS device status in a byte.</returns>
     public byte GetStatus(bool inputFlag);
 
     public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);

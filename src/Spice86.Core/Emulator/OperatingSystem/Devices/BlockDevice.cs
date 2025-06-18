@@ -3,8 +3,6 @@ namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 
-using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 /// <summary>
@@ -19,12 +17,30 @@ public class BlockDevice : VirtualDeviceBase {
     /// An optional 7-byte field with the signature of the device.
     /// </summary>
     public string Signature { get; }
+
+    /// <summary>
+    /// Device name, also serves for file-based device access.
+    /// </summary>
     public override string Name { get; set; }
+    
+    /// <summary>
+    /// Gets the DOS Device characteristics. Largely undocumented, and device-specific.
+    /// </summary>
     public override ushort Information { get; }
+    
+    /// <inheritdoc/>
     public override bool CanRead { get; }
+    
+    /// <inheritdoc/>
     public override bool CanSeek { get; }
+
+    /// <inheritdoc/>
     public override bool CanWrite { get; }
+    
+    /// <inheritdoc/>
     public override long Length { get; }
+    
+    /// <inheritdoc/>
     public override long Position { get; set; }
 
     /// <summary>
@@ -47,41 +63,41 @@ public class BlockDevice : VirtualDeviceBase {
         Signature = signature.Length > 7 ? signature[..7] : signature;
     }
 
+    /// <inheritdoc/>
     public override void Close() {
-        throw new NotImplementedException();
+        //NOP
     }
 
+    /// <inheritdoc/>
     public override byte GetStatus(bool inputFlag) {
-        throw new NotImplementedException();
+        //NOP
+        return 0;
     }
 
+    /// <inheritdoc/>
     public override int Read(byte[] buffer, int offset, int count) {
-        throw new NotImplementedException();
+        //NOP
+        return 0;
     }
 
+    /// <inheritdoc/>
     public override long Seek(long offset, SeekOrigin origin) {
-        throw new NotImplementedException();
+        //NOP
+        return 0;
     }
 
-    public override bool TryReadFromControlChannel(uint address, ushort size,
-        [NotNullWhen(true)] out ushort? returnCode) {
-        throw new NotImplementedException();
-    }
-
-    public override bool TryWriteToControlChannel(uint address, ushort size,
-        [NotNullWhen(true)] out ushort? returnCode) {
-        throw new NotImplementedException();
-    }
-
+    /// <inheritdoc/>
     public override void Flush() {
-        throw new NotImplementedException();
+        //NOP
     }
 
+    /// <inheritdoc/>
     public override void SetLength(long value) {
-        throw new NotImplementedException();
+        //NOP
     }
 
+    /// <inheritdoc/>
     public override void Write(byte[] buffer, int offset, int count) {
-        throw new NotImplementedException();
+        //NOP
     }
 }
