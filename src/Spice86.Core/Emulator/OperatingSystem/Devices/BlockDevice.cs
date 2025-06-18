@@ -21,7 +21,11 @@ public class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// Device name, also serves for file-based device access.
     /// </summary>
-    public override string Name { get; set; }
+    private string _name;
+    public override string Name {
+        get => _name;
+        set => _name = value;
+    }
     
     /// <summary>
     /// Gets the DOS Device characteristics. Largely undocumented, and device-specific.
@@ -59,7 +63,7 @@ public class BlockDevice : VirtualDeviceBase {
         : base(loggerService, attributes, strategy, interrupt) {
         Attributes &= ~DeviceAttributes.Character;
         UnitCount = unitCount;
-        Name = name;
+        _name = name;
         Signature = signature.Length > 7 ? signature[..7] : signature;
     }
 
