@@ -27,7 +27,7 @@ public class DosDiskInt25Handler : InterruptHandler {
             if (State.CX == 1 && State.DX == 0) {
                 if (State.AL >= 2) {
                     // write some BPB data into buffer for MicroProse installers
-                    Memory.UInt8[new SegmentedAddress(State.DS, (ushort)(State.BX + 0x1c))] = 0x3f; // hidden sectors
+                    Memory.UInt16[State.DS, (ushort)(State.BX + 0x1c)] = 0x3f; // hidden sectors
                 }
             } else if(LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", State.AL);
