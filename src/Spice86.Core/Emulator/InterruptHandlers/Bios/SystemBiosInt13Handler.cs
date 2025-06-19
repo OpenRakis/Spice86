@@ -57,7 +57,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Reset Disk System.
     /// </summary>
     /// <remarks>
-    /// This odes nothing and always clears CF.
+    /// This does nothing and always clears CF.
     /// </remarks>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void ResetDiskSystem(bool calledFromVm) {
