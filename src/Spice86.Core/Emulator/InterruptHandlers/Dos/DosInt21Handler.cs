@@ -398,13 +398,13 @@ public class DosInt21Handler : InterruptHandler {
     /// </remarks>
     public void BufferedInput() {
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-        DosInputBuffer inputBufferHolder = new DosInputBuffer(Memory, address);
+        DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
         int readCount = 0;
         if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
             !_dosFileManager.TryGetStandardOutput(out CharacterDevice? standardOutput)) {
             return;
         }
-        inputBufferHolder.Characters = string.Empty;
+        dosInputBuffer.Characters = string.Empty;
 
         while(State.IsRunning) {
             byte[] inputBuffer = new byte[1];
@@ -429,7 +429,7 @@ public class DosInt21Handler : InterruptHandler {
                 }
                 continue;
             }
-            if (readCount >= inputBufferHolder.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
+            if (readCount >= dosInputBuffer.Length && c != (byte)AsciiControlCodes.CarriageReturn) { //input buffer full and not CR
                 const byte bell = 7;
                 standardOutput.Write(bell);
                 continue;
@@ -437,12 +437,12 @@ public class DosInt21Handler : InterruptHandler {
             if(standardOutput.CanWrite) {
                 standardOutput.Write(c);
             }
-            inputBufferHolder.Characters += c;
+            dosInputBuffer.Characters += c;
             if (c == (byte)AsciiControlCodes.CarriageReturn) {
                 break;
             }
         }
-        inputBufferHolder.ReadCount = (byte)(readCount < 0 ? 0 : (byte)readCount);
+        dosInputBuffer.ReadCount = (byte)(readCount < 0 ? 0 : (byte)readCount);
     }
 
     /// <summary>
