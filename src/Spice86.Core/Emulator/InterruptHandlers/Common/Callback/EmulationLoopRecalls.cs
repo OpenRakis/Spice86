@@ -6,13 +6,13 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 /// <summary>
-/// A class that can asynchronously wait for machine code to run. Called by C# code.
+/// A class that waits for machine code to run. Called by C# code.
 /// </summary>
-/// <remarks>Primarly used by the emulator, for example when an interrupt handler needs to wait for another interrupt handler. This has to go through the emulation loop, otherwise the wait would block the emulation process.</remarks>
+/// <remarks>Primarly used by the emulator, for example when an interrupt handler needs to wait for another interrupt handler. <br/>
+/// This I/O operation has to go through the emulation loop, otherwise the wait would block the emulated program.</remarks>
 public class EmulationLoopRecalls {
     private readonly NonLinearFlow _nonLinearFlow;
     private readonly InterruptVectorTable _interruptVectorTable;
-    private readonly SegmentedAddress _biosKeyboardCallback;
     private readonly EmulationLoop _emulationLoop;
     private readonly State _state;
 
@@ -21,7 +21,6 @@ public class EmulationLoopRecalls {
         _state = state;
         _emulationLoop = emulationLoop;
         _interruptVectorTable = ivt;
-        _biosKeyboardCallback = _interruptVectorTable[0x16];
     }
 
     /// <summary>
@@ -33,10 +32,11 @@ public class EmulationLoopRecalls {
         // Wait for keypress
         ushort keyStroke;
         byte oldAh = _state.AH;
+        SegmentedAddress biosKeyboardCallback = _interruptVectorTable[0x16];
         do {
-            _nonLinearFlow.InterruptCall(_biosKeyboardCallback, expectedReturnAddress);
+            _nonLinearFlow.InterruptCall(biosKeyboardCallback, expectedReturnAddress);
             _state.AH = 0x00; // Function 0x0: GetKeyStroke
-            _emulationLoop.RunFromUntil(_biosKeyboardCallback, expectedReturnAddress);
+            _emulationLoop.RunFromUntil(biosKeyboardCallback, expectedReturnAddress);
             keyStroke = _state.AX;
         } while (keyStroke is 0 && _state.IsRunning);
         byte scanCode = _state.AL;
