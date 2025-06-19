@@ -169,12 +169,16 @@ public class DosFileManager {
         if (fileHandle == newHandle) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
-        if (!IsValidFileHandle(newHandle)) {
+        // Out of range in our array
+        if (!IsHandleInRange(newHandle)) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
+        // New handle is already opened
         if (OpenFiles[newHandle] != null) {
             return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
         }
+        // Open it and assign it to a var named file.
+        // Should always pass: we already called IsValidFileHandle for our own error code.
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
@@ -550,7 +554,7 @@ public class DosFileManager {
     /// <param name="bufferAddress">The address of the buffer containing the data to write.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> object representing the result of the operation.</returns>
     public DosFileOperationResult WriteToFileOrDevice(ushort fileHandle, ushort writeLength, uint bufferAddress) {
-        if (!IsValidFileHandle(fileHandle)) {
+        if (!IsHandleInRange(fileHandle)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Invalid or unsupported file handle {FileHandle}. Doing nothing", fileHandle);
             }
@@ -625,13 +629,13 @@ public class DosFileManager {
     private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(_diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private VirtualFileBase? GetOpenFile(ushort fileHandle) {
-        if (!IsValidFileHandle(fileHandle)) {
+        if (!IsHandleInRange(fileHandle)) {
             return null;
         }
         return OpenFiles[fileHandle];
     }
 
-    private bool IsValidFileHandle(ushort fileHandle) => fileHandle <= OpenFiles.Length;
+    private bool IsHandleInRange(ushort fileHandle) => fileHandle <= OpenFiles.Length;
 
     private DosFileOperationResult NoFreeHandleError() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
