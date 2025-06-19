@@ -20,14 +20,19 @@ public class DosDiskInt25Handler : InterruptHandler {
     public override byte VectorNumber => 0x25;
 
     public override void Run() {
-        if(State.AL >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
+        byte driveNumber = State.AL;
+        ushort sectorToRead = State.CX;
+        ushort startingLogicalSector = State.DX;
+        SegmentedAddress bufferForData = new(State.DS, State.BX);
+
+        if (driveNumber >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
             State.AX = 0x8002;
             State.CarryFlag = true;
         } else {
-            if (State.CX == 1 && State.DX == 0) {
-                if (State.AL >= 2) {
+            if (sectorToRead == 1 && startingLogicalSector == 0) {
+                if (driveNumber >= 2) {
                     // write some BPB data into buffer for MicroProse installers
-                    Memory.UInt16[State.DS, (ushort)(State.BX + 0x1c)] = 0x3f; // hidden sectors
+                    Memory.UInt16[bufferForData.Segment, (ushort)(bufferForData.Offset + 0x1c)] = 0x3f; // hidden sectors
                 }
             } else if(LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
                 LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", State.AL);
