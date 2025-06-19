@@ -120,8 +120,8 @@ public class ConsoleDevice : CharacterDevice {
         while(index < buffer.Length && readCount < count) {
             // Function 0: Read keystroke
             _state.AH = 0x0;
-            byte? scanCode = GetOrWaitForScanCode();
-            if(scanCode is null) {
+            byte? scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
+            if (scanCode is null) {
                 break;
             }
             switch (scanCode) {
@@ -199,19 +199,6 @@ public class ConsoleDevice : CharacterDevice {
         }
         _state.AX = oldAx; // Restore AX
         return readCount;
-    }
-
-    /// <summary>
-    /// Tries to shortcut the emulation loop recall by reading memory first. <br/>
-    /// If nothing is available, we wait for the scan code in the AL register.
-    /// <remarks>This is different from FreeDOS and DOS, which just wait directly. <br/>
-    /// May break some TSRs which rely on the ability to intercept this.</remarks>
-    /// </summary>
-    /// <returns>The scancode byte, coming from either the BIOS keyboard buffer or directly from the INT16H software interrupt.</returns>
-    private byte GetOrWaitForScanCode() {
-        byte? scanCode = (byte?)_biosKeybardBuffer.DequeueKeyCode();
-        scanCode ??= _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
-        return scanCode.Value;
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
