@@ -273,7 +273,7 @@ public class Spice86DependencyInjection : IDisposable {
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
                     state, loggerService, timerInt8Handler);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            functionHandlerProvider, stack, state, biosDataArea, loggerService);
+            functionHandlerProvider, stack, state, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
