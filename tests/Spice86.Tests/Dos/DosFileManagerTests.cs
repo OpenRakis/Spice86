@@ -139,12 +139,6 @@ public class DosFileManagerTests {
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        Midi midiDevice = new Midi(configuration, softwareMixer, state, ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
-            configuration.FailOnUnhandledPort, loggerService);
-
-        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2), ioPortDispatcher, pauseHandler, loggerService,
-            configuration.FailOnUnhandledPort);
-
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
         SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaController, dualPic,
             configuration.FailOnUnhandledPort,
