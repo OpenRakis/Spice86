@@ -200,8 +200,7 @@ public class Dos {
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService);
         AddDevice(auxDevice);
-        foreach(VirtualDrive drive in DosDriveManager.Values) {
-
+        for (int i = 0; i < DosDriveManager.Count; i++) {
             AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
         }
         return [nulDevice, consoleDevice, printerDevice];
