@@ -11,8 +11,6 @@ using Spice86.Shared.Interfaces;
 ///     INT 13h handler. BIOS disk access functions.
 /// </summary>
 public class SystemBiosInt13Handler : InterruptHandler {
-    private readonly BiosDataArea _biosDataArea;
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -20,14 +18,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="biosDataArea">The structure where the BIOS puts its related data in emulated memory.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public SystemBiosInt13Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, BiosDataArea biosDataArea,
+        Stack stack, State state,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _biosDataArea = biosDataArea;
         FillDispatchTable();
     }
 
