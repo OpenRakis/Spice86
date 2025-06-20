@@ -19,12 +19,6 @@ public class BiosKeyboardBuffer {
     public BiosKeyboardBuffer(IIndexable memory, BiosDataArea biosDataArea) {
         _memory = memory;
         _biosDataArea = biosDataArea;
-    }
-
-    /// <summary>
-    /// Setups the <see cref="StartAddress"/> and <see cref="EndAddress"/> of the BIOS keyboard buffer in memory.
-    /// </summary>
-    internal void Init() {
         // absolute base address is uint but BDA is low in memory so it fits in ushort
         StartAddress = (ushort)_biosDataArea.KbdBuf.BaseAddress;
         EndAddress = (ushort)(StartAddress + _biosDataArea.KbdBuf.Count);
@@ -78,6 +72,15 @@ public class BiosKeyboardBuffer {
         _memory.UInt16[0, TailAddress] = code;
         TailAddress = newTail;
         return true;
+    }
+
+    /// <summary>
+    /// Flushes the buffer, resetting the head and tail addresses to the start of the buffer.
+    /// </summary>
+    public void Flush() {
+        // Reset the head and tail addresses to the start of the buffer
+        HeadAddress = StartAddress;
+        TailAddress = StartAddress;
     }
 
     /// <summary>

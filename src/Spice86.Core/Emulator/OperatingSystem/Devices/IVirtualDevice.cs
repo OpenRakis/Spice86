@@ -1,11 +1,27 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// The interface for all DOS virtual devices.
 /// </summary>
-public interface IVirtualDevice {
+public interface IVirtualDevice : IVirtualFile {
+
+    /// <summary>
+    /// Gets the device status
+    /// </summary>
+    /// <param name="inputFlag">Whether it's for input data or output data</param>
+    /// <returns>The DOS device status in a byte.</returns>
+    public byte GetStatus(bool inputFlag);
+
+    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
+
+    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
+
+    public uint DeviceNumber { get; set; }
 
     /// <summary>
     /// The segment where the device driver header is stored.

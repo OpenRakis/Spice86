@@ -1,22 +1,17 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
+
+using System;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 /// <summary>
 /// Character devices are things like the console, the printer, the clock, etc.
 /// </summary>
-public class CharacterDevice : VirtualDeviceBase {
-    /// <summary>
-    /// The logging service.
-    /// </summary>
-    protected readonly ILoggerService Logger;
-
-    /// <summary>
-    /// 8-byte field with the name of the device.
-    /// </summary>
-    public string Name { get; }
+public abstract class CharacterDevice : VirtualDeviceBase {
+    private string _name = string.Empty;
 
     /// <summary>
     /// Create a new character device.
@@ -26,17 +21,14 @@ public class CharacterDevice : VirtualDeviceBase {
     /// <param name="loggerService">The logging service.</param>
     /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
     /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
-    public CharacterDevice(DeviceAttributes attributes, string name, ILoggerService loggerService, ushort strategy = 0, ushort interrupt = 0)
-        : base(attributes, strategy, interrupt) {
+    public CharacterDevice(ILoggerService loggerService,
+        DeviceAttributes attributes, string name, ushort strategy = 0,
+        ushort interrupt = 0)
+        : base(loggerService, attributes, strategy, interrupt) {
         Attributes |= DeviceAttributes.Character;
-        Name = name.Length > 8 ? name[..8] : name;
+        _name = name.Length > 8 ? name[..8] : name;
         Logger = loggerService;
     }
 
-    /// <summary>
-    /// Open a stream to the device.
-    /// </summary>
-    public virtual Stream OpenStream(string openMode) {
-        return new DeviceStream(Name, openMode, Logger);
-    }
+    public override string Name { get => _name; set => _name = value; }
 }

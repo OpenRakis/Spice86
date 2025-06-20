@@ -56,9 +56,14 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     public byte Ps2CtrlFlag { get => UInt8[0x16]; set => UInt8[0x16] = value; }
 
     /// <summary>
-    /// Gets or sets the Keyboard status flag
+    /// Gets or sets the first Keyboard status flag
     /// </summary>
-    public ushort KbdFlag0 { get => UInt16[0x17]; set => UInt16[0x17] = value; }
+    public byte KeyboardStatusFlag { get => UInt8[0x17]; set => UInt8[0x17] = value; }
+
+    /// <summary>
+    /// Gets or sets the second Keyboard status flag
+    /// </summary>
+    public byte KeyboardStatusFlag2 { get => UInt8[0x18]; set => UInt8[0x18] = value; }
 
     /// <summary>
     /// Gets or sets the Alt + Numpad data
@@ -293,12 +298,12 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// <summary>
     /// Gets or sets the keyboard status flag.
     /// </summary>
-    public byte KbdFlag1 { get => UInt8[0x96]; set => UInt8[0x96] = value; }
+    public byte KeyboardStatusFlag3 { get => UInt8[0x96]; set => UInt8[0x96] = value; }
 
     /// <summary>
     /// Gets or sets the keyboard LED.
     /// </summary>
-    public byte KbdLed { get => UInt8[0x97]; set => UInt8[0x97] = value; }
+    public byte KeyboardLedStatus { get => UInt8[0x97]; set => UInt8[0x97] = value; }
 
     /// <summary>
     /// Gets or sets the user wait complete flag.
