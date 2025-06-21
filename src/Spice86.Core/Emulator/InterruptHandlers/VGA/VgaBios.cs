@@ -42,6 +42,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         FillDispatchTable();
 
         InitializeBiosArea();
+        InitializeStaticFunctionalityTable();
     }
 
     /// <summary>
@@ -65,11 +66,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 nameof(VgaBios), nameof(WriteString), str, cursorPosition.X, cursorPosition.Y, includeAttributes ? "included" : attribute);
         }
         _vgaFunctions.WriteString(segment, offset, length, includeAttributes, attribute, cursorPosition, updateCursorPosition);
-    }
-
-    /// <inheritdoc />
-    public VideoFunctionalityInfo GetFunctionalityInfo() {
-        throw new NotImplementedException();
     }
 
     /// <inheritdoc />
@@ -480,6 +476,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
+        if (!HasRunnable(operation) && LoggerService.IsEnabled(LogEventLevel.Error)) {
+            LoggerService.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
+        }
         Run(operation);
     }
 
@@ -608,56 +607,82 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         AddAction(0x13, WriteString);
         AddAction(0x1A, GetSetDisplayCombinationCode);
         AddAction(0x1B, () => GetFunctionalityInfo());
+        AddAction(0x4F, VesaFunctions);
     }
 
-    // public VideoFunctionalityInfo GetFunctionalityInfo() {
-    //     ushort segment = _state.ES;
-    //     ushort offset = _state.DI;
-    //
-    //     uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-    //     var info = new VideoFunctionalityInfo(_memory, address) {
-    //         SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
-    //         VideoMode = _bios.VideoMode,
-    //         ScreenColumns = _bios.ScreenColumns,
-    //         VideoBufferLength = MemoryMap.VideoBiosSegment - MemoryMap.GraphicVideoMemorySegment, // TODO: real value
-    //         VideoBufferAddress = MemoryMap.GraphicVideoMemorySegment, // TODO: real value
-    //         CursorEndLine = 0, // TODO: figure out what this is
-    //         CursorStartLine = 0, // TODO: figure out what this is
-    //         ActiveDisplayPage = (byte)CurrentMode.ActiveDisplayPage,
-    //         CrtControllerBaseAddress = _bios.CrtControllerBaseAddress,
-    //         CurrentRegister3X8Value = 0, // Unused in VGA
-    //         CurrentRegister3X9Value = 0, // Unused in VGA
-    //         ScreenRows = _bios.ScreenRows,
-    //         CharacterMatrixHeight = (ushort)CurrentMode.FontHeight,
-    //         ActiveDisplayCombinationCode = _bios.DisplayCombinationCode,
-    //         AlternateDisplayCombinationCode = 0x00, // No secondary display
-    //         NumberOfColorsSupported = (ushort)(1 << CurrentMode.BitsPerPixel),
-    //         NumberOfPages = 4,
-    //         NumberOfActiveScanLines = 0, // TODO: figure out what this is
-    //         TextCharacterTableUsed = 0, // TODO: figure out what this is
-    //         TextCharacterTableUsed2 = 0, // TODO: figure out what this is
-    //         OtherStateInformation = 0b00000001,
-    //         VideoRamAvailable = 3, // 0=64K, 1=128K, 2=192K, 3=256K
-    //         SaveAreaStatus = 0b00000000
-    //     };
-    //     for (int i = 0; i < 8; i++) {
-    //         // TODO: fix
-    //         // info.SetCursorPosition(i, (byte)TextConsole.CursorPosition.X, (byte)TextConsole.CursorPosition.Y);
-    //     }
-    //
-    //     // Indicate success.
-    //     _state.AL = 0x1B;
-    //     if (_logger.IsEnabled(LogEventLevel.Debug)) {
-    //         _logger.Debug("INT 10: GetFunctionalityInfo {0}", info);
-    //     }
-    //     return info;
-    // }
-    //
-    // /// <summary>
-    // /// Writes values to the static functionality table in emulated memory.
-    // /// </summary>
-    // private void InitializeStaticFunctionalityTable() {
-    //     _memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
-    //     _memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
-    // }
+    public void VesaFunctions() {
+        if(_logger.IsEnabled(LogEventLevel.Warning)) {
+            // This can be valid, video cards came to the scene before VESA was a standard.
+            // It seems some games can expect that (eg. Rules of Engagement 2)
+            //TODO: Implement at least VESA 1.2
+            _logger.Warning("Emulated program tried to call VESA functions. Not implemented, moving on!");
+        }
+    }
+
+    /// <inheritdoc />
+    public VideoFunctionalityInfo GetFunctionalityInfo() {
+        ushort segment = State.ES;
+        ushort offset = State.DI;
+
+        switch(State.BX) {
+            case 0x0:
+                // Indicate success.
+                State.AL = 0x1B;
+                break;
+            default:
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("{ClassName} INT 10 1B: {MethodName} - Unsopprted subFunction 0x{SubFunction:X2}",
+                        nameof(VgaBios), nameof(GetFunctionalityInfo), State.BX);
+                }
+                State.AL = 0;
+                break;
+
+        }
+
+        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
+        var info = new VideoFunctionalityInfo(Memory, address) {
+            SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
+            VideoMode = _biosDataArea.VideoMode,
+            ScreenColumns = _biosDataArea.ScreenColumns,
+            VideoBufferLength = MemoryMap.VideoBiosSegment - MemoryMap.GraphicVideoMemorySegment, // TODO: real value
+            VideoBufferAddress = MemoryMap.GraphicVideoMemorySegment, // TODO: real value
+            CursorEndLine = 0, // TODO: figure out what this is
+            CursorStartLine = 0, // TODO: figure out what this is
+            ActiveDisplayPage = (byte)0, // TODO: figure out what this is
+            CrtControllerBaseAddress = _biosDataArea.CrtControllerBaseAddress,
+            CurrentRegister3X8Value = 0, // Unused in VGA
+            CurrentRegister3X9Value = 0, // Unused in VGA
+            ScreenRows = _biosDataArea.ScreenRows,
+            CharacterMatrixHeight = (ushort)_vgaFunctions.GetCurrentMode().CharacterHeight,
+            ActiveDisplayCombinationCode = _biosDataArea.DisplayCombinationCode,
+            AlternateDisplayCombinationCode = 0x00, // No secondary display
+            NumberOfColorsSupported = (ushort)(_vgaFunctions.GetColorMode() ? 256 : 1), //TODO: Expand on this
+            NumberOfPages = 4,// TODO: figure out what this is
+            NumberOfActiveScanLines = 0, // TODO: figure out what this is
+            TextCharacterTableUsed = 0, // TODO: figure out what this is
+            TextCharacterTableUsed2 = 0, // TODO: figure out what this is
+            OtherStateInformation = 0b00000001,
+            VideoRamAvailable = 3, // 0=64K, 1=128K, 2=192K, 3=256K
+            SaveAreaStatus = 0b00000000
+        };
+        for (byte i = 0; i < 8; i++) {
+            // TODO: fix
+            CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(i);
+            info.SetCursorPosition(i, (byte)cursorPosition.X, (byte)cursorPosition.Y);
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+            _logger.Warning("{ClassName} INT 10 1B: {MethodName} - experimental! {@0}", 
+                nameof(VgaBios), nameof(GetFunctionalityInfo), info);
+        }
+        return info;
+    }
+
+    /// <summary>
+    /// Writes values to the static functionality table in emulated memory.
+    /// </summary>
+    private void InitializeStaticFunctionalityTable() {
+        Memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
+        Memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
+    }
 }
