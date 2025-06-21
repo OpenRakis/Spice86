@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of BIOS keyboard buffer handler (interrupt 0x9)
+/// Crude implementation of BIOS keyboard buffer handler (hardware interrupt 0x9)
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;
@@ -25,14 +25,16 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="keyboard">The keyboard controller.</param>
-    /// <param name="biosDataArea">The memory mapped BIOS values.</param>
+    /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public BiosKeyboardInt9Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, DualPic dualPic, Keyboard keyboard, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public BiosKeyboardInt9Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack,
+        State state, DualPic dualPic, Keyboard keyboard,
+        BiosKeyboardBuffer biosKeyboardBuffer, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _keyboard = keyboard;
         _dualPic = dualPic;
-        BiosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardBuffer.Init();
+        BiosKeyboardBuffer = biosKeyboardBuffer;
     }
 
     /// <summary>
@@ -45,17 +47,14 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        if (_keyboard.LastKeyboardInput.ScanCode is null) {
-            return;
+        byte scanCode = _keyboard.KeyboardEvent.ScanCode ?? 0;
+        byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("{BiosInt9KeyReceived}", scanCode);
         }
 
-        byte ascii = _keyboard.LastKeyboardInput.AsciiCode ?? 0;
-
-        if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{BiosInt9KeyReceived}", ascii);
-        }
-
-        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(_keyboard.LastKeyboardInput.ScanCode.Value << 8 | ascii));
+        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));
         _dualPic.AcknowledgeInterrupt(1);
     }
 }

@@ -39,39 +39,33 @@ public sealed class ProgramExecutor : IDisposable {
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
     /// </summary>
     /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
+    /// <param name="emulationLoop">The class that runs the core emulation process.</param>
     /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="instructionExecutor">The CPU instance.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="timer">The programmable interval timer.</param>
     /// <param name="dos">The DOS kernel.</param>
-    /// <param name="functionHandler">The class that handles functions calls for the emulator.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider, IInstructionExecutor instructionExecutor, 
-        MemoryDataExporter memoryDataExporter, State state, Timer timer, Dos dos,
-        FunctionHandler functionHandler, FunctionCatalogue functionCatalogue,
+        EmulationLoop emulationLoop,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        EmulatorStateSerializer emulatorStateSerializer,
+        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        MemoryDataExporter memoryDataExporter, State state, Dos dos,
+        FunctionCatalogue functionCatalogue,
         ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DmaController dmaController,
-        ILoggerService loggerService) {
+        IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
+        _emulationLoop = emulationLoop;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        _emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, instructionExecutor,
-            state, timer, emulatorBreakpointsManager,
-            dmaController,
-            pauseHandler);
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
                 state, functionCatalogue,
