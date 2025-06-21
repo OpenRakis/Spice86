@@ -3,9 +3,9 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -13,6 +13,8 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -23,11 +25,13 @@ using System.Text;
 /// </summary>
 public class Dos {
     private const int DeviceDriverHeaderLength = 18;
+    private readonly BiosDataArea _biosDataArea;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly KeyboardStreamedInput _keyboardStreamedInput;
     private readonly ILoggerService _loggerService;
+    private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
+    private readonly EmulationLoopRecalls _emulationLoopRecalls;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -45,14 +49,24 @@ public class Dos {
     public DosInt2fHandler DosInt2FHandler { get; }
 
     /// <summary>
+    /// Gets the INT 25H DOS Disk services.
+    /// </summary>
+    public DosDiskInt25Handler DosInt25Handler { get; }
+
+    /// <summary>
+    /// Gets the INT26H DOS Disk services stub.
+    /// </summary>
+    public DosDiskInt26Handler DosInt26Handler { get; }
+
+    /// <summary>
     /// Gets the INT 28h DOS services.
     /// </summary>
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
-    /// Gets the country ID from the CountryInfo table
+    /// The class that handles DOS drives, as a sorted dictionnary.
     /// </summary>
-    public byte CurrentCountryId => CountryInfo.Country;
+    public DosDriveManager DosDriveManager { get; }
 
     /// <summary>
     /// Gets the list of virtual devices.
@@ -90,6 +104,11 @@ public class Dos {
     public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
 
     /// <summary>
+    /// The movable data transfer area for DOS applications.
+    /// </summary>
+    public DosSwappableDataArea DosSwappableDataArea { get; }
+
+    /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
@@ -101,34 +120,47 @@ public class Dos {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="emulationLoopRecalls">The class used to wait for interrupts without blocking the emulation loop.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="keyboardInt16Handler">The keyboard interrupt controller.</param>
+    /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
+    /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
     /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, KeyboardInt16Handler keyboardInt16Handler,
-        IVgaFunctionality vgaFunctionality, string? cDriveFolderPath, string? executablePath, bool initializeDos, bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, EmulationLoopRecalls emulationLoopRecalls,
+        BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
+        BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
+        string? cDriveFolderPath, string? executablePath, bool initializeDos,
+        bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _biosKeyboardBuffer = biosKeyboardBuffer;
+        _emulationLoopRecalls = emulationLoopRecalls;
         _memory = memory;
+        _biosDataArea = biosDataArea;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        _keyboardStreamedInput = new KeyboardStreamedInput(keyboardInt16Handler);
-        AddDefaultDevices();
-        DosSwappableDataArea dosSwappableDataArea = new(_memory,
+        DosDriveManager = new(_loggerService, cDriveFolderPath, executablePath);
+        VirtualFileBase[] dosDevices = AddDefaultDevices();
+        DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
-        FileManager = new DosFileManager(_memory, cDriveFolderPath, executablePath,
+        DosStringDecoder dosStringDecoder = new(memory, state);
+
+        FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
         MemoryManager = new DosMemoryManager(_memory, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, _vgaFunctionality, this,
-            dosSwappableDataArea,
-            _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+            keyboardInt16Handler, CountryInfo, dosStringDecoder,
+            MemoryManager, FileManager, DosDriveManager, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(null, _memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -139,10 +171,11 @@ public class Dos {
             return;
         }
 
-        OpenDefaultFileHandles();
+        OpenDefaultFileHandles(dosDevices);
 
         if (enableEms) {
-            Ems = new(_memory, functionHandlerProvider, stack, state, this, _loggerService);
+            Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
+            AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
@@ -150,34 +183,33 @@ public class Dos {
         }
     }
 
-    private void OpenDefaultFileHandles() {
-        if (Devices.Find(device => device is CharacterDevice { Name: "CON" }) is CharacterDevice con) {
-            FileManager.OpenDevice(con, "r", "STDIN");
-            FileManager.OpenDevice(con, "w", "STDOUT");
-            FileManager.OpenDevice(con, "w", "STDERR");
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "AUX" }) is CharacterDevice aux) {
-            FileManager.OpenDevice(aux, "rw", "STDAUX");
-        }
-
-        if (Devices.Find(device => device is CharacterDevice { Name: "PRN" }) is CharacterDevice prn) {
-            FileManager.OpenDevice(prn, "w", "STDPRN");
+    private void OpenDefaultFileHandles(VirtualFileBase[] fileDevices) {
+        foreach (VirtualFileBase fileDevice in fileDevices) {
+            FileManager.OpenDevice(fileDevice);
         }
     }
 
-    private void AddDefaultDevices() {
-        AddDevice(new ConsoleDevice(_state, _vgaFunctionality, _keyboardStreamedInput, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout, "CON", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "AUX", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character, "PRN", _loggerService));
-        AddDevice(new CharacterDevice(DeviceAttributes.Character | DeviceAttributes.CurrentClock, "CLOCK", _loggerService));
-        AddDevice(new BlockDevice(DeviceAttributes.FatDevice, 1));
+    private VirtualFileBase[] AddDefaultDevices() {
+        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
+        AddDevice(nulDevice);
+        var consoleDevice = new ConsoleDevice(_loggerService, _state,
+            _emulationLoopRecalls, _biosDataArea, _vgaFunctionality,
+            _biosKeyboardBuffer, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
+        AddDevice(consoleDevice);
+        var printerDevice = new PrinterDevice(_loggerService);
+        AddDevice(printerDevice);
+        var auxDevice = new AuxDevice(_loggerService);
+        AddDevice(auxDevice);
+        for (int i = 0; i < DosDriveManager.Count; i++) {
+            AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
+        }
+        return [nulDevice, consoleDevice, printerDevice];
     }
 
     /// <summary>
     /// Add a device to memory so that the information can be read by both DOS and programs.
     /// </summary>
-    /// <param name="device">The character or block device to add</param>
+    /// <param name="device">The DOS Device driver to add.</param>
     /// <param name="segment">The segment part of the segmented address for the DOS device header.</param>
     /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
@@ -197,11 +229,9 @@ public class Dos {
         _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
         index += 2;
         if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
-            var characterDevice = (CharacterDevice)device;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
-                Encoding.ASCII.GetBytes( $"{characterDevice.Name,-8}"));
-        } else {
-            var blockDevice = (BlockDevice)device;
+                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
+        } else if(device is BlockDevice blockDevice) {
             _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
             index++;
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
