@@ -9,10 +9,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -25,7 +27,7 @@ using System.Linq;
 /// <remarks>This is a LIM standard implementation. Which means there's no
 /// difference between EMM pages and raw pages. They're both 16 KB.</remarks>
 /// </summary>
-public sealed class ExpandedMemoryManager : InterruptHandler {
+public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// The string identifier in main memory for the EMS Handler. <br/>
     /// DOS programs can detect the presence of an EMS handler by looking for it <br/>
@@ -94,6 +96,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public IDictionary<int, EmmHandle> EmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
+    public uint DeviceNumber { get; set; } = 0;
+
+    public DosDeviceHeader Header { get; init; }
+    
+    public ushort Information => 0xc0c0; //Lifted from DOSBox.
+
+    public string Name {
+        get {
+            return EmsIdentifier;
+        }
+        set => throw new InvalidOperationException("Cannot rename DOS device!");
+    }
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -101,12 +116,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="dos">The DOS kernel.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Dos dos, ILoggerService loggerService)
+    public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        var device = new CharacterDevice(DeviceAttributes.Ioctl, EmsIdentifier, loggerService);
-        dos.AddDevice(device, DosDeviceSegment, 0x0000);
+        Header = new DosDeviceHeader(memory, new SegmentedAddress(DosDeviceSegment, 0x0).Linear) {
+            Name = EmsIdentifier,
+            Attributes = DeviceAttributes.Ioctl | DeviceAttributes.Character,
+            StrategyEntryPoint = 0,
+            InterruptEntryPoint = 0
+        };
         FillDispatchTable();
 
         // Allocation of system handle 0.
@@ -164,6 +182,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
                 LoggerService.Error("EMS function not provided: {@Function}", operation);
             }
             State.AH = EmmStatus.EmmFunctionNotSupported;
+            return;
         }
         Run(operation);
     }
@@ -788,5 +807,19 @@ public sealed class ExpandedMemoryManager : InterruptHandler {
     /// </summary>
     public void SetHandleName(ushort handle, string name) {
         EmmHandles[handle].Name = name;
+    }
+
+    public byte GetStatus(bool inputFlag) {
+        return 0;
+    }
+
+    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+        returnCode = null;
+        return false;
+    }
+
+    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+        returnCode = null;
+        return false;
     }
 }
