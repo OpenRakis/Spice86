@@ -449,7 +449,7 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult OpenFile(string fileName, FileAccessMode accessMode) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
-            .FirstOrDefault(device => device.Name == fileName);
+            .FirstOrDefault(device => device.IsName(fileName));
         if (device is not null) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Opening device {FileName} with mode {OpenMode}", fileName, accessMode);
