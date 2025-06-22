@@ -4,7 +4,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 /// Represents a set of flags that describe the attributes of a virtual DOS device.
 /// </summary>
 [Flags]
-public enum DeviceAttributes : ushort {
+public enum DeviceAttributes {
     /// <summary>
     /// The device is the current standard input device.
     /// </summary>

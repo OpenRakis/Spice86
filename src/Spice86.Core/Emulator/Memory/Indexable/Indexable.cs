@@ -107,11 +107,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="maxLength">The maximum length to write</param>
     /// <exception cref="UnrecoverableException"></exception>
     public virtual void SetZeroTerminatedString(uint address, string value, int maxLength) {
-        if(string.IsNullOrEmpty(value)) {
-            return;
-        }
-        int endOffset = (value.Length + 1);
-        if (endOffset > maxLength && !string.IsNullOrEmpty(value)) {
+        if (value.Length + 1 > maxLength && !string.IsNullOrEmpty(value)) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
@@ -123,8 +119,7 @@ public abstract class Indexable : IIndexable {
             UInt8[(uint)(address + i)] = character;
         }
 
-        long endAddress = address + endOffset;
-        UInt8[(uint)endAddress] = 0;
+        UInt8[(uint)(address + i)] = 0;
     }
 
     /// <summary>
