@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System.ComponentModel.DataAnnotations;
-using System.IO;
+
 
 /// <summary>
 /// Block devices are things like hard drives, floppy drives, etc.
