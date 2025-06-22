@@ -4,27 +4,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 
 /// <summary>
 /// Block devices are things like hard drives, floppy drives, etc.
 /// </summary>
 public class BlockDevice : VirtualDeviceBase {
-    /// <summary>
-    /// The number of units (disks) that this block device manages.
-    /// </summary>
-    /// <remarks>
-    /// A block device driver can manage more than one disk or floppy drive.
-    /// </remarks>
-    public byte UnitCount { get; }
-
-    /// <summary>
-    /// An optional 7-byte field with the signature of the block device.
-    /// </summary>
-    [Range(0,7)]
-    public string Signature { get; }
-
     public override ushort Information { get; }
     /// <inheritdoc/>
     public override bool CanRead { get; }
@@ -51,11 +36,11 @@ public class BlockDevice : VirtualDeviceBase {
     /// <param name="signature">An optional 7-byte field with the signature of the block device</param>
     public BlockDevice(IMemory memory, uint baseAddress, DeviceAttributes attributes,
         byte unitCount, string signature = "")
-        : base(new DosDeviceHeader(memory, baseAddress) {
-            Attributes = attributes
+        : base(new BlockDeviceHeader(memory, baseAddress) {
+            Attributes = attributes,
+            UnitCount = unitCount,
+            Signature = signature,
         }) {
-        UnitCount = unitCount;
-        Signature = signature.Length > 7 ? signature[..7] : signature;
     }
 
     /// <inheritdoc/>

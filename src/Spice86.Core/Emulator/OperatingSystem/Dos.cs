@@ -220,36 +220,15 @@ public class Dos {
         // Store the location of the header
         segment ??= MemoryMap.DeviceDriverSegment;
         offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
-        // Write the DOS device driver header to memory
-        ushort index = offset.Value;
-        _memory.UInt16[segment.Value, index] = 0xFFFF;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = 0xFFFF;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = (ushort)header.Attributes;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = header.StrategyEntryPoint;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = header.InterruptEntryPoint;
-        index += 2;
-        if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
-        } else if(device is BlockDevice blockDevice) {
-            _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
-            index++;
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
-        }
-
-        // Make the previous device point to this one
+        // Update the DOS device chain driver header to memory...
+        // ... Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _memory.SegmentedAddress[previousDevice.Header.BaseAddress] =
+            previousDevice.Header.NextDevicePointer =
                 new SegmentedAddress(segment.Value, offset.Value);
         }
 
-        // Handle changing of current input, output or clock devices.
+        // ... Handle changing of current input, output or clock devices.
         if (header.Attributes.HasFlag(DeviceAttributes.CurrentStdin) ||
             header.Attributes.HasFlag(DeviceAttributes.CurrentStdout)) {
             CurrentConsoleDevice = (CharacterDevice)device;
@@ -257,7 +236,6 @@ public class Dos {
         if (header.Attributes.HasFlag(DeviceAttributes.CurrentClock)) {
             CurrentClockDevice = (CharacterDevice)device;
         }
-
         Devices.Add(device);
     }
 }
