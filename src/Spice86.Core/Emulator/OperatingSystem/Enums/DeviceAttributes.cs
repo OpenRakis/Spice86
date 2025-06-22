@@ -31,7 +31,7 @@ public enum DeviceAttributes {
     Special = 0x10,
 
     /// <summary>
-    /// The device is a FAT device.
+    /// The device has a FAT file system.
     /// </summary>
     FatDevice = 0x2000,
 
@@ -41,7 +41,7 @@ public enum DeviceAttributes {
     Ioctl = 0x4000,
 
     /// <summary>
-    /// The device is a character device.
+    /// The device is used for character-based input/output operations.
     /// </summary>
     Character = 0x8000
 }

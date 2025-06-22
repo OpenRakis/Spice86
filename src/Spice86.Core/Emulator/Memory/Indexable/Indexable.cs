@@ -113,10 +113,10 @@ public abstract class Indexable : IIndexable {
         }
 
         int i = 0;
-        for (; i < value.Length; i++) {
-            char character = value[i];
-            byte charFirstByte = Encoding.ASCII.GetBytes(character.ToString())[0];
-            UInt8[(uint)(address + i)] = charFirstByte;
+        Span<byte> charBytes = Encoding.ASCII.GetBytes(value);
+        for (; i < charBytes.Length; i++) {
+            byte character = charBytes[i];
+            UInt8[(uint)(address + i)] = character;
         }
 
         UInt8[(uint)(address + i)] = 0;

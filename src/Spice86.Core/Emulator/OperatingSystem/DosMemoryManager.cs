@@ -5,6 +5,8 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 /// Implements DOS memory operations, such as allocating and releasing MCBs
 /// </summary>
@@ -127,10 +129,14 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
     /// <param name="requestedSize">The new size for the MCB, in bytes.</param>
+    /// <param name="dosMemoryControlBlock">The modified memory control block, or <c>null</c> if the operation was not successful.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public bool ModifyBlock(ushort blockSegment, ushort requestedSize) {
-        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
+    public bool TryModifyBlock(ushort blockSegment, ref ushort requestedSize,
+        [NotNullWhen(true)] out DosMemoryControlBlock? dosMemoryControlBlock) {
+        dosMemoryControlBlock = null;
+        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
+            requestedSize = this.FindLargestFree().Size;
             return false;
         }
 
@@ -139,6 +145,7 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
+            requestedSize = this.FindLargestFree().Size;
             return false;
         }
 
@@ -146,6 +153,7 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block.Size, requestedSize);
             }
+            requestedSize = this.FindLargestFree().Size;
             return false;
         }
 
@@ -153,7 +161,8 @@ public class DosMemoryManager {
             SplitBlock(block, requestedSize);
         }
 
-        block.PspSegment = _pspSegment;
+        dosMemoryControlBlock = block;
+        dosMemoryControlBlock.PspSegment = _pspSegment;
         return true;
     }
 

@@ -21,7 +21,9 @@ public class SystemBiosInt12Handler : InterruptHandler {
     /// <param name="biosDataArea"></param>
     /// <param name="loggerService"></param>
     public SystemBiosInt12Handler(
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, BiosDataArea biosDataArea, ILoggerService loggerService) 
+        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, BiosDataArea biosDataArea,
+        ILoggerService loggerService) 
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
     }

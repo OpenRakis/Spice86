@@ -5,37 +5,52 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
+    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
+    private readonly BiosDataArea _biosDataArea;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="biosDataArea">The BIOS data structure holding state information.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    public KeyboardInt16Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+    public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _loggerService = loggerService;
+        _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
+        AddAction(0x02, () => GetShiftFlags());
     }
 
     /// <inheritdoc/>
     public override byte VectorNumber => 0x16;
 
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        return base.WriteAssemblyInRam(memoryAsmWriter);
+    }
+
     /// <summary>
     /// Returns in the AX register the pending key code.
     /// </summary>
+    /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
     public void GetKeystroke() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
@@ -46,6 +61,13 @@ public class KeyboardInt16Handler : InterruptHandler {
         // AH = keyboard scan code
         // AL = ASCII character or zero if special function key
         State.AX = keyCode.Value;
+    }
+
+    public void GetShiftFlags() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET SHIFT FLAGS");
+        }
+        State.AL = _biosDataArea.KeyboardStatusFlag;
     }
 
     /// <summary>
@@ -85,6 +107,13 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <returns>The next keycode as an ushort value, <c>null</c> if nothing was in the buffer.</returns>
     public ushort? GetNextKeyCode() {
         return _biosKeyboardBuffer.DequeueKeyCode();
+    }
+
+    /// <summary>
+    /// Tells the BIOS keyboard buffer to flush its contents, setting the head and tail addresses to the start of the buffer.
+    /// </summary>
+    public void FlushKeyboardBuffer() {
+        _biosKeyboardBuffer.Flush();
     }
 
     /// <inheritdoc/>
