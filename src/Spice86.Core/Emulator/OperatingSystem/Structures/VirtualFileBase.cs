@@ -4,7 +4,6 @@ using System.IO;
 
 public abstract class VirtualFileBase : Stream, IVirtualFile {
     public virtual string Name { get; set; } = "";
-    public abstract ushort Information { get; }
 
     /// <summary>
     /// This method is useful for checking if the file name represents a specific unique device name.

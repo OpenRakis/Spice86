@@ -94,7 +94,7 @@ public class DosFileManager {
         [NotNullWhen(true)] out T? device) where T : IVirtualDevice {
         device = OpenFiles.OfType<T>().FirstOrDefault(x => x is
             CharacterDevice device &&
-            device.Attributes.HasFlag(attributes));
+            device.Header.Attributes.HasFlag(attributes));
         return device is not null;
     }
 
@@ -899,7 +899,7 @@ public class DosFileManager {
                         }
                         sourceDrive = 0x2; // defaulting to C:
                     }
-                    ushort dosFileInfo = (ushort)((dosFile.Information & 0xffe0) | sourceDrive);
+                    ushort dosFileInfo = (ushort)(0xffe0 | sourceDrive);
                     state.DX = dosFileInfo;
                     return DosFileOperationResult.Value16(dosFileInfo);
                 }

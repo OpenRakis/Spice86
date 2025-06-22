@@ -2,21 +2,24 @@
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
 
 public class PrinterDevice : CharacterDevice {
+    private const string LPT1 = "LPT1";
+    private readonly ILoggerService _loggerService;
 
-    public PrinterDevice(ILoggerService loggerService,
-        ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, DeviceAttributes.Character, "LPT1", strategy, interrupt) {
+    public PrinterDevice(ILoggerService loggerService, IByteReaderWriter memory,
+        uint baseAddress)
+        : base(memory, baseAddress, LPT1) {
+        _loggerService = loggerService;
     }
 
-    public override string Name => "LPT1";
+    public override string Name => LPT1;
 
-    public const string Alias = "PRN";
+    public override string Alias => "PRN";
 
     public override ushort Information => 0x80A0;
 
@@ -32,27 +35,27 @@ public class PrinterDevice : CharacterDevice {
 
     public override void Write(byte[] buffer, int offset, int count) {
         string output = System.Text.Encoding.ASCII.GetString(buffer, offset, count);
-        if(Logger.IsEnabled(LogEventLevel.Information)) {
-            Logger.Information("Writing to printer: {Output}", output);
+        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Writing to printer: {Output}", output);
         }
     }
 
     public override void Flush() {
-        if (Logger.IsEnabled(LogEventLevel.Information)) {
-            Logger.Information("Flushing printer");
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Flushing printer");
         }
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
-        if (Logger.IsEnabled(LogEventLevel.Information)) {
-            Logger.Information("Reading printer");
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Reading printer");
         }
         return 0;
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
-        if (Logger.IsEnabled(LogEventLevel.Information)) {
-            Logger.Information("Seeking printer");
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Seeking printer");
         }
         return 0;
     }

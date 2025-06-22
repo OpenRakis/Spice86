@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -96,13 +97,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public IDictionary<int, EmmHandle> EmmHandles { get; } = new Dictionary<int, EmmHandle>();
 
     public uint DeviceNumber { get; set; } = 0;
-    public ushort Segment { get; set; } = 0;
-    public ushort Offset { get; set; } = 0;
-    public DeviceAttributes Attributes { get; set; } = DeviceAttributes.Ioctl | DeviceAttributes.Character;
-    public ushort StrategyEntryPoint { get; set; } = 0;
-    public ushort InterruptEntryPoint { get; set; } = 0;
-    public string Name { get; set; }
+
+    public DosDeviceHeader Header { get; init; }
+    
     public ushort Information => 0xc0c0; //Lifted from DOSBox.
+
+    public string Name {
+        get {
+            return EmsIdentifier;
+        }
+        set => throw new InvalidOperationException("Cannot rename DOS device!");
+    }
 
     /// <summary>
     /// Initializes a new instance.
@@ -114,7 +119,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        Name = EmsIdentifier;
+        Header = new DosDeviceHeader(memory, new SegmentedAddress(DosDeviceSegment, 0x0).Linear) {
+            Name = EmsIdentifier,
+            Attributes = DeviceAttributes.Ioctl | DeviceAttributes.Character,
+            StrategyEntryPoint = 0,
+            InterruptEntryPoint = 0
+        };
         FillDispatchTable();
 
         // Allocation of system handle 0.

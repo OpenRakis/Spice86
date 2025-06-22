@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -24,7 +23,6 @@ using System.Text;
 /// Represents the DOS kernel.
 /// </summary>
 public class Dos {
-    private const int DeviceDriverHeaderLength = 18;
     private readonly BiosDataArea _biosDataArea;
     private readonly IMemory _memory;
     private readonly State _state;
@@ -189,19 +187,24 @@ public class Dos {
         }
     }
 
+    private uint GetDefaultNewDeviceBaseAddress()
+        => new SegmentedAddress(MemoryMap.DeviceDriverSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
+
     private VirtualFileBase[] AddDefaultDevices() {
-        var nulDevice = new NullDevice(_loggerService, DeviceAttributes.Character);
+        var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
-        var consoleDevice = new ConsoleDevice(_loggerService, _state,
-            _emulationLoopRecalls, _biosDataArea, _vgaFunctionality,
-            _biosKeyboardBuffer, DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout);
+        var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
+            _loggerService, _state,
+            _biosDataArea, _emulationLoopRecalls, _vgaFunctionality,
+            _biosKeyboardBuffer);
         AddDevice(consoleDevice);
-        var printerDevice = new PrinterDevice(_loggerService);
+        var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(printerDevice);
-        var auxDevice = new AuxDevice(_loggerService);
+        var auxDevice = new AuxDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(auxDevice);
         for (int i = 0; i < DosDriveManager.Count; i++) {
-            AddDevice(new BlockDevice(_loggerService, "",DeviceAttributes.FatDevice, 1));
+            AddDevice(new BlockDevice(_memory, GetDefaultNewDeviceBaseAddress(),
+                DeviceAttributes.FatDevice, 1));
         }
         return [nulDevice, consoleDevice, printerDevice];
     }
@@ -212,45 +215,46 @@ public class Dos {
     /// <param name="device">The DOS Device driver to add.</param>
     /// <param name="segment">The segment part of the segmented address for the DOS device header.</param>
     /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
-    public void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
+    private void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
+        DosDeviceHeader header = device.Header;
         // Store the location of the header
-        device.Segment = segment ?? MemoryMap.DeviceDriverSegment;
-        device.Offset = offset ?? (ushort)(Devices.Count * DeviceDriverHeaderLength);
+        segment ??= MemoryMap.DeviceDriverSegment;
+        offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
         // Write the DOS device driver header to memory
-        ushort index = device.Offset;
-        _memory.UInt16[device.Segment, index] = 0xFFFF;
+        ushort index = offset.Value;
+        _memory.UInt16[segment.Value, index] = 0xFFFF;
         index += 2;
-        _memory.UInt16[device.Segment, index] = 0xFFFF;
+        _memory.UInt16[segment.Value, index] = 0xFFFF;
         index += 2;
-        _memory.UInt16[device.Segment, index] = (ushort)device.Attributes;
+        _memory.UInt16[segment.Value, index] = (ushort)header.Attributes;
         index += 2;
-        _memory.UInt16[device.Segment, index] = device.StrategyEntryPoint;
+        _memory.UInt16[segment.Value, index] = header.StrategyEntryPoint;
         index += 2;
-        _memory.UInt16[device.Segment, index] = device.InterruptEntryPoint;
+        _memory.UInt16[segment.Value, index] = header.InterruptEntryPoint;
         index += 2;
-        if (device.Attributes.HasFlag(DeviceAttributes.Character)) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+        if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
                 Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
         } else if(device is BlockDevice blockDevice) {
-            _memory.UInt8[device.Segment, index] = blockDevice.UnitCount;
+            _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
             index++;
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(device.Segment, index),
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
                 Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
         }
 
         // Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _memory.SegmentedAddress[previousDevice.Segment, previousDevice.Offset] =
-                new(device.Segment, device.Offset);
+            _memory.SegmentedAddress[previousDevice.Header.BaseAddress] =
+                new SegmentedAddress(segment.Value, offset.Value);
         }
 
         // Handle changing of current input, output or clock devices.
-        if (device.Attributes.HasFlag(DeviceAttributes.CurrentStdin) ||
-            device.Attributes.HasFlag(DeviceAttributes.CurrentStdout)) {
+        if (header.Attributes.HasFlag(DeviceAttributes.CurrentStdin) ||
+            header.Attributes.HasFlag(DeviceAttributes.CurrentStdout)) {
             CurrentConsoleDevice = (CharacterDevice)device;
         }
-        if (device.Attributes.HasFlag(DeviceAttributes.CurrentClock)) {
+        if (header.Attributes.HasFlag(DeviceAttributes.CurrentClock)) {
             CurrentClockDevice = (CharacterDevice)device;
         }
 
