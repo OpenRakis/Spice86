@@ -23,6 +23,8 @@ using System.Text;
 /// Represents the DOS kernel.
 /// </summary>
 public class Dos {
+    //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
+    private const int DosSysVarSegment = 0x80;
     private readonly BiosDataArea _biosDataArea;
     private readonly IMemory _memory;
     private readonly State _state;
@@ -107,6 +109,14 @@ public class Dos {
     public DosSwappableDataArea DosSwappableDataArea { get; }
 
     /// <summary>
+    /// The DOS System information. Read by DOSINFO.
+    /// </summary>
+    /// <remarks>
+    /// AKA the 'List of lists'
+    /// </remarks>
+    public DosSysVars DosSysVars { get; }
+
+    /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
@@ -144,6 +154,14 @@ public class Dos {
         _vgaFunctionality = vgaFunctionality;
         DosDriveManager = new(_loggerService, cDriveFolderPath, executablePath);
         VirtualFileBase[] dosDevices = AddDefaultDevices();
+        DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
+            MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
+
+        DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
+
+        // like DOSBox, we don't have one.
+        DosSysVars.ClockDeviceHeaderPointer = 0x0;
+
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
