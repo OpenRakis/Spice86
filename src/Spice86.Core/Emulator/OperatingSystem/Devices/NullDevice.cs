@@ -2,19 +2,25 @@
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 public class NullDevice : VirtualDeviceBase {
-    public NullDevice(ILoggerService loggerService, DeviceAttributes attributes,
-        ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, attributes, strategy, interrupt) {
+    private const string NUL = "NUL";
+    private readonly ILoggerService _loggerService;
+    public NullDevice(ILoggerService loggerService, IByteReaderWriter memory, uint baseAddress)
+        : base(new DosDeviceHeader(memory, baseAddress) {
+            Attributes = Enums.DeviceAttributes.CurrentNull,
+            Name = NUL
+        }) {
+        _loggerService = loggerService;
     }
 
-    public override string Name => "NUL";
+    public override string Name => NUL;
     public override ushort Information => 0x8084;
     public override bool CanRead => true;
     public override bool CanSeek => true;
@@ -24,38 +30,38 @@ public class NullDevice : VirtualDeviceBase {
 
     public override void Flush() {
         // No-op for null device
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Flushing {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Flushing {@Device}", this);
         }
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
         // No-op for null device
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Reading {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Reading {@Device}", this);
         }
         return 0;
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
         // No-op for null device
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Seeking {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Seeking {@Device}", this);
         }
         return 0;
     }
 
     public override void SetLength(long value) {
         // No-op for null device
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Setting length {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Setting length {@Device}", this);
         }
     }
 
     public override bool TryReadFromControlChannel(uint address, ushort size,
         [NotNullWhen(true)] out ushort? returnCode) {
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Reading from control channel of {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Reading from control channel of {@Device}", this);
         }
 
         returnCode = null;
@@ -64,8 +70,8 @@ public class NullDevice : VirtualDeviceBase {
 
     public override bool TryWriteToControlChannel(uint address, ushort size,
         [NotNullWhen(true)] out ushort? returnCode) {
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Writing to control channel of {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Writing to control channel of {@Device}", this);
         }
         returnCode = null;
         return false;
@@ -73,8 +79,8 @@ public class NullDevice : VirtualDeviceBase {
 
     public override void Write(byte[] buffer, int offset, int count) {
         // No-op for null device
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("Writing {@Device}", this);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Writing {@Device}", this);
         }
     }
 }

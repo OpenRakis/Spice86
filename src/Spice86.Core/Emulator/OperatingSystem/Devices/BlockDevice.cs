@@ -1,8 +1,10 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 
 /// <summary>
@@ -10,12 +12,17 @@ using System.IO;
 /// </summary>
 public class BlockDevice : VirtualDeviceBase {
     /// <summary>
-    /// The number of units (disks) that this device has.
+    /// The number of units (disks) that this block device manages.
     /// </summary>
+    /// <remarks>
+    /// A block device driver can manage more than one disk or floppy drive.
+    /// </remarks>
     public byte UnitCount { get; }
+
     /// <summary>
-    /// An optional 7-byte field with the signature of the device.
+    /// An optional 7-byte field with the signature of the block device.
     /// </summary>
+    [Range(0,7)]
     public string Signature { get; }
 
     /// <summary>
@@ -27,7 +34,6 @@ public class BlockDevice : VirtualDeviceBase {
     /// Gets the DOS Device characteristics. Largely undocumented, and device-specific.
     /// </summary>
     public override ushort Information { get; }
-    
     /// <inheritdoc/>
     public override bool CanRead { get; }
     
@@ -46,18 +52,16 @@ public class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// Create a new virtual device.
     /// </summary>
-    /// <param name="loggerService">The logging implementation.</param>
-    /// <param name="name">The name or label of the block device.</param>
-    /// <param name="attributes">The device attributes.</param>
+    /// <param name="memory">The memory bus, to store the DOS device driver header..</param>
+    /// <param name="baseAddress">The absolute address to the DOS device driver header.</param>
+    /// <param name="attributes">The block device attributes. Not all block devices are FAT devices.</param>
     /// <param name="unitCount">The amount of disks this device has.</param>
-    /// <param name="signature">The string identifier.</param>
-    /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
-    /// <param name="interrupt">Optional entrypoint for the interrupt routine.</param>
-    public BlockDevice(ILoggerService loggerService, string name,
-        DeviceAttributes attributes, byte unitCount,
-        string signature = "", ushort strategy = 0, ushort interrupt = 0)
-        : base(loggerService, attributes, strategy, interrupt) {
-        Attributes &= ~DeviceAttributes.Character;
+    /// <param name="signature">An optional 7-byte field with the signature of the block device</param>
+    public BlockDevice(IMemory memory, uint baseAddress, DeviceAttributes attributes,
+        string name, byte unitCount, string signature = "")
+        : base(new DosDeviceHeader(memory, baseAddress) {
+            Attributes = attributes
+        }) {
         UnitCount = unitCount;
         Name = name;
         Signature = signature.Length > 7 ? signature[..7] : signature;

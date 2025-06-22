@@ -71,7 +71,6 @@ public class DosFile : VirtualFileBase {
 
     public byte Drive { get; set; } = 0xff; //unset
     public override string Name { get; set; }
-    public override ushort Information { get; }
     public override bool CanRead { get; }
     public override bool CanSeek { get; }
     public override bool CanWrite { get; }

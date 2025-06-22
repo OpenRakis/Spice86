@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -21,9 +22,11 @@ using System.IO;
 /// Represents the console device.
 /// </summary>
 public class ConsoleDevice : CharacterDevice {
+    private const string CON = "CON";
     private byte _readCache = 0;
     public const int InputAvailable = 0x80D3;
     public const int NoInputAvailable = 0x8093;
+    private readonly ILoggerService _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
@@ -46,11 +49,13 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(ILoggerService loggerService, State state,
-        EmulationLoopRecalls emulationLoopRecalls, BiosDataArea biosDataArea,
-        IVgaFunctionality vgaFunctionality, BiosKeyboardBuffer biosKeyboardBuffer,
-        DeviceAttributes attributes)
-        : base(loggerService, attributes, "CON") {
+    public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
+        ILoggerService loggerService, State state, BiosDataArea biosDataArea,
+        EmulationLoopRecalls emulationLoopRecalls, IVgaFunctionality vgaFunctionality,
+        BiosKeyboardBuffer biosKeyboardBuffer)
+        : base(memory, baseAddress, CON,
+            DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
+        _loggerService = loggerService;
         _biosKeybardBuffer = biosKeyboardBuffer;
         _emulationLoopRecalls = emulationLoopRecalls;
         _state = state;
@@ -76,7 +81,7 @@ public class ConsoleDevice : CharacterDevice {
 
     public bool DirectOutput { get; set; }
 
-    public override string Name => "CON";
+    public override string Name => CON;
 
     public override bool CanSeek => false;
 
@@ -237,8 +242,8 @@ public class ConsoleDevice : CharacterDevice {
                     case 'D': // Scrolling down
                     case 'M': // Scrolling up
                     default:
-                        if(Logger.IsEnabled(LogEventLevel.Warning)) {
-                            Logger.Warning("ANSI: Unknown char {AnsiChar} after an Esc character", $"{chr:X2}");
+                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("ANSI: Unknown char {AnsiChar} after an Esc character", $"{chr:X2}");
                         }
                         ClearAnsi();
                         break;
@@ -281,8 +286,8 @@ public class ConsoleDevice : CharacterDevice {
                                 _ansi.Attribute |= 0x08;
                                 break;
                             case 4: // Underline
-                                if(Logger.IsEnabled(LogEventLevel.Information)) {
-                                    Logger.Information("ANSI: No support for underline yet");
+                                if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+                                    _loggerService.Information("ANSI: No support for underline yet");
                                 }
                                 break;
                             case 5: // Blinking
@@ -365,9 +370,9 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'f':
                 case 'H': // Cursor Position
-                    if(!_ansi.WasWarned && Logger.IsEnabled(LogEventLevel.Warning)) {
+                    if(!_ansi.WasWarned && _loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _ansi.WasWarned = true;
-                        Logger.Warning("ANSI Warning to debugger: ANSI SEQUENCES USED");
+                        _loggerService.Warning("ANSI Warning to debugger: ANSI SEQUENCES USED");
                     }
                     ncols = _biosDataArea.ScreenColumns;
                     nrows = (ushort)(_biosDataArea.ScreenRows + 1);
@@ -445,8 +450,8 @@ public class ConsoleDevice : CharacterDevice {
                         _ansi.Data[0] = 2;
                     }
                     // Every version behaves like type 2
-                    if (_ansi.Data[0] != 2 && Logger.IsEnabled(LogEventLevel.Information)) {
-                        Logger.Information("ANSI: {EscapceSequence} called : not supported handling as 2",
+                    if (_ansi.Data[0] != 2 && _loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("ANSI: {EscapceSequence} called : not supported handling as 2",
                             $"Esc{_ansi.Data[0]:d}J");
                     }
                     _vgaFunctionality.SetActivePage(page);
@@ -456,8 +461,8 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'h': // Set mode (if code =7 enable linewrap)
                 case 'I': // Reset mode
-                    if(Logger.IsEnabled(LogEventLevel.Warning)) {
-                        Logger.Warning("ANSI: set/reset mode called (not supported)");
+                    if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("ANSI: set/reset mode called (not supported)");
                     }
                     ClearAnsi();
                     break;
@@ -497,8 +502,8 @@ public class ConsoleDevice : CharacterDevice {
                 case 'p': // Reassign keys (needs strings)
                 case 'i': // Printer stuff
                 default:
-                    if (Logger.IsEnabled(LogEventLevel.Information)) {
-                        Logger.Information("ANSI: Unhandled character {AnsiChar} in Escape sequence", $"{chr:X2}");
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("ANSI: Unhandled character {AnsiChar} in Escape sequence", $"{chr:X2}");
                     }
                     ClearAnsi();
                     break;

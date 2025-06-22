@@ -1,6 +1,5 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System.Diagnostics.CodeAnalysis;
@@ -17,37 +16,34 @@ public interface IVirtualDevice : IVirtualFile {
     /// <returns>The DOS device status in a byte.</returns>
     public byte GetStatus(bool inputFlag);
 
+    /// <summary>
+    /// Tries to read data from the control channel.
+    /// </summary>
+    /// <remarks>
+    /// Not all devices support IOCTL.
+    /// </remarks>
+    /// <returns>Whether the read operation was successful.</returns>
     public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
 
+    /// <summary>
+    /// Tries to read data from the control channel.
+    /// </summary>
+    /// <remarks>
+    /// Not all devices support IOCTL.
+    /// </remarks>
+    /// <returns>Whether the write operation was successful.</returns>
     public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode);
 
+    /// <summary>
+    /// The index of the device in the DOS device list.
+    /// </summary>
     public uint DeviceNumber { get; set; }
 
     /// <summary>
-    /// The segment where the device driver header is stored.
+    /// The corresponding DOS device header for this device.
     /// </summary>
-    public ushort Segment { get; set; }
+    public DosDeviceHeader Header { get; init; }
 
-    /// <summary>
-    /// The offset in the segment where the device driver header is stored.
-    /// </summary>
-    public ushort Offset { get; set; }
-
-    /// <summary>
-    /// The device attributes.
-    /// <see href="https://github.com/microsoft/MS-DOS/blob/master/v2.0/bin/DEVDRIV.DOC#L125"/>
-    /// </summary>
-    public DeviceAttributes Attributes { get; set; }
-
-    /// <summary>
-    /// This is the entrypoint for the strategy routine.
-    /// DOS will give this routine a Device Request Header when it wants the device to do something.
-    /// </summary>
-    public ushort StrategyEntryPoint { get; set; }
-
-    /// <summary>
-    /// This is the entrypoint for the interrupt routine.
-    /// DOS will call this routine immediately after calling the strategy endpoint.
-    /// </summary>
-    public ushort InterruptEntryPoint { get; set; }
+    /// Gets the DOS Device characteristics. Largely undocumented, and device-specific.
+    public ushort Information { get; }
 }

@@ -1,48 +1,24 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
-
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Interfaces;
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// The abstract base class for all DOS virtual devices
 /// </summary>
 public abstract class VirtualDeviceBase : VirtualFileBase, IVirtualDevice {
-    protected ILoggerService Logger;
-
     /// <summary>
     /// Create a new virtual device.
     /// </summary>
-    /// <param name="loggerService">The logging implementation.</param>
-    /// <param name="attributes">The device attributes</param>
-    /// <param name="strategy">Optional entrypoint for the strategy routine.</param>
-    /// <param name="interrupt">Optional entrypoint for the interrupt routine</param>
-    protected VirtualDeviceBase(ILoggerService loggerService,
-        DeviceAttributes attributes,
-        ushort strategy = 0, ushort interrupt = 0) {
-        Logger = loggerService;
-        Attributes = attributes;
-        StrategyEntryPoint = strategy;
-        InterruptEntryPoint = interrupt;
+    protected VirtualDeviceBase(DosDeviceHeader dosDeviceHeader) {
+        Header = dosDeviceHeader;
     }
 
     /// <inheritdoc />
-    public ushort Segment { get; set; }
+    public DosDeviceHeader Header { get; init; }
 
     /// <inheritdoc />
-    public ushort Offset { get; set; }
-
-    /// <inheritdoc />
-    public DeviceAttributes Attributes { get; set; }
-
-    /// <inheritdoc />
-    public ushort StrategyEntryPoint { get; set; }
-
-    /// <inheritdoc />
-    public ushort InterruptEntryPoint { get; set; }
-
     public uint DeviceNumber { get; set; }
 
     public virtual byte GetStatus(bool inputFlag) => 0;
@@ -57,4 +33,19 @@ public abstract class VirtualDeviceBase : VirtualFileBase, IVirtualDevice {
         returnCode = null;
         return false;
     }
+
+
+    /// <inheritdoc />
+    public abstract ushort Information { get; }
+
+    /// <summary>
+    /// The unique DOS device name, set by the DOS device implementer.
+    /// </summary>
+    /// <remarks>
+    /// Limited to 8 ASCII encoded characters. A block device does not have a name, but an assigned block device letter.
+    /// </remarks>
+    [Range(0, 8)]
+    public override string Name => Header.Name;
+
+    public virtual string? Alias { get; init; }
 }
