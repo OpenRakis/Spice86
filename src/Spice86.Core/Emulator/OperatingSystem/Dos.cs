@@ -221,17 +221,7 @@ public class Dos {
         segment ??= MemoryMap.DeviceDriverSegment;
         offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
         // Write the DOS device driver header to memory
-        ushort index = offset.Value;
-        _memory.UInt16[segment.Value, index] = 0xFFFF;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = 0xFFFF;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = (ushort)header.Attributes;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = header.StrategyEntryPoint;
-        index += 2;
-        _memory.UInt16[segment.Value, index] = header.InterruptEntryPoint;
-        index += 2;
+        ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
             _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
                 Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
