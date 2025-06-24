@@ -20,6 +20,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -41,6 +42,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -443,9 +445,12 @@ public class Spice86DependencyInjection : IDisposable {
             systemBiosInt15Handler, systemClockInt1AHandler,
             timer,
             timerInt8Handler,
-            vgaCard, videoState, vgaIoPortHandler,
-            vgaRenderer, vgaBios, vgaRom,
-            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            vgaCard, videoState, vgaIoPortHandler, vgaRenderer, vgaBios, vgaRom,
+            dmaController, new OPLFMChip(timer,
+                soundBlaster.FMSynthSoundChannel, state,
+                ioPortDispatcher, configuration.FailOnUnhandledPort,
+                loggerService, pauseHandler),
+            softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
