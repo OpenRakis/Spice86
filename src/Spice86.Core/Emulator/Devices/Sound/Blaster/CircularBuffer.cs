@@ -82,4 +82,9 @@ public sealed class CircularBuffer {
 
         return sourceSpan.Length;
     }
+
+    /// <summary>
+    /// Gets whether the internal buffer is full.
+    /// </summary>
+    public bool IsAtCapacity => Capacity - _bytesInBuffer <= 0;
 }

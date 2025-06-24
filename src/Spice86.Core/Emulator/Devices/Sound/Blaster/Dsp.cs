@@ -1,6 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
-using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Memory;
 
 using System;
@@ -23,10 +22,24 @@ public sealed class Dsp : IDisposable {
         _adpcm2 = new();
         _adpcm3 = new();
         _adpcm4 = new();
-        dmaChannel8 = eightBitDmaChannel;
-        dmaChannel16 = sixteenBitDmaChannel;
+        _dmaChannel8 = eightBitDmaChannel;
+        _dmaChannel16 = sixteenBitDmaChannel;
         SampleRate = 22050;
         BlockTransferSize = 65536;
+    }
+
+    /// <summary>
+    /// Gets whether the DSP can receive PCM data
+    /// </summary>
+    /// <returns></returns>
+    public bool IsWriteBufferAtCapacity() {
+        if (State == DspState.Normal) {
+            return true;
+        }
+        if (IsDmaTransferActive) {
+            return true;
+        }
+        return IsAtCapacity;
     }
 
     /// <summary>
@@ -69,6 +82,8 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     public bool IsDmaTransferActive { get; set; }
 
+    public bool IsAtCapacity => _waveBuffer.IsAtCapacity;
+
     /// <summary>
     /// Starts a new DMA transfer.
     /// </summary>
@@ -81,20 +96,20 @@ public sealed class Dsp : IDisposable {
         Is16Bit = is16Bit;
         IsStereo = isStereo;
         AutoInitialize = autoInitialize;
-        referenceByteExpected = referenceByte;
-        compression = compressionLevel;
+        _referenceByteExpected = referenceByte;
+        _compression = compressionLevel;
         IsDmaTransferActive = true;
 
-        decodeRemainderOffset = -1;
+        _decodeRemainderOffset = -1;
 
-        decoder = compressionLevel switch {
+        _decoder = compressionLevel switch {
             CompressionLevel.ADPCM2 => _adpcm2,
             CompressionLevel.ADPCM3 => _adpcm3,
             CompressionLevel.ADPCM4 => _adpcm4,
             _ => null,
         };
 
-        currentChannel = dmaChannel8;
+        _currentChannel = _dmaChannel8;
 
         int transferRate = SampleRate;
         if (Is16Bit) {
@@ -110,8 +125,8 @@ public sealed class Dsp : IDisposable {
             factor = 1.5;
         }
 
-        currentChannel.TransferRate = (int)(transferRate * factor);
-        currentChannel.IsActive = true;
+        _currentChannel.TransferRate = (int)(transferRate * factor);
+        _currentChannel.IsActive = true;
 
         _resetTimer.Elapsed += OnResetTimerElapsed;
     }
@@ -133,34 +148,34 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="buffer">Buffer into which sample data is written.</param>
     public void Read(Span<byte> buffer) {
-        if (compression == CompressionLevel.None) {
+        if (_compression == CompressionLevel.None) {
             InternalRead(buffer);
             return;
         }
 
-        if (decodeBuffer == null || decodeBuffer.Length < buffer.Length * 4) {
-            decodeBuffer = new byte[buffer.Length * 4];
+        if (_decodeBuffer == null || _decodeBuffer.Length < buffer.Length * 4) {
+            _decodeBuffer = new byte[buffer.Length * 4];
         }
 
         int offset = 0;
         int length = buffer.Length;
 
-        while (buffer.Length > 0 && decodeRemainderOffset >= 0) {
-            buffer[offset] = decodeRemainder[decodeRemainderOffset];
+        while (buffer.Length > 0 && _decodeRemainderOffset >= 0) {
+            buffer[offset] = _decodeRemainder[_decodeRemainderOffset];
             offset++;
             length--;
-            decodeRemainderOffset--;
+            _decodeRemainderOffset--;
         }
 
         if (length <= 0) {
             return;
         }
 
-        if (referenceByteExpected) {
+        if (_referenceByteExpected) {
             InternalRead(buffer.Slice(offset, 1));
-            referenceByteExpected = false;
-            if (decoder is not null) {
-                decoder.Reference = decodeBuffer[offset];
+            _referenceByteExpected = false;
+            if (_decoder is not null) {
+                _decoder.Reference = _decodeBuffer[offset];
             }
             offset++;
             length--;
@@ -170,18 +185,18 @@ public sealed class Dsp : IDisposable {
             return;
         }
 
-        int? blocks = length / decoder?.CompressionFactor;
+        int? blocks = length / _decoder?.CompressionFactor;
 
-        if (blocks > 0 && decodeBuffer is not null) {
-            InternalRead(decodeBuffer.AsSpan(0, blocks.Value));
-            decoder?.Decode(decodeBuffer, 0, blocks.Value, buffer[offset..]);
+        if (blocks > 0 && _decodeBuffer is not null) {
+            InternalRead(_decodeBuffer.AsSpan(0, blocks.Value));
+            _decoder?.Decode(_decodeBuffer, 0, blocks.Value, buffer[offset..]);
         }
 
-        int? remainder = length % decoder?.CompressionFactor;
+        int? remainder = length % _decoder?.CompressionFactor;
         if (remainder > 0) {
-            InternalRead(decodeRemainder.AsSpan(0, remainder.Value));
-            Array.Reverse(decodeRemainder, 0, remainder.Value);
-            decodeRemainderOffset = remainder.Value - 1;
+            InternalRead(_decodeRemainder.AsSpan(0, remainder.Value));
+            Array.Reverse(_decodeRemainder, 0, remainder.Value);
+            _decodeRemainderOffset = remainder.Value - 1;
         }
     }
 
@@ -191,11 +206,11 @@ public sealed class Dsp : IDisposable {
     /// <param name="source">Pointer to data in memory.</param>
     /// <returns>Number of bytes actually written.</returns>
     public int DmaWrite(ReadOnlySpan<byte> source) {
-        int actualCount = waveBuffer.Write(source);
+        int actualCount = _waveBuffer.Write(source);
         if (AutoInitialize) {
-            autoInitTotal += actualCount;
-            if (autoInitTotal >= BlockTransferSize) {
-                autoInitTotal -= BlockTransferSize;
+            _autoInitTotal += actualCount;
+            if (_autoInitTotal >= BlockTransferSize) {
+                _autoInitTotal -= BlockTransferSize;
                 OnAutoInitBufferComplete?.Invoke();
             }
         }
@@ -213,8 +228,8 @@ public sealed class Dsp : IDisposable {
         AutoInitialize = false;
         Is16Bit = false;
         IsStereo = false;
-        autoInitTotal = 0;
-        readIdleCycles = 0;
+        _autoInitTotal = 0;
+        _readIdleCycles = 0;
         State = DspState.Reset;
         _resetTimer.Start();
     }
@@ -229,19 +244,19 @@ public sealed class Dsp : IDisposable {
         Span<byte> dest = buffer;
 
         while (dest.Length > 0) {
-            int amt = waveBuffer.Read(dest);
+            int amt = _waveBuffer.Read(dest);
 
             if (amt == 0) {
-                if (!IsDmaTransferActive || readIdleCycles >= 100) {
+                if (!IsDmaTransferActive || _readIdleCycles >= 100) {
                     byte zeroValue = Is16Bit ? (byte)0 : (byte)128;
                     dest.Fill(zeroValue);
                     return;
                 }
 
-                readIdleCycles++;
+                _readIdleCycles++;
                 Thread.Sleep(1);
             } else {
-                readIdleCycles = 0;
+                _readIdleCycles = 0;
             }
 
             dest = dest[amt..];
@@ -251,63 +266,63 @@ public sealed class Dsp : IDisposable {
     /// <summary>
     /// DMA channel used for 8-bit data transfers.
     /// </summary>
-    private readonly DmaChannel dmaChannel8;
+    private readonly DmaChannel _dmaChannel8;
 
     /// <summary>
     /// DMA channel used for 16-bit data transfers.
     /// </summary>
-    private readonly DmaChannel dmaChannel16;
+    private readonly DmaChannel _dmaChannel16;
 
     /// <summary>
     /// Currently active DMA channel.
     /// </summary>
-    private DmaChannel? currentChannel;
+    private DmaChannel? _currentChannel;
 
     /// <summary>
     /// Number of bytes transferred in the current auto-init cycle.
     /// </summary>
-    private int autoInitTotal;
+    private int _autoInitTotal;
 
     /// <summary>
     /// Number of cycles with no new input data.
     /// </summary>
-    private int readIdleCycles;
+    private int _readIdleCycles;
 
     /// <summary>
     /// The current compression level.
     /// </summary>
-    private CompressionLevel compression;
+    private CompressionLevel _compression;
 
     /// <summary>
     /// Indicates whether a reference byte is expected.
     /// </summary>
-    private bool referenceByteExpected;
+    private bool _referenceByteExpected;
 
     /// <summary>
     /// Current ADPCM decoder instance.
     /// </summary>
-    private ADPCMDecoder? decoder;
+    private ADPCMDecoder? _decoder;
 
     /// <summary>
     /// Buffer used for ADPCM decoding.
     /// </summary>
-    private byte[]? decodeBuffer;
+    private byte[]? _decodeBuffer;
 
     /// <summary>
     /// Last index of remaining decoded bytes.
     /// </summary>
-    private int decodeRemainderOffset;
-    private bool disposedValue;
+    private int _decodeRemainderOffset;
+    private bool _disposedValue;
 
     /// <summary>
     /// Remaining decoded bytes.
     /// </summary>
-    private readonly byte[] decodeRemainder = new byte[4];
+    private readonly byte[] _decodeRemainder = new byte[4];
 
     /// <summary>
     /// Contains generated waveform data waiting to be read.
     /// </summary>
-    private readonly CircularBuffer waveBuffer = new(TargetBufferSize);
+    private readonly CircularBuffer _waveBuffer = new(TargetBufferSize);
 
     /// <summary>
     /// Size of output buffer in samples.
@@ -315,11 +330,11 @@ public sealed class Dsp : IDisposable {
     private const int TargetBufferSize = 1024;
 
     private void Dispose(bool disposing) {
-        if (!disposedValue) {
+        if (!_disposedValue) {
             if (disposing) {
                 _resetTimer.Dispose();
             }
-            disposedValue = true;
+            _disposedValue = true;
         }
     }
 
