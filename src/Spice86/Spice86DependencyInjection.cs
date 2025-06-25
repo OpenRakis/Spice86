@@ -347,7 +347,7 @@ public class Spice86DependencyInjection : IDisposable {
         PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
             ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
-            5, 1, 5, SbType.Sb16);
+            7, 1, 5, SbType.SbPro2);
         SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher,
             softwareMixer, state, dmaController, dualPic,
             configuration.FailOnUnhandledPort,

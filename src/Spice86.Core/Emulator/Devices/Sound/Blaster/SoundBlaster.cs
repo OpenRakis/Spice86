@@ -164,7 +164,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
     /// </summary>
-    public SbType SbType { get; set; } = SbType.Sb16;
+    public SbType SbType { get; set; } = SbType.SbPro2;
 
     /// <summary>
     /// The base I/O Address of the Sound Blaster card.
