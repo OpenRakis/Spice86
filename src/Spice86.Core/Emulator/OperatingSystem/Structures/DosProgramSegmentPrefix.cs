@@ -8,6 +8,8 @@ using Spice86.Shared.Utils;
 /// Represents the Program Segment Prefix (PSP)
 /// </summary>
 public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
+    public const ushort MaxLength = 0x80 + 128;
+
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 

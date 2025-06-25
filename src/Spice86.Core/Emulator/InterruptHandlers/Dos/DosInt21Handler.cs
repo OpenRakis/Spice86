@@ -901,7 +901,7 @@ public class DosInt21Handler : InterruptHandler {
         bool success = false;
         byte typeOfLoadByte = State.AL;
         if (!Enum.IsDefined(typeof(DosExecOperation), typeOfLoadByte)) {
-            SetCarryFlag(false, calledFromVm);
+            SetCarryFlag(true, calledFromVm);
             return;
         }
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
@@ -1275,14 +1275,41 @@ public class DosInt21Handler : InterruptHandler {
             }
             throw new UnrecoverableException($"Invalid EXE file {hostFile}");
         }
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("Read header: {ReadHeader}", exeFile);
-        }
-
         LoadExeFileInMemory(exeFile, startSegment);
-        ushort pspSegment = (ushort)(startSegment - 0x10);
+        ushort pspSegment = MemoryUtils.ToSegment((ushort)(startSegment - DosProgramSegmentPrefix.MaxLength));
         SetupCpuForExe(exeFile, startSegment, pspSegment);
-        new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
+
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        var psp = new DosProgramSegmentPrefix(Memory, pspAddress);
+
+        // Set INT 20h exit (CD 20)
+        psp.Exit[0] = 0xCD;
+        psp.Exit[1] = 0x20;
+
+        psp.FarCall = 0xCB;
+
+        // Set last free segment (just before video memory)
+        const ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+        psp.NextSegment = lastFreeSegment;
+
+        // Set command tail (arguments)
+        Memory.LoadData(pspAddress + 0x80, PspGenerator.ArgumentsToDosBytes(arguments));
+
+        // Set environment segment (if you have an environment block, set it here)
+        var environmentBlockGenerator = new EnvironmentBlockGenerator(_dos.EnvironmentVariables);
+        var envBlocStart = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.MaxLength);
+        var envBlockSegment = MemoryUtils.ToSegment(envBlocStart);
+        var envBlockData = environmentBlockGenerator.BuildEnvironmentBlock();
+        uint envBlockFinalAddress = MemoryUtils.ToPhysicalAddress(envBlockSegment, 0);
+        Memory.LoadData(envBlockFinalAddress, envBlockData);
+        psp.EnvironmentTableSegment = envBlockSegment;
+
+        // Initialize the memory manager with the PSP segment and the last free segment value.
+        _dosMemoryManager.Init(pspSegment, lastFreeSegment);
+
+        // Set the disk transfer area address to the command-line offset in the PSP.
+        _dosFileManager.SetDiskTransferAreaAddress(pspSegment, 0x80);
+
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("Initial CPU State: {CpuState}", State);
         }

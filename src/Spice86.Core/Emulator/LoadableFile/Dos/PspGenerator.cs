@@ -65,7 +65,7 @@ public class PspGenerator {
     /// </summary>
     /// <param name="arguments">The command-line arguments string.</param>
     /// <returns>The command-line arguments in the format used by DOS.</returns>
-    private static byte[] ArgumentsToDosBytes(string? arguments) {
+    public static byte[] ArgumentsToDosBytes(string? arguments) {
         byte[] res = new byte[128];
         string correctLengthArguments = "";
         if (string.IsNullOrWhiteSpace(arguments) == false) {

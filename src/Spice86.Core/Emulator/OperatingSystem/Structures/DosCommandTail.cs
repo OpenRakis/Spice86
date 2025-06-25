@@ -2,15 +2,13 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 
 public class DosCommandTail : MemoryBasedDataStructure {
     public DosCommandTail(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
-    public string Command {
-        get => GetZeroTerminatedString(BaseAddress, MaxCharacterLength);
-        set => SetZeroTerminatedString(BaseAddress, value, MaxCharacterLength);
-    }
+    public UInt8Array Command => GetUInt8Array(BaseAddress, MaxCharacterLength);
 
     public const int MaxCharacterLength = 128;
 }

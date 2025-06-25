@@ -94,11 +94,8 @@ public sealed class ProgramExecutor : IDisposable {
         }
         string fileExtension = Path.GetExtension(_configuration.Exe).ToLowerInvariant();
         switch (fileExtension) {
-            case ".exe":
+            case ".exe" or ".com":
                 _dosInt21Handler.LoadAndExecExeFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment);
-                break;
-            case ".com":
-                _dosInt21Handler.LoadAndExecComFile(_configuration.Exe, _configuration.ExeArgs, _configuration.ProgramEntryPointSegment);
                 break;
             default:
                 new BiosLoader(_memory, _state, _configuration.Exe, _loggerService).LoadHostFile();
