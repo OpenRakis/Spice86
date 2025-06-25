@@ -24,87 +24,87 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <summary>
     /// The port number for the MPU-401 MIDI data port.
     /// </summary>
-    public const int MPU401_DATA_PORT = 0x300;
+    public const int MPU401_DATA_PORT = 0x300 - SbBaseAddress;
 
     /// <summary>
     /// The port number for the MPU-401 MIDI status/command port.
     /// </summary>
-    public const int MPU401_STATUS_COMMAND_PORT = 0x301;
+    public const int MPU401_STATUS_COMMAND_PORT = 0x301 - SbBaseAddress;
 
     /// <summary>
     /// The port number for reading data from the DSP.
     /// </summary>
-    public const int DSP_READ_PORT_NUMBER = 0x22A;
+    public const int DSP_READ_PORT_NUMBER = 0x22A - SbBaseAddress;
 
     /// <summary>
     /// The port number for resetting the DSP.
     /// </summary>
-    public const int DSP_RESET_PORT_NUMBER = 0x226;
+    public const int DSP_RESET_PORT_NUMBER = 0x226 - SbBaseAddress;
 
     /// <summary>
     /// An undocumented port that is ignored by the 'Hardware Programming Guide' and only logged by DOSBox Staging's Sound Blaster implementation.
     /// </summary>
-    public const int IGNORE_PORT = 0x0227;
+    public const int IGNORE_PORT = 0x0227 - SbBaseAddress;
 
     /// <summary>
     /// The port used to set the DSP status.
     /// </summary>
-    public const int DSP_WRITE_STATUS = 0x22C;
+    public const int DSP_WRITE_STATUS = 0x22C - SbBaseAddress;
 
     /// <summary>
     /// The port used to get the DSP status.
     /// </summary>
-    public const int DSP_READ_STATUS = 0x22E;
+    public const int DSP_READ_STATUS = 0x22E - SbBaseAddress;
 
     /// <summary>
     /// The port number for sending FM music data to the left FM music channel.
     /// </summary>
-    public const int FM_MUSIC_DATA_PORT_NUMBER = 0x229;
+    public const int FM_MUSIC_DATA_PORT_NUMBER = 0x229 - SbBaseAddress;
 
     /// <summary>
     /// The port number for sending FM music data to the right FM music channel.
     /// </summary>
-    public const int FM_MUSIC_DATA_PORT_NUMBER_2 = 0x389;
+    public const int FM_MUSIC_DATA_PORT_NUMBER_2 = 0x389 - SbBaseAddress;
 
     /// <summary>
     /// The port number for checking the status of the left FM music channel.
     /// </summary>
-    public const int FM_MUSIC_STATUS_PORT_NUMBER = 0x228;
+    public const int FM_MUSIC_STATUS_PORT_NUMBER = 0x228 - SbBaseAddress;
 
     /// <summary>
     /// The port number for checking the status of the right FM music channel.
     /// </summary>
-    public const int FM_MUSIC_STATUS_PORT_NUMBER_2 = 0x388;
+    public const int FM_MUSIC_STATUS_PORT_NUMBER_2 = 0x388 - SbBaseAddress;
 
     /// <summary>
     /// The port number for sending data to the left speaker.
     /// </summary>
-    public const int LEFT_SPEAKER_DATA_PORT_NUMBER = 0x221;
+    public const int LEFT_SPEAKER_DATA_PORT_NUMBER = 0x221 - SbBaseAddress;
 
     /// <summary>
     /// The port number for checking the status of the left speaker.
     /// </summary>
-    public const int LEFT_SPEAKER_STATUS_PORT_NUMBER = 0x220;
+    public const int LEFT_SPEAKER_STATUS_PORT_NUMBER = 0x220 - SbBaseAddress;
 
     /// <summary>
     /// The port number for sending data to the mixer.
     /// </summary>
-    public const int MIXER_DATA_PORT_NUMBER = 0x225;
+    public const int MIXER_DATA_PORT_NUMBER = 0x225 - SbBaseAddress;
 
     /// <summary>
     /// The port number for accessing the mixer registers.
     /// </summary>
-    public const int MIXER_REGISTER_PORT_NUMBER = 0x224;
+    public const int MIXER_REGISTER_PORT_NUMBER = 0x224 - SbBaseAddress;
 
     /// <summary>
     /// The port number for sending data to the right speaker.
     /// </summary>
-    public const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223;
+    public const int RIGHT_SPEAKER_DATA_PORT_NUMBER = 0x223 - SbBaseAddress;
 
     /// <summary>
     /// The port number for checking the status of the right speaker.
     /// </summary>
-    public const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222;
+    public const int RIGHT_SPEAKER_STATUS_PORT_NUMBER = 0x222 - SbBaseAddress;
     
     private const int ResampleRate = 48000;
 
@@ -164,7 +164,12 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
     /// </summary>
-    public SbType SbType { get; set; } = SbType.Sb16;
+    public SbType SbType { get; set; } = SbType.SbPro2;
+
+    /// <summary>
+    /// The base I/O Address of the Sound Blaster card.
+    /// </summary>
+    public const ushort SbBaseAddress = 0x220;
 
     /// <summary>
     /// Initializes a new instance of the SoundBlaster class.
@@ -203,22 +208,52 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// </summary>
     public string BlasterString => $"A220 I{IRQ} D{DMA} T4";
 
+    private struct BufferStatus {
+        private byte data;
+
+        // Bits 0-6: Reserved (always set to 1 when reading)
+        public byte Reserved {
+            get => (byte)(data & 0b0111_1111);
+            set => data = (byte)((data & 0b1000_0000) | (value & 0b0111_1111));
+        }
+
+        // Bit 7: HasData
+        public bool HasData {
+            get => (data & 0b1000_0000) != 0;
+            set {
+                if (value)
+                    data |= 0b1000_0000;
+                else
+                    data &= 0b0111_1111;
+            }
+        }
+
+        public BufferStatus() {
+            data = 0b1111_1111;
+        }
+
+        public byte Data {
+            get => data;
+            set => data = value;
+        }
+    }
+
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
-        switch (port) {
+        switch (port - SbBaseAddress) {
             case MPU401_DATA_PORT:
                 return 0xFF;
             case MPU401_STATUS_COMMAND_PORT:
                 return 0xC0; //No data, and the interface is not ready
-            case DspPorts.DspReadStatus:
-                return _dsp.IsDmaTransferActive ? (byte)0xff : (byte)0x7f;
             case DspPorts.DspReadData:
                 return _outputData.Count > 0 ? _outputData.Dequeue() : (byte)0;
-            case DspPorts.DspWrite:
+            case DspPorts.DspWriteData:
                 return 0x00;
-            case DspPorts.DspReadBufferStatus:
+            case DspPorts.DspReadStatus:
                 _ctMixer.InterruptStatusRegister = InterruptStatus.None;
-                return _outputData.Count > 0 ? (byte)0x80 : (byte)0u;
+                var readStatus = new BufferStatus();
+                readStatus.HasData = _outputData.Count != 0;
+                return readStatus.Data;
             case DspPorts.MixerAddress:
                 return (byte)_ctMixer.CurrentAddress;
             case DspPorts.MixerData:
@@ -226,21 +261,21 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
             case DspPorts.DspReset:
                 return 0xFF;
             default:
-                return base.ReadByte(port);
+                if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Unhandled byte read of SB port {PortNumber:X4}", port);
+                }
+                return 0xFF;
         }
     }
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
         _deviceThread.StartThreadIfNeeded();
-        switch (port) {
+        switch (port - SbBaseAddress) {
             case MPU401_DATA_PORT:
                 //ignored
                 return;
             case MPU401_STATUS_COMMAND_PORT:
-                //ignored
-                return;
-            case DspPorts.DspWriteStatus:
                 //ignored
                 return;
             case DspPorts.DspReset:
@@ -259,7 +294,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
                     }
                 }
                 break;
-            case DspPorts.DspWrite:
+            case DspPorts.DspWriteData:
                 switch (_blasterState) {
                     case BlasterState.WaitingForCommand: {
                         _currentCommand = value;
@@ -297,6 +332,9 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
                 }
                 break;
             default:
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("Unhandled byte write of SB port {PortNumber:X4}", port);
+                }
                 base.WriteByte(port, value);
                 break;
         }
@@ -307,6 +345,17 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         uint value = ReadByte(port);
         value |= (uint)(ReadByte((ushort)(port + 1)) << 8);
         return (ushort)value;
+    }
+
+    public override void WriteWord(ushort port, ushort value) {
+        switch(port - SbBaseAddress) {
+            case DspPorts.MixerAddress:
+                _ctMixer.CurrentAddress = value;
+                break;
+            default:
+                base.WriteWord(port, value);
+                break;
+        }
     }
 
     int IDmaDevice8.Channel => DMA;
@@ -322,7 +371,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The list of input ports.
     /// </summary>
     public FrozenSet<int> InputPorts => new int[] {
-        DspPorts.DspReadData, DspPorts.DspWrite, DspPorts.DspReadBufferStatus, DspPorts.MixerAddress, DspPorts.MixerData, DspPorts.DspReset,
+        DspPorts.DspReadData, DspPorts.DspWriteData, DspPorts.DspReadStatus, DspPorts.MixerAddress, DspPorts.MixerData, DspPorts.DspReset,
         IGNORE_PORT
     }.ToFrozenSet();
 
@@ -335,7 +384,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The list of output ports.
     /// </summary>
     public FrozenSet<int> OutputPorts =>
-        new int[] { DspPorts.DspReset, DspPorts.DspWrite, DspPorts.MixerAddress }.ToFrozenSet();
+        new int[] { DspPorts.DspReset, DspPorts.DspWriteData, DspPorts.MixerAddress, DspPorts.MixerData, IGNORE_PORT }.ToFrozenSet();
 
     /// <inheritdoc />
     public void Dispose() {
@@ -356,25 +405,25 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_READ_STATUS, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_STATUS, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_RESET_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_READ_STATUS + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_WRITE_STATUS + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_REGISTER_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(MIXER_DATA_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(DSP_READ_PORT_NUMBER + SbBaseAddress, this);
 
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
-        ioPortDispatcher.AddIOPortHandler(IGNORE_PORT, this);
-        ioPortDispatcher.AddIOPortHandler(MPU401_DATA_PORT, this);
-        ioPortDispatcher.AddIOPortHandler(MPU401_STATUS_COMMAND_PORT, this);
+        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_STATUS_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(LEFT_SPEAKER_DATA_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_STATUS_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(RIGHT_SPEAKER_DATA_PORT_NUMBER + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(IGNORE_PORT + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(MPU401_DATA_PORT + SbBaseAddress, this);
+        ioPortDispatcher.AddIOPortHandler(MPU401_STATUS_COMMAND_PORT + SbBaseAddress, this);
         // Those are managed by OPL3FM class.
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
+        //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);
+        //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
     }
 
     void IDmaDevice8.SingleCycleComplete() {

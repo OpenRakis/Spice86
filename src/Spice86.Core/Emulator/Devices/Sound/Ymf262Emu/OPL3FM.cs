@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -51,6 +52,8 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
         ioPortDispatcher.AddIOPortHandler(0x388, this);
         ioPortDispatcher.AddIOPortHandler(0x389, this);
+        ioPortDispatcher.AddIOPortHandler(0x228, this);
+        ioPortDispatcher.AddIOPortHandler(0x229, this);
     }
 
     /// <inheritdoc />
