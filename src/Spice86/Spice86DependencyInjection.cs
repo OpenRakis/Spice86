@@ -463,10 +463,10 @@ public class Spice86DependencyInjection : IDisposable {
         functionHandler.UseCodeOverride = useCodeOverride;
         functionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
 
-        ProgramExecutor programExecutor = new(configuration, emulationLoop,
-            emulatorBreakpointsManager, emulatorStateSerializer, memory,
-            functionHandlerProvider, memoryDataExporter, state, dos,
-            functionCatalogue, executionFlowRecorder, pauseHandler,
+        ProgramExecutor programExecutor = new(configuration, functionCatalogue,
+            emulatorBreakpointsManager, memory, emulatorStateSerializer, state,
+            functionHandlerProvider, memoryDataExporter, dos.DosInt21Handler,
+            executionFlowRecorder, pauseHandler, emulationLoop,
             mainWindowViewModel, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

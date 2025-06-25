@@ -19,7 +19,7 @@ public class PspGenerator {
     private readonly DosFileManager _dosFileManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PspGenerator"/> class with the specified <see cref="Machine"/> object.
+    /// Initializes a new instance of the <see cref="PspGenerator"/>
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="environmentVariables">The master environment block from the DOS kernel.</param>
@@ -65,7 +65,7 @@ public class PspGenerator {
     /// </summary>
     /// <param name="arguments">The command-line arguments string.</param>
     /// <returns>The command-line arguments in the format used by DOS.</returns>
-    private static byte[] ArgumentsToDosBytes(string? arguments) {
+    public static byte[] ArgumentsToDosBytes(string? arguments) {
         byte[] res = new byte[128];
         string correctLengthArguments = "";
         if (string.IsNullOrWhiteSpace(arguments) == false) {
