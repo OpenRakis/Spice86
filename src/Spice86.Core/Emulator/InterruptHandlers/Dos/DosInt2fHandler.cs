@@ -19,15 +19,15 @@ public class DosInt2fHandler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
     /// </summary>
-    /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt2fHandler(ExtendedMemoryManager? xms, IMemory memory,
+    /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
+    public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILoggerService loggerService)
+        State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;
         FillDispatchTable();

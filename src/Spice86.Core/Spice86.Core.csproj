@@ -66,4 +66,7 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Emulator\InterruptHandlers\Bios\Structures\" />
+  </ItemGroup>
 </Project>
