@@ -28,6 +28,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -267,9 +268,19 @@ public class Spice86DependencyInjection : IDisposable {
                     functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
                     state, biosDataArea, loggerService);
+
+        ExtendedMemoryManager? xms = null;
+        if (configuration.Xms) {
+            xms = new(memory, a20Gate, callbackHandler, state, loggerService);
+        }
+        if (configuration.Xms && loggerService.IsEnabled(
+            LogEventLevel.Information)) {
+            loggerService.Information("DOS XMS driver created...");
+        }
+
         SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
                     functionHandlerProvider, stack, state, a20Gate,
-                    configuration.InitializeDOS is not false, loggerService);
+                    configuration.InitializeDOS is not false, loggerService, xms);
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
                     state, loggerService, timerInt8Handler);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
@@ -397,16 +408,14 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
 
-        EmulationLoopRecalls machineCodeCallback = new(interruptVectorTable, state, stack, emulationLoop);
+        EmulationLoopRecalls emulationLoopRecalls = new(interruptVectorTable, state, stack, emulationLoop);
 
-
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, machineCodeCallback, biosKeyboardBuffer,
-            keyboardInt16Handler, biosDataArea, vgaFunctionality, configuration.CDrive,
-            configuration.Exe,
-            configuration.InitializeDOS is not false,
-            configuration.Ems,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            loggerService);
+        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
+            state, emulationLoopRecalls, biosKeyboardBuffer,
+            keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            loggerService, new Dictionary<string, string> {
+                { "BLASTER", soundBlaster.BlasterString } },
+            xms);
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers

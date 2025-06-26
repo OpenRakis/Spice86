@@ -5,9 +5,11 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Interrupt 15h is a ROM BIOS service that includes several extensions to the original PC ROM BIOS,
@@ -29,16 +31,19 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="xms">The DOS Extended Memory Manager. Optional.<br/>
+    /// Hooks functions <see cref="GetExtendedMemorySize"/> and <see cref="CopyExtendedMemory"/> if present.</param>
     public SystemBiosInt15Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, bool initializeResetVector,
-        ILoggerService loggerService)
+        ILoggerService loggerService, ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
+        _extendedMemoryManager = xms;
         FillDispatchTable();
     }
 
@@ -114,8 +119,12 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// They are then free to use the memory between the new and old sizes at will. <br/><br/>
     /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
     /// </remarks>
-    /// <remarks>TODO: This is supposed to be overriden by the XMS driver, if present, to protect the HMA and return 0.</remarks>
-    public virtual void GetExtendedMemorySize(bool calledFromVm) {
+    public void GetExtendedMemorySize(bool calledFromVm) {
+        if(_extendedMemoryManager is not null) {
+            State.AX = 0;
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
         if (_a20Gate.IsEnabled) {
             State.AX = (ushort)Math.Max(0, Memory.Length - ExtendedMemoryBaseAddress);
         } else {
@@ -126,20 +135,25 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     /// <summary>
     /// Legacy BIOS function to copy extended memory.
-    /// <remarks>TODO: Must refactor this with the usage of a MemoryBasedDataStructure</remarks>
-    /// <remarks>TODO: This is supposed to be overriden by the XMS driver, if present, to preserve the state of the A20 line is preserved across the call.</remarks>
     /// </summary>
-    public virtual void CopyExtendedMemory(bool calledFromVm) {
+    public void CopyExtendedMemory(bool calledFromVm) {
+        if (_extendedMemoryManager is not null) {
+            _extendedMemoryManager.CopyExtendedMemory(calledFromVm);
+            return;
+        }
         bool enabled = _a20Gate.IsEnabled;
         _a20Gate.IsEnabled = true;
-        uint bytes = State.ECX;
-        uint data = State.ESI;
-        long source = Memory.UInt32[data + 0x12] & 0x00FFFFFF + Memory.UInt8[data + 0x16] << 24;
-        long dest = Memory.UInt32[data + 0x1A] & 0x00FFFFFF + Memory.UInt8[data + 0x1E] << 24;
-        State.EAX = (State.EAX & 0xFFFF) | (State.EAX & 0xFFFF0000);
-        Memory.MemCopy((uint)source, (uint)dest, bytes);
+        ushort numberOfWordsToCopy = State.CX;
+        uint globalDescriptorTableAddress = MemoryUtils.ToPhysicalAddress(
+            State.ES, State.SI);
+        var descriptor = new GlobalDescriptorTable(Memory,
+            globalDescriptorTableAddress);
+        Memory.MemCopy(descriptor.GetLinearSourceAddress(),
+            descriptor.GetLinearDestAddress(),
+            numberOfWordsToCopy);
         _a20Gate.IsEnabled = enabled;
         SetCarryFlag(false, calledFromVm);
+        State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
     }
 
     /// <summary>

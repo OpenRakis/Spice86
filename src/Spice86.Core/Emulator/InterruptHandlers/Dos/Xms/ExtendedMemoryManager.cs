@@ -2,15 +2,20 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -18,7 +23,7 @@ using System.Linq;
 /// XMS is always called through INT 0x2F, AH=0x43. <br/>
 /// </summary>
 /// <remarks>This provides XMS 2.0</remarks>
-public sealed class ExtendedMemoryManager : IMemoryDevice {
+public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private int _a20EnableCount;
 
     private readonly ILoggerService _loggerService;
@@ -53,8 +58,14 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     public const string XmsIdentifier = "XMSXXXX0";
 
     public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate,
-        CallbackHandler callbackHandler, State state,
-        ILoggerService loggerService) {
+        CallbackHandler callbackHandler, State state, ILoggerService loggerService) {
+        Header = new DosDeviceHeader(memory,
+            new SegmentedAddress(DosDeviceSegment, 0x0).Linear) {
+            Name = XmsIdentifier,
+            Attributes = DeviceAttributes.Ioctl,
+            StrategyEntryPoint = 0,
+            InterruptEntryPoint = 0
+        };
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
@@ -64,10 +75,12 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
-        memoryAsmWriter.RegisterAndWriteCallback(0x43, Run);
+        memoryAsmWriter.RegisterAndWriteCallback(0x43, RunMultiplex);
         memoryAsmWriter.WriteIret();
+        memoryAsmWriter.WriteFarRet();
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
         _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize * 1024, false));
+        Name = XmsIdentifier;
     }
 
     /// <summary>
@@ -90,8 +103,11 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// </summary>
     public long TotalFreeMemory => GetFreeBlocks().Sum(b => b.Length);
 
-    /// <inheritdoc/>
-    public void Run() {
+    /// <summary>
+    /// Run XMS subfunctions in AL. XMS is called via INT2F with AH=0x43.<br/>
+    /// INT2F is the DOS Multiplex interrupts handler.
+    /// </summary>
+    public void RunMultiplex() {
         byte operation = _state.AL;
         switch (operation) {
             case 0x00:
@@ -455,7 +471,7 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
         bool a20State = _memory.A20Gate.IsEnabled;
         _memory.A20Gate.IsEnabled = true;
 
-        var moveDataSpan = _memory.GetSpan(_state.DS, _state.SI);
+        Span<byte> moveDataSpan = _memory.GetSpan(_state.DS, _state.SI);
         fixed (byte* moveDataPtr = moveDataSpan) {
             XmsMoveData moveData = *(XmsMoveData*)moveDataPtr;
             Span<byte> srcPtr = new byte[] { };
@@ -503,6 +519,11 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// <inheritdoc/>
     public uint Size => XmsMemorySize * 1024;
 
+    public uint DeviceNumber { get; set; }
+    public DosDeviceHeader Header { get; init; }
+    public ushort Information { get; }
+    public string Name { get; set; }
+
     /// <inheritdoc/>
     public byte Read(uint address) {
         return XmsRam.Read(address - XmsBaseAddress);
@@ -516,5 +537,21 @@ public sealed class ExtendedMemoryManager : IMemoryDevice {
     /// <inheritdoc/>
     public Span<byte> GetSpan(int address, int length) {
         return XmsRam.GetSpan((int) (address - XmsBaseAddress), length);
+    }
+
+    public byte GetStatus(bool inputFlag) {
+        throw new NotImplementedException();
+    }
+
+    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+        throw new NotImplementedException();
+    }
+
+    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+        throw new NotImplementedException();
+    }
+
+    public void CopyExtendedMemory(bool calledFromVm) {
+        throw new NotImplementedException();
     }
 }

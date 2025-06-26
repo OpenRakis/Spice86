@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -121,38 +122,40 @@ public class Dos {
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
 
+    public ExtendedMemoryManager? Xms { get; private set; }
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="configuration">The emulator config. This is what to run, and how.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="emulationLoopRecalls">The class used to wait for interrupts without blocking the emulation loop.</param>
-    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
-    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
-    /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
-    /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
-    /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="xms">The extended memory DOS driver. Optional.</param>
+    public Dos(Configuration configuration, IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, EmulationLoopRecalls emulationLoopRecalls,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        string? cDriveFolderPath, string? executablePath, bool initializeDos,
-        bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+        ILoggerService loggerService, IDictionary<string, string> envVars,
+        ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
+        Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _emulationLoopRecalls = emulationLoopRecalls;
         _memory = memory;
         _biosDataArea = biosDataArea;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        DosDriveManager = new(_loggerService, cDriveFolderPath, executablePath);
+        DosDriveManager = new(_loggerService,configuration.CDrive,
+            configuration.Exe);
         VirtualFileBase[] dosDevices = AddDefaultDevices();
         DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
@@ -174,7 +177,8 @@ public class Dos {
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(null, _memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory,
+            functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
@@ -183,15 +187,20 @@ public class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
 
-        if (!initializeDos) {
+        if (configuration.InitializeDOS is false) {
             return;
         }
 
         OpenDefaultFileHandles(dosDevices);
 
-        if (enableEms) {
+        if (configuration.Ems) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
             AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
+        }
+
+        if(configuration.Xms && xms is not null) {
+            Xms = xms;
+            AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
