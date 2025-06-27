@@ -106,6 +106,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// Run XMS subfunctions in AL. XMS is called via INT2F with AH=0x43.<br/>
     /// INT2F is the DOS Multiplex interrupts handler.
+    /// //TODO: Expand INT2F ! Especially regarding IOCTL.
     /// </summary>
     public void RunMultiplex() {
         byte operation = _state.AL;
@@ -471,49 +472,47 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         bool a20State = _memory.A20Gate.IsEnabled;
         _memory.A20Gate.IsEnabled = true;
 
-        Span<byte> moveDataSpan = _memory.GetSpan(_state.DS, _state.SI);
-        fixed (byte* moveDataPtr = moveDataSpan) {
-            XmsMoveData moveData = *(XmsMoveData*)moveDataPtr;
-            Span<byte> srcPtr = new byte[] { };
-            Span<byte> destPtr = new byte[] { };
+        uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.DI);
+        ExtendedMemoryMoveStructure moveData = new(_memory, address);
+        Span<byte> srcPtr = new byte[] { };
+        Span<byte> destPtr = new byte[] { };
 
-            if (moveData.SourceHandle == 0) {
-                SegmentedAddress srcAddress = moveData.SourceAddress;
-                srcPtr = _memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
-            } else {
-                if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
-                    srcPtr = _memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset),
-                        0);
-                }
+        if (moveData.SourceHandle == 0) {
+            SegmentedAddress srcAddress = moveData.SourceAddress;
+            srcPtr = _memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
+        } else {
+            if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
+                srcPtr = _memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset),
+                    0);
             }
-
-            if (moveData.DestHandle == 0) {
-                SegmentedAddress destAddress = moveData.DestAddress;
-                destPtr = _memory.GetSpan(destAddress.Segment, destAddress.Offset);
-            } else {
-                if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
-                    destPtr = _memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset),
-                        0);
-                }
-            }
-
-            if (srcPtr.Length == 0) {
-                _state.BL = 0xA3; // Invalid source handle.
-                _state.AX = 0; // Didn't work.
-                return;
-            }
-
-            if (destPtr.Length == 0) {
-                _state.BL = 0xA5; // Invalid destination handle.
-                _state.AX = 0; // Didn't work.
-                return;
-            }
-
-            srcPtr.CopyTo(destPtr);
-
-            _state.AX = 1; // Success.
-            _memory.A20Gate.IsEnabled = a20State;
         }
+
+        if (moveData.DestHandle == 0) {
+            SegmentedAddress destAddress = moveData.DestAddress;
+            destPtr = _memory.GetSpan(destAddress.Segment, destAddress.Offset);
+        } else {
+            if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
+                destPtr = _memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset),
+                    0);
+            }
+        }
+
+        if (srcPtr.Length == 0) {
+            _state.BL = 0xA3; // Invalid source handle.
+            _state.AX = 0; // Didn't work.
+            return;
+        }
+
+        if (destPtr.Length == 0) {
+            _state.BL = 0xA5; // Invalid destination handle.
+            _state.AX = 0; // Didn't work.
+            return;
+        }
+
+        srcPtr.CopyTo(destPtr);
+
+        _state.AX = 1; // Success.
+        _memory.A20Gate.IsEnabled = a20State;
     }
 
     /// <inheritdoc/>
