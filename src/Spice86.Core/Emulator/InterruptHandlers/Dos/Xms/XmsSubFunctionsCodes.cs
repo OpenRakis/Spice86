@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
-internal static class XmsFunctions {
+internal static class XmsSubFunctionsCodes {
     public const byte GetVersionNumber = 0x00;
     public const byte RequestHighMemoryArea = 0x01;
     public const byte ReleaseHighMemoryArea = 0x02;
