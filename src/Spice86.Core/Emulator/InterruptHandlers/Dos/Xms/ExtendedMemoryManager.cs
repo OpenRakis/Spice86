@@ -21,8 +21,8 @@ using System.Linq;
 /// <summary>
 /// Provides DOS applications with XMS memory. <br/>
 /// XMS is always called through INT 0x2F, AH=0x43. <br/>
+/// Implements XMS 2.0 API subfunctions as per the eXtended Memory Specification (XMS) version 2.0.
 /// </summary>
-/// <remarks>This provides XMS 2.0</remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private int _a20EnableCount;
 
@@ -104,9 +104,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public long TotalFreeMemory => GetFreeBlocks().Sum(b => b.Length);
 
     /// <summary>
-    /// Run XMS subfunctions in AL. XMS is called via INT2F with AH=0x43.<br/>
-    /// INT2F is the DOS Multiplex interrupts handler.
-    /// //TODO: Expand INT2F ! Especially regarding IOCTL.
+    /// Dispatches XMS subfunctions based on the value in AL.
     /// </summary>
     public void RunMultiplex() {
         byte operation = _state.AL;
@@ -138,22 +136,25 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             case 0x08:
                 QueryFreeExtendedMemory();
                 break;
-            case 0xA:
+            case 0x09:
+                AllocateExtendedMemoryBlock();
+                break;
+            case 0x0A:
                 FreeExtendedMemoryBlock();
                 break;
-            case 0xB:
+            case 0x0B:
                 MoveExtendedMemoryBlock();
                 break;
-            case 0xC:
+            case 0x0C:
                 LockExtendedMemoryBlock();
                 break;
-            case 0xD:
+            case 0x0D:
                 UnlockExtendedMemoryBlock();
                 break;
-            case 0xE:
+            case 0x0E:
                 GetHandleInformation();
                 break;
-            case 0xF:
+            case 0x0F:
                 ReallocateExtendedMemoryBlock();
                 break;
             case 0x10:
@@ -165,30 +166,132 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         }
     }
 
-    private void ReleaseUpperMemoryBlock() {
-        throw new NotImplementedException();
-    }
-
-    private void ReallocateExtendedMemoryBlock() {
-        throw new NotImplementedException();
-    }
-
+    /// <summary>
+    /// XMS Function 00h: Get XMS Version Number.
+    /// Returns the XMS version, driver revision, and HMA existence.
+    /// </summary>
+    /// <remarks>
+    /// AX = XMS version (BCD, e.g. 0200h for 2.00)
+    /// BX = Driver internal revision number
+    /// DX = 0001h if HMA exists, 0000h otherwise
+    /// </remarks>
     public void GetVersionNumber() {
-        _state.AX = 0x0200; // Return version 2.00
-        _state.BX = 0; // Internal version
-        _state.DX = 1; // HMA exists
+        _state.AX = 0x0200; // XMS version 2.00
+        _state.BX = 0;      // Internal revision
+        _state.DX = 1;      // HMA exists
     }
 
+    /// <summary>
+    /// XMS Function 01h: Request High Memory Area (HMA).
+    /// Attempts to reserve the 64K-16 byte HMA for the caller.
+    /// </summary>
+    /// <remarks>
+    /// If the HMA is available and the request meets the /HMAMIN= parameter, the request succeeds.
+    /// DX = FFFFh for applications, or size in bytes for TSRs/drivers.
+    /// AX = 0001h if successful, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 90h (no HMA), 91h (already in use), 92h (DX &lt; /HMAMIN)
+    /// </remarks>
     public void RequestHighMemoryArea() {
-        _state.AX = 0; // Didn't work
-        _state.BL = 0x91; // HMA already in use
+        // Not implemented: always fail with "already in use"
+        _state.AX = 0;
+        _state.BL = 0x91;
     }
 
+    /// <summary>
+    /// XMS Function 02h: Release High Memory Area (HMA).
+    /// Releases the HMA, making it available for other programs.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if successful, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 90h (no HMA), 93h (not allocated)
+    /// </remarks>
     public void ReleaseHighMemoryArea() {
-        _state.AX = 0; // Didn't work
-        _state.BL = 0x93; // HMA not allocated
+        // Not implemented: always fail with "not allocated"
+        _state.AX = 0;
+        _state.BL = 0x93;
     }
 
+    /// <summary>
+    /// XMS Function 03h: Global Enable A20.
+    /// Attempts to enable the A20 line globally.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if A20 enabled, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error)
+    /// </remarks>
+    public void GlobalEnableA20() {
+        _memory.A20Gate.IsEnabled = true;
+        _state.AX = 1; // Success
+    }
+
+    /// <summary>
+    /// XMS Function 04h: Global Disable A20.
+    /// Attempts to disable the A20 line globally.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if A20 disabled, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), 94h (A20 still enabled)
+    /// </remarks>
+    public void GlobalDisableA20() {
+        _memory.A20Gate.IsEnabled = false;
+        _state.AX = 1; // Success
+    }
+
+    /// <summary>
+    /// XMS Function 05h: Local Enable A20.
+    /// Increments the local A20 enable count and enables A20 if needed.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if A20 enabled, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error)
+    /// </remarks>
+    public void EnableLocalA20() {
+        if (_a20EnableCount == 0) {
+            _memory.A20Gate.IsEnabled = true;
+        }
+        _a20EnableCount++;
+        _state.AX = 1; // Success
+    }
+
+    /// <summary>
+    /// XMS Function 06h: Local Disable A20.
+    /// Decrements the local A20 enable count and disables A20 if needed.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if successful, 0000h otherwise.
+    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), 94h (A20 still enabled)
+    /// </remarks>
+    public void DisableLocalA20() {
+        if (_a20EnableCount == 1) {
+            _memory.A20Gate.IsEnabled = false;
+        }
+        if (_a20EnableCount > 0) {
+            _a20EnableCount--;
+        }
+        _state.AX = 1; // Success
+    }
+
+    /// <summary>
+    /// XMS Function 07h: Query A20.
+    /// Checks if the A20 line is physically enabled.
+    /// </summary>
+    /// <remarks>
+    /// AX = 0001h if A20 enabled, 0000h otherwise.
+    /// BL = 00h (success), 80h (not implemented), 81h (VDISK)
+    /// </remarks>
+    public void QueryA20() {
+        _state.AX = (ushort)(_a20EnableCount > 0 ? 1 : 0);
+    }
+
+    /// <summary>
+    /// XMS Function 08h: Query Free Extended Memory.
+    /// Returns the size of the largest free block and total free memory in K-bytes.
+    /// </summary>
+    /// <remarks>
+    /// AX = Largest free block in K-bytes
+    /// DX = Total free memory in K-bytes
+    /// BL = 80h (not implemented), 81h (VDISK), A0h (all memory allocated)
+    /// </remarks>
     public void QueryFreeExtendedMemory() {
         if (LargestFreeBlock <= ushort.MaxValue * 1024u) {
             _state.AX = (ushort)(LargestFreeBlock / 1024u);
@@ -207,27 +310,243 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         }
     }
 
+    /// <summary>
+    /// XMS Function 09h: Allocate Extended Memory Block.
+    /// Allocates a block of extended memory of the requested size.
+    /// </summary>
+    /// <remarks>
+    /// DX = Size in K-bytes
+    /// AX = 0001h if allocated, 0000h otherwise
+    /// DX = Handle to allocated block
+    /// BL = 80h (not implemented), 81h (VDISK), A0h (no memory), A1h (no handles)
+    /// </remarks>
     public void AllocateExtendedMemoryBlock() {
         AllocateAnyExtendedMemory(_state.DX);
     }
 
-    public void RequestUpperMemoryBlock() {
-        _state.BL = 0xB1; // No UMB's available.
-        _state.AX = 0; // Didn't work.
+    /// <summary>
+    /// XMS Function 0Ah: Free Extended Memory Block.
+    /// Frees a previously allocated extended memory block.
+    /// </summary>
+    /// <remarks>
+    /// DX = Handle to free
+    /// AX = 0001h if freed, 0000h otherwise
+    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), ABh (handle locked)
+    /// </remarks>
+    public void FreeExtendedMemoryBlock() {
+        int handle = _state.DX;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = 0xA2;
+            return;
+        }
+
+        if (lockCount > 0) {
+            _state.AX = 0;
+            _state.BL = 0xAB;
+            return;
+        }
+
+        if (TryGetBlock(handle, out XmsBlock block)) {
+            XmsBlock freeBlock = block.Free();
+            _xmsBlocksLinkedList.Replace(block, freeBlock);
+            MergeFreeBlocks(freeBlock);
+        }
+
+        _xmsHandles.Remove(handle);
+        _state.AX = 1;
     }
 
-    public void GlobalDisableA20() {
-        _memory.A20Gate.IsEnabled = false;
-        _state.AX = 1; // Success
-    }
-
-    public void GlobalEnableA20() {
+    /// <summary>
+    /// XMS Function 0Bh: Move Extended Memory Block.
+    /// Moves a block of memory as described by the Extended Memory Move Structure at DS:SI.
+    /// </summary>
+    /// <remarks>
+    /// DS:SI = Pointer to ExtendedMemoryMoveStructure
+    /// AX = 0001h if successful, 0000h otherwise
+    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), A3h (invalid source handle), A4h (invalid source offset), A5h (invalid dest handle), A6h (invalid dest offset), A7h (invalid length), A8h (invalid overlap), A9h (parity error)
+    /// </remarks>
+    public unsafe void MoveExtendedMemoryBlock() {
+        bool a20State = _memory.A20Gate.IsEnabled;
         _memory.A20Gate.IsEnabled = true;
-        _state.AX = 1; // Success
+
+        uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+        ExtendedMemoryMoveStructure moveData = new(_memory, address);
+        Span<byte> srcPtr = new byte[] { };
+        Span<byte> destPtr = new byte[] { };
+
+        if (moveData.SourceHandle == 0) {
+            SegmentedAddress srcAddress = moveData.SourceAddress;
+            srcPtr = _memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
+        } else {
+            if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
+                srcPtr = _memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset), 0);
+            }
+        }
+
+        if (moveData.DestHandle == 0) {
+            SegmentedAddress destAddress = moveData.DestAddress;
+            destPtr = _memory.GetSpan(destAddress.Segment, destAddress.Offset);
+        } else {
+            if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
+                destPtr = _memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset), 0);
+            }
+        }
+
+        if (srcPtr.Length == 0) {
+            _state.BL = 0xA3;
+            _state.AX = 0;
+            return;
+        }
+
+        if (destPtr.Length == 0) {
+            _state.BL = 0xA5;
+            _state.AX = 0;
+            return;
+        }
+
+        srcPtr.CopyTo(destPtr);
+
+        _state.AX = 1;
+        _memory.A20Gate.IsEnabled = a20State;
     }
 
-    public void QueryA20() {
-        _state.AX = (ushort)(_a20EnableCount > 0 ? (short)1 : (short)0);
+    /// <summary>
+    /// XMS Function 0Ch: Lock Extended Memory Block.
+    /// Locks a block and returns its 32-bit linear address.
+    /// </summary>
+    /// <remarks>
+    /// DX = Handle to lock
+    /// AX = 0001h if locked, 0000h otherwise
+    /// DX:BX = 32-bit linear address
+    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), ACh (lock count overflow), ADh (lock fails)
+    /// </remarks>
+    public void LockExtendedMemoryBlock() {
+        int handle = _state.DX;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = 0xA2;
+            return;
+        }
+
+        _xmsHandles[handle] = lockCount + 1;
+
+        _ = TryGetBlock(handle, out XmsBlock block);
+        uint fullAddress = XmsBaseAddress + block.Offset;
+
+        _state.AX = 1;
+        _state.DX = (ushort)(fullAddress >> 16);
+        _state.BX = (ushort)(fullAddress & 0xFFFFu);
+    }
+
+    /// <summary>
+    /// XMS Function 0Dh: Unlock Extended Memory Block.
+    /// Unlocks a previously locked block.
+    /// </summary>
+    /// <remarks>
+    /// DX = Handle to unlock
+    /// AX = 0001h if unlocked, 0000h otherwise
+    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), AAh (not locked)
+    /// </remarks>
+    public void UnlockExtendedMemoryBlock() {
+        int handle = _state.DX;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = 0xA2;
+            return;
+        }
+
+        if (lockCount < 1) {
+            _state.AX = 0;
+            _state.BL = 0xAA;
+            return;
+        }
+
+        _xmsHandles[handle] = lockCount - 1;
+
+        _state.AX = 1;
+    }
+
+    /// <summary>
+    /// XMS Function 0Eh: Get Handle Information.
+    /// Returns lock count, free handles, and block size for a handle.
+    /// </summary>
+    /// <remarks>
+    /// DX = Handle
+    /// AX = 0001h if found, 0000h otherwise
+    /// BH = Lock count
+    /// BL = Free handles
+    /// DX = Block length in K-bytes
+    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle)
+    /// </remarks>
+    public void GetHandleInformation() {
+        int handle = _state.DX;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = 0xA2;
+            return;
+        }
+
+        _state.BH = (byte)lockCount;
+        _state.BL = (byte)(MaxHandles - _xmsHandles.Count);
+
+        if (!TryGetBlock(handle, out XmsBlock block)) {
+            _state.DX = 0;
+        } else {
+            _state.DX = (ushort)(block.Length / 1024u);
+        }
+
+        _state.AX = 1;
+    }
+
+    /// <summary>
+    /// XMS Function 0Fh: Reallocate Extended Memory Block.
+    /// Changes the size of an unlocked extended memory block.
+    /// </summary>
+    /// <remarks>
+    /// BX = New size in K-bytes
+    /// DX = Handle to reallocate
+    /// AX = 0001h if reallocated, 0000h otherwise
+    /// BL = 80h (not implemented), 81h (VDISK), A0h (no memory), A1h (no handles), A2h (invalid handle), ABh (block locked)
+    /// </remarks>
+    private void ReallocateExtendedMemoryBlock() {
+        // Not implemented
+        _state.AX = 0;
+        _state.BL = 0x80;
+    }
+
+    /// <summary>
+    /// XMS Function 10h: Request Upper Memory Block (UMB).
+    /// Attempts to allocate a UMB of the requested size.
+    /// </summary>
+    /// <remarks>
+    /// DX = Size in paragraphs
+    /// AX = 0001h if granted, 0000h otherwise
+    /// BX = Segment of UMB
+    /// DX = Actual size or largest available
+    /// BL = 80h (not implemented), B0h (smaller UMB), B1h (no UMBs)
+    /// </remarks>
+    public void RequestUpperMemoryBlock() {
+        _state.BL = 0xB1; // No UMBs available
+        _state.AX = 0;
+    }
+
+    /// <summary>
+    /// XMS Function 11h: Release Upper Memory Block (UMB).
+    /// Releases a previously allocated UMB.
+    /// </summary>
+    /// <remarks>
+    /// DX = Segment of UMB
+    /// AX = 0001h if released, 0000h otherwise
+    /// BL = 80h (not implemented), B2h (invalid segment)
+    /// </remarks>
+    private void ReleaseUpperMemoryBlock() {
+        _state.AX = 0;
+        _state.BL = 0x80;
     }
 
     /// <summary>
@@ -291,31 +610,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <summary>
-    /// Increments the A20 enable count.
-    /// </summary>
-    public void EnableLocalA20() {
-        if (_a20EnableCount == 0) {
-            _memory.A20Gate.IsEnabled = true;
-        }
-        _a20EnableCount++;
-        _state.AX = 1; // Success
-    }
-
-    /// <summary>
-    /// Decrements the A20 enable count.
-    /// </summary>
-    public void DisableLocalA20() {
-        if (_a20EnableCount == 1) {
-            _memory.A20Gate.IsEnabled = false;
-        }
-
-        if (_a20EnableCount > 0) {
-            _a20EnableCount--;
-        }
-        _state.AX = 1; // Success
-    }
-    
-    /// <summary>
     /// Returns all of the free blocks in the map sorted by size in ascending order.
     /// </summary>
     /// <returns>Sorted list of free blocks in the map.</returns>
@@ -365,154 +659,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.AX = 0; // Didn't work.
             _state.BL = res;
         }
-    }
-
-    /// <summary>
-    /// Frees a block of memory.
-    /// </summary>
-    public void FreeExtendedMemoryBlock() {
-        int handle = _state.DX;
-
-        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
-            _state.AX = 0; // Didn't work.
-            _state.BL = 0xA2; // Invalid handle.
-            return;
-        }
-
-        if (lockCount > 0) {
-            _state.AX = 0; // Didn't work.
-            _state.BL = 0xAB; // Handle is locked.
-            return;
-        }
-
-        if (TryGetBlock(handle, out XmsBlock block)) {
-            XmsBlock freeBlock = block.Free();
-            _xmsBlocksLinkedList.Replace(block, freeBlock);
-            MergeFreeBlocks(freeBlock);
-        }
-
-        _xmsHandles.Remove(handle);
-        _state.AX = 1; // Success.
-    }
-
-    /// <summary>
-    /// Locks a block of memory.
-    /// </summary>
-    public void LockExtendedMemoryBlock() {
-        int handle = _state.DX;
-
-        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
-            _state.AX = 0; // Didn't work.
-            _state.BL = 0xA2; // Invalid handle.
-            return;
-        }
-
-        _xmsHandles[handle] = lockCount + 1;
-
-        _ = TryGetBlock(handle, out XmsBlock block);
-        uint fullAddress = XmsBaseAddress + block.Offset;
-
-        _state.AX = 1; // Success.
-        _state.DX = (ushort)(fullAddress >> 16);
-        _state.BX = (ushort)(fullAddress & 0xFFFFu);
-    }
-
-    /// <summary>
-    /// Unlocks a block of memory.
-    /// </summary>
-    public void UnlockExtendedMemoryBlock() {
-        int handle = _state.DX;
-
-        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
-            _state.AX = 0; // Didn't work.
-            _state.BL = 0xA2; // Invalid handle.
-            return;
-        }
-
-        if (lockCount < 1) {
-            _state.AX = 0;
-            _state.BL = 0xAA; // Handle is not locked.
-            return;
-        }
-
-        _xmsHandles[handle] = lockCount - 1;
-
-        _state.AX = 1; // Success.
-    }
-
-    /// <summary>
-    /// Returns information about an XMS handle.
-    /// </summary>
-    public void GetHandleInformation() {
-        int handle = _state.DX;
-
-        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
-            _state.AX = 0; // Didn't work.
-            _state.BL = 0xA2; // Invalid handle.
-            return;
-        }
-
-        _state.BH = (byte)lockCount;
-        _state.BL = (byte)(MaxHandles - _xmsHandles.Count);
-
-        if (!TryGetBlock(handle, out XmsBlock block)) {
-            _state.DX = 0;
-        } else {
-            _state.DX = (ushort)(block.Length / 1024u);
-        }
-
-        _state.AX = 1; // Success.
-    }
-
-    /// <summary>
-    /// Copies a block of memory.
-    /// TODO: Verify this works
-    /// </summary>
-    public unsafe void MoveExtendedMemoryBlock() {
-        bool a20State = _memory.A20Gate.IsEnabled;
-        _memory.A20Gate.IsEnabled = true;
-
-        uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.DI);
-        ExtendedMemoryMoveStructure moveData = new(_memory, address);
-        Span<byte> srcPtr = new byte[] { };
-        Span<byte> destPtr = new byte[] { };
-
-        if (moveData.SourceHandle == 0) {
-            SegmentedAddress srcAddress = moveData.SourceAddress;
-            srcPtr = _memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
-                srcPtr = _memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset),
-                    0);
-            }
-        }
-
-        if (moveData.DestHandle == 0) {
-            SegmentedAddress destAddress = moveData.DestAddress;
-            destPtr = _memory.GetSpan(destAddress.Segment, destAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
-                destPtr = _memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset),
-                    0);
-            }
-        }
-
-        if (srcPtr.Length == 0) {
-            _state.BL = 0xA3; // Invalid source handle.
-            _state.AX = 0; // Didn't work.
-            return;
-        }
-
-        if (destPtr.Length == 0) {
-            _state.BL = 0xA5; // Invalid destination handle.
-            _state.AX = 0; // Didn't work.
-            return;
-        }
-
-        srcPtr.CopyTo(destPtr);
-
-        _state.AX = 1; // Success.
-        _memory.A20Gate.IsEnabled = a20State;
     }
 
     /// <inheritdoc/>
