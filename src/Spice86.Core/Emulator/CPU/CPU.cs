@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+namespace Spice86.Core.Emulator.CPU;
 
 using Serilog.Events;
 
@@ -322,6 +322,15 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
             case 0xBF:
                 // MOVSX r32, r/m16
                 _instructions32.Movsx();
+                break;
+            case 0xC0:
+                // XADD r/m8, r8
+                _instructions8.XaddRm();
+                break;
+            case 0xC1:
+                // XADD r/m16, r16
+                // XADD r/m32, r32
+                _instructions16Or32.XaddRm();
                 break;
             default:
                 HandleInvalidOpcode((ushort)(subcode | 0x0F00));

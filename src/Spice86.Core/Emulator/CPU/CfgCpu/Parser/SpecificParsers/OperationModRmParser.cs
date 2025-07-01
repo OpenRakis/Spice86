@@ -41,3 +41,5 @@ partial class ImulRmParser;
 partial class MovRmZeroExtendByteParser;
 [OperationModRmParser("MovRmSignExtendByte", false)]
 partial class MovRmSignExtendByteParser;
+[OperationModRmParser("XaddRm", true)]
+partial class XaddRmParser;
