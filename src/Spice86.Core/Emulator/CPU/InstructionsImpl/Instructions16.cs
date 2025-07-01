@@ -408,6 +408,15 @@ public class Instructions16 : Instructions16Or32 {
         ModRM.SetRm16(value2);
     }
 
+    public override void XaddRm() {
+        // XADD rmw rw
+        ModRM.Read();
+        ushort dest = ModRM.GetRm16();
+        ushort src = ModRM.R16;
+        ModRM.R16 = dest;
+        ModRM.SetRm16(_alu16.Add(src, dest));
+    }
+
     public override void XchgAcc(int regIndex) {
         // XCHG AX regIndex
         (State.AX, UInt16Registers[regIndex]) = (UInt16Registers[regIndex], State.AX);

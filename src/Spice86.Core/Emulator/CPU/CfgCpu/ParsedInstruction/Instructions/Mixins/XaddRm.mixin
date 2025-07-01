@@ -1,0 +1,33 @@
+@moxy
+@attribute required int Size
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        var sum = helper.Alu{{Size}}.Add(helper.ModRm.R{{Size}}, helper.ModRm.RM{{Size}});
+        helper.ModRm.R{{Size}} = helper.ModRm.RM{{Size}};
+        helper.ModRm.RM{{Size}} = sum;
+        helper.MoveIpAndSetNextNode(this);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.XADD,
+            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext)
+        );
+    }
+}

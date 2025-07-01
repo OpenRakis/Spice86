@@ -134,6 +134,7 @@ public abstract class Instructions {
     public abstract void Ins();
     public abstract void Outs();
     public abstract void XchgRm();
+    public abstract void XaddRm();
 
     // Mov
     public abstract void MovRmReg();

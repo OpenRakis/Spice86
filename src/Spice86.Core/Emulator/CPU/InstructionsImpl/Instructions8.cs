@@ -432,6 +432,15 @@ public class Instructions8 : Instructions {
         ModRM.SetRm8(value2);
     }
 
+    public override void XaddRm() {
+        // XADD rmb rb
+        ModRM.Read();
+        byte dest = ModRM.GetRm8();
+        byte src = ModRM.R8;
+        ModRM.R8 = dest;
+        ModRM.SetRm8(_alu8.Add(src, dest));
+    }
+
     public override void MovRmReg() {
         // MOV rmb rb
         ModRM.Read();

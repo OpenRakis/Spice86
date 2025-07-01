@@ -402,6 +402,15 @@ public class Instructions32 : Instructions16Or32 {
         ModRM.SetRm32(value2);
     }
 
+    public override void XaddRm() {
+        // XADD rmdw rdw
+        ModRM.Read();
+        uint dest = ModRM.GetRm32();
+        uint src = ModRM.R32;
+        ModRM.R32 = dest;
+        ModRM.SetRm32(_alu32.Add(src, dest));
+    }
+
     public override void XchgAcc(int regIndex) {
         // XCHG EAX regIndex
         (State.EAX, UInt32Registers[regIndex]) = (UInt32Registers[regIndex], State.EAX);

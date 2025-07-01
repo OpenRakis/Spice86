@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 
 public enum InstructionOperation {
     AAA,
@@ -148,6 +148,7 @@ public enum InstructionOperation {
     STOS,
     SUB,
     TEST,
+    XADD,
     XCHG,
     XLAT,
     XOR

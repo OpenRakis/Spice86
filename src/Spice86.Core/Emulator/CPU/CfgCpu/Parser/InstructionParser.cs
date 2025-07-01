@@ -77,6 +77,7 @@ public class InstructionParser : BaseInstructionParser {
     private readonly XchgRegAccParser _xchgRegAccParser;
     private readonly XchgRmParser _xchgRmParser;
     private readonly XorAluOperationParser _xorAluOperationParser;
+    private readonly XaddRmParser _xaddRmParser;
 
     public InstructionParser(IIndexable memory, State state) : base(new(memory), state) {
         _adcAluOperationParser = new(this);
@@ -144,6 +145,7 @@ public class InstructionParser : BaseInstructionParser {
         _xchgRegAccParser = new(this);
         _xchgRmParser = new(this);
         _xorAluOperationParser = new(this);
+        _xaddRmParser = new(this);
     }
 
     private InstructionField<ushort> ReadOpcode() {
@@ -662,6 +664,9 @@ public class InstructionParser : BaseInstructionParser {
             case 0x0FBF:
                 return new MovRmSignExtendWord32(context.Address, context.OpcodeField, context.Prefixes,
                     _modRmParser.ParseNext(context));
+            case 0x0FC0:
+            case 0x0FC1:
+                return _xaddRmParser.Parse(context);
             case 0xDBE3:
                 return new FnInit(context.Address, context.OpcodeField, context.Prefixes);
         }
