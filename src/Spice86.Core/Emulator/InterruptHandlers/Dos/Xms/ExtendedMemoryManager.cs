@@ -19,10 +19,35 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
-/// Provides DOS applications with XMS memory. <br/>
-/// XMS is always called through INT 0x2F, AH=0x43. <br/>
-/// Implements XMS 2.0 API subfunctions as per the eXtended Memory Specification (XMS) version 2.0.
+/// Provides DOS applications with XMS memory according to the eXtended Memory Specification (XMS) version 2.0. <br/>
+/// XMS allows DOS programs to utilize additional memory found in Intel's 80286 and 80386 based machines in
+/// a consistent, machine independent manner. XMS adds almost 64K to the 640K which DOS programs can access
+/// directly and provides a standard method of storing data in extended memory above 1MB.
 /// </summary>
+/// <remarks>
+/// <para>
+        /// Memory Layout:
+/// <code>
+/// |-------------------------------------------------------|   Top of Memory
+/// |             Extended Memory Blocks (EMBs)             |
+/// |            Used for data storage only                 |
+/// |-------------------------------------------------------|   1088K
+/// |           High Memory Area (HMA) - 64K-16B           |
+/// |        FFFF:0010 through FFFF:FFFF                   |
+/// |=======================================================|   1024K or 1MB
+/// |         Upper Memory Blocks (UMBs) - Optional        |
+/// |-------------------------------------------------------|   640K
+/// |            Conventional DOS Memory                    |
+/// +-------------------------------------------------------+   0K
+/// </code>
+/// </para>
+/// <para>
+/// This implementation provides XMS version 2.0 features accessed via INT 2Fh, AH=43h.
+/// </para>
+/// <para>
+/// See: <c>xms20.txt</c> for the full specification.
+/// </para>
+/// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private int _a20EnableCount;
 
@@ -32,20 +57,29 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private readonly IMemory _memory;
     private readonly LinkedList<XmsBlock> _xmsBlocksLinkedList = new();
     private readonly SortedList<int, int> _xmsHandles = new();
-    
+
     /// <summary>
     /// The segment of the interrupt handler.
     /// </summary>
-
     public const ushort DosDeviceSegment = 0xD000;
 
     /// <summary>
     /// The size of available XMS Memory, in kilobytes.
     /// </summary>
-    /// <remarks>
-    /// 32 MB for XMS 2.0
-    /// </remarks>
+    /// <remarks>32 MB maximum size as per XMS 2.0 specification</remarks>
     public const uint XmsMemorySize = 32 * 1024;
+
+    /// <summary>
+    /// Specifies the starting physical address of XMS memory. <br/>
+    /// XMS blocks start at 1088K, after the High Memory Area (HMA).
+    /// </summary>
+    public const uint XmsBaseAddress = 0x10FFF0;
+
+    /// <summary>
+    /// Maximum number of XMS handles that can be allocated simultaneously. <br/>
+    /// This is the default value from HIMEM.SYS and can be adjusted via the /NUMHANDLES= parameter.
+    /// </summary>
+    private const int MaxHandles = 128;
 
     /// <summary>
     /// XMS plain old memory.
@@ -57,6 +91,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </summary>
     public const string XmsIdentifier = "XMSXXXX0";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="a20Gate">The A20 gate controller.</param>
+    /// <param name="callbackHandler">Callback handler for XMS multiplex entry point.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate,
         CallbackHandler callbackHandler, State state, ILoggerService loggerService) {
         Header = new DosDeviceHeader(memory,
@@ -84,20 +126,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <summary>
-    /// Specifies the starting physical address of XMS. XMS starts at 1088k after HMA
-    /// </summary>
-    public const uint XmsBaseAddress = 0x10FFF0;
-
-    /// <summary>
-    /// Total number of handles available at once.
-    /// </summary>
-    private const int MaxHandles = 128;
-
-    /// <summary>
     /// Gets the largest free block of memory in bytes.
     /// </summary>
     public uint LargestFreeBlock => GetFreeBlocks().FirstOrDefault().Length;
-    
+
     /// <summary>
     /// Gets the total amount of free memory in bytes.
     /// </summary>
@@ -106,6 +138,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// Dispatches XMS subfunctions based on the value in AL.
     /// </summary>
+    /// <remarks>
+    /// This is the main entry point for XMS API calls via the multiplex interrupt.
+    /// </remarks>
     public void RunMultiplex() {
         byte operation = _state.AL;
         switch (operation) {
@@ -171,9 +206,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns the XMS version, driver revision, and HMA existence.
     /// </summary>
     /// <remarks>
-    /// AX = XMS version (BCD, e.g. 0200h for 2.00)
-    /// BX = Driver internal revision number
-    /// DX = 0001h if HMA exists, 0000h otherwise
+    /// <b>Inputs:</b> AH = 00h<br/>
+    /// <b>Outputs:</b>
+    /// <list type="bullet">
+    /// <item>AX = XMS version number (BCD, e.g. 0200h for 2.00)</item>
+    /// <item>BX = Driver internal revision number</item>
+    /// <item>DX = 0001h if HMA exists, 0000h otherwise</item>
+    /// </list>
+    /// <b>Errors:</b> None
     /// </remarks>
     public void GetVersionNumber() {
         _state.AX = 0x0200; // XMS version 2.00
@@ -186,13 +226,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to reserve the 64K-16 byte HMA for the caller.
     /// </summary>
     /// <remarks>
-    /// If the HMA is available and the request meets the /HMAMIN= parameter, the request succeeds.
-    /// DX = FFFFh for applications, or size in bytes for TSRs/drivers.
-    /// AX = 0001h if successful, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 90h (no HMA), 91h (already in use), 92h (DX &lt; /HMAMIN)
+    /// <b>Inputs:</b> AH = 01h, DX = FFFFh (application) or size in bytes (TSR/driver)<br/>
+    /// <b>Outputs:</b> AX = 0001h if assigned, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 90h (HMA does not exist)</item>
+    /// <item>BL = 91h (HMA already in use)</item>
+    /// <item>BL = 92h (DX &lt; /HMAMIN= parameter)</item>
+    /// </list>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        // Not implemented: always fail with "already in use"
+        // Not implemented - fail with "already in use"
         _state.AX = 0;
         _state.BL = 0x91;
     }
@@ -202,11 +248,18 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Releases the HMA, making it available for other programs.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if successful, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 90h (no HMA), 93h (not allocated)
+    /// <b>Inputs:</b> AH = 02h<br/>
+    /// <b>Outputs:</b> AX = 0001h if released, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 90h (HMA does not exist)</item>
+    /// <item>BL = 93h (HMA not allocated)</item>
+    /// </list>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        // Not implemented: always fail with "not allocated"
+        // Not implemented - fail with "not allocated"
         _state.AX = 0;
         _state.BL = 0x93;
     }
@@ -216,8 +269,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to enable the A20 line globally.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if A20 enabled, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error)
+    /// <b>Inputs:</b> AH = 03h<br/>
+    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 82h (A20 error)</item>
+    /// </list>
     /// </remarks>
     public void GlobalEnableA20() {
         _memory.A20Gate.IsEnabled = true;
@@ -229,8 +288,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to disable the A20 line globally.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if A20 disabled, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), 94h (A20 still enabled)
+    /// <b>Inputs:</b> AH = 04h<br/>
+    /// <b>Outputs:</b> AX = 0001h if disabled, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 82h (A20 error)</item>
+    /// <item>BL = 94h (A20 still enabled)</item>
+    /// </list>
     /// </remarks>
     public void GlobalDisableA20() {
         _memory.A20Gate.IsEnabled = false;
@@ -242,8 +308,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Increments the local A20 enable count and enables A20 if needed.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if A20 enabled, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error)
+    /// <b>Inputs:</b> AH = 05h<br/>
+    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 82h (A20 error)</item>
+    /// </list>
     /// </remarks>
     public void EnableLocalA20() {
         if (_a20EnableCount == 0) {
@@ -258,8 +330,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Decrements the local A20 enable count and disables A20 if needed.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if successful, 0000h otherwise.
-    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), 94h (A20 still enabled)
+    /// <b>Inputs:</b> AH = 06h<br/>
+    /// <b>Outputs:</b> AX = 0001h if successful, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 82h (A20 error)</item>
+    /// <item>BL = 94h (A20 still enabled)</item>
+    /// </list>
     /// </remarks>
     public void DisableLocalA20() {
         if (_a20EnableCount == 1) {
@@ -276,8 +355,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Checks if the A20 line is physically enabled.
     /// </summary>
     /// <remarks>
-    /// AX = 0001h if A20 enabled, 0000h otherwise.
-    /// BL = 00h (success), 80h (not implemented), 81h (VDISK)
+    /// <b>Inputs:</b> AH = 07h<br/>
+    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 00h (success)</item>
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// </list>
     /// </remarks>
     public void QueryA20() {
         _state.AX = (ushort)(_a20EnableCount > 0 ? 1 : 0);
@@ -288,9 +373,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns the size of the largest free block and total free memory in K-bytes.
     /// </summary>
     /// <remarks>
-    /// AX = Largest free block in K-bytes
-    /// DX = Total free memory in K-bytes
-    /// BL = 80h (not implemented), 81h (VDISK), A0h (all memory allocated)
+    /// <b>Inputs:</b> AH = 08h<br/>
+    /// <b>Outputs:</b> AX = Largest free block in K-bytes, DX = Total free memory in K-bytes<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A0h (all memory allocated)</item>
+    /// </list>
     /// </remarks>
     public void QueryFreeExtendedMemory() {
         if (LargestFreeBlock <= ushort.MaxValue * 1024u) {
@@ -315,10 +405,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Allocates a block of extended memory of the requested size.
     /// </summary>
     /// <remarks>
-    /// DX = Size in K-bytes
-    /// AX = 0001h if allocated, 0000h otherwise
-    /// DX = Handle to allocated block
-    /// BL = 80h (not implemented), 81h (VDISK), A0h (no memory), A1h (no handles)
+    /// <b>Inputs:</b> AH = 09h, DX = Size in K-bytes<br/>
+    /// <b>Outputs:</b> AX = 0001h if allocated, 0000h otherwise; DX = Handle to allocated block<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A0h (no memory)</item>
+    /// <item>BL = A1h (no handles)</item>
+    /// </list>
     /// </remarks>
     public void AllocateExtendedMemoryBlock() {
         AllocateAnyExtendedMemory(_state.DX);
@@ -329,9 +424,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Frees a previously allocated extended memory block.
     /// </summary>
     /// <remarks>
-    /// DX = Handle to free
-    /// AX = 0001h if freed, 0000h otherwise
-    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), ABh (handle locked)
+    /// <b>Inputs:</b> AH = 0Ah, DX = Handle to free<br/>
+    /// <b>Outputs:</b> AX = 0001h if freed, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A2h (invalid handle)</item>
+    /// <item>BL = ABh (handle locked)</item>
+    /// </list>
     /// </remarks>
     public void FreeExtendedMemoryBlock() {
         int handle = _state.DX;
@@ -363,9 +464,21 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Moves a block of memory as described by the Extended Memory Move Structure at DS:SI.
     /// </summary>
     /// <remarks>
-    /// DS:SI = Pointer to ExtendedMemoryMoveStructure
-    /// AX = 0001h if successful, 0000h otherwise
-    /// BL = 80h (not implemented), 81h (VDISK), 82h (A20 error), A3h (invalid source handle), A4h (invalid source offset), A5h (invalid dest handle), A6h (invalid dest offset), A7h (invalid length), A8h (invalid overlap), A9h (parity error)
+    /// <b>Inputs:</b> AH = 0Bh, DS:SI = Pointer to ExtendedMemoryMoveStructure<br/>
+    /// <b>Outputs:</b> AX = 0001h if successful, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = 82h (A20 error)</item>
+    /// <item>BL = A3h (invalid source handle)</item>
+    /// <item>BL = A4h (invalid source offset)</item>
+    /// <item>BL = A5h (invalid dest handle)</item>
+    /// <item>BL = A6h (invalid dest offset)</item>
+    /// <item>BL = A7h (invalid length)</item>
+    /// <item>BL = A8h (invalid overlap)</item>
+    /// <item>BL = A9h (parity error)</item>
+    /// </list>
     /// </remarks>
     public unsafe void MoveExtendedMemoryBlock() {
         bool a20State = _memory.A20Gate.IsEnabled;
@@ -417,10 +530,16 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Locks a block and returns its 32-bit linear address.
     /// </summary>
     /// <remarks>
-    /// DX = Handle to lock
-    /// AX = 0001h if locked, 0000h otherwise
-    /// DX:BX = 32-bit linear address
-    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), ACh (lock count overflow), ADh (lock fails)
+    /// <b>Inputs:</b> AH = 0Ch, DX = Handle to lock<br/>
+    /// <b>Outputs:</b> AX = 0001h if locked, 0000h otherwise; DX:BX = 32-bit linear address<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A2h (invalid handle)</item>
+    /// <item>BL = ACh (lock count overflow)</item>
+    /// <item>BL = ADh (lock fails)</item>
+    /// </list>
     /// </remarks>
     public void LockExtendedMemoryBlock() {
         int handle = _state.DX;
@@ -446,9 +565,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Unlocks a previously locked block.
     /// </summary>
     /// <remarks>
-    /// DX = Handle to unlock
-    /// AX = 0001h if unlocked, 0000h otherwise
-    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle), AAh (not locked)
+    /// <b>Inputs:</b> AH = 0Dh, DX = Handle to unlock<br/>
+    /// <b>Outputs:</b> AX = 0001h if unlocked, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A2h (invalid handle)</item>
+    /// <item>BL = AAh (not locked)</item>
+    /// </list>
     /// </remarks>
     public void UnlockExtendedMemoryBlock() {
         int handle = _state.DX;
@@ -475,12 +600,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns lock count, free handles, and block size for a handle.
     /// </summary>
     /// <remarks>
-    /// DX = Handle
-    /// AX = 0001h if found, 0000h otherwise
-    /// BH = Lock count
-    /// BL = Free handles
-    /// DX = Block length in K-bytes
-    /// BL = 80h (not implemented), 81h (VDISK), A2h (invalid handle)
+    /// <b>Inputs:</b> AH = 0Eh, DX = Handle<br/>
+    /// <b>Outputs:</b> AX = 0001h if found, 0000h otherwise; BH = Lock count; BL = Free handles; DX = Block length in K-bytes<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A2h (invalid handle)</item>
+    /// </list>
     /// </remarks>
     public void GetHandleInformation() {
         int handle = _state.DX;
@@ -508,10 +635,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Changes the size of an unlocked extended memory block.
     /// </summary>
     /// <remarks>
-    /// BX = New size in K-bytes
-    /// DX = Handle to reallocate
-    /// AX = 0001h if reallocated, 0000h otherwise
-    /// BL = 80h (not implemented), 81h (VDISK), A0h (no memory), A1h (no handles), A2h (invalid handle), ABh (block locked)
+    /// <b>Inputs:</b> AH = 0Fh, BX = New size in K-bytes, DX = Handle<br/>
+    /// <b>Outputs:</b> AX = 0001h if reallocated, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>BL = A0h (no memory)</item>
+    /// <item>BL = A1h (no handles)</item>
+    /// <item>BL = A2h (invalid handle)</item>
+    /// <item>BL = ABh (block locked)</item>
+    /// </list>
     /// </remarks>
     private void ReallocateExtendedMemoryBlock() {
         // Not implemented
@@ -524,11 +658,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to allocate a UMB of the requested size.
     /// </summary>
     /// <remarks>
-    /// DX = Size in paragraphs
-    /// AX = 0001h if granted, 0000h otherwise
-    /// BX = Segment of UMB
-    /// DX = Actual size or largest available
-    /// BL = 80h (not implemented), B0h (smaller UMB), B1h (no UMBs)
+    /// <b>Inputs:</b> AH = 10h, DX = Size in paragraphs<br/>
+    /// <b>Outputs:</b> AX = 0001h if granted, 0000h otherwise; BX = Segment of UMB; DX = Actual size or largest available<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = B0h (smaller UMB)</item>
+    /// <item>BL = B1h (no UMBs)</item>
+    /// </list>
     /// </remarks>
     public void RequestUpperMemoryBlock() {
         _state.BL = 0xB1; // No UMBs available
@@ -540,9 +677,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Releases a previously allocated UMB.
     /// </summary>
     /// <remarks>
-    /// DX = Segment of UMB
-    /// AX = 0001h if released, 0000h otherwise
-    /// BL = 80h (not implemented), B2h (invalid segment)
+    /// <b>Inputs:</b> AH = 11h, DX = Segment of UMB<br/>
+    /// <b>Outputs:</b> AX = 0001h if released, 0000h otherwise<br/>
+    /// <b>Errors:</b>
+    /// <list type="bullet">
+    /// <item>BL = 80h (not implemented)</item>
+    /// <item>BL = B2h (invalid segment)</item>
+    /// </list>
     /// </remarks>
     private void ReleaseUpperMemoryBlock() {
         _state.AX = 0;
@@ -684,18 +825,25 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         return XmsRam.GetSpan((int) (address - XmsBaseAddress), length);
     }
 
+    /// <inheritdoc/>
     public byte GetStatus(bool inputFlag) {
         throw new NotImplementedException();
     }
 
+    /// <inheritdoc/>
     public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
+    /// <inheritdoc/>
     public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Not implemented. For future use: copy extended memory.
+    /// </summary>
+    /// <param name="calledFromVm">Indicates if called from VM context.</param>
     public void CopyExtendedMemory(bool calledFromVm) {
         throw new NotImplementedException();
     }
