@@ -2,7 +2,6 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
@@ -19,14 +18,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
-/// Provides DOS applications with XMS memory according to the eXtended Memory Specification (XMS) version 2.0. <br/>
+/// Provides DOS applications with XMS memory according to the eXtended Memory Specification (XMS) version 3.0. <br/>
 /// XMS allows DOS programs to utilize additional memory found in Intel's 80286 and 80386 based machines in
 /// a consistent, machine independent manner. XMS adds almost 64K to the 640K which DOS programs can access
 /// directly and provides a standard method of storing data in extended memory above 1MB.
 /// </summary>
 /// <remarks>
 /// <para>
-        /// Memory Layout:
+/// Memory Layout:
 /// <code>
 /// |-------------------------------------------------------|   Top of Memory
 /// |             Extended Memory Blocks (EMBs)             |
@@ -47,6 +46,9 @@ using System.Linq;
 /// <para>
 /// See: <c>xms20.txt</c> for the full specification.
 /// </para>
+/// </remarks>
+/// <remarks>
+/// In MS-DOS, this is HIMEM.SYS. In DOSBox, this is xms.cpp
 /// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private int _a20EnableCount;
@@ -92,6 +94,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public const string XmsIdentifier = "XMSXXXX0";
 
     /// <summary>
+    /// The memory address to the C# XMS callback <see cref="RunMultiplex"/>
+    /// </summary>
+    public SegmentedAddress CallbackAddress { get; init; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
@@ -99,10 +106,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <param name="callbackHandler">Callback handler for XMS multiplex entry point.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate,
+    public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate, DosTables dosTables,
         CallbackHandler callbackHandler, State state, ILoggerService loggerService) {
+        uint headerAddress = new SegmentedAddress(DosDeviceSegment, 0x0).Linear;
         Header = new DosDeviceHeader(memory,
-            new SegmentedAddress(DosDeviceSegment, 0x0).Linear) {
+            headerAddress) {
             Name = XmsIdentifier,
             Attributes = DeviceAttributes.Ioctl,
             StrategyEntryPoint = 0,
@@ -112,7 +120,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         _a20Gate = a20Gate;
         _memory = memory;
         _loggerService = loggerService;
-        MemoryAsmWriter memoryAsmWriter = new(memory, new(DosDeviceSegment, 0), callbackHandler);
+        // Place hookable callback in writable memory area
+        var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables.GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
+        CallbackAddress = hookableCodeAddress;
+        MemoryAsmWriter memoryAsmWriter = new(memory, hookableCodeAddress, callbackHandler);
         memoryAsmWriter.WriteJumpNear(0x3);
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
@@ -136,13 +147,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public long TotalFreeMemory => GetFreeBlocks().Sum(b => b.Length);
 
     /// <summary>
-    /// Dispatches XMS subfunctions based on the value in AL.
+    /// Dispatches XMS subfunctions based on the value in AH.
     /// </summary>
     /// <remarks>
     /// This is the main entry point for XMS API calls via the multiplex interrupt.
     /// </remarks>
     public void RunMultiplex() {
-        byte operation = _state.AL;
+        byte operation = _state.AH;
         switch (operation) {
             case 0x00:
                 GetVersionNumber();
@@ -198,6 +209,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             case 0x11:
                 ReleaseUpperMemoryBlock();
                 break;
+            default:
+                if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _loggerService.Error("XMS function not recognized: {XmsSubFunctionNumber:X2}", operation);
+                }
+                break;
         }
     }
 
@@ -217,8 +233,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </remarks>
     public void GetVersionNumber() {
         _state.AX = 0x0200; // XMS version 2.00
-        _state.BX = 0;      // Internal revision
-        _state.DX = 1;      // HMA exists
+        _state.BX = 0x0201; // Internal revision
+        _state.DX = 0x0;      // HMA is not available.
     }
 
     /// <summary>

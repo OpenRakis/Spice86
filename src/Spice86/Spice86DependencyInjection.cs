@@ -37,6 +37,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Infrastructure;
@@ -270,8 +271,11 @@ public class Spice86DependencyInjection : IDisposable {
                     state, biosDataArea, loggerService);
 
         ExtendedMemoryManager? xms = null;
+
+        DosTables dosTables = new();
+
         if (configuration.Xms) {
-            xms = new(memory, a20Gate, callbackHandler, state, loggerService);
+            xms = new(memory, a20Gate, dosTables, callbackHandler, state, loggerService);
         }
         if (configuration.Xms && loggerService.IsEnabled(
             LogEventLevel.Information)) {
