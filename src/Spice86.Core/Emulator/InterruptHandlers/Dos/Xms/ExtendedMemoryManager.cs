@@ -132,6 +132,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.CurrentAddress = savedAddress;
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
         Name = XmsIdentifier;
+
+        // Initialize XMS memory as a single free block
+        _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsMemorySize * 1024, true));
     }
 
     /// <summary>
@@ -156,70 +159,119 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             case XmsSubFunctionsCodes.GetVersionNumber:
                 GetVersionNumber();
                 break;
+
             case XmsSubFunctionsCodes.RequestHighMemoryArea:
                 RequestHighMemoryArea();
                 break;
+
             case XmsSubFunctionsCodes.ReleaseHighMemoryArea:
                 ReleaseHighMemoryArea();
                 break;
+
             case XmsSubFunctionsCodes.GlobalEnableA20:
                 GlobalEnableA20();
                 break;
+
             case XmsSubFunctionsCodes.GlobalDisableA20:
                 GlobalDisableA20();
                 break;
+
             case XmsSubFunctionsCodes.LocalEnableA20:
                 EnableLocalA20();
                 break;
+
             case XmsSubFunctionsCodes.LocalDisableA20:
                 DisableLocalA20();
                 break;
+
             case XmsSubFunctionsCodes.QueryA20:
                 QueryA20();
                 break;
+
             case XmsSubFunctionsCodes.QueryFreeExtendedMemory:
                 QueryFreeExtendedMemory();
                 break;
+
             case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
                 AllocateExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
                 FreeExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
                 MoveExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
                 LockExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
                 UnlockExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.GetHandleInformation:
                 GetHandleInformation();
                 break;
+
             case XmsSubFunctionsCodes.ReallocateExtendedMemoryBlock:
                 ReallocateExtendedMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.RequestUpperMemoryBlock:
                 RequestUpperMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.ReleaseUpperMemoryBlock:
                 ReleaseUpperMemoryBlock();
                 break;
+
             case XmsSubFunctionsCodes.ReallocateUpperMemoryBlock:
             case XmsSubFunctionsCodes.QueryAnyFreeExtendedMemory:
-            case XmsSubFunctionsCodes.AllocateAnyExtendedMemory:
-                // XMS 3.0 extended functions - not implemented yet
-                if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error("XMS 3.0 function not implemented: {XmsSubFunctionNumber:X2}", operation);
-                }
-                _state.AX = 0x0;
-                _state.BH = 0xFF;
-                _state.BL = (byte)XmsErrorCodes.NotImplemented;
+                // Function 88h - Returns 32-bit sizes and highest address
+                byte result = TryGetFreeMemoryInfo(out uint largestFree, out uint totalFree);
+                _state.EAX = largestFree / 1024u; // Convert bytes to KB
+                _state.EDX = totalFree / 1024u;
+                _state.ECX = XmsBaseAddress + XmsMemorySize * 1024 - 1; // Highest memory address
+                _state.BL = result == 0 ? (byte)0 : (byte)XmsErrorCodes.XmsOutOfSpace;
+                _state.AX = result == 0 ? (ushort)1 : (ushort)0;
                 break;
+
+            case XmsSubFunctionsCodes.AllocateAnyExtendedMemory:
+                // Function 89h - Like Function 09h but takes 32-bit size
+                AllocateAnyExtendedMemory(_state.EDX);
+                break;
+
+            case XmsSubFunctionsCodes.GetExtendedEmbHandle:
+                // Function 8Eh - Like Function 0Eh but returns more info
+                if (!_xmsHandles.TryGetValue(_state.DX, out int lockCount)) {
+                    _state.AX = 0;
+                    _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+                    break;
+                }
+
+                _state.BH = (byte)lockCount;
+                // Return 16-bit count of free handles instead of 8-bit
+                _state.CX = (ushort)(MaxHandles - _xmsHandles.Count);
+
+                if (!TryGetBlock(_state.DX, out XmsBlock block)) {
+                    _state.EDX = 0;
+                } else {
+                    _state.EDX = block.Length / 1024u; // Return 32-bit size in KB
+                }
+
+                _state.AX = 1;
+                break;
+
+            case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
+                // Function 8Fh - Like Function 0Fh but takes 32-bit size
+                ReallocateAnyExtendedMemory();
+                break;
+
             default:
-                if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _loggerService.Error("XMS function not recognized: {XmsSubFunctionNumber:X2}", operation);
                 }
                 _state.AX = 0x0;
@@ -266,9 +318,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        // Not implemented - fail with "already in use"
+        // HMA is not available and in use by DOS
         _state.AX = 0;
-        _state.BL = 0x91;
+        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
     }
 
     /// <summary>
@@ -287,9 +339,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        // Not implemented - fail with "not allocated"
+        // HMA is not available and in use by DOS
         _state.AX = 0;
-        _state.BL = 0x93;
+        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
     }
 
     /// <summary>
@@ -329,8 +381,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </remarks>
     public void GlobalDisableA20() {
         _a20GlobalEnabled = false;
-        SetA20(false);
-        _state.AX = 1;
+        if (_a20LocalEnableCount == 0) {
+            SetA20(false);
+            _state.AX = 1;
+        } else {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
+        }
     }
 
     /// <summary>
@@ -379,22 +436,21 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void DisableLocalA20() {
-        // HIMEM.SYS returns error if count is already 0
         if (_a20LocalEnableCount == 0) {
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.A20Error;
             return;
         }
 
-        if (--_a20LocalEnableCount != 0) {
-            // A20 line is still enabled, per spec
+        if (--_a20LocalEnableCount == 0 && !_a20GlobalEnabled) {
+            SetA20(false);
+            _state.AX = 1;
+        } else if (_a20LocalEnableCount != 0) {
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
-            return;
+        } else {
+            _state.AX = 1;
         }
-
-        SetA20(false);
-        _state.AX = 1;
     }
 
     /// <summary>
@@ -527,47 +583,86 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <item>BL = A9h (parity error)</item>
     /// </list>
     /// </remarks>
-    public unsafe void MoveExtendedMemoryBlock() {
+    public void MoveExtendedMemoryBlock() {
         bool a20State = IsA20Enabled();
         SetA20(true);
 
         uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
-        ExtendedMemoryMoveStructure moveData = new(_memory, address);
-        Span<byte> srcPtr = new byte[] { };
-        Span<byte> destPtr = new byte[] { };
+        var move = new ExtendedMemoryMoveStructure(_memory, address);
 
-        if (moveData.SourceHandle == 0) {
-            SegmentedAddress srcAddress = moveData.SourceAddress;
-            srcPtr = _memory.GetSpan(srcAddress.Segment, srcAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.SourceHandle, out XmsBlock srcBlock)) {
-                srcPtr = _memory.GetSpan((int)(XmsBaseAddress + srcBlock.Offset + moveData.SourceOffset), 0);
-            }
-        }
-
-        if (moveData.DestHandle == 0) {
-            SegmentedAddress destAddress = moveData.DestAddress;
-            destPtr = _memory.GetSpan(destAddress.Segment, destAddress.Offset);
-        } else {
-            if (TryGetBlock(moveData.DestHandle, out XmsBlock destBlock)) {
-                destPtr = _memory.GetSpan((int)(XmsBaseAddress + destBlock.Offset + moveData.DestOffset), 0);
-            }
-        }
-
-        if (srcPtr.Length == 0) {
-            _state.BL = 0xA3;
+        // "Length must be even" per XMS spec
+        if (move.Length % 2 != 0) {
             _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsParityError;
+            SetA20(a20State);
             return;
         }
 
-        if (destPtr.Length == 0) {
-            _state.BL = 0xA5;
+        // Validate source
+        uint srcAddress;
+        if (move.SourceHandle == 0) {
+            srcAddress = move.SourceAddress.Linear;
+            if (srcAddress + move.Length > 0x10FFF0) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
+                SetA20(a20State);
+                return;
+            }
+        } else if (TryGetBlock(move.SourceHandle, out XmsBlock srcBlock)) {
+            if (move.SourceOffset + move.Length > srcBlock.Length) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
+                SetA20(a20State);
+                return;
+            }
+            srcAddress = XmsBaseAddress + srcBlock.Offset + move.SourceOffset;
+        } else {
             _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcHandle;
+            SetA20(a20State);
             return;
         }
 
-        srcPtr.CopyTo(destPtr);
+        // Validate destination
+        uint destAddress;
+        if (move.DestHandle == 0) {
+            destAddress = move.DestAddress.Linear;
+            if (destAddress + move.Length > 0x10FFF0) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
+                SetA20(a20State);
+                return;
+            }
+        } else if (TryGetBlock(move.DestHandle, out XmsBlock destBlock)) {
+            if (move.DestOffset + move.Length > destBlock.Length) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
+                SetA20(a20State);
+                return;
+            }
+            destAddress = XmsBaseAddress + destBlock.Offset + move.DestOffset;
+        } else {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidDestHandle;
+            SetA20(a20State);
+            return;
+        }
 
+        // Check for invalid overlap
+        if (move.SourceHandle != 0 && move.SourceHandle == move.DestHandle) {
+            uint srcStart = move.SourceOffset;
+            uint srcEnd = srcStart + move.Length;
+            uint destStart = move.DestOffset;
+            uint destEnd = destStart + move.Length;
+            if ((srcStart < destEnd) && (destStart < srcEnd)) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidOverlap;
+                SetA20(a20State);
+                return;
+            }
+        }
+
+        _memory.MemCopy(srcAddress, destAddress, move.Length);
         _state.AX = 1;
         SetA20(a20State);
     }
@@ -593,15 +688,25 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
         if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
             _state.AX = 0;
-            _state.BL = 0xA2;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
+
+        if (lockCount >= byte.MaxValue) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsLockCountOverflow;
             return;
         }
 
         _xmsHandles[handle] = lockCount + 1;
 
-        _ = TryGetBlock(handle, out XmsBlock block);
-        uint fullAddress = XmsBaseAddress + block.Offset;
+        if (!TryGetBlock(handle, out XmsBlock block)) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
 
+        uint fullAddress = XmsBaseAddress + block.Offset;
         _state.AX = 1;
         _state.DX = (ushort)(fullAddress >> 16);
         _state.BX = (ushort)(fullAddress & 0xFFFFu);
@@ -692,12 +797,73 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <item>BL = A1h (no handles)</item>
     /// <item>BL = A2h (invalid handle)</item>
     /// <item>BL = ABh (block locked)</item>
+    /// <item>BL = A0h (out of space)</item>
     /// </list>
     /// </remarks>
     private void ReallocateExtendedMemoryBlock() {
-        // Not implemented
-        _state.AX = 0;
-        _state.BL = 0x80;
+        int handle = _state.DX;
+        uint newSize = (uint)_state.BX * 1024u;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
+
+        if (lockCount > 0) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsBlockLocked;
+            return;
+        }
+
+        if (!TryGetBlock(handle, out XmsBlock block)) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
+
+        if (newSize == block.Length) {
+            _state.AX = 1; // No change needed
+            return;
+        }
+
+        // Handle size 0 (free block)
+        if (newSize == 0) {
+            XmsBlock freeBlock = block.Free();
+            _xmsBlocksLinkedList.Replace(block, freeBlock);
+            MergeFreeBlocks(freeBlock);
+            _xmsHandles.Remove(handle);
+            _state.AX = 1;
+            return;
+        }
+
+        // Try to shrink or grow
+        if (newSize < block.Length) {
+            // Split block and free remainder
+            XmsBlock[] newBlocks = block.Allocate(handle, newSize);
+            _xmsBlocksLinkedList.Replace(block, newBlocks);
+            MergeFreeBlocks(newBlocks[1]);
+            _state.AX = 1;
+        } else {
+            // Try to grow using next free block
+            var node = _xmsBlocksLinkedList.Find(block);
+            if (node?.Next != null && node.Next.Value.IsFree) {
+                uint combined = block.Length + node.Next.Value.Length;
+                if (combined >= newSize) {
+                    XmsBlock merged = block.Join(node.Next.Value);
+                    _xmsBlocksLinkedList.Remove(node.Next);
+                    XmsBlock[] newBlocks = merged.Allocate(handle, newSize);
+                    _xmsBlocksLinkedList.Replace(block, newBlocks);
+                    if (newBlocks.Length > 1) {
+                        MergeFreeBlocks(newBlocks[1]);
+                    }
+                    _state.AX = 1;
+                    return;
+                }
+            }
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsOutOfSpace;
+        }
     }
 
     /// <summary>
@@ -862,7 +1028,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
     /// <inheritdoc/>
     public uint DeviceNumber { get; set; }
-   
+
     /// <inheritdoc/>
     public DosDeviceHeader Header { get; init; }
 
@@ -870,7 +1036,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Not supported by HIMEM.SYS
     /// </summary>
     public ushort Information => 0x0;
-    
+
     /// <inheritdoc/>
     public string Name { get; set; }
 
@@ -886,7 +1052,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
     /// <inheritdoc/>
     public Span<byte> GetSpan(int address, int length) {
-        return XmsRam.GetSpan((int) (address - XmsBaseAddress), length);
+        return XmsRam.GetSpan((int)(address - XmsBaseAddress), length);
     }
 
     /// <inheritdoc/>
@@ -961,5 +1127,88 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         _state.AH = 0x00; // Success
         SetA20(a20WasEnabled);
         return true;
+    }
+
+    /// <summary>
+    /// XMS Function 88h: Query Any Free Extended Memory.
+    /// Returns 32-bit sizes and highest address.
+    /// </summary>
+    /// <param name="largestFree">Largest free block in bytes.</param>
+    /// <param name="totalFree">Total free memory in bytes.</param>
+    /// <returns>Zero on success, nonzero on failure.</returns>
+    private byte TryGetFreeMemoryInfo(out uint largestFree, out uint totalFree) {
+        largestFree = LargestFreeBlock;
+        totalFree = (uint)TotalFreeMemory;
+        return largestFree > 0 ? (byte)0 : (byte)XmsErrorCodes.XmsOutOfSpace;
+    }
+
+    /// <summary>
+    /// XMS Function 8Fh: Reallocate Any Extended Memory.
+    /// Changes the size of an unlocked extended memory block using 32-bit size.
+    /// </summary>
+    private void ReallocateAnyExtendedMemory() {
+        int handle = _state.DX;
+        uint newSize = _state.EDX;
+
+        if (!_xmsHandles.TryGetValue(handle, out int lockCount)) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
+
+        if (lockCount > 0) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsBlockLocked;
+            return;
+        }
+
+        if (!TryGetBlock(handle, out XmsBlock block)) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            return;
+        }
+
+        if (newSize == block.Length) {
+            _state.AX = 1; // No change needed
+            return;
+        }
+
+        // Handle size 0 (free block)
+        if (newSize == 0) {
+            XmsBlock freeBlock = block.Free();
+            _xmsBlocksLinkedList.Replace(block, freeBlock);
+            MergeFreeBlocks(freeBlock);
+            _xmsHandles.Remove(handle);
+            _state.AX = 1;
+            return;
+        }
+
+        // Try to shrink or grow
+        if (newSize < block.Length) {
+            // Split block and free remainder
+            XmsBlock[] newBlocks = block.Allocate(handle, newSize);
+            _xmsBlocksLinkedList.Replace(block, newBlocks);
+            MergeFreeBlocks(newBlocks[1]);
+            _state.AX = 1;
+        } else {
+            // Try to grow using next free block
+            var node = _xmsBlocksLinkedList.Find(block);
+            if (node?.Next != null && node.Next.Value.IsFree) {
+                uint combined = block.Length + node.Next.Value.Length;
+                if (combined >= newSize) {
+                    XmsBlock merged = block.Join(node.Next.Value);
+                    _xmsBlocksLinkedList.Remove(node.Next);
+                    XmsBlock[] newBlocks = merged.Allocate(handle, newSize);
+                    _xmsBlocksLinkedList.Replace(block, newBlocks);
+                    if (newBlocks.Length > 1) {
+                        MergeFreeBlocks(newBlocks[1]);
+                    }
+                    _state.AX = 1;
+                    return;
+                }
+            }
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsOutOfSpace;
+        }
     }
 }

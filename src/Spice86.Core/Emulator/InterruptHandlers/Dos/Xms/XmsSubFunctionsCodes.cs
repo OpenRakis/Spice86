@@ -129,5 +129,8 @@ public enum XmsSubFunctionsCodes : byte {
     /// Allocate Any Extended Memory (386+ only).
     /// Allocates a block of extended memory of the requested size using 32-bit values.
     /// </summary>
-    AllocateAnyExtendedMemory = 0x89
+    AllocateAnyExtendedMemory = 0x89,
+
+    ReallocateAnyExtendedMemory = 0x8F,
+    GetExtendedEmbHandle = 0x8E,
 }
