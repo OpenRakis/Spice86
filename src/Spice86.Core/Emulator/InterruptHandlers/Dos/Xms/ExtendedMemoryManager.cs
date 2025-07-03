@@ -46,6 +46,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public const ushort XmsInternalVersion = 0x0301;
 
     private int _a20EnableCount;
+    private bool _a20GlobalEnabled = false;
+    private uint _a20LocalEnableCount = 0;
+    private const uint A20MaxTimesEnabled = uint.MaxValue;
 
     private readonly ILoggerService _loggerService;
     private readonly State _state;
@@ -111,6 +114,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         };
         _state = state;
         _a20Gate = a20Gate;
+        _a20Gate.IsEnabled = true;
         _memory = memory;
         _loggerService = loggerService;
         // Place hookable callback in writable memory area
@@ -127,7 +131,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
-        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize * 1024, used: false));
         Name = XmsIdentifier;
     }
 
@@ -148,71 +151,80 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// This is the main entry point for XMS API calls via the multiplex interrupt.
     /// </remarks>
     public void RunMultiplex() {
-        byte operation = _state.AH;
+        var operation = (XmsSubFunctionsCodes)_state.AH;
         switch (operation) {
-            case 0x00:
+            case XmsSubFunctionsCodes.GetVersionNumber:
                 GetVersionNumber();
                 break;
-            case 0x01:
+            case XmsSubFunctionsCodes.RequestHighMemoryArea:
                 RequestHighMemoryArea();
                 break;
-            case 0x02:
+            case XmsSubFunctionsCodes.ReleaseHighMemoryArea:
                 ReleaseHighMemoryArea();
                 break;
-            case 0x03:
+            case XmsSubFunctionsCodes.GlobalEnableA20:
                 GlobalEnableA20();
                 break;
-            case 0x04:
+            case XmsSubFunctionsCodes.GlobalDisableA20:
                 GlobalDisableA20();
                 break;
-            case 0x05:
+            case XmsSubFunctionsCodes.LocalEnableA20:
                 EnableLocalA20();
                 break;
-            case 0x06:
+            case XmsSubFunctionsCodes.LocalDisableA20:
                 DisableLocalA20();
                 break;
-            case 0x07:
+            case XmsSubFunctionsCodes.QueryA20:
                 QueryA20();
                 break;
-            case 0x08:
+            case XmsSubFunctionsCodes.QueryFreeExtendedMemory:
                 QueryFreeExtendedMemory();
                 break;
-            case 0x09:
+            case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
                 AllocateExtendedMemoryBlock();
                 break;
-            case 0x0A:
+            case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
                 FreeExtendedMemoryBlock();
                 break;
-            case 0x0B:
+            case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
                 MoveExtendedMemoryBlock();
                 break;
-            case 0x0C:
+            case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
                 LockExtendedMemoryBlock();
                 break;
-            case 0x0D:
+            case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
                 UnlockExtendedMemoryBlock();
                 break;
-            case 0x0E:
+            case XmsSubFunctionsCodes.GetHandleInformation:
                 GetHandleInformation();
                 break;
-            case 0x0F:
+            case XmsSubFunctionsCodes.ReallocateExtendedMemoryBlock:
                 ReallocateExtendedMemoryBlock();
                 break;
-            case 0x10:
+            case XmsSubFunctionsCodes.RequestUpperMemoryBlock:
                 RequestUpperMemoryBlock();
                 break;
-            case 0x11:
+            case XmsSubFunctionsCodes.ReleaseUpperMemoryBlock:
                 ReleaseUpperMemoryBlock();
+                break;
+            case XmsSubFunctionsCodes.ReallocateUpperMemoryBlock:
+            case XmsSubFunctionsCodes.QueryAnyFreeExtendedMemory:
+            case XmsSubFunctionsCodes.AllocateAnyExtendedMemory:
+                // XMS 3.0 extended functions - not implemented yet
+                if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _loggerService.Error("XMS 3.0 function not implemented: {XmsSubFunctionNumber:X2}", operation);
+                }
+                _state.AX = 0x0;
+                _state.BH = 0xFF;
+                _state.BL = (byte)XmsErrorCodes.NotImplemented;
                 break;
             default:
                 if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _loggerService.Error("XMS function not recognized: {XmsSubFunctionNumber:X2}", operation);
                 }
-                //TODO: Check if this is correct behavior
                 _state.AX = 0x0;
                 _state.BH = 0xFF;
                 _state.BL = (byte)XmsErrorCodes.NotImplemented;
-                //base.SetCarryFlag(true, calledFromVm: true);
                 break;
         }
     }
@@ -295,8 +307,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void GlobalEnableA20() {
-        _memory.A20Gate.IsEnabled = true;
-        _state.AX = 1; // Success
+        _a20GlobalEnabled = true;
+        SetA20(true);
+        _state.AX = 1;
     }
 
     /// <summary>
@@ -315,8 +328,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void GlobalDisableA20() {
-        _memory.A20Gate.IsEnabled = false;
-        _state.AX = 1; // Success
+        _a20GlobalEnabled = false;
+        SetA20(false);
+        _state.AX = 1;
     }
 
     /// <summary>
@@ -334,11 +348,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void EnableLocalA20() {
-        if (_a20EnableCount == 0) {
-            _memory.A20Gate.IsEnabled = true;
+        // Counter overflow protection
+        if (_a20LocalEnableCount == A20MaxTimesEnabled) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.A20Error;
+            return;
         }
-        _a20EnableCount++;
-        _state.AX = 1; // Success
+
+        // Only enable A20 if count is 0
+        if (_a20LocalEnableCount++ == 0) {
+            SetA20(true);
+        }
+
+        _state.AX = 1;
     }
 
     /// <summary>
@@ -357,13 +379,22 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void DisableLocalA20() {
-        if (_a20EnableCount == 1) {
-            _memory.A20Gate.IsEnabled = false;
+        // HIMEM.SYS returns error if count is already 0
+        if (_a20LocalEnableCount == 0) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.A20Error;
+            return;
         }
-        if (_a20EnableCount > 0) {
-            _a20EnableCount--;
+
+        if (--_a20LocalEnableCount != 0) {
+            // A20 line is still enabled, per spec
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
+            return;
         }
-        _state.AX = 1; // Success
+
+        SetA20(false);
+        _state.AX = 1;
     }
 
     /// <summary>
@@ -381,7 +412,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void QueryA20() {
-        _state.AX = (ushort)(_a20EnableCount > 0 ? 1 : 0);
+        _state.AX = IsA20Enabled() ? (ushort)1 : (ushort)0;
     }
 
     /// <summary>
@@ -497,8 +528,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public unsafe void MoveExtendedMemoryBlock() {
-        bool a20State = _memory.A20Gate.IsEnabled;
-        _memory.A20Gate.IsEnabled = true;
+        bool a20State = IsA20Enabled();
+        SetA20(true);
 
         uint address = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
         ExtendedMemoryMoveStructure moveData = new(_memory, address);
@@ -538,7 +569,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         srcPtr.CopyTo(destPtr);
 
         _state.AX = 1;
-        _memory.A20Gate.IsEnabled = a20State;
+        SetA20(a20State);
     }
 
     /// <summary>
@@ -757,7 +788,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <param name="block">On success, contains information about the block.</param>
     /// <returns>True if handle was found; otherwise false.</returns>
     public bool TryGetBlock(int handle, out XmsBlock block) {
-        foreach (XmsBlock b in _xmsBlocksLinkedList.Where(b => b.IsUsed && b.Handle == handle)) {
+        foreach (XmsBlock b in _xmsBlocksLinkedList.Where(b => !b.IsFree && b.Handle == handle)) {
             block = b;
             return true;
         }
@@ -770,7 +801,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns all of the free blocks in the map sorted by size in ascending order.
     /// </summary>
     /// <returns>Sorted list of free blocks in the map.</returns>
-    public IEnumerable<XmsBlock> GetFreeBlocks() => _xmsBlocksLinkedList.Where(static x => !x.IsUsed).OrderBy(static x => x.Length);
+    public IEnumerable<XmsBlock> GetFreeBlocks() => _xmsBlocksLinkedList.Where(static x => x.IsFree).OrderBy(static x => x.Length);
 
     /// <summary>
     /// Returns the next available handle for an allocation on success; returns 0 if no handles are available.
@@ -795,7 +826,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
         if (firstNode?.Next != null) {
             LinkedListNode<XmsBlock> nextNode = firstNode.Next;
-            if (!nextNode.Value.IsUsed) {
+            if (nextNode.Value.IsFree) {
                 XmsBlock newBlock = firstBlock.Join(nextNode.Value);
                 _xmsBlocksLinkedList.Remove(nextNode);
                 _xmsBlocksLinkedList.Replace(firstBlock, newBlock);
@@ -816,6 +847,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.AX = 0; // Didn't work.
             _state.BL = res;
         }
+    }
+
+    private void SetA20(bool enable) {
+        _a20Gate.IsEnabled = enable;
+    }
+
+    private bool IsA20Enabled() {
+        return _a20Gate.IsEnabled;
     }
 
     /// <inheritdoc/>
@@ -857,14 +896,16 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <inheritdoc/>
-    public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+    public bool TryReadFromControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         //Not supported by HIMEM.SYS
         returnCode = null;
         return false;
     }
 
     /// <inheritdoc/>
-    public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
+    public bool TryWriteToControlChannel(uint address, ushort size,
+        [NotNullWhen(true)] out ushort? returnCode) {
         //Not supported by HIMEM.SYS
         returnCode = null;
         return false;

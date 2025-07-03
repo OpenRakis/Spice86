@@ -1,18 +1,11 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
-
-using System;
-
-/// <summary>
-/// Represents a block of XMS memory.
-/// </summary>
 public readonly struct XmsBlock : IEquatable<XmsBlock> {
-    public XmsBlock(int handle, uint offset, uint length, bool used) {
+    public XmsBlock(int handle, uint offset, uint length, bool free) {
         Handle = handle;
         Offset = offset;
         Length = length;
-        IsUsed = used;
+        IsFree = free;
     }
-
     /// <summary>
     /// Gets the handle which owns the block.
     /// </summary>
@@ -22,19 +15,19 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// Gets the offset of the block from the XMS base address.
     /// </summary>
     public uint Offset { get; }
-
     /// <summary>
     /// Gets the length of the block in bytes.
     /// </summary>
     public uint Length { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the block is in use.
+    /// Gets a value indicating whether the block is ready to be used.
     /// </summary>
-    public bool IsUsed { get; }
+    public bool IsFree { get; }
+
 
     public override string ToString() {
-        if (IsUsed) {
+        if (!IsFree) {
             return $"{Handle:X4}: {Offset:X8} to {Offset + Length:X8}";
         } else {
             return "Free";
@@ -45,7 +38,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
 
     public override int GetHashCode() => Handle ^ (int)Offset ^ (int)Length;
 
-    public bool Equals(XmsBlock other) => Handle == other.Handle && Offset == other.Offset && Length == other.Length && IsUsed == other.IsUsed;
+    public bool Equals(XmsBlock other) => Handle == other.Handle && Offset == other.Offset && Length == other.Length && !IsFree == !other.IsFree;
 
     /// <summary>
     /// Allocates a block of memory from a free block.
@@ -54,7 +47,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// <param name="length">Length of the requested block in bytes.</param>
     /// <returns>Array of blocks to replace this block.</returns>
     public XmsBlock[] Allocate(int handle, uint length) {
-        if (IsUsed) {
+        if (!IsFree) {
             throw new InvalidOperationException();
         }
 
@@ -86,7 +79,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// <param name="other">Other unused block to merge with.</param>
     /// <returns>Merged block of memory.</returns>
     public XmsBlock Join(XmsBlock other) {
-        if (IsUsed || other.IsUsed) {
+        if (!IsFree || !other.IsFree) {
             throw new InvalidOperationException();
         }
 
