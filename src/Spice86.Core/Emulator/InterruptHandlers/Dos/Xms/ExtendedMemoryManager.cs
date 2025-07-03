@@ -61,8 +61,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// The size of available XMS Memory, in kilobytes.
     /// </summary>
-    /// <remarks>32 MB maximum size as per XMS 2.0 specification</remarks>
-    public const uint XmsMemorySize = 32 * 1024;
+    /// <remarks>32 MB maximum size in the XMS 2.0 specification, but 8 MB available here.</remarks>
+    public const uint XmsMemorySize = 8 * 1024;
 
     /// <summary>
     /// Specifies the starting physical address of XMS memory. <br/>
