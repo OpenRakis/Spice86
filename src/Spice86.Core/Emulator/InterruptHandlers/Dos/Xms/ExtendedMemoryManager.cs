@@ -912,10 +912,54 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <summary>
-    /// Not implemented. For future use: copy extended memory.
+    /// BIOS-compatible function to copy extended memory, as used by INT 15h, AH=89h.
+    /// This is not a standard XMS function, but is expected by BIOS and DOS programs.
+    /// The copy parameters are passed in ES:SI as a structure compatible with <see cref="ExtendedMemoryMoveStructure"/>.
     /// </summary>
-    /// <param name="calledFromVm">Indicates if called from VM context.</param>
-    public void CopyExtendedMemory(bool calledFromVm) {
-        throw new NotImplementedException("TODO");
+    /// <param name="calledFromVm">Indicates if called from the emulator.</param>
+    /// <returns>True if the copy succeeded, false if there was an error.</returns>
+    public bool CopyExtendedMemory(bool calledFromVm) {
+        bool a20WasEnabled = IsA20Enabled();
+        SetA20(true);
+
+        uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.SI);
+        var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
+
+        // Validate length (must be even and nonzero)
+        if (move.Length == 0 || (move.Length & 1) != 0) {
+            _state.AH = 0x01; // Indicate error (arbitrary, as BIOS doesn't standardize this)
+            SetA20(a20WasEnabled);
+            return false;
+        }
+
+        // Determine source address
+        uint srcAddress;
+        if (move.SourceHandle == 0) {
+            srcAddress = move.SourceAddress.Linear;
+        } else if (TryGetBlock(move.SourceHandle, out XmsBlock srcBlock)) {
+            srcAddress = XmsBaseAddress + srcBlock.Offset + move.SourceOffset;
+        } else {
+            _state.AH = 0x01; // Error: invalid source handle
+            SetA20(a20WasEnabled);
+            return false;
+        }
+
+        // Determine destination address
+        uint destAddress;
+        if (move.DestHandle == 0) {
+            destAddress = move.DestAddress.Linear;
+        } else if (TryGetBlock(move.DestHandle, out XmsBlock destBlock)) {
+            destAddress = XmsBaseAddress + destBlock.Offset + move.DestOffset;
+        } else {
+            _state.AH = 0x01; // Error: invalid dest handle
+            SetA20(a20WasEnabled);
+            return false;
+        }
+
+        _memory.MemCopy(srcAddress, destAddress, move.Length);
+
+        _state.AH = 0x00; // Success
+        SetA20(a20WasEnabled);
+        return true;
     }
 }

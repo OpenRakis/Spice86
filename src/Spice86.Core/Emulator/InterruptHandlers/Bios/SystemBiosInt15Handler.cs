@@ -134,11 +134,28 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Legacy BIOS function to copy extended memory.
+    /// INT 15h, AH=87h - SYSTEM - COPY EXTENDED MEMORY
+    /// <para>
+    /// Copies data in extended memory using a global descriptor table.
+    /// </para><br/>
+    /// <b>Inputs:</b><br/>
+    /// AH = 87h<br/>
+    /// CX = number of words to copy (maximum 8000h)<br/>
+    /// ES:SI = pointer to global descriptor table (see RBIL #00499)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF set on error<br/>
+    /// CF clear if successful<br/>
+    /// AH = status (see RBIL #00498)<br/>
     /// </summary>
     public void CopyExtendedMemory(bool calledFromVm) {
         if (_extendedMemoryManager is not null) {
-            _extendedMemoryManager.CopyExtendedMemory(calledFromVm);
+            bool success = _extendedMemoryManager.CopyExtendedMemory(calledFromVm);
+            SetCarryFlag(!success, calledFromVm);
+            if (success) {
+                State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+            } else {
+                State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+            }
             return;
         }
         bool enabled = _a20Gate.IsEnabled;
