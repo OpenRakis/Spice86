@@ -24,9 +24,8 @@ using System.Linq;
 /// directly and provides a standard method of storing data in extended memory above 1MB.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Memory Layout:
 /// <code>
+/// Memory Layout:
 /// |-------------------------------------------------------|   Top of Memory
 /// |             Extended Memory Blocks (EMBs)             |
 /// |            Used for data storage only                 |
@@ -39,16 +38,10 @@ using System.Linq;
 /// |            Conventional DOS Memory                    |
 /// +-------------------------------------------------------+   0K
 /// </code>
-/// </para>
-/// <para>
 /// This implementation provides XMS version 2.0 features accessed via INT 2Fh, AH=43h.
-/// </para>
-/// <para>
 /// See: <c>xms20.txt</c> for the full specification.
-/// </para>
-/// </remarks>
-/// <remarks>
-/// In MS-DOS, this is HIMEM.SYS. In DOSBox, this is xms.cpp
+/// In MS-DOS, this is HIMEM.SYS. In DOSBox, this is xms.cpp <br/>
+/// In MS-DOS, EMM386.EXE uses XMS for EMS storage. This is not the case here.
 /// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private int _a20EnableCount;
@@ -61,7 +54,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     private readonly SortedList<int, int> _xmsHandles = new();
 
     /// <summary>
-    /// The segment of the interrupt handler.
+    /// The segment of the XMS Dos Device Driver.
     /// </summary>
     public const ushort DosDeviceSegment = 0xD000;
 
