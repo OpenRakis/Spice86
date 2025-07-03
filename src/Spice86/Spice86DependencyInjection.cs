@@ -270,12 +270,20 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
                     state, biosDataArea, loggerService);
 
+        // memoryAsmWriter is common to InterruptInstaller and
+        // AssemblyRoutineInstaller so that they both write at the
+        // same address (Bios Segment F000)
+        MemoryAsmWriter memoryAsmWriter = new(memory,
+            new SegmentedAddress(
+                configuration.ProvidedAsmHandlersSegment, 0),
+            callbackHandler);
+
         ExtendedMemoryManager? xms = null;
 
         DosTables dosTables = new();
 
         if (configuration.Xms) {
-            xms = new(memory, a20Gate, dosTables, callbackHandler, state, loggerService);
+            xms = new(memory, state, a20Gate, memoryAsmWriter, dosTables, loggerService);
         }
         if (configuration.Xms && loggerService.IsEnabled(
             LogEventLevel.Information)) {
@@ -383,14 +391,6 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulation loop created...");
         }
-
-        // memoryAsmWriter is common to InterruptInstaller and
-        // AssemblyRoutineInstaller so that they both write at the
-        // same address (Bios Segment F000)
-        MemoryAsmWriter memoryAsmWriter = new(memory,
-            new SegmentedAddress(
-                configuration.ProvidedAsmHandlersSegment, 0),
-            callbackHandler);
         InterruptInstaller interruptInstaller =
             new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
         AssemblyRoutineInstaller assemblyRoutineInstaller =

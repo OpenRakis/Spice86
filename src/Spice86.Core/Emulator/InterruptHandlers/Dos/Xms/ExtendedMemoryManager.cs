@@ -2,11 +2,9 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -38,12 +36,15 @@ using System.Linq;
 /// |            Conventional DOS Memory                    |
 /// +-------------------------------------------------------+   0K
 /// </code>
-/// This implementation provides XMS version 2.0 features accessed via INT 2Fh, AH=43h.
+/// This implementation provides XMS version 3.0 features accessed via INT 2Fh, AH=43h.
 /// See: <c>xms20.txt</c> for the full specification.
 /// In MS-DOS, this is HIMEM.SYS. In DOSBox, this is xms.cpp <br/>
 /// In MS-DOS, EMM386.EXE uses XMS for EMS storage. This is not the case here.
 /// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
+    public const ushort XmsVersion = 0x0300;
+    public const ushort XmsInternalVersion = 0x0301;
+
     private int _a20EnableCount;
 
     private readonly ILoggerService _loggerService;
@@ -56,7 +57,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// The segment of the XMS Dos Device Driver.
     /// </summary>
-    public const ushort DosDeviceSegment = 0xD000;
+    public const ushort DosDeviceSegment = MemoryMap.DeviceDriversSegment;
 
     /// <summary>
     /// The size of available XMS Memory, in kilobytes.
@@ -96,16 +97,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="a20Gate">The A20 gate controller.</param>
-    /// <param name="callbackHandler">Callback handler for XMS multiplex entry point.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExtendedMemoryManager(IMemory memory, A20Gate a20Gate, DosTables dosTables,
-        CallbackHandler callbackHandler, State state, ILoggerService loggerService) {
+    public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
+        MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
+        ILoggerService loggerService) {
         uint headerAddress = new SegmentedAddress(DosDeviceSegment, 0x0).Linear;
         Header = new DosDeviceHeader(memory,
             headerAddress) {
             Name = XmsIdentifier,
-            Attributes = DeviceAttributes.Ioctl,
             StrategyEntryPoint = 0,
             InterruptEntryPoint = 0
         };
@@ -116,7 +116,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables.GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
         CallbackAddress = hookableCodeAddress;
-        MemoryAsmWriter memoryAsmWriter = new(memory, hookableCodeAddress, callbackHandler);
+        SegmentedAddress savedAddress = memoryAsmWriter.CurrentAddress;
+        memoryAsmWriter.CurrentAddress = hookableCodeAddress;
         memoryAsmWriter.WriteJumpNear(0x3);
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
@@ -124,8 +125,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.RegisterAndWriteCallback(0x43, RunMultiplex);
         memoryAsmWriter.WriteIret();
         memoryAsmWriter.WriteFarRet();
+        memoryAsmWriter.CurrentAddress = savedAddress;
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
-        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize * 1024, false));
+        _xmsBlocksLinkedList.AddFirst(new XmsBlock(0, 0, XmsMemorySize * 1024, used: false));
         Name = XmsIdentifier;
     }
 
@@ -206,6 +208,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
                 if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _loggerService.Error("XMS function not recognized: {XmsSubFunctionNumber:X2}", operation);
                 }
+                //TODO: Check if this is correct behavior
+                _state.AX = 0x0;
+                _state.BH = 0xFF;
+                _state.BL = (byte)XmsErrorCodes.NotImplemented;
+                //base.SetCarryFlag(true, calledFromVm: true);
                 break;
         }
     }
@@ -225,8 +232,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <b>Errors:</b> None
     /// </remarks>
     public void GetVersionNumber() {
-        _state.AX = 0x0200; // XMS version 2.00
-        _state.BX = 0x0201; // Internal revision
+        _state.AX = XmsVersion; // XMS version 3.00
+        _state.BX = XmsInternalVersion;
         _state.DX = 0x0;      // HMA is not available.
     }
 
@@ -814,9 +821,18 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <inheritdoc/>
     public uint Size => XmsMemorySize * 1024;
 
+    /// <inheritdoc/>
     public uint DeviceNumber { get; set; }
+   
+    /// <inheritdoc/>
     public DosDeviceHeader Header { get; init; }
-    public ushort Information { get; }
+
+    /// <summary>
+    /// Not supported by HIMEM.SYS
+    /// </summary>
+    public ushort Information => 0x0;
+    
+    /// <inheritdoc/>
     public string Name { get; set; }
 
     /// <inheritdoc/>
@@ -836,17 +852,22 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
     /// <inheritdoc/>
     public byte GetStatus(bool inputFlag) {
-        throw new NotImplementedException();
+        //Not supported by HIMEM.SYS
+        return 0;
     }
 
     /// <inheritdoc/>
     public bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
-        throw new NotImplementedException();
+        //Not supported by HIMEM.SYS
+        returnCode = null;
+        return false;
     }
 
     /// <inheritdoc/>
     public bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode) {
-        throw new NotImplementedException();
+        //Not supported by HIMEM.SYS
+        returnCode = null;
+        return false;
     }
 
     /// <summary>
@@ -854,6 +875,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </summary>
     /// <param name="calledFromVm">Indicates if called from VM context.</param>
     public void CopyExtendedMemory(bool calledFromVm) {
-        throw new NotImplementedException();
+        throw new NotImplementedException("TODO");
     }
 }

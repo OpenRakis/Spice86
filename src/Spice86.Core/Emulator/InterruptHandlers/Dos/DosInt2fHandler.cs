@@ -69,11 +69,11 @@ public class DosInt2fHandler : InterruptHandler {
     public void XmsServices(bool calledFromVm) {
         switch (State.AL) {
             //Is XMS Driver installed
-            case 0:
+            case (byte)XmsInt2FFunctionsCodes.InstallationCheck:
                 State.AL = (byte)(_xms is null ? 0x0 : 0x80);
                 break;
             //Get XMS Control Function Address
-            case 0x10:
+            case (byte)XmsInt2FFunctionsCodes.GetCallbackAddress:
                 SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0,0);
                 State.ES = segmentedAddress.Segment;
                 State.BX = segmentedAddress.Offset;

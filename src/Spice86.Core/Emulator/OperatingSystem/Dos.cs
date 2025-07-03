@@ -193,14 +193,14 @@ public class Dos {
 
         OpenDefaultFileHandles(dosDevices);
 
+        if (configuration.Xms && xms is not null) {
+            Xms = xms;
+            AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
+        }
+
         if (configuration.Ems) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
             AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
-        }
-
-        if(configuration.Xms && xms is not null) {
-            Xms = xms;
-            AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
@@ -215,7 +215,7 @@ public class Dos {
     }
 
     private uint GetDefaultNewDeviceBaseAddress()
-        => new SegmentedAddress(MemoryMap.DeviceDriverSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
+        => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
     private VirtualFileBase[] AddDefaultDevices() {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
@@ -245,7 +245,7 @@ public class Dos {
     private void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         DosDeviceHeader header = device.Header;
         // Store the location of the header
-        segment ??= MemoryMap.DeviceDriverSegment;
+        segment ??= MemoryMap.DeviceDriversSegment;
         offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
         // Write the DOS device driver header to memory
         ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
