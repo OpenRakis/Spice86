@@ -225,17 +225,22 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
     
     public override byte ReadByte(ushort port) {
-        // Port 0x61: PC Speaker control port
-        // bit 0: Timer gate
-        // bit 1: Speaker data
-        // bits 2-7: Other system functions (unused here)
-        byte result = (byte)(
-            (_portB.Timer2Gating ? 0x01 : 0) | 
-            (_portB.SpeakerOutput ? 0x02 : 0) | 
-            0x3C // Unused bits are always 1
-        );
+        if (port == PcSpeakerPortNumber) {
+            // Port 0x61: PC Speaker control port
+            // bit 0: Timer gate
+            // bit 1: Speaker data
+            // bits 2-7: Other system functions (unused here)
+            byte result = (byte)(
+                (_portB.Timer2Gating ? 0x01 : 0) | 
+                (_portB.SpeakerOutput ? 0x02 : 0) | 
+                0x3C // Unused bits are always 1
+            );
+            
+            return result;
+        }
         
-        return result;
+        // Delegate non-speaker ports to the base implementation
+        return base.ReadByte(port);
     }
     
     public override void WriteByte(ushort port, byte value) {
