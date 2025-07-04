@@ -688,7 +688,7 @@ public class DosFileManager {
                         break;
                     }
                 case FileAccessMode.WriteOnly:
-                    randomAccessFile = File.Open(hostFileName, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+                    randomAccessFile = File.Open(hostFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
                     break;
                 case FileAccessMode.ReadWrite: {
                         string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
