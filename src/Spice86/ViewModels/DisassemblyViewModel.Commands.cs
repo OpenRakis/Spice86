@@ -110,7 +110,10 @@ public partial class DisassemblyViewModel {
     }
 
     [RelayCommand]
-    private void GoToFunction(FunctionInfo functionInfo) {
+    private void GoToFunction(FunctionInfo? functionInfo) {
+        if(functionInfo is null) {
+            return;
+        }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Go to function: {FunctionName} at address {FunctionAddress:X8}", functionInfo.Name, functionInfo.Address.Linear);
         }
