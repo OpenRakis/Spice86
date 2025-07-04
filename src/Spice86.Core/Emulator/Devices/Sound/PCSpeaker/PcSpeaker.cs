@@ -13,27 +13,30 @@ using System;
 /// <summary>
 /// Emulates the PC Speaker found in IBM compatible PCs.
 /// </summary>
-public sealed partial class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    private const int PcSpeakerPortNumber = 0x61;
-    private const int SampleRate = 48000;
-    private const int FramesPerBuffer = 512;
-    private const float PitTickRate = 1193182.0f;
-    private const float MsPerPitTick = 1000.0f / PitTickRate;
+public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
+    public const int PcSpeakerPortNumber = 0x61;
+    public const int SampleRate = 48000;
+    public const int FramesPerBuffer = 512;
+    public const float PitTickRate = 1193182.0f;
+    public const float MsPerPitTick = 1000.0f / PitTickRate;
     
-    // PC Speaker amplitude settings
-    private const float PositiveAmplitude = 0.5f;
-    private const float NegativeAmplitude = -0.5f;
-    private const float NeutralAmplitude = 0.0f;
-    
+    public const float PositiveAmplitude = 0.5f;
+    public const float NegativeAmplitude = -0.5f;
+    public const float NeutralAmplitude = 0.0f;
+
+    public const int HighPassCutoffHz = 100;  // Filter out DC and very low frequencies
+    public const int LowPassCutoffHz = 8000;  // Filter out high frequencies
+    public const double FilterQ = 0.7071;     // Standard Butterworth Q factor
+
     private readonly Pit8254Counter _pit8254Counter;
     private readonly SoundChannel _soundChannel;
     private readonly DeviceThread _deviceThread;
     private bool _disposed;
     
-    // Speaker state tracking
     private readonly PitState _pitState = new();
     private readonly PpiPortB _portB = new();
-    private int _prevPitMode = 3; // Default is square wave (mode 3)
+    // Default is square wave (mode 3)
+    private int _prevPitMode = (byte)PitMode.SquareWave;
     
     private readonly float[] _audioBuffer;
     
@@ -43,9 +46,6 @@ public sealed partial class PcSpeaker : DefaultIOPortHandler, IDisposable {
     
     private readonly LowPass _lowPassFilter = new();
     private readonly HighPass _highPassFilter = new();
-    private const int HighPassCutoffHz = 100;  // Filter out DC and very low frequencies
-    private const int LowPassCutoffHz = 8000;  // Filter out high frequencies
-    private const double FilterQ = 0.7071;     // Standard Butterworth Q factor
     
     /// <summary>
     /// Initializes a new instance of the <see cref="PcSpeaker"/> class.
