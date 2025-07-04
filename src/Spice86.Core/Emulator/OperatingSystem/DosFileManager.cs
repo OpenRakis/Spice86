@@ -693,9 +693,9 @@ public class DosFileManager {
                 case FileAccessMode.ReadWrite: {
                         string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
-                            randomAccessFile = File.Open(hostFileName, FileMode.Open ,FileAccess.ReadWrite, FileShare.ReadWrite);
+                            randomAccessFile = File.Open(hostFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
                         } else if (File.Exists(realFileName)) {
-                            randomAccessFile = File.Open(realFileName, FileMode.Open ,FileAccess.ReadWrite, FileShare.ReadWrite);
+                            randomAccessFile = File.Open(realFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
                         } else {
                             return FileNotFoundError(dosFileName);
                         }
