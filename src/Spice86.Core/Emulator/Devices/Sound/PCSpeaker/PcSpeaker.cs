@@ -14,16 +14,13 @@ using System;
 /// Emulates the PC Speaker found in IBM compatible PCs.
 /// </summary>
 public sealed partial class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    // IO port constants
     private const int PcSpeakerPortNumber = 0x61;
-    
-    // Audio constants
     private const int SampleRate = 48000;
     private const int FramesPerBuffer = 512;
     private const float PitTickRate = 1193182.0f;
     private const float MsPerPitTick = 1000.0f / PitTickRate;
     
-    // PC Speaker amplitude settings - carefully calibrated for DOSBox compatibility
+    // PC Speaker amplitude settings
     private const float PositiveAmplitude = 0.5f;
     private const float NegativeAmplitude = -0.5f;
     private const float NeutralAmplitude = 0.0f;
@@ -177,7 +174,6 @@ public sealed partial class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         float durationMs = MsPerPitTick * counter;
         
-        // Adjust the PIT state based on the mode and counter
         switch (mode) {
             case PitMode.SquareWave:
             case PitMode.SquareWaveAlias:
