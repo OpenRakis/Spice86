@@ -244,6 +244,11 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     }
     
     public override void WriteByte(ushort port, byte value) {
+        if (port != PcSpeakerPortNumber) {
+            base.WriteByte(port, value);
+            return;
+        }
+        
         _deviceThread.StartThreadIfNeeded();
         
         // Get previous state for edge detection
