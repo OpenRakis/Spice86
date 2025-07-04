@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 public sealed partial class PcSpeaker {
-    #region Support Types
-
     /// <summary>
     /// PIT operation modes
     /// </summary>
@@ -16,6 +14,4 @@ public sealed partial class PcSpeaker {
         SquareWaveAlias = 7,
         Inactive = 8
     }
-    
-    #endregion
 }
