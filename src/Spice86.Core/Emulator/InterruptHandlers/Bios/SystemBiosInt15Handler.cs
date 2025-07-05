@@ -17,7 +17,6 @@ using Spice86.Shared.Utils;
 /// A program uses this service to find out how much extended memory there is.
 /// </summary>
 public class SystemBiosInt15Handler : InterruptHandler {
-    private const int ExtendedMemoryBaseAddress = 0x100000;
     private readonly A20Gate _a20Gate;
     private readonly ExtendedMemoryManager? _extendedMemoryManager;
 
@@ -126,9 +125,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
         if (_a20Gate.IsEnabled) {
-            State.AX = (ushort)Math.Max(0, Memory.Length - ExtendedMemoryBaseAddress);
+            State.AX = (ushort)Math.Max(0, Memory.Length - A20Gate.StartOfHighMemoryArea);
         } else {
-            State.AX = (ushort)(A20Gate.EndOfHighMemoryArea - ExtendedMemoryBaseAddress);
+            State.AX = (ushort)(A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea);
         }
         SetCarryFlag(false, calledFromVm);
     }
