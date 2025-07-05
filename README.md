@@ -414,7 +414,7 @@ Betrayal at Krondor:
 
 ## Credits
 
-Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Those are: The DMA Controller, the PC Speaker, the SoundBlaster, the MT-32, and General MIDI.
+Some emulation code was adapted from the [Aeon emulator](https://github.com/gregdivis/Aeon) by @gregdivis. Those are: The DMA Controller, the SoundBlaster, the MT-32, and General MIDI.
 
 This project uses JetBrains Rider licenses, thanks to JetBrains' [Open Source Community Support](https://www.jetbrains.com/community/opensource/#support).
 

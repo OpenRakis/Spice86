@@ -1,221 +1,226 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 
+using Spice86.Core.Backend.Audio.IirFilters;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
-using System.Diagnostics;
+using System;
 
 /// <summary>
-/// Emulates a basic PC Speaker.
+/// Emulates the PC Speaker found in IBM compatible PCs.
 /// </summary>
 public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
-    private const int PcSpeakerPortNumber = 0x61;
+    public const int PcSpeakerPortNumber = 0x61;
+    public const int SampleRate = 48000;
+    public const int FramesPerBuffer = 512;
+    
+    public const float PositiveAmplitude = 0.5f;
+    public const float NegativeAmplitude = -0.5f;
+    public const float NeutralAmplitude = 0.0f;
 
-    private readonly SoundChannel _soundChannel;
+    public const int HighPassCutoffHz = 100;  // Filter out DC and very low frequencies
+    public const int LowPassCutoffHz = 8000;  // Filter out high frequencies
+    public const double FilterQ = 0.7071;     // Standard Butterworth Q factor
 
-    private readonly int _outputSampleRate = 48000;
-    private readonly int _ticksPerSample;
     private readonly Pit8254Counter _pit8254Counter;
-    private readonly Stopwatch _durationTimer = new();
-    private QueuedNote _currentNote;
-    private SpeakerControl _controlRegister = SpeakerControl.UseTimer;
-    private int _currentPeriod;
-
+    private readonly SoundChannel _soundChannel;
     private readonly DeviceThread _deviceThread;
-
     private bool _disposed;
     
-    private readonly byte[] _monoBuffer;
-    private readonly byte[] _stereoBuffer;
-
+    private readonly PpiPortB _portB = new();
+    
+    private readonly float[] _audioBuffer;
+    
+    // Audio cycle tracking
+    private float _cyclePosition = 0;
+    private float _cycleStep = 0;
+    
+    private readonly LowPass _lowPassFilter = new();
+    private readonly HighPass _highPassFilter = new();
+    
+    // Current amplitude state
+    private float _currentAmplitude = PositiveAmplitude;
+    
     /// <summary>
-    /// Initializes a new instance of <see cref="PcSpeaker"/>
+    /// Initializes a new instance of the <see cref="PcSpeaker"/> class.
     /// </summary>
-    /// <param name="softwareMixer">The software mixer for sound channels.</param>
-    /// <param name="pit8254Counter">PIT8254 counter backing up the PC speaker.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
-    /// <param name="pauseHandler">The handler for the emulation pause state.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public PcSpeaker(SoftwareMixer softwareMixer,
-        State state,
-        Pit8254Counter pit8254Counter,
-        IOPortDispatcher ioPortDispatcher,
-        IPauseHandler pauseHandler,
-        ILoggerService loggerService,
-        bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
-        _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
+    public PcSpeaker(
+        SoftwareMixer softwareMixer, State state, Pit8254Counter pit8254Counter,
+        IOPortDispatcher ioPortDispatcher, IPauseHandler pauseHandler,
+        ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
         _pit8254Counter = pit8254Counter;
-        pit8254Counter.SettingChangedEvent += (_, _) => OnTimerSettingChanged();
-        _ticksPerSample = (int)(Stopwatch.Frequency / (double)_outputSampleRate);
-        InitPortHandlers(ioPortDispatcher);
+        _audioBuffer = new float[FramesPerBuffer];
+        _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
+        _soundChannel.Volume = 100; // Full volume by default
+        _soundChannel.StereoSeparation = 0; // PC Speaker is mono
         
-        _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoopBody, pauseHandler, loggerService);
-        _monoBuffer = new byte[4096];
-        _stereoBuffer = new byte[_monoBuffer.Length * 2];
+        // Initialize filters for authentic PC speaker sound
+        _highPassFilter.Setup(SampleRate, HighPassCutoffHz, FilterQ);
+        _lowPassFilter.Setup(SampleRate, LowPassCutoffHz, FilterQ);
+        
+        ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
+        
+        // Subscribe to PIT events
+        _pit8254Counter.SettingChangedEvent += OnPitSettingChanged;
+        _pit8254Counter.GateStateChanged += OnPitGateChanged;
+        
+        // Set initial amplitude based on PIT state
+        UpdateCurrentAmplitude();
+        
+        // Get initial cycle step from PIT
+        _cycleStep = _pit8254Counter.CalculateCycleStep(SampleRate);
+        
+        _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
-
-    /// <summary>
-    /// Gets the current frequency in Hz.
-    /// </summary>
-    private double Frequency => _pit8254Counter.Frequency;
-
-    /// <summary>
-    /// Gets the current period in samples.
-    /// </summary>
-    private int PeriodInSamples => (int)(_outputSampleRate / Frequency);
-
-    /// <summary>
-    /// Fills a buffer with silence.
-    /// </summary>
-    /// <param name="buffer">Buffer to fill.</param>
-    private static void GenerateSilence(Span<byte> buffer) => buffer.Fill(127);
-
-    /// <summary>
-    /// Invoked when the speaker has been turned off.
-    /// </summary>
-    private void SpeakerDisabled() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PC Speaker disabled");
-        }
-        EnqueueCurrentNote();
-        _currentPeriod = 0;
-        _deviceThread.Pause();
+    
+    private void OnPitSettingChanged(object? sender, EventArgs e) {
+        // Update cycle parameters for square wave generation
+        _cycleStep = _pit8254Counter.CalculateCycleStep(SampleRate);
+        
+        // Update amplitude for non-square wave modes
+        UpdateCurrentAmplitude();
     }
-
+    
+    private void OnPitGateChanged(object? sender, bool enabled) {
+        // Update amplitude when gate state changes
+        UpdateCurrentAmplitude();
+    }
+    
     /// <summary>
-    /// Invoked when the frequency has changed.
+    /// Updates the current amplitude based on PIT output state
     /// </summary>
-    private void OnTimerSettingChanged() {
-        if (_currentPeriod == PeriodInSamples) {
+    private void UpdateCurrentAmplitude() {
+        // Map PIT output state to amplitude
+        _currentAmplitude = _pit8254Counter.OutputState == Pit8254Counter.OutputStatus.High
+            ? PositiveAmplitude
+            : NegativeAmplitude;
+    }
+    
+    private void PlaybackLoop() {
+        Array.Clear(_audioBuffer, 0, _audioBuffer.Length);
+        GenerateAudio();
+        ApplyFiltersAndRender();
+    }
+    
+    private void GenerateAudio() {
+        if (!_portB.SpeakerOutput || !_portB.Timer2Gating || !_pit8254Counter.IsSquareWaveActive) {
+            // If speaker is disabled or gate is off, generate silence
+            Array.Fill(_audioBuffer, 0.0f);
             return;
         }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PC Speaker frequency changed to {Frequency}", _pit8254Counter.Frequency);
+        
+        if (_pit8254Counter.CurrentPitMode == Pit8254Counter.PitMode.SquareWave || 
+            _pit8254Counter.CurrentPitMode == Pit8254Counter.PitMode.SquareWaveAlias) {
+            GenerateSquareWave();
+        } else {
+            // For all other modes or inactive state, just use the current amplitude
+            Array.Fill(_audioBuffer, _currentAmplitude);
         }
-        EnqueueCurrentNote();
-
-        _durationTimer.Reset();
-        _durationTimer.Start();
-        _currentPeriod = PeriodInSamples;
-        _deviceThread.Resume();
+    }
+    
+    private void GenerateSquareWave() {
+        // Generate square wave
+        for (int i = 0; i < _audioBuffer.Length; i++) {
+            // Advance cycle position
+            _cyclePosition = (_cyclePosition + _cycleStep) % 1.0f;
+            
+            // Square wave: positive for first half, negative for second half
+            _audioBuffer[i] = _cyclePosition < 0.5f ? PositiveAmplitude : NegativeAmplitude;
+        }
+    }
+    
+    private void ApplyFiltersAndRender() {
+        // Apply high-pass filter to remove DC offset
+        for (int i = 0; i < _audioBuffer.Length; i++) {
+            _audioBuffer[i] = (float)_highPassFilter.Filter(_audioBuffer[i]);
+        }
+        
+        // Apply low-pass filter to smooth the waveform
+        for (int i = 0; i < _audioBuffer.Length; i++) {
+            _audioBuffer[i] = (float)_lowPassFilter.Filter(_audioBuffer[i]);
+        }
+        _soundChannel.Render(_audioBuffer);
     }
 
     /// <summary>
-    /// Enqueues the current note.
+    /// Reads a byte from the specified I/O port.
     /// </summary>
-    private void EnqueueCurrentNote() {
-        if (!_durationTimer.IsRunning || _currentPeriod == 0) {
-            return;
-        }
-        _durationTimer.Stop();
-
-        int periodDuration = _ticksPerSample * _currentPeriod;
-        int repetitions = (int)(_durationTimer.ElapsedTicks / periodDuration);
-        _currentNote = new QueuedNote(_currentPeriod, repetitions);
-    }
-
-    /// <summary>
-    /// Fills a buffer with a square wave of the current frequency.
-    /// </summary>
-    /// <param name="buffer">Buffer to fill.</param>
-    /// <param name="period">The number of samples in the period.</param>
-    /// <returns>Number of bytes written to the buffer.</returns>
-    private int GenerateSquareWave(Span<byte> buffer, int period) {
-        if (period < 2) {
-            buffer[0] = 127;
-            return 1;
-        }
-
-        int halfPeriod = period / 2;
-        buffer[..halfPeriod].Fill(96);
-        buffer.Slice(halfPeriod, halfPeriod).Fill(120);
-
-        return period;
-    }
-
-    /// <summary>
-    /// Body of the loop for PC speaker sound generation
-    /// </summary>
-    public void PlaybackLoopBody() {
-        if (!IsEnabled(_controlRegister)) {
-            return;
-        }
-        int samples = GenerateSquareWave(_monoBuffer, _currentNote.Period);
-        int periods = _currentNote.PeriodCount;
-
-        // While the original PC speaker was mono, the emulator output is stereo.
-        // So we have to duplicate the signal.
-        ChannelAdapter.MonoToStereo(_monoBuffer.AsSpan(0, samples), _stereoBuffer.AsSpan(0, samples * 2));
-        samples *= 2;
-
-        while (periods > 0) {
-            _soundChannel.Render(_stereoBuffer.AsSpan(0, samples));
-            periods--;
-        }
-
-        GenerateSilence(_monoBuffer);
-    }
-
-    /// <inheritdoc />
+    /// <remarks>When reading from port <see cref="PcSpeakerPortNumber"/>, the returned byte contains the
+    /// following bit fields: <list type="bullet"> <item><description>Bit 0: Timer gate state (1 if enabled, 0 if
+    /// disabled).</description></item> <item><description>Bit 1: Speaker output state (1 if active, 0 if
+    /// inactive).</description></item> <item><description>Bits 2-7: Reserved and always set to 1.</description></item>
+    /// </list> For other ports, the behavior is delegated to the base implementation.</remarks>
+    /// <param name="port">The I/O port address to read from.</param>
+    /// <returns>A byte representing the state of the specified port. For port <see cref="PcSpeakerPortNumber"/>,  the returned
+    /// value encodes the PC Speaker control state, including timer gating and speaker output. For other ports, the
+    /// result is determined by the base implementation.</returns>
     public override byte ReadByte(ushort port) {
         if (port != PcSpeakerPortNumber) {
             return base.ReadByte(port);
         }
+        // Port 0x61: PC Speaker control port
+        // bit 0: Timer gate
+        // bit 1: Speaker data
+        // bits 2-7: Other system functions (unused here)
+        byte result = (byte)(
+            (_portB.Timer2Gating ? 0x01 : 0) |
+            (_portB.SpeakerOutput ? 0x02 : 0) |
+            0b111100 // Unused bits are always 1
+        );
 
-        byte value = (byte)_controlRegister;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PC Speaker get value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
-        }
-
-        return value;
+        return result;
     }
 
-    private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
-        ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
-    }
-
-    /// <inheritdoc />
+    /// <summary>
+    /// Writes a byte to the specified port, updating the state of the PC speaker if the port matches the PC speaker
+    /// port number.
+    /// </summary>
+    /// <remarks>If the specified port is not the PC speaker port number, the method delegates the operation
+    /// to the base implementation. For the PC speaker port, this method updates the speaker's state, including its
+    /// timer gating and output settings. Changes to the timer gate state are detected and propagated to the associated
+    /// timer via <see cref="Pit8254Counter.SetGateState(bool)"/> .</remarks>
+    /// <param name="port">The port number to which the byte is written. Must be a valid port number.</param>
+    /// <param name="value">The byte value to write to the port. The value may affect the PC speaker state if the port matches the PC
+    /// speaker port number.</param>
     public override void WriteByte(ushort port, byte value) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("PC Speaker set value {PCSpeakerValue}", ConvertUtils.ToHex8(value));
-        }
-
-        if (port == PcSpeakerPortNumber) {
-            SpeakerControl newValue = (SpeakerControl)value;
-            if (IsEnabled(_controlRegister) && !IsEnabled(newValue)) {
-                // Enabled -> Disabled => stop it
-                SpeakerDisabled();
-            } else if (!IsEnabled(_controlRegister) && IsEnabled(newValue)) {
-                // Disabled -> Enabled => start it if not yet started
-                _deviceThread.StartThreadIfNeeded();
-            }
-            _controlRegister = newValue;
-        } else {
+        if (port != PcSpeakerPortNumber) {
             base.WriteByte(port, value);
+            return;
+        }
+        
+        _deviceThread.StartThreadIfNeeded();
+        
+        // Get previous state for edge detection
+        bool oldTimer2Gating = _portB.Timer2Gating;
+        
+        // Update port B state
+        _portB.Timer2Gating = (value & 0x01) != 0;
+        _portB.SpeakerOutput = (value & 0x02) != 0;
+        
+        // Detect changes to the timer gate
+        if (oldTimer2Gating != _portB.Timer2Gating) {
+            _pit8254Counter.SetGateState(_portB.Timer2Gating);
         }
     }
-
-    private bool IsEnabled(SpeakerControl registerValue) {
-        return (registerValue & SpeakerControl.SpeakerOn) != 0 && (registerValue & SpeakerControl.UseTimer) != 0;
-    }
-
-    /// <inheritdoc />
+    
+    /// <summary>
+    /// Disposes resources used by this instance.
+    /// </summary>
     public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
     }
-
+    
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
                 _deviceThread.Dispose();
+                _pit8254Counter.SettingChangedEvent -= OnPitSettingChanged;
+                _pit8254Counter.GateStateChanged -= OnPitGateChanged;
             }
             _disposed = true;
         }
