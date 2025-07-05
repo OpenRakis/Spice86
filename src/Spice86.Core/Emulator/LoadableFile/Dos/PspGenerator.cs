@@ -25,7 +25,8 @@ public class PspGenerator {
     /// <param name="environmentVariables">The master environment block from the DOS kernel.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="dosFileManager">The DOS file manager.</param>
-    public PspGenerator(IMemory memory, EnvironmentVariables environmentVariables, DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
+    public PspGenerator(IMemory memory, EnvironmentVariables environmentVariables,
+        DosMemoryManager dosMemoryManager, DosFileManager dosFileManager) {
         _memory = memory;
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
@@ -37,7 +38,9 @@ public class PspGenerator {
     /// </summary>
     /// <param name="pspSegment">The segment address at which to generate the PSP.</param>
     /// <param name="arguments">The command-line arguments to pass to the program.</param>
-    public void GeneratePsp(ushort pspSegment, string? arguments) {
+    /// <param name="dosFileSpec">An ASCIIZ string of the filespec (including the drive, path, and extension) <br/>
+    /// which was used by DOS INT21H 0x4B (LOAD AND/OR EXEC) to load and execute the program</param>
+    public void GeneratePsp(ushort pspSegment, string? arguments, string dosFileSpec) {
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
 
         // Set the PSP's first 2 bytes to INT 20h.
@@ -51,7 +54,7 @@ public class PspGenerator {
         _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
 
         // Copy the DOS env vars into the PSP.
-        _memory.LoadData(pspAddress + ENVIRONMENT_SEGMENT_OFFSET, _environmentBlockGenerator.BuildEnvironmentBlock());
+        _memory.LoadData(pspAddress + ENVIRONMENT_SEGMENT_OFFSET, _environmentBlockGenerator.BuildEnvironmentBlock(dosFileSpec));
 
         // Initialize the memory manager with the PSP segment and the last free segment value.
         _dosMemoryManager.Init(pspSegment, lastFreeSegment);

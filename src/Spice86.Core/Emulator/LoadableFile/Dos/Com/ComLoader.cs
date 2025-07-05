@@ -28,7 +28,10 @@ public class ComLoader : DosFileLoader {
     /// <param name="dosFileManager">The DOS file manager.</param>
     /// <param name="dosMemoryManager">The DOS memory manager.</param>
     /// <param name="startSegment">The starting segment of the program.</param>
-    public ComLoader(IMemory memory, State state, ILoggerService loggerService, EnvironmentVariables environmentVariables, DosFileManager dosFileManager, DosMemoryManager dosMemoryManager, ushort startSegment) : base(memory, state, loggerService) {
+    public ComLoader(IMemory memory, State state, ILoggerService loggerService,
+        EnvironmentVariables environmentVariables, DosFileManager dosFileManager,
+        DosMemoryManager dosMemoryManager, ushort startSegment)
+        : base(memory, state, loggerService) {
         _startSegment = startSegment;
         _environmentVariables = environmentVariables;
         _dosFileManager = dosFileManager;
@@ -42,8 +45,7 @@ public class ComLoader : DosFileLoader {
     /// <param name="file">The file path of the .COM executable file to load.</param>
     /// <param name="arguments">The arguments to pass to the program.</param>
     /// <returns>The bytes of the loaded .COM executable file.</returns>
-    public override byte[] LoadFile(string file, string? arguments) {
-        new PspGenerator(_memory, _environmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(_startSegment, arguments);
+    internal override (ushort CodeSegment, byte[] FileContent) LoadFile(string file, string? arguments) {
         byte[] com = ReadFile(file);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_startSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
@@ -53,6 +55,6 @@ public class ComLoader : DosFileLoader {
         _state.ES = _startSegment;
         SetEntryPoint(_startSegment, ComOffset);
         _state.InterruptFlag = true;
-        return com;
+        return (_startSegment, com);
     }
 }
