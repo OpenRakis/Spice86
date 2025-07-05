@@ -1,0 +1,31 @@
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+
+public enum XmsErrorCodes : byte {
+    Ok = 0x00,
+    NotImplemented = 0x80,
+    VDiskDetected = 0x81,
+    A20Error = 0x82,
+    GeneralDriverError = 0x8e,
+    HmaDoesNotExist = 0x90,
+    HmaInUse = 0x91,
+    HmaNotBigEnough = 0x92, 
+    HmaNotAllocated = 0x93,
+    A20StillEnabled = 0x94,
+    XmsOutOfSpace = 0xA0,
+    XmsOutOfHandles = 0xA1,
+    XmsInvalidHandle = 0xA2,
+    XmsInvalidSrcHandle = 0xA3,
+    XmsInvalidSrcOffset = 0xA4,
+    XmsInvalidDestHandle = 0xA5,
+    XmsInvalidDestOffset = 0xA6,
+    XmsInvalidLength = 0xA7,
+    XmsInvalidOverlap = 0xA8,
+    XmsParityError = 0xA9,
+    XmsBlockNotLocked = 0xAA,
+    XmsBlockLocked = 0xAB,
+    XmsLockCountOverflow = 0xAC,
+    XmsLockFailed = 0xAD,
+    UmbOnlySmallerBlock = 0xB0,
+    UmbNoBlocksAvailable = 0xB1,
+    UmbInvalidSegment = 0xB2
+}
