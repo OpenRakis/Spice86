@@ -76,11 +76,12 @@ public class PspGenerator {
         // Set the command line size.
         res[0] = (byte)correctLengthArguments.Length;
 
+        var argumentsBytes = Encoding.UTF8.GetBytes(correctLengthArguments);
+
         // Copy the actual characters.
         int index = 0;
         for (; index < correctLengthArguments.Length; index++) {
-            char str = correctLengthArguments[index];
-            res[index + 1] = Encoding.ASCII.GetBytes(str.ToString())[0];
+            res[index + 1] = argumentsBytes[index];
         }
 
         res[index + 1] = 0x0D; // Carriage return.
