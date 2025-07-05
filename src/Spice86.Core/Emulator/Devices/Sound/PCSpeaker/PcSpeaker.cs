@@ -69,30 +69,14 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         // Subscribe to PIT events
         _pit8254Counter.SettingChangedEvent += OnPitSettingChanged;
-        _pit8254Counter.GateStateChanged += OnPitGateChanged;
         
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
     
     private void OnPitSettingChanged(object? sender, EventArgs e) {
-        // Only respond to changes in channel 2 (PC Speaker)
-        if (_pit8254Counter.Index != 2) {
-            return;
-        }
-        
-        // Update cycle generation parameters based on PIT counter value
         UpdateCycleParameters();
     }
-    
-    private void OnPitGateChanged(object? sender, bool enabled) {
-        // Only respond to changes in channel 2 (PC Speaker)
-        if (_pit8254Counter.Index != 2) {
-            return;
-        }
-        
-        // No action needed here - the gate state is checked in GenerateAudio
-    }
-    
+ 
     private void UpdateCycleParameters() {
         // Calculate frequency from PIT counter value
         float counterMs = MsPerPitTick * _pit8254Counter.ReloadValue;
@@ -227,7 +211,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             if (disposing) {
                 _deviceThread.Dispose();
                 _pit8254Counter.SettingChangedEvent -= OnPitSettingChanged;
-                _pit8254Counter.GateStateChanged -= OnPitGateChanged;
             }
             _disposed = true;
         }
