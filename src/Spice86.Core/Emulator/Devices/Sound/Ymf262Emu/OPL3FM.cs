@@ -16,7 +16,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private const byte Timer2Mask = 0xA0;
 
     private readonly SoundChannel _soundChannel;
-    private readonly FmSynthesizer? _synth;
+    private readonly FmSynthesizer _synth;
     private int _currentAddress;
     private readonly DeviceThread _deviceThread;
     private byte _statusByte;
@@ -141,7 +141,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     }
 
     private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
-        _synth?.GetData(buffer);
+        _synth.GetData(buffer);
         ChannelAdapter.MonoToStereo(buffer, playBuffer);
     }
 }
