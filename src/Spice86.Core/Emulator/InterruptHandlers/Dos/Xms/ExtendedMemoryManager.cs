@@ -130,6 +130,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.WriteIret();
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
+        //XMS driver takes ownership of the HMA
+        memory.RegisterMapping(A20Gate.StartOfHighMemoryArea,
+            A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea, this);
+        //Add XMS memory
         memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
         Name = XmsIdentifier;
 
@@ -320,7 +324,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public void RequestHighMemoryArea() {
         // HMA is not available and in use by DOS
         _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
+        _state.BL = (byte)XmsErrorCodes.HmaInUse;
     }
 
     /// <summary>
@@ -341,7 +345,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public void ReleaseHighMemoryArea() {
         // HMA is not available and in use by DOS
         _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
+        _state.BL = (byte)XmsErrorCodes.HmaNotAllocated;
     }
 
     /// <summary>
@@ -846,7 +850,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.AX = 1;
         } else {
             // Try to grow using next free block
-            var node = _xmsBlocksLinkedList.Find(block);
+            LinkedListNode<XmsBlock>? node = _xmsBlocksLinkedList.Find(block);
             if (node?.Next != null && node.Next.Value.IsFree) {
                 uint combined = block.Length + node.Next.Value.Length;
                 if (combined >= newSize) {
@@ -1192,7 +1196,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.AX = 1;
         } else {
             // Try to grow using next free block
-            var node = _xmsBlocksLinkedList.Find(block);
+            LinkedListNode<XmsBlock>? node = _xmsBlocksLinkedList.Find(block);
             if (node?.Next != null && node.Next.Value.IsFree) {
                 uint combined = block.Length + node.Next.Value.Length;
                 if (combined >= newSize) {
