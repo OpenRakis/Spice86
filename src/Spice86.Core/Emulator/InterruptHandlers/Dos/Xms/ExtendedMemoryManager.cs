@@ -305,11 +305,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.AX = result.PrimaryValue;
             _state.BX = result.SecondaryValue;
             _state.DX = result.TertiaryValue;
-            _state.BL = 0; // Clear BL error code on success (crucial fix)
+            _state.BL = 0;
         } else if (result.Success) {
             // Standard successful result
-            _state.AX = 1;  // XMS API function success code
-            _state.BL = 0;  // No error code (crucial fix)
+            _state.BL = 0;
 
             // Apply any additional return values based on function
             switch (operation) {
