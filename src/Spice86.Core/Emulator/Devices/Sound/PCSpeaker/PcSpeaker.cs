@@ -17,8 +17,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     public const int PcSpeakerPortNumber = 0x61;
     public const int SampleRate = 48000;
     public const int FramesPerBuffer = 512;
-    public const float PitTickRate = 1193182.0f;
-    public const float MsPerPitTick = 1000.0f / PitTickRate;
     
     public const float PositiveAmplitude = 0.5f;
     public const float NegativeAmplitude = -0.5f;
@@ -74,12 +72,15 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         // Set initial amplitude based on PIT state
         UpdateCurrentAmplitude();
         
+        // Get initial cycle step from PIT
+        _cycleStep = _pit8254Counter.CalculateCycleStep(SampleRate);
+        
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
     
     private void OnPitSettingChanged(object? sender, EventArgs e) {
         // Update cycle parameters for square wave generation
-        UpdateCycleParameters();
+        _cycleStep = _pit8254Counter.CalculateCycleStep(SampleRate);
         
         // Update amplitude for non-square wave modes
         UpdateCurrentAmplitude();
@@ -98,18 +99,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         _currentAmplitude = _pit8254Counter.OutputState == Pit8254Counter.OutputStatus.High
             ? PositiveAmplitude
             : NegativeAmplitude;
-    }
- 
-    private void UpdateCycleParameters() {
-        // Calculate frequency from PIT counter value
-        float counterMs = MsPerPitTick * _pit8254Counter.ReloadValue;
-        if (counterMs <= 0) counterMs = 1.0f; // Avoid division by zero
-        
-        float cycleLength = (SampleRate * counterMs) / 1000.0f;
-        if (cycleLength <= 2) cycleLength = 2; // Minimum cycle length
-        
-        // Calculate step per sample
-        _cycleStep = 1.0f / cycleLength;
     }
     
     private void PlaybackLoop() {
@@ -157,7 +146,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         }
         _soundChannel.Render(_audioBuffer);
     }
-    
+
     /// <summary>
     /// Reads a byte from the specified I/O port.
     /// </summary>
@@ -217,9 +206,6 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         if (oldTimer2Gating != _portB.Timer2Gating) {
             _pit8254Counter.SetGateState(_portB.Timer2Gating);
         }
-        
-        // Update the cycle parameters in case they've changed
-        UpdateCycleParameters();
     }
     
     /// <summary>

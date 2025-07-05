@@ -13,6 +13,11 @@ public class Pit8254Counter {
     /// Equals to 1.193182 MHz
     /// </summary>
     public const long HardwareFrequency = 1193182;
+    /// <summary>
+    /// Milliseconds per PIT tick
+    /// </summary>
+    public const float MsPerPitTick = 1000.0f / HardwareFrequency;
+
     private readonly ILoggerService _loggerService;
 
     private bool _latchMode = false;
@@ -131,7 +136,32 @@ public class Pit8254Counter {
             OnReloadValueWrite();
         }
     }
-
+    
+    /// <summary>
+    /// Gets the period in milliseconds based on the reload value
+    /// </summary>
+    public float PeriodMs => MsPerPitTick * (ReloadValue == 0 ? 0x10000 : ReloadValue);
+    
+    /// <summary>
+    /// Calculates the cycle length for audio generation at the given sample rate
+    /// </summary>
+    /// <param name="sampleRate">Sample rate in Hz</param>
+    /// <returns>The cycle length in samples</returns>
+    public float CalculateCycleLength(int sampleRate) {
+        float counterMs = PeriodMs;
+        float cycleLength = (sampleRate * counterMs) / 1000.0f;
+        return cycleLength <= 2 ? 2 : cycleLength; // Minimum cycle length
+    }
+    
+    /// <summary>
+    /// Calculates the cycle step for each sample based on the sample rate
+    /// </summary>
+    /// <param name="sampleRate">Sample rate in Hz</param>
+    /// <returns>The cycle step value</returns>
+    public float CalculateCycleStep(int sampleRate) {
+        return 1.0f / CalculateCycleLength(sampleRate);
+    }
+    
     /// <summary>
     /// Access the value of the counter using the current mode.
     /// </summary>
