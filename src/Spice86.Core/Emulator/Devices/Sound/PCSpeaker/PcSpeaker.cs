@@ -33,10 +33,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private readonly DeviceThread _deviceThread;
     private bool _disposed;
     
-    private readonly PitState _pitState = new();
     private readonly PpiPortB _portB = new();
-    // Default is square wave (mode 3)
-    private int _prevPitMode = (byte)PitMode.SquareWave;
     
     private readonly float[] _audioBuffer;
     
@@ -47,18 +44,17 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
     private readonly LowPass _lowPassFilter = new();
     private readonly HighPass _highPassFilter = new();
     
+    // Current amplitude state
+    private float _currentAmplitude = PositiveAmplitude;
+    
     /// <summary>
     /// Initializes a new instance of the <see cref="PcSpeaker"/> class.
     /// </summary>
     public PcSpeaker(
-        SoftwareMixer softwareMixer,
-        State state,
-        Pit8254Counter pit8254Counter,
-        IOPortDispatcher ioPortDispatcher,
-        IPauseHandler pauseHandler,
-        ILoggerService loggerService,
-        bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
-        
+        SoftwareMixer softwareMixer, State state, Pit8254Counter pit8254Counter,
+        IOPortDispatcher ioPortDispatcher, IPauseHandler pauseHandler,
+        ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
         _pit8254Counter = pit8254Counter;
         _audioBuffer = new float[FramesPerBuffer];
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker));
@@ -71,7 +67,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
         
+        // Subscribe to PIT events
         _pit8254Counter.SettingChangedEvent += OnPitSettingChanged;
+        _pit8254Counter.GateStateChanged += OnPitGateChanged;
         
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
@@ -82,36 +80,20 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             return;
         }
         
-        if (_prevPitMode != _pit8254Counter.Mode) {
-            SetPITControl((PitMode)_pit8254Counter.Mode);
-            _prevPitMode = _pit8254Counter.Mode;
-        }
-        
-        SetCounter(_pit8254Counter.ReloadValue, _pit8254Counter.Mode);
+        // Update cycle generation parameters based on PIT counter value
+        UpdateCycleParameters();
     }
     
-    private void PlaybackLoop() {
-        Array.Clear(_audioBuffer, 0, _audioBuffer.Length);
-        GenerateAudio();
-        ApplyFiltersAndRender();
-    }
-    
-    private void GenerateAudio() {
-        if (!_portB.SpeakerOutput || !_portB.Timer2Gating || !_pitState.Mode3Counting) {
-            // If speaker is disabled or gate is off, generate silence
-            Array.Fill(_audioBuffer, 0.0f);
+    private void OnPitGateChanged(object? sender, bool enabled) {
+        // Only respond to changes in channel 2 (PC Speaker)
+        if (_pit8254Counter.Index != 2) {
             return;
         }
         
-        if (_pitState.Mode == PitMode.SquareWave || _pitState.Mode == PitMode.SquareWaveAlias) {
-            GenerateSquareWave();
-        } else {
-            // For all other modes or inactive state, just use the current amplitude
-            Array.Fill(_audioBuffer, _pitState.Amplitude);
-        }
+        // No action needed here - the gate state is checked in GenerateAudio
     }
     
-    private void GenerateSquareWave() {
+    private void UpdateCycleParameters() {
         // Calculate frequency from PIT counter value
         float counterMs = MsPerPitTick * _pit8254Counter.ReloadValue;
         if (counterMs <= 0) counterMs = 1.0f; // Avoid division by zero
@@ -121,7 +103,31 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         // Calculate step per sample
         _cycleStep = 1.0f / cycleLength;
+    }
+    
+    private void PlaybackLoop() {
+        Array.Clear(_audioBuffer, 0, _audioBuffer.Length);
+        GenerateAudio();
+        ApplyFiltersAndRender();
+    }
+    
+    private void GenerateAudio() {
+        if (!_portB.SpeakerOutput || !_portB.Timer2Gating || !_pit8254Counter.IsSquareWaveActive) {
+            // If speaker is disabled or gate is off, generate silence
+            Array.Fill(_audioBuffer, 0.0f);
+            return;
+        }
         
+        if (_pit8254Counter.CurrentPitMode == Pit8254Counter.PitMode.SquareWave || 
+            _pit8254Counter.CurrentPitMode == Pit8254Counter.PitMode.SquareWaveAlias) {
+            GenerateSquareWave();
+        } else {
+            // For all other modes or inactive state, just use the current amplitude
+            Array.Fill(_audioBuffer, _currentAmplitude);
+        }
+    }
+    
+    private void GenerateSquareWave() {
         // Generate square wave
         for (int i = 0; i < _audioBuffer.Length; i++) {
             // Advance cycle position
@@ -145,104 +151,46 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         _soundChannel.Render(_audioBuffer);
     }
     
-    private void SetPITControl(PitMode mode) {
-        _pitState.Mode = mode;
-        
-        switch (mode) {
-            case PitMode.SquareWave:
-            case PitMode.SquareWaveAlias:
-                _pitState.Amplitude = PositiveAmplitude;
-                // Start with mode3 not counting until triggered
-                _pitState.Mode3Counting = false;
-                break;
-            
-            case PitMode.OneShot:
-                _pitState.Amplitude = PositiveAmplitude;
-                _pitState.Mode1WaitingForCounter = true;
-                _pitState.Mode1WaitingForTrigger = false;
-                break;
-            
-            default:
-                // For other modes, start with neutral amplitude
-                _pitState.Amplitude = NeutralAmplitude;
-                break;
-        }
-    }
-    
-    private void SetCounter(int counter, int pitModeValue) {
-        PitMode mode = (PitMode)pitModeValue;
-        
-        float durationMs = MsPerPitTick * counter;
-        
-        switch (mode) {
-            case PitMode.SquareWave:
-            case PitMode.SquareWaveAlias:
-                // Square wave mode - most common for PC speaker music
-                if (counter < 2) {
-                    // Too low for meaningful sound, disable counting
-                    _pitState.Mode3Counting = false;
-                    _pitState.Amplitude = PositiveAmplitude;
-                    return;
-                }
-                
-                // Update counter values
-                _pitState.MaxMs = durationMs;
-                _pitState.HalfMs = durationMs / 2;
-                
-                // Start counting if gate is enabled
-                if (_portB.Timer2Gating) {
-                    _pitState.Mode3Counting = true;
-                }
-                break;
-                
-            case PitMode.OneShot:
-                _pitState.Mode1PendingMax = durationMs;
-                if (_pitState.Mode1WaitingForCounter) {
-                    _pitState.Mode1WaitingForCounter = false;
-                    _pitState.Mode1WaitingForTrigger = true;
-                }
-                break;
-                
-            case PitMode.RateGenerator:
-            case PitMode.RateGeneratorAlias:
-                _pitState.MaxMs = durationMs;
-                _pitState.HalfMs = MsPerPitTick; // Fixed half cycle time for rate generator
-                break;
-                
-            case PitMode.SoftwareStrobe:
-                _pitState.Amplitude = PositiveAmplitude;
-                _pitState.MaxMs = durationMs;
-                break;
-                
-            default:
-                // For other modes, just update the duration
-                _pitState.MaxMs = durationMs;
-                break;
-        }
-        
-        // Update the mode
-        _pitState.Mode = mode;
-    }
-    
+    /// <summary>
+    /// Reads a byte from the specified I/O port.
+    /// </summary>
+    /// <remarks>When reading from port <see cref="PcSpeakerPortNumber"/>, the returned byte contains the
+    /// following bit fields: <list type="bullet"> <item><description>Bit 0: Timer gate state (1 if enabled, 0 if
+    /// disabled).</description></item> <item><description>Bit 1: Speaker output state (1 if active, 0 if
+    /// inactive).</description></item> <item><description>Bits 2-7: Reserved and always set to 1.</description></item>
+    /// </list> For other ports, the behavior is delegated to the base implementation.</remarks>
+    /// <param name="port">The I/O port address to read from.</param>
+    /// <returns>A byte representing the state of the specified port. For port <see cref="PcSpeakerPortNumber"/>,  the returned
+    /// value encodes the PC Speaker control state, including timer gating and speaker output. For other ports, the
+    /// result is determined by the base implementation.</returns>
     public override byte ReadByte(ushort port) {
-        if (port == PcSpeakerPortNumber) {
-            // Port 0x61: PC Speaker control port
-            // bit 0: Timer gate
-            // bit 1: Speaker data
-            // bits 2-7: Other system functions (unused here)
-            byte result = (byte)(
-                (_portB.Timer2Gating ? 0x01 : 0) | 
-                (_portB.SpeakerOutput ? 0x02 : 0) | 
-                0x3C // Unused bits are always 1
-            );
-            
-            return result;
+        if (port != PcSpeakerPortNumber) {
+            return base.ReadByte(port);
         }
-        
-        // Delegate non-speaker ports to the base implementation
-        return base.ReadByte(port);
+        // Port 0x61: PC Speaker control port
+        // bit 0: Timer gate
+        // bit 1: Speaker data
+        // bits 2-7: Other system functions (unused here)
+        byte result = (byte)(
+            (_portB.Timer2Gating ? 0x01 : 0) |
+            (_portB.SpeakerOutput ? 0x02 : 0) |
+            0b111100 // Unused bits are always 1
+        );
+
+        return result;
     }
-    
+
+    /// <summary>
+    /// Writes a byte to the specified port, updating the state of the PC speaker if the port matches the PC speaker
+    /// port number.
+    /// </summary>
+    /// <remarks>If the specified port is not the PC speaker port number, the method delegates the operation
+    /// to the base implementation. For the PC speaker port, this method updates the speaker's state, including its
+    /// timer gating and output settings. Changes to the timer gate state are detected and propagated to the associated
+    /// timer via <see cref="Pit8254Counter.SetGateState(bool)"/> .</remarks>
+    /// <param name="port">The port number to which the byte is written. Must be a valid port number.</param>
+    /// <param name="value">The byte value to write to the port. The value may affect the PC speaker state if the port matches the PC
+    /// speaker port number.</param>
     public override void WriteByte(ushort port, byte value) {
         if (port != PcSpeakerPortNumber) {
             base.WriteByte(port, value);
@@ -258,40 +206,13 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         _portB.Timer2Gating = (value & 0x01) != 0;
         _portB.SpeakerOutput = (value & 0x02) != 0;
         
-        // Detect rising edge on timer gate (trigger)
-        bool pitTrigger = !oldTimer2Gating && _portB.Timer2Gating;
-        
-        if (pitTrigger) {
-            switch (_pitState.Mode) {
-                case PitMode.OneShot:
-                    if (!_pitState.Mode1WaitingForCounter) {
-                        _pitState.Amplitude = NegativeAmplitude;
-                        _pitState.Mode1WaitingForTrigger = false;
-                        // Start the one-shot pulse
-                    }
-                    break;
-                    
-                case PitMode.SquareWave:
-                case PitMode.SquareWaveAlias:
-                    // Start square wave generation
-                    _pitState.Mode3Counting = true;
-                    _pitState.Amplitude = PositiveAmplitude;
-                    // Reset cycle position to start at the beginning of the waveform
-                    _cyclePosition = 0;
-                    break;
-                    
-                default:
-                    // Other modes not handled
-                    break;
-            }
-        } else if (!_portB.Timer2Gating) {
-            // Gate turned off
-            if (_pitState.Mode == PitMode.SquareWave || _pitState.Mode == PitMode.SquareWaveAlias) {
-                // Stop counting and set output high
-                _pitState.Mode3Counting = false;
-                _pitState.Amplitude = PositiveAmplitude;
-            }
+        // Detect changes to the timer gate
+        if (oldTimer2Gating != _portB.Timer2Gating) {
+            _pit8254Counter.SetGateState(_portB.Timer2Gating);
         }
+        
+        // Update the cycle parameters in case they've changed
+        UpdateCycleParameters();
     }
     
     /// <summary>
@@ -306,6 +227,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             if (disposing) {
                 _deviceThread.Dispose();
                 _pit8254Counter.SettingChangedEvent -= OnPitSettingChanged;
+                _pit8254Counter.GateStateChanged -= OnPitGateChanged;
             }
             _disposed = true;
         }
