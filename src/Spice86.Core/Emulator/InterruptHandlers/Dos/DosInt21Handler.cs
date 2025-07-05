@@ -7,11 +7,16 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.LoadableFile.Dos;
+using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -31,6 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly Dos _dos;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -49,13 +55,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosFileManager">The DOS class responsible for DOS drive access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for file and device-as-file access.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory,
+    public DosInt21Handler(IMemory memory, Dos dos,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
+        _dos = dos;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
@@ -113,7 +120,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
         AddAction(0x4A, () => ModifyMemoryBlock(true));
-        AddAction(0x4B, () => LoadAndOrExecute(true));
+        AddAction(0x4B, () => LoadAndOrExecuteProgram(true));
         AddAction(0x4C, QuitWithExitCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
@@ -875,6 +882,67 @@ public class DosInt21Handler : InterruptHandler {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
     }
+    
+    /// <summary>
+    /// Load and or execute a program.
+    /// AL = 0: Load and execute. <br/>
+    /// AL = 1: Load only. <br/>
+    /// AL = 2: Load overlay. <br/>
+    /// DS:DX: ASCIIZ program name with extension. <br/>
+    /// ES:BX: EXEC Parameter block. <br/>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error.
+    /// TODO: This needs the DOS Swappable Area, and a lot of other DOS globals (current drive, current folder, ...)
+    /// </returns>
+    /// </summary>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
+    public void LoadAndOrExecuteProgram(bool calledFromVm) {
+        bool success = false;
+        byte typeOfLoadByte = State.AL;
+        if (!Enum.IsDefined(typeof(DosExecOperation), typeOfLoadByte)) {
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+        string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
+        DosExecParameterBlock dosExecParameterBlock = new DosExecParameterBlock(Memory, MemoryUtils.ToPhysicalAddress(State.ES, State.BX));
+        DosExecOperation dosExecOperation = (DosExecOperation)State.AL;
+        string? fullHostPath = _dosFileManager.TryGetFullHostPathFromDos(programName);
+        
+        if(string.IsNullOrWhiteSpace(fullHostPath) || !File.Exists(fullHostPath)) {
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("LOAD AND/OR EXECUTE PROGRAM {DosExecOperation}, {ProgramName}", dosExecOperation, programName);
+        }
+
+        bool isComFile = string.Equals(Path.GetExtension(programName).ToLowerInvariant(), ".com", StringComparison.OrdinalIgnoreCase);
+        
+        switch (dosExecOperation) {
+            case DosExecOperation.LoadAndExecute:
+                if (isComFile) {
+                    LoadAndExecComFile(fullHostPath, "", 0x1000);
+                } else {
+                    LoadAndExecExeFile(fullHostPath, "", 0x1000);
+                }
+                success = true;
+                break;
+            case DosExecOperation.LoadOnly:
+                // Not implemented
+                success = false;
+                break;
+            case DosExecOperation.LoadOverlay:
+                // Not implemented
+                success = false;
+                break;
+            default:
+                SetCarryFlag(true, calledFromVm);
+                return;
+        }
+        SetCarryFlag(success, calledFromVm);
+    }
 
     /// <summary>
     /// Moves a file using a DOS handle. AL specifies the origin of the move, BX the file handle, CX:DX the offset.
@@ -1191,5 +1259,125 @@ public class DosInt21Handler : InterruptHandler {
         if (dosFileOperationResult.IsValueIsUint32) {
             State.DX = (ushort)(value >> 16);
         }
+    }
+    
+    private const ushort ComOffset = 0x100;
+
+    internal void LoadAndExecExeFile(string hostFile, string? arguments, ushort startSegment) {
+        byte[] exe = File.ReadAllBytes(hostFile);
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("Exe size: {ExeSize}", exe.Length);
+        }
+        ExeFile exeFile = new ExeFile(new ByteArrayReaderWriter(exe));
+        if (!exeFile.IsValid) {
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("Invalid EXE file {File}", hostFile);
+            }
+            throw new UnrecoverableException($"Invalid EXE file {hostFile}");
+        }
+        LoadExeFileInMemory(exeFile, startSegment);
+        ushort pspSegment = MemoryUtils.ToSegment((ushort)(startSegment - DosProgramSegmentPrefix.MaxLength));
+        SetupCpuForExe(exeFile, startSegment, pspSegment);
+
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        var psp = new DosProgramSegmentPrefix(Memory, pspAddress);
+
+        // Set INT 20h exit (CD 20)
+        psp.Exit[0] = 0xCD;
+        psp.Exit[1] = 0x20;
+
+        psp.FarCall = 0xCB;
+
+        // Set last free segment (just before video memory)
+        const ushort lastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+        psp.NextSegment = lastFreeSegment;
+
+        // Set command tail (arguments)
+        Memory.LoadData(pspAddress + 0x80, PspGenerator.ArgumentsToDosBytes(arguments));
+
+        // Set environment segment (if you have an environment block, set it here)
+        var environmentBlockGenerator = new EnvironmentBlockGenerator(_dos.EnvironmentVariables);
+        var envBlocStart = MemoryUtils.ToPhysicalAddress(pspSegment, DosProgramSegmentPrefix.MaxLength);
+        var envBlockSegment = MemoryUtils.ToSegment(envBlocStart);
+        var envBlockData = environmentBlockGenerator.BuildEnvironmentBlock();
+        uint envBlockFinalAddress = MemoryUtils.ToPhysicalAddress(envBlockSegment, 0);
+        Memory.LoadData(envBlockFinalAddress, envBlockData);
+        psp.EnvironmentTableSegment = envBlockSegment;
+
+        // Initialize the memory manager with the PSP segment and the last free segment value.
+        _dosMemoryManager.Init(pspSegment, lastFreeSegment);
+
+        // Set the disk transfer area address to the command-line offset in the PSP.
+        _dosFileManager.SetDiskTransferAreaAddress(pspSegment, 0x80);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("Initial CPU State: {CpuState}", State);
+        }
+    }
+    
+    /// <summary>
+    /// Loads the program image and applies any necessary relocations to it.
+    /// </summary>
+    /// <param name="exeFile">The EXE file to load.</param>
+    /// <param name="startSegment">The starting segment for the program.</param>
+    private void LoadExeFileInMemory(ExeFile exeFile, ushort startSegment) {
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, 0);
+        Memory.LoadData(physicalStartAddress, exeFile.ProgramImage);
+        foreach (SegmentedAddress address in exeFile.RelocationTable) {
+            // Read value from memory, add the start segment offset and write back
+            uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
+            Memory.UInt16[addressToEdit] += startSegment;
+        }
+    }
+
+    /// <summary>
+    /// Sets up the CPU to execute the loaded program.
+    /// </summary>
+    /// <param name="exeFile">The EXE file that was loaded.</param>
+    /// <param name="startSegment">The starting segment address of the program.</param>
+    /// <param name="pspSegment">The segment address of the program's PSP (Program Segment Prefix).</param>
+    private void SetupCpuForExe(ExeFile exeFile, ushort startSegment, ushort pspSegment) {
+        // MS-DOS uses the values in the file header to set the SP and SS registers and
+        // adjusts the initial value of the SS register by adding the start-segment
+        // address to it.
+        State.SS = (ushort)(exeFile.InitSS + startSegment);
+        State.SP = exeFile.InitSP;
+
+        // Make DS and ES point to the PSP
+        State.DS = pspSegment;
+        State.ES = pspSegment;
+
+        State.InterruptFlag = true;
+
+        // Finally, MS-DOS reads the initial CS and IP values from the program's file
+        // header, adjusts the CS register value by adding the start-segment address to
+        // it, and transfers control to the program at the adjusted address.
+        SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+    }
+    
+    /// <summary>
+    /// Sets the entry point of the loaded file to the specified segment and offset values.
+    /// </summary>
+    /// <param name="cs">The segment value of the entry point.</param>
+    /// <param name="ip">The offset value of the entry point.</param>
+    private void SetEntryPoint(ushort cs, ushort ip) {
+        State.CS = cs;
+        State.IP = ip;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+        }
+    }
+    
+    internal void LoadAndExecComFile(string hostFile, string? arguments, ushort startSegment) {
+        new PspGenerator(Memory, _dos.EnvironmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(startSegment, arguments);
+        byte[] com = File.ReadAllBytes(hostFile);
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(startSegment, ComOffset);
+        Memory.LoadData(physicalStartAddress, com);
+
+        // Make DS and ES point to the PSP
+        State.DS = startSegment;
+        State.ES = startSegment;
+        SetEntryPoint(startSegment, ComOffset);
+        State.InterruptFlag = true;
     }
 }
