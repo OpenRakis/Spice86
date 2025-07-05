@@ -194,6 +194,8 @@ public class Dos {
             AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
         }
 
+        envVars.Add("PATH", $"{DosDriveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+
         foreach (KeyValuePair<string, string> envVar in envVars) {
             EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
