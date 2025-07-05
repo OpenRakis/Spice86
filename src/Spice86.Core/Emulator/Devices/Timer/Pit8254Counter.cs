@@ -1,4 +1,5 @@
-﻿using Spice86.Shared.Interfaces;
+﻿using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
@@ -12,12 +13,52 @@ public class Pit8254Counter {
     /// Equals to 1.193182 MHz
     /// </summary>
     public const long HardwareFrequency = 1193182;
+    /// <summary>
+    /// Milliseconds per PIT tick
+    /// </summary>
+    public const float MsPerPitTick = 1000.0f / HardwareFrequency;
+
     private readonly ILoggerService _loggerService;
 
     private bool _latchMode = false;
     private readonly Pit8254Register _latchRegister = new();
     private readonly Pit8254Register _currentCountRegister = new();
     private readonly Pit8254Register _reloadValueRegister = new();
+
+    /// <summary>
+    /// PIT operation modes
+    /// </summary>
+    public enum PitMode : byte {
+        InterruptOnTerminalCount = 0,
+        OneShot = 1,
+        RateGenerator = 2,
+        SquareWave = 3,
+        SoftwareStrobe = 4,
+        HardwareStrobe = 5,
+        RateGeneratorAlias = 6,
+        SquareWaveAlias = 7,
+        Inactive = 8
+    }
+
+    public enum OutputStatus : byte {
+        Low = 0,
+        High = 1,
+    }
+
+    /// <summary>
+    /// Gets the current PIT mode as enum type
+    /// </summary>
+    public PitMode CurrentPitMode => (PitMode)Mode;
+
+    /// <summary>
+    /// Gets whether the counter is active for square wave generation
+    /// </summary>
+    public bool IsSquareWaveActive { get; private set; }
+
+    /// <summary>
+    /// Gets the current output state (high/low) for speaker signal
+    /// </summary>
+    public OutputStatus OutputState { get; private set; } = OutputStatus.High;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Pit8254Counter"/> class.
@@ -48,6 +89,11 @@ public class Pit8254Counter {
     /// Fires when the Timer parameters are changed.
     /// </summary>
     public event EventHandler? SettingChangedEvent;
+
+    /// <summary>
+    /// Event for when the counter gate state changes
+    /// </summary>
+    public event EventHandler<bool>? GateStateChanged;
 
     /// <summary>
     /// Gets or sets the Binary Coded Decimal (BCD) value for the counter.
@@ -90,7 +136,32 @@ public class Pit8254Counter {
             OnReloadValueWrite();
         }
     }
-
+    
+    /// <summary>
+    /// Gets the period in milliseconds based on the reload value
+    /// </summary>
+    public float PeriodMs => MsPerPitTick * (ReloadValue == 0 ? 0x10000 : ReloadValue);
+    
+    /// <summary>
+    /// Calculates the cycle length for audio generation at the given sample rate
+    /// </summary>
+    /// <param name="sampleRate">Sample rate in Hz</param>
+    /// <returns>The cycle length in samples</returns>
+    public float CalculateCycleLength(int sampleRate) {
+        float counterMs = PeriodMs;
+        float cycleLength = (sampleRate * counterMs) / 1000.0f;
+        return cycleLength <= 2 ? 2 : cycleLength; // Minimum cycle length
+    }
+    
+    /// <summary>
+    /// Calculates the cycle step for each sample based on the sample rate
+    /// </summary>
+    /// <param name="sampleRate">Sample rate in Hz</param>
+    /// <returns>The cycle step value</returns>
+    public float CalculateCycleStep(int sampleRate) {
+        return 1.0f / CalculateCycleLength(sampleRate);
+    }
+    
     /// <summary>
     /// Access the value of the counter using the current mode.
     /// </summary>
@@ -162,6 +233,12 @@ public class Pit8254Counter {
         } else {
             UpdateDesiredFrequency(HardwareFrequency / ReloadValue);
         }
+        
+        // Update square wave state if needed
+        if (CurrentPitMode == PitMode.SquareWave || CurrentPitMode == PitMode.SquareWaveAlias) {
+            // Only consider valid counter values
+            IsSquareWaveActive = ReloadValue >= 2;
+        }
     }
 
     /// <summary>
@@ -174,6 +251,31 @@ public class Pit8254Counter {
         }
         Activator.Frequency = desiredFrequency;
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
+    }
+    
+    /// <summary>
+    /// Triggers the gate for this counter
+    /// </summary>
+    public void SetGateState(bool enabled) {
+        // Handle gate trigger based on current mode
+        switch(CurrentPitMode) {
+            case PitMode.OneShot:
+                if (enabled) {
+                    OutputState = OutputStatus.Low;
+                }
+                break;
+                
+            case PitMode.SquareWave:
+            case PitMode.SquareWaveAlias:
+                IsSquareWaveActive = enabled;
+                if (enabled) {
+                    // Reset the output state to high when starting
+                    OutputState = OutputStatus.High;
+                }
+                break;
+        }
+        
+        GateStateChanged?.Invoke(this, enabled);
     }
     
     /// <inheritdoc/>
