@@ -69,12 +69,35 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
         
         // Subscribe to PIT events
         _pit8254Counter.SettingChangedEvent += OnPitSettingChanged;
+        _pit8254Counter.GateStateChanged += OnPitGateChanged;
+        
+        // Set initial amplitude based on PIT state
+        UpdateCurrentAmplitude();
         
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
     
     private void OnPitSettingChanged(object? sender, EventArgs e) {
+        // Update cycle parameters for square wave generation
         UpdateCycleParameters();
+        
+        // Update amplitude for non-square wave modes
+        UpdateCurrentAmplitude();
+    }
+    
+    private void OnPitGateChanged(object? sender, bool enabled) {
+        // Update amplitude when gate state changes
+        UpdateCurrentAmplitude();
+    }
+    
+    /// <summary>
+    /// Updates the current amplitude based on PIT output state
+    /// </summary>
+    private void UpdateCurrentAmplitude() {
+        // Map PIT output state to amplitude
+        _currentAmplitude = _pit8254Counter.OutputState == Pit8254Counter.OutputStatus.High
+            ? PositiveAmplitude
+            : NegativeAmplitude;
     }
  
     private void UpdateCycleParameters() {
@@ -211,6 +234,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable {
             if (disposing) {
                 _deviceThread.Dispose();
                 _pit8254Counter.SettingChangedEvent -= OnPitSettingChanged;
+                _pit8254Counter.GateStateChanged -= OnPitGateChanged;
             }
             _disposed = true;
         }
