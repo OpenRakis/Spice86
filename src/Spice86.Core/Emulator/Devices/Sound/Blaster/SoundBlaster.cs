@@ -155,11 +155,6 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// The SoundBlaster's OPL3 FM sound channel.
     /// </summary>
     public SoundChannel FMSynthSoundChannel { get; }
-    
-    /// <summary>
-    /// The internal FM synth chip for music.
-    /// </summary>
-    public OPL3FM Opl3Fm { get; }
 
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
@@ -197,8 +192,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         dmaController.SetupDmaDeviceChannel(this);
         _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
-        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
-        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService, pauseHandler);
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPLFMChip));
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
