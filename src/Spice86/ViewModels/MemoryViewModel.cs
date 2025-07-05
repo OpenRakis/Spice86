@@ -304,6 +304,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
                 searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
                 AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
             }
+        } catch (TaskCanceledException) {
         } finally {
             await _uiDispatcher.InvokeAsync(() => {
                 IsBusy = false;
@@ -314,6 +315,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     private async Task<uint?> PerformMemorySearchAsync(uint searchStartAddress,
         int searchLength, byte[] searchBytes, CancellationToken token) {
+        if(token.IsCancellationRequested) {
+            return null;
+        }
         return await Task.Run(
             () => {
                 uint? value = _memory.SearchValue(searchStartAddress, searchLength, searchBytes);
