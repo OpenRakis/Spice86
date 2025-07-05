@@ -127,7 +127,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.RegisterAndWriteCallback(0x43, RunMultiplex);
-        memoryAsmWriter.WriteIret();
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
         //XMS driver takes ownership of the HMA
@@ -351,7 +350,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             }
         } else {
             // Failure result
-            _state.AX = 0;  // XMS API function failure code
             _state.BL = result.ErrorCode;
         }
 
