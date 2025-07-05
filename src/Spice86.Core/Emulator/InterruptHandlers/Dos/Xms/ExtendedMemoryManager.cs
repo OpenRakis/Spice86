@@ -302,7 +302,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public void GetVersionNumber() {
         _state.AX = XmsVersion; // XMS version 3.00
         _state.BX = XmsInternalVersion;
-        _state.DX = 0x0;      // HMA is not available.
+        _state.DX = 0x1; //HMA exists
     }
 
     /// <summary>
@@ -322,7 +322,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        // HMA is not available and in use by DOS
+        // HMA exists but is in use by DOS
         _state.AX = 0;
         _state.BL = (byte)XmsErrorCodes.HmaInUse;
     }
@@ -343,7 +343,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </list>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        // HMA is not available and in use by DOS
+        // Can't release HMA
         _state.AX = 0;
         _state.BL = (byte)XmsErrorCodes.HmaNotAllocated;
     }
@@ -441,19 +441,22 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// </remarks>
     public void DisableLocalA20() {
         if (_a20LocalEnableCount == 0) {
+            // A20 is not locally enabled, so can't be disabled
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.A20Error;
             return;
         }
 
-        if (--_a20LocalEnableCount == 0 && !_a20GlobalEnabled) {
+        // Decrement count and check if we can disable A20
+        _a20LocalEnableCount--;
+
+        if (_a20LocalEnableCount == 0 && !_a20GlobalEnabled) {
+            // No local enables and no global enable
             SetA20(false);
-            _state.AX = 1;
-        } else if (_a20LocalEnableCount != 0) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
+            _state.AX = 1; // Success
         } else {
-            _state.AX = 1;
+            // A20 still enabled (due to other local enables or global enable)
+            _state.AX = 1; // Still success according to XMS spec
         }
     }
 
