@@ -3,8 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
@@ -85,7 +83,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (screenPresenter is not null) {
             screenPresenter.UserInterfaceInitialized += Run;
         }
-        LoadFileToRun(configuration, loader);
+        LoadFileToRun(configuration, loader, dos);
     }
 
     /// <summary>
@@ -166,7 +164,7 @@ public sealed class ProgramExecutor : IDisposable {
             emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 
-    private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {
+    private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader, Dos dos) {
         string? executableFileName = configuration.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
@@ -176,9 +174,10 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         try {
-            byte[] fileContent = loader.LoadFile(executableFileName,
+            (ushort codeSegment, byte[] fileContent) = loader.LoadFile(executableFileName,
                 $"{Path.GetFileName(executableFileName).ToUpperInvariant()} {configuration.ExeArgs}");
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
+            dos.GeneratePspInMemory(configuration, codeSegment, configuration.ExeArgs);
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }

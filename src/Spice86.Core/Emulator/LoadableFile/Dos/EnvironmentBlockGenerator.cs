@@ -1,7 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile.Dos;
-
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using System.Linq;
+using System.Text;
 
 /// <summary>
 /// A class that generates a process's environment block.
@@ -19,15 +20,24 @@ public class EnvironmentBlockGenerator {
     /// Returns a byte array containing a process's environment block.
     /// </summary>
     /// <returns>Byte array containing the process's environment block.</returns>
-    public byte[] BuildEnvironmentBlock() {
+    public byte[] BuildEnvironmentBlock(string dosFileSpec) {
         byte[] environmentStrings = _environmentVariables.EnvironmentBlock;
+
+        byte[] dosFileSpecBytes = Encoding.ASCII.GetBytes(dosFileSpec);
         // Need 2 bytes between strings and path and a null terminator after path.
-        byte[] fullBlock = new byte[environmentStrings.Length + 2];
+        byte[] fullBlock = new byte[environmentStrings.Length + 2 + dosFileSpecBytes.Length + 1];
 
         environmentStrings.CopyTo(fullBlock, 0);
 
-        // Not sure what this is for.
+        dosFileSpecBytes.CopyTo(fullBlock, environmentStrings.Length + 2);
+
+        //dosFileSpec is a zero-terminated ASCII string
+        fullBlock[environmentStrings.Length + 2 + dosFileSpecBytes.Length] = 0;
+
+        //16-bit binary count of additional strings
+        //Normally, it is 001H
         fullBlock[environmentStrings.Length] = 1;
+
 
         return fullBlock;
     }
