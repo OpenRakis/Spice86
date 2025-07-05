@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -194,6 +195,8 @@ public class Dos {
             AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
         }
 
+        envVars.Add("PATH", $"{DosDriveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+
         foreach (KeyValuePair<string, string> envVar in envVars) {
             EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
@@ -203,6 +206,12 @@ public class Dos {
         foreach (VirtualFileBase fileDevice in fileDevices) {
             FileManager.OpenDevice(fileDevice);
         }
+    }
+
+    internal void GeneratePspInMemory(Configuration configuration, ushort pspSegment, string? arguments) {
+        var pspGenerator = new PspGenerator(_memory, EnvironmentVariables, MemoryManager, FileManager);
+        string dosFileSpec = $"{Path.GetFileName(configuration.Exe)}".ToUpperInvariant();
+        pspGenerator.GeneratePsp(pspSegment, arguments, dosFileSpec);
     }
 
     private uint GetDefaultNewDeviceBaseAddress()

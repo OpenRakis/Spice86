@@ -43,11 +43,11 @@ public class BiosLoader : ExecutableFileLoader {
     /// <param name="file">The path to the BIOS file to load.</param>
     /// <param name="arguments">Ignored for BIOS files.</param>
     /// <returns>The loaded BIOS file as a byte array.</returns>
-    public override byte[] LoadFile(string file, string? arguments) {
+    internal override (ushort CodeSegment, byte[] FileContent) LoadFile(string file, string? arguments) {
         byte[] bios = ReadFile(file);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(CodeSegment, 0);
         _memory.LoadData(physicalStartAddress, bios);
         SetEntryPoint(CodeSegment, CodeOffset);
-        return bios;
+        return (CodeSegment, bios);
     }
 }

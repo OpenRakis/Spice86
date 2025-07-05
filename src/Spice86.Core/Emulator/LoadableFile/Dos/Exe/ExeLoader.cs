@@ -47,7 +47,7 @@ public class ExeLoader : DosFileLoader {
     /// <param name="file">The path to the EXE file to load.</param>
     /// <param name="arguments">Optional command-line arguments to pass to the program.</param>
     /// <returns>The raw bytes of the loaded EXE file.</returns>
-    public override byte[] LoadFile(string file, string? arguments) {
+    internal override (ushort CodeSegment, byte[] FileContent) LoadFile(string file, string? arguments) {
         byte[] exe = ReadFile(file);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
@@ -66,11 +66,10 @@ public class ExeLoader : DosFileLoader {
         LoadExeFileInMemory(exeFile, _startSegment);
         ushort pspSegment = (ushort)(_startSegment - 0x10);
         SetupCpuForExe(exeFile, _startSegment, pspSegment);
-        new PspGenerator(_memory, _environmentVariables, _dosMemoryManager, _dosFileManager).GeneratePsp(pspSegment, arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Initial CPU State: {CpuState}", _state);
         }
-        return exe;
+        return (pspSegment, exe);
     }
 
     /// <summary>
