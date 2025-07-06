@@ -47,11 +47,15 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte scanCode = _keyboard.KeyboardEvent.ScanCode ?? 0;
-        byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
+        if (_keyboard.KeyboardEvent.ScanCode is null) {
+            return;
+        }
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{BiosInt9KeyReceived}", scanCode);
+        byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
+        byte scanCode = _keyboard.KeyboardEvent.ScanCode ?? 0;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("scanCode: {ScanCode:X2} ascii: {AsciiCode:X2}", scanCode, ascii);
         }
 
         BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));
