@@ -26,6 +26,7 @@ public class ConsoleDevice : CharacterDevice {
     private byte _readCache = 0;
     public const int InputAvailable = 0x80D3;
     public const int NoInputAvailable = 0x8093;
+    private readonly ConsoleControl _consolControl = new();
     private readonly ILoggerService _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
@@ -75,11 +76,7 @@ public class ConsoleDevice : CharacterDevice {
         return _currentMode.MemoryModel == MemoryModel.Text;
     }
 
-    public bool InternalOutput { get; set; }
-
-    public bool Echo { get; set; } = true;
-
-    public bool DirectOutput { get; set; }
+    public ConsoleControl ConsoleControl => _consolControl;
 
     public override string Name => CON;
 
@@ -117,7 +114,7 @@ public class ConsoleDevice : CharacterDevice {
         int readCount = 0;
         if ((_readCache > 0) && (buffer.Length > 0)) {
             buffer[index++] = _readCache;
-            if (Echo) {
+            if (_consolControl.Echo) {
                 OutputWithNoAttributes(_readCache);
             }
             _readCache = 0;
@@ -136,7 +133,7 @@ public class ConsoleDevice : CharacterDevice {
                         readCount++;
                     }
                     _state.AX = oldAx;
-                    if (Echo) {
+                    if (_consolControl.Echo) {
                         // Maybe don't do this (no need for it actually)
                         // (but it's compatible)
                         OutputWithNoAttributes(AsciiControlCodes.LineFeed);
@@ -193,7 +190,7 @@ public class ConsoleDevice : CharacterDevice {
                     readCount++;
                     break;
             }
-            if (Echo) {
+            if (_consolControl.Echo) {
                 // What to do if buffer.Length == 1 and character is BackSpace ?
                 OutputWithNoAttributes(scanCode);
             }
@@ -215,7 +212,7 @@ public class ConsoleDevice : CharacterDevice {
                     // Start the sequence
                     _ansi.Esc = true;
                     continue;
-                } else if (chr == '\t' && !DirectOutput) {
+                } else if (chr == '\t' && !_consolControl.DirectOutput) {
                     // Expand tab if no direct output
                     page = _biosDataArea.CurrentVideoPage;
                     do {
@@ -248,7 +245,7 @@ public class ConsoleDevice : CharacterDevice {
             }
 
             // ansi.Esc and ansi.Sci are true
-            if (!InternalOutput) {
+            if (!_consolControl.InternalOutput) {
                 _ansi.IsEnabled = true;
             }
 
@@ -533,7 +530,7 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     private void Output(char chr) {
-        if (InternalOutput || _ansi.IsEnabled) {
+        if (_consolControl.InternalOutput || _ansi.IsEnabled) {
             if (GetIsInTextMode()) {
                 byte page = _biosDataArea.CurrentVideoPage;
                 ushort pos = _biosDataArea.CursorPosition[page];

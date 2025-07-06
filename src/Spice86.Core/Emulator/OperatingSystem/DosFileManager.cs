@@ -496,7 +496,7 @@ public class DosFileManager {
     /// <param name="readLength">The amount of data to read.</param>
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
+    public DosFileOperationResult ReadFileOrDevice(ushort fileHandle, ushort readLength, uint targetAddress) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
