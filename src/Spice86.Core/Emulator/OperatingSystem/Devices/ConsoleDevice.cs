@@ -120,8 +120,6 @@ public class ConsoleDevice : CharacterDevice {
             _readCache = 0;
         }
         while(index < buffer.Length && readCount < count) {
-            // Function 0: Read keystroke
-            _state.AH = 0x0;
             byte? scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
             if (scanCode is null) {
                 break;
