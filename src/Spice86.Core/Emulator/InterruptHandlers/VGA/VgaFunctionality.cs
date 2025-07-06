@@ -125,7 +125,7 @@ public class VgaFunctionality : IVgaFunctionality {
     public void WriteCharacterAtCursor(CharacterPlusAttribute character, byte page, int count = 1) {
         CursorPosition cursorPosition = GetCursorPosition(page);
         while (count-- > 0) {
-            WriteCharacter(cursorPosition, character);
+            cursorPosition = WriteCharacter(cursorPosition, character);
         }
     }
 
