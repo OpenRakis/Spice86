@@ -199,11 +199,12 @@ public class DosInt21Handler : InterruptHandler {
     /// Copies a character from the standard input to _state.AL, without echo on the standard output.
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
+        bool echo = _consoleControl.Echo;
+        _consoleControl.Echo = false;
         if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) ||
             !stdIn.CanRead) {
             State.AL = 0;
         } else {
-            _consoleControl.Echo = false;
             byte[] bytes = new byte[1];
             var readCount = stdIn.Read(bytes, 0, 1);
             if (readCount < 1) {
@@ -211,8 +212,8 @@ public class DosInt21Handler : InterruptHandler {
             } else {
                 State.AL = bytes[0];
             }
-            _consoleControl.Echo = true;
         }
+        _consoleControl.Echo = echo;
     }
 
     /// <summary>
