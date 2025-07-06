@@ -3,7 +3,7 @@ namespace Spice86.Shared.Diagnostics;
 using Spice86.Shared.Interfaces;
 
 /// <inheritdoc />
-public class PerformanceMeasurer : IPerformanceMeasurer {
+public class PerformanceMeasurer : IPerformanceMeasureReader, IPerformanceMeasureWriter {
     private long _measure;
     private long _lastTimeInMilliseconds;
     private long _sampledMetricsCount;
@@ -45,7 +45,8 @@ public class PerformanceMeasurer : IPerformanceMeasurer {
         long valueDelta = newMeasure - _measure;
         _measure = newMeasure;
         ValuePerMillisecond = valueDelta / millisecondsDelta;
-        AverageValuePerSecond = ApproxRollingAverage(AverageValuePerSecond, ValuePerSecond, _sampledMetricsCount++);
+        AverageValuePerSecond = ApproxRollingAverage(AverageValuePerSecond, 
+            ValuePerSecond, _sampledMetricsCount++);
     }
 
     private bool IsFirstMeasurement() {

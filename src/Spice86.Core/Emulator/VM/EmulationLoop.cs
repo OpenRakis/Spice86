@@ -28,6 +28,8 @@ public class EmulationLoop {
     private readonly Stopwatch _stopwatch;
     private readonly DmaController _dmaController;
 
+    public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
+
     /// <summary>
     /// Whether the emulation is paused.
     /// </summary>

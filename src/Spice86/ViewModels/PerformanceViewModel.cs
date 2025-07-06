@@ -7,12 +7,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Infrastructure;
-using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Interfaces;
 
 using System;
 
 public partial class PerformanceViewModel : ViewModelBase {
-    private readonly PerformanceMeasurer _performanceMeasurer;
+    private readonly IPerformanceMeasureReader _cpuPerformanceReader;
     private readonly State _state;
 
     [ObservableProperty]
@@ -20,13 +20,15 @@ public partial class PerformanceViewModel : ViewModelBase {
 
     private bool _isPaused;
     
-    public PerformanceViewModel(State state, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+    public PerformanceViewModel(State state, IPauseHandler pauseHandler,
+        IUIDispatcher uiDispatcher, IPerformanceMeasureReader cpuPerfReader) {
+        _cpuPerformanceReader = cpuPerfReader;
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         _state = state;
         _isPaused = pauseHandler.IsPaused;
-        _performanceMeasurer = new PerformanceMeasurer();
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0), DispatcherPriority.Background, UpdatePerformanceInfo);
+        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(0.4),
+            DispatcherPriority.Background, UpdatePerformanceInfo);
     }
 
     private void UpdatePerformanceInfo(object? sender, EventArgs e) {
@@ -34,10 +36,9 @@ public partial class PerformanceViewModel : ViewModelBase {
             return;
         }
 
-        _performanceMeasurer.UpdateValue(_state.Cycles);
         InstructionsExecuted = _state.Cycles;
-        AverageInstructionsPerSecond = _performanceMeasurer.AverageValuePerSecond;
-        InstructionsPerMillisecond = _performanceMeasurer.ValuePerMillisecond;
+        AverageInstructionsPerSecond = _cpuPerformanceReader.AverageValuePerSecond;
+        InstructionsPerMillisecond = _cpuPerformanceReader.ValuePerMillisecond;
     }
 
     [ObservableProperty]
