@@ -84,25 +84,16 @@ public sealed class FmSynthesizer {
     public int SampleRate { get; }
 
     /// <summary>
-    /// Fills <paramref name="buffer"/> with 16-bit mono samples.
+    /// Fills <paramref name="buffer"/> with 32-bit stereo samples (interleaved left-right).
     /// </summary>
-    /// <param name="buffer">Buffer to fill with 16-bit waveform data.</param>
-    public void GetData(Span<short> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            // Apply low-pass filter directly to the output
-            double sample = _lowPassFilter.Filter(GetNextSample());
-            buffer[i] = (short)(sample * 32767);
-        }
-    }
-    
-    /// <summary>
-    /// Fills <paramref name="buffer"/> with 32-bit mono samples.
-    /// </summary>
-    /// <param name="buffer">Buffer to fill with 32-bit waveform data.</param>
+    /// <param name="buffer">Buffer to fill with 32-bit stereo waveform data.</param>
     public void GetData(Span<float> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
+        for (int i = 0; i < buffer.Length; i += 2) {
             // Apply low-pass filter directly to the output
-            buffer[i] = (float)_lowPassFilter.Filter(GetNextSample());
+            float sample = (float)_lowPassFilter.Filter(GetNextSample());
+            // Write the same sample to both left and right channels
+            buffer[i] = sample;      // Left channel
+            buffer[i + 1] = sample;  // Right channel
         }
     }
 

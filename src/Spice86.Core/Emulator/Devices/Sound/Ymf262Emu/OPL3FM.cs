@@ -23,7 +23,6 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     private byte _timer1Data;
     private byte _timer2Data;
     private byte _timerControlByte;
-    private readonly float[] _synthReadBuffer = new float[1024];
     private readonly float[] _playBuffer = new float[1024 * 2];
 
     private bool _disposed;
@@ -42,10 +41,14 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
-    public OPL3FM(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+    public OPL3FM(SoundChannel fmSynthSoundChannel, State state,
+        IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
+        ILoggerService loggerService, IPauseHandler pauseHandler)
+        : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = fmSynthSoundChannel;
         _synth = new(48000);
-        _deviceThread = new DeviceThread(nameof(OPL3FM), PlaybackLoopBody, pauseHandler, loggerService);
+        _deviceThread = new DeviceThread(nameof(OPL3FM), PlaybackLoopBody,
+            pauseHandler, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -119,7 +122,7 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
 
     private void InitializePlaybackIfNeeded() {
         if (!_deviceThread.Active) {
-            FillBuffer(_synthReadBuffer, _playBuffer);
+            FillBuffer(_playBuffer);
             _deviceThread.StartThreadIfNeeded();
         }
     } 
@@ -137,11 +140,10 @@ public class OPL3FM : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void PlaybackLoopBody() {
         _soundChannel.Render(_playBuffer);
-        FillBuffer(_synthReadBuffer, _playBuffer);
+        FillBuffer(_playBuffer);
     }
 
-    private void FillBuffer(Span<float> buffer, Span<float> playBuffer) {
-        _synth.GetData(buffer);
-        ChannelAdapter.MonoToStereo(buffer, playBuffer);
+    private void FillBuffer(Span<float> playBuffer) {
+        _synth.GetData(playBuffer);
     }
 }
