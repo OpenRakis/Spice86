@@ -120,7 +120,14 @@ public class ConsoleDevice : CharacterDevice {
             _readCache = 0;
         }
         while(index < buffer.Length && readCount < count) {
-            byte? scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
+            byte? scanCode;
+            if (_biosKeybardBuffer.DequeueKeyCode() is ushort keyCode) {
+                // INT9H already got it - just read it from the BIOS.
+                scanCode = ConvertUtils.ReadLsb(keyCode);
+            } else {
+                // Wait for a keypress in a blocking way.
+                scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
+            }
             if (scanCode is null) {
                 break;
             }
