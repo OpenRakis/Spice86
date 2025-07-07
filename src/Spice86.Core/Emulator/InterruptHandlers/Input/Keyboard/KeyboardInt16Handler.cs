@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Serilog.Events;
 
@@ -9,6 +8,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
@@ -71,10 +72,27 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Tries to get the pending keycode from the BIOS keyboard buffer without removing it.
+    /// </summary>
+    /// <param name="keyCode">When this method returns, contains the keycode if one was available; otherwise, the default value.</param>
+    /// <returns><c>True</c> if a keycode was available; otherwise, <c>False</c>.</returns>
+    public bool TryGetPendingKeyCode([NotNullWhen(true)] out ushort? keyCode) {
+        ushort? code = _biosKeyboardBuffer.PeekKeyCode();
+        if (code.HasValue) {
+            keyCode = code.Value;
+            return true;
+        }
+        keyCode = null;
+        return false;
+    }
+
+    /// <summary>
     /// Gets whether the BIOS keyboard buffer has a pending key code in its queue.
     /// </summary>
     /// <returns><c>True</c> if the BIOS keyboard buffer is not empty, <c>False</c> otherwise.</returns>
-    public bool HasKeyCodePending() => _biosKeyboardBuffer.PeekKeyCode() is not null;
+    public bool HasKeyCodePending() {
+        return TryGetPendingKeyCode(out _);
+    }
 
     /// <summary>
     /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
@@ -106,7 +124,11 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </summary>
     /// <returns>The next keycode as an ushort value, <c>null</c> if nothing was in the buffer.</returns>
     public ushort? GetNextKeyCode() {
-        return _biosKeyboardBuffer.DequeueKeyCode();
+        if (TryGetPendingKeyCode(out ushort? keyCode)) {
+            _biosKeyboardBuffer.DequeueKeyCode();
+            return keyCode;
+        }
+        return null;
     }
 
     /// <summary>

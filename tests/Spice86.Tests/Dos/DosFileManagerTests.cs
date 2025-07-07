@@ -164,7 +164,7 @@ public class DosFileManagerTests {
             emulatorBreakpointsManager, dmaController, pauseHandler);
 
         Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
-            new EmulationLoopRecalls(interruptVectorTable, state, stack, emulationLoop),
+            new EmulationLoopRecalls(keyboardInt16Handler, interruptVectorTable, state, stack, emulationLoop),
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,

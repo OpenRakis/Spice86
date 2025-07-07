@@ -120,17 +120,7 @@ public class ConsoleDevice : CharacterDevice {
             _readCache = 0;
         }
         while(index < buffer.Length && readCount < count) {
-            byte? scanCode;
-            if (_biosKeybardBuffer.DequeueKeyCode() is ushort keyCode) {
-                // INT9H already got it - just read it from the BIOS.
-                scanCode = ConvertUtils.ReadLsb(keyCode);
-            } else {
-                // Wait for a keypress in a blocking way.
-                scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
-            }
-            if (scanCode is null) {
-                break;
-            }
+            byte  scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
             switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
@@ -151,7 +141,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Backspace:
                     if (buffer.Length == 1) {
-                        buffer[index++] = scanCode.Value;
+                        buffer[index++] = scanCode;
                         readCount++;
                     } else if (index > 0) {
                         buffer[index--] = 0;
@@ -170,7 +160,7 @@ public class ConsoleDevice : CharacterDevice {
                     // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
                     if (_state.AH != 0) {
                         // Extended key if _state.AH is not 0x0
-                        buffer[index++] = scanCode.Value;
+                        buffer[index++] = scanCode;
                         readCount++;
                     } else {
                         buffer[index++] = 0;
@@ -185,7 +175,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Null:
                     // Extended keys in the INT 16H 0x0 function call case
-                    buffer[index++] = scanCode.Value;
+                    buffer[index++] = scanCode;
                     readCount++;
                     if (buffer.Length > index) {
                         buffer[index++] = _state.AH;
@@ -195,13 +185,13 @@ public class ConsoleDevice : CharacterDevice {
                     }
                     break;
                 default:
-                    buffer[index++] = scanCode.Value;
+                    buffer[index++] = scanCode;
                     readCount++;
                     break;
             }
             if (_consolControl.Echo) {
                 // What to do if buffer.Length == 1 and character is BackSpace ?
-                OutputWithNoAttributes(scanCode.Value);
+                OutputWithNoAttributes(scanCode);
             }
         }
         _state.AX = oldAx; // Restore AX

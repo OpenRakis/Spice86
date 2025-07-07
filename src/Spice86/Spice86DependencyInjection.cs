@@ -396,7 +396,8 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
 
-        EmulationLoopRecalls machineCodeCallback = new(interruptVectorTable, state, stack, emulationLoop);
+        EmulationLoopRecalls machineCodeCallback = new(keyboardInt16Handler,interruptVectorTable,
+            state, stack, emulationLoop);
 
 
         Dos dos = new Dos(memory, functionHandlerProvider, stack, state, machineCodeCallback, biosKeyboardBuffer,
