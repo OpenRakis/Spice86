@@ -5,7 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -194,7 +194,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         dmaController.SetupDmaDeviceChannel(this);
         _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
-        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPLFMChip));
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(Opl));
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }

@@ -27,7 +27,7 @@ public sealed class AdlibGold  {
 
     public void SurroundControlWrite(byte data) => _surroundProcessor.ControlWrite(data);
 
-    private void Process(Span<short> input, uint frames, Span<float> output) {
+    internal void Process(Span<short> input, uint frames, Span<float> output) {
         uint framesRemaining = frames;
         int index = 0;
         while(framesRemaining-- > 0) {

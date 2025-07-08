@@ -1261,6 +1261,11 @@ public struct Opl3Chip {
         for(int i = 0; i < Channel.Length; i++) {
             Channel[i] = new();
         }
+        for (int i = 0; i < Slot.Length; i++) {
+            Slot[i] = new() {
+                Channel = new()
+            };
+        }
     }
     public Opl3Channel[] Channel { get; set; } = new Opl3Channel[18];
     public Opl3Slot[] Slot { get; set; } = new Opl3Slot[36];

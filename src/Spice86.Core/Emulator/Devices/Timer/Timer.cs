@@ -19,13 +19,6 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterTwo = 0x42;
     private const int ModeCommandeRegister = 0x43;
 
-    private readonly Stopwatch _emulatorStopWatch = Stopwatch.StartNew();
-
-    /// <summary>
-    /// The measure of wall clock time since the emulator started, in milliseconds.
-    /// </summary>
-    public long EmulatorRunTime => _emulatorStopWatch.ElapsedMilliseconds;
-
     /// <summary>
     /// The number of <see cref="Stopwatch"/> timer ticks per millisecond.
     /// </summary>
