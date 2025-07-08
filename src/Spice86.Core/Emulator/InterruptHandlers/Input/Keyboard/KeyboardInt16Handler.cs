@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -11,13 +12,15 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
 
+using static System.Runtime.CompilerServices.RuntimeHelpers;
+
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
+    private readonly EmulationLoopRecalls _emulationLoopRecalls;
 
     /// <summary>
     /// Initializes a new instance.
@@ -31,9 +34,10 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer,
+        EmulationLoopRecalls emulationLoopRecalls)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _loggerService = loggerService;
+        _emulationLoopRecalls = emulationLoopRecalls;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
@@ -56,12 +60,15 @@ public class KeyboardInt16Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
         }
-        ushort? keyCode = GetNextKeyCode();
-        keyCode ??= 0;
-
-        // AH = keyboard scan code
-        // AL = ASCII character or zero if special function key
-        State.AX = keyCode.Value;
+        while (State.IsRunning) {
+            if (TryGetPendingKeyCode(out ushort? keyCode)) {
+                _biosKeyboardBuffer.DequeueKeyCode();
+                State.AX = keyCode.Value;
+                break;
+            } else {
+                _emulationLoopRecalls.WaitForKeybardDataReady();
+            }
+        }
     }
 
     public void GetShiftFlags() {
@@ -117,18 +124,6 @@ public class KeyboardInt16Handler : InterruptHandler {
                 State.AX = keyCode.Value;
             }
         }
-    }
-
-    /// <summary>
-    /// Dequeues the next keycode from the BIOS keyboard buffer and returns it.
-    /// </summary>
-    /// <returns>The next keycode as an ushort value, <c>null</c> if nothing was in the buffer.</returns>
-    public ushort? GetNextKeyCode() {
-        if (TryGetPendingKeyCode(out ushort? keyCode)) {
-            _biosKeyboardBuffer.DequeueKeyCode();
-            return keyCode;
-        }
-        return null;
     }
 
     /// <summary>

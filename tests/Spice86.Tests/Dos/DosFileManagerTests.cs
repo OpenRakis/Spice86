@@ -156,15 +156,19 @@ public class DosFileManagerTests {
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
-
         EmulationLoop emulationLoop = new EmulationLoop(loggerService,
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler);
 
+        EmulationLoopRecalls emulationLoopRecalls = new EmulationLoopRecalls(
+            interruptVectorTable, state, stack, emulationLoop);
+
+        KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
+            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
+    biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecalls);
+
         Dos dos = new Dos(memory, functionHandlerProvider, stack, state,
-            new EmulationLoopRecalls(keyboardInt16Handler, interruptVectorTable, state, stack, emulationLoop),
+            new EmulationLoopRecalls(interruptVectorTable, state, stack, emulationLoop),
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, configuration.CDrive,
             configuration.Exe, configuration.InitializeDOS is not false, configuration.Ems,

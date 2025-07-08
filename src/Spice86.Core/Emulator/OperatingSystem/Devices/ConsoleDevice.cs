@@ -31,7 +31,7 @@ public class ConsoleDevice : CharacterDevice {
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly EmulationLoopRecalls _emulationLoopRecalls;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly State _state;
     private readonly Ansi _ansi = new Ansi();
     private class Ansi {
@@ -52,13 +52,13 @@ public class ConsoleDevice : CharacterDevice {
     /// </summary>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
         ILoggerService loggerService, State state, BiosDataArea biosDataArea,
-        EmulationLoopRecalls emulationLoopRecalls, IVgaFunctionality vgaFunctionality,
+        KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
         _loggerService = loggerService;
         _biosKeybardBuffer = biosKeyboardBuffer;
-        _emulationLoopRecalls = emulationLoopRecalls;
+        _keyboardInt16Handler = keyboardInt16Handler;
         _state = state;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
@@ -120,7 +120,8 @@ public class ConsoleDevice : CharacterDevice {
             _readCache = 0;
         }
         while(index < buffer.Length && readCount < count) {
-            byte  scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
+            _keyboardInt16Handler.GetKeystroke();
+            byte scanCode = _state.AL;
             switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
