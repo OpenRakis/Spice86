@@ -16,9 +16,8 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
 
     private readonly SoundChannel _soundChannel;
     private readonly DeviceThread _deviceThread;
-    private readonly float[] _synthReadBuffer = new float[1024];
-    private readonly float[] _playBuffer = new float[1024 * 2];
-    private readonly OplFmSynth _opl;
+    private readonly Opl _opl;
+    private readonly System.Diagnostics.Stopwatch _wallClock = new();
 
     private bool _disposed;
 
@@ -38,13 +37,14 @@ public class OPLFMChip : DefaultIOPortHandler, IDisposable {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="pauseHandler">Class for handling pausing the emulator.</param>
-    public OPLFMChip(Timer timer, SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher,
+    public OPLFMChip(SoundChannel fmSynthSoundChannel, State state, IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort, ILoggerService loggerService, IPauseHandler pauseHandler)
         : base(state, failOnUnhandledPort, loggerService) {
         _soundChannel = fmSynthSoundChannel;
-        _opl = new(timer, new AdlibGold(loggerService), OplMode.Opl2);
+        _opl = new( new AdlibGold(loggerService), OplMode.Opl2);
         _deviceThread = new DeviceThread(nameof(OPLFMChip), PlaybackLoopBody, pauseHandler, loggerService);
         InitPortHandlers(ioPortDispatcher);
+        _wallClock.Start();
     }
 
 

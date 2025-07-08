@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Core.Emulator.Devices.Timer;
 
+using System.Diagnostics;
+
 public enum Mode {
     Opl2, DualOpl2, Opl3, Opl3Gold
 }
@@ -9,7 +11,7 @@ public enum Mode {
 public struct Control {
     public Control() { }
     public byte Index { get; set; }
-    public byte LVol { get; set; } = OplFmSynth.DefaultVolumeValue;
+    public byte LVol { get; set; } = Opl.DefaultVolumeValue;
     public byte RVol { get; set; }
 
     public bool IsActive { get; set; }
@@ -101,9 +103,15 @@ public class OplTimer {
     }
 }
 
-public class Chip {
-    private Timer _timer;
-    public Chip(Timer timer) {
+public class OplChip {
+    private readonly OplTimer _timer;
+    private readonly Stopwatch _emulatorStopWatch = Stopwatch.StartNew();
+
+    /// <summary>
+    /// The measure of wall clock time since the emulator started, in milliseconds.
+    /// </summary>
+    private long EmulatorRunTime => _emulatorStopWatch.ElapsedMilliseconds;
+    public OplChip(OplTimer timer) {
         _timer = timer;
         Timer0 = new(80);
         Timer1 = new(320);
@@ -123,11 +131,11 @@ public class Chip {
         // LOG(LOG_MISC,LOG_ERROR)("write adlib timer %X %X",reg,val);
         switch (reg) {
             case 0x02:
-                Timer0.Update(_timer.EmulatorRunTime);
+                Timer0.Update(EmulatorRunTime);
                 Timer0.SetCounter(val);
                 return true;
             case 0x03:
-                Timer1.Update(_timer.EmulatorRunTime);
+                Timer1.Update(EmulatorRunTime);
                 Timer1.SetCounter(val);
                 return true;
             case 0x04:
@@ -136,7 +144,7 @@ public class Chip {
                     Timer0.Reset();
                     Timer1.Reset();
                 } else {
-                    double time = _timer.EmulatorRunTime;
+                    double time = EmulatorRunTime;
                     if ((val & 0x1) > 0) {
                         Timer0.Start(time);
                     } else {
@@ -160,7 +168,7 @@ public class Chip {
     /// Read the current timer state, will use current double
     /// </summary>
     public byte Read() {
-        TimeSpan time = TimeSpan.FromMilliseconds(_timer.EmulatorRunTime);
+        TimeSpan time = TimeSpan.FromMilliseconds(EmulatorRunTime);
         byte ret = 0;
 
         // Overflow won't be set if a channel is masked
@@ -179,7 +187,7 @@ public class Chip {
 /// <summary>
 /// The OPL3 / OPL2 / Adlib Gold OPL chip emulation class.
 /// </summary>
-public class OplFmSynth {
+public class Opl {
     public const byte DefaultVolumeValue = 0xff;
 
     /// <summary>
@@ -191,7 +199,7 @@ public class OplFmSynth {
 
     private Mode _mode;
 
-    private Chip[] _chip = new Chip[2];
+    private OplChip[] _chip = new OplChip[2];
 
     private Opl3Chip _oplChip = new();
 
@@ -225,12 +233,11 @@ public class OplFmSynth {
 
     private bool _dualOpl = false;
 
-    public OplFmSynth(Timer timer,
-        AdlibGold adlibGold, OplMode oplMode) {
+    public Opl(AdlibGold adlibGold, OplMode oplMode) {
         _adlibGold = adlibGold;
         _oplMode = oplMode;
-        _chip[0] = new Chip(timer);
-        _chip[1] = new Chip(timer);
+        _chip[0] = new OplChip(new OplTimer(80));
+        _chip[1] = new OplChip(new OplTimer(120));
     }
 
    private void AdlibGoldControlWrite(byte val) {
