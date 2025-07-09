@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Crude implementation of BIOS keyboard buffer handler (hardware interrupt 0x9)
+/// Crude implementation of BIOS keyboard buffer handler (hardware interrupt 0x9, IRQ1)
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Keyboard _keyboard;

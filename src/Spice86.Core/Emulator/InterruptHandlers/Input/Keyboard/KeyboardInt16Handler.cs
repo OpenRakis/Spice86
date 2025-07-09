@@ -20,7 +20,7 @@ using static System.Runtime.CompilerServices.RuntimeHelpers;
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
-    private readonly EmulationLoopRecalls _emulationLoopRecalls;
+    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Initializes a new instance.
@@ -32,12 +32,13 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
+    /// <param name="emulationLoopRecall">Class used to wait for keyboard input from hardware interrupt 0x9 (IRQ1)</param>
     public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer,
-        EmulationLoopRecalls emulationLoopRecalls)
+        EmulationLoopRecall emulationLoopRecall)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _emulationLoopRecalls = emulationLoopRecalls;
+        _emulationLoopRecall = emulationLoopRecall;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
@@ -66,7 +67,8 @@ public class KeyboardInt16Handler : InterruptHandler {
                 State.AX = keyCode.Value;
                 break;
             } else {
-                _emulationLoopRecalls.WaitForKeybardDataReady();
+                //Wait for hardware interrupt 0x9 (IRQ1) to be processed
+                _emulationLoopRecall.RunInterrupt(0x9);
             }
         }
     }
