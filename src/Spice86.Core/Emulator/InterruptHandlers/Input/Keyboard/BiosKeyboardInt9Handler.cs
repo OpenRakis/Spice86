@@ -47,8 +47,14 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte scanCode = _keyboard.KeyboardEvent.ScanCode ?? 0;
+        byte? scanCode = _keyboard.KeyboardEvent.ScanCode;
         byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
+
+        if (scanCode is null) {
+            // No key pressed, nothing to enqueue
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
+        }
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{BiosInt9KeyReceived}", scanCode);

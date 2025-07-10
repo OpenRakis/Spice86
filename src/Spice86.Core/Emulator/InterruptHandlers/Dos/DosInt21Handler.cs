@@ -31,7 +31,6 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
-    private readonly ConsoleControl _consoleControl;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -54,10 +53,8 @@ public class DosInt21Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
-        ConsoleControl consoleControl, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _consoleControl = consoleControl;
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
@@ -104,7 +101,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3C, () => CreateFileUsingHandle(true));
         AddAction(0x3D, () => OpenFile(true));
         AddAction(0x3E, () => CloseFile(true));
-        AddAction(0x3F, () => ReadFromFileOrDevice(true));
+        AddAction(0x3F, () => ReadFile(true));
         AddAction(0x40, () => WriteToFileOrDevice(true));
         AddAction(0x41, () => RemoveFile(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
@@ -199,12 +196,8 @@ public class DosInt21Handler : InterruptHandler {
     /// Copies a character from the standard input to _state.AL, without echo on the standard output.
     /// </summary>
     public void DirectStandardInputWithoutEcho() {
-        bool echo = _consoleControl.Echo;
-        _consoleControl.Echo = false;
-        if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) ||
-            !stdIn.CanRead) {
-            State.AL = 0;
-        } else {
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
+            stdIn.CanRead) {
             byte[] bytes = new byte[1];
             var readCount = stdIn.Read(bytes, 0, 1);
             if (readCount < 1) {
@@ -212,8 +205,9 @@ public class DosInt21Handler : InterruptHandler {
             } else {
                 State.AL = bytes[0];
             }
+        } else {
+            State.AL = 0;
         }
-        _consoleControl.Echo = echo;
     }
 
     /// <summary>
@@ -403,8 +397,6 @@ public class DosInt21Handler : InterruptHandler {
     /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
     /// </remarks>
     public void BufferedInput() {
-        bool echo = _consoleControl.Echo;
-        _consoleControl.Echo = true; // Enable echoing to the standard output.
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
         int readCount = 0;
@@ -451,7 +443,6 @@ public class DosInt21Handler : InterruptHandler {
             }
         }
         dosInputBuffer.ReadCount = (byte)(readCount < 0 ? 0 : (byte)readCount);
-        _consoleControl.Echo = echo;
     }
 
     /// <summary>
@@ -497,9 +488,13 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
-                _consoleControl.DirectOutput = true;
+                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                    consoleDeviceBefore.DirectOutput = true;
+                }
                 stdOut.Write(character);
-                _consoleControl.DirectOutput = false;
+                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                    consoleDeviceAfter.DirectOutput = false;
+                }
                 State.AL = character;
             } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("DOS INT21H DirectConsoleIo: Cannot write to standard output device.");
@@ -958,15 +953,14 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Reads a file or device from the file handle in BX, the read length in CX, and the buffer at DS:DX.
+    /// Reads a file from disk from the file handle in BX, the read length in CX, and the buffer at DS:DX.
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
-    public void ReadFromFileOrDevice(bool calledFromVm) {
-        _consoleControl.Echo = false;
+    public void ReadFile(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort readLength = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -975,10 +969,9 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFileOrDevice(
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(
             fileHandle, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-        _consoleControl.Echo = true;
     }
 
     /// <inheritdoc />

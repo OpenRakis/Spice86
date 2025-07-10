@@ -61,12 +61,11 @@ public class KeyboardInt16Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
         }
-        while (State.IsRunning) {
-            if (TryGetPendingKeyCode(out ushort? keyCode)) {
-                _biosKeyboardBuffer.DequeueKeyCode();
-                State.AX = keyCode.Value;
-                break;
-            } else {
+        if (TryGetPendingKeyCode(out ushort? keyCode)) {
+            _biosKeyboardBuffer.DequeueKeyCode();
+            State.AX = keyCode.Value;
+        } else {
+            while (_biosKeyboardBuffer.IsEmpty) {
                 //Wait for hardware interrupt 0x9 (IRQ1) to be processed
                 _emulationLoopRecall.RunInterrupt(0x9);
             }
