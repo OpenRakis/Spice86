@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 /// <summary>
 /// Generates a Process Segment Prefix (PSP) and sets it up with the appropriate values.
@@ -53,11 +54,25 @@ public class PspGenerator {
         // Load the command-line arguments into the PSP.
         _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET, ArgumentsToDosBytes(arguments));
 
+        byte[] environmentBlock = _environmentBlockGenerator.BuildEnvironmentBlock(dosFileSpec);
+
+        int envBlockPointer = pspSegment + 2;
+
+        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress((ushort)envBlockPointer, 0);
+
+        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
+            envBlockSegmentAddress.Offset), environmentBlock);
+
         // Copy the DOS env vars into the PSP.
-        _memory.LoadData(pspAddress + ENVIRONMENT_SEGMENT_OFFSET, _environmentBlockGenerator.BuildEnvironmentBlock(dosFileSpec));
+        var pspEnvSegmentAddress = new SegmentedAddress(pspSegment, ENVIRONMENT_SEGMENT_OFFSET);
+        _memory.SegmentedAddress[pspEnvSegmentAddress] = envBlockSegmentAddress;
 
         // Initialize the memory manager with the PSP segment and the last free segment value.
         _dosMemoryManager.Init(pspSegment, lastFreeSegment);
+
+        DosMemoryControlBlock mcb = _dosMemoryManager.GetDosMemoryControlBlockFromSegment((ushort)(pspSegment - 1));
+
+        mcb.FileName = Path.GetFileNameWithoutExtension(dosFileSpec).ToUpperInvariant();
 
         // Set the disk transfer area address to the command-line offset in the PSP.
         _dosFileManager.SetDiskTransferAreaAddress(pspSegment, DTA_OR_COMMAND_LINE_OFFSET);
@@ -79,7 +94,7 @@ public class PspGenerator {
         // Set the command line size.
         res[0] = (byte)correctLengthArguments.Length;
 
-        var argumentsBytes = Encoding.UTF8.GetBytes(correctLengthArguments);
+        byte[] argumentsBytes = Encoding.UTF8.GetBytes(correctLengthArguments);
 
         // Copy the actual characters.
         int index = 0;

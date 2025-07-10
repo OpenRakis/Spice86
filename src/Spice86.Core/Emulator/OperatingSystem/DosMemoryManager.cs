@@ -200,7 +200,7 @@ public class DosMemoryManager {
         }
     }
 
-    private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(ushort blockSegment) {
+    internal DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(ushort blockSegment) {
         return new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
     }
 
