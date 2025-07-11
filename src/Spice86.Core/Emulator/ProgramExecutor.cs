@@ -3,18 +3,13 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Bios;
-using Spice86.Core.Emulator.LoadableFile.Dos.Com;
-using Spice86.Core.Emulator.LoadableFile.Dos.Exe;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
@@ -73,8 +68,7 @@ public sealed class ProgramExecutor : IDisposable {
                 emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
-            memory, state, dos.EnvironmentVariables,
-            dos.FileManager, dos.MemoryManager);
+            memory, state, dos);
         if (configuration.InitializeDOS is null) {
             configuration.InitializeDOS = loader.DosInitializationNeeded;
             if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -92,7 +86,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// Starts the loaded program.
     /// </summary>
     public void Run() {
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Starting the emulation loop");
         }
         if (_gdbServer is not null) {
@@ -123,36 +117,18 @@ public sealed class ProgramExecutor : IDisposable {
         }
     }
 
-    private ExecutableFileLoader CreateExecutableFileLoader(Configuration configuration, IMemory memory, State cpuState, EnvironmentVariables environmentVariables,
-        DosFileManager fileManager, DosMemoryManager memoryManager) {
-        string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
+    private ExecutableFileLoader CreateExecutableFileLoader(
+        Configuration configuration, IMemory memory, State cpuState, Dos dos) {
+        string? exe = configuration.Exe;
+        ArgumentException.ThrowIfNullOrEmpty(exe);
 
-        string lowerCaseFileName = executableFileName.ToLowerInvariant();
-        ushort entryPointSegment = configuration.ProgramEntryPointSegment;
-        if (lowerCaseFileName.EndsWith(".exe")) {
-            return new ExeLoader(memory,
-                cpuState,
-                _loggerService,
-                environmentVariables,
-                fileManager,
-                memoryManager,
-                entryPointSegment);
-        }
-
-        if (lowerCaseFileName.EndsWith(".com")) {
-            return new ComLoader(memory,
-                cpuState,
-                _loggerService,
-                environmentVariables,
-                fileManager,
-                memoryManager,
-                entryPointSegment);
-        }
-
-        return new BiosLoader(memory, cpuState, _loggerService);
+        string upperCaseExtension = Path.GetExtension(exe.ToUpperInvariant());
+        return upperCaseExtension switch {
+            ".EXE" or ".COM" => dos,
+            _ => new BiosLoader(memory, cpuState, _loggerService),
+        };
     }
-    
+
     private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
         MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
         FunctionCatalogue functionCatalogue, ExecutionFlowRecorder executionFlowRecorder,
