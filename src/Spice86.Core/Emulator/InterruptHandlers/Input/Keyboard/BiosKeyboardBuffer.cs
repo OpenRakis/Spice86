@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
 /// This is a memory based FIFO Queue used to store key codes. <br/>
-/// Data about buffer start, end and positions is stored in the Bios Data Area.
+/// Data about buffer start, and end positions is stored in the Bios Data Area.
 /// </summary>
 public class BiosKeyboardBuffer {
     private readonly IIndexable _memory;

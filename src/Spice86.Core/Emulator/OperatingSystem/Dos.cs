@@ -32,7 +32,7 @@ public class Dos {
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
-    private readonly EmulationLoopRecalls _emulationLoopRecalls;
+    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -132,16 +132,16 @@ public class Dos {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="emulationLoopRecalls">The class used to wait for interrupts without blocking the emulation loop.</param>
+    /// <param name="emulationLoopRecall">The class used to wait for interrupts without blocking the emulation loop.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
-    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="xms">The extended memory DOS driver. Optional.</param>
     public Dos(Configuration configuration, IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, EmulationLoopRecalls emulationLoopRecalls,
+        Stack stack, State state, EmulationLoopRecall emulationLoopRecall,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         ILoggerService loggerService, IDictionary<string, string> envVars,
@@ -149,14 +149,13 @@ public class Dos {
         _loggerService = loggerService;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        _emulationLoopRecalls = emulationLoopRecalls;
+        _emulationLoopRecall = emulationLoopRecall;
         _memory = memory;
         _biosDataArea = biosDataArea;
         _state = state;
         _vgaFunctionality = vgaFunctionality;
-        DosDriveManager = new(_loggerService,configuration.CDrive,
-            configuration.Exe);
-        VirtualFileBase[] dosDevices = AddDefaultDevices();
+        DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
+        VirtualFileBase[] dosDevices = AddDefaultDevices(keyboardInt16Handler);
         DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
@@ -217,12 +216,12 @@ public class Dos {
     private uint GetDefaultNewDeviceBaseAddress()
         => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
-    private VirtualFileBase[] AddDefaultDevices() {
+    private VirtualFileBase[] AddDefaultDevices(KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
             _loggerService, _state,
-            _biosDataArea, _emulationLoopRecalls, _vgaFunctionality,
+            _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
             _biosKeyboardBuffer);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());

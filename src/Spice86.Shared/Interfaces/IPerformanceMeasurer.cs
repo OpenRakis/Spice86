@@ -3,7 +3,7 @@ namespace Spice86.Shared.Interfaces;
 /// <summary>
 /// Measures a performance metric.
 /// </summary>
-public interface IPerformanceMeasurer {
+public interface IPerformanceMeasureReader {
     /// <summary>
     /// Gets the performance measurement value per millisecond.
     /// </summary>
@@ -18,7 +18,9 @@ public interface IPerformanceMeasurer {
     /// Gets the performance measurement value per second (average).
     /// </summary>
     long AverageValuePerSecond { get; }
+}
 
+public interface IPerformanceMeasureWriter {
     /// <summary>
     /// Updates performance measurements with a new value.
     /// </summary>

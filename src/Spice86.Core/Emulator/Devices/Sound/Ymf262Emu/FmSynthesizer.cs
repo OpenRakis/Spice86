@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Channels;
 using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu.Operators;
+using Spice86.Core.Backend.Audio.IirFilters;
 
 /// <summary>
 /// Emulates a YMF262 OPL3 device.
@@ -12,6 +13,7 @@ public sealed class FmSynthesizer {
     private readonly double _tremoloIncrement0;
     private readonly double _tremoloIncrement1;
     private readonly int _tremoloTableLength;
+    private readonly LowPass _lowPassFilter;
 
     internal readonly int[] Registers = new int[0x200];
     internal readonly HighHat? HighHatOperator;
@@ -58,6 +60,10 @@ public sealed class FmSynthesizer {
         _tremoloTableLength = (int)(sampleRate / TremoloFrequency);
         _tremoloIncrement0 = CalculateIncrement(TremoloDepth0, 0, 1 / (2 * TremoloFrequency));
         _tremoloIncrement1 = CalculateIncrement(TremoloDepth1, 0, 1 / (2 * TremoloFrequency));
+        
+        // Initialize the low-pass filter with cutoff at 8000 Hz
+        _lowPassFilter = new LowPass();
+        _lowPassFilter.Setup(sampleRate, 8000);
 
         InitializeOperators();
         InitializeChannels2Op();
@@ -78,21 +84,16 @@ public sealed class FmSynthesizer {
     public int SampleRate { get; }
 
     /// <summary>
-    /// Fills <paramref name="buffer"/> with 16-bit mono samples.
+    /// Fills <paramref name="buffer"/> with 32-bit stereo samples (interleaved left-right).
     /// </summary>
-    /// <param name="buffer">Buffer to fill with 16-bit waveform data.</param>
-    public void GetData(Span<short> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = (short)(GetNextSample() * 32767);
-        }
-    }
-    /// <summary>
-    /// Fills <paramref name="buffer"/> with 32-bit mono samples.
-    /// </summary>
-    /// <param name="buffer">Buffer to fill with 32-bit waveform data.</param>
+    /// <param name="buffer">Buffer to fill with 32-bit stereo waveform data.</param>
     public void GetData(Span<float> buffer) {
-        for (int i = 0; i < buffer.Length; i++) {
-            buffer[i] = (float)GetNextSample();
+        for (int i = 0; i < buffer.Length; i += 2) {
+            // Apply low-pass filter directly to the output
+            float sample = (float)_lowPassFilter.Filter(GetNextSample());
+            // Write the same sample to both left and right channels
+            buffer[i] = sample;      // Left channel
+            buffer[i + 1] = sample;  // Right channel
         }
     }
 
@@ -205,7 +206,7 @@ public sealed class FmSynthesizer {
     private double GetNextSample() {
         Span<double> channelOutput = stackalloc double[4];
 
-        Span<double> outputBuffer = stackalloc double[4] { 0, 0, 0, 0 };
+        Span<double> outputBuffer = [0, 0, 0, 0];
 
         // If IsOpl3Mode = 0, use OPL2 mode with 9 channels. If IsOpl3Mode = 1, use OPL3 18 channels;
         for (int array = 0; array < (IsOpl3Mode + 1); array++) {
@@ -448,21 +449,20 @@ public sealed class FmSynthesizer {
             _operators[0, 0x14] = SnareDrumOperator;
             _operators[0, 0x12] = TomTomOperator;
             _operators[0, 0x15] = TopCymbalOperator;
-        }
-        else {
+        } else {
             for (int i = 6; i <= 8; i++) {
                 _channels[0, i] = Channels2Op[0, i];
             }
-            if(_highHatOperatorInNonRhythmMode is not null) {
+            if (_highHatOperatorInNonRhythmMode is not null) {
                 _operators[0, 0x11] = _highHatOperatorInNonRhythmMode;
             }
-            if(_snareDrumOperatorInNonRhythmMode is not null) {
+            if (_snareDrumOperatorInNonRhythmMode is not null) {
                 _operators[0, 0x14] = _snareDrumOperatorInNonRhythmMode;
             }
-            if(_tomTomOperatorInNonRhythmMode is not null) {
+            if (_tomTomOperatorInNonRhythmMode is not null) {
                 _operators[0, 0x12] = _tomTomOperatorInNonRhythmMode;
             }
-            if(_topCymbalOperatorInNonRhythmMode is not null) {
+            if (_topCymbalOperatorInNonRhythmMode is not null) {
                 _operators[0, 0x15] = _topCymbalOperatorInNonRhythmMode;
             }
         }

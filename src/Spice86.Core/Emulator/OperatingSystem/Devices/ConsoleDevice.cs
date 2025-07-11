@@ -30,7 +30,7 @@ public class ConsoleDevice : CharacterDevice {
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly EmulationLoopRecalls _emulationLoopRecalls;
+    private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly State _state;
     private readonly Ansi _ansi = new Ansi();
     private class Ansi {
@@ -51,13 +51,13 @@ public class ConsoleDevice : CharacterDevice {
     /// </summary>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
         ILoggerService loggerService, State state, BiosDataArea biosDataArea,
-        EmulationLoopRecalls emulationLoopRecalls, IVgaFunctionality vgaFunctionality,
+        KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
         _loggerService = loggerService;
         _biosKeybardBuffer = biosKeyboardBuffer;
-        _emulationLoopRecalls = emulationLoopRecalls;
+        _keyboardInt16Handler = keyboardInt16Handler;
         _state = state;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
@@ -123,12 +123,8 @@ public class ConsoleDevice : CharacterDevice {
             _readCache = 0;
         }
         while(index < buffer.Length && readCount < count) {
-            // Function 0: Read keystroke
-            _state.AH = 0x0;
-            byte? scanCode = _emulationLoopRecalls.ReadBiosInt16HGetKeyStroke();
-            if (scanCode is null) {
-                break;
-            }
+            _keyboardInt16Handler.GetKeystroke();
+            byte scanCode = _state.AL;
             switch (scanCode) {
                 case (byte)AsciiControlCodes.CarriageReturn:
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
@@ -149,7 +145,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Backspace:
                     if (buffer.Length == 1) {
-                        buffer[index++] = scanCode.Value;
+                        buffer[index++] = scanCode;
                         readCount++;
                     } else if (index > 0) {
                         buffer[index--] = 0;
@@ -168,7 +164,7 @@ public class ConsoleDevice : CharacterDevice {
                     // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
                     if (_state.AH != 0) {
                         // Extended key if _state.AH is not 0x0
-                        buffer[index++] = scanCode.Value;
+                        buffer[index++] = scanCode;
                         readCount++;
                     } else {
                         buffer[index++] = 0;
@@ -183,7 +179,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case (byte)AsciiControlCodes.Null:
                     // Extended keys in the INT 16H 0x0 function call case
-                    buffer[index++] = scanCode.Value;
+                    buffer[index++] = scanCode;
                     readCount++;
                     if (buffer.Length > index) {
                         buffer[index++] = _state.AH;
@@ -193,13 +189,13 @@ public class ConsoleDevice : CharacterDevice {
                     }
                     break;
                 default:
-                    buffer[index++] = scanCode.Value;
+                    buffer[index++] = scanCode;
                     readCount++;
                     break;
             }
             if (Echo) {
                 // What to do if buffer.Length == 1 and character is BackSpace ?
-                OutputWithNoAttributes(scanCode.Value);
+                OutputWithNoAttributes(scanCode);
             }
         }
         _state.AX = oldAx; // Restore AX

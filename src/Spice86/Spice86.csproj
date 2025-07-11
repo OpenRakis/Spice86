@@ -27,7 +27,6 @@
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="PanAndZoom" />
-    <PackageReference Include="Xaml.Behaviors.Avalonia" />
     <PackageReference Include="AvaloniaGraphControl" />
     <PackageReference Include="AvaloniaHex" />
     <PackageReference Include="bodong.Avalonia.PropertyGrid" />
