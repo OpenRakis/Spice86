@@ -335,9 +335,12 @@ public class Spice86DependencyInjection : IDisposable {
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(state, memory, mouse, mainWindowViewModel,
             vgaFunctionality, loggerService);
+
+        EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
+            state, stack, emulationLoop);
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -396,10 +399,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
 
-        EmulationLoopRecalls machineCodeCallback = new(interruptVectorTable, state, stack, emulationLoop);
-
-
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, machineCodeCallback, biosKeyboardBuffer,
+        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoopRecall, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality, configuration.CDrive,
             configuration.Exe,
             configuration.InitializeDOS is not false,

@@ -1,22 +1,26 @@
-﻿
-namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics.CodeAnalysis;
+
+using static System.Runtime.CompilerServices.RuntimeHelpers;
+
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
-    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
+    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Initializes a new instance.
@@ -28,11 +32,13 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
+    /// <param name="emulationLoopRecall">Class used to wait for keyboard input from hardware interrupt 0x9 (IRQ1)</param>
     public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer,
+        EmulationLoopRecall emulationLoopRecall)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _loggerService = loggerService;
+        _emulationLoopRecall = emulationLoopRecall;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
@@ -55,12 +61,15 @@ public class KeyboardInt16Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
         }
-        ushort? keyCode = GetNextKeyCode();
-        keyCode ??= 0;
-
-        // AH = keyboard scan code
-        // AL = ASCII character or zero if special function key
-        State.AX = keyCode.Value;
+        if (TryGetPendingKeyCode(out ushort? keyCode)) {
+            _biosKeyboardBuffer.DequeueKeyCode();
+            State.AX = keyCode.Value;
+        } else {
+            while (_biosKeyboardBuffer.IsEmpty) {
+                //Wait for hardware interrupt 0x9 (IRQ1) to be processed
+                _emulationLoopRecall.RunInterrupt(0x9);
+            }
+        }
     }
 
     public void GetShiftFlags() {
@@ -71,10 +80,27 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Tries to get the pending keycode from the BIOS keyboard buffer without removing it.
+    /// </summary>
+    /// <param name="keyCode">When this method returns, contains the keycode if one was available; otherwise, the default value.</param>
+    /// <returns><c>True</c> if a keycode was available; otherwise, <c>False</c>.</returns>
+    public bool TryGetPendingKeyCode([NotNullWhen(true)] out ushort? keyCode) {
+        ushort? code = _biosKeyboardBuffer.PeekKeyCode();
+        if (code.HasValue) {
+            keyCode = code.Value;
+            return true;
+        }
+        keyCode = null;
+        return false;
+    }
+
+    /// <summary>
     /// Gets whether the BIOS keyboard buffer has a pending key code in its queue.
     /// </summary>
     /// <returns><c>True</c> if the BIOS keyboard buffer is not empty, <c>False</c> otherwise.</returns>
-    public bool HasKeyCodePending() => _biosKeyboardBuffer.PeekKeyCode() is not null;
+    public bool HasKeyCodePending() {
+        return TryGetPendingKeyCode(out _);
+    }
 
     /// <summary>
     /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
@@ -99,14 +125,6 @@ public class KeyboardInt16Handler : InterruptHandler {
                 State.AX = keyCode.Value;
             }
         }
-    }
-
-    /// <summary>
-    /// Dequeues the next keycode from the BIOS keyboard buffer and returns it.
-    /// </summary>
-    /// <returns>The next keycode as an ushort value, <c>null</c> if nothing was in the buffer.</returns>
-    public ushort? GetNextKeyCode() {
-        return _biosKeyboardBuffer.DequeueKeyCode();
     }
 
     /// <summary>
