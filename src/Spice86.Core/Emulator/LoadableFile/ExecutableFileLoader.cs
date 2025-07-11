@@ -46,7 +46,7 @@ public abstract class ExecutableFileLoader {
     /// <param name="file">The path of the file to load.</param>
     /// <param name="arguments">Optional arguments to pass to the loaded file.</param>
     /// <returns>The bytes of the loaded file.</returns>
-    internal abstract (ushort CodeSegment, byte[] FileContent) LoadFile(string file, string? arguments);
+    public abstract byte[] LoadFile(string file, string? arguments);
 
     /// <summary>
     /// Reads the contents of a file and returns its bytes.
