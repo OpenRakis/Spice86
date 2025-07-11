@@ -247,7 +247,7 @@ public class DosFileManager {
         EnumerationOptions enumerationOptions = GetEnumerationOptions(searchAttributes);
 
         try {
-            string? searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
+            string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
             string[] matchingPaths = Directory.GetFileSystemEntries(
                 searchFolder,
                 searchPattern,
