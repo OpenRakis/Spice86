@@ -5,7 +5,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -134,15 +133,14 @@ public sealed class Dos : DosFileLoader {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="emulationLoopRecall">The class used to wait for interrupts without blocking the emulation loop.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
-    public Dos(Configuration configuration, IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, EmulationLoopRecall emulationLoopRecall,
+    public Dos(Configuration configuration, IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, ILoggerService loggerService)
@@ -396,7 +394,8 @@ public sealed class Dos : DosFileLoader {
         _memory.LoadData(physicalStartAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
         foreach (SegmentedAddress address in exeFile.RelocationTable) {
             // Read value from memory, add the start segment offset and write back
-            uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset) + physicalStartAddress;
+            uint addressToEdit = MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset)
+                + physicalStartAddress;
             _memory.UInt16[addressToEdit] += startSegment;
         }
     }

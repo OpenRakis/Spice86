@@ -168,10 +168,8 @@ public class DosFileManagerTests {
     biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
-            new EmulationLoopRecall(interruptVectorTable, state, stack, emulationLoop),
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
-            vgaFunctionality,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
+            vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 
         DosDriveManager dosDriveManager = new(loggerService, configuration.CDrive, configuration.Exe);
