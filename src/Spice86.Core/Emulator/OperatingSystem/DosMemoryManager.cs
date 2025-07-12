@@ -13,17 +13,38 @@ using System.Diagnostics.CodeAnalysis;
 public class DosMemoryManager {
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private ushort _pspSegment;
-    private DosMemoryControlBlock? _start;
+    private readonly ushort _pspSegment;
+    private readonly DosMemoryControlBlock _start;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory, ILoggerService loggerService) {
+    /// <param name="pspSegment">The segment start of the first PSP.</param>
+    /// <param name="lastFreeSegment">The last free segment for DOS memory manager to use.</param>
+    /// <param name="dosFileName">The full absolute host file path to the DOS executable we are going to execute.</param>
+    public DosMemoryManager(IMemory memory, ILoggerService loggerService,
+        ushort pspSegment, ushort lastFreeSegment, string? dosFileName = null) {
         _loggerService = loggerService;
         _memory = memory;
+        ushort startSegment = (ushort)(pspSegment - 1);
+        _pspSegment = pspSegment;
+        ushort size = (ushort)(lastFreeSegment - startSegment);
+        _start = GetDosMemoryControlBlockFromSegment(startSegment);
+
+        // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
+        _start.Size = (ushort)(size - 1);
+        _start.SetFree();
+        _start.SetLast();
+
+        if (!string.IsNullOrWhiteSpace(dosFileName)) {
+            string shortFileName = Path.GetFileNameWithoutExtension(dosFileName).ToUpperInvariant();
+            if(shortFileName.Length > 8) {
+                shortFileName = shortFileName[..8];
+            }
+            _start.FileName = shortFileName;
+        }
     }
 
     /// <summary>
@@ -111,18 +132,6 @@ public class DosMemoryManager {
     /// Gets the segment number of the Process Segment Prefix (PSP)
     /// </summary>
     public ushort PspSegment => _pspSegment;
-
-    internal void Init(ushort pspSegment, ushort lastFreeSegment) {
-        ushort startSegment = (ushort)(pspSegment - 1);
-        _pspSegment = pspSegment;
-        ushort size = (ushort)(lastFreeSegment - startSegment);
-        _start = GetDosMemoryControlBlockFromSegment(startSegment);
-
-        // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
-        _start.Size = (ushort)(size - 1);
-        _start.SetFree();
-        _start.SetLast();
-    }
 
     /// <summary>
     /// Extends or reduces a MCB.

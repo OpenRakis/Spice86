@@ -399,11 +399,8 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
 
-        Dos dos = new Dos(memory, functionHandlerProvider, stack, state, emulationLoopRecall, biosKeyboardBuffer,
-            keyboardInt16Handler, biosDataArea, vgaFunctionality, configuration.CDrive,
-            configuration.Exe,
-            configuration.InitializeDOS is not false,
-            configuration.Ems,
+        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
+            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             loggerService);
 

@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 using Spice86.Core.Emulator.Memory;
@@ -30,6 +31,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the name of the file associated with the MCB.
     /// </summary>
+    [Range(0, 8)]
     public string FileName { get => GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize); set => SetZeroTerminatedString(FilenameFieldOffset, value, FilenameFieldSize); }
 
     /// <summary>

@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile.Dos.Exe;
+﻿namespace Spice86.Core.Emulator.LoadableFile.Dos;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
@@ -7,12 +7,12 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>
 /// Representation of an EXE file as a MemoryBasedDataStructure
 /// </summary>
-public class ExeFile : MemoryBasedDataStructure {
+public class DosExeFile : MemoryBasedDataStructure {
     /// <summary>
     /// Creates a new instance of the ExeFile class.
     /// </summary>
     /// <param name="byteReaderWriter">The class that allows writing and reading at specific addresses in memory.</param>
-    public ExeFile(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, 0) {
+    public DosExeFile(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, 0) {
     }
 
     /// <summary>
