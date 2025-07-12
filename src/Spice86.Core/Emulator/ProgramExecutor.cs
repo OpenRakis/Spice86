@@ -124,7 +124,7 @@ public sealed class ProgramExecutor : IDisposable {
 
         string upperCaseExtension = Path.GetExtension(exe.ToUpperInvariant());
         return upperCaseExtension switch {
-            ".EXE" or ".COM" => dos,
+            ".EXE" or ".COM" => dos.ProcessManager,
             _ => new BiosLoader(memory, cpuState, _loggerService),
         };
     }
