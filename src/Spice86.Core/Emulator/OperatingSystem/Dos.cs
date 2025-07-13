@@ -94,9 +94,9 @@ public sealed class Dos {
     public DosProcessManager ProcessManager { get; }
 
     /// <summary>
-    /// Gets the global DOS memory structures.
+    /// Gets the global DOS region settings structure.
     /// </summary>
-    public CountryInfo CountryInfo { get; } = new();
+    public CountryInfo CountryInfo { get; }
 
     /// <summary>
     /// The movable data transfer area for DOS applications.
@@ -154,6 +154,7 @@ public sealed class Dos {
 
         DosStringDecoder dosStringDecoder = new(memory, state);
 
+        CountryInfo = new(memory);
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
         ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
