@@ -84,6 +84,10 @@ public class DosProcessManager : DosFileLoader {
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
+        SetupStackSpace(file, arguments);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Loading file: {File} with arguments: {Arguments}", file, arguments);
+        }
         uint pspAddress = MemoryUtils.ToPhysicalAddress(PspSegment, 0);
 
         // Set the PSP's first 2 bytes to INT 20h.
@@ -116,11 +120,13 @@ public class DosProcessManager : DosFileLoader {
         _fileManager.SetDiskTransferAreaAddress(PspSegment,
             DTA_OR_COMMAND_LINE_OFFSET);
 
-        return Path.GetExtension(file).ToUpperInvariant() switch {
+        var result = Path.GetExtension(file).ToUpperInvariant() switch {
             ".COM" => LoadComFile(file),
             ".EXE" => LoadExeFile(file, PspSegment),
             _ => throw new UnrecoverableException($"Unsupported file type for DOS: {file}"),
         };
+
+        return result;
     }
 
     private byte[] LoadComFile(string file) {
@@ -199,5 +205,76 @@ public class DosProcessManager : DosFileLoader {
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
         SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+    }
+
+    private void SetupStackSpace(string file, string? arguments) {
+        // Reserve 0x200 bytes of stack space
+        _state.SP -= 0x200;
+
+        // Calculate the physical address where the stack begins
+        uint stackPhysicalAddress = MemoryUtils.ToPhysicalAddress(_state.SS, _state.SP);
+
+        // Write filename to stack at offset 0x20
+        string fileNameOnly = Path.GetFileName(file);
+        _memory.SetZeroTerminatedString(stackPhysicalAddress + 0x20, fileNameOnly, 128);
+
+        // Setup command line at offset 0x100
+        byte[] cmdLine = ArgumentsToDosBytes(arguments);
+        _memory.LoadData(stackPhysicalAddress + 0x100, cmdLine);
+
+        // Setup FCB1 and FCB2 in PSP (File Control Blocks at offsets 0x5C and 0x6C)
+        if (!string.IsNullOrEmpty(arguments)) {
+            string[] parts = arguments.Split(new[] { ' ', '\t', ',', ';', '=' },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            // Initialize FCBs by clearing them first (36 bytes each)
+            _memory.Memset8(MemoryUtils.ToPhysicalAddress(PspSegment, 0x5C), 0, 36);
+            _memory.Memset8(MemoryUtils.ToPhysicalAddress(PspSegment, 0x6C), 0, 36);
+
+            // Parse first two parameters for FCBs if they exist
+            if (parts.Length > 0) {
+                PopulateFcb(parts[0], PspSegment, 0x5C);
+            }
+            if (parts.Length > 1) {
+                PopulateFcb(parts[1], PspSegment, 0x6C);
+            }
+        }
+
+        _state.SP += 0x200; // Restore SP after setting up the stack
+    }
+
+    private void PopulateFcb(string param, ushort segment, ushort offset) {
+        // Basic FCB setup - just the filename part
+        if (param.StartsWith('/') && param.Length > 1) {
+            param = param[1..];
+        }
+
+        // Extract drive letter if present
+        byte driveNumber = 0; // Default drive
+        if (param.Length > 1 && param[1] == ':') {
+            driveNumber = (byte)(char.ToUpperInvariant(param[0]) - 'A' + 1);
+            param = param[2..];
+        }
+
+        // Set drive number in FCB (first byte)
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(segment, offset);
+        _memory.UInt8[fcbAddress] = driveNumber;
+
+        // Convert filename to 8.3 format and write to FCB
+        string fileName = Path.GetFileNameWithoutExtension(param);
+        fileName = fileName.Length > 8 ? fileName[..8] : fileName.PadRight(8, ' ');
+
+        // Write filename (8 chars)
+        byte[] fileNameBytes = Encoding.ASCII.GetBytes(fileName);
+        _memory.LoadData(fcbAddress + 1, fileNameBytes, Math.Min(fileNameBytes.Length, 8));
+
+        // Write extension (3 chars) if present
+        string extension = Path.GetExtension(param);
+        if (!string.IsNullOrEmpty(extension)) {
+            extension = extension[1..];
+            extension = extension.Length > 3 ? extension[..3] : extension.PadRight(3, ' ');
+            byte[] extBytes = Encoding.ASCII.GetBytes(extension);
+            _memory.LoadData(fcbAddress + 9, extBytes, Math.Min(extBytes.Length, 3));
+        }
     }
 }
