@@ -1,45 +1,16 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the Program Segment Prefix (PSP)
 /// </summary>
-public sealed class DosProgramSegmentPrefix : DosEnvironmentBlock {
+public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
-    }
-
-    public void MakeNew(ushort memSize) {
-
-    }
-
-    public void CloseFiles() {
-
-    }
-
-    /// <summary>
-    /// Gets the <see cref="BaseAddress"/> of the PSP as a segment.
-    /// </summary>
-    public ushort Segment => MemoryUtils.ToSegment(BaseAddress);
-
-    public void SaveVectors() {
-
-    }
-
-    public void RestoreVectors() {
-
-    }
-
-    public override string? GetEnvironmentVariable(string variableName) {
-        throw new NotImplementedException();
-    }
-
-    public override void SetEnvironmentVariable(string variableName, string value) {
-        throw new NotImplementedException();
     }
 
     /// <summary>
