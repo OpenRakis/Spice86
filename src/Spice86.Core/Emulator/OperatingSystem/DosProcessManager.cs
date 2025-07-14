@@ -100,8 +100,7 @@ public class DosProcessManager : DosFileLoader {
         psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
         psp.DosCommandTail.Command = asciiCommandLine;
 
-        byte[] environmentBlock = new EnvironmentBlockGenerator(_environmentVariables)
-            .BuildEnvironmentBlock();
+        byte[] environmentBlock = CreateEnvironmentBlock(file);
 
         // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
         int envBlockPointer = PspSegment + 1;
@@ -122,6 +121,73 @@ public class DosProcessManager : DosFileLoader {
             ".EXE" => LoadExeFile(file, PspSegment),
             _ => throw new UnrecoverableException($"Unsupported file type for DOS: {file}"),
         };
+    }
+
+    /// <summary>
+    /// Creates a DOS environment block from the current environment variables.
+    /// </summary>
+    /// <param name="programPath">The path to the program being executed.</param>
+    /// <returns>A byte array containing the DOS environment block.</returns>
+    private byte[] CreateEnvironmentBlock(string programPath) {
+        using MemoryStream ms = new();
+    
+        // Add each environment variable as NAME=VALUE followed by a null terminator
+        foreach (KeyValuePair<string, string> envVar in _environmentVariables) {
+            string envString = $"{envVar.Key}={envVar.Value}";
+            byte[] envBytes = Encoding.ASCII.GetBytes(envString);
+            ms.Write(envBytes, 0, envBytes.Length);
+            ms.WriteByte(0); // Null terminator for this variable
+        }
+    
+        // Add final null byte to mark end of environment block
+        ms.WriteByte(0);
+    
+        // Write a word with value 1 after the environment variables
+        // This is required by DOS
+        ms.WriteByte(1);
+        ms.WriteByte(0);
+    
+        // Get the DOS path for the program (not the host path)
+        string dosPath = GetDosProgramPath(programPath);
+    
+        // Write the DOS path to the environment block
+        byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
+        ms.Write(programPathBytes, 0, programPathBytes.Length);
+        ms.WriteByte(0); // Null terminator for program path
+    
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Gets the proper DOS path for a program.
+    /// </summary>
+    /// <param name="programPath">The program path as provided.</param>
+    /// <returns>A properly formatted DOS path.</returns>
+    private string GetDosProgramPath(string programPath) {
+        // Extract just the filename without path if it's a full path
+        string fileName = Path.GetFileName(programPath);
+        
+        // Create a DOS path using the current drive and directory
+        string currentDrive = _driveManager.CurrentDrive.DosVolume;
+        string currentDir = _driveManager.CurrentDrive.CurrentDosDirectory;
+        
+        // Ensure current directory has trailing backslash
+        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
+            currentDir += '\\';
+        }
+        
+        // Build the full DOS path
+        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
+        
+        // Replace slashes and standardize
+        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
+        
+        // Clean up any double backslashes
+        while (dosPath.Contains("\\\\")) {
+            dosPath = dosPath.Replace("\\\\", "\\");
+        }
+        
+        return dosPath;
     }
 
     private byte[] LoadComFile(string file) {
