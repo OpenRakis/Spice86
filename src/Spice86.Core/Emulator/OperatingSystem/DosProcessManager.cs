@@ -16,9 +16,6 @@ using Spice86.Shared.Utils;
 using System.Text;
 
 public class DosProcessManager : DosFileLoader {
-    private const ushort DTA_OR_COMMAND_LINE_OFFSET = 0x80;
-    private const ushort LAST_FREE_SEGMENT_OFFSET = 0x02;
-    private const ushort ENVIRONMENT_SEGMENT_OFFSET = 0x2C;
     private const ushort ComOffset = 0x100;
     private readonly ushort _startSegment;
     private readonly ushort _pspSegment;
@@ -71,7 +68,7 @@ public class DosProcessManager : DosFileLoader {
         // Set the command line size.
         res[0] = (byte)correctLengthArguments.Length;
 
-        byte[] argumentsBytes = Encoding.UTF8.GetBytes(correctLengthArguments);
+        byte[] argumentsBytes = Encoding.ASCII.GetBytes(correctLengthArguments);
 
         // Copy the actual characters.
         int index = 0;
@@ -80,41 +77,45 @@ public class DosProcessManager : DosFileLoader {
         }
 
         res[index + 1] = 0x0D; // Carriage return.
-        return res;
+        int endIndex = index + 1;
+        return res[0..endIndex];
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
         uint pspAddress = MemoryUtils.ToPhysicalAddress(PspSegment, 0);
 
+        // Use DosProgramSegmentPrefix abstraction
+        var psp = new DosProgramSegmentPrefix(_memory, pspAddress);
+
         // Set the PSP's first 2 bytes to INT 20h.
-        _memory.UInt16[pspAddress] = 0xCD20;
+        psp.Exit[0] = 0xCD;
+        psp.Exit[1] = 0x20;
 
-        // Set the PSP's last free segment value.
-        _memory.UInt16[pspAddress + LAST_FREE_SEGMENT_OFFSET] = LastFreeSegment;
+        psp.NextSegment = LastFreeSegment;
 
-        // Load the command-line arguments into the PSP.
-        _memory.LoadData(pspAddress + DTA_OR_COMMAND_LINE_OFFSET,
-            ArgumentsToDosBytes(arguments));
+        // Load the command-line arguments into the PSP's command tail.
+        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
+        byte length = commandLineBytes[0];
+        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
+        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
+        psp.DosCommandTail.Command = asciiCommandLine;
 
         byte[] environmentBlock = new EnvironmentBlockGenerator(_environmentVariables)
             .BuildEnvironmentBlock();
 
-        //In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
+        // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
         int envBlockPointer = PspSegment + 1;
-
         SegmentedAddress envBlockSegmentAddress = new SegmentedAddress((ushort)envBlockPointer, 0);
 
-        //Copy the environment block to memory in a separated segment.
+        // Copy the environment block to memory in a separated segment.
         _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
             envBlockSegmentAddress.Offset), environmentBlock);
 
         // Point the PSP's environment segment to the environment block.
-        var pspEnvSegmentAddress = new SegmentedAddress(PspSegment, ENVIRONMENT_SEGMENT_OFFSET);
-        _memory.SegmentedAddress[pspEnvSegmentAddress] = envBlockSegmentAddress;
+        psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
 
         // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(PspSegment,
-            DTA_OR_COMMAND_LINE_OFFSET);
+        _fileManager.SetDiskTransferAreaAddress(PspSegment, DosCommandTail.OffsetInPspSegment);
 
         return Path.GetExtension(file).ToUpperInvariant() switch {
             ".COM" => LoadComFile(file),

@@ -8,7 +8,10 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// <remarks>In DOSBox source code, this is the DOS_ParamBlock</remarks>
 /// </summary>
 internal class DosExecParameterBlock : DosMemoryControlBlock {
+    private readonly DosCommandTail _dosCommandTail;
     public DosExecParameterBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+        _dosCommandTail = new DosCommandTail(byteReaderWriter, baseAddress + 0x2);
+        CommandTailAddress = _dosCommandTail.BaseAddress;
     }
 
     /// <summary>
@@ -19,9 +22,9 @@ internal class DosExecParameterBlock : DosMemoryControlBlock {
     /// <summary>
     /// Gets or sets the address of the command line used to execute the program. Copied at the end of the child PSP.
     /// </summary>
-    public uint CommandTailAddress { get => UInt32[0x2]; set { UInt32[0x2] = value; } }
+    public uint CommandTailAddress { get => UInt32[0x2]; private set => UInt32[0x2] = value; }
 
-    public DosCommandTail CommandTail { get => new (ByteReaderWriter, CommandTailAddress); }
+    public DosCommandTail CommandTail { get => _dosCommandTail; }
 
     /// <summary>
     /// Gets or sets the address of the first file control block. Unopened FCB to be copied to the child PSP.

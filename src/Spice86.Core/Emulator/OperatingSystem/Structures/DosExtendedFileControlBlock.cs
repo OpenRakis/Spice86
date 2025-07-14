@@ -1,4 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 
 public class DosExtendedFileControlBlock : DosFileControlBlock {
@@ -16,8 +18,8 @@ public class DosExtendedFileControlBlock : DosFileControlBlock {
 
     public const byte ExpectedSignature = 0xFF;
 
-    public byte FileAttribute {
-        get => UInt8[2];
-        set => UInt8[2] = value;
+    public DosFileAttributes FileAttribute {
+        get => (DosFileAttributes)UInt8[2];
+        set => UInt8[2] = (byte)value;
     }
 }
