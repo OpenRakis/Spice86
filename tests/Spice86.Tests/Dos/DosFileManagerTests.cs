@@ -165,7 +165,7 @@ public class DosFileManagerTests {
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-    biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,

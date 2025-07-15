@@ -5,7 +5,9 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -13,6 +15,8 @@ using Spice86.Shared.Utils;
 /// Reimplementation of int2f
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
+    private readonly ExtendedMemoryManager? _xms;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
     /// </summary>
@@ -21,8 +25,12 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt2fHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
+    /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
+    public DosInt2fHandler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack,
+        State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _xms = xms;
         FillDispatchTable();
     }
 
@@ -31,15 +39,52 @@ public class DosInt2fHandler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte operation = State.AH;
-        Run(operation);
+        byte multiplexServiceId = State.AH;
+
+        if (!HasRunnable(multiplexServiceId)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Unhandled INT2F call: {Operation:X2}", multiplexServiceId);
+            }
+            //Moving on...
+            return;
+        }
+
+        Run(multiplexServiceId);
     }
 
     private void FillDispatchTable() {
-        AddAction(0x16, () => ClearCFAndCX(true));
-        AddAction(0x15, SendDeviceDriverRequest);
-        AddAction(0x43, () => ClearCFAndCX(true));
-        AddAction(0x46, () => ClearCFAndCX(true));
+        AddAction(0x10, () => ShareRelatedServices(true));
+        AddAction(0x16, () => DosVirtualMachineServices(true));
+        AddAction(0x15, () => MscdexServices(true));
+        AddAction(0x43, () => XmsServices(true));
+    }
+
+    public void ShareRelatedServices(bool calledFromVm) {
+        if(State.AX == 0x1000) {
+            //report SHARE.EXE as installed...
+            State.AL = 0xFF;
+        }
+    }
+
+    public void XmsServices(bool calledFromVm) {
+        switch (State.AL) {
+            //Is XMS Driver installed
+            case (byte)XmsInt2FFunctionsCodes.InstallationCheck:
+                State.AL = (byte)(_xms is null ? 0x0 : 0x80);
+                break;
+            //Get XMS Control Function Address
+            case (byte)XmsInt2FFunctionsCodes.GetCallbackAddress:
+                SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0,0);
+                State.ES = segmentedAddress.Segment;
+                State.BX = segmentedAddress.Offset;
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("{MethodName}: value {AL} not supported", nameof(XmsServices), State.AL);
+                }
+                break;
+        }
+        SetCarryFlag(false, calledFromVm);
     }
 
     /// <summary>
@@ -47,25 +92,24 @@ public class DosInt2fHandler : InterruptHandler {
     /// <see href="https://github.com/FDOS/kernel/blob/master/kernel/int2f.asm"/> -> 'int2f_call:'.
     /// </summary>
     /// <param name="calledFromVm">Whether it was called by the emulator or not</param>
-    public void ClearCFAndCX(bool calledFromVm) {
+    public void DosVirtualMachineServices(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.CX = 0;
     }
 
     /// <summary>
-    /// Sends a DOS device driver request. Always fails.
-    /// TODO: Implement this.
+    /// Sends a DOS device driver request to MSCDEX. Always fails.
+    /// TODO: Implement MSCDEX.
     /// </summary>
-    public void SendDeviceDriverRequest() {
+    public void MscdexServices(bool calledFromVm) {
         ushort drive = State.CX;
         uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
+        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
                 drive, deviceDriverRequestHeaderAddress);
         }
 
-        // Carry flag signals error.
-        State.CarryFlag = true;
+        SetCarryFlag(true, calledFromVm);
         // AX carries error reason.
         State.AX = 0x000F; // Error code for "Invalid drive"
     }
