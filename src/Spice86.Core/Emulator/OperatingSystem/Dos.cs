@@ -2,10 +2,10 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -22,16 +22,14 @@ using System.Text;
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public class Dos {
+public sealed class Dos {
     //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
     private const int DosSysVarSegment = 0x80;
     private readonly BiosDataArea _biosDataArea;
-    private readonly IMemory _memory;
-    private readonly State _state;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly ILoggerService _loggerService;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
-    private readonly EmulationLoopRecall _emulationLoopRecall;
+    private readonly IMemory _memory;
+    private readonly ILoggerService _loggerService;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -93,15 +91,12 @@ public class Dos {
     /// </summary>
     public DosFileManager FileManager { get; }
 
-    /// <summary>
-    /// Gets the global DOS memory structures.
-    /// </summary>
-    public CountryInfo CountryInfo { get; } = new();
+    public DosProcessManager ProcessManager { get; }
 
     /// <summary>
-    /// Gets the current DOS master environment variables.
+    /// Gets the global DOS region settings structure.
     /// </summary>
-    public EnvironmentVariables EnvironmentVariables { get; } = new EnvironmentVariables();
+    public CountryInfo CountryInfo { get; }
 
     /// <summary>
     /// The movable data transfer area for DOS applications.
@@ -124,52 +119,46 @@ public class Dos {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="configuration">An object that describes what to run and how.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="emulationLoopRecall">The class used to wait for interrupts without blocking the emulation loop.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
-    /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
-    /// <param name="initializeDos">Whether to open default file handles, install EMS if set, and set the environment variables.</param>
-    /// <param name="enableEms">Whether to create and install the EMS driver.</param>
-    public Dos(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, EmulationLoopRecall emulationLoopRecall,
+    public Dos(Configuration configuration, IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        string? cDriveFolderPath, string? executablePath, bool initializeDos,
-        bool enableEms, IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, ILoggerService loggerService) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        _emulationLoopRecall = emulationLoopRecall;
         _memory = memory;
         _biosDataArea = biosDataArea;
-        _state = state;
         _vgaFunctionality = vgaFunctionality;
-        DosDriveManager = new(_loggerService, cDriveFolderPath, executablePath);
-        VirtualFileBase[] dosDevices = AddDefaultDevices(keyboardInt16Handler);
+
+        DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
+
+        VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
         DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
-
-        // like DOSBox, we don't have one.
-        DosSysVars.ClockDeviceHeaderPointer = 0x0;
 
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
 
+        CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
-        MemoryManager = new DosMemoryManager(_memory, _loggerService);
+        ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
+        MemoryManager = new DosMemoryManager(_memory, loggerService, ProcessManager.PspSegment, DosProcessManager.LastFreeSegment);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -179,23 +168,16 @@ public class Dos {
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
 
+        if (configuration.InitializeDOS is false) {
+            return;
+        }
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Initializing DOS");
         }
-
-        if (!initializeDos) {
-            return;
-        }
-
         OpenDefaultFileHandles(dosDevices);
-
-        if (enableEms) {
+        if (configuration.Ems) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
             AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
-        }
-
-        foreach (KeyValuePair<string, string> envVar in envVars) {
-            EnvironmentVariables.Add(envVar.Key, envVar.Value);
         }
     }
 
@@ -208,11 +190,11 @@ public class Dos {
     private uint GetDefaultNewDeviceBaseAddress()
         => new SegmentedAddress(MemoryMap.DeviceDriverSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
-    private VirtualFileBase[] AddDefaultDevices(KeyboardInt16Handler keyboardInt16Handler) {
+    private VirtualFileBase[] AddDefaultDevices(State state, KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
-            _loggerService, _state,
+            _loggerService, state,
             _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
             _biosKeyboardBuffer);
         AddDevice(consoleDevice);
@@ -265,7 +247,6 @@ public class Dos {
         if (header.Attributes.HasFlag(DeviceAttributes.CurrentClock)) {
             CurrentClockDevice = (CharacterDevice)device;
         }
-
         Devices.Add(device);
     }
 }

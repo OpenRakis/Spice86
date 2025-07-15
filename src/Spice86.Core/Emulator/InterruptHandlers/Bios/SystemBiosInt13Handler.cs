@@ -10,6 +10,9 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 ///     INT 13h handler. BIOS disk access functions.
 /// </summary>
+/// <remarks>
+/// In DOSBox, this is INT13_DiskHandler in bios_disk.cpp
+/// </remarks>
 public class SystemBiosInt13Handler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
@@ -47,6 +50,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     private void FillDispatchTable() {
         AddAction(0x0, () => ResetDiskSystem(true));
+        AddAction(0x4, () => VerifySectors(true));
     }
 
     /// <summary>
@@ -60,6 +64,26 @@ public class SystemBiosInt13Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("BIOS INT13H: Reset Disk Number 0x(DiskNumber:X2)", State.DL);
         }
+        SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Verify Disk Sector. This is a stub.
+    /// </summary>
+    /// <remarks>
+    /// Shangai II needs this to run.
+    /// </remarks>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void VerifySectors(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("BIOS INT13H: Verify Sectors 0x(AL:X2)", State.AL);
+        }
+        if(State.AL == 0) {
+            State.AH = 0x1;
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+        State.AH = 0x0;
         SetCarryFlag(false, calledFromVm);
     }
 }
