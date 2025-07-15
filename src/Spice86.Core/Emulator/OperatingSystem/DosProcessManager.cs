@@ -148,7 +148,7 @@ public class DosProcessManager : DosFileLoader {
         ms.WriteByte(0);
     
         // Get the DOS path for the program (not the host path)
-        string dosPath = GetDosProgramPath(programPath);
+        string dosPath = _fileManager.GetDosProgramPath(programPath);
     
         // Write the DOS path to the environment block
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
@@ -158,37 +158,7 @@ public class DosProcessManager : DosFileLoader {
         return ms.ToArray();
     }
 
-    /// <summary>
-    /// Gets the proper DOS path for a program.
-    /// </summary>
-    /// <param name="programPath">The program path as provided.</param>
-    /// <returns>A properly formatted DOS path.</returns>
-    private string GetDosProgramPath(string programPath) {
-        // Extract just the filename without path if it's a full path
-        string fileName = Path.GetFileName(programPath);
-        
-        // Create a DOS path using the current drive and directory
-        string currentDrive = _driveManager.CurrentDrive.DosVolume;
-        string currentDir = _driveManager.CurrentDrive.CurrentDosDirectory;
-        
-        // Ensure current directory has trailing backslash
-        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
-            currentDir += '\\';
-        }
-        
-        // Build the full DOS path
-        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
-        
-        // Replace slashes and standardize
-        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
-        
-        // Clean up any double backslashes
-        while (dosPath.Contains("\\\\")) {
-            dosPath = dosPath.Replace("\\\\", "\\");
-        }
-        
-        return dosPath;
-    }
+    
 
     private byte[] LoadComFile(string file) {
         byte[] com = ReadFile(file);
