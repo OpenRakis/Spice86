@@ -152,8 +152,7 @@ public sealed class ProgramExecutor : IDisposable {
         }
 
         try {
-            byte[] fileContent = loader.LoadFile(executableFileName,
-                $"{Path.GetFileName(executableFileName).ToUpperInvariant()} {configuration.ExeArgs}");
+            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
