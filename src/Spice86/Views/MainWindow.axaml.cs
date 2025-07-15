@@ -3,6 +3,7 @@ namespace Spice86.Views;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 using Spice86.ViewModels;
 
@@ -17,6 +18,15 @@ internal partial class MainWindow : Window {
         this.Menu.KeyDown += OnMenuKeyDown;
         this.Menu.KeyDown += OnMenuKeyUp;
         this.Menu.GotFocus += OnMenuGotFocus;
+        this.Loaded += MainWindow_Loaded;
+    }
+
+    private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
+        Dispatcher.UIThread.Post(() => {
+            if (DataContext is MainWindowViewModel viewModel) {
+                viewModel.StartEmulator();
+            }
+        }, DispatcherPriority.Background);
     }
 
     public static readonly StyledProperty<PerformanceViewModel?> PerformanceViewModelProperty =

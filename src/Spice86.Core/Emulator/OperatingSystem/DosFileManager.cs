@@ -1077,4 +1077,36 @@ public class DosFileManager {
                 return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
         }
     }
+
+    /// <summary>
+    /// Gets the proper DOS path for a program.
+    /// </summary>
+    /// <param name="programPath">The program path as provided.</param>
+    /// <returns>A properly formatted DOS path.</returns>
+    internal string GetDosProgramPath(string programPath) {
+        // Extract just the filename without path if it's a full path
+        string fileName = Path.GetFileName(programPath);
+
+        // Create a DOS path using the current drive and directory
+        string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;
+        string currentDir = _dosDriveManager.CurrentDrive.CurrentDosDirectory;
+
+        // Ensure current directory has trailing backslash
+        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
+            currentDir += '\\';
+        }
+
+        // Build the full DOS path
+        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
+
+        // Replace slashes and standardize
+        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
+
+        // Clean up any double backslashes
+        while (dosPath.Contains("\\\\")) {
+            dosPath = dosPath.Replace("\\\\", "\\");
+        }
+
+        return dosPath;
+    }
 }

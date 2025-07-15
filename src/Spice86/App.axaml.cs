@@ -58,7 +58,6 @@ internal partial class App : Application {
             mainWindow.Image.PointerMoved += (s, e) => mainVm.OnMouseMoved(e, mainWindow.Image);
             mainWindow.Image.PointerPressed += (s, e) => mainVm.OnMouseButtonDown(e, mainWindow.Image);
             mainWindow.Image.PointerReleased += (s, e) => mainVm.OnMouseButtonUp(e, mainWindow.Image);
-            mainVm.StartEmulator();
             mainVm.Disposing += dependencyInjection.Dispose;
         }
         desktop.MainWindow = mainWindow;

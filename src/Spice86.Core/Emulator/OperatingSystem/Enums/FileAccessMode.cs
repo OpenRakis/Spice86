@@ -6,7 +6,7 @@ using System.Diagnostics;
 /// Represents file access modes, sharing modes, and inheritance attributes.
 /// </summary>
 [Flags]
-public enum FileAccessMode : byte {
+public enum FileAccessMode {
     /// <summary>
     /// File can only be read.
     /// </summary>

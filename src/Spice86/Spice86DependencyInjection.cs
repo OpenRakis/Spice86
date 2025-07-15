@@ -415,10 +415,10 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
-            state, emulationLoopRecall, biosKeyboardBuffer,
+            state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
-            loggerService, new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } },
+            new Dictionary<string, string> {
+                { "BLASTER", soundBlaster.BlasterString } }, loggerService,
             xms);
 
         if (configuration.InitializeDOS is not false) {

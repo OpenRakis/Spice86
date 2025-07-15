@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 /// This comes from FreeDOS (FAT.H)
 /// </remarks>
 [Flags]
-public enum DosFileAttributes {
+public enum DosFileAttributes : byte {
     /// <summary>
     /// No attributes set
     /// </summary>

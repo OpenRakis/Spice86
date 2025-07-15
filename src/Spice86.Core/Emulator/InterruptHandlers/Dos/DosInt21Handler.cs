@@ -18,6 +18,7 @@ using Spice86.Shared.Utils;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -1164,21 +1165,21 @@ public class DosInt21Handler : InterruptHandler {
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
-    private void LogDosError(bool calledFromVm) {
+    private void LogDosError(bool calledFromVm, [CallerMemberName] string? callerName = null) {
         string returnMessage = "";
         if (calledFromVm) {
             returnMessage = $"Int will return to {FunctionHandlerProvider.FunctionHandlerInUse.PeekReturn()}. ";
         }
         if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}",
-                returnMessage, State.ToString());
+            LoggerService.Error("DOS operation from {CallerName} failed with an error. {ReturnMessage}. State is {State}",
+                callerName, returnMessage, State.ToString());
         }
     }
 
     private void SetStateFromDosFileOperationResult(bool calledFromVm,
-        DosFileOperationResult dosFileOperationResult) {
+        DosFileOperationResult dosFileOperationResult, [CallerMemberName] string? callerName = null) {
         if (dosFileOperationResult.IsError) {
-            LogDosError(calledFromVm);
+            LogDosError(calledFromVm, callerName);
             SetCarryFlag(true, calledFromVm);
         } else {
             SetCarryFlag(false, calledFromVm);

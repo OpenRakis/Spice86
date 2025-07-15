@@ -23,6 +23,7 @@ public class DosSysVars : MemoryBasedDataStructure {
     public DosSysVars(NullDevice nullDevice, IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
         _nullDeviceHeader = nullDevice.Header;
         CopyArray(_nullDeviceHeader, 0x22);
+        ClockDeviceHeaderPointer = 0x0;
     }
 
     /// <summary>
