@@ -155,7 +155,7 @@ public sealed class Dos {
         DosStringDecoder dosStringDecoder = new(memory, state);
 
         CountryInfo = new();
-        FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
+        FileManager = new DosFileManager(_memory, dosStringDecoder, DosSwappableDataArea, DosDriveManager,
             _loggerService, this.Devices);
         ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
         MemoryManager = new DosMemoryManager(_memory, loggerService, ProcessManager.PspSegment, DosProcessManager.LastFreeSegment);

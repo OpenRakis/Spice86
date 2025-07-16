@@ -245,6 +245,68 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, DosRelativePath));
     }
 
+    /// <summary>
+    /// Renames a file from oldPath to newPath.
+    /// </summary>
+    /// <param name="oldPath">The original file path.</param>
+    /// <param name="newPath">The new file path.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> indicating success or failure.</returns>
+    public DosFileOperationResult RenameFile(string oldPath, string newPath) {
+        string? hostOldPath = GetFullHostPathFromDosOrDefault(oldPath);
+        if (string.IsNullOrWhiteSpace(hostOldPath)) {
+            if (!PathExists(oldPath)) {
+                return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+            }
+            return DosFileOperationResult.Error(ErrorCode.FileNotFound);
+        }
+
+        string? hostNewPath = PrefixWithHostDirectory(newPath);
+        if (string.IsNullOrWhiteSpace(hostNewPath)) {
+            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        }
+
+        try {
+            // Check if target exists
+            if (File.Exists(hostNewPath)) {
+                return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+            }
+
+            // Check if source drive is read-only
+            char oldDriveLetter = oldPath[0];
+            if (_dosDriveManager.TryGetValue(oldDriveLetter, out VirtualDrive? drive) && drive.IsReadOnlyMedium) {
+                return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+            }
+
+            File.Move(hostOldPath, hostNewPath);
+            return DosFileOperationResult.NoValue();
+        } catch (Exception) {
+            return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+        }
+    }
+
+    /// <summary>
+    /// Checks if a path exists.
+    /// </summary>
+    /// <param name="path">The DOS path to check.</param>
+    /// <returns>true if the path exists, false otherwise.</returns>
+    private bool PathExists(string path) {
+        // Extract the directory part of the path
+        int lastSeparator = path.LastIndexOf('\\');
+        if (lastSeparator == -1) {
+            return true; // No directory part, assume it exists
+        }
+
+        if (lastSeparator == 0) {
+            return true; // Root directory
+        }
+
+        string directoryPath = path[..lastSeparator];
+
+        // Check if directory exists
+        string? hostDirPath = GetFullHostPathFromDosOrDefault(directoryPath);
+        return !string.IsNullOrWhiteSpace(hostDirPath);
+    }
+
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&
         DosDriveManager.DriveLetters.Keys.Contains(char.ToUpperInvariant(dosPath[0])) &&

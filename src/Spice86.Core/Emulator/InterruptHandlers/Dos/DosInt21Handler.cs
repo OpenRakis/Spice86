@@ -121,6 +121,22 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x0F, FcbOpenFile);
+        AddAction(0x10, FcbCloseFile);
+        AddAction(0x11, FcbFindFirst);
+        AddAction(0x12, FcbFindNext);
+        AddAction(0x13, FcbDeleteFile);
+        AddAction(0x14, FcbSequentialRead);
+        AddAction(0x15, FcbSequentialWrite);
+        AddAction(0x16, FcbCreateFile);
+        AddAction(0x17, FcbRenameFile);
+        AddAction(0x21, FcbRandomRead);
+        AddAction(0x22, FcbRandomWrite);
+        AddAction(0x23, FcbGetFileSize);
+        AddAction(0x24, FcbSetRandomRecord);
+        AddAction(0x27, FcbRandomBlockRead);
+        AddAction(0x28, FcbRandomBlockWrite);
+        AddAction(0x29, FcbParseName);
     }
 
     /// <summary>
@@ -1141,6 +1157,230 @@ public class DosInt21Handler : InterruptHandler {
                     break;
                 }
             default: throw new UnhandledOperationException(State, "getSetFileAttribute operation unhandled: " + op);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Open existing file
+    /// </summary>
+    private void FcbOpenFile() {
+        if (_dosFileManager.OpenFcb(State.DS, State.DX)) {
+            State.AL = 0;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x0F FCB-fileopen used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Close file
+    /// </summary>
+    private void FcbCloseFile() {
+        if (_dosFileManager.CloseFcb(State.DS, State.DX)) {
+            State.AL = 0;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x10 FCB-fileclose used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Find first matching file
+    /// </summary>
+    private void FcbFindFirst() {
+        if (_dosFileManager.FindFirstFcb(State.DS, State.DX)) {
+            State.AL = 0x00;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x11 FCB-FindFirst used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Find next matching file
+    /// </summary>
+    private void FcbFindNext() {
+        if (_dosFileManager.FindNextFcb(State.DS, State.DX)) {
+            State.AL = 0x00;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x12 FCB-FindNext used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Delete file
+    /// </summary>
+    private void FcbDeleteFile() {
+        if (_dosFileManager.DeleteFileFcb(State.DS, State.DX)) {
+            State.AL = 0x00;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x13 FCB-Delete used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Sequential read
+    /// </summary>
+    private void FcbSequentialRead() {
+        State.AL = _dosFileManager.ReadFcb(State.DS, State.DX, 0);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x14 FCB-Read used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Sequential write
+    /// </summary>
+    private void FcbSequentialWrite() {
+        State.AL = _dosFileManager.WriteFcb(State.DS, State.DX, 0);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x15 FCB-Write used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Create file
+    /// </summary>
+    private void FcbCreateFile() {
+        if (_dosFileManager.CreateFcb(State.DS, State.DX)) {
+            State.AL = 0;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x16 FCB-CreateFile used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Rename file
+    /// </summary>
+    private void FcbRenameFile() {
+        if (_dosFileManager.RenameFileFcb(State.DS, State.DX)) {
+            State.AL = 0;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x17 FCB-RenameFile used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Random read
+    /// </summary>
+    private void FcbRandomRead() {
+        ushort numRec = 1;
+        State.AL = _dosFileManager.RandomReadFcb(State.DS, State.DX, ref numRec, false);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x21 FCB-RandomRead used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Random write
+    /// </summary>
+    private void FcbRandomWrite() {
+        ushort numRec = 1;
+        State.AL = _dosFileManager.RandomWriteFcb(State.DS, State.DX, ref numRec, false);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x22 FCB-RandomWrite used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Get file size
+    /// </summary>
+    private void FcbGetFileSize() {
+        if (_dosFileManager.GetFileSizeFcb(State.DS, State.DX)) {
+            State.AL = 0;
+        } else {
+            State.AL = 0xFF;
+        }
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x23 FCB-GetFileSize used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Set random record
+    /// </summary>
+    private void FcbSetRandomRecord() {
+        _dosFileManager.SetRandomRecordFcb(State.DS, State.DX);
+        State.AL = 0; // Always succeeds
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x24 FCB-SetRandomRecord used, result:al={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Random block read
+    /// </summary>
+    private void FcbRandomBlockRead() {
+        ushort numRec = State.CX;
+        State.AL = _dosFileManager.RandomReadFcb(State.DS, State.DX, ref numRec, false);
+        State.CX = numRec; // Return actual number of records read
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x27 FCB-RandomBlockRead used, result:al={Result}, records={Records}", State.AL, numRec);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Random block write
+    /// </summary>
+    private void FcbRandomBlockWrite() {
+        ushort numRec = State.CX;
+        State.AL = _dosFileManager.RandomWriteFcb(State.DS, State.DX, ref numRec, false);
+        State.CX = numRec; // Return actual number of records written
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x28 FCB-RandomBlockWrite used, result:al={Result}, records={Records}", State.AL, numRec);
+        }
+    }
+
+    /// <summary>
+    /// FCB: Parse filename
+    /// </summary>
+    private void FcbParseName() {
+        string filename = Memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(State.ES, State.DI), 1023);
+
+        // Parse the filename into the FCB at ES:DI
+        FcbParseResult result = _dosFileManager.ParseFcbName(State.ES, State.DI, State.AL, filename, out byte changeOffset);
+
+        // Update SI to point past the parsed string
+        State.SI += changeOffset;
+
+        // Set result code
+        State.AL = (byte)result;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("DOS:0x29 FCB-ParseName used for {Filename}, result:al={Result}", filename, State.AL);
         }
     }
 
