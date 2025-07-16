@@ -20,7 +20,7 @@ using System.Text;
 /// The class that implements DOS file operations, such as finding files,
 /// allocating file handles, and updating the Disk Transfer Area.
 /// </summary>
-public class DosFileManager {
+public partial class DosFileManager {
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
@@ -67,17 +67,20 @@ public class DosFileManager {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="dosStringDecoder">A helper class to encode/decode DOS strings.</param>
+    /// <param name="dosSwappableDataArea">Used to access update FCB related globals.</param>
     /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosSwappableDataArea dosSwappableDataArea, DosDriveManager dosDriveManager,
+        ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
         _dosPathResolver = new(dosDriveManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        _fcbParser = new DosFileControlBlockParser(_memory, _dosDriveManager);
     }
 
     /// <summary>
