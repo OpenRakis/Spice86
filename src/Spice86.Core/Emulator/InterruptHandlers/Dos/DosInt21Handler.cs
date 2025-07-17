@@ -32,6 +32,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -50,7 +51,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosFileManager">The DOS class responsible for DOS drive access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for file and device-as-file access.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory,
+    public DosInt21Handler(IMemory memory, DosProcessManager dosProcessManager,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
@@ -62,6 +63,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _dosProcessManager = dosProcessManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
@@ -874,7 +876,11 @@ public class DosInt21Handler : InterruptHandler {
     /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecParameterBlock execParameterBlock = new(Memory, MemoryUtils.ToPhysicalAddress(State.ES, State.BX));
+        if(!_dosProcessManager.TryExecute(programName, execParameterBlock, State.AL, out ErrorCode? errorCode)) {
+            SetCarryFlag(true, calledFromVm);
+            State.AL = (byte)errorCode;
+        }
     }
 
     /// <summary>

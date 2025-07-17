@@ -157,10 +157,11 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
-        ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
-        MemoryManager = new DosMemoryManager(_memory, loggerService, ProcessManager.PspSegment, DosProcessManager.LastFreeSegment);
+        MemoryManager = new DosMemoryManager(_memory, loggerService,
+            (ushort)(configuration.ProgramEntryPointSegment - 0x10), DosProcessManager.LastFreeSegment);
+        ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, MemoryManager, envVars, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
+        DosInt21Handler = new DosInt21Handler(_memory, ProcessManager, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
