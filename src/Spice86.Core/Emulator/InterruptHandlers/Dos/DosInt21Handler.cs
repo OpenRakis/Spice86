@@ -47,8 +47,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
     /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
-    /// <param name="dosFileManager">The DOS class responsible for DOS drive access.</param>
-    /// <param name="dosDriveManager">The DOS class responsible for file and device-as-file access.</param>
+    /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
+    /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
