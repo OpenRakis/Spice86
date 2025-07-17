@@ -1148,7 +1148,6 @@ public class DosInt21Handler : InterruptHandler {
     /// Provides MS-DOS drivers based IOCTL operations, which are device-driver specific operations.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
-    /// <param name="state">The CPU state containing the IOCTL operation parameters</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <remarks>
     /// Supports the following operations based on the AL register:
