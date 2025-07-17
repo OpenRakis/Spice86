@@ -1145,21 +1145,27 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Provides MS-DOS drivers based IOCTL operations, such as: get device information, set device information, get logical drive for physical drive... <br/>
-    /// <para>
-    /// AL = 0: Get device information from the device handle in BX. Returns result in DX. TODO: Implement it entirely. <br/>
-    /// AL = 1: Set device information. Does nothing. TODO: Implement it. <br/>
-    /// AL = 0xE: Get logical drive for physical drive. Always returns 0 in AL for only one drive.
-    /// </para>
+    /// Provides MS-DOS drivers based IOCTL operations, which are device-driver specific operations.
     /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <param name="state">The CPU state containing the IOCTL operation parameters</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <remarks>
-    ///  TODO: Update it once we mount more than just C: !
-    ///  </remarks>
-    /// <returns>
-    /// Always indicates success by clearing the carry flag.
-    /// </returns>
-    /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
-    /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
+    /// Supports the following operations based on the AL register:
+    /// <list type="bullet">
+    ///   <item><description>AL = 0x00: Get Device Information from handle in BX. Returns information in DX.</description></item>
+    ///   <item><description>AL = 0x01: Set Device Information using handle in BX and data in DL.</description></item>
+    ///   <item><description>AL = 0x02: Read from Device Control Channel using handle in BX.</description></item>
+    ///   <item><description>AL = 0x03: Write to Device Control Channel using handle in BX.</description></item>
+    ///   <item><description>AL = 0x06: Get Input Status for handle in BX. Returns status in AL (0xFF=ready, 0x00=not ready).</description></item>
+    ///   <item><description>AL = 0x07: Get Output Status for handle in BX. Returns status in AL (0xFF=ready, 0x00=not ready).</description></item>
+    ///   <item><description>AL = 0x08: Check if block device in BL is removable. Returns AL=0 for removable, AL=1 for fixed.</description></item>
+    ///   <item><description>AL = 0x09: Check if block device in BL is remote. Returns DX with device attributes.</description></item>
+    ///   <item><description>AL = 0x0B: Set sharing retry count. DX=retry count.</description></item>
+    ///   <item><description>AL = 0x0D: Generic block device request for drive in BL. Command in CL, parameter block at DS:DX.</description></item>
+    ///   <item><description>AL = 0x0E: Get Logical Drive Map for drive in BL. Returns physical drive in AL.</description></item>
+    /// </list>
+    /// </remarks>
     public void IoControl(bool calledFromVm) {
         DosFileOperationResult result = _dosFileManager.IoControl(State);
         SetStateFromDosFileOperationResult(calledFromVm, result);

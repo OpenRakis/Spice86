@@ -1144,10 +1144,10 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Gets the proper DOS path for a program.
+    /// Gets the proper DOS path for the emulated program.
     /// </summary>
-    /// <param name="programPath">The program path as provided.</param>
-    /// <returns>A properly formatted DOS path.</returns>
+    /// <param name="programPath">The absolute host path to the executable file.</param>
+    /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
     internal string GetDosProgramPath(string programPath) {
         // Extract just the filename without path if it's a full path
         string fileName = Path.GetFileName(programPath);
