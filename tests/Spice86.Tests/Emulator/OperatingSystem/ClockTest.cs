@@ -9,20 +9,17 @@ using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public class ClockTests
-{
+public class ClockTests {
     private readonly ILoggerService _loggerService;
     private readonly Clock _clock;
 
-    public ClockTests()
-    {
+    public ClockTests() {
         _loggerService = Substitute.For<ILoggerService>();
         _clock = new Clock(_loggerService);
     }
 
     [Fact]
-    public void Constructor_InitializesWithNoOffset()
-    {
+    public void Constructor_InitializesWithNoOffset() {
         // Arrange & Act
         var clock = new Clock(_loggerService);
 
@@ -35,8 +32,7 @@ public class ClockTests
     [InlineData(0, 0, 0, 0)]
     [InlineData(12, 30, 45, 50)]
     [InlineData(23, 59, 59, 99)]
-    public void SetTime_ValidTime_ReturnsTrue(byte hours, byte minutes, byte seconds, byte hundredths)
-    {
+    public void SetTime_ValidTime_ReturnsTrue(byte hours, byte minutes, byte seconds, byte hundredths) {
         // Act
         bool result = _clock.SetTime(hours, minutes, seconds, hundredths);
 
@@ -50,8 +46,7 @@ public class ClockTests
     [InlineData(0, 60, 0, 0)]
     [InlineData(0, 0, 60, 0)]
     [InlineData(0, 0, 0, 100)]
-    public void SetTime_InvalidTime_ReturnsFalse(byte hours, byte minutes, byte seconds, byte hundredths)
-    {
+    public void SetTime_InvalidTime_ReturnsFalse(byte hours, byte minutes, byte seconds, byte hundredths) {
         // Act
         bool result = _clock.SetTime(hours, minutes, seconds, hundredths);
 
@@ -64,8 +59,7 @@ public class ClockTests
     [InlineData(2023, 1, 1)]
     [InlineData(2024, 12, 31)]
     [InlineData(1980, 6, 15)]
-    public void SetDate_ValidDate_ReturnsTrue(ushort year, byte month, byte day)
-    {
+    public void SetDate_ValidDate_ReturnsTrue(ushort year, byte month, byte day) {
         // Act
         bool result = _clock.SetDate(year, month, day);
 
@@ -80,8 +74,7 @@ public class ClockTests
     [InlineData(2023, 1, 0)]
     [InlineData(2023, 1, 32)]
     [InlineData(2023, 2, 29)] // Not a leap year
-    public void SetDate_InvalidDate_ReturnsFalse(ushort year, byte month, byte day)
-    {
+    public void SetDate_InvalidDate_ReturnsFalse(ushort year, byte month, byte day) {
         // Act
         bool result = _clock.SetDate(year, month, day);
 
@@ -91,8 +84,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetTime_WithTimeOffset_ReturnsVirtualTime()
-    {
+    public void GetTime_WithTimeOffset_ReturnsVirtualTime() {
         // Arrange
         byte expectedHours = 15;
         byte expectedMinutes = 30;
@@ -111,8 +103,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetDate_WithDateOffset_ReturnsVirtualDate()
-    {
+    public void GetDate_WithDateOffset_ReturnsVirtualDate() {
         // Arrange
         ushort expectedYear = 2023;
         byte expectedMonth = 6;
@@ -130,8 +121,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetTime_WithoutOffset_ReturnsRealTime()
-    {
+    public void GetTime_WithoutOffset_ReturnsRealTime() {
         // Arrange
         DateTime now = DateTime.Now;
 
@@ -146,8 +136,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetDate_WithoutOffset_ReturnsRealDate()
-    {
+    public void GetDate_WithoutOffset_ReturnsRealDate() {
         // Arrange
         DateTime now = DateTime.Now;
 
@@ -162,8 +151,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetVirtualDateTime_WithBothOffsets_AppliesBoth()
-    {
+    public void GetVirtualDateTime_WithBothOffsets_AppliesBoth() {
         // Arrange
         ushort virtualYear = 2024;
         byte virtualMonth = 12;
@@ -188,8 +176,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetVirtualDateTime_WithOnlyDateOffset_AppliesDateOnly()
-    {
+    public void GetVirtualDateTime_WithOnlyDateOffset_AppliesDateOnly() {
         // Arrange
         DateTime now = DateTime.Now;
         ushort virtualYear = 2024;
@@ -210,8 +197,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetVirtualDateTime_WithOnlyTimeOffset_AppliesTimeOnly()
-    {
+    public void GetVirtualDateTime_WithOnlyTimeOffset_AppliesTimeOnly() {
         // Arrange
         DateTime now = DateTime.Now;
         byte virtualHours = 18;
@@ -233,8 +219,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void GetVirtualDateTime_WithoutOffset_ReturnsRealTime()
-    {
+    public void GetVirtualDateTime_WithoutOffset_ReturnsRealTime() {
         // Arrange
         DateTime now = DateTime.Now;
 
@@ -246,8 +231,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void HasOffset_ReturnsTrue_WhenTimeOffsetSet()
-    {
+    public void HasOffset_ReturnsTrue_WhenTimeOffsetSet() {
         // Act
         _clock.SetTime(12, 0, 0, 0);
 
@@ -256,8 +240,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void HasOffset_ReturnsTrue_WhenDateOffsetSet()
-    {
+    public void HasOffset_ReturnsTrue_WhenDateOffsetSet() {
         // Act
         _clock.SetDate(2023, 6, 15);
 
@@ -266,8 +249,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void HasOffset_ReturnsTrue_WhenBothOffsetsSet()
-    {
+    public void HasOffset_ReturnsTrue_WhenBothOffsetsSet() {
         // Act
         _clock.SetDate(2023, 6, 15);
         _clock.SetTime(12, 0, 0, 0);
@@ -277,8 +259,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void SetTime_OverridesPreviousTimeOffset()
-    {
+    public void SetTime_OverridesPreviousTimeOffset() {
         // Arrange
         _clock.SetTime(12, 0, 0, 0);
 
@@ -294,8 +275,7 @@ public class ClockTests
     }
 
     [Fact]
-    public void SetDate_OverridesPreviousDateOffset()
-    {
+    public void SetDate_OverridesPreviousDateOffset() {
         // Arrange
         _clock.SetDate(2023, 1, 1);
 

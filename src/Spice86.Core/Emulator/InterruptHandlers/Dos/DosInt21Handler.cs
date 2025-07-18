@@ -131,11 +131,11 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET DATE");
         }
-        
+
         ushort year = State.CX;
         byte month = State.DH;
         byte day = State.DL;
-        
+
         if (!_clock.SetDate(year, month, day)) {
             State.AL = 0xFF; // Invalid date
         }
@@ -145,12 +145,12 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("SET TIME");
         }
-        
+
         byte hours = State.CH;
         byte minutes = State.CL;
         byte seconds = State.DH;
         byte hundredths = State.DL;
-        
+
         if (!_clock.SetTime(hours, minutes, seconds, hundredths)) {
             State.AL = 0xFF; // Invalid time
         }
