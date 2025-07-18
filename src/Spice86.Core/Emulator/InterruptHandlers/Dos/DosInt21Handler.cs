@@ -35,6 +35,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
+    private readonly Clock _clock;
 
     /// <summary>
     /// Initializes a new instance.
@@ -54,7 +55,7 @@ public class DosInt21Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
@@ -63,6 +64,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
+        _clock = clock;
         FillDispatchTable();
     }
 
@@ -85,8 +87,10 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
+        AddAction(0x2D, SetTime);
         AddAction(0x25, SetInterruptVector);
         AddAction(0x2A, GetDate);
+        AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
@@ -121,6 +125,35 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+    }
+
+    public void SetDate() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET DATE");
+        }
+
+        ushort year = State.CX;
+        byte month = State.DH;
+        byte day = State.DL;
+
+        if (!_clock.SetDate(year, month, day)) {
+            State.AL = 0xFF; // Invalid date
+        }
+    }
+
+    public void SetTime() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET TIME");
+        }
+
+        byte hours = State.CH;
+        byte minutes = State.CL;
+        byte seconds = State.DH;
+        byte hundredths = State.DL;
+
+        if (!_clock.SetTime(hours, minutes, seconds, hundredths)) {
+            State.AL = 0xFF; // Invalid time
+        }
     }
 
     /// <summary>
@@ -681,11 +714,11 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DATE");
         }
-        DateTime now = DateTime.Now;
-        State.AL = (byte)now.DayOfWeek;
-        State.CX = (ushort)now.Year;
-        State.DH = (byte)now.Month;
-        State.DL = (byte)now.Day;
+        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
+        State.AL = dayOfWeek;
+        State.CX = year;
+        State.DH = month;
+        State.DL = day;
     }
 
     /// <summary>
@@ -830,11 +863,11 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET TIME");
         }
-        DateTime now = DateTime.Now;
-        State.CH = (byte)now.Hour;
-        State.CL = (byte)now.Minute;
-        State.DH = (byte)now.Second;
-        State.DL = (byte)now.Millisecond;
+        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
+        State.CH = hours;
+        State.CL = minutes;
+        State.DH = seconds;
+        State.DL = hundredths;
     }
 
     /// <summary>
