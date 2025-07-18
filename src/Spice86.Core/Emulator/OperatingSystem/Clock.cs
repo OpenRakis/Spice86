@@ -29,7 +29,9 @@ public class Clock(ILoggerService loggerService) {
         }
         catch (ArgumentOutOfRangeException)
         {
-            loggerService.Warning("Invalid time (hours, minutes, seconds, hundredths): {}, {}, {}, {}", hours, minutes, seconds, hundredths);
+            if (loggerService.IsEnabled(LogEventLevel.Warning)) {
+                loggerService.Warning("Invalid time (hours, minutes, seconds, hundredths): {}, {}, {}, {}", hours, minutes, seconds, hundredths);
+            }
             return false;
         }
         
@@ -60,7 +62,9 @@ public class Clock(ILoggerService loggerService) {
         }
         catch (ArgumentOutOfRangeException)
         {
-            loggerService.Warning("Invalid date (y-m-d): {}-{}-{}", year, month, day);
+            if (loggerService.IsEnabled(LogEventLevel.Warning)) {
+                loggerService.Warning("Invalid date (y-m-d): {}-{}-{}", year, month, day);
+            }
             return false;
         }
         
