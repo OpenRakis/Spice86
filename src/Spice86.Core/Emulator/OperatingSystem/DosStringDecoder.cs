@@ -56,19 +56,20 @@ public class DosStringDecoder {
     /// <returns>The string from memory.</returns>
     public string GetDosString(ushort segment, ushort offset, char end) {
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        int length = MaxDosStringLength;
+        byte endByte = (byte)end;
         Span<byte> data = stackalloc byte[MaxDosStringLength];
         int dataIndex = 0;
-        while (length-- != 0) {
-            byte memByte = _memory.UInt8[address++];
-            if (memByte == end || dataIndex >= MaxDosStringLength) {
+
+        while (dataIndex < MaxDosStringLength) {
+            byte memByte = _memory.UInt8[address + (uint)dataIndex];
+            if (memByte == endByte) {
                 break;
             }
+
             data[dataIndex++] = memByte;
         }
-        data[dataIndex] = 0; // Null terminate the string
-        string convertedString = ConvertDosChars( data[..dataIndex]);
-        return convertedString;
+
+        return ConvertDosChars(data[..dataIndex]);
     }
 
     /// <summary>
