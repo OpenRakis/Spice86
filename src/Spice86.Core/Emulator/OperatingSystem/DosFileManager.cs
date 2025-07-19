@@ -234,7 +234,7 @@ public class DosFileManager {
             x => x.IsName(fileSpec)) is { } characterDevice) {
             if (!TryUpdateDosTransferAreaWithFileMatch(dta,
                 characterDevice.Name, string.Empty,
-                out DosFileOperationResult status, searchAttributes)) {
+                out DosFileOperationResult status, (DosFileAttributes)(searchAttributes))) {
                 return status;
             }
             _activeFileSearches.Add(dta.SearchId, (characterDevice.Name, fileSpec));
@@ -263,7 +263,7 @@ public class DosFileManager {
             }
 
             if (!TryUpdateDosTransferAreaWithFileMatch(dta, matchingPaths[0], searchFolder,
-                out DosFileOperationResult status, searchAttributes)) {
+                out DosFileOperationResult status, (DosFileAttributes?)searchAttributes)) {
                 return status;
             }
 
@@ -408,9 +408,9 @@ public class DosFileManager {
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
         string filename, string searchFolder, out DosFileOperationResult status,
-        ushort? searchAttributes = null) {
+        DosFileAttributes? searchAttributes = null) {
         try {
-            UpdateDosTransferAreaWithFileMatch(dta, filename, searchFolder, searchAttributes);
+            UpdateDosTransferAreaWithFileMatch(dta, filename, searchFolder, (byte?)searchAttributes);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while getting attributes");
@@ -749,7 +749,7 @@ public class DosFileManager {
     private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) => OpenFiles[fileHandle] = openFile;
 
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
-        string matchingFileSystemEntry, string searchFolder, ushort? searchAttributes = null) {
+        string matchingFileSystemEntry, string searchFolder, byte? searchAttributes = null) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Found matching file {MatchingFileSystemEntry}", matchingFileSystemEntry);
         }
@@ -761,7 +761,8 @@ public class DosFileManager {
         DateTime creationLocalTime = creationZonedDateTime.ToLocalTime();
         dta.Drive = _dosDriveManager.CurrentDriveIndex;
         dta.SearchAttributes = searchAttributes ?? dta.SearchAttributes;
-        dta.FileAttributes = (byte)entryInfo.Attributes;
+        DosFileAttributes dosAttributes = (DosFileAttributes)entryInfo.Attributes;
+        dta.FileAttributes = (byte)dosAttributes;
         dta.FileDate = ToDosDate(creationLocalDate);
         dta.FileTime = ToDosTime(creationLocalTime);
         if (entryInfo is FileInfo fileInfo) {

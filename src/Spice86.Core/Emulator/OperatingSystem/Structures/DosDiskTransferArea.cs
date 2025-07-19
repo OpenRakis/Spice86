@@ -64,7 +64,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// The file attributes used by the file search.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    internal ushort SearchAttributes { get => UInt16[0x14]; set => UInt16[0x14] = value; }
+    internal byte SearchAttributes { get => UInt8[0x12]; set => UInt8[0x12] = value; }
 
     /// <summary>
     /// The SearchId, for multiple searches at the same time.
