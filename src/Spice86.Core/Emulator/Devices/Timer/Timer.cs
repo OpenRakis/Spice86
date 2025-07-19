@@ -33,7 +33,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
         CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        
+
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Pit8254Counter(_loggerService, i, counterConfiguratorFactory.InstantiateCounterActivator());
         }
@@ -115,11 +115,14 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     /// If the counter is activated, triggers the interrupt request
     /// </summary>
     public void Tick() {
-        // Only do counter 0.
-        // Counter 1 is unused and counter 2 is PC speaker which is handled separately.
+        // Process Counter 0 (system timer)
         if (_counters[0].ProcessActivation()) {
             _dualPic.ProcessInterruptRequest(0);
         }
+        // Make sure Counter 2 (PC Speaker) is actually activated each tick
+        // This fixes 'Where in the World is Carmen Sandiego' (among others)
+        // tmp fix, bad for performance
+        _counters[2].ProcessActivation(forced: true);
     }
 
     private static bool IsCounterRegisterPort(int port) => port is >= CounterRegisterZero and <= CounterRegisterTwo;

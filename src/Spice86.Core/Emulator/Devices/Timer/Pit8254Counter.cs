@@ -1,5 +1,4 @@
-﻿using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Shared.Interfaces;
+﻿using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
@@ -24,6 +23,8 @@ public class Pit8254Counter {
     private readonly Pit8254Register _latchRegister = new();
     private readonly Pit8254Register _currentCountRegister = new();
     private readonly Pit8254Register _reloadValueRegister = new();
+    private bool _isGateHigh = true;
+    private bool _needsReload = false;
 
     /// <summary>
     /// PIT operation modes
@@ -74,7 +75,7 @@ public class Pit8254Counter {
         ReloadValue = 0;
         CurrentCount = 0xFFFF;
     }
-    
+
     /// <summary>
     /// Gets or sets the activator for the counter.
     /// </summary>
@@ -136,12 +137,12 @@ public class Pit8254Counter {
             OnReloadValueWrite();
         }
     }
-    
+
     /// <summary>
     /// Gets the period in milliseconds based on the reload value
     /// </summary>
     public float PeriodMs => MsPerPitTick * (ReloadValue == 0 ? 0x10000 : ReloadValue);
-    
+
     /// <summary>
     /// Calculates the cycle length for audio generation at the given sample rate
     /// </summary>
@@ -152,7 +153,7 @@ public class Pit8254Counter {
         float cycleLength = (sampleRate * counterMs) / 1000.0f;
         return cycleLength <= 2 ? 2 : cycleLength; // Minimum cycle length
     }
-    
+
     /// <summary>
     /// Calculates the cycle step for each sample based on the sample rate
     /// </summary>
@@ -161,7 +162,7 @@ public class Pit8254Counter {
     public float CalculateCycleStep(int sampleRate) {
         return 1.0f / CalculateCycleLength(sampleRate);
     }
-    
+
     /// <summary>
     /// Access the value of the counter using the current mode.
     /// </summary>
@@ -182,20 +183,133 @@ public class Pit8254Counter {
         _reloadValueRegister.WriteValue(ReadWritePolicy, value);
         if (_reloadValueRegister.ValueFullyWritten) {
             OnReloadValueWrite();
+
+            // Special handling for different modes when a new value is written
+            switch (CurrentPitMode) {
+                case PitMode.InterruptOnTerminalCount:
+                    // Mode 0: Counter immediately loads the new count
+                    CurrentCount = ReloadValue;
+                    OutputState = OutputStatus.Low;
+                    break;
+                case PitMode.RateGenerator:
+                case PitMode.RateGeneratorAlias:
+                case PitMode.SquareWave:
+                case PitMode.SquareWaveAlias:
+                    // Modes 2 & 3: Reload the counter immediately
+                    CurrentCount = ReloadValue;
+                    OutputState = OutputStatus.High;
+                    break;
+                case PitMode.SoftwareStrobe:
+                    // Mode 4: Counter continues counting, but will use new value on next reload
+                    OutputState = OutputStatus.High;
+                    break;
+            }
         }
     }
 
     /// <summary>
-    /// Checks whether the counter is activated and if so, decrements the ticks.
+    /// Checks whether the counter is activated and if so, processes the counter based on its mode.
     /// </summary>
     /// <returns>Whether the activation was processed.</returns>
-    public bool ProcessActivation() {
-        if (Activator.IsActivated) {
-            CurrentCount--;
-            return true;
+    public bool ProcessActivation(bool forced = false) {
+        // Special case for Counter 2 (PC Speaker timer) - many games rely on it
+        // even when not explicitly activated through the timer system
+        // This fixes 'Where in the World is Carmen Sandiego'(among others)
+        bool isActivated = Activator.IsActivated || forced;
+
+        if (!isActivated) {
+            return false;
         }
 
-        return false;
+        // Process the counter based on its operating mode
+        switch (CurrentPitMode) {
+            case PitMode.InterruptOnTerminalCount:
+                // Mode 0: If count is 0, output stays high. Otherwise decrement and check
+                if (CurrentCount > 0) {
+                    CurrentCount--;
+                    if (CurrentCount == 0) {
+                        OutputState = OutputStatus.High; // Output goes high when count reaches 0
+                    }
+                }
+                break;
+
+            case PitMode.OneShot:
+                // Mode 1: OneShot - Output remains low until count reaches 0
+                if (CurrentCount > 0) {
+                    CurrentCount--;
+                    if (CurrentCount == 0) {
+                        OutputState = OutputStatus.High; // Output goes high when count reaches 0
+                    }
+                }
+                break;
+
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+                // Mode 2: Rate Generator - Output stays high until count = 1, then goes low for one clock
+                if (CurrentCount > 0) {
+                    CurrentCount--;
+                    if (CurrentCount == 1) {
+                        OutputState = OutputStatus.Low; // Goes low when count reaches 1
+                    } else if (CurrentCount == 0) {
+                        CurrentCount = ReloadValue; // Reload when count reaches 0
+                        OutputState = OutputStatus.High; // Back to high
+                    }
+                }
+                break;
+
+            case PitMode.SquareWave:
+            case PitMode.SquareWaveAlias:
+                // Mode 3: Square Wave - Output toggles each time count reaches half and zero
+                if (CurrentCount > 0) {
+                    ushort halfCount = (ushort)(ReloadValue / 2); // This is how we get a square wave
+                    CurrentCount--;
+
+                    if (ReloadValue == 0) {
+                        // Special case for reload value = 0 (effectively 65536)
+                        halfCount = 0x8000;
+                    }
+
+                    if (CurrentCount == halfCount) {
+                        OutputState = OutputStatus.Low; // Toggle output at half count
+                    } else if (CurrentCount == 0) {
+                        OutputState = OutputStatus.High; // Toggle output at zero
+                        CurrentCount = ReloadValue; // Reload
+                    }
+                }
+                break;
+
+            case PitMode.SoftwareStrobe:
+                // Mode 4: Software Triggered Strobe - Output goes low when count reaches 0
+                if (CurrentCount > 0) {
+                    CurrentCount--;
+                    if (CurrentCount == 0) {
+                        OutputState = OutputStatus.Low; // Goes low when count reaches 0
+                        _needsReload = true; // Flag for reload after the next clock
+                    }
+                } else if (_needsReload) {
+                    OutputState = OutputStatus.High; // Back to high
+                    CurrentCount = ReloadValue; // Reload
+                    _needsReload = false;
+                }
+                break;
+
+            case PitMode.HardwareStrobe:
+                // Mode 5: Hardware Triggered Strobe - Same as Mode 4 but triggered by hardware
+                if (_isGateHigh && CurrentCount > 0) { // Only count if gate is high
+                    CurrentCount--;
+                    if (CurrentCount == 0) {
+                        OutputState = OutputStatus.Low;
+                        _needsReload = true;
+                    }
+                } else if (_needsReload) {
+                    OutputState = OutputStatus.High;
+                    CurrentCount = ReloadValue;
+                    _needsReload = false;
+                }
+                break;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -206,25 +320,57 @@ public class Pit8254Counter {
         ushort readWritePolicy = (ushort)(value >> 4 & 0b11);
         if (readWritePolicy == 0) {
             if (_latchMode) {
-                // If a Counter is latched and then, some time later, latched again before the count is read, the second Counter Latch Command is ignored. 
+                // If a Counter is latched and then, some time later,
+                // latched again before the count is read,
+                // the second Counter Latch Command is ignored. 
                 return;
             }
             _latchMode = true;
             _latchRegister.Value = _currentCountRegister.Value;
-            // Counter Latch Commands do not affect the programmed Mode of the Counter or the read write policy in any way.
+            // Counter Latch Commands do not affect the programmed Mode of the Counter
+            // or the read write policy in any way.
             return;
         }
         ReadWritePolicy = readWritePolicy;
-        Mode = (ushort)(value >> 1 & 0b111);
-        if (Mode != 3 && _loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("Counter {Index} Mode updated to {Mode} which is not supported.", Index, Mode);
+        int newMode = (ushort)(value >> 1 & 0b111);
+
+        if (Mode != newMode && _loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("Counter {Index} Mode updated from {OldMode} to {NewMode}", Index, Mode, newMode);
         }
+
+        Mode = newMode;
         Bcd = (value & 1) == 1;
-        SettingChangedEvent?.Invoke(this, EventArgs.Empty);
+
+        // Initialize counter state based on the new mode
+        InitializeCounterForMode();
     }
 
     /// <summary>
-    /// Called when a value is written to the reload value counter boundary. It updates the desired frequency based on the new value.
+    /// Initializes the counter state appropriate for the current mode
+    /// </summary>
+    private void InitializeCounterForMode() {
+        switch (CurrentPitMode) {
+            case PitMode.InterruptOnTerminalCount:
+                OutputState = OutputStatus.Low;
+                break;
+            case PitMode.OneShot:
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+            case PitMode.SoftwareStrobe:
+            case PitMode.HardwareStrobe:
+                OutputState = OutputStatus.High;
+                break;
+            case PitMode.SquareWave:
+            case PitMode.SquareWaveAlias:
+                OutputState = OutputStatus.High;
+                IsSquareWaveActive = ReloadValue >= 2;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Called when a value is written to the reload value counter boundary.
+    /// It updates the desired frequency based on the new value.
     /// </summary>
     private void OnReloadValueWrite() {
         if (ReloadValue == 0) {
@@ -233,9 +379,9 @@ public class Pit8254Counter {
         } else {
             UpdateDesiredFrequency(HardwareFrequency / ReloadValue);
         }
-        
+
         // Update square wave state if needed
-        if (CurrentPitMode == PitMode.SquareWave || CurrentPitMode == PitMode.SquareWaveAlias) {
+        if (CurrentPitMode is PitMode.SquareWave or PitMode.SquareWaveAlias) {
             // Only consider valid counter values
             IsSquareWaveActive = ReloadValue >= 2;
         }
@@ -252,32 +398,53 @@ public class Pit8254Counter {
         Activator.Frequency = desiredFrequency;
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
     }
-    
+
     /// <summary>
     /// Triggers the gate for this counter
     /// </summary>
     public void SetGateState(bool enabled) {
+        _isGateHigh = enabled;
+
         // Handle gate trigger based on current mode
-        switch(CurrentPitMode) {
+        switch (CurrentPitMode) {
             case PitMode.OneShot:
                 if (enabled) {
-                    OutputState = OutputStatus.Low;
+                    CurrentCount = ReloadValue; // Reload on rising edge
+                    OutputState = OutputStatus.Low; // Output goes low
                 }
                 break;
-                
+
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+                if (enabled) {
+                    CurrentCount = ReloadValue; // Reload on rising edge
+                    OutputState = OutputStatus.High;
+                } else {
+                    OutputState = OutputStatus.High; // Output forced high when gate goes low
+                }
+                break;
+
             case PitMode.SquareWave:
             case PitMode.SquareWaveAlias:
-                IsSquareWaveActive = enabled;
+                IsSquareWaveActive = enabled && ReloadValue >= 2;
                 if (enabled) {
-                    // Reset the output state to high when starting
+                    CurrentCount = ReloadValue; // Reload on rising edge
                     OutputState = OutputStatus.High;
+                } else {
+                    OutputState = OutputStatus.High; // Output forced high when gate goes low
+                }
+                break;
+
+            case PitMode.HardwareStrobe:
+                if (enabled) {
+                    CurrentCount = ReloadValue; // Reload on rising edge
                 }
                 break;
         }
         
         GateStateChanged?.Invoke(this, enabled);
     }
-    
+
     /// <inheritdoc/>
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
