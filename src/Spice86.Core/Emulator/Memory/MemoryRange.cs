@@ -1,17 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
-using System.Text.Json;
-
 using Spice86.Shared.Utils;
 
+using System.Diagnostics;
+using System.Text.Json;
+
 /// <summary> Represents a range in memory. </summary>
+[DebuggerDisplay("{Name} ({StartAddress}-{EndAddress}, Size: {EndAddress - StartAddress} bytes)")]
 public class MemoryRange {
     /// <summary>
     /// Creates a new instance of the <see cref="MemoryRange"/> class.
     /// </summary>
     /// <param name="startAddress">The starting address of the memory range.</param>
     /// <param name="endAddress">The ending address of the memory range.</param>
-    /// <param name="name">The name of the memory range.</param>
+    /// <param name="name">The name of the DOS file this memory mapped range belongs to.</param>
     public MemoryRange(uint startAddress, uint endAddress, string name) {
         StartAddress = startAddress;
         EndAddress = endAddress;

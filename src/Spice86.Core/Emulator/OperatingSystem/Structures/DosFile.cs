@@ -25,30 +25,37 @@ public class DosFile : VirtualFileBase {
     /// <summary>
     /// Adds a memory range to the list of loaded memory ranges for the file.
     /// </summary>
-    /// <param name="memoryRange">The memory range to add.</param>
-    public void AddMemoryRange(MemoryRange memoryRange) {
+    /// <param name="newMemoryRange">The memory range to add.</param>
+    public void AddMemoryRange(MemoryRange newMemoryRange) {
         for (int i = 0; i < _loadedMemoryRanges.Count; i++) {
-            MemoryRange loadMemoryRange = _loadedMemoryRanges[i];
-            if (loadMemoryRange.StartAddress == memoryRange.StartAddress && loadMemoryRange.EndAddress == memoryRange.EndAddress) {
+            MemoryRange existingMemoryRange = _loadedMemoryRanges[i];
+            if (existingMemoryRange.StartAddress == newMemoryRange.StartAddress &&
+                existingMemoryRange.EndAddress == newMemoryRange.EndAddress) {
                 // Same, nothing to do
                 return;
             }
 
-            if (loadMemoryRange.IsInRange(memoryRange.StartAddress, memoryRange.EndAddress)) {
+            if (existingMemoryRange.IsInRange(newMemoryRange.StartAddress, newMemoryRange.EndAddress)) {
                 // Fuse
-                loadMemoryRange.StartAddress = Math.Min(loadMemoryRange.StartAddress, memoryRange.StartAddress);
-                loadMemoryRange.EndAddress = Math.Max(loadMemoryRange.EndAddress, memoryRange.EndAddress);
+                existingMemoryRange.StartAddress = Math.Min(existingMemoryRange.StartAddress, newMemoryRange.StartAddress);
+                existingMemoryRange.EndAddress = Math.Max(existingMemoryRange.EndAddress, newMemoryRange.EndAddress);
                 return;
             }
 
-            if (loadMemoryRange.EndAddress + 1 == memoryRange.StartAddress) {
+            if (existingMemoryRange.EndAddress + 1 == newMemoryRange.StartAddress) {
                 // We are the next block, extend
-                loadMemoryRange.EndAddress = memoryRange.EndAddress;
+                existingMemoryRange.EndAddress = newMemoryRange.EndAddress;
+                return;
+            }
+
+            if (existingMemoryRange.StartAddress - 1 == newMemoryRange.EndAddress) {
+                // The new range comes immediately before this existing range, extend
+                existingMemoryRange.StartAddress = newMemoryRange.StartAddress;
                 return;
             }
         }
 
-        _loadedMemoryRanges.Add(memoryRange);
+        _loadedMemoryRanges.Add(newMemoryRange);
     }
 
     /// <summary>

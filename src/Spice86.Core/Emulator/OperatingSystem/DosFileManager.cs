@@ -522,7 +522,7 @@ public class DosFileManager {
             _memory.LoadData(targetAddress, buffer, actualReadLength);
             if (file is DosFile actualFile) {
                 actualFile.AddMemoryRange(new MemoryRange(targetAddress,
-                    (uint)(targetAddress + actualReadLength - 1), file.Name));
+                    (uint)(targetAddress + actualReadLength), file.Name));
             }
         }
 
