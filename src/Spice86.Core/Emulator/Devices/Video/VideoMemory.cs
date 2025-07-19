@@ -2,9 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
-using Spice86.Shared.Emulator.Errors;
-
-using System.Diagnostics;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
@@ -12,16 +10,19 @@ using System.Diagnostics;
 public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
+    private readonly ILoggerService _logger;
 
     /// <summary>
     ///     Create a new instance of the video memory.
     /// </summary>
     /// <param name="state">The interface that represents the state of the video card.</param>
-    public VideoMemory(IVideoState state) {
+    /// <param name="logger">The logger service implementation.</param>
+    public VideoMemory(IVideoState state, ILoggerService logger) {
         _state = state;
-        Planes = new byte[4, 0x20000];
+        Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
+        Planes = new byte[4, 64 * 1024]; // VRAM consists of 4 planes of 64kb
         _latches = new byte[4];
-        Size = 0x20000;
+        _logger = logger;
     }
 
     /// <inheritdoc />
@@ -29,6 +30,11 @@ public class VideoMemory : IVideoMemory {
 
     /// <inheritdoc />
     public byte Read(uint address) {
+        if (IsOutsideCurrentlyMappedRange(address)) {
+            _logger.Debug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
+
+            return 0;
+        }
         (byte plane, uint offset) = DecodeReadAddress(address);
         _latches[0] = Planes[0, offset];
         _latches[1] = Planes[1, offset];
@@ -39,6 +45,7 @@ public class VideoMemory : IVideoMemory {
             case ReadMode.ReadMode0:
                 // result = (byte)(_latch >> (plane << 3));
                 result = _latches[plane];
+
                 break;
             case ReadMode.ReadMode1: {
                 // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
@@ -65,6 +72,7 @@ public class VideoMemory : IVideoMemory {
                         result |= (byte)(1 << i);
                     }
                 }
+
                 break;
             }
             default:
@@ -74,8 +82,22 @@ public class VideoMemory : IVideoMemory {
         return result;
     }
 
+    private bool IsOutsideCurrentlyMappedRange(uint address) {
+        return address >= _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.BaseAddress +
+            _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.MemorySize ||
+            address < _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.BaseAddress;
+    }
+
     /// <inheritdoc />
     public void Write(uint address, byte value) {
+        if (IsOutsideCurrentlyMappedRange(address)) {
+            // TODO: this is most likely writing to a secondary monochrome monitor we have not implemented yet.
+            if (value != 0x00) { // don't log initial memory clearing
+                _logger.Debug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
+            }
+
+            return;
+        }
         (byte planes, uint offset) = DecodeWriteAddress(address);
         bool[] writePlane = planes.ToBits();
         Register8 planeEnable = _state.SequencerRegisters.PlaneMaskRegister;
@@ -84,18 +106,23 @@ public class VideoMemory : IVideoMemory {
         switch (_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode) {
             case WriteMode.WriteMode0:
                 HandleWriteMode0(value, planeEnable, writePlane, setResetEnable, setReset, offset);
+
                 break;
             case WriteMode.WriteMode1:
                 HandleWriteMode1(planeEnable, writePlane, offset);
+
                 break;
             case WriteMode.WriteMode2:
                 HandleWriteMode2(value, planeEnable, writePlane, offset);
+
                 break;
             case WriteMode.WriteMode3:
                 HandleWriteMode3(value, planeEnable, writePlane, setReset, offset);
+
                 break;
             default:
-                throw new InvalidOperationException($"Unknown writeMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode}");
+                throw new InvalidOperationException(
+                    $"Unknown writeMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.WriteMode}");
         }
     }
 
@@ -152,17 +179,8 @@ public class VideoMemory : IVideoMemory {
         }
     }
 
-    private void HandleWriteMode0(byte value, Register8 planeEnable,
-        ReadOnlySpan<bool> writePlane, Register8 setResetEnable, Register8 setReset, uint offset) {
-        if(offset >= 0x10000) {
-            throw new UnrecoverableException(
-                $"""
-                Wile in video write mode 0, the emulated program tried to write at a video memory address beyond 0x10000,
-                which is forbidden! The value was : 0x{offset:X} !
-                An issue outside VGA emulation probably caused this...?
-                """
-                );
-        }
+    private void HandleWriteMode0(byte value, Register8 planeEnable, ReadOnlySpan<bool> writePlane, Register8 setResetEnable,
+        Register8 setReset, uint offset) {
         if (_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount != 0) {
             value.Ror(_state.GraphicsControllerRegisters.DataRotateRegister.RotateCount);
         }
@@ -194,16 +212,21 @@ public class VideoMemory : IVideoMemory {
                 break;
             case FunctionSelect.And:
                 tempValue &= _latches[plane];
+
                 break;
             case FunctionSelect.Or:
                 tempValue |= _latches[plane];
+
                 break;
             case FunctionSelect.Xor:
                 tempValue ^= _latches[plane];
+
                 break;
             default:
-                throw new InvalidOperationException($"Unknown functionSelect {_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect}");
+                throw new InvalidOperationException(
+                    $"Unknown functionSelect {_state.GraphicsControllerRegisters.DataRotateRegister.FunctionSelect}");
         }
+
         return tempValue;
     }
 
@@ -233,6 +256,7 @@ public class VideoMemory : IVideoMemory {
         else {
             plane = _state.GraphicsControllerRegisters.ReadMapSelectRegister.PlaneSelect;
         }
+
         return (plane, offset);
     }
 
@@ -265,6 +289,7 @@ public class VideoMemory : IVideoMemory {
             // write to all planes
             planes = 0b1111;
         }
+
         return (planes, offset);
     }
 }

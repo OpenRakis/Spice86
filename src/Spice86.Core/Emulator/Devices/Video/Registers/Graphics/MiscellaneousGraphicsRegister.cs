@@ -47,4 +47,15 @@ public class MiscellaneousGraphicsRegister : Register8 {
         3 => 0xB8000,
         _ => throw new ArgumentOutOfRangeException()
     };
+
+    /// <summary>
+    ///     The size of the graphics memory window.
+    /// </summary>
+    public uint MemorySize => MemoryMap switch {
+        0 => 128 * 1024,
+        1 => 64 * 1024,
+        2 => 32 * 1024,
+        3 => 32 * 1024,
+        _ => throw new ArgumentOutOfRangeException()
+    };
 }
