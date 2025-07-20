@@ -20,7 +20,7 @@ public partial class StackMemoryViewModel : MemoryViewModel {
                 uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
                 canCloseTab, startAddress, endAddress) {
         Title = "CPU Stack Memory";
-        pauseHandler.Paused += () => UpdateStackMemoryViewModel(this, stack);
+        pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateStackMemoryViewModel(this, stack));
     }
     private static void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
         //stack.PhysicalAddress is MemoryUtils.ToPhysicalAddress(state.SS, state.SP)
