@@ -3,15 +3,16 @@
 		xmlns:vm="using:Spice86.ViewModels"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:converters="clr-namespace:Spice86.Converters"
-		xmlns:local="clr-namespace:Spice86;assembly=Spice86"
-		xmlns:b="clr-namespace:Spice86.Behaviors"
-		xmlns:userControls="clr-namespace:Spice86.UserControls"
+		xmlns:converters="clr-namespace:Spice86.Views.Converters"
+		xmlns:local="clr-namespace:Spice86.Views;assembly=Spice86"
+		xmlns:b="clr-namespace:Spice86.Views.Behaviors"
+		xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+	    xmlns:factory="clr-namespace:Spice86.Views.Factory"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
-		xmlns:controls="clr-namespace:Spice86.Controls"
+		xmlns:controls="clr-namespace:Spice86.Views.Controls"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
-		Icon="/Assets/Spice86.ico"
+		Icon="/Views/Assets/Spice86.ico"
 		Title="{Binding MainTitle}"
 		x:CompileBindings="True" x:DataType="vm:MainWindowViewModel"
 		MinWidth="1024"
@@ -21,7 +22,7 @@
 		WindowStartupLocation="CenterScreen"
 		CanResize="True">
 	<Window.DataTemplates>
-		<local:ViewLocator />
+		<factory:ViewLocator />
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />

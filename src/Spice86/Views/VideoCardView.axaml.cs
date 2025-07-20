@@ -2,9 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 
-using Spice86.Infrastructure;
-
 using Spice86.ViewModels;
+using Spice86.ViewModels.Services;
 
 namespace Spice86.Views;
 

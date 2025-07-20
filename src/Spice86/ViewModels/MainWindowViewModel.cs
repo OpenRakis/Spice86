@@ -14,11 +14,11 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
-using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Services;
 
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;

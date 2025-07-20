@@ -3,7 +3,7 @@ namespace Spice86.ViewModels;
 using Avalonia.Collections;
 using Avalonia.Controls;
 
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.ObjectModel;

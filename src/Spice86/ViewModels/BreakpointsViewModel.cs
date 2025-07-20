@@ -9,9 +9,9 @@ using CommunityToolkit.Mvvm.Messaging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Infrastructure;
-using Spice86.Messages;
+using Spice86.ViewModels.Messages;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 

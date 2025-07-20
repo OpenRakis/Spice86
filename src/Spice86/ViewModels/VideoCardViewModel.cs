@@ -1,13 +1,10 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Infrastructure;
-using Spice86.Mappers;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.ViewModels.PropertiesMappers;
 
 public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]

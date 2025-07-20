@@ -7,13 +7,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Infrastructure;
-using Spice86.Mappers;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Utils;
 
 using System.ComponentModel;
 using System.Reflection;
+using Spice86.ViewModels.PropertiesMappers;
+using Spice86.ViewModels.Services;
 
 public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly State _cpuState;

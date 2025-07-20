@@ -6,8 +6,8 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Infrastructure;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Services;
 
 namespace Spice86.ViewModels;
 

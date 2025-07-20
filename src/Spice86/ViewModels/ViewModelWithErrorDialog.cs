@@ -3,9 +3,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Behaviors;
-using Spice86.Infrastructure;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.Services;
+using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.Views.Behaviors;
 
 using System.Text.Json;
 

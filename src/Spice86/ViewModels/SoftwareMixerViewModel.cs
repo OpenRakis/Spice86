@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.ComponentModel;
 
