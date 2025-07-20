@@ -3,6 +3,8 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
+using System.ComponentModel.DataAnnotations;
+
 /// <summary>
 /// Represents a DTA (Disk Transfer Area) in memory.
 /// </summary>
@@ -15,14 +17,9 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     public DosDiskTransferArea(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
     }
     /// <summary>
-    /// The offset in bytes where we store on which drive the search is performed.
-    /// </summary>
-    private const int DriveOffset = 0x0;
-
-    /// <summary>
     /// The offset in bytes where the SearchId is located.
     /// </summary>
-    private const int SearchIdOffset = 0x13;
+    private const int SearchIdOffset = 0x0;
 
     /// <summary>
     /// The offset in bytes where the attribute field is located.
@@ -45,39 +42,20 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     private const int FileSizeOffset = 0x1A;
 
     /// <summary>
-    /// The offset in bytes where the file name field is located.
+    /// The offset in bytes where the matching file name is located. ASCII encoded.
     /// </summary>
     private const int FileNameOffset = 0x1E;
 
     /// <summary>
     /// The size in bytes of the zero-terminated ASCII file name string field.
     /// </summary>
-    private const int FileNameSize = 13;
-
-    /// <summary>
-    /// Gets or sets the drive on which the search is performed.
-    /// <remarks>No one should touch this, except DOS.</remarks>
-    /// </summary>
-    internal byte Drive { get => UInt8[DriveOffset]; set => UInt8[DriveOffset] = value; }
-
-    /// <summary>
-    /// The file attributes used by the file search.
-    /// <remarks>No one should touch this, except DOS.</remarks>
-    /// </summary>
-    internal byte SearchAttributes { get => UInt8[0x12]; set => UInt8[0x12] = value; }
+    private const int FileNameLength = 13;
 
     /// <summary>
     /// The SearchId, for multiple searches at the same time.
     /// <remarks>No one should touch this, except DOS.</remarks>
     /// </summary>
-    internal byte SearchId { get => UInt8[SearchIdOffset]; set => UInt8[SearchIdOffset] = value; }
-
-    /// <summary>
-    /// Gets or sets where we are in the enumeration of the search results.
-    /// <remarks>No one should touch this, except DOS.</remarks>
-    /// </summary>
-    internal ushort EntryCountWithinSearchResults { get => UInt16[0xD]; set => UInt16[0xD] = value; }
-
+    internal uint SearchId { get => UInt32[SearchIdOffset]; set => UInt32[SearchIdOffset] = value; }
     /// <summary>
     /// Gets or sets the file attributes field.
     /// </summary>
@@ -98,11 +76,9 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// </summary>
     public ushort FileSize { get => UInt16[FileSizeOffset]; set => UInt16[FileSizeOffset] = value; }
 
-    /// <summary>
-    /// Gets or sets the file name field.
-    /// </summary>
+    [Range(0,13)]
     public string FileName {
-        get => GetZeroTerminatedString(FileNameOffset, FileNameSize);
-        set => SetZeroTerminatedString(FileNameOffset, value, FileNameSize);
+        get => GetZeroTerminatedString(FileNameOffset, FileNameLength);
+        set => SetZeroTerminatedString(FileNameOffset, value, FileNameLength);
     }
 }
