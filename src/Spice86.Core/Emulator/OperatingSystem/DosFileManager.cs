@@ -768,7 +768,7 @@ public class DosFileManager {
         dta.FileDate = ToDosDate(creationLocalDate);
         dta.FileTime = ToDosTime(creationLocalTime);
         if (entryInfo is FileInfo fileInfo) {
-            dta.FileSize = (ushort)fileInfo.Length;
+            dta.FileSize = (uint)fileInfo.Length;
         } else {
             // The FAT node entry size for a directory
             dta.FileSize = 4096;
