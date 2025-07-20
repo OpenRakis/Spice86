@@ -113,7 +113,7 @@
 				</Button>
 			</StackPanel>
 		</Grid>
-		<Viewbox Grid.Row="1">
+		<Viewbox Name="ScreenView" Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.LayoutTransform>
 					<TransformGroup>
