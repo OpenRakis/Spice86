@@ -381,12 +381,12 @@ public class DosFileManager {
         uint key = dta.SearchId;
         if (!_activeFileSearches.TryGetValue(key, out FileSearchPrivateData? search)) {
             return FileOperationErrorWithLog($"Call FindFirst first to initiate a search.",
-                ErrorCode.NoMoreMatchingFiles);
+                ErrorCode.NoMoreFiles);
         }
 
         if (!GetSearchFolder(search.FileSpec, out string? searchFolder)) {
             return FileOperationErrorWithLog("Search in an invalid folder",
-                ErrorCode.NoMoreMatchingFiles);
+                ErrorCode.NoMoreFiles);
         }
 
         string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder,
@@ -396,7 +396,7 @@ public class DosFileManager {
         string? fileMatch = matchingFiles.ElementAtOrDefault(search.Index);
         if (matchingFiles.Length == 0 || fileMatch is null) {
             return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}",
-                ErrorCode.NoMoreMatchingFiles);
+                ErrorCode.NoMoreFiles);
         }
 
         search.Index++;
@@ -404,7 +404,7 @@ public class DosFileManager {
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
             fileMatch, searchFolder, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.",
-                ErrorCode.NoMoreMatchingFiles);
+                ErrorCode.NoMoreFiles);
         }
         UpdateActiveSearch(key, search.FileSpec);
 
