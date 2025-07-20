@@ -29,7 +29,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         BootDrive = 0x0;
         ExtendedMemorySize = (ushort)(byteReaderWriter.Length / 1024);
         MinMemForExec = 0x0;
-        A20GateFixRountineOffset = 0x0;
+        A20GateFixRoutineOffset = 0x0;
         MemAllocScanStart = 0x16f;
         MaxSectorLength = 0x200;
         RegCXfrom5e = 0x0;
@@ -260,7 +260,7 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// (DOS=HIGH) offset in DOS CS of function to fix A20 control when executing special .COM format
     /// </summary>
-    public ushort A20GateFixRountineOffset {
+    public ushort A20GateFixRoutineOffset {
         get => UInt16[0x3B];
         set => UInt16[0x3B] = value;
     }
