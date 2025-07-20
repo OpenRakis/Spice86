@@ -1,4 +1,6 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Avalonia.Threading;
+
+using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
@@ -20,7 +22,8 @@ public partial class StackMemoryViewModel : MemoryViewModel {
                 uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
                 canCloseTab, startAddress, endAddress) {
         Title = "CPU Stack Memory";
-        pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateStackMemoryViewModel(this, stack));
+        pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateStackMemoryViewModel(this, stack),
+            DispatcherPriority.Background);
     }
     private static void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
         //stack.PhysicalAddress is MemoryUtils.ToPhysicalAddress(state.SS, state.SP)
