@@ -58,6 +58,7 @@
     <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="12.0.0" />
     <PackageVersion Include="Spice86.Audio" Version="11.4.0" />
     <PackageVersion Include="FastExpressionCompiler" Version="5.4.1" />
+    <PackageVersion Include="Silk.NET.SDL" Version="2.23.0" />
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
   </ItemGroup>
 </Project>

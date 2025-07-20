@@ -70,7 +70,7 @@
 			</dock:DockControl.Factory>
 			<dockModel:RootDock IsCollapsable="False">
 				<dockModel:DocumentDock CanCreateDocument="False">
-					<dockModel:Document Id="Disassembly" Title="Disassembly (Alt-F1)" HotKeyManager.HotKey="Alt+F1">
+					<dockModel:Document Id="Disassembly" Title="Disassembly" HotKeyManager.HotKey="Alt+F1">
 						<TabControl ItemsSource="{Binding $parent[Window].DataContext.DisassemblyViewModels}">
 							<TabControl.ItemTemplate>
 								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -86,18 +86,18 @@
 					</dockModel:Document>
 					<dockModel:Document
 					Id="CodeFlow"
-					Title="Code Flow (Alt-F2)"
+					Title="Code Flow"
 					HotKeyManager.HotKey="Alt+F2">
 						<ContentPresenter
 						Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Cpu"
-					Title="CPU (Alt-F3)"
+					Title="CPU"
 					HotKeyManager.HotKey="Alt+F3">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
-					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
+					<dockModel:Document Id="Memory" Title="Memory" HotKeyManager.HotKey="Alt+F4">
 						<TabControl ItemsSource="{Binding $parent[Window].DataContext.MemoryViewModels}">
 							<TabControl.ItemTemplate>
 								<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
@@ -106,17 +106,17 @@
 							</TabControl.ItemTemplate>
 						</TabControl>
 					</dockModel:Document>
-					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
+					<dockModel:Document Id="Devices" Title="Devices" HotKeyManager.HotKey="Alt+F5">
 						<TabControl DataContext="{Binding $parent[Window].DataContext}">
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
-							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" Content="{Binding VideoCardViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" Content="{Binding PaletteViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
 
 						</TabControl>
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Breakpoints"
-					Title="Breakpoints (Alt-F6)"
+					Title="Breakpoints"
 					HotKeyManager.HotKey="Alt+F6">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
 					</dockModel:Document>
