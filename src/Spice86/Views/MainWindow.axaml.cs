@@ -2,14 +2,21 @@ namespace Spice86.Views;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.Platform;
 
 using Spice86.ViewModels;
+using Spice86.Native;
 
 using System;
 
 internal partial class MainWindow : Window {
+    private bool _isMouseCaptured = false;
+    private bool _wantToCapture = true;
+    private IntPtr _windowHandle;
+    
     /// <summary>
     /// Initializes a new instance
     /// </summary>
@@ -22,11 +29,24 @@ internal partial class MainWindow : Window {
     }
 
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
+        // Get native window handle when window is loaded
+        _windowHandle = GetNativeWindowHandle();
+        
         Dispatcher.UIThread.Post(() => {
-            if (DataContext is MainWindowViewModel viewModel) {
-                viewModel.StartEmulator();
+            if (DataContext is MainWindowViewModel mainVm) {
+                mainVm.CloseMainWindow += (_, _) => Close();
+                mainVm.InvalidateBitmap += Image.InvalidateVisual;
+                Image.PointerMoved += OnMouseMoved;
+                Image.PointerPressed += OnPointerPressed;
+                Image.PointerReleased += OnMouseButtonUp;
+                mainVm.StartEmulator();
             }
         }, DispatcherPriority.Background);
+    }
+
+    // Get the native window handle
+    private IntPtr GetNativeWindowHandle() {
+        return TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
     }
 
     public static readonly StyledProperty<PerformanceViewModel?> PerformanceViewModelProperty =
@@ -37,7 +57,51 @@ internal partial class MainWindow : Window {
         get => GetValue(PerformanceViewModelProperty);
         set => SetValue(PerformanceViewModelProperty, value);
     }
+    
+    private void OnMouseMoved(object? sender, PointerEventArgs e) {
+        if (this.DataContext is MainWindowViewModel mainVm) {
+            if(!_isMouseCaptured && _wantToCapture) {
+                _wantToCapture = false;
+                _isMouseCaptured = true;
+                // Use native mouse capture instead of Avalonia's e.Pointer.Capture()
+                NativeMouseCapture.EnableCapture(_windowHandle);
+            }
+            mainVm.OnMouseMoved(e, Image);
+        }
+    }
 
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e) {
+        if (this.DataContext is not MainWindowViewModel mainVm) {
+            return;
+        }
+        
+        if (e.GetCurrentPoint(Image).Properties.IsMiddleButtonPressed) {
+            _isMouseCaptured = !_isMouseCaptured;
+            _wantToCapture = !_wantToCapture;
+
+            if (_isMouseCaptured) {
+                NativeMouseCapture.EnableCapture(_windowHandle);
+            } else {
+                NativeMouseCapture.DisableCapture();
+            }
+            // We've handled the middle-click, so we can stop here.
+            e.Handled = true;
+            return;
+        }
+        
+        mainVm.OnMouseButtonDown(e, Image);
+    }
+
+    private void OnMouseButtonUp(object? sender, PointerReleasedEventArgs e) {
+        if (this.DataContext is MainWindowViewModel mainVm) {
+            // The middle mouse button is only for toggling capture, not for the emulator.
+            if (e.InitialPressMouseButton == MouseButton.Middle) {
+                e.Handled = true;
+                return;
+            }
+            mainVm.OnMouseButtonUp(e, Image);
+        }
+    }
 
     private void OnMenuGotFocus(object? sender, GotFocusEventArgs e) {
         FocusOnVideoBuffer();
@@ -58,14 +122,6 @@ internal partial class MainWindow : Window {
         Image.Focus();
     }
 
-    protected override void OnOpened(EventArgs e) {
-        base.OnOpened(e);
-        if (DataContext is not MainWindowViewModel mainVm) {
-            return;
-        }
-        mainVm.CloseMainWindow += (_, _) => Close();
-    }
-
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnVideoBuffer();
         (DataContext as MainWindowViewModel)?.OnKeyUp(e);
@@ -79,6 +135,9 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
+        // Release mouse capture when closing
+        NativeMouseCapture.Cleanup();
+        
         (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
         base.OnClosing(e);
     }
