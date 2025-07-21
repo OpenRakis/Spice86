@@ -43,7 +43,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// Expands to 4.
     /// </summary>
-    public const byte EmmMaxPhysicalPages = (byte) (EmmPageFrameSize / EmmPageSize);
+    public const byte EmmMaxPhysicalPages = (byte)(EmmPageFrameSize / EmmPageSize);
 
     /// <summary>
     /// Value used when a page is unmapped or unallocated.
@@ -99,7 +99,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public uint DeviceNumber { get; set; } = 0;
 
     public DosDeviceHeader Header { get; init; }
-    
+
     public ushort Information => 0xc0c0; //Lifted from DOSBox.
 
     public string Name {
@@ -131,7 +131,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         AllocatePages(4);
 
         for (ushort i = 0; i < EmmMaxPhysicalPages; i++) {
-            uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort) (EmmPageSize * i));
+            uint startAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, (ushort)(EmmPageSize * i));
             EmmRegister emmRegister = new(new EmmPage(EmmPageSize), startAddress);
             EmmPageFrame.Add(i, emmRegister);
             Memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
@@ -167,6 +167,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         AddAction(0x50, MapUnmapMultipleHandlePages);
         AddAction(0x51, ReallocatePages);
         AddAction(0x53, GetSetHandleName);
+        AddAction(0x58, GetMappablePhysicalAddressArray);
         AddAction(0x59, GetExpandedMemoryHardwareInformation);
     }
 
@@ -233,7 +234,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// </summary>
     /// <returns>The number of pages available.</returns>
     public ushort GetFreePageCount() {
-        return (ushort) Math.Max(0, EmmMemory.TotalPages - EmmHandles.Sum(static x => x.Value.LogicalPages.Count));
+        return (ushort)Math.Max(0, EmmMemory.TotalPages - EmmHandles.Sum(static x => x.Value.LogicalPages.Count));
     }
 
     /// <summary>
@@ -275,7 +276,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         };
         while (numberOfPagesToAlloc > 0) {
             ushort pageNumber = (ushort)existingHandle.LogicalPages.Count;
-            existingHandle.LogicalPages.Add(new EmmPage(EmmPageSize){
+            existingHandle.LogicalPages.Add(new EmmPage(EmmPageSize) {
                 PageNumber = pageNumber
             });
             numberOfPagesToAlloc--;
@@ -394,7 +395,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, 0);
         uint pageFrameAddressEnd = MemoryUtils.ToPhysicalAddress(EmmPageFrameSegment, EmmPageSize);
         if (address >= pageFrameAddress && address < pageFrameAddressEnd) {
-            MapUnmapHandlePage(logicalPage, (ushort) ((address - pageFrameAddress) / EmmPageSize), handleId);
+            MapUnmapHandlePage(logicalPage, (ushort)((address - pageFrameAddress) / EmmPageSize), handleId);
         }
     }
 
@@ -587,7 +588,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <param name="tableAddress">The linear address of the table to fill.</param>
     /// <returns>The status code.</returns>
     public byte GetAllHandlePages(uint tableAddress) {
-        foreach(KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
+        foreach (KeyValuePair<int, EmmHandle> allocatedHandle in EmmHandles) {
             Memory.UInt16[tableAddress] = allocatedHandle.Value.HandleNumber;
             tableAddress += 2;
             Memory.UInt16[tableAddress] = (ushort)allocatedHandle.Value.LogicalPages.Count;
@@ -748,6 +749,42 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
+    /// Function 25 (58h): Get Mappable Physical Address Array.
+    /// <para>
+    /// Returns an array containing the segment address and physical page number for each mappable  <br/>
+    /// physical page in the system. The contents of this array provide a cross reference between  <br/>
+    /// physical page numbers and the actual segment addresses for each mappable page. <br/>
+    /// </para>
+    /// <para>
+    /// Input: <br/>
+    ///   - ES:DI points to an application-supplied memory area where the physical address array will be stored
+    /// </para>
+    /// <para>
+    /// Output: <br/>
+    ///   - Array entries are written to ES:DI in pairs (segment, page number) <br/>
+    ///   - CX = number of entries in the array <br/>
+    ///   - AH = status code (00h = success) <br/>
+    /// </para>
+    /// <para>
+    /// Each entry in the array contains two values: <br/>
+    ///   - A segment address of the mappable physical page <br/>
+    ///   - The corresponding physical page number
+    /// </para>
+    /// </summary>
+    public void GetMappablePhysicalAddressArray() {
+        uint bufferAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
+        for (ushort i = 0; i < EmmPageFrame.Count; i++) {
+            ushort segment = (ushort)(EmmPageFrameSegment + (i * EmmPageSize / 16));
+            Memory.UInt16[bufferAddress] = segment;
+            bufferAddress += 2;
+            Memory.UInt16[bufferAddress] = i;
+            bufferAddress += 2;
+        }
+        State.CX = EmmMaxPhysicalPages;
+        State.AH = EmmStatus.EmmNoError;
+    }
+
+    /// <summary>
     /// This function is for use by operating systems only.  This function can
     /// be disabled at any time by the operating system. <br/>
     /// Refer to Function 30 for a description of how an operating system does this.
@@ -757,17 +794,17 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             case EmmSubFunctions.GetHardwareConfigurationArray:
                 uint data = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
                 // 1 page is 1K paragraphs (16KB)
-                Memory.UInt16[data] =0x0400;
-                data+=2;
+                Memory.UInt16[data] = 0x0400;
+                data += 2;
                 // No alternate register sets
                 Memory.UInt16[data] = 0x0000;
-                data+=2;
+                data += 2;
                 // Context save area size
                 Memory.UInt16[data] = (ushort)EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count();
-                data+=2;
+                data += 2;
                 // No DMA channels
                 Memory.UInt16[data] = 0x0000;
-                data+=2;
+                data += 2;
                 // Always 0 for LIM standard
                 Memory.UInt16[data] = 0x0000;
                 break;
@@ -792,7 +829,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Returns the number of open EMM handles
     /// </summary>
     /// <returns>The number of open EMM handles</returns>
-    public ushort GetAllocatedHandlePagesCount() => (ushort) EmmHandles.Sum(static x => x.Value.LogicalPages.Count);
+    public ushort GetAllocatedHandlePagesCount() => (ushort)EmmHandles.Sum(static x => x.Value.LogicalPages.Count);
 
     /// <summary>
     /// Gets the name of a handle.
