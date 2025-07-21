@@ -654,11 +654,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindNextMatchingFile(bool calledFromVm) {
-        ushort attributes = State.CX;
-        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}",
-                ConvertUtils.ToHex16(attributes), fileSpec);
+            LoggerService.Verbose("FIND NEXT MATCHING FILE");
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);

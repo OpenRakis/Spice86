@@ -216,6 +216,42 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
     }
 
+    internal static string GetShortFileName(string hostFileName, string hostDir) {
+        string fileName = Path.GetFileNameWithoutExtension(hostFileName);
+        string extension = Path.GetExtension(hostFileName);
+        // Initialize the StringBuilder for our result
+        StringBuilder shortName = new StringBuilder();
+
+        // Count files with similar names for collision detection
+        int count = 1;
+        if (!string.IsNullOrWhiteSpace(hostDir) && Directory.Exists(hostDir)) {
+            count = new DirectoryInfo(hostDir).EnumerateFiles($"{fileName}.*")
+                .TakeWhile(x => x.Name != hostFileName).Count() + 1;
+        }
+
+        // Handle filename part (8 characters)
+        if (fileName.Length > 8) {
+            // Need to add tilde notation (~N)
+            int digitsInCount = count.ToString().Length;
+            int charsToKeep = Math.Max(1, 8 - 1 - digitsInCount);
+
+            shortName.Append(fileName.AsSpan(0, charsToKeep));
+            shortName.Append('~');
+            shortName.Append(count);
+        } else {
+            shortName.Append(fileName);
+        }
+
+        if (extension != null) {
+            if (extension.Length > 4) {
+                shortName.Append(extension.AsSpan(0, 4));
+            } else {
+                shortName.Append(extension);
+            }
+        }
+        return shortName.ToString().ToUpperInvariant();
+    }
+
     private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
         string relativePath = fileOrDirInfo.FullName[hostPrefix.Length..];
         if (fileOrDirInfo is FileInfo) {
