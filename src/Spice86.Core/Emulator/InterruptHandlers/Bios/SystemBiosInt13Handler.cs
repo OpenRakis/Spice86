@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.Text.RegularExpressions;
+
 /// <summary>
 ///     INT 13h handler. BIOS disk access functions.
 /// </summary>
@@ -51,6 +53,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private void FillDispatchTable() {
         AddAction(0x0, () => ResetDiskSystem(true));
         AddAction(0x4, () => VerifySectors(true));
+        AddAction(0x15, () => GetDisketteOrHddType(true));
     }
 
     /// <summary>
@@ -85,5 +88,26 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
         State.AH = 0x0;
         SetCarryFlag(false, calledFromVm);
+    }
+
+    /// <summary>
+    /// Get Diskette Type or Check Hard Drive Installed
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    public void GetDisketteOrHddType(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("{Method} was called! Only returning fake" +
+                "hard drive value if asking for first hard drive." +
+                "Invalid drive otherwise.", nameof(GetDisketteOrHddType));
+        }
+        if(State.DL is 0x80) { // first hard disk drive
+            State.AL = 0x3; // hard drive type
+            State.CX = 3;  // High word of 32-bit sector count
+            State.DX = 0x4800; //105 megs (0x00034800 = 215,040 of 512 bytes sector = 105 megs)
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            State.AH = 0xFF; // BIOS Disk error code: sense operation failed.
+            SetCarryFlag(true, calledFromVm);
+        }
     }
 }
