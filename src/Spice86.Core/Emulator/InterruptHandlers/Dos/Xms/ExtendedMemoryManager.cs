@@ -16,92 +16,246 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
-/// Provides DOS applications with XMS memory according to the eXtended Memory Specification (XMS) version 3.0. <br/>
-/// XMS allows DOS programs to utilize additional memory found in Intel's 80286 and 80386 based machines in
-/// a consistent, machine independent manner. XMS adds almost 64K to the 640K which DOS programs can access
-/// directly and provides a standard method of storing data in extended memory above 1MB.
+/// Implements the eXtended Memory Specification (XMS) version 3.0 for DOS applications.
 /// </summary>
 /// <remarks>
+/// <para>
+/// XMS provides DOS programs with access to memory above the conventional 640KB limit in 
+/// Intel 80286 and 80386 based machines. It defines a standardized API for accessing:
+/// </para>
+/// <list type="bullet">
+///   <item>
+///     <term>High Memory Area (HMA)</term>
+///     <description>The first 64KB-16bytes of extended memory (FFFF:0010 to FFFF:FFFF)</description>
+///   </item>
+///   <item>
+///     <term>Extended Memory Blocks (EMBs)</term>
+///     <description>Memory blocks above 1MB+64KB that can be allocated, locked, moved, and freed</description>
+///   </item>
+///   <item>
+///     <term>Upper Memory Blocks (UMBs)</term>
+///     <description>Optional memory blocks in the upper memory area (640KB-1MB)</description>
+///   </item>
+/// </list>
+/// <para>
+/// XMS functions are accessed via INT 2Fh, AH=43h, and use the concept of "handles" to reference
+/// allocated memory blocks. This implementation supports all required XMS 3.0 functions including
+/// the 32-bit extended functions (88h, 89h, 8Eh, 8Fh) that support memory access beyond 64MB.
+/// </para>
+/// <para>
+/// Memory layout in XMS:
 /// <code>
-/// Memory Layout:
-/// |-------------------------------------------------------|   Top of Memory
-/// |             Extended Memory Blocks (EMBs)             |
-/// |            Used for data storage only                 |
-/// |-------------------------------------------------------|   1088K
-/// |           High Memory Area (HMA) - 64K-16B           |
-/// |        FFFF:0010 through FFFF:FFFF                   |
-/// |=======================================================|   1024K or 1MB
-/// |         Upper Memory Blocks (UMBs) - Optional        |
-/// |-------------------------------------------------------|   640K
-/// |            Conventional DOS Memory                    |
-/// +-------------------------------------------------------+   0K
+///  _______________________________________   Top of Memory
+/// |                                       |
+/// |    Extended Memory Blocks (EMBs)      |
+/// |    (Data storage only)                |
+/// |_______________________________________|   1088KB
+/// |                                       |
+/// |    High Memory Area (HMA)             |
+/// |    (64KB-16bytes)                     |
+/// |=======================================|   1024KB (1MB)
+/// |                                       |
+/// |    Upper Memory Blocks (UMBs)         |
+/// |    (Optional)                         |
+/// |_______________________________________|   640KB
+/// |                                       |
+/// |    Conventional DOS Memory            |
+/// |                                       |
+/// |_______________________________________|   0KB
 /// </code>
-/// This implementation provides XMS version 3.0 features accessed via INT 2Fh, AH=43h.
-/// See: <c>xms20.txt</c> for the full specification.
-/// In MS-DOS, this is HIMEM.SYS. In DOSBox, this is xms.cpp <br/>
-/// In MS-DOS, EMM386.EXE uses XMS for EMS storage. This is not the case here.
+/// </para>
+/// <para>
+/// This implementation is equivalent to HIMEM.SYS in MS-DOS, providing memory management
+/// services and A20 line control for DOS applications running in the emulator.
+/// </para>
 /// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
+    /// <summary>
+    /// The XMS version number in BCD format (0x0300 = version 3.00).
+    /// </summary>
+    /// <remarks>
+    /// This is returned by Function 00h (Get XMS Version Number) in the AX register.
+    /// XMS 3.0 adds extended functions that support memory beyond 64MB limit.
+    /// </remarks>
     public const ushort XmsVersion = 0x0300;
+
+    /// <summary>
+    /// The internal revision number of the XMS driver.
+    /// </summary>
+    /// <remarks>
+    /// This is returned by Function 00h (Get XMS Version Number) in the BX register.
+    /// It's mainly used for debugging purposes as per the XMS specification.
+    /// </remarks>
     public const ushort XmsInternalVersion = 0x0301;
 
-    private int _a20EnableCount;
+    /// <summary>
+    /// Flag indicating if the A20 line is globally enabled.
+    /// </summary>
+    /// <remarks>
+    /// The global A20 state is controlled by Functions 03h (Global Enable A20) and 
+    /// 04h (Global Disable A20). This flag is separate from the local enable count
+    /// and is typically used by programs that have control of the HMA.
+    /// </remarks>
     private bool _a20GlobalEnabled = false;
+
+    /// <summary>
+    /// Counter for local A20 enable/disable calls.
+    /// </summary>
+    /// <remarks>
+    /// Per XMS specification, the A20 line should be controlled via an "enable count".
+    /// Local Enable (Function 05h) increments this count and enables A20 if the count was zero.
+    /// Local Disable (Function 06h) decrements this count and disables A20 if the count becomes zero.
+    /// This allows nested A20 enables/disables to work correctly.
+    /// </remarks>
     private uint _a20LocalEnableCount = 0;
+
+    /// <summary>
+    /// Maximum value for the A20 local enable count to prevent overflow.
+    /// </summary>
+    /// <remarks>
+    /// When the local enable count reaches this value, further attempts to 
+    /// enable A20 locally will return error code 82h (A20 error).
+    /// </remarks>
     private const uint A20MaxTimesEnabled = uint.MaxValue;
 
+    /// <summary>
+    /// Logger service for recording XMS operations and errors.
+    /// </summary>
     private readonly ILoggerService _loggerService;
+
+    /// <summary>
+    /// CPU state containing registers used for XMS function calls and returns.
+    /// </summary>
+    /// <remarks>
+    /// XMS functions take arguments in CPU registers and return results in registers:
+    /// - AH: Contains the XMS function code (e.g., 00h, 09h, 0Ch)
+    /// - AX: Return value, 0001h (success) or 0000h (failure)
+    /// - BL: Error code on failure
+    /// - Other registers: Function-specific parameters and return values
+    /// </remarks>
     private readonly State _state;
+
+    /// <summary>
+    /// Controller for the A20 address line.
+    /// </summary>
+    /// <remarks>
+    /// The A20 address line must be enabled to access memory above 1MB.
+    /// XMS provides functions to control the A20 line state both globally and locally.
+    /// </remarks>
     private readonly A20Gate _a20Gate;
+
+    /// <summary>
+    /// Memory bus for reading/writing XMS memory.
+    /// </summary>
     private readonly IMemory _memory;
+
+    /// <summary>
+    /// Linked list of XMS memory blocks (free and allocated).
+    /// </summary>
+    /// <remarks>
+    /// This data structure tracks all XMS memory blocks. Each block has a handle (for allocated blocks),
+    /// offset, length, and free/allocated status. The linked list structure allows for efficient
+    /// merging of adjacent free blocks to reduce fragmentation.
+    /// </remarks>
     private readonly LinkedList<XmsBlock> _xmsBlocksLinkedList = new();
+
+    /// <summary>
+    /// Maps XMS handles to their lock counts.
+    /// </summary>
+    /// <remarks>
+    /// Each allocated XMS block has a handle and a lock count. The lock count tracks how many times
+    /// Function 0Ch (Lock Extended Memory Block) has been called on the block without a matching
+    /// Function 0Dh (Unlock Extended Memory Block) call. A block with a non-zero lock count
+    /// cannot be freed or reallocated.
+    /// </remarks>
     private readonly SortedList<int, int> _xmsHandles = new();
 
     /// <summary>
-    /// The segment of the XMS Dos Device Driver.
+    /// The segment of the XMS DOS Device Driver in memory.
     /// </summary>
+    /// <remarks>
+    /// In a real DOS system, HIMEM.SYS would be loaded as a device driver at this segment.
+    /// The device driver header would be located at this address, followed by the driver code.
+    /// </remarks>
     public const ushort DosDeviceSegment = MemoryMap.DeviceDriversSegment;
 
     /// <summary>
     /// The size of available XMS Memory, in kilobytes.
     /// </summary>
-    /// <remarks>32 MB maximum size in the XMS 2.0 specification, but 8 MB available here.</remarks>
+    /// <remarks>
+    /// This implementation provides 8MB of XMS memory. The XMS 2.0 specification technically
+    /// limited extended memory to 64MB due to using 16-bit values for sizes in KB.
+    /// XMS 3.0 added functions (88h, 89h, 8Eh, 8Fh) that use 32-bit values for sizes in bytes,
+    /// allowing access to memory beyond the 64MB limit.
+    /// </remarks>
     public const uint XmsMemorySize = 8 * 1024;
 
     /// <summary>
-    /// Specifies the starting physical address of XMS memory. <br/>
-    /// XMS blocks start at 1088K, after the High Memory Area (HMA).
+    /// The starting physical address of XMS memory.
     /// </summary>
+    /// <remarks>
+    /// XMS blocks start at 1088KB (1MB + 64KB), after the High Memory Area (HMA).
+    /// This address (0x10FFF0) corresponds to linear address 1088KB - 16 bytes.
+    /// </remarks>
     public const uint XmsBaseAddress = 0x10FFF0;
 
     /// <summary>
-    /// Maximum number of XMS handles that can be allocated simultaneously. <br/>
-    /// This is the default value from HIMEM.SYS and can be adjusted via the /NUMHANDLES= parameter.
+    /// Maximum number of XMS handles that can be allocated simultaneously.
     /// </summary>
+    /// <remarks>
+    /// This is the default value from HIMEM.SYS. In a real DOS system, this value could be
+    /// adjusted via the /NUMHANDLES= parameter in CONFIG.SYS. Each handle consumes a small
+    /// amount of conventional memory, so this value represents a tradeoff between the number
+    /// of allocatable blocks and conventional memory usage.
+    /// </remarks>
     private const int MaxHandles = 128;
 
     /// <summary>
     /// XMS plain old memory.
     /// </summary>
+    /// <remarks>
+    /// This is the actual memory buffer that holds the XMS memory content.
+    /// It's sized according to XmsMemorySize, which is 8MB in this implementation.
+    /// </remarks>
     public Ram XmsRam { get; private set; } = new(XmsMemorySize * 1024);
 
     /// <summary>
     /// DOS Device Driver Name.
     /// </summary>
+    /// <remarks>
+    /// This is the device name that would appear in the DOS device driver chain.
+    /// Real HIMEM.SYS uses "XMSXXXX0" as its device name.
+    /// </remarks>
     public const string XmsIdentifier = "XMSXXXX0";
 
     /// <summary>
-    /// The memory address to the C# XMS callback <see cref="RunMultiplex"/>
+    /// The memory address to the C# XMS callback.
     /// </summary>
+    /// <remarks>
+    /// This is the address where the XMS multiplexer interrupt handler (INT 2Fh, AH=43h)
+    /// jumps to when calling the XMS API. It's set up to execute the <see cref="RunMultiplex"/> method.
+    /// </remarks>
     public SegmentedAddress CallbackAddress { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
     /// </summary>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="a20Gate">The A20 gate controller.</param>
-    /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="memory">The memory bus for accessing emulated memory.</param>
+    /// <param name="a20Gate">The A20 gate controller for managing the A20 line state.</param>
+    /// <param name="state">The CPU state for accessing registers during XMS operations.</param>
+    /// <param name="memoryAsmWriter">Helper for writing assembly code to memory.</param>
+    /// <param name="dosTables">DOS memory tables for placing the XMS driver in memory.</param>
+    /// <param name="loggerService">The logger service for recording XMS operations.</param>
+    /// <remarks>
+    /// This constructor:
+    /// <list type="bullet">
+    /// <item>Creates a DOS device header for the XMS driver</item>
+    /// <item>Sets up a callback for the INT 2Fh XMS multiplex handler</item>
+    /// <item>Initializes the XMS memory area as a single free block</item>
+    /// <item>Registers memory mappings for both XMS memory and HMA</item>
+    /// <item>Enables the A20 line by default</item>
+    /// </list>
+    /// </remarks>
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
         ILoggerService loggerService) {
@@ -143,24 +297,45 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// Gets the largest free block of memory in bytes.
     /// </summary>
+    /// <remarks>
+    /// This property is used by Functions 08h (Query Free Extended Memory) and 88h (Query Any Free Extended Memory)
+    /// to report the size of the largest available memory block. It's calculated by finding the largest
+    /// free block in the XMS memory pool.
+    /// </remarks>
     public uint LargestFreeBlock => GetFreeBlocks().FirstOrDefault().Length;
 
     /// <summary>
     /// Gets the total amount of free memory in bytes.
     /// </summary>
+    /// <remarks>
+    /// This property is used by Functions 08h (Query Free Extended Memory) and 88h (Query Any Free Extended Memory)
+    /// to report the total free memory available. It's calculated by summing the sizes of all free blocks
+    /// in the XMS memory pool.
+    /// </remarks>
     public long TotalFreeMemory => GetFreeBlocks().Sum(b => b.Length);
 
     /// <summary>
-    /// Dispatches XMS subfunctions based on the value in AH.
+    /// Dispatches XMS subfunctions based on the value in AH register.
     /// </summary>
     /// <remarks>
-    /// This is the main entry point for XMS API calls via the multiplex interrupt.
-    /// </remarks>
-    /// <summary>
-    /// Dispatches XMS subfunctions based on the value in AH.
-    /// </summary>
-    /// <remarks>
-    /// This is the main entry point for XMS API calls via the multiplex interrupt.
+    /// <para>
+    /// This is the main entry point for XMS API calls via the multiplex interrupt INT 2Fh, AH=43h.
+    /// It examines the AH register to determine which XMS function to execute, calls the appropriate
+    /// method, and then applies the results to the CPU registers according to the XMS specification.
+    /// </para>
+    /// <para>
+    /// XMS functions follow this general pattern:
+    /// <list type="bullet">
+    /// <item>Input parameters are passed in CPU registers</item>
+    /// <item>Function execution produces an XmsResult structure</item>
+    /// <item>On success (AX=0001h), additional results are placed in various registers</item>
+    /// <item>On failure (AX=0000h), an error code is placed in BL</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The method handles all standard XMS functions (00h-12h) as well as the extended
+    /// 32-bit functions (88h, 89h, 8Eh, 8Fh) introduced in XMS 3.0.
+    /// </para>
     /// </remarks>
     public void RunMultiplex() {
         var operation = (XmsSubFunctionsCodes)_state.AH;
@@ -170,8 +345,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
         // Log detailed diagnostics for each XMS call
         string functionName = operation.ToString();
-        string parameters = "";
-
+        string parameters;
         switch (operation) {
             case XmsSubFunctionsCodes.GetVersionNumber:
                 parameters = "No parameters";
@@ -308,6 +482,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             _state.BL = 0;
         } else if (result.Success) {
             // Standard successful result
+            _state.AX = 1;  // AX=0001h indicates success
             _state.BL = 0;
 
             // Apply any additional return values based on function
@@ -349,6 +524,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
             }
         } else {
             // Failure result
+            _state.AX = 0;  // AX=0000h indicates failure
             _state.BL = result.ErrorCode;
         }
 
@@ -363,15 +539,29 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns the XMS version, driver revision, and HMA existence.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 00h<br/>
-    /// <b>Outputs:</b>
+    /// <para>
+    /// This function identifies the XMS version and driver capabilities. It's often
+    /// the first XMS function called by applications to verify XMS presence and version.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>AX = XMS version number (BCD, e.g. 0200h for 2.00)</item>
-    /// <item>BX = Driver internal revision number</item>
+    /// <item>AH = 00h (Function code)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = XMS version number as BCD (0300h = version 3.00)</item>
+    /// <item>BX = Driver internal revision number (implementation-specific)</item>
     /// <item>DX = 0001h if HMA exists, 0000h otherwise</item>
     /// </list>
-    /// <b>Errors:</b> None
+    /// </para>
+    /// <para>
+    /// This function never fails and doesn't change the A20 line state.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure with version information.</returns>
     public XmsResult GetVersionNumber() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS GetVersionNumber called");
@@ -395,17 +585,39 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to reserve the 64K-16 byte HMA for the caller.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 01h, DX = FFFFh (application) or size in bytes (TSR/driver)<br/>
-    /// <b>Outputs:</b> AX = 0001h if assigned, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// The High Memory Area is the first 64KB minus 16 bytes of extended memory (FFFF:0010 to FFFF:FFFF).
+    /// It's unique because it can be accessed in real mode after enabling the A20 line.
+    /// Only one program can use the HMA at a time.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 90h (HMA does not exist)</item>
-    /// <item>BL = 91h (HMA already in use)</item>
-    /// <item>BL = 92h (DX &lt; /HMAMIN= parameter)</item>
+    /// <item>AH = 01h (Function code)</item>
+    /// <item>DX = Bytes needed in HMA for TSRs/drivers, or FFFFh for applications</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if successful, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>90h - HMA does not exist</item>
+    /// <item>91h - HMA is already in use</item>
+    /// <item>92h - DX &lt; /HMAMIN= parameter</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// In this implementation, the HMA is not available for allocation because it's considered to be
+    /// already in use by the system (simulating DOS 5+ which can load parts of itself into the HMA).
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether the HMA was assigned.</returns>
     public XmsResult RequestHighMemoryArea() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS RequestHighMemoryArea called with size={Size:X4}h", _state.DX);
@@ -424,16 +636,36 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Releases the HMA, making it available for other programs.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 02h<br/>
-    /// <b>Outputs:</b> AX = 0001h if released, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function releases control of the HMA so other programs can use it.
+    /// Programs must release the HMA before exiting.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 90h (HMA does not exist)</item>
-    /// <item>BL = 93h (HMA not allocated)</item>
+    /// <item>AH = 02h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if released, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>90h - HMA does not exist</item>
+    /// <item>93h - HMA was not allocated to caller</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// In this implementation, the HMA cannot be released because it was never allocated to
+    /// the caller (it's considered to be in use by the system).
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether the HMA was released.</returns>
     public XmsResult ReleaseHighMemoryArea() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS ReleaseHighMemoryArea called");
@@ -446,20 +678,41 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
         return XmsResult.Error(XmsErrorCodes.HmaNotAllocated);
     }
+
     /// <summary>
     /// XMS Function 03h: Global Enable A20.
     /// Attempts to enable the A20 line globally.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 03h<br/>
-    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function enables the A20 line to allow access to memory above 1MB, including the HMA.
+    /// It should only be used by programs that have control of the HMA.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 82h (A20 error)</item>
+    /// <item>AH = 03h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if enabled, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>82h - A20 error</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This function sets the global A20 enable flag and physically enables the A20 line.
+    /// On many machines, toggling the A20 line is a relatively slow operation.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether A20 was enabled.</returns>
     public XmsResult GlobalEnableA20() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS GlobalEnableA20 called, current A20 state={CurrentState}",
@@ -482,16 +735,37 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Attempts to disable the A20 line globally.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 04h<br/>
-    /// <b>Outputs:</b> AX = 0001h if disabled, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function disables the A20 line, preventing access to memory above 1MB.
+    /// It should only be used by programs that have control of the HMA.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 82h (A20 error)</item>
-    /// <item>BL = 94h (A20 still enabled)</item>
+    /// <item>AH = 04h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if disabled, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>82h - A20 error</item>
+    /// <item>94h - A20 still enabled by local calls</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This function clears the global A20 enable flag and physically disables the A20 line
+    /// if there are no local enables active. If local enables are active (non-zero local enable count),
+    /// the A20 line remains enabled and error 94h is returned.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether A20 was disabled.</returns>
     public XmsResult GlobalDisableA20() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS GlobalDisableA20 called, current A20 state={CurrentState}, LocalCount={LocalCount}",
@@ -522,15 +796,38 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Increments the local A20 enable count and enables A20 if needed.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 05h<br/>
-    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function enables the A20 line for direct access to extended memory and
+    /// increments the local enable count. It should be balanced with a call to
+    /// Function 06h (Local Disable A20) before program termination.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 82h (A20 error)</item>
+    /// <item>AH = 05h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if enabled, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>82h - A20 error (counter overflow)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The function maintains a counter of local A20 enable calls. Each call increments
+    /// the counter, and the A20 line is enabled if the counter was zero. This allows
+    /// for nested enables/disables to work correctly. If the counter would overflow,
+    /// the function fails with error 82h.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether A20 was locally enabled.</returns>
     public XmsResult EnableLocalA20() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS LocalEnableA20 called, current count={CurrentCount}",
@@ -568,16 +865,39 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Decrements the local A20 enable count and disables A20 if needed.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 06h<br/>
-    /// <b>Outputs:</b> AX = 0001h if successful, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function decrements the local A20 enable count and disables the A20 line
+    /// if the count reaches zero and global A20 is not enabled. It balances a previous
+    /// call to Function 05h (Local Enable A20).
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 82h (A20 error)</item>
-    /// <item>BL = 94h (A20 still enabled)</item>
+    /// <item>AH = 06h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if successful, 0000h if failed</item>
+    /// <item>If failed, BL = Error code</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>82h - A20 error (not locally enabled)</item>
+    /// <item>94h - A20 still enabled (by global enable)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The function maintains a counter of local A20 enable calls. Each disable call decrements
+    /// the counter, and the A20 line is disabled if the counter reaches zero and global A20
+    /// is not enabled. If the counter is already zero (A20 not locally enabled), the function
+    /// fails with error 82h.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether A20 was successfully disabled locally.</returns>
     public XmsResult DisableLocalA20() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS LocalDisableA20 called, current count={CurrentCount}",
@@ -621,15 +941,34 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Checks if the A20 line is physically enabled.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 07h<br/>
-    /// <b>Outputs:</b> AX = 0001h if enabled, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function tests the physical state of the A20 line to determine if it's enabled or disabled.
+    /// It works by checking if "memory wrap" occurs, which is when addressing 1MB+X wraps to X
+    /// when A20 is disabled.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 00h (success)</item>
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
+    /// <item>AH = 07h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if A20 is enabled, 0000h if disabled</item>
+    /// <item>BL = 00h (success)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors: None
+    /// </para>
+    /// <para>
+    /// Unlike most XMS functions, this function returns 0001h or 0000h in AX to indicate
+    /// the A20 state, not the function success. BL is set to 00h to indicate the function
+    /// succeeded in determining the A20 state.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure with the A20 state in the PrimaryValue field.</returns>
     public XmsResult QueryA20() {
         bool isEnabled = IsA20Enabled();
 
@@ -647,15 +986,36 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Returns the size of the largest free block and total free memory in K-bytes.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 08h<br/>
-    /// <b>Outputs:</b> AX = Largest free block in K-bytes, DX = Total free memory in K-bytes<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function reports the amount of free extended memory available for allocation.
+    /// It returns both the largest contiguous block and the total amount of free memory.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = A0h (all memory allocated)</item>
+    /// <item>AH = 08h (Function code)</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = Size of largest free block in K-bytes</item>
+    /// <item>DX = Total free extended memory in K-bytes</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>A0h - All extended memory is allocated</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The 64KB HMA is not included in the returned values even if it's not in use.
+    /// This function is limited to reporting sizes up to 64MB due to using 16-bit registers
+    /// for K-byte values. For larger memory pools, use Function 88h (Query Any Free Extended Memory).
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure with the free memory information.</returns>
     public XmsResult QueryFreeExtendedMemory() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS QueryFreeExtendedMemory called: LargestFreeBlock={LargestFree}KB, TotalFree={TotalFree}KB",
@@ -697,16 +1057,40 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Allocates a block of extended memory of the requested size.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 09h, DX = Size in K-bytes<br/>
-    /// <b>Outputs:</b> AX = 0001h if allocated, 0000h otherwise; DX = Handle to allocated block<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function attempts to allocate a block of extended memory of the requested size
+    /// and returns a handle to identify the block in subsequent XMS calls.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = A0h (no memory)</item>
-    /// <item>BL = A1h (no handles)</item>
+    /// <item>AH = 09h (Function code)</item>
+    /// <item>DX = Size of memory to allocate in K-bytes</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if allocated, 0000h if failed</item>
+    /// <item>DX = Handle to allocated block (if successful)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>A0h - All available extended memory is allocated</item>
+    /// <item>A1h - All available extended memory handles are in use</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Extended memory handles are scarce resources (limited by MaxHandles). Programs should
+    /// try to allocate as few blocks as possible. Allocation of a zero-length block is allowed
+    /// and can be useful for reserving a handle. This function is limited to allocations up to
+    /// 64MB due to using a 16-bit register for K-byte size. For larger allocations, use
+    /// Function 89h (Allocate Any Extended Memory).
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure with the allocation result.</returns>
     public XmsResult AllocateExtendedMemoryBlock() {
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS AllocateExtendedMemoryBlock called: Size={SizeKB}KB", _state.DX);
@@ -734,16 +1118,37 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Frees a previously allocated extended memory block.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 0Ah, DX = Handle to free<br/>
-    /// <b>Outputs:</b> AX = 0001h if freed, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function releases an XMS memory block that was previously allocated using
+    /// Function 09h (Allocate Extended Memory Block).
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = A2h (invalid handle)</item>
-    /// <item>BL = ABh (handle locked)</item>
+    /// <item>AH = 0Ah (Function code)</item>
+    /// <item>DX = Handle of the block to free</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if freed, 0000h if failed</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>A2h - Invalid handle</item>
+    /// <item>ABh - Block is locked</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Programs should free all allocated memory blocks before exiting. When a block is freed,
+    /// its handle and data become invalid and should not be accessed. A block cannot be freed
+    /// if it is locked (has a non-zero lock count).
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether the block was freed.</returns>
     public XmsResult FreeExtendedMemoryBlock() {
         int handle = _state.DX;
 
@@ -785,6 +1190,44 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         return XmsResult.CreateSuccess();
     }
 
+    /// <summary>
+    /// XMS Function 88h: Query Any Free Extended Memory.
+    /// Returns extended memory availability using 32-bit values.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This 386+ specific function reports the amount of free extended memory using 32-bit values,
+    /// allowing it to handle memory pools larger than 64MB. It returns the largest free block,
+    /// total free memory, and the highest memory address.
+    /// </para>
+    /// <para>
+    /// Register inputs:
+    /// <list type="bullet">
+    /// <item>AH = 88h (Function code)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if successful, 0000h if failed</item>
+    /// <item>EDX:EAX = Size of largest free block in bytes (if successful)</item>
+    /// <item>ECX:EBX = Total free memory in bytes (if successful)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>80h - Function not implemented (on 80286 machines)</item>
+    /// <item>A0h - All extended memory is allocated</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This function is similar to Function 08h but returns 32-bit byte values instead of
+    /// 16-bit K-byte values, allowing it to report memory sizes beyond the 64MB limit.
+    /// It's only available on 80386 and higher processors.
+    /// </para>
+    /// </remarks>
+    /// <returns>An XmsResult structure with the extended memory information.</returns>
     public XmsResult QueryAnyFreeExtendedMemory() {
         byte result = TryGetFreeMemoryInfo(out uint largestFree, out uint _);
         uint largestFreeKb = largestFree / 1024u;
@@ -801,22 +1244,79 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// Moves a block of memory as described by the Extended Memory Move Structure at DS:SI.
     /// </summary>
     /// <remarks>
-    /// <b>Inputs:</b> AH = 0Bh, DS:SI = Pointer to ExtendedMemoryMoveStructure<br/>
-    /// <b>Outputs:</b> AX = 0001h if successful, 0000h otherwise<br/>
-    /// <b>Errors:</b>
+    /// <para>
+    /// This function transfers a block of data between memory locations based on the
+    /// Extended Memory Move Structure. It can move data between conventional memory and
+    /// extended memory, or within either area.
+    /// </para>
+    /// <para>
+    /// Register inputs:
     /// <list type="bullet">
-    /// <item>BL = 80h (not implemented)</item>
-    /// <item>BL = 81h (VDISK detected)</item>
-    /// <item>BL = 82h (A20 error)</item>
-    /// <item>BL = A3h (invalid source handle)</item>
-    /// <item>BL = A4h (invalid source offset)</item>
-    /// <item>BL = A5h (invalid dest handle)</item>
-    /// <item>BL = A6h (invalid dest offset)</item>
-    /// <item>BL = A7h (invalid length)</item>
-    /// <item>BL = A8h (invalid overlap)</item>
-    /// <item>BL = A9h (parity error)</item>
+    /// <item>AH = 0Bh (Function code)</item>
+    /// <item>DS:SI = Pointer to an Extended Memory Move Structure</item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// Extended Memory Move Structure:
+    /// <list type="table">
+    /// <item>
+    ///   <term>Offset</term>
+    ///   <term>Size</term>
+    ///   <term>Description</term>
+    /// </item>
+    /// <item>
+    ///   <term>00h</term>
+    ///   <term>DWORD</term>
+    ///   <term>Length of data to move in bytes</term>
+    /// </item>
+    /// <item>
+    ///   <term>04h</term>
+    ///   <term>WORD</term>
+    ///   <term>Source handle (0 for conventional memory)</term>
+    /// </item>
+    /// <item>
+    ///   <term>06h</term>
+    ///   <term>DWORD</term>
+    ///   <term>Source offset (or segment:offset if handle is 0)</term>
+    /// </item>
+    /// <item>
+    ///   <term>0Ah</term>
+    ///   <term>WORD</term>
+    ///   <term>Destination handle (0 for conventional memory)</term>
+    /// </item>
+    /// <item>
+    ///   <term>0Ch</term>
+    ///   <term>DWORD</term>
+    ///   <term>Destination offset (or segment:offset if handle is 0)</term>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Register outputs:
+    /// <list type="bullet">
+    /// <item>AX = 0001h if successful, 0000h if failed</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Possible errors:
+    /// <list type="bullet">
+    /// <item>82h - A20 error</item>
+    /// <item>A3h - Invalid source handle</item>
+    /// <item>A4h - Invalid source offset</item>
+    /// <item>A5h - Invalid destination handle</item>
+    /// <item>A6h - Invalid destination offset</item>
+    /// <item>A7h - Invalid length</item>
+    /// <item>A8h - Invalid overlap</item>
+    /// <item>A9h - Parity error</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// If a handle is 0, the corresponding offset is interpreted as a segment:offset pair
+    /// in conventional memory. The Length must be even. The function preserves the A20 line state
+    /// and enables it temporarily during the operation if needed.
+    /// </para>
     /// </remarks>
+    /// <returns>An XmsResult structure indicating whether the move was successful.</returns>
     public XmsResult MoveExtendedMemoryBlock() {
         bool a20State = IsA20Enabled();
         SetA20(true);
