@@ -272,7 +272,7 @@ public class DosFileManager {
                 enumerationOptions);
 
             if (matchingPaths.Length == 0) {
-                return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+                return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
             }
 
             if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
