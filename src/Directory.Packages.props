@@ -11,7 +11,7 @@
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.2" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.2" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
-    <PackageVersion Include="AvaloniaHex" Version="0.1.8" />
+    <PackageVersion Include="AvaloniaHex" Version="0.1.9" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.2" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.1.5" />
     <PackageVersion Include="bodong.PropertyModels" Version="11.3.1.1" />
@@ -24,7 +24,7 @@
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.303" />
     <PackageVersion Include="Iced" Version="1.21.0" />
-    <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.0" />
     <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
     <PackageVersion Include="MeltySynth" Version="2.4.1" />
     <PackageVersion Include="Morris.Moxy" Version="1.10" />
