@@ -148,13 +148,9 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     public void CopyExtendedMemory(bool calledFromVm) {
         if (_extendedMemoryManager is not null) {
-            bool success = _extendedMemoryManager.CopyExtendedMemory(calledFromVm);
-            SetCarryFlag(!success, calledFromVm);
-            if (success) {
-                State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
-            } else {
-                State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
-            }
+            _extendedMemoryManager.CopyExtendedMemory();
+            State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+            SetCarryFlag(false, calledFromVm);
             return;
         }
         bool enabled = _a20Gate.IsEnabled;

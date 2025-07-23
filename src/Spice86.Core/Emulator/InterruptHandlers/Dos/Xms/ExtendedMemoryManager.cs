@@ -2,6 +2,7 @@
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -1941,55 +1942,23 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <summary>
-    /// BIOS-compatible function to copy extended memory, as used by INT 15h, AH=87h.
-    /// This is not a standard XMS function, but is expected by BIOS and DOS programs.
+    /// BIOS-compatible function to copy extended memory - but preserves local A20 gate state.
+    /// Otherwise, it's the same as INT 15h, AH=87h.
+    /// This is not a standard XMS function, XMS is suppsoed to override INT15H, AH=87h according to specs.
     /// The copy parameters are passed in ES:SI as a structure compatible with <see cref="ExtendedMemoryMoveStructure"/>.
     /// </summary>
-    /// <param name="calledFromVm">Indicates if called from the emulator.</param>
-    /// <returns>True if the copy succeeded, false if there was an error.</returns>
-    public bool CopyExtendedMemory(bool calledFromVm) {
+    public void CopyExtendedMemory() {
         bool a20WasEnabled = IsA20Enabled();
         SetA20(true);
-
-        uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.SI);
-        var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
-
-        // Validate length (must be even and nonzero)
-        if (move.Length == 0 || (move.Length & 1) != 0) {
-            _state.AH = 0x01; // Indicate error (arbitrary, as BIOS doesn't standardize this)
-            SetA20(a20WasEnabled);
-            return false;
-        }
-
-        // Determine source address
-        uint srcAddress;
-        if (move.SourceHandle == 0) {
-            srcAddress = move.SourceAddress.Linear;
-        } else if (TryGetBlock(move.SourceHandle, out XmsBlock srcBlock)) {
-            srcAddress = XmsBaseAddress + srcBlock.Offset + move.SourceOffset;
-        } else {
-            _state.AH = 0x01; // Error: invalid source handle
-            SetA20(a20WasEnabled);
-            return false;
-        }
-
-        // Determine destination address
-        uint destAddress;
-        if (move.DestHandle == 0) {
-            destAddress = move.DestAddress.Linear;
-        } else if (TryGetBlock(move.DestHandle, out XmsBlock destBlock)) {
-            destAddress = XmsBaseAddress + destBlock.Offset + move.DestOffset;
-        } else {
-            _state.AH = 0x01; // Error: invalid dest handle
-            SetA20(a20WasEnabled);
-            return false;
-        }
-
-        _memory.MemCopy(srcAddress, destAddress, move.Length);
-
-        _state.AH = 0x00; // Success
+        ushort numberOfWordsToCopy = _state.CX;
+        uint globalDescriptorTableAddress = MemoryUtils.ToPhysicalAddress(
+            _state.ES, _state.SI);
+        var descriptor = new GlobalDescriptorTable(_memory,
+            globalDescriptorTableAddress);
+        _memory.MemCopy(descriptor.GetLinearSourceAddress(),
+            descriptor.GetLinearDestAddress(),
+            numberOfWordsToCopy);
         SetA20(a20WasEnabled);
-        return true;
     }
 
     /// <summary>
