@@ -53,7 +53,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0xC2, Unsupported);
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
-        AddAction(0x89, () => CopyExtendedMemory(true));
+        AddAction(0x87, () => CopyExtendedMemory(true));
     }
 
     /// <inheritdoc />

@@ -1941,7 +1941,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     }
 
     /// <summary>
-    /// BIOS-compatible function to copy extended memory, as used by INT 15h, AH=89h.
+    /// BIOS-compatible function to copy extended memory, as used by INT 15h, AH=87h.
     /// This is not a standard XMS function, but is expected by BIOS and DOS programs.
     /// The copy parameters are passed in ES:SI as a structure compatible with <see cref="ExtendedMemoryMoveStructure"/>.
     /// </summary>
