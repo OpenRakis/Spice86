@@ -15,12 +15,6 @@ public sealed class EnvironmentVariables : IDictionary<string, string> {
     /// Generates a null-separated block of environment strings.
     /// </summary>
     /// <returns>Null-separated block of environment strings.</returns>
-    public byte[] EnvironmentBlock => Encoding.ASCII.GetBytes(EnvironmentString);
-
-    /// <summary>
-    /// Generates a null-separated block of environment strings.
-    /// </summary>
-    /// <returns>Null-separated block of environment strings.</returns>
     public string EnvironmentString {
         get {
             StringBuilder sb = new();
