@@ -150,6 +150,15 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
+            .FirstOrDefault(device => device.IsName(fileName));
+        if (device is not null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Opening device {FileName}", fileName);
+            }
+            return OpenDevice(device);
+        }
+        
         string prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
