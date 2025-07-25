@@ -9,7 +9,7 @@ using System.Numerics;
 
 public abstract class InstructionWithModRmAndValueField<T> : InstructionWithModRm, IInstructionWithValueField<T> where T : INumberBase<T>  {
     protected InstructionWithModRmAndValueField(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
-        ModRmContext modRmContext, InstructionField<T> valueField) : base(address, opcodeField, prefixes, modRmContext) {
+        ModRmContext modRmContext, InstructionField<T> valueField, int? maxSuccessorsCount) : base(address, opcodeField, prefixes, modRmContext, maxSuccessorsCount) {
         ValueField = valueField;
         AddField(ValueField);
     }

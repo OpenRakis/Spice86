@@ -7,7 +7,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Das : CfgInstruction {
     public Das(SegmentedAddress address, InstructionField<ushort> opcodeField) :
-        base(address, opcodeField) {
+        base(address, opcodeField, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

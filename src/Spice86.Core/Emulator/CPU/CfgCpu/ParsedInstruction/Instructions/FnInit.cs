@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class FnInit : CfgInstruction {
 
-    public FnInit(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) : base(address, opcodeField, prefixes) {
+    public FnInit(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) : base(address, opcodeField, prefixes, 1) {
     }
     public override void Execute(InstructionExecutionHelper helper) {
         // Do nothing, no FPU emulation, but this is used to detect FPU support.

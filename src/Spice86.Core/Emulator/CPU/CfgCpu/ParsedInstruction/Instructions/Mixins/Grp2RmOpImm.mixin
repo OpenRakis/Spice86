@@ -15,7 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<byte> {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
-         ModRmContext modRmContext, InstructionField<byte> valueField) : base(address, opcodeField, prefixes, modRmContext, valueField) {
+         ModRmContext modRmContext, InstructionField<byte> valueField) : base(address, opcodeField, prefixes, modRmContext, valueField, 1) {
      }
     
     public override void Execute(InstructionExecutionHelper helper) {

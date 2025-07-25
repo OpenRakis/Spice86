@@ -11,7 +11,7 @@ public class CallFarImm16 : InstructionWithSegmentedAddressField {
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,
         InstructionField<SegmentedAddress> segmentedAddressField) :
-        base(address, opcodeField, segmentedAddressField) {
+        base(address, opcodeField, segmentedAddressField, null) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

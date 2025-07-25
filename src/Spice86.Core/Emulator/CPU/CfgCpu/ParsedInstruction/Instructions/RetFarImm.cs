@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class RetFarImm : InstructionWithValueField<ushort>, IReturnInstruction {
 
-    public RetFarImm(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<ushort> valueField) : base(address, opcodeField, valueField) {
+    public RetFarImm(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<ushort> valueField) : base(address, opcodeField, valueField, null) {
     }
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }

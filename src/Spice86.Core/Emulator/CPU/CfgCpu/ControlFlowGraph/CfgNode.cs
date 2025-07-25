@@ -1,17 +1,16 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Shared.Emulator.Memory;
 
 public abstract class CfgNode : ICfgNode {
     private static int _nextId;
-    public CfgNode(SegmentedAddress address) {
+    public CfgNode(SegmentedAddress address, int? maxSuccessorsCount) {
         Address = address;
         Id = _nextId++;
+        MaxSuccessorsCount = maxSuccessorsCount;
     }
 
     public int Id { get; }
@@ -27,4 +26,10 @@ public abstract class CfgNode : ICfgNode {
     public abstract void Execute(InstructionExecutionHelper helper);
 
     public abstract InstructionNode ToInstructionAst(AstBuilder builder);
+
+    public int? MaxSuccessorsCount { get; set; }
+
+    public bool CanHaveMoreSuccessors { get; set; } = true;
+    
+    public ICfgNode? UniqueSuccessor { get; set; }
 }

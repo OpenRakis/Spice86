@@ -17,13 +17,13 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     /// </summary>
     private bool _isLive = true;
 
-    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField) : this(address,
-        opcodeField, new List<InstructionPrefix>()) {
+    protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField, int? maxSuccessorsCount) : this(address,
+        opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount) {
     }
 
     protected CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,
-        List<InstructionPrefix> prefixes)
-        : base(address) {
+        List<InstructionPrefix> prefixes, int? maxSuccessorsCount)
+        : base(address, maxSuccessorsCount) {
         InstructionPrefixes = prefixes;
         PrefixFields = prefixes.Select(prefix => prefix.PrefixField).ToList();
         foreach (InstructionPrefix prefix in prefixes) {
@@ -129,5 +129,15 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     
     public void SetLive(bool isLive) {
         _isLive = isLive;
+    }
+
+    public void IncreaseMaxSuccessorsCount(SegmentedAddress target) {
+        if (MaxSuccessorsCount is not null && !SuccessorsPerAddress.ContainsKey(target)) {
+            // Ensure the subsequent link attempt will be done
+            CanHaveMoreSuccessors = true;
+            MaxSuccessorsCount++;
+            // Reset it. Will not be used anymore if MaxSuccessorsCount is now more than 1 or null.
+            UniqueSuccessor = null;
+        }
     }
 }

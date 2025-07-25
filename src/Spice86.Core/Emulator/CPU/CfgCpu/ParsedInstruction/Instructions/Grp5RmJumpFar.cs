@@ -11,7 +11,7 @@ using Spice86.Shared.Emulator.Memory;
 public class Grp5RmJumpFar : InstructionWithModRm {
     public Grp5RmJumpFar(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes,
-        modRmContext) {
+        modRmContext, null) {
     }
     
     public override void Execute(InstructionExecutionHelper helper) {

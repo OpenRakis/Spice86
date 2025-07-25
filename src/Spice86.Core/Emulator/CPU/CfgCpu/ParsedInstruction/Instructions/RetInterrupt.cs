@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces
 using Spice86.Shared.Emulator.Memory;
 
 public class RetInterrupt : CfgInstruction, IReturnInstruction {
-    public RetInterrupt(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public RetInterrupt(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, null) {
     }
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
