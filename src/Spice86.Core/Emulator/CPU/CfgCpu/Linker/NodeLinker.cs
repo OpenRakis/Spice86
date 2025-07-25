@@ -139,6 +139,9 @@ public class NodeLinker : InstructionReplacer {
     private void LinkToNext(ICfgNode current, ICfgNode next) {
         current.Successors.Add(next);
         next.Predecessors.Add(current);
+        if (current.Successors.Count == current.MaxSuccessorsCount) {
+            current.CanHaveMoreSuccessors = false;
+        }
     }
 
     public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {

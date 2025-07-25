@@ -40,4 +40,6 @@ public class SelectorNode(SegmentedAddress address) : CfgNode(address) {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.SELECTOR);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

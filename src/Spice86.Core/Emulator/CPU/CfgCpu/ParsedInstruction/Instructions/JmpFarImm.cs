@@ -24,4 +24,6 @@ public class JmpFarImm : InstructionWithSegmentedAddressField {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.JMP_FAR, builder.Constant.ToNode(_targetAddress));
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  1;
 }

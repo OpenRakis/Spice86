@@ -21,4 +21,6 @@ public class RetInterrupt : CfgInstruction, IReturnInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.IRET);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

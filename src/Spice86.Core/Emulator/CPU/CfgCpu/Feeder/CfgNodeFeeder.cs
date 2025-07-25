@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
+using System.Diagnostics.CodeAnalysis;
+
 /// <summary>
 /// Handles coherency between the memory and the graph of instructions executed by the CPU.
 /// Next node to execute is normally the next node from the graph but several checks are done to make sure it is really it:
@@ -37,9 +39,10 @@ public class CfgNodeFeeder {
     public ICfgNode GetLinkedCfgNodeToExecute(ExecutionContext executionContext) {
         // Determine actual node to execute. Graph may not represent what is actually in memory if graph is not complete or if self modifying code
         ICfgNode toExecute = DetermineToExecute(executionContext.NodeToExecuteNextAccordingToGraph);
-        if (executionContext.LastExecuted != null) {
-            // Register what we found in the graph
-            _nodeLinker.Link(executionContext.LastExecuted, toExecute);
+        ICfgNode? lastExecuted = executionContext.LastExecuted;
+        if (lastExecuted is { CanHaveMoreSuccessors: true }) {
+            // Node can still have successors, try to register the link in the graph
+            _nodeLinker.Link(lastExecuted, toExecute);
         }
 
         return toExecute;

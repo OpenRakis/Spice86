@@ -32,4 +32,6 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     protected ValueNode TargetIpToNode(AstBuilder builder) {
         return builder.Constant.ToNode(_targetIp);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  1;
 }

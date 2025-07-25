@@ -20,4 +20,6 @@ public class InterruptOverflow : CfgInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.INTO);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

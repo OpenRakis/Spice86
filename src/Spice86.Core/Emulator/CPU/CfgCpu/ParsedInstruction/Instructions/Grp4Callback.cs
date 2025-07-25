@@ -26,4 +26,6 @@ public class Grp4Callback : InstructionWithModRm {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.CALLBACK);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

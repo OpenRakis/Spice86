@@ -30,4 +30,6 @@ public partial class {{ moxy.Class.Name }} : JmpNearImm{{Size}} {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.{{Mnemonic | string.upcase}}_{{ if Size == 8 }}SHORT{{else}}NEAR{{ end }}, TargetIpToNode(builder));
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  2;
 }

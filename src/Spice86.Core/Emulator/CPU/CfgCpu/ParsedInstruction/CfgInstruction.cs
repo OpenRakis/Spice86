@@ -130,4 +130,6 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public void SetLive(bool isLive) {
         _isLive = isLive;
     }
+
+    public override int? MaxSuccessorsCount { get ; set; } = 1;
 }

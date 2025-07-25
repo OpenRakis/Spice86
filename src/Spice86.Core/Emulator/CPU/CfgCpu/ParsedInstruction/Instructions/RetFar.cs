@@ -20,4 +20,6 @@ public class RetFar : CfgInstruction, IReturnInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.RET_FAR);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

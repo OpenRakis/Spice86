@@ -18,4 +18,6 @@ public class Interrupt : InstructionWithValueField<byte> {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.INT, builder.InstructionField.ToNode(ValueField)!);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

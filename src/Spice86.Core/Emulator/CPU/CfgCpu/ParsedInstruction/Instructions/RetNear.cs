@@ -20,4 +20,6 @@ public class RetNear : CfgInstruction, IReturnInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.RET_NEAR);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

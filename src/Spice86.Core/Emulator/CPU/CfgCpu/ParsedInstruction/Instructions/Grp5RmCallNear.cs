@@ -23,4 +23,6 @@ public class Grp5RmCallNear : InstructionWithModRm {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.CALL_NEAR, builder.ModRm.RmToNode(DataType.UINT16, ModRmContext));
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

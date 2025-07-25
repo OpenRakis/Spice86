@@ -21,4 +21,6 @@ public class RetFarImm : InstructionWithValueField<ushort>, IReturnInstruction {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.RET_FAR, builder.InstructionField.ToNode(ValueField)!);
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

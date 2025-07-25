@@ -24,4 +24,6 @@ public class Grp5RmCallFar : InstructionWithModRm {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.CALL_FAR, builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext));
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }

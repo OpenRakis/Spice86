@@ -259,6 +259,11 @@ public class InstructionExecutionHelper {
             Stack.Push16(cpuException.ErrorCode.Value);
         }
         try {
+            // Non regular successor found
+            instruction.CanHaveMoreSuccessors = true;
+            // Do not prevent regular successors from getting added.
+            // The cost is now this node will always be checked for new new links
+            instruction.MaxSuccessorsCount = null;
             HandleInterruptCall(instruction, cpuException.InterruptVector);
         } catch (UnhandledOperationException e) {
             throw new AggregateException(cpuException, e);

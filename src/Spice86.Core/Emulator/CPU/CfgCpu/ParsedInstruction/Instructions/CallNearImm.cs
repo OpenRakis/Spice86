@@ -22,4 +22,6 @@ public class CallNearImm : InstructionWithOffsetField<short> {
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
         return new InstructionNode(InstructionOperation.CALL_NEAR, builder.Constant.ToNode(_targetIp));
     }
+    
+    public override int? MaxSuccessorsCount { get ; set; } =  null;
 }
