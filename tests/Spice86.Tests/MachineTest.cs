@@ -275,7 +275,7 @@ public class MachineTest
         spice86DependencyInjection.ProgramExecutor.Run();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
-        CompareMemoryWithExpected(memory, expected, 0, expected.Length);
+        CompareMemoryWithExpected(memory, expected);
         CompareListingWithExpected(binName, enableCfgCpu, machine);
         return machine;
     }
@@ -396,9 +396,9 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private void CompareMemoryWithExpected(IMemory memory, byte[] expected, int start, int end)
+    private static void CompareMemoryWithExpected(IMemory memory, byte[] expected)
     {
-        byte[] actual = memory.ReadRam();
-        Assert.Equal(expected[start..end], actual[start..end]);
+        byte[] actual = memory.ReadRam((uint)expected.Length);
+        Assert.Equal(expected, actual);
     }
 }
