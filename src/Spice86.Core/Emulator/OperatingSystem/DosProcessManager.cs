@@ -15,10 +15,12 @@ using Spice86.Shared.Utils;
 
 using System.Text;
 
+/// <summary>
+/// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
+/// </summary>
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
-    private readonly ushort _startSegment;
-    private readonly ushort _pspSegment;
+    private readonly ushort _programEntryPointSegment;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
 
@@ -30,9 +32,7 @@ public class DosProcessManager : DosFileLoader {
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
 
-    public const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
-
-    public ushort PspSegment => _pspSegment;
+    public DosProgramSegmentPrefix CurrentPsp { get; private set; }
 
     public DosProcessManager(Configuration configuration, IMemory memory,
         State state, DosFileManager dosFileManager, DosDriveManager dosDriveManager,
@@ -41,16 +41,18 @@ public class DosProcessManager : DosFileLoader {
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
-        _startSegment = configuration.ProgramEntryPointSegment;
-        _pspSegment = (ushort)(_startSegment - 0x10);
+        _programEntryPointSegment = configuration.ProgramEntryPointSegment;
 
         envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
         }
+        ushort pspSegment = (ushort)(_programEntryPointSegment - 0x10);
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        var psp = new DosProgramSegmentPrefix(_memory, pspAddress);
+        CurrentPsp = psp;
     }
-
 
     /// <summary>
     /// Converts the specified command-line arguments string into the format used by DOS.
@@ -81,17 +83,16 @@ public class DosProcessManager : DosFileLoader {
         return res[0..endIndex];
     }
 
-    public override byte[] LoadFile(string file, string? arguments) {
-        uint pspAddress = MemoryUtils.ToPhysicalAddress(PspSegment, 0);
+    public ushort GetCurrentPspSegment() => MemoryUtils.ToSegment(CurrentPsp.BaseAddress);
 
-        // Use DosProgramSegmentPrefix abstraction
-        var psp = new DosProgramSegmentPrefix(_memory, pspAddress);
+    public override byte[] LoadFile(string file, string? arguments) {
+        DosProgramSegmentPrefix psp = CurrentPsp;
 
         // Set the PSP's first 2 bytes to INT 20h.
         psp.Exit[0] = 0xCD;
         psp.Exit[1] = 0x20;
 
-        psp.NextSegment = LastFreeSegment;
+        psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
         // Load the command-line arguments into the PSP's command tail.
         byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
@@ -103,7 +104,7 @@ public class DosProcessManager : DosFileLoader {
         byte[] environmentBlock = CreateEnvironmentBlock(file);
 
         // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        int envBlockPointer = PspSegment + 1;
+        int envBlockPointer = GetCurrentPspSegment() + 1;
         SegmentedAddress envBlockSegmentAddress = new SegmentedAddress((ushort)envBlockPointer, 0);
 
         // Copy the environment block to memory in a separated segment.
@@ -114,11 +115,11 @@ public class DosProcessManager : DosFileLoader {
         psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
 
         // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(PspSegment, DosCommandTail.OffsetInPspSegment);
+        _fileManager.SetDiskTransferAreaAddress(GetCurrentPspSegment(), DosCommandTail.OffsetInPspSegment);
 
         return Path.GetExtension(file).ToUpperInvariant() switch {
             ".COM" => LoadComFile(file),
-            ".EXE" => LoadExeFile(file, PspSegment),
+            ".EXE" => LoadExeFile(file, GetCurrentPspSegment()),
             _ => throw new UnrecoverableException($"Unsupported file type for DOS: {file}"),
         };
     }
@@ -162,13 +163,13 @@ public class DosProcessManager : DosFileLoader {
 
     private byte[] LoadComFile(string file) {
         byte[] com = ReadFile(file);
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_startSegment, ComOffset);
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_programEntryPointSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 
         // Make DS and ES point to the PSP
-        _state.DS = _startSegment;
-        _state.ES = _startSegment;
-        SetEntryPoint(_startSegment, ComOffset);
+        _state.DS = _programEntryPointSegment;
+        _state.ES = _programEntryPointSegment;
+        SetEntryPoint(_programEntryPointSegment, ComOffset);
         _state.InterruptFlag = true;
         return com;
     }
@@ -189,8 +190,8 @@ public class DosProcessManager : DosFileLoader {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, _startSegment);
-        SetupCpuForExe(exeFile, _startSegment, pspSegment);
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, _programEntryPointSegment);
+        SetupCpuForExe(exeFile, _programEntryPointSegment, pspSegment);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Initial CPU State: {CpuState}", _state);
         }

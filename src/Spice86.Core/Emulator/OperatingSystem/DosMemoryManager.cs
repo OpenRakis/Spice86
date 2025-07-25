@@ -11,40 +11,36 @@ using System.Diagnostics.CodeAnalysis;
 /// Implements DOS memory operations, such as allocating and releasing MCBs
 /// </summary>
 public class DosMemoryManager {
+    internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly ushort _pspSegment;
+    private readonly DosProcessManager _processManager;
     private readonly DosMemoryControlBlock _start;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="dosSysVars">The global memory variables of the DOS kernel.</param>
+    /// <param name="processManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="pspSegment">The segment start of the first PSP.</param>
-    /// <param name="lastFreeSegment">The last free segment for DOS memory manager to use.</param>
-    /// <param name="dosFileName">The full absolute host file path to the DOS executable we are going to execute.</param>
-    public DosMemoryManager(IMemory memory, ILoggerService loggerService,
-        ushort pspSegment, ushort lastFreeSegment, string? dosFileName = null) {
+    public DosMemoryManager(IMemory memory, DosSysVars dosSysVars,
+        DosProcessManager processManager, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _processManager = processManager;
         _memory = memory;
+        ushort pspSegment = _processManager.GetCurrentPspSegment();
         ushort startSegment = (ushort)(pspSegment - 1);
-        _pspSegment = pspSegment;
-        ushort size = (ushort)(lastFreeSegment - startSegment);
+        ushort size = (ushort)(LastFreeSegment - startSegment);
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
 
         // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
         _start.Size = (ushort)(size - 1);
         _start.SetFree();
         _start.SetLast();
-
-        if (!string.IsNullOrWhiteSpace(dosFileName)) {
-            string shortFileName = Path.GetFileNameWithoutExtension(dosFileName).ToUpperInvariant();
-            if(shortFileName.Length > 8) {
-                shortFileName = shortFileName[..8];
-            }
-            _start.FileName = shortFileName;
-        }
+        //const ushort ConvMemSizeInParagraphs = MemoryMap.GraphicVideoMemorySegment - MemoryMap.FreeMemoryStartSegment - 1; // -1 for MCB itself
+        //uint convMemSizeInKb = MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0) - MemoryUtils.ToPhysicalAddress(MemoryMap.FreeMemoryStartSegment - 1, 0);
+        dosSysVars.FirstMCB = _processManager.GetCurrentPspSegment();
     }
 
     /// <summary>
@@ -79,7 +75,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _pspSegment;
+        block.PspSegment = _processManager.GetCurrentPspSegment();
         return block;
     }
 
@@ -129,11 +125,6 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Gets the segment number of the Process Segment Prefix (PSP)
-    /// </summary>
-    public ushort PspSegment => _pspSegment;
-
-    /// <summary>
     /// Extends or reduces a MCB.
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
@@ -171,7 +162,7 @@ public class DosMemoryManager {
         }
 
         dosMemoryControlBlock = block;
-        dosMemoryControlBlock.PspSegment = _pspSegment;
+        dosMemoryControlBlock.PspSegment = _processManager.GetCurrentPspSegment();
         return true;
     }
 
