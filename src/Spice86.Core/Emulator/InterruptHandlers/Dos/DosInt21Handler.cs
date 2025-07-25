@@ -18,6 +18,7 @@ using Spice86.Shared.Utils;
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 /// <summary>
@@ -34,6 +35,7 @@ public class DosInt21Handler : InterruptHandler {
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
+    private readonly Clock _clock;
 
     /// <summary>
     /// Initializes a new instance.
@@ -46,14 +48,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
     /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
-    /// <param name="dosFileManager">The DOS class responsible for DOS drive access.</param>
-    /// <param name="dosDriveManager">The DOS class responsible for file and device-as-file access.</param>
+    /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
+    /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosStringDecoder = dosStringDecoder;
@@ -62,6 +64,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
+        _clock = clock;
         FillDispatchTable();
     }
 
@@ -84,8 +87,10 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
+        AddAction(0x2D, SetTime);
         AddAction(0x25, SetInterruptVector);
         AddAction(0x2A, GetDate);
+        AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
@@ -120,6 +125,35 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+    }
+
+    public void SetDate() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET DATE");
+        }
+
+        ushort year = State.CX;
+        byte month = State.DH;
+        byte day = State.DL;
+
+        if (!_clock.SetDate(year, month, day)) {
+            State.AL = 0xFF; // Invalid date
+        }
+    }
+
+    public void SetTime() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET TIME");
+        }
+
+        byte hours = State.CH;
+        byte minutes = State.CL;
+        byte seconds = State.DH;
+        byte hundredths = State.DL;
+
+        if (!_clock.SetTime(hours, minutes, seconds, hundredths)) {
+            State.AL = 0xFF; // Invalid time
+        }
     }
 
     /// <summary>
@@ -620,11 +654,8 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FindNextMatchingFile(bool calledFromVm) {
-        ushort attributes = State.CX;
-        string fileSpec = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FIND NEXT MATCHING FILE {Attributes}, {FileSpec}",
-                ConvertUtils.ToHex16(attributes), fileSpec);
+            LoggerService.Verbose("FIND NEXT MATCHING FILE");
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.FindNextMatchingFile();
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
@@ -680,11 +711,11 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DATE");
         }
-        DateTime now = DateTime.Now;
-        State.AL = (byte)now.DayOfWeek;
-        State.CX = (ushort)now.Year;
-        State.DH = (byte)now.Month;
-        State.DL = (byte)now.Day;
+        (ushort year, byte month, byte day, byte dayOfWeek) = _clock.GetDate();
+        State.AL = dayOfWeek;
+        State.CX = year;
+        State.DH = month;
+        State.DL = day;
     }
 
     /// <summary>
@@ -829,11 +860,11 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET TIME");
         }
-        DateTime now = DateTime.Now;
-        State.CH = (byte)now.Hour;
-        State.CL = (byte)now.Minute;
-        State.DH = (byte)now.Second;
-        State.DL = (byte)now.Millisecond;
+        (byte hours, byte minutes, byte seconds, byte hundredths) = _clock.GetTime();
+        State.CH = hours;
+        State.CL = minutes;
+        State.DH = seconds;
+        State.DL = hundredths;
     }
 
     /// <summary>
@@ -1144,41 +1175,46 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Provides MS-DOS drivers based IOCTL operations, such as: get device information, set device information, get logical drive for physical drive... <br/>
-    /// <para>
-    /// AL = 0: Get device information from the device handle in BX. Returns result in DX. TODO: Implement it entirely. <br/>
-    /// AL = 1: Set device information. Does nothing. TODO: Implement it. <br/>
-    /// AL = 0xE: Get logical drive for physical drive. Always returns 0 in AL for only one drive.
-    /// </para>
+    /// Provides MS-DOS drivers based IOCTL operations, which are device-driver specific operations.
     /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <remarks>
-    ///  TODO: Update it once we mount more than just C: !
-    ///  </remarks>
-    /// <returns>
-    /// Always indicates success by clearing the carry flag.
-    /// </returns>
-    /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
-    /// <exception cref="UnhandledOperationException">When the IO control operation in the AL Register is not recognized.</exception>
+    /// Supports the following operations based on the AL register:
+    /// <list type="bullet">
+    ///   <item><description>AL = 0x00: Get Device Information from handle in BX. Returns information in DX.</description></item>
+    ///   <item><description>AL = 0x01: Set Device Information using handle in BX and data in DL.</description></item>
+    ///   <item><description>AL = 0x02: Read from Device Control Channel using handle in BX.</description></item>
+    ///   <item><description>AL = 0x03: Write to Device Control Channel using handle in BX.</description></item>
+    ///   <item><description>AL = 0x06: Get Input Status for handle in BX. Returns status in AL (0xFF=ready, 0x00=not ready).</description></item>
+    ///   <item><description>AL = 0x07: Get Output Status for handle in BX. Returns status in AL (0xFF=ready, 0x00=not ready).</description></item>
+    ///   <item><description>AL = 0x08: Check if block device in BL is removable. Returns AL=0 for removable, AL=1 for fixed.</description></item>
+    ///   <item><description>AL = 0x09: Check if block device in BL is remote. Returns DX with device attributes.</description></item>
+    ///   <item><description>AL = 0x0B: Set sharing retry count. DX=retry count.</description></item>
+    ///   <item><description>AL = 0x0D: Generic block device request for drive in BL. Command in CL, parameter block at DS:DX.</description></item>
+    ///   <item><description>AL = 0x0E: Get Logical Drive Map for drive in BL. Returns physical drive in AL.</description></item>
+    /// </list>
+    /// </remarks>
     public void IoControl(bool calledFromVm) {
         DosFileOperationResult result = _dosFileManager.IoControl(State);
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
-    private void LogDosError(bool calledFromVm) {
+    private void LogDosError(bool calledFromVm, [CallerMemberName] string? callerName = null) {
         string returnMessage = "";
         if (calledFromVm) {
             returnMessage = $"Int will return to {FunctionHandlerProvider.FunctionHandlerInUse.PeekReturn()}. ";
         }
         if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("DOS operation failed with an error. {ReturnMessage}. State is {State}",
-                returnMessage, State.ToString());
+            LoggerService.Error("DOS operation from {CallerName} failed with an error. {ReturnMessage}. State is {State}",
+                callerName, returnMessage, State.ToString());
         }
     }
 
     private void SetStateFromDosFileOperationResult(bool calledFromVm,
-        DosFileOperationResult dosFileOperationResult) {
+        DosFileOperationResult dosFileOperationResult, [CallerMemberName] string? callerName = null) {
         if (dosFileOperationResult.IsError) {
-            LogDosError(calledFromVm);
+            LogDosError(calledFromVm, callerName);
             SetCarryFlag(true, calledFromVm);
         } else {
             SetCarryFlag(false, calledFromVm);

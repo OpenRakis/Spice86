@@ -262,7 +262,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Video card support classes created...");
         }
-
+        
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
                     functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
@@ -270,8 +270,10 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
                     functionHandlerProvider, stack, state, a20Gate,
                     configuration.InitializeDOS is not false, loggerService);
+        var rtc = new Clock(loggerService);
+        
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
-                    state, loggerService, timerInt8Handler);
+                    state, loggerService, timerInt8Handler, rtc);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
 
@@ -398,11 +400,13 @@ public class Spice86DependencyInjection : IDisposable {
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
+        
+        var dosClock = new Clock(loggerService);
 
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            loggerService);
+            dosClock, loggerService);
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers

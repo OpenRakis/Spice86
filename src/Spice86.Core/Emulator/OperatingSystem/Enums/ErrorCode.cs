@@ -101,11 +101,6 @@ public enum ErrorCode : byte
     NoMoreFiles,
 
     /// <summary>
-    /// No more files match the criteria
-    /// </summary>
-    NoMoreMatchingFiles,
-
-    /// <summary>
     /// File, or a part of the file, is locked
     /// </summary>
     LockViolation = 0x33,

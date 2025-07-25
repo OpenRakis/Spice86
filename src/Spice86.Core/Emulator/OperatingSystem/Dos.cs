@@ -124,17 +124,18 @@ public sealed class Dos {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
-    /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="clock"></param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -159,10 +160,11 @@ public sealed class Dos {
             _loggerService, this.Devices);
         ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
         MemoryManager = new DosMemoryManager(_memory, loggerService, ProcessManager.PspSegment, DosProcessManager.LastFreeSegment);
+        DosSysVars.FirstMCB = ProcessManager.PspSegment;
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
