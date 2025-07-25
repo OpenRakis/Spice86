@@ -24,7 +24,7 @@ public class DosMemoryManager {
     /// <param name="dosSysVars">The global memory variables of the DOS kernel.</param>
     /// <param name="processManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory, DosSysVars dosSysVars,
+    public DosMemoryManager(IMemory memory,
         DosProcessManager processManager, ILoggerService loggerService) {
         _loggerService = loggerService;
         _processManager = processManager;
@@ -40,7 +40,6 @@ public class DosMemoryManager {
         _start.SetLast();
         //const ushort ConvMemSizeInParagraphs = MemoryMap.GraphicVideoMemorySegment - MemoryMap.FreeMemoryStartSegment - 1; // -1 for MCB itself
         //uint convMemSizeInKb = MemoryUtils.ToPhysicalAddress(MemoryMap.GraphicVideoMemorySegment, 0) - MemoryUtils.ToPhysicalAddress(MemoryMap.FreeMemoryStartSegment - 1, 0);
-        dosSysVars.FirstMCB = _processManager.GetCurrentPspSegment();
     }
 
     /// <summary>

@@ -38,7 +38,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         SharingCount = 0x0;
         SharingDelay = 0x0;
         PtrCONInput = 0x0;
-        FirstMCB = 0x0;
+        FirstMCB = 0x16F;
         DirtyDiskBuffers = 0x0;
         LookaheadBufPt = 0x0;
         LookaheadBufNumber = 0x0;
