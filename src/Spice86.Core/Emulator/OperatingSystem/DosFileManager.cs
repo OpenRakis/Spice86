@@ -713,12 +713,8 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case FileAccessMode.ReadOnly: {
-                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName,
-                                FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                        } else if (File.Exists(realFileName)) {
-                            randomAccessFile = File.Open(realFileName,
                                 FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                         } else {
                             return FileNotFoundError(dosFileName);
@@ -731,12 +727,8 @@ public class DosFileManager {
                         FileAccess.Write, FileShare.ReadWrite);
                     break;
                 case FileAccessMode.ReadWrite: {
-                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName, FileMode.Open,
-                                FileAccess.ReadWrite, FileShare.ReadWrite);
-                        } else if (File.Exists(realFileName)) {
-                            randomAccessFile = File.Open(realFileName, FileMode.Open,
                                 FileAccess.ReadWrite, FileShare.ReadWrite);
                         } else {
                             return FileNotFoundError(dosFileName);
