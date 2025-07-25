@@ -564,7 +564,17 @@ public class MouseInt33Handler : InterruptHandler {
         AddAction(0x1A, SetMouseSensitivity);
         AddAction(0x1B, GetMouseSensitivity);
         AddAction(0x1C, SetInterruptRate);
+        AddAction(0x21, Reset);
         AddAction(0x24, GetSoftwareVersionAndMouseType);
+    }
+    
+    private void Reset() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
+        }
+        _mouseDriver.Reset();
+        State.AX = 0xFFFF;
+        State.BX = (ushort)_mouseDriver.ButtonCount;
     }
 
     private void GetMotionDistance() {
