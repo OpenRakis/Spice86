@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -43,7 +44,17 @@ public class KeyboardInt16Handler : InterruptHandler {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
-        AddAction(0x02, () => GetShiftFlags());
+        AddAction(0x02, GetShiftFlags);
+        AddAction(0x03, () => Unsupported(0x03));
+        AddAction(0x04, () => Unsupported(0x04));
+        AddAction(0x05, () => Unsupported(0x05));
+        AddAction(0x10, () => Unsupported(0x10));
+        AddAction(0x11, () => Unsupported(0x11));
+        AddAction(0x12, () => Unsupported(0x12));
+    }
+
+    private void Unsupported(int operation) {
+        throw GenerateUnhandledOperationException(operation);
     }
 
     /// <inheritdoc/>
@@ -137,6 +148,22 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <inheritdoc/>
     public override void Run() {
         byte operation = State.AH;
-        Run(operation);
+
+        if (HasRunnable(operation)) {
+            Run(operation);
+        } else {
+            HandleUndocumentedInterrupt(operation);
+        }
+    }
+
+    private void HandleUndocumentedInterrupt(byte operation) {
+        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning(
+                "{ClassName} INT {Int:X2} {operation}: Unhandled/undocumented keyboard interrupt called, will ignore",
+                nameof(KeyboardInt16Handler), VectorNumber, operation);
+        }
+
+        State.CarryFlag = true;
+        State.AX = 0;
     }
 }
