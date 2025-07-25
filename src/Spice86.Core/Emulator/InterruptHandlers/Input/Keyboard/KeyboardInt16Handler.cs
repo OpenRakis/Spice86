@@ -54,10 +54,8 @@ public class KeyboardInt16Handler : InterruptHandler {
                 nameof(KeyboardInt16Handler), VectorNumber, operation);
         }
 
-        //If games that use those unsupported interrupts misbehave or crash, check if this state is the proper way to
-        //fix it as I couldn't find documentation about it
-        State.CarryFlag = true;
-        State.AX = 0;
+        //If games that use those unsupported interrupts misbehave or crash, check if certain flags/registers have to be set
+        //properly, e.g., AX = 0 and/or setting the carry flag accordingly.
     }
 
     /// <inheritdoc/>
