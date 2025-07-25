@@ -351,10 +351,10 @@ public class DosInt21Handler : InterruptHandler {
             DosMemoryControlBlock largest = _dosMemoryManager.FindLargestFree();
             // INSUFFICIENT MEMORY
             State.AX = 0x08;
-            State.BX = largest.Size;
+            State.BX = largest.AllocationSize;
             return;
         }
-        State.AX = res.UsableSpaceSegment;
+        State.AX = res.DataBlockSegment;
     }
 
     /// <summary>
@@ -887,14 +887,14 @@ public class DosInt21Handler : InterruptHandler {
                 requestedSize, blockSegment);
         }
         if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSize,
-            out DosMemoryControlBlock? modifiedBlock)) {
+            out DosMemoryControlBlock? _, out ErrorCode? errorCode)) {
             State.AX = requestedSize;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);
             // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
-            State.AX = 0x08;
+            State.AX = (ushort)errorCode.Value;
             State.BX = requestedSize;
         }
     }
