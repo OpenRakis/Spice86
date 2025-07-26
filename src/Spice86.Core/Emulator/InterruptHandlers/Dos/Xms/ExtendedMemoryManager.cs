@@ -261,7 +261,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
         ILoggerService loggerService) {
-        uint headerAddress = new SegmentedAddress(DosDeviceSegment, 0x0).Linear;
+        uint headerAddress = MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0);
         Header = new DosDeviceHeader(memory,
             headerAddress) {
             Name = XmsIdentifier,
@@ -274,7 +274,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         _memory = memory;
         _loggerService = loggerService;
         // Place hookable callback in writable memory area
-        var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables.GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
+        var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
+            .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
         CallbackAddress = hookableCodeAddress;
         SegmentedAddress savedAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.CurrentAddress = hookableCodeAddress;
@@ -285,11 +286,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
         memoryAsmWriter.RegisterAndWriteCallback(0x43, RunMultiplex);
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
-        //XMS driver takes ownership of the HMA
-        memory.RegisterMapping(A20Gate.StartOfHighMemoryArea,
-            A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea, this);
-        //Add XMS memory
-        memory.RegisterMapping(XmsBaseAddress, XmsMemorySize * 1024, this);
         Name = XmsIdentifier;
 
         // Initialize XMS memory as a single free block
@@ -1907,17 +1903,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
 
     /// <inheritdoc/>
     public byte Read(uint address) {
-        return XmsRam.Read(address - XmsBaseAddress);
+        return XmsRam.Read(address);
     }
 
     /// <inheritdoc/>
     public void Write(uint address, byte value) {
-        XmsRam.Write(address - XmsBaseAddress, value);
+        XmsRam.Write(address, value);
     }
 
     /// <inheritdoc/>
     public Span<byte> GetSpan(int address, int length) {
-        return XmsRam.GetSpan((int)(address - XmsBaseAddress), length);
+        return XmsRam.GetSpan(address, length);
     }
 
     /// <inheritdoc/>
@@ -1945,8 +1941,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice, IMemoryDevice {
     /// <summary>
     /// BIOS-compatible function to copy extended memory - but preserves local A20 gate state.
     /// Otherwise, it's the same as INT 15h, AH=87h.
-    /// This is not a standard XMS function, XMS is suppsoed to override INT15H, AH=87h according to specs.
-    /// The copy parameters are passed in ES:SI as a structure compatible with <see cref="ExtendedMemoryMoveStructure"/>.
+    /// This is not a standard XMS function, but XMS is supposed to override INT15H, AH=87h according to specs.
+    /// The copy parameters are passed in ES:SI in a <see cref="ExtendedMemoryMoveStructure"/>.
     /// </summary>
     public void CopyExtendedMemory() {
         bool a20WasEnabled = IsA20Enabled();
