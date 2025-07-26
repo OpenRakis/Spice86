@@ -617,7 +617,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
 
         State.AH = EmmStatus.EmmNoError;
         switch (operation) {
-            case EmmSubFunctions.UsePhysicalPageNumbers:
+            case EmmSubFunctionsCodes.UsePhysicalPageNumbers:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = Memory.UInt16[mapAddress];
                     mapAddress += 2;
@@ -629,7 +629,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                     }
                 }
                 break;
-            case EmmSubFunctions.UseSegmentedAddress:
+            case EmmSubFunctionsCodes.UseSegmentedAddress:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = Memory.UInt16[mapAddress];
                     mapAddress += 2;
@@ -729,11 +729,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmInvalidHandle;
         }
         switch (operation) {
-            case EmmSubFunctions.HandleNameGet:
+            case EmmSubFunctionsCodes.HandleNameGet:
                 GetHandleName(handleId);
                 break;
 
-            case EmmSubFunctions.HandleNameSet:
+            case EmmSubFunctionsCodes.HandleNameSet:
                 SetHandleName(handleId,
                     Memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(State.SI, State.DI),
                         8));
@@ -791,7 +791,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// </summary>
     public void GetExpandedMemoryHardwareInformation() {
         switch (State.AL) {
-            case EmmSubFunctions.GetHardwareConfigurationArray:
+            case EmmSubFunctionsCodes.GetHardwareConfigurationArray:
                 uint data = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
                 // 1 page is 1K paragraphs (16KB)
                 Memory.UInt16[data] = 0x0400;
@@ -808,7 +808,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 // Always 0 for LIM standard
                 Memory.UInt16[data] = 0x0000;
                 break;
-            case EmmSubFunctions.GetUnallocatedRawPages:
+            case EmmSubFunctionsCodes.GetUnallocatedRawPages:
                 // Return number of pages available in BX.
                 State.BX = GetFreePageCount();
                 // Return total number of pages in DX.
