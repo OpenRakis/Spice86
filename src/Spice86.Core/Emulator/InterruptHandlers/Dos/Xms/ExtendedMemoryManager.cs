@@ -35,7 +35,8 @@ using System.Linq;
 ///   </item>
 ///   <item>
 ///     <term>Upper Memory Blocks (UMBs)</term>
-///     <description>Optional memory blocks in the upper memory area (640KB-1MB)</description>
+///     <description>Optional memory blocks in the upper memory area (640KB-1MB). <br/> 
+///     As the specs do not require them to be implemented, they are not supported by this implementation.<br/></description>
 ///   </item>
 /// </list>
 /// <para>
@@ -44,7 +45,7 @@ using System.Linq;
 /// the 32-bit extended functions (88h, 89h, 8Eh, 8Fh) that support memory access beyond 64MB.
 /// </para>
 /// <para>
-/// Memory layout in XMS:
+/// System Memory layout with XMS and UMBs:
 /// <code>
 ///  _______________________________________   Top of Memory
 /// |                                       |
