@@ -1,0 +1,49 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Spice86.Views.Controls">
+
+    <Design.PreviewWith>
+        <Border Padding="20">
+            <StackPanel>
+                <Button Content="This is a &quot;hyperlink&quot;" Classes="hyperlink" />
+                <TextBlock Foreground="{DynamicResource HighlightColor}">This is highlighted</TextBlock>
+            </StackPanel>
+        </Border>
+    </Design.PreviewWith>
+
+    <Style Selector="Button.hyperlink">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <TextBlock Text="{TemplateBinding Content}" Foreground="{DynamicResource HyperlinkButtonForeground }"
+                           TextDecorations="Underline">
+                    <TextBlock.Styles>
+                        <Style Selector="TextBlock:pointerover">
+                            <Setter Property="Foreground" Value="{DynamicResource HyperlinkButtonOverForeground }" />
+                        </Style>
+                    </TextBlock.Styles>
+                </TextBlock>
+            </ControlTemplate>
+        </Setter>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <Style>
+        <Style.Resources>
+            <ResourceDictionary>
+                <Color x:Key="HighlightColor">#80FFFF00</Color>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#1C1F23" />
+                        <SolidColorBrush x:Key="HyperlinkButtonOverForeground" Color="#0077FA" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Dark">
+                        <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#F9F9F9" />
+                        <SolidColorBrush x:Key="HyperlinkButtonOverForeground" Color="#54A9FF" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+            </ResourceDictionary>
+        </Style.Resources>
+    </Style>
+
+</Styles>

@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Logging;
+
 using ClockSelect = Spice86.Core.Emulator.Devices.Video.Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 using System.Diagnostics;
@@ -18,10 +20,11 @@ public class Renderer : IVgaRenderer {
     /// </summary>
     /// <param name="memory">The video memory implementation.</param>
     /// <param name="state">The video state implementation.</param>
-    public Renderer(IMemory memory, IVideoState state) {
+    /// <param name="loggerService">The logger service implementation.</param>
+    public Renderer(IMemory memory, IVideoState state, LoggerService loggerService) {
         _state = state;
         const uint videoBaseAddress = MemoryMap.GraphicVideoMemorySegment << 4;
-        _memory = new VideoMemory(_state);
+        _memory = new VideoMemory(_state, loggerService);
         memory.RegisterMapping(videoBaseAddress, _memory.Size, _memory);
     }
 

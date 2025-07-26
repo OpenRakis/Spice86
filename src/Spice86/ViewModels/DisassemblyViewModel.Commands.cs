@@ -6,8 +6,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Messages;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.Messages;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class DisassemblyViewModel {

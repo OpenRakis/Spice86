@@ -11,9 +11,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
-using Spice86.DataTemplates;
-using Spice86.MemoryWrappers;
-using Spice86.Messages;
+using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Messages;
+using Spice86.ViewModels.Services;
 
 using Structurizer;
 using Structurizer.Types;
@@ -134,7 +134,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
                 new TextColumn<StructureMember, int>("Size", x => x.Size, null, new TextColumnOptions<StructureMember> {
                     TextAlignment = TextAlignment.Right
                 }),
-                new TemplateColumn<StructureMember>("Value", DataTemplateProvider.StructureMemberValueTemplate)
+                new TemplateColumn<StructureMember>("Value", StructureDataTemplateProvider.StructureMemberValueTemplate)
             }
         };
     }

@@ -150,6 +150,15 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException"></exception>
     public DosFileOperationResult CreateFileUsingHandle(string fileName, ushort fileAttribute) {
+        CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
+            .FirstOrDefault(device => device.IsName(fileName));
+        if (device is not null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Opening device {FileName}", fileName);
+            }
+            return OpenDevice(device);
+        }
+        
         string prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
@@ -272,7 +281,7 @@ public class DosFileManager {
                 enumerationOptions);
 
             if (matchingPaths.Length == 0) {
-                return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+                return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
             }
 
             if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
@@ -704,12 +713,8 @@ public class DosFileManager {
             Stream? randomAccessFile = null;
             switch (openMode) {
                 case FileAccessMode.ReadOnly: {
-                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName,
-                                FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                        } else if (File.Exists(realFileName)) {
-                            randomAccessFile = File.Open(realFileName,
                                 FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                         } else {
                             return FileNotFoundError(dosFileName);
@@ -722,12 +727,8 @@ public class DosFileManager {
                         FileAccess.Write, FileShare.ReadWrite);
                     break;
                 case FileAccessMode.ReadWrite: {
-                        string? realFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFileName);
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName, FileMode.Open,
-                                FileAccess.ReadWrite, FileShare.ReadWrite);
-                        } else if (File.Exists(realFileName)) {
-                            randomAccessFile = File.Open(realFileName, FileMode.Open,
                                 FileAccess.ReadWrite, FileShare.ReadWrite);
                         } else {
                             return FileNotFoundError(dosFileName);

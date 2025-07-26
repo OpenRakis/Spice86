@@ -3,8 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-             xmlns:converters="clr-namespace:Spice86.Converters"
-             xmlns:behaviors="clr-namespace:Spice86.Behaviors"
+             xmlns:converters="clr-namespace:Spice86.Views.Converters"
+             xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
              mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="450"
              x:Class="Spice86.Views.RegistersView"
              x:DataType="viewModels:IRegistersViewModel">

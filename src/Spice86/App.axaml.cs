@@ -17,8 +17,8 @@ using System;
 /// The main entry point for the Spice86 UI.
 /// </summary>
 internal partial class App : Application {
-    private const string Spice86ControlThemesSource = "avares://Spice86/Assets/ControlThemes.axaml";
-    private const string Spice86StylesSource = "avares://Spice86/Styles/Spice86.axaml";
+    private const string Spice86ControlThemesSource = "avares://Spice86/Views/Assets/ControlThemes.axaml";
+    private const string Spice86StylesSource = "avares://Spice86/Views/Styles/Spice86.axaml";
 
     /// <summary>
     /// Initializes the Spice86 UI.

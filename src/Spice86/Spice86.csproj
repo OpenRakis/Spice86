@@ -44,7 +44,7 @@
     <PackageReference Include="Xaml.Behaviors.Avalonia" />
   </ItemGroup>
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Views\Assets\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
