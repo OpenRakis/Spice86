@@ -6,8 +6,9 @@ using Iced.Intel;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.TextPresentation;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 /// <summary>
 ///     View model for a line in the debugger.

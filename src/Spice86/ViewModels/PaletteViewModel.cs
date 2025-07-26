@@ -8,8 +8,8 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.Infrastructure;
 using Spice86.Shared.Emulator.Video;
+using Spice86.ViewModels.Services;
 
 public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private readonly ArgbPalette _argbPalette;

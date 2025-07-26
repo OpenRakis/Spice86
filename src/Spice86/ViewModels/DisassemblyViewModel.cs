@@ -13,12 +13,11 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Infrastructure;
-using Spice86.MemoryWrappers;
-using Spice86.Messages;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.Messages;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Services;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;

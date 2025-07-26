@@ -2,8 +2,8 @@ namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.Input;
 
-using Spice86.Models.Debugging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 /// <summary>
 ///     Interface containing all the commands related to disassembly functionality.

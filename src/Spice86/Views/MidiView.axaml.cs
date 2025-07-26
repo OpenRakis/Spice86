@@ -1,9 +1,9 @@
 namespace Spice86.Views;
 using Avalonia.Threading;
 using Avalonia;
-using Spice86.Infrastructure;
 using Spice86.ViewModels;
 using Avalonia.Controls;
+using Spice86.ViewModels.Services;
 
 public partial class MidiView : UserControl {
     private DispatcherTimer? _timer;

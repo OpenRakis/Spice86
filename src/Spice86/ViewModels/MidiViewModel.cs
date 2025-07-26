@@ -5,9 +5,9 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Infrastructure;
-using Spice86.Mappers;
-using Spice86.Models.Debugging;
+using Spice86.ViewModels.ValueViewModels.Debugging;
+using Spice86.ViewModels.PropertiesMappers;
+using Spice86.ViewModels.Services;
 
 public partial class MidiViewModel : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]

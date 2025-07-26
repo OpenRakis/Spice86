@@ -3,8 +3,8 @@ namespace Spice86.Views;
 using Avalonia;
 using Avalonia.Controls;
 
-using Spice86.Messages;
 using Spice86.ViewModels;
+using Spice86.ViewModels.Messages;
 
 public partial class StructureView : Window {
     public StructureView() {

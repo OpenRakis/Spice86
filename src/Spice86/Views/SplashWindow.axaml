@@ -20,7 +20,7 @@
 			IsIndeterminate="True"
 			HorizontalAlignment="Stretch"
 			VerticalAlignment="Center" />
-		<Image Source="avares://Spice86/Assets/Spice86.ico"
+		<Image Source="avares://Spice86/Views/Assets/Spice86.ico"
 			HorizontalAlignment="Center"
 			VerticalAlignment="Center"
 			Width="32" Height="32" />

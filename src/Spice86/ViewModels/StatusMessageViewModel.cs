@@ -3,8 +3,8 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Spice86.Infrastructure;
-using Spice86.Messages;
+using Spice86.ViewModels.Messages;
+using Spice86.ViewModels.Services;
 
 public partial class StatusMessageViewModel : ViewModelBase, IRecipient<StatusMessage> {
     private readonly IUIDispatcher _uiDispatcher;
