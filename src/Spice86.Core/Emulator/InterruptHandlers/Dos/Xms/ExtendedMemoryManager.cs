@@ -24,7 +24,7 @@ using System.Reflection.Metadata;
 /// </summary>
 /// <remarks>
 /// <para>
-/// XMS provides DOS programs with access to memory above the conventional 640KB limit in 
+/// XMS provides DOS programs with access to memory above the conventional 640KB limit in
 /// Intel 80286 and 80386 based machines. It defines a standardized API for accessing:
 /// </para>
 /// <list type="bullet">
@@ -38,7 +38,7 @@ using System.Reflection.Metadata;
 ///   </item>
 ///   <item>
 ///     <term>Upper Memory Blocks (UMBs)</term>
-///     <description>Optional memory blocks in the upper memory area (640KB-1MB). <br/> 
+///     <description>Optional memory blocks in the upper memory area (640KB-1MB). <br/>
 ///     As the specs do not require them to be implemented, they are not supported by this implementation.<br/></description>
 ///   </item>
 /// </list>
@@ -75,6 +75,7 @@ using System.Reflection.Metadata;
 /// </para>
 /// </remarks>
 public sealed class ExtendedMemoryManager : IVirtualDevice {
+
     /// <summary>
     /// The XMS version number in BCD format (0x0300 = version 3.00).
     /// </summary>
@@ -108,7 +109,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// Maximum value for the A20 local enable count to prevent overflow.
     /// </summary>
     /// <remarks>
-    /// When the local enable count reaches this value, further attempts to 
+    /// When the local enable count reaches this value, further attempts to
     /// enable A20 locally will return error code 82h (A20 error).
     /// </remarks>
     private const uint A20MaxTimesEnabled = uint.MaxValue;
@@ -326,7 +327,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void RunMultiplex() {
         var operation = (XmsSubFunctionsCodes)_state.AH;
 
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("XMS call from CS:IP={CS:X4}:{IP:X4}, function {Function:X2}h",
                 _state.CS, _state.IP, _state.AH);
         }
@@ -337,18 +338,22 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
                 parameters = $"Size={_state.DX}KB";
                 break;
+
             case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
                 parameters = $"Handle={_state.DX:X4}h";
                 break;
+
             case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
                 uint structAddr = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
                 var move = new ExtendedMemoryMoveStructure(_memory, structAddr);
                 parameters = $"Length={move.Length}, Src={move.SourceHandle:X4}h:{move.SourceOffset:X8}h, Dst={move.DestHandle:X4}h:{move.DestOffset:X8}h";
                 break;
+
             case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
             case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
                 parameters = $"Handle={_state.DX:X4}h";
                 break;
+
             default:
                 parameters = $"AX={_state.AX:X4}h BX={_state.BX:X4}h CX={_state.CX:X4}h DX={_state.DX:X4}h";
                 break;
@@ -451,6 +456,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
                 ReallocateAnyExtendedMemory();
                 break;
+
             default:
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("XMS function not provided: {@Function}", operation);
@@ -616,7 +622,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         SetA20(true);
-        if(_a20Gate.IsEnabled) {
+        if (_a20Gate.IsEnabled) {
             _state.AX = 1;
         } else {
             _state.AX = 0;
@@ -719,7 +725,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
         // at entering this call
 
-        if(_a20LocalEnableCount == A20MaxTimesEnabled) {
+        if (_a20LocalEnableCount == A20MaxTimesEnabled) {
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.A20LineError;
             return;
@@ -1761,7 +1767,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     private bool TryGetBlock(int handle, [NotNullWhen(true)] out XmsBlock? block) {
-        if(_xmsBlocksLinkedList.Count == 0) {
+        if (_xmsBlocksLinkedList.Count == 0) {
             block = null;
             return false;
         }
