@@ -234,8 +234,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// <item>Creates a DOS device header for the XMS driver</item>
     /// <item>Sets up a callback for the INT 2Fh XMS multiplex handler</item>
     /// <item>Initializes the XMS memory area as a single free block</item>
-    /// <item>Registers memory mappings for both XMS memory and HMA</item>
-    /// <item>Enables the A20 line by default</item>
     /// </list>
     /// </remarks>
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
