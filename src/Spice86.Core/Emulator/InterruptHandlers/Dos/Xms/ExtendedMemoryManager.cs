@@ -1498,7 +1498,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void RequestUpperMemoryBlock() {
         _state.AX = 0;
-        _state.DL = (byte)XmsErrorCodes.NotImplemented;
+        _state.DL = (byte)XmsErrorCodes.UmbNoBlocksAvailable;
     }
 
     /// <summary>
