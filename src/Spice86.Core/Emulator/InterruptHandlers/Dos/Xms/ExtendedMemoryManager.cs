@@ -332,9 +332,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("XMS function not provided: {function:X2}", _state.AH);
             }
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.NotImplemented;
-            return;
         }
 
         var operation = (XmsSubFunctionsCodes)_state.AH;
