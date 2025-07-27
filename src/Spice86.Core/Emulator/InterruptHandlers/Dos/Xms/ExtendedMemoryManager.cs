@@ -277,7 +277,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the size of the largest available memory block. It's calculated by finding the largest
     /// free block in the XMS memory pool.
     /// </remarks>
-    public uint LargestFreeBlockLength => GetFreeBlocks().Max(static x => x.Length);
+    public uint LargestFreeBlockLength {
+        get {
+            IEnumerable<XmsBlock> elements = GetFreeBlocks();
+            if(!elements.Any()) {
+                return 0;
+            }
+            return elements.Max(static x => x.Length);
+        }
+    }
 
     /// <summary>
     /// Gets the total amount of free memory in bytes.
@@ -287,7 +295,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the total free memory available. It's calculated by summing the sizes of all free blocks
     /// in the XMS memory pool.
     /// </remarks>
-    public long TotalFreeMemory => GetFreeBlocks().Sum(static b => b.Length);
+    public long TotalFreeMemory {
+        get {
+            IEnumerable<XmsBlock> elements = GetFreeBlocks();
+            if (!elements.Any()) {
+                return 0;
+            }
+            return GetFreeBlocks().Sum(static b => b.Length);
+        }
+    }
 
     /// <summary>
     /// Dispatches XMS subfunctions based on the value in AH register.
