@@ -251,7 +251,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         };
         _state = state;
         _a20Gate = a20Gate;
-        _a20Gate.IsEnabled = true;
         _memory = memory;
         _loggerService = loggerService;
         // Place hookable callback in writable memory area
