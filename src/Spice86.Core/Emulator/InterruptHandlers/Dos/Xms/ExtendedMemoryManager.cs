@@ -1519,6 +1519,34 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state.DL = (byte)XmsErrorCodes.NotImplemented;
     }
 
+    /// <summary>
+    /// XMS Function 12h: Reallocate Upper Memory Block (UMB).
+    /// Attempts to reallocate an existing UMB to a new size.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This function attempts to reallocate an Upper Memory Block (UMB) to a newly specified size.
+    /// If the new size is smaller than the old block's size, all data at the upper end of the block is lost.
+    /// </para>
+    /// <para>
+    /// <b>Arguments:</b><br/>
+    /// AH = 12h<br/>
+    /// BX = New size for UMB in paragraphs<br/>
+    /// DX = Segment number of the UMB to reallocate
+    /// </para>
+    /// <para>
+    /// <b>Returns:</b><br/>
+    /// AX = 0001h if the block was reallocated<br/>
+    /// AX = 0000h otherwise
+    /// </para>
+    /// <para>
+    /// <b>Errors:</b><br/>
+    /// BL = 80h if the function is not implemented<br/>
+    /// BL = B0h if no UMB large enough to satisfy the request is available.<br/>
+    /// In this event, DX = size of the largest UMB that is available.<br/>
+    /// BL = B2h if the UMB segment number is invalid
+    /// </para>
+    /// </remarks>
     public void ReallocateUpperMemoryBlock() {
         _state.AX = 0;
         _state.DL = (byte)XmsErrorCodes.NotImplemented;
