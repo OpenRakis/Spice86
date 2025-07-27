@@ -334,6 +334,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.NotImplemented;
+            return;
         }
 
         var operation = (XmsSubFunctionsCodes)_state.AH;
