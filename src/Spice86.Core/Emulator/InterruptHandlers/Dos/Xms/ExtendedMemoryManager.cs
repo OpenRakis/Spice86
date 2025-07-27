@@ -1869,6 +1869,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// The copy parameters are passed in ES:SI in a <see cref="ExtendedMemoryMoveStructure"/>.
     /// </summary>
     internal void CopyExtendedMemory() {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Call to BIOS XMS function, overriden by DOS XMS driver");
+        }
         bool a20WasEnabled = _a20Gate.IsEnabled;
         SetA20(true);
         ushort numberOfWordsToCopy = _state.CX;
