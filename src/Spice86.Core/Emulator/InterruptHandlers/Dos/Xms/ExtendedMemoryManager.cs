@@ -249,7 +249,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService;
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -870,21 +870,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _loggerService.Verbose("XMS QueryFreeExtendedMemory called: LargestFreeBlock={LargestFree}KB, TotalFree={TotalFree}KB",
                 LargestFreeBlockLength / 1024, TotalFreeMemory / 1024);
         }
-        ushort largestKB, totalKB;
-        if (LargestFreeBlockLength <= ushort.MaxValue * 1024u) {
-            largestKB = (ushort)(LargestFreeBlockLength / 1024u);
-        } else {
-            largestKB = ushort.MaxValue;
-        }
+        long largestKB, totalKB;
+        largestKB = LargestFreeBlockLength / 1024;
+        totalKB = TotalFreeMemory / 1024;
 
-        if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
-            totalKB = (ushort)(TotalFreeMemory / 1024);
-        } else {
-            totalKB = ushort.MaxValue;
-        }
-
-        _state.AX = largestKB;
-        _state.DX = totalKB;
+        _state.AX = (ushort)Math.Min(ushort.MaxValue, largestKB);
+        _state.DX = (ushort)Math.Min(ushort.MaxValue, totalKB);
 
         if (largestKB == 0 && totalKB == 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
