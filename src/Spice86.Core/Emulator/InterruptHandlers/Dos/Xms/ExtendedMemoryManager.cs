@@ -325,6 +325,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RunMultiplex() {
+        if(!Enum.IsDefined(typeof(XmsSubFunctionsCodes), _state.AH)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("XMS function not provided: {function:X2}", _state.AH);
+            }
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.NotImplemented;
+        }
+
         var operation = (XmsSubFunctionsCodes)_state.AH;
 
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -455,14 +463,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
             case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
                 ReallocateAnyExtendedMemory();
-                break;
-
-            default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("XMS function not provided: {@Function}", operation);
-                }
-                _state.AX = 0;
-                _state.BL = (byte)XmsErrorCodes.NotImplemented;
                 break;
         }
     }
