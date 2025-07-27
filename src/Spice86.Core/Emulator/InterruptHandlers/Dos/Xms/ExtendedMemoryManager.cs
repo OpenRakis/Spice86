@@ -1631,11 +1631,37 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
     }
 
+    /// <summary>
+    /// Allocate Any Extended Memory (Function 89h, 386+ only).
+    /// <para>
+    /// <b>Input:</b> AH=89h, EDX=amount requested (KB)<br/>
+    /// <b>Returns:</b>
+    /// <list type="bullet">
+    /// <item>AX = 0001h if allocated, 0000h if not</item>
+    /// <item>DX = handle to allocated block (if successful)</item>
+    /// </list>
+    /// <b>On error:</b> BL = error code
+    /// </para>
+    /// </summary>
     public void AllocateAnyExtendedMemory() {
         uint length = _state.EDX * 1024u;
         AllocateExtendedMemoryBlockInternal(length);
     }
 
+    /// <summary>
+    /// Get Extended EMB Handle (Function 8Eh, 386+ only).
+    /// <para>
+    /// <b>Input:</b> AH=8Eh, DX=handle<br/>
+    /// <b>Returns:</b>
+    /// <list type="bullet">
+    /// <item>AX = 0001h if found, 0000h if not</item>
+    /// <item>BH = lock count</item>
+    /// <item>CX = number of free handles</item>
+    /// <item>EDX = block length (KB)</item>
+    /// </list>
+    /// <b>On error:</b> BL = error code
+    /// </para>
+    /// </summary>
     public void GetExtendedEmbHandle() {
         int handle = _state.DX;
 
@@ -1660,8 +1686,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     /// <summary>
-    /// XMS Function 8Fh: Reallocate Any Extended Memory.
-    /// Changes the size of an unlocked extended memory block using 32-bit size.
+    /// Reallocate Any Extended Memory (Function 8Fh, 386+ only).
+    /// <para>
+    /// <b>Input:</b> AH=8Fh, EBX=new size (KB), DX=handle<br/>
+    /// <b>Returns:</b>
+    /// <list type="bullet">
+    /// <item>AX = 0001h if reallocated, 0000h if not</item>
+    /// </list>
+    /// <b>On error:</b> BL = error code
+    /// </para>
     /// </summary>
     public void ReallocateAnyExtendedMemory() {
         int handle = _state.DX;
