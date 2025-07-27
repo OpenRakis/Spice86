@@ -71,7 +71,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// Frees a used block of memory.
     /// </summary>
     /// <returns>Freed block to replace this block.</returns>
-    public XmsBlock Free() => new(0, Offset, Length, false);
+    public XmsBlock Free() => new(0, Offset, Length, free: true);
 
     /// <summary>
     /// Merges two contiguous unused blocks of memory.
