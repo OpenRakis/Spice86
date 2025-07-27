@@ -17,8 +17,7 @@ public enum XmsErrorCodes : byte {
     /// <summary>
     /// Function not implemented.
     /// Returned when a requested XMS function is not supported by the XMS driver.
-    /// This is common for optional functions like UMB management (10h, 11h, 12h)
-    /// in XMS 3.0 implementations that don't support UMB.
+    /// Only UMB functions are optional.
     /// </summary>
     NotImplemented = 0x80,
     
@@ -36,7 +35,7 @@ public enum XmsErrorCodes : byte {
     /// the A20 address line. This may be due to hardware limitations
     /// or conflicts with other software controlling the A20 line.
     /// </summary>
-    A20Error = 0x82,
+    A20LineError = 0x82,
     
     /// <summary>
     /// General driver error.
@@ -90,7 +89,7 @@ public enum XmsErrorCodes : byte {
     /// Returned when attempting to allocate extended memory (Functions 09h or 89h)
     /// but there is no free extended memory available in the system.
     /// </summary>
-    XmsOutOfSpace = 0xA0,
+    XmsOutOfMemory = 0xA0,
     
     /// <summary>
     /// All available extended memory handles are in use.
