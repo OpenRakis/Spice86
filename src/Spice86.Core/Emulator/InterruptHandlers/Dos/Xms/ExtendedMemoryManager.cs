@@ -1129,6 +1129,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
         var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
 
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("MoveExtendedMemoryBlock with param: {@MoveStructParam}", move);
+        }
+
         // Validate length
         if (move.Length == 0 || (move.Length & 1) != 0) {
             _state.AX = 0;
@@ -1197,6 +1201,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         --_a20LocalEnableCount;
         if(!a20WasEnabled) {
             SetA20(false);
+        }
+
+        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("MoveExtendedMemoryBlock: success!");
         }
 
         _state.AX = 1; // Success
