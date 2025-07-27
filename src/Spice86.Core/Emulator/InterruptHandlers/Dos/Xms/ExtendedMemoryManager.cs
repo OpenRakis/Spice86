@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection.Metadata;
 
 /// <summary>
 /// Implements the eXtended Memory Specification (XMS) version 3.0 for DOS applications.
