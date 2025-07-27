@@ -1113,7 +1113,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void MoveExtendedMemoryBlock() {
         // DS:SI points to the move structure
-        uint moveStructAddress = ((uint)_state.DS << 4) + _state.SI;
+        uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
         var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
 
         // Validate length
