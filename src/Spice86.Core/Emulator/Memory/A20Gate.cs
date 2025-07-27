@@ -21,6 +21,17 @@ public class A20Gate {
     public const uint EndOfHighMemoryArea = 0x10FFEF;
 
     /// <summary>
+    /// This is the first byte beyond the end of the HMA. <br/>
+    /// Used as an upper boundary for memory move operations between XMS memory and real mode accessible memory.
+    /// </summary>
+    /// <remarks>
+    /// Microsoft XMS TEST.C considers it an error to allow real mode
+    /// pointers + length to extend past the end of the
+    /// 8086-accessible conventional memory area.
+    /// </remarks>
+    public const uint EndOfHighMemoryAreaPlusOne = 0x10FFF0;
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="enabled">Whether the 20th address line is enabled on emulator startup.</param>

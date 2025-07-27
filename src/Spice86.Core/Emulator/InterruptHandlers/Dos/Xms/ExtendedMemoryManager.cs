@@ -187,15 +187,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public const uint XmsMemorySize = 8 * 1024;
 
     /// <summary>
-    /// The starting physical address of XMS memory.
-    /// </summary>
-    /// <remarks>
-    /// XMS blocks start at 1088KB (1MB + 64KB), after the High Memory Area (HMA).
-    /// This address (0x10FFF0) corresponds to linear address 1088KB - 16 bytes.
-    /// </remarks>
-    public const uint XmsBaseAddress = 0x10FFF0;
-
-    /// <summary>
     /// Maximum number of XMS handles that can be allocated simultaneously.
     /// </summary>
     /// <remarks>
@@ -1168,17 +1159,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         uint srcAddress;
         if (move.SourceHandle == 0) {
             srcAddress = move.SourceAddress.Linear;
-            // Microsoft TEST.C considers it an error to allow real mode
-            // pointers + length to extend past the end of the
-            // 8086-accessible conventional memory area.
-            if (srcAddress + move.Length > 0x10FFF0) {
+            if (srcAddress + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
                 SetA20(a20State);
-
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Source conventional memory address {Addr:X8}h + length exceeds limit",
                         srcAddress);
                 }
-
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
@@ -1186,29 +1172,25 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         } else if (TryGetBlock(move.SourceHandle, out XmsBlock? srcBlock)) {
             if (move.SourceOffset + move.Length > srcBlock.Value.Length) {
                 SetA20(a20State);
-
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Source offset {Offset:X8}h + length exceeds block size {Size:X8}h",
                         move.SourceOffset, srcBlock.Value.Length);
                 }
-
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
                 return;
             }
-            srcAddress = XmsBaseAddress + srcBlock.Value.Offset + move.SourceOffset;
+            srcAddress = srcBlock.Value.Offset + move.SourceOffset;
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("XMS MoveExtendedMemoryBlock: Source XMS block at physical address {Addr:X8}h", srcAddress);
             }
         } else {
             SetA20(a20State);
-
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Invalid source handle {Handle:X4}h",
                     move.SourceHandle);
             }
-
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcHandle;
             return;
@@ -1218,17 +1200,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         uint destAddress;
         if (move.DestHandle == 0) {
             destAddress = move.DestAddress.Linear;
-            // Microsoft TEST.C considers it an error to allow real mode
-            // pointers + length to extend past the end of the
-            // 8086-accessible conventional memory area.
-            if (destAddress + move.Length > 0x10FFF0) {
+            if (destAddress + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
                 SetA20(a20State);
-
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Destination conventional memory address {Addr:X8}h + length exceeds limit",
                         destAddress);
                 }
-
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
@@ -1236,17 +1213,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         } else if (TryGetBlock(move.DestHandle, out XmsBlock? destBlock)) {
             if (move.DestOffset + move.Length > destBlock.Value.Length) {
                 SetA20(a20State);
-
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Destination offset {Offset:X8}h + length exceeds block size {Size:X8}h",
                         move.DestOffset, destBlock.Value.Length);
                 }
-
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
                 return;
             }
-            destAddress = XmsBaseAddress + destBlock.Value.Offset + move.DestOffset;
+            destAddress = destBlock.Value.Offset + move.DestOffset;
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("XMS MoveExtendedMemoryBlock: Destination XMS block at physical address {Addr:X8}h", destAddress);
@@ -1257,7 +1232,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Invalid destination handle {Handle:X4}h",
                     move.DestHandle);
             }
-
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsInvalidDestHandle;
             return;
@@ -1271,23 +1245,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             uint destEnd = destStart + move.Length;
             if ((srcStart < destEnd) && (destStart < srcEnd)) {
                 SetA20(a20State);
-
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("XMS MoveExtendedMemoryBlock failed: Invalid overlap between source and destination");
                 }
-
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidOverlap;
             }
         }
 
         _memory.MemCopy(srcAddress, destAddress, move.Length);
-
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS MoveExtendedMemoryBlock succeeded: Moved {Length} bytes from {SrcAddr:X8}h to {DestAddr:X8}h",
                 move.Length, srcAddress, destAddress);
         }
-
         SetA20(a20State);
         _state.AX = 1;
     }
@@ -1344,7 +1314,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        uint fullAddress = XmsBaseAddress + block.Value.Offset;
+        uint fullAddress = _memory.Length + block.Value.Offset;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS LockExtendedMemoryBlock succeeded: Handle={Handle:X4}h, Address={Addr:X8}h, NewLockCount={LockCount}",
@@ -1629,7 +1599,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         uint highestEndingAddressOfAnyXmsBlock = _xmsBlocksLinkedList.Max(static x => x.Offset + x.Length);
 
-        _state.ECX = highestEndingAddressOfAnyXmsBlock + XmsBaseAddress;
+        _state.ECX = highestEndingAddressOfAnyXmsBlock + _memory.Length;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
