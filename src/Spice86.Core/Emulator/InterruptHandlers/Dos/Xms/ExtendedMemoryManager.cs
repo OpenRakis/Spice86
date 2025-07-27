@@ -1262,7 +1262,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        uint fullAddress = _memory.Length + block.Value.Offset;
+        uint fullAddress = block.Value.Offset;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS LockExtendedMemoryBlock succeeded: Handle={Handle:X4}h, Address={Addr:X8}h, NewLockCount={LockCount}",
@@ -1575,7 +1575,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         uint highestEndingAddressOfAnyXmsBlock = _xmsBlocksLinkedList.Max(static x => x.Offset + x.Length);
 
-        _state.ECX = highestEndingAddressOfAnyXmsBlock + _memory.Length;
+        _state.ECX = highestEndingAddressOfAnyXmsBlock;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
