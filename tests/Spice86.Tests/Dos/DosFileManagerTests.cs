@@ -60,7 +60,7 @@ public class DosFileManagerTests {
         DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
 
         // Act
-        DosFileOperationResult result = dosFileManager.OpenFile("C.txt", FileAccessMode.WriteOnly);
+        DosFileOperationResult result = dosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.WriteOnly);
 
         // Assert
         result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));

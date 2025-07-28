@@ -119,7 +119,7 @@ public class DosFileManager {
     /// <param name="fileHandle">The file handle to an open file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException">If the host OS refuses to close the file.</exception>
-    public DosFileOperationResult CloseFile(ushort fileHandle) {
+    public DosFileOperationResult CloseFileOrDevice(ushort fileHandle) {
         if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
@@ -210,7 +210,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
         if (newHandle < OpenFiles.Length && OpenFiles[newHandle] != null) {
-            CloseFile(newHandle);
+            CloseFileOrDevice(newHandle);
         }
         SetOpenFile(newHandle, file);
         return DosFileOperationResult.NoValue();
@@ -466,7 +466,7 @@ public class DosFileManager {
     /// <param name="fileName">The name of the file to open.</param>
     /// <param name="accessMode">The access mode (read, write, or read+write)</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenFile(string fileName, FileAccessMode accessMode) {
+    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
         if (device is not null) {
@@ -515,7 +515,7 @@ public class DosFileManager {
     /// <param name="readLength">The amount of data to read.</param>
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
+    public DosFileOperationResult ReadFileOrDevice(ushort fileHandle, ushort readLength, uint targetAddress) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
