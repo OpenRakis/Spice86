@@ -191,7 +191,7 @@ public sealed class Dos {
 
         if (configuration.Ems) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
-            AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
+            AddDevice(Ems.AsCharacterDevice(), ExpandedMemoryManager.DosDeviceSegment, 0);
         }
     }
 

@@ -108,6 +108,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         set => throw new InvalidOperationException("Cannot rename DOS device!");
     }
 
+    private readonly EMMCharacterDevice _emmCharacterDevice;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -135,6 +137,46 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             EmmPageFrame.Add(i, emmRegister);
             Memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
+
+        // A character device wrapper so EMS can be opened via DOSINT21H OpenFile function
+        // fixes Wolf3D not finding Expanded Memory.
+        _emmCharacterDevice = new EMMCharacterDevice(memory, DosDeviceSegment, Header, this);
+    }
+
+    private sealed class EMMCharacterDevice : CharacterDevice {
+        private readonly ExpandedMemoryManager _ems;
+
+        public EMMCharacterDevice(IMemory memory, ushort segment, DosDeviceHeader header, ExpandedMemoryManager ems)
+            : base(memory, new SegmentedAddress(segment, 0).Linear, EmsIdentifier,
+                   DeviceAttributes.Ioctl | DeviceAttributes.Character) {
+            _ems = ems;
+            Header = header;
+        }
+
+        public override ushort Information => _ems.Information;
+        public override string Name {
+            get => _ems.Name;
+            set => throw new InvalidOperationException("Cannot rename DOS device!");
+        }
+
+        // Stream overrides: EMS is not a readable/writable stream
+        public override int Read(byte[] buffer, int offset, int count) => 0;
+        public override void Write(byte[] buffer, int offset, int count) { }
+        public override long Seek(long offset, SeekOrigin origin) => 0;
+        public override void SetLength(long value) { }
+        public override void Flush() { }
+        public override bool CanRead => false;
+        public override bool CanWrite => false;
+        public override bool CanSeek => false;
+        public override long Length => 0;
+        public override long Position { get; set; }
+
+        // IOCTL and status delegation
+        public override byte GetStatus(bool inputFlag) => _ems.GetStatus(inputFlag);
+        public override bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode)
+            => _ems.TryReadFromControlChannel(address, size, out returnCode);
+        public override bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode)
+            => _ems.TryWriteToControlChannel(address, size, out returnCode);
     }
 
     /// <inheritdoc />
@@ -169,6 +211,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         AddAction(0x58, GetMappablePhysicalAddressArray);
         AddAction(0x59, GetExpandedMemoryHardwareInformation);
     }
+
+    public CharacterDevice AsCharacterDevice() => _emmCharacterDevice;
 
     /// <inheritdoc />
     public override void Run() {
