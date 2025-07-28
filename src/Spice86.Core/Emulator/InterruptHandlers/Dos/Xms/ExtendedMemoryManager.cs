@@ -94,6 +94,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public const ushort XmsInternalVersion = 0x0301;
 
     /// <summary>
+    /// Linear address where extended memory starts.
+    /// </summary>
+    public const uint XmsBaseAddress = A20Gate.StartOfHighMemoryArea;
+
+    /// <summary>
     /// Counter for local A20 enable/disable calls.
     /// </summary>
     /// <remarks>
@@ -1262,7 +1267,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        uint fullAddress = block.Value.Offset;
+        uint fullAddress = XmsBaseAddress + block.Value.Offset;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS LockExtendedMemoryBlock succeeded: Handle={Handle:X4}h, Address={Addr:X8}h, NewLockCount={LockCount}",
