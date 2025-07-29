@@ -344,47 +344,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void RunMultiplex() {
         if (!Enum.IsDefined(typeof(XmsSubFunctionsCodes), _state.AH)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("XMS function not provided: {function:X2}", _state.AH);
+                _loggerService.Error("XMS function not defined in XMS3.0 enum: {function:X2}", _state.AH);
             }
         }
 
         var operation = (XmsSubFunctionsCodes)_state.AH;
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("XMS call from CS:IP={CS:X4}:{IP:X4}, function {Function:X2}h",
-                _state.CS, _state.IP, _state.AH);
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            string functionName = operation.ToString();
-            string parameters;
-            switch (operation) {
-                case XmsSubFunctionsCodes.AllocateExtendedMemoryBlock:
-                    parameters = $"Size={_state.DX}KB";
-                    break;
-
-                case XmsSubFunctionsCodes.FreeExtendedMemoryBlock:
-                    parameters = $"Handle={_state.DX:X4}h";
-                    break;
-
-                case XmsSubFunctionsCodes.MoveExtendedMemoryBlock:
-                    uint structAddr = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
-                    var move = new ExtendedMemoryMoveStructure(_memory, structAddr);
-                    parameters = $"Length={move.Length}, Src={move.SourceHandle:X4}h:{move.SourceOffset:X8}h, Dst={move.DestHandle:X4}h:{move.DestOffset:X8}h";
-                    break;
-
-                case XmsSubFunctionsCodes.LockExtendedMemoryBlock:
-                case XmsSubFunctionsCodes.UnlockExtendedMemoryBlock:
-                    parameters = $"Handle={_state.DX:X4}h";
-                    break;
-
-                default:
-                    parameters = $"AX={_state.AX:X4}h BX={_state.BX:X4}h CX={_state.CX:X4}h DX={_state.DX:X4}h";
-                    break;
-            }
-            _loggerService.Information("XMS CALL: {Function} ({FuncCode:X2}h) with {Parameters} - CS:IP={CS:X4}:{IP:X4}",
-            functionName, (byte)operation, parameters, _state.CS, _state.IP);
-        }
 
         switch (operation) {
             case XmsSubFunctionsCodes.GetVersionNumber:
