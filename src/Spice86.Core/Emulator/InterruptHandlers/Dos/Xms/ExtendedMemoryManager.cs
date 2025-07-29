@@ -1177,13 +1177,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _loggerService.Verbose("MoveExtendedMemoryBlock with param: {@MoveStructParam}", move);
         }
 
-        // Validate length
-        if (move.Length == 0 || (move.Length & 1) != 0) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
-            return;
-        }
-
         // Determine source
         Span<byte> srcSpan;
         if (move.SourceHandle == 0) {
