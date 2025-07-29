@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
@@ -48,7 +48,7 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
 
     private uint GetLinearAddressInternal(UInt8Array addrBytes) {
         // Little-endian: low, mid, high
-        return (uint)(addrBytes[0] | (addrBytes[1] << 8) | (addrBytes[2] << 16));
+        return (uint)(addrBytes[0] | addrBytes[1] << 8 | addrBytes[2] << 16);
     }
 
     /// <summary>

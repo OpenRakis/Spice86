@@ -21,13 +21,6 @@
 	<AdditionalFiles Include="Emulator/CPU/CfgCpu/Parser/SpecificParsers/Mixin/*.mixin" />
   </ItemGroup>
   <ItemGroup>
-    <AdditionalFiles Remove="Emulator\InterruptHandlers\Bios\Structures\**" />
-    <AvaloniaXaml Remove="Emulator\InterruptHandlers\Bios\Structures\**" />
-    <Compile Remove="Emulator\InterruptHandlers\Bios\Structures\**" />
-    <EmbeddedResource Remove="Emulator\InterruptHandlers\Bios\Structures\**" />
-    <None Remove="Emulator\InterruptHandlers\Bios\Structures\**" />
-  </ItemGroup>
-  <ItemGroup>
     <None Remove="Resources\2MGM.sf2" />
   </ItemGroup>
   <ItemGroup>

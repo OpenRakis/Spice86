@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.Memory.Indexable;
 
 /// <summary>
