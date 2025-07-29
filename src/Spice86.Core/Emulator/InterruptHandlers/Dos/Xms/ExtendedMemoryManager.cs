@@ -1211,16 +1211,18 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             }
         }
 
-        bool a20WasEnabled = _a20Gate.IsEnabled;
-        ++_a20State.NumTimesEnabled;
-        SetA20(true);
-        srcSpan.CopyTo(dstSpan);
-        --_a20State.NumTimesEnabled;
-        if(!a20WasEnabled) {
-            SetA20(false);
+        if(move.Length != 0) {
+            bool a20WasEnabled = _a20Gate.IsEnabled;
+            ++_a20State.NumTimesEnabled;
+            SetA20(true);
+            srcSpan.CopyTo(dstSpan);
+            --_a20State.NumTimesEnabled;
+            if (!a20WasEnabled) {
+                SetA20(false);
+            }
         }
 
-        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("MoveExtendedMemoryBlock: success!");
         }
 
