@@ -805,6 +805,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         if (--_a20LocalEnableCount != 0) {
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
+            return;
         }
 
         SetA20(false);
