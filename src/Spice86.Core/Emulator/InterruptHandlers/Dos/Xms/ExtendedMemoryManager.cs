@@ -99,17 +99,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public const uint XmsBaseAddress = A20Gate.StartOfHighMemoryArea;
 
     /// <summary>
-    /// Counter for local A20 enable/disable calls.
-    /// </summary>
-    /// <remarks>
-    /// Per XMS specification, the A20 line should be controlled via an "enable count".
-    /// Local Enable (Function 05h) increments this count and enables A20 if the count was zero.
-    /// Local Disable (Function 06h) decrements this count and disables A20 if the count becomes zero.
-    /// This allows nested A20 enables/disables to work correctly.
-    /// </remarks>
-    private uint _a20LocalEnableCount = 0;
-
-    /// <summary>
     /// Maximum value for the A20 local enable count to prevent overflow.
     /// </summary>
     /// <remarks>
@@ -224,6 +213,26 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public SegmentedAddress CallbackAddress { get; init; }
 
+    private class A20State {
+        /// <summary>
+        /// Gets or sets a value indicating whether the A20 line is globally enabled.
+        /// </summary>
+        public bool IsGloballyEnabled { get; set; }
+
+        /// <summary>
+        /// Counter for local A20 enable/disable calls.
+        /// </summary>
+        /// <remarks>
+        /// Per XMS specification, the A20 line should be controlled via an "enable count".
+        /// Local Enable (Function 05h) increments this count and enables A20 if the count was zero.
+        /// Local Disable (Function 06h) decrements this count and disables A20 if the count becomes zero.
+        /// This allows nested A20 enables/disables to work correctly.
+        /// </remarks>
+        public uint NumTimesEnabled { get; set; }
+    }
+
+    private readonly A20State _a20State = new();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
     /// </summary>
@@ -254,7 +263,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _loggerService = loggerService;
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -625,13 +634,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _loggerService.Verbose("XMS GlobalEnableA20 called, current A20 state={CurrentState}",
                 _a20Gate.IsEnabled);
         }
-
-        SetA20(true);
-        if (_a20Gate.IsEnabled) {
-            _state.AX = 1;
+        // This appears to be how Microsoft HIMEM.SYS implements this
+        XmsErrorCodes result = XmsErrorCodes.A20LineError;
+        if (_a20State.IsGloballyEnabled) {
+            result = EnableLocalA20Internal();
+            if (result == XmsErrorCodes.Ok) {
+                _a20State.IsGloballyEnabled = false;
+                _state.AX = 1;
+            }
         } else {
             _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20LineError;
+            _state.BL = (byte)result;
         }
     }
 
@@ -675,13 +688,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _loggerService.Verbose("XMS GlobalDisableA20 called, current A20 state={CurrentState}",
                 _a20Gate.IsEnabled);
         }
-
-        SetA20(false);
-        if (_a20Gate.IsEnabled) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20LineError;
+        // This appears to be how Microsoft HIMEM.SYS implements this
+        XmsErrorCodes result = XmsErrorCodes.A20LineError;
+        if (_a20State.IsGloballyEnabled) {
+            result = DisableLocalA20Internal();
+            if(result == XmsErrorCodes.Ok) {
+                _a20State.IsGloballyEnabled = false;
+                _state.AX = 1;
+            }
         } else {
-            _state.AX = 1;
+            _state.AX = 0;
+            _state.BL = (byte)result;
         }
     }
 
@@ -724,26 +741,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void EnableLocalA20() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS EnableLocalA20 called, current count={CurrentCount}",
-                _a20LocalEnableCount);
+                _a20State.NumTimesEnabled);
         }
-
-        // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
-        // at entering this call
-
-        if (_a20LocalEnableCount == A20MaxTimesEnabled) {
+        XmsErrorCodes errorCode = EnableLocalA20Internal();
+        if (errorCode != XmsErrorCodes.Ok) {
+            _state.BL = (byte)errorCode;
             _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20LineError;
-            return;
-        }
-
-        // Only enable A20 if count is 0
-        if (_a20LocalEnableCount++ == 0) {
-            SetA20(true);
-        }
-
-        if (!_a20Gate.IsEnabled) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20LineError;
         } else {
             _state.AX = 1;
         }
@@ -789,32 +792,56 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void DisableLocalA20() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS DisableLocalA20 called, current count={CurrentCount}",
-                _a20LocalEnableCount);
+                _a20State.NumTimesEnabled);
         }
+        XmsErrorCodes errorCode = DisableLocalA20Internal();
+        if (errorCode != XmsErrorCodes.Ok) {
+            _state.BL = (byte)errorCode;
+            _state.AX = 0;
+        }else {
+            _state.AX = 1;
+        }
+    }
+
+    private XmsErrorCodes EnableLocalA20Internal() {
 
         // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
         // at entering this call
 
-        if (_a20LocalEnableCount == 0) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
-            return;
+        if (_a20State.NumTimesEnabled == A20MaxTimesEnabled) {
+            return XmsErrorCodes.A20LineError;
         }
 
         // Only enable A20 if count is 0
-        if (--_a20LocalEnableCount != 0) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
-            return;
+        if (_a20State.NumTimesEnabled++ == 0) {
+            SetA20(true);
+        }
+
+        if (!_a20Gate.IsEnabled) {
+            return XmsErrorCodes.A20LineError;
+        }
+        return XmsErrorCodes.Ok;
+    }
+
+    private XmsErrorCodes DisableLocalA20Internal() {
+        
+        // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
+        // at entering this call
+
+        if (_a20State.NumTimesEnabled == 0) {
+            return XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
+        }
+
+        // Only enable A20 if count is 0
+        if (--_a20State.NumTimesEnabled != 0) {
+            return XmsErrorCodes.A20StillEnabled;
         }
 
         SetA20(false);
         if (_a20Gate.IsEnabled) {
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.A20StillEnabled;
-        } else {
-            _state.AX = 1;
+            return XmsErrorCodes.A20StillEnabled;
         }
+        return XmsErrorCodes.Ok;
     }
 
     /// <summary>
@@ -1212,10 +1239,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         bool a20WasEnabled = _a20Gate.IsEnabled;
-        ++_a20LocalEnableCount;
+        ++_a20State.NumTimesEnabled;
         SetA20(true);
         srcSpan[..(int)move.Length].CopyTo(dstSpan);
-        --_a20LocalEnableCount;
+        --_a20State.NumTimesEnabled;
         if(!a20WasEnabled) {
             SetA20(false);
         }
