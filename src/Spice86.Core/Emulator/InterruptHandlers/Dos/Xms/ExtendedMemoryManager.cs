@@ -1181,7 +1181,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         Span<byte> srcSpan;
         if (move.SourceHandle == 0) {
             // Real mode address
-            uint srcAddr = ((move.SourceOffset >> 16) << 4) + (move.SourceOffset & 0xFFFF);
+            uint srcAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.SourceOffset >> 16),
+                (ushort)(move.SourceOffset & 0xFFFF));
             if (srcAddr + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
@@ -1202,7 +1203,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         Span<byte> dstSpan;
         if (move.DestHandle == 0) {
             // Real mode address
-            uint dstAddr = ((move.DestOffset >> 16) << 4) + (move.DestOffset & 0xFFFF);
+            uint dstAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.DestOffset >> 16),
+                (ushort)(move.DestOffset & 0xFFFF));
             if (dstAddr + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
@@ -1234,7 +1236,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         bool a20WasEnabled = _a20Gate.IsEnabled;
         ++_a20State.NumTimesEnabled;
         SetA20(true);
-        srcSpan[..(int)move.Length].CopyTo(dstSpan);
+        srcSpan.CopyTo(dstSpan);
         --_a20State.NumTimesEnabled;
         if(!a20WasEnabled) {
             SetA20(false);
