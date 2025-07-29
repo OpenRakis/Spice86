@@ -134,7 +134,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     private readonly A20Gate _a20Gate;
 
     /// <summary>
-    /// Memory bus for reading/writing XMS memory.
+    /// Main memory bus
     /// </summary>
     private readonly IMemory _memory;
 
@@ -1183,7 +1183,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             // Real mode address
             uint srcAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.SourceOffset >> 16),
                 (ushort)(move.SourceOffset & 0xFFFF));
-            if (srcAddr + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
+            if (srcAddr + move.Length > A20Gate.EndOfHighMemoryArea) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
                 return;
@@ -1191,9 +1191,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             srcSpan = _memory.GetSpan((int)srcAddr, (int)move.Length);
         } else {
             // XMS block
-            if (!TryGetBlock(move.SourceHandle, out XmsBlock? srcBlock) || srcBlock.Value.Length < move.SourceOffset + move.Length) {
+            if (!TryGetBlock(move.SourceHandle, out XmsBlock? srcBlock)) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcHandle;
+                return;
+            }
+            if (move.SourceOffset > srcBlock.Value.Length) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
+                return;
+            }
+            if (move.Length > srcBlock.Value.Length - move.SourceOffset) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
             srcSpan = XmsRam.GetSpan((int)(srcBlock.Value.Offset + move.SourceOffset), (int)move.Length);
@@ -1205,7 +1215,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             // Real mode address
             uint dstAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.DestOffset >> 16),
                 (ushort)(move.DestOffset & 0xFFFF));
-            if (dstAddr + move.Length > A20Gate.EndOfHighMemoryAreaPlusOne) {
+            if (dstAddr + move.Length > A20Gate.EndOfHighMemoryArea) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
                 return;
@@ -1213,9 +1223,19 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             dstSpan = _memory.GetSpan((int)dstAddr, (int)move.Length);
         } else {
             // XMS block
-            if (!TryGetBlock(move.DestHandle, out XmsBlock? dstBlock) || dstBlock.Value.Length < move.DestOffset + move.Length) {
+            if (!TryGetBlock(move.DestHandle, out XmsBlock? dstBlock)) {
                 _state.AX = 0;
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidDestHandle;
+                return;
+            }
+            if (move.DestOffset > dstBlock.Value.Length) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
+                return;
+            }
+            if (move.Length > dstBlock.Value.Length - move.DestOffset) {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
             dstSpan = XmsRam.GetSpan((int)(dstBlock.Value.Offset + move.DestOffset), (int)move.Length);

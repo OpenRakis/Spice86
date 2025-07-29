@@ -18,18 +18,12 @@ public class A20Gate {
     /// Real Mode cannot access memory beyond this. <br/>
     /// This value equals to 1 MB + 65 519 bytes.
     /// </summary>
-    public const uint EndOfHighMemoryArea = 0x10FFEF;
-
-    /// <summary>
-    /// This is the first byte beyond the end of the HMA. <br/>
-    /// Used as an upper boundary for memory move operations between XMS memory and real mode accessible memory.
-    /// </summary>
     /// <remarks>
-    /// Microsoft XMS TEST.C considers it an error to allow real mode
+    /// For the DOS XMS device, Microsoft XMS TEST.C considers it an error to allow real mode
     /// pointers + length to extend past the end of the
     /// 8086-accessible conventional memory area.
     /// </remarks>
-    public const uint EndOfHighMemoryAreaPlusOne = 0x10FFF0;
+    public const uint EndOfHighMemoryArea = 0x10FFEF;
 
     /// <summary>
     /// Initializes a new instance.
