@@ -280,7 +280,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         Name = XmsIdentifier;
 
         // Initialize XMS memory as a single free block
-        _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsMemorySize * 1024, true));
+        _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsRam.Size, true));
     }
 
     /// <summary>
@@ -876,35 +876,29 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void QueryFreeExtendedMemory() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS QueryFreeExtendedMemory called: LargestFreeBlock={LargestFree}KB, TotalFree={TotalFree}KB",
-                LargestFreeBlockLength / 1024, TotalFreeMemory / 1024);
-        }
         // Calculate sizes in KB
         ushort largestKB, totalKB;
 
-        if (LargestFreeBlockLength <= ushort.MaxValue * 1024u) {
-            largestKB = (ushort)(LargestFreeBlockLength / 1024u);
-        } else {
+        if (LargestFreeBlockLength / 1024u > ushort.MaxValue) {
             largestKB = ushort.MaxValue;
-        }
-
-        if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
-            totalKB = (ushort)(TotalFreeMemory / 1024);
         } else {
-            totalKB = ushort.MaxValue;
+            largestKB = (ushort)(LargestFreeBlockLength / 1024u);
         }
-
+        if (TotalFreeMemory / 1024u > ushort.MaxValue) {
+            totalKB = ushort.MaxValue;
+        } else {
+            totalKB = (ushort)(TotalFreeMemory / 1024u);
+        }
         _state.AX = largestKB;
         _state.DX = totalKB;
 
-        if (largestKB == 0 && totalKB == 0) {
+        if (totalKB == 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("XMS QueryFreeExtendedMemory: All memory is allocated");
             }
             _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
-        } else if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
+        } else if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                 largestKB, totalKB);
         }
     }
@@ -1563,32 +1557,25 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void QueryAnyFreeExtendedMemory() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS QueryFreeExtendedMemory called: LargestFreeBlock={LargestFree}KB, TotalFree={TotalFree}KB",
-                LargestFreeBlockLength / 1024, TotalFreeMemory / 1024);
-        }
-
         // Calculate sizes in KB
         ushort largestKB, totalKB;
 
-        if (LargestFreeBlockLength <= ushort.MaxValue * 1024u) {
-            largestKB = (ushort)(LargestFreeBlockLength / 1024u);
-        } else {
+        if (LargestFreeBlockLength / 1024u > ushort.MaxValue) {
             largestKB = ushort.MaxValue;
-        }
-
-        if (TotalFreeMemory <= ushort.MaxValue * 1024u) {
-            totalKB = (ushort)(TotalFreeMemory / 1024);
         } else {
-            totalKB = ushort.MaxValue;
+            largestKB = (ushort)(LargestFreeBlockLength / 1024u);
         }
-
+        if (TotalFreeMemory / 1024u > ushort.MaxValue) {
+            totalKB = ushort.MaxValue;
+        } else {
+            totalKB = (ushort)(TotalFreeMemory / 1024u);
+        }
         _state.EAX = largestKB;
         _state.EDX = totalKB;
 
-        if (largestKB == 0 && totalKB == 0) {
+        if (totalKB == 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS QueryFreeExtendedMemory: All memory is allocated");
+                _loggerService.Warning("XMS QueryAnyFreeExtendedMemory: All memory is allocated");
             }
             _state.EAX = 0;
             _state.ECX = 0;
@@ -1596,12 +1583,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        uint highestEndingAddressOfAnyXmsBlock = _xmsBlocksLinkedList.Max(static x => x.Offset + x.Length);
+        uint highestEndingAddressOfAnyXmsBlock = XmsBaseAddress + _xmsBlocksLinkedList.Max(static x => x.Offset + x.Length);
 
         _state.ECX = highestEndingAddressOfAnyXmsBlock;
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
+            _loggerService.Verbose("XMS QueryAnyFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                 largestKB, totalKB);
         }
     }
