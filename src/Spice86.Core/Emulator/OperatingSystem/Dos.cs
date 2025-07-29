@@ -151,7 +151,7 @@ public sealed class Dos {
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
-        DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
+        DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;

@@ -177,7 +177,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// XMS 3.0 added functions (88h, 89h, 8Eh, 8Fh) that use 32-bit values for sizes in bytes,
     /// allowing access to memory beyond the 64MB limit.
     /// </remarks>
-    public const uint XmsMemorySize = 8 * 1024;
+    public const ushort XmsMemorySize = 8 * 1024;
 
     /// <summary>
     /// Maximum number of XMS handles that can be allocated simultaneously.
