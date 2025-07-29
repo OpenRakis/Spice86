@@ -1265,7 +1265,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        if (lockCount == byte.MaxValue) {
+        if (lockCount >= byte.MaxValue) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("XMS LockExtendedMemoryBlock failed: Lock count overflow for handle {Handle:X4}h", handle);
             }
