@@ -254,7 +254,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService;
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -306,7 +306,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             if (!elements.Any()) {
                 return 0;
             }
-            return GetFreeBlocks().Sum(static b => b.Length);
+            return elements.Sum(static b => b.Length);
         }
     }
 
