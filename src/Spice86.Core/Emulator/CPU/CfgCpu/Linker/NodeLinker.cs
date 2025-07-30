@@ -139,6 +139,13 @@ public class NodeLinker : InstructionReplacer {
     private void LinkToNext(ICfgNode current, ICfgNode next) {
         current.Successors.Add(next);
         next.Predecessors.Add(current);
+        // Unique successor is only valid if node has 1 successor
+        current.UniqueSuccessor = current.MaxSuccessorsCount == 1 ? next : null;
+        if (current.Successors.Count == current.MaxSuccessorsCount) {
+            // We reached the max number of successors for this node
+            // This means that there is no need to try to link it to other nodes, it is impossible there will be new links.
+            current.CanHaveMoreSuccessors = false;
+        }
     }
 
     public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
@@ -168,6 +175,8 @@ public class NodeLinker : InstructionReplacer {
     private void SwitchSuccessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
         foreach (ICfgNode successor in oldNode.Successors) {
             LinkToNext(newNode, successor);
+            // Only successors set touched are on new node and old node.
+            // Updating the cache should be taken care of by caller.
             successor.Predecessors.Remove(oldNode);
             oldNode.Successors.Remove(successor);
         }

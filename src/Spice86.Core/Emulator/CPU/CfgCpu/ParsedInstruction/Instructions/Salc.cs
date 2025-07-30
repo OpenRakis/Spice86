@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class Salc : CfgInstruction {
 
-    public Salc(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public Salc(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

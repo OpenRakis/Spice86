@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Interrupt : InstructionWithValueField<byte> {
     public Interrupt(SegmentedAddress address, InstructionField<ushort> opcodeField,
-        InstructionField<byte> valueField) : base(address, opcodeField, valueField) {
+        InstructionField<byte> valueField) : base(address, opcodeField, valueField, null) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

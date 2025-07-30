@@ -11,7 +11,7 @@ public class CallNearImm : InstructionWithOffsetField<short> {
     private readonly ushort _targetIp;
     public CallNearImm(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, InstructionField<short> offsetField) : base(address, opcodeField, prefixes,
-        offsetField) {
+        offsetField, null) {
         _targetIp = (ushort)(NextInMemoryAddress.Offset + offsetField.Value);
     }
 

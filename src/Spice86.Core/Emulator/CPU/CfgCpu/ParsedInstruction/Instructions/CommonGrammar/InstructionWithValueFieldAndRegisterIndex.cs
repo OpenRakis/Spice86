@@ -11,8 +11,9 @@ public abstract class InstructionWithValueFieldAndRegisterIndex<T> : Instruction
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         InstructionField<T> valueField,
-        int registerIndex) :
-        base(address, opcodeField, prefixes, valueField) {
+        int registerIndex,
+        int? maxSuccessorsCount) :
+        base(address, opcodeField, prefixes, valueField, maxSuccessorsCount) {
         RegisterIndex = registerIndex;
     }
 

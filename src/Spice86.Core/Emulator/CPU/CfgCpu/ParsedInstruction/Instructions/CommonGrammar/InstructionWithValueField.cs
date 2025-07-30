@@ -10,14 +10,19 @@ public abstract class InstructionWithValueField<T> : CfgInstruction, IInstructio
     protected InstructionWithValueField(SegmentedAddress address,
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
-        InstructionField<T> valueField) :
-        base(address, opcodeField, prefixes) {
+        InstructionField<T> valueField,
+        int? maxSuccessorsCount) :
+        base(address, opcodeField, prefixes, maxSuccessorsCount) {
         ValueField = valueField;
         AddField(ValueField);
     }
     
-    protected InstructionWithValueField(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<T> valueField) : this(address,
-        opcodeField, new List<InstructionPrefix>(), valueField) {
+    protected InstructionWithValueField(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        InstructionField<T> valueField,
+        int? maxSuccessorsCount) : this(address,
+        opcodeField, new List<InstructionPrefix>(), valueField, maxSuccessorsCount) {
     }
 
     public InstructionField<T> ValueField { get; }

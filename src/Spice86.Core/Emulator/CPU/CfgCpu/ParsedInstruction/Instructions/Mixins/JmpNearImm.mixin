@@ -17,7 +17,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{Signed
     private readonly ushort _targetIp;
 
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, InstructionField<{{SignedType}}> offsetField) :
-        base(address, opcodeField, prefixes, offsetField) {
+        base(address, opcodeField, prefixes, offsetField, 1) {
         _targetIp = (ushort)(NextInMemoryAddress.Offset + offsetField.Value);
     }
 

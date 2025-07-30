@@ -8,8 +8,8 @@ public abstract class InstructionWithRegisterIndex : CfgInstruction, IInstructio
     protected InstructionWithRegisterIndex(SegmentedAddress address,
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
-        int registerIndex) :
-        base(address, opcodeField, prefixes) {
+        int registerIndex, int? maxSuccessorsCount) :
+        base(address, opcodeField, prefixes, maxSuccessorsCount) {
         RegisterIndex = registerIndex;
     }
     public int RegisterIndex { get; }

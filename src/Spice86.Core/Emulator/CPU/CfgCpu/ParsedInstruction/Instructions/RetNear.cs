@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class RetNear : CfgInstruction, IReturnInstruction {
 
-    public RetNear(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public RetNear(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, null) {
     }
     
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }

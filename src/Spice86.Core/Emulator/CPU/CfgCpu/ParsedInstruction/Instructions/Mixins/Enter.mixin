@@ -18,7 +18,7 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
     public {{ moxy.Class.Name }}(SegmentedAddress address,
         InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         InstructionField<ushort> storageField,
-        InstructionField<byte> levelField) : base(address, opcodeField, prefixes, storageField, levelField) {
+        InstructionField<byte> levelField) : base(address, opcodeField, prefixes, storageField, levelField, 1) {
     }
     
     public override void Execute(InstructionExecutionHelper helper) {

@@ -5,7 +5,12 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public abstract class InstructionWithSegmentRegisterIndex: CfgInstruction, IInstructionWithSegmentRegisterIndex {
-    protected InstructionWithSegmentRegisterIndex(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, int segmentRegisterIndex) : base(address, opcodeField, prefixes) {
+    protected InstructionWithSegmentRegisterIndex(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes,
+        int segmentRegisterIndex,
+        int? maxSuccessorsCount) : base(address, opcodeField, prefixes, maxSuccessorsCount) {
         SegmentRegisterIndex = segmentRegisterIndex;
     }
     

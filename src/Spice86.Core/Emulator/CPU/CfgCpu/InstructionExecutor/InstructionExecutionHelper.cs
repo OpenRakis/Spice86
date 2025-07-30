@@ -202,6 +202,9 @@ public class InstructionExecutionHelper {
     }
 
     public ICfgNode? GetSuccessorAtCsIp(CfgInstruction instruction) {
+        if (instruction.UniqueSuccessor is not null) {
+            return instruction.UniqueSuccessor;
+        }
         instruction.SuccessorsPerAddress.TryGetValue(State.IpSegmentedAddress, out ICfgNode? res);
         return res;
     }
@@ -259,6 +262,8 @@ public class InstructionExecutionHelper {
             Stack.Push16(cpuException.ErrorCode.Value);
         }
         try {
+            // Link to the interrupt handler will likely need to be added
+            instruction.IncreaseMaxSuccessorsCount(InterruptVectorTable[cpuException.InterruptVector]);
             HandleInterruptCall(instruction, cpuException.InterruptVector);
         } catch (UnhandledOperationException e) {
             throw new AggregateException(cpuException, e);

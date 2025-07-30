@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Aad : InstructionWithValueField<byte> {
     public Aad(SegmentedAddress address, InstructionField<ushort> opcodeField, InstructionField<byte> valueField) :
-        base(address, opcodeField, new List<InstructionPrefix>(), valueField) {
+        base(address, opcodeField, new List<InstructionPrefix>(), valueField, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

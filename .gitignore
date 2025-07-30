@@ -383,3 +383,6 @@ VSharp.*
 #AI guidelines
 .windsurfrules
 Knowledge/
+
+#Lost Dump files
+spice86dump*.json

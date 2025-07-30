@@ -13,7 +13,7 @@ public class JmpFarImm : InstructionWithSegmentedAddressField {
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,
         InstructionField<SegmentedAddress> segmentedAddressField) :
-        base(address, opcodeField, segmentedAddressField) {
+        base(address, opcodeField, segmentedAddressField, 1) {
         _targetAddress = SegmentedAddressField.Value;
     }
 

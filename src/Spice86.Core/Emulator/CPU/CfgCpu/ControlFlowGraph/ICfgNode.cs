@@ -59,4 +59,20 @@ public interface ICfgNode {
     /// <param name="builder"></param>
     /// <returns></returns>
     public InstructionNode ToInstructionAst(AstBuilder builder);
+
+    /// <summary>
+    /// Max successors this node can be expected to have.
+    /// If null, it means the node can have an unlimited number of successors.
+    /// </summary>
+    public int? MaxSuccessorsCount { get; set; }
+    
+    /// <summary>
+    /// Whether the node can have more successors in its current state 
+    /// </summary>
+    public bool CanHaveMoreSuccessors { get; set; }
+    
+    /// <summary>
+    /// Direct access to successor for nodes with only one successor
+    /// </summary>
+    public ICfgNode? UniqueSuccessor { get; set; }
 }

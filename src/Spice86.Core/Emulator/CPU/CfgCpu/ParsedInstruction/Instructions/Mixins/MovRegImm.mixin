@@ -18,7 +18,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithValueFieldAndRegiste
         InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes,
         InstructionField<{{Type}}> valueField,
-        int registerIndex) : base(address, opcodeField, prefixes, valueField, registerIndex) {
+        int registerIndex) : base(address, opcodeField, prefixes, valueField, registerIndex, 1) {
     }
     
     public override void Execute(InstructionExecutionHelper helper) {

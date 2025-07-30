@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class RetFar : CfgInstruction, IReturnInstruction {
 
-    public RetFar(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public RetFar(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, null) {
     }
 
     public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }

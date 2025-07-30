@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.Memory;
 public class Grp4Callback : InstructionWithModRm {
     public Grp4Callback(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         ModRmContext modRmContext, InstructionField<byte> callbackNumber) : base(address, opcodeField, prefixes,
-        modRmContext) {
+        modRmContext, null) {
         CallbackNumber = callbackNumber;
         AddField(callbackNumber);
     }

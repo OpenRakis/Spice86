@@ -8,7 +8,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Cwd16 : CfgInstruction {
     public Cwd16(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes) :
-        base(address, opcodeField, prefixes) {
+        base(address, opcodeField, prefixes, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

@@ -6,8 +6,9 @@ public abstract class InstructionWithSegmentedAddressField : CfgInstruction {
     public InstructionWithSegmentedAddressField(
         SegmentedAddress address,
         InstructionField<ushort> opcodeField,
-        InstructionField<SegmentedAddress> segmentedAddressField) :
-        base(address, opcodeField) {
+        InstructionField<SegmentedAddress> segmentedAddressField,
+        int? maxSuccessorsCount) :
+        base(address, opcodeField, maxSuccessorsCount) {
         SegmentedAddressField = segmentedAddressField;
         AddField(segmentedAddressField);
     }
