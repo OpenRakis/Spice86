@@ -120,13 +120,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
     /// </remarks>
     public void GetExtendedMemorySize(bool calledFromVm) {
-        if(_extendedMemoryManager is not null) {
-            State.AX = 0;
-            SetCarryFlag(false, calledFromVm);
-            return;
-        }
-        if (_a20Gate.IsEnabled) {
-            State.AX = (ushort)Math.Max(0, Memory.Length - A20Gate.StartOfHighMemoryArea);
+        if (_a20Gate.IsEnabled || _extendedMemoryManager is not null) {
+            State.AX = 0; //Either the HMA is not accessible, or the DOS driver protects it.
         } else {
             State.AX = (ushort)(A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea);
         }
