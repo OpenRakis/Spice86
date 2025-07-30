@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
 /// View model for the CPU registers panel.
@@ -26,6 +27,11 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
     /// Gets the pointer registers.
     /// </summary>
     public ObservableCollection<RegisterViewModel> PointerRegisters { get; } = [];
+    
+    /// <summary>
+    /// Gets the eflag register.
+    /// </summary>
+    public RegisterViewModel EFlagRegister { get; private set; }
 
     /// <summary>
     /// Gets the CPU flags.
@@ -41,6 +47,7 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
         InitializeRegisters();
     }
 
+    [MemberNotNull(nameof(EFlagRegister))]
     private void InitializeRegisters() {
         // General purpose registers (32-bit versions as they were in DOS era)
         GeneralRegisters.Add(new RegisterViewModel("EAX", _state, s => s.EAX));
@@ -62,6 +69,8 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
         PointerRegisters.Add(new RegisterViewModel("EBP", _state, s => s.EBP));
         PointerRegisters.Add(new RegisterViewModel("ESI", _state, s => s.ESI));
         PointerRegisters.Add(new RegisterViewModel("EDI", _state, s => s.EDI));
+
+        EFlagRegister = new RegisterViewModel("FLAG", _state, s => s.Flags.FlagRegister);
 
         // Flags
         Flags.Add(new FlagViewModel("CF", _state, s => s.CarryFlag));
@@ -90,6 +99,8 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
         foreach (RegisterViewModel register in PointerRegisters) {
             register.Update();
         }
+        
+        EFlagRegister.Update();
 
         foreach (FlagViewModel flag in Flags) {
             flag.Update();
