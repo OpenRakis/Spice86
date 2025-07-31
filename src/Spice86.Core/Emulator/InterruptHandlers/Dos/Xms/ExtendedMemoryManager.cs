@@ -172,12 +172,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// The size of available XMS Memory, in kilobytes.
     /// </summary>
     /// <remarks>
-    /// This implementation provides 8MB of XMS memory. The XMS 2.0 specification technically
+    /// This implementation provides 16MB of XMS memory. The XMS 2.0 specification technically
     /// limited extended memory to 64MB due to using 16-bit values for sizes in KB.
     /// XMS 3.0 added functions (88h, 89h, 8Eh, 8Fh) that use 32-bit values for sizes in bytes,
     /// allowing access to memory beyond the 64MB limit.
     /// </remarks>
-    public const ushort XmsMemorySize = 8 * 1024;
+    public const ushort XmsMemorySize = 16 * 1024;
 
     /// <summary>
     /// Maximum number of XMS handles that can be allocated simultaneously.
