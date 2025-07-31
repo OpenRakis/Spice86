@@ -232,8 +232,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
     private readonly A20State _a20State = new();
 
-    private ushort _offsetInHmaForDosApp = 0;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
     /// </summary>
