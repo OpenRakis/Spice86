@@ -207,8 +207,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// The memory address to the C# XMS callback.
     /// </summary>
     /// <remarks>
-    /// This is the address where the XMS multiplexer interrupt handler (INT 2Fh, AH=43h)
-    /// jumps to when calling the XMS API. It's set up to execute the <see cref="RunMultiplex"/> method.
+    /// This is the address where emulated program jumps to for calling the XMS API.
+    /// It's set up to execute the <see cref="RunMultiplex"/> method.
     /// </remarks>
     public SegmentedAddress CallbackAddress { get; init; }
 
