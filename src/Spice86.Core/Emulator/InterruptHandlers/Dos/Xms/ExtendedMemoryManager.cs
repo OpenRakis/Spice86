@@ -290,15 +290,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the size of the largest available memory block. It's calculated by finding the largest
     /// free block in the XMS memory pool.
     /// </remarks>
-    public uint LargestFreeBlockLength {
-        get {
-            IEnumerable<XmsBlock> elements = GetFreeBlocks();
-            if(!elements.Any()) {
-                return 0;
-            }
-            return elements.Max(static x => x.Length);
-        }
-    }
+    public uint LargestFreeBlockLength => _xmsBlocksLinkedList
+        .Where(static x => x.IsFree)
+        .Select(static x => x.Length)
+        .DefaultIfEmpty((uint)0)
+        .Max();
 
     /// <summary>
     /// Gets the total amount of free memory in bytes.
@@ -308,15 +304,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// to report the total free memory available. It's calculated by summing the sizes of all free blocks
     /// in the XMS memory pool.
     /// </remarks>
-    public long TotalFreeMemory {
-        get {
-            IEnumerable<XmsBlock> elements = GetFreeBlocks();
-            if (!elements.Any()) {
-                return 0;
-            }
-            return elements.Sum(static b => b.Length);
-        }
-    }
+    public long TotalFreeMemory => _xmsBlocksLinkedList
+        .Where(static x => x.IsFree)
+        .Sum(static b => b.Length);
 
     /// <summary>
     /// Dispatches XMS subfunctions based on the value in AH register.
@@ -1704,10 +1694,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return XmsErrorCodes.Ok;
         }
 
-        XmsBlock? smallestFreeBlock = GetFreeBlocks()
-            .Where(b => b.Length >= length)
-            .Select(static b => new XmsBlock?(b))
-            .FirstOrDefault();
+        XmsBlock? smallestFreeBlock = null;
+
+        foreach (XmsBlock block in _xmsBlocksLinkedList) {
+            if (!block.IsFree || block.Length < length) {
+                continue;
+            }
+            if (smallestFreeBlock is null ||
+                block.Length < smallestFreeBlock.Value.Length) {
+                smallestFreeBlock = block;
+            }
+        }
 
         if (smallestFreeBlock == null) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
