@@ -163,8 +163,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// The segment of the XMS DOS Device Driver in memory.
     /// </summary>
     /// <remarks>
-    /// In a real DOS system, HIMEM.SYS would be loaded as a device driver at this segment.
-    /// The device driver header would be located at this address, followed by the driver code.
+    /// In a real DOS system, HIMEM.SYS DOS device header would be at this segment.
     /// </remarks>
     public const ushort DosDeviceSegment = MemoryMap.DeviceDriversSegment;
 
