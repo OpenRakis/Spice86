@@ -897,9 +897,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Warning("XMS QueryFreeExtendedMemory: All memory is allocated");
             }
             _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
-        } else if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        } else {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                 largestKB, totalKB);
+        }
+            _state.BL = 0;
         }
     }
 
@@ -1574,6 +1577,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
         _state.EAX = largestKB;
         _state.EDX = totalKB;
+
+        if(totalKB > 0) {
+            _state.BL = 0;
+        }
 
         if (totalKB == 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
