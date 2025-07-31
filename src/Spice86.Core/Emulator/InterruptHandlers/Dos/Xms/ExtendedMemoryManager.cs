@@ -899,9 +899,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
         } else {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
-                largestKB, totalKB);
-        }
+                _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
+                    largestKB, totalKB);
+            }
             _state.BL = 0;
         }
     }
@@ -1136,6 +1136,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("MoveExtendedMemoryBlock with param: {@MoveStructParam}", move);
+        }
+
+        // "Length must be even" --Microsoft XMS Spec 3.0
+        if (move.Length % 2 > 0) {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.XmsParityError;
+            return;
         }
 
         // Determine source
