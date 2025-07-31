@@ -232,6 +232,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
     private readonly A20State _a20State = new();
 
+    private ushort _offsetInHmaForDosApp = 0;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ExtendedMemoryManager"/> class.
     /// </summary>
@@ -465,7 +467,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         // Special case: version call uses DirectRegister to set AX, BX, DX directly
         _state.AX = XmsVersion;        // XMS version 3.00
         _state.BX = XmsInternalVersion; // Internal revision
-        _state.DX = 0x0000;            // No HMA available
+        _state.DX = 0x0001;            // HMA is available
     }
 
     /// <summary>
@@ -501,13 +503,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </list>
     /// </para>
     /// <para>
-    /// In this implementation, the HMA is not available for allocation because it's considered to be
-    /// already in use by the system (simulating DOS 5+ which can load parts of itself into the HMA).
     /// </para>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
+        _state.AX = 1;
+        _state.BL = 0;
     }
 
     /// <summary>
@@ -540,13 +540,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </list>
     /// </para>
     /// <para>
-    /// In this implementation, the HMA cannot be released because it was never allocated to
-    /// the caller (it's considered to be in use by the system).
     /// </para>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.HmaDoesNotExist;
+        _state.AX = 1;
+        _state.BL = 0;
     }
 
     /// <summary>
