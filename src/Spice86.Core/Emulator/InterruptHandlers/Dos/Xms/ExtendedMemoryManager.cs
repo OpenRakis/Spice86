@@ -262,7 +262,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService;
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -1289,9 +1289,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 handle, fullAddress, _xmsHandles[handle]);
         }
 
+        ushort segment = MemoryUtils.ToSegment(fullAddress);
+        ushort offset = MemoryUtils.ToOffset(fullAddress);
+        SegmentedAddress destPointer = new(segment, offset);
+        _state.DX = destPointer.Segment;
+        _state.BX = destPointer.Offset;
         _state.AX = 1;
         _state.BL = 0;
-        _memory.UInt32[destPointer] = fullAddress;
     }
 
     /// <summary>
@@ -1400,7 +1404,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (lockCount > 0) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsBlockLocked;
+            _state.BL = (byte)XmsErrorCodes.XmsBlockLocked;
             return;
         }
 
@@ -1434,6 +1438,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             XmsBlock[] newBlocks = block.Value.Allocate(handle, newSizeInBytes);
             _xmsBlocksLinkedList.Replace(block.Value, newBlocks);
             MergeFreeBlocks(newBlocks[1]);
+            _state.BL = 0;
             _state.AX = 1;
         } else {
             // Try to grow using next free block
