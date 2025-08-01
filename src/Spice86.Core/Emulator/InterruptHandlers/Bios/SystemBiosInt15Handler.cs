@@ -19,11 +19,12 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
-    private readonly ExtendedMemoryManager? _extendedMemoryManager;
+    private readonly Configuration _configuration;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
@@ -31,19 +32,17 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="a20Gate">The A20 line gate.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="xms">The DOS Extended Memory Manager. Optional.<br/>
-    /// Hooks function <see cref="GetExtendedMemorySize"/> if present.</param>
-    public SystemBiosInt15Handler(IMemory memory,
+    public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, bool initializeResetVector,
-        ILoggerService loggerService, ExtendedMemoryManager? xms = null)
+        ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
+        _configuration = configuration;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
-        _extendedMemoryManager = xms;
         FillDispatchTable();
     }
 
@@ -120,7 +119,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
     /// </remarks>
     public void GetExtendedMemorySize(bool calledFromVm) {
-        if (_a20Gate.IsEnabled || _extendedMemoryManager is not null) {
+        if (_a20Gate.IsEnabled || _configuration.Xms is true) {
             State.AX = 0; //Either the HMA is not accessible, or the DOS driver protects it.
         } else {
             State.AX = (ushort)(A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea);
