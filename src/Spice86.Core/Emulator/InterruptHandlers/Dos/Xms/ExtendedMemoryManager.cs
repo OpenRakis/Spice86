@@ -4,7 +4,6 @@ using Serilog.Events;
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -17,7 +16,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 /// <summary>
 /// Implements the eXtended Memory Specification (XMS) version 3.0 for DOS applications.
@@ -262,7 +260,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
+        _loggerService = loggerService;
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -1838,29 +1836,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         //Not supported by HIMEM.SYS
         returnCode = null;
         return false;
-    }
-
-    /// <summary>
-    /// BIOS-compatible function to copy extended memory - but the XMS driver has to preserve local A20 gate state.
-    /// Otherwise, it's the same as INT 15h, AH=87h.
-    /// This is not a standard XMS function, but XMS is supposed to override INT15H, AH=87h according to specs.
-    /// The copy parameters are passed in ES:SI in a <see cref="ExtendedMemoryMoveStructure"/>.
-    /// </summary>
-    internal void CopyExtendedMemory() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Call to BIOS XMS function, overriden by DOS XMS driver");
-        }
-        bool a20WasEnabled = _a20Gate.IsEnabled;
-        SetA20(true);
-        ushort numberOfWordsToCopy = _state.CX;
-        uint globalDescriptorTableAddress = MemoryUtils.ToPhysicalAddress(
-            _state.ES, _state.SI);
-        var descriptor = new GlobalDescriptorTable(_memory,
-            globalDescriptorTableAddress);
-        _memory.MemCopy(descriptor.GetLinearSourceAddress(),
-            descriptor.GetLinearDestAddress(),
-            numberOfWordsToCopy);
-        SetA20(a20WasEnabled);
     }
 
     private void SetA20(bool enable) {
