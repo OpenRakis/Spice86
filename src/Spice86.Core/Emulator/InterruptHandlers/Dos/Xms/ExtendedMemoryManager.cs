@@ -110,6 +110,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     private readonly State _state;
     private readonly A20Gate _a20Gate;
     private readonly IMemory _memory;
+    private bool _hmaClaimedByDosApp = false;
 
     /// <summary>
     /// Linked list of XMS memory blocks (free and allocated).
@@ -478,8 +479,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        _state.AX = 1;
-        _state.BL = (byte)XmsErrorCodes.Ok;
+        if(!_hmaClaimedByDosApp) {
+            _state.AX = 1;
+            _state.BL = (byte)XmsErrorCodes.Ok;
+        } else {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.HmaInUse;
+        }
     }
 
     /// <summary>
@@ -515,8 +521,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        _state.AX = 1;
-        _state.BL = (byte)XmsErrorCodes.Ok;
+        if(_hmaClaimedByDosApp) {
+            _hmaClaimedByDosApp = false;
+            _state.AX = 1;
+            _state.BL = (byte)XmsErrorCodes.Ok;
+        } else {
+            _state.AX = 0;
+            _state.BL = (byte)XmsErrorCodes.HmaNotAllocated;
+        }
     }
 
     /// <summary>
