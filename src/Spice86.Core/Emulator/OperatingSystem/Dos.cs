@@ -237,7 +237,7 @@ public sealed class Dos {
         // Make the previous device point to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _memory.SegmentedAddress[previousDevice.Header.BaseAddress] =
+            _memory.SegmentedAddress16[previousDevice.Header.BaseAddress] =
                 new SegmentedAddress(segment.Value, offset.Value);
         }
 

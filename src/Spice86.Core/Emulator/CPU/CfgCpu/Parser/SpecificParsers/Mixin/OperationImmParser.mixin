@@ -4,6 +4,7 @@
 @attribute required bool IsOnlyField8
 @attribute required bool IsUnsignedField
 @attribute required bool IsFinalValue
+@attribute required bool bitWidthFromOperandSize
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
@@ -17,7 +18,7 @@ public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
     public {{ moxy.Class.Name }}(BaseInstructionParser other) : base(other) {
     }
     public CfgInstruction Parse(ParsingContext context) {
-        BitWidth bitWidth = GetBitWidth({{ if !Has8 }}false{{ else }}context.OpcodeField{{ end }}, context.HasOperandSize32);
+        BitWidth bitWidth = {{if bitWidthFromOperandSize}}GetBitWidth({{ if !Has8 }}false{{ else }}context.OpcodeField{{ end }}, context.HasOperandSize32){{else}}context.AddressWidthFromPrefixes{{end}};
         return Parse(context, bitWidth);
     }
 

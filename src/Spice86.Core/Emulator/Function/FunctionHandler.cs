@@ -135,9 +135,13 @@ public class FunctionHandler {
     /// <returns>The return address of the specified call type from the machine stack at the specified physical address without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType, uint stackPhysicalAddress) {
         IMemory memory = _memory;
+        // for NEAR32 and FAR32, return address is 4 bytes but in real mode we only care about the first 2
         return returnCallType switch {
-            CallType.NEAR => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
-            CallType.FAR or CallType.INTERRUPT or CallType.EXTERNAL_INTERRUPT => memory.SegmentedAddress[stackPhysicalAddress],
+            CallType.NEAR16 => new SegmentedAddress(_state.CS, memory.UInt16[stackPhysicalAddress]),
+            CallType.NEAR32 => new SegmentedAddress(_state.CS, (ushort)memory.UInt32[stackPhysicalAddress]),
+            CallType.FAR16 or CallType.INTERRUPT or CallType.EXTERNAL_INTERRUPT => memory.SegmentedAddress16[stackPhysicalAddress],
+            // +2 for CS padding
+            CallType.FAR32 => memory.SegmentedAddress32[stackPhysicalAddress + 2],
             CallType.MACHINE => null,
             _ => null
         };

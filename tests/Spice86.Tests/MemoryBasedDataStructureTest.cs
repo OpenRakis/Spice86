@@ -80,14 +80,14 @@ public class MemoryBasedDataStructureTest {
     public void CanMapSegmentedAddress() {
         // Arrange
         (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        data.SegmentedAddress[ReadAddress] = ExpectedSegmentedAddress;
+        data.SegmentedAddress16[ReadAddress] = ExpectedSegmentedAddress;
 
         // Act & Assert
         // Read
-        Assert.Equal(ExpectedSegmentedAddress, memoryBasedDataStructure.SegmentedAddress[ReadOffset]);
+        Assert.Equal(ExpectedSegmentedAddress, memoryBasedDataStructure.SegmentedAddress16[ReadOffset]);
         // Write
-        memoryBasedDataStructure.SegmentedAddress[WriteOffset] = ExpectedSegmentedAddress;
-        Assert.Equal(ExpectedSegmentedAddress, data.SegmentedAddress[WriteAddress]);
+        memoryBasedDataStructure.SegmentedAddress16[WriteOffset] = ExpectedSegmentedAddress;
+        Assert.Equal(ExpectedSegmentedAddress, data.SegmentedAddress16[WriteAddress]);
     }
 
     [Fact]
@@ -152,14 +152,14 @@ public class MemoryBasedDataStructureTest {
     public void CanMapSegmentedAddressArray() {
         // Arrange
         (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        CopyArrayToIndexer(ExpectedSegmentedAddressArray, data.SegmentedAddress, ReadAddress, 4);
+        CopyArrayToIndexer(ExpectedSegmentedAddressArray, data.SegmentedAddress16, ReadAddress, 4);
 
         // Act & Assert
         SegmentedAddressArray segmentedAddressArray = memoryBasedDataStructure.GetSegmentedAddressArray(ReadOffset, ExpectedUInt32Array.Length);
         // Read
         AssertArrayEqualsCollection(ExpectedSegmentedAddressArray, segmentedAddressArray);
         // Write
-        WriteIndex0AndAssertIndex1Untouched<SegmentedAddress>(ExpectedSegmentedAddressArray, segmentedAddressArray, data.SegmentedAddress, 4, SegmentedAddress.ZERO);
+        WriteIndex0AndAssertIndex1Untouched<SegmentedAddress>(ExpectedSegmentedAddressArray, segmentedAddressArray, data.SegmentedAddress16, 4, SegmentedAddress.ZERO);
     }
 
     private void CopyArrayToIndexer<T>(IReadOnlyList<T> array, Indexer<T> data, uint baseAddress, int elementSize) {

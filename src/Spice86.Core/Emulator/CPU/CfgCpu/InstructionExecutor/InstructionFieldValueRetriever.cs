@@ -64,6 +64,6 @@ public class InstructionFieldValueRetriever {
             return field.Value;
         }
 
-        return Memory.SegmentedAddress[field.PhysicalAddress];
+        return Memory.SegmentedAddress16[field.PhysicalAddress];
     }
 }

@@ -13,7 +13,8 @@ public class InstructionReader {
         UInt16BigEndian = new UInt16BigEndianFieldReader(memory, InstructionReaderAddressSource);
         Int32 = new(memory, InstructionReaderAddressSource);
         UInt32 = new(memory, InstructionReaderAddressSource);
-        SegmentedAddress = new(memory, InstructionReaderAddressSource);
+        SegmentedAddress16 = new(memory, InstructionReaderAddressSource);
+        SegmentedAddress32 = new(memory,  InstructionReaderAddressSource);
     }
 
     public InstructionReaderAddressSource InstructionReaderAddressSource { get; }
@@ -25,5 +26,7 @@ public class InstructionReader {
     public UInt16BigEndianFieldReader UInt16BigEndian { get; }
     public Int32FieldReader Int32 { get; }
     public UInt32FieldReader UInt32 { get; }
-    public SegmentedAddressInstructionFieldReader SegmentedAddress { get; }
+    public SegmentedAddress16InstructionFieldReader SegmentedAddress16 { get; }
+
+    public SegmentedAddress32InstructionFieldReader SegmentedAddress32 { get; }
 }

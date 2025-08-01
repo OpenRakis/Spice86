@@ -136,7 +136,7 @@ public class Stack {
     /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
     /// <returns>The value in memory.</returns>
     public SegmentedAddress PeekSegmentedAddress(int index) {
-        return _memory.SegmentedAddress[(uint)(PhysicalAddress + index)];
+        return _memory.SegmentedAddress16[(uint)(PhysicalAddress + index)];
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public class Stack {
     /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
     /// <param name="value">The value to store in memory.</param>
     public void PokeSegmentedAddress(int index, SegmentedAddress value) {
-        _memory.SegmentedAddress[(uint)(PhysicalAddress + index)] = value;
+        _memory.SegmentedAddress16[(uint)(PhysicalAddress + index)] = value;
     }
 
     /// <summary>
@@ -153,8 +153,18 @@ public class Stack {
     /// </summary>
     /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public SegmentedAddress PopSegmentedAddress() {
-        SegmentedAddress res = _memory.SegmentedAddress[PhysicalAddress];
+        SegmentedAddress res = _memory.SegmentedAddress16[PhysicalAddress];
         _state.SP = (ushort)(_state.SP + 4);
+        return res;
+    }
+    
+    /// <summary>
+    /// Pops a SegmentedAddress value from the stack
+    /// </summary>
+    /// <returns>The value retrieved from the stack, therefore read from memory</returns>
+    public SegmentedAddress PopSegmentedAddress32() {
+        SegmentedAddress res = _memory.SegmentedAddress32[PhysicalAddress];
+        _state.SP = (ushort)(_state.SP + 6);
         return res;
     }
 
@@ -164,7 +174,16 @@ public class Stack {
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void PushSegmentedAddress(SegmentedAddress value) {
         _state.SP = (ushort)(_state.SP - 4);
-        _memory.SegmentedAddress[PhysicalAddress] = value;
+        _memory.SegmentedAddress16[PhysicalAddress] = value;
+    }
+    
+    /// <summary>
+    /// Pushes a SegmentedAddress value on the stack
+    /// </summary>
+    /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
+    public void PushSegmentedAddress32(SegmentedAddress value) {
+        _state.SP = (ushort)(_state.SP - 6);
+        _memory.SegmentedAddress32[PhysicalAddress] = value;
     }
 
     /// <summary>

@@ -1,4 +1,8 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+@moxy
+@attribute required int OperandSize
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
@@ -8,20 +12,19 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
-public class Grp5RmJumpFar : InstructionWithModRm {
-    public Grp5RmJumpFar(SegmentedAddress address, InstructionField<ushort> opcodeField,
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes,
         modRmContext, null) {
     }
     
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        uint ipAddress = helper.ModRm.MandatoryMemoryAddress;
-        (ushort cs, ushort ip) = helper.Memory.SegmentedAddress16[ipAddress];
-        helper.JumpFar(this, cs, ip);
+        ushort targetIp = (ushort)helper.ModRm.RM{{OperandSize}};
+        helper.NearCallWithReturnIpNextInstruction{{OperandSize}}(this, targetIp);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.JMP_FAR, builder.ModRm.ToMemoryAddressNode(DataType.UINT32, ModRmContext));
+        return new InstructionNode(InstructionOperation.CALL_NEAR, builder.ModRm.RmToNode(DataType.UINT{{OperandSize}}, ModRmContext));
     }
 }

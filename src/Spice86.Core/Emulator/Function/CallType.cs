@@ -7,10 +7,14 @@ using Spice86.Core.Emulator.CPU;
 /// </summary>
 public enum CallType {
     /// <summary>For this call, only IP is on the stack.</summary>
-    NEAR,
+    NEAR16,
+    /// <summary>For this call, only EIP is on the stack.</summary>
+    NEAR32,
 
     /// <summary>For this call, CS and IP are on the stack </summary>
-    FAR,
+    FAR16,
+    /// <summary>For this call, CS and EIP are on the stack </summary>
+    FAR32,
 
     /// <summary>For this call, CS, IP, and the flags are on the stack.</summary>
     INTERRUPT,

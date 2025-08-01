@@ -141,7 +141,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     }
 
     public void FarRet(ushort numberOfBytesToPop) {
-        FunctionHandlerInUse.Ret(CallType.FAR, null);
+        FunctionHandlerInUse.Ret(CallType.FAR16, null);
         _internalIp = Stack.Pop16();
         ushort cs = Stack.Pop16();
         ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, cs, _internalIp);
@@ -174,7 +174,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     }
 
     public void NearRet(int numberOfBytesToPop) {
-        FunctionHandlerInUse.Ret(CallType.NEAR, null);
+        FunctionHandlerInUse.Ret(CallType.NEAR16, null);
         _internalIp = Stack.Pop16();
         ExecutionFlowRecorder.RegisterReturn(State.CS, State.IP, State.CS, _internalIp);
         State.SP = (ushort)(numberOfBytesToPop + State.SP);
@@ -1090,7 +1090,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     private void FarCall(ushort returnCS, ushort returnIP, ushort targetCS, ushort targetIP) {
         Stack.Push16(returnCS);
         Stack.Push16(returnIP);
-        HandleCall(CallType.FAR, returnCS, returnIP, targetCS, targetIP);
+        HandleCall(CallType.FAR16, returnCS, returnIP, targetCS, targetIP);
     }
 
     private uint InternalIpPhysicalAddress => MemoryUtils.ToPhysicalAddress(State.CS, _internalIp);
@@ -1244,7 +1244,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
 
     private void NearCall(ushort returnIP, ushort callIP) {
         Stack.Push16(returnIP);
-        HandleCall(CallType.NEAR, State.CS, returnIP, State.CS, callIP);
+        HandleCall(CallType.NEAR16, State.CS, returnIP, State.CS, callIP);
     }
 
     public byte In8(ushort port) {

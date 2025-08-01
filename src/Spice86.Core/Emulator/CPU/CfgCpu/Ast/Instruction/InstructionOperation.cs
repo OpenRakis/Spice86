@@ -39,6 +39,7 @@ public enum InstructionOperation {
     INS,
     INT,
     INTO,
+    INVALID,
     IRET,
     JA_NEAR,
     JA_SHORT,
