@@ -507,7 +507,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void RequestHighMemoryArea() {
         _state.AX = 1;
-        _state.BL = 0;
+        _state.BL = (byte)XmsErrorCodes.Ok;
     }
 
     /// <summary>
@@ -544,7 +544,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void ReleaseHighMemoryArea() {
         _state.AX = 1;
-        _state.BL = 0;
+        _state.BL = (byte)XmsErrorCodes.Ok;
     }
 
     /// <summary>
@@ -701,7 +701,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _state.BL = (byte)errorCode;
             _state.AX = 0;
         } else {
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
         }
     }
@@ -753,7 +753,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _state.BL = (byte)errorCode;
             _state.AX = 0;
         }else {
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
         }
     }
@@ -829,7 +829,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void QueryA20() {
         bool isEnabled = _a20Gate.IsEnabled;
         _state.AX = (ushort)(isEnabled ? 1 : 0);
-        _state.BL = 0;
+        _state.BL = (byte)XmsErrorCodes.Ok;
     }
 
     /// <summary>
@@ -893,7 +893,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                     largestKB, totalKB);
             }
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
         }
     }
 
@@ -952,7 +952,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Verbose("XMS AllocateExtendedMemoryBlock succeeded: Handle={Handle:X4}h for {Size}KB",
                     handle, _state.DX);
             }
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.DX = handle;
             _state.AX = 1;
         } else {
@@ -1034,7 +1034,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.Replace(block.Value, freeBlock);
             MergeFreeBlocks(freeBlock);
             _xmsHandles.Remove(handle);
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("XMS FreeExtendedMemoryBlock succeeded for handle {Handle:X4}h", handle);
@@ -1297,7 +1297,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state.DX = destPointer.Segment;
         _state.BX = destPointer.Offset;
         _state.AX = 1;
-        _state.BL = 0;
+        _state.BL = (byte)XmsErrorCodes.Ok;
     }
 
     /// <summary>
@@ -1330,7 +1330,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        _state.BL = 0;
+        _state.BL = (byte)XmsErrorCodes.Ok;
         _state.AX = 1;
         _xmsHandles[handle] = (byte)(lockCount - 1);
     }
@@ -1418,7 +1418,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (newSizeInBytes == block.Value.Length) {
             // No change needed
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
             return;
         }
@@ -1429,7 +1429,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.Replace(block.Value, freeBlock);
             MergeFreeBlocks(freeBlock);
             _xmsHandles.Remove(handle);
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
             return;
         }
@@ -1440,7 +1440,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             XmsBlock[] newBlocks = block.Value.Allocate(handle, newSizeInBytes);
             _xmsBlocksLinkedList.Replace(block.Value, newBlocks);
             MergeFreeBlocks(newBlocks[1]);
-            _state.BL = 0;
+            _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
         } else {
             // Try to grow using next free block
