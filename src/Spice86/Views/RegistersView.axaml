@@ -132,9 +132,29 @@
                 CornerRadius="4"
                 Padding="8">
             <StackPanel>
-                <TextBlock Text="Flags"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,4" />
+                <ContentControl Content="{Binding EFlagRegister}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate DataType="viewModels:RegisterViewModel">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,2, 2, 0">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Name}"
+                                           FontFamily="Consolas,Menlo,Monaco,monospace"
+                                           MinWidth="40"
+                                           Foreground="#78C9B0" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <SelectableTextBlock Text="{Binding UpperWordHex}"
+                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding UpperWordChanged}" />
+
+                                    <SelectableTextBlock Text="{Binding LowerWordHex}"
+                                                         FontFamily="Consolas,Menlo,Monaco,monospace"
+                                                         behaviors:HighlightBehavior.IsHighlighted="{Binding LowByteChanged}"
+                                                         Margin="4,0,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
                 <ItemsControl ItemsSource="{Binding Flags}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
