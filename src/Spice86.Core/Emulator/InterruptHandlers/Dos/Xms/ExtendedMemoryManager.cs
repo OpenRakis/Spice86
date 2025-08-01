@@ -333,8 +333,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void RunMultiplex() {
         if (!Enum.IsDefined(typeof(XmsSubFunctionsCodes), _state.AH)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("XMS function not defined in XMS3.0 enum: {function:X2}", _state.AH);
+                _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
             }
+            _state.AX = 1;
+            _state.BL = (byte)XmsErrorCodes.NotImplemented;
         }
 
         var operation = (XmsSubFunctionsCodes)_state.AH;
