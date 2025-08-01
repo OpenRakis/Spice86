@@ -10,8 +10,6 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
@@ -61,11 +59,11 @@ public class DosFileManagerTests {
         DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
 
         // Act
-        DosFileOperationResult result = dosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.WriteOnly);
+        DosFileOperationResult result = dosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.ReadOnly);
 
         // Assert
-        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));
-        dosFileManager.OpenFiles.ElementAtOrDefault(0)?.Name.Should().Be("C.txt");
+        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(3));
+        dosFileManager.OpenFiles.ElementAtOrDefault(3)?.Name.Should().Be("C.txt");
     }
 
     [Theory]
@@ -176,8 +174,6 @@ public class DosFileManagerTests {
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             clock, loggerService);
 
-        DosDriveManager dosDriveManager = new(loggerService, configuration.CDrive, configuration.Exe);
-
-        return new DosFileManager(memory, new DosStringDecoder(memory, state), dosDriveManager, loggerService, dos.Devices);
+        return dos.FileManager;
     }
 }
