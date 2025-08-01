@@ -95,10 +95,11 @@ public class DosFileManagerTests {
 
     private static DosFileManager ArrangeDosFileManager(string mountPoint) {
         Configuration configuration = new Configuration() {
+            AudioEngine = AudioEngine.Dummy,
             DumpDataOnExit = false,
             CDrive = mountPoint
         };
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
