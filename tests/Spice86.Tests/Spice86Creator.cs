@@ -13,7 +13,7 @@ public class Spice86Creator {
     private readonly long _maxCycles;
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000, bool failOnUnhandledPort = false) {
+        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false) {
         _configuration = new Configuration {
             Exe = $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
@@ -28,7 +28,8 @@ public class Spice86Creator {
             InstructionsPerSecond = enablePit ? 100000 : null,
             CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
-            FailOnUnhandledPort = failOnUnhandledPort
+            FailOnUnhandledPort = failOnUnhandledPort,
+            A20Gate = enableA20Gate
         };
         _maxCycles = maxCycles;
     }
