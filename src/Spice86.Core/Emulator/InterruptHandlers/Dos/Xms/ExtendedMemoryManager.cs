@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Implements the eXtended Memory Specification (XMS) version 3.0 for DOS applications.
@@ -182,10 +183,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// Maximum number of XMS handles that can be allocated simultaneously.
     /// </summary>
     /// <remarks>
-    /// This is the default value from HIMEM.SYS. In a real DOS system, this value could be
+    /// This is the maximum value from HIMEM.SYS. In a real DOS system, this value could be
     /// adjusted via the /NUMHANDLES= parameter in CONFIG.SYS. Each handle consumes a small
-    /// amount of conventional memory, so this value represents a tradeoff between the number
-    /// of allocatable blocks and conventional memory usage.
+    /// amount of conventional memory, but not for us.
     /// </remarks>
     private const int MaxHandles = 128;
 
@@ -590,6 +590,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             if (result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;
                 _state.AX = 1;
+                _state.BL = 0;
             }
         } else {
             _state.AX = 0;
@@ -643,6 +644,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             result = DisableLocalA20Internal();
             if(result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;
+                _state.BL = 0;
                 _state.AX = 1;
             }
         } else {
@@ -697,6 +699,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _state.BL = (byte)errorCode;
             _state.AX = 0;
         } else {
+            _state.BL = 0;
             _state.AX = 1;
         }
     }
@@ -748,6 +751,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _state.BL = (byte)errorCode;
             _state.AX = 0;
         }else {
+            _state.BL = 0;
             _state.AX = 1;
         }
     }
@@ -758,7 +762,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         // at entering this call
 
         if (_a20State.NumTimesEnabled == A20MaxTimesEnabled) {
-            return XmsErrorCodes.A20LineError;
+            return XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
         }
 
         // Only enable A20 if count is 0
@@ -781,7 +785,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
         }
 
-        // Only enable A20 if count is 0
+        // Only disable A20 if count is 0
         if (--_a20State.NumTimesEnabled != 0) {
             return XmsErrorCodes.A20StillEnabled;
         }
@@ -946,6 +950,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Verbose("XMS AllocateExtendedMemoryBlock succeeded: Handle={Handle:X4}h for {Size}KB",
                     handle, _state.DX);
             }
+            _state.BL = 0;
             _state.DX = handle;
             _state.AX = 1;
         } else {
@@ -1027,6 +1032,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.Replace(block.Value, freeBlock);
             MergeFreeBlocks(freeBlock);
             _xmsHandles.Remove(handle);
+            _state.BL = 0;
             _state.AX = 1;
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("XMS FreeExtendedMemoryBlock succeeded for handle {Handle:X4}h", handle);
@@ -1284,7 +1290,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         _state.AX = 1;
-        uint destPointer = MemoryUtils.ToPhysicalAddress(_state.DX, _state.BX);
+        _state.BL = 0;
         _memory.UInt32[destPointer] = fullAddress;
     }
 
@@ -1318,6 +1324,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
+        _state.BL = 0;
         _state.AX = 1;
         _xmsHandles[handle] = (byte)(lockCount - 1);
     }
@@ -1342,12 +1349,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (!_xmsHandles.TryGetValue(handle, out byte lockCount)) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
             return;
         }
         if (!TryGetBlock(handle, out XmsBlock? block)) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
             return;
         }
 
@@ -1357,6 +1364,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state.BH = lockCount;
         _state.BL = freeHandles;
         _state.DX = sizeKb;
+        _state.EDX &= 0xffff;
     }
 
     /// <summary>
@@ -1386,7 +1394,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     private void ReallocateExtendedMemoryBlockInternal(int handle, uint newSizeInBytes) {
         if (!_xmsHandles.TryGetValue(handle, out byte lockCount)) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
             return;
         }
 
@@ -1398,12 +1406,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (!TryGetBlock(handle, out XmsBlock? block)) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
             return;
         }
 
         if (newSizeInBytes == block.Value.Length) {
             // No change needed
+            _state.BL = 0;
             _state.AX = 1;
             return;
         }
@@ -1414,6 +1423,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.Replace(block.Value, freeBlock);
             MergeFreeBlocks(freeBlock);
             _xmsHandles.Remove(handle);
+            _state.BL = 0;
             _state.AX = 1;
             return;
         }
@@ -1442,7 +1452,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 }
             }
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsOutOfMemory;
+            _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
         }
     }
 
@@ -1462,7 +1472,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void RequestUpperMemoryBlock() {
         _state.AX = 0;
-        _state.DL = (byte)XmsErrorCodes.UmbNoBlocksAvailable;
+        _state.BL = (byte)XmsErrorCodes.UmbNoBlocksAvailable;
     }
 
     /// <summary>
@@ -1480,7 +1490,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void ReleaseUpperMemoryBlock() {
         _state.AX = 0;
-        _state.DL = (byte)XmsErrorCodes.NotImplemented;
+        _state.BL = (byte)XmsErrorCodes.NotImplemented;
     }
 
     /// <summary>
@@ -1513,7 +1523,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void ReallocateUpperMemoryBlock() {
         _state.AX = 0;
-        _state.DL = (byte)XmsErrorCodes.NotImplemented;
+        _state.BL = (byte)XmsErrorCodes.NotImplemented;
     }
 
     /// <summary>
@@ -1630,7 +1640,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         if (!_xmsHandles.TryGetValue(handle, out byte lockCount)) {
             _state.AX = 0;
-            _state.DL = (byte)XmsErrorCodes.XmsInvalidHandle;
+            _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
             return;
         }
         if (!TryGetBlock(handle, out XmsBlock? block)) {
@@ -1744,9 +1754,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         block = null;
         return false;
     }
-
-    private IEnumerable<XmsBlock> GetFreeBlocks() => _xmsBlocksLinkedList.
-        Where(static x => x.IsFree).OrderBy(static x => x.Length);
 
     private bool TryGetFreeHandle([NotNullWhen(true)] out ushort? handle) {
         if (_xmsHandles.Count == MaxHandles) {
