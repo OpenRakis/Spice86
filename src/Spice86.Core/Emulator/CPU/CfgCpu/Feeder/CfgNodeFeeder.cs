@@ -67,7 +67,9 @@ public class CfgNodeFeeder {
 
         if (fromMemory.Address != currentFromGraph.Address) {
             // should never happen
-            throw new UnhandledCfgDiscrepancyException("Nodes from memory and from graph don't have the same address. This should never happen.");
+            throw new UnhandledCfgDiscrepancyException("Nodes from memory and from graph don't have the same address. This should never happen. " +
+                                                       $"From memory: {fromMemory}" +
+                                                       $"From graph: {currentFromGraph}");
         }
 
         // Graph and memory are not aligned ... Need to inject Node with discriminator to select the right one from memory at exec time.

@@ -167,7 +167,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// OR  Day counter on all products after AT <br/>
     /// OR  PS/2 Pointer to reset code with memory preserved
     /// </summary>
-    public SegmentedAddress Jump { get => SegmentedAddress[0x67]; set => SegmentedAddress[0x67] = value; }
+    public SegmentedAddress Jump { get => SegmentedAddress16[0x67]; set => SegmentedAddress16[0x67] = value; }
 
     // Padding at 0x6B
 
@@ -309,7 +309,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// <summary>
     /// Gets or sets the user wait complete flag.
     /// </summary>
-    public SegmentedAddress UserWaitCompleteFlag { get => SegmentedAddress[0x98]; set => SegmentedAddress[0x98] = value; }
+    public SegmentedAddress UserWaitCompleteFlag { get => SegmentedAddress16[0x98]; set => SegmentedAddress16[0x98] = value; }
 
     /// <summary>
     /// Gets or sets the user wait timeout.
@@ -328,7 +328,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     ///  This includes information such as the current video mode,
     ///  and the state of the video card registers <br/>
     /// </summary>
-    public SegmentedAddress VideoSaveTable { get => SegmentedAddress[0xA8]; set => SegmentedAddress[0xA8] = value; }
+    public SegmentedAddress VideoSaveTable { get => SegmentedAddress16[0xA8]; set => SegmentedAddress16[0xA8] = value; }
 
     /// <summary>
     /// Gets the inter application communication area.

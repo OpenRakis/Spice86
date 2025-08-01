@@ -5,22 +5,22 @@ using JetBrains.Annotations;
 using Serilog;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.IO;
 using System.Text;
 
 using Xunit;
-using Xunit.Abstractions;
 
 public class MachineTest
 {
@@ -311,75 +311,49 @@ public class MachineTest
             failOnUnhandledPort: true).Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
-        List<(ushort Port, byte Value)> portValues = new();
-        var debugPortsHandler = new Test386ButNotProtectedModeHandler(machine.IoPortDispatcher,
-            (port, value) => portValues.Add((port, value)));
+        Test386ButNotProtectedModeHandler debugPortsHandler = new Test386ButNotProtectedModeHandler(machine.CpuState, new LoggerService(), machine.IoPortDispatcher);
 
         //Act
-        spice86DependencyInjection.ProgramExecutor.Run();
-
+        try {
+            spice86DependencyInjection.ProgramExecutor.Run();
+        } finally {
+            Log.Information("Reached POST values {portValues}. Ascii Error is {asciiError}", debugPortsHandler.PostValues, debugPortsHandler.AsciiError);
+        }
 
         //Assert
-        Assert.Equal(0x999, portValues.Last().Port);
-        //Normally, we should test if 0xFF has been posted last, at port 0x999
         if (enableCfgCpu) {
-            //test3865.asm stops at 2 tests...?!
-            Assert.Equal(2, portValues.Count);
+            Assert.Equal(8, debugPortsHandler.PostValues.Count);
+            // FF means test finished normally
+            Assert.Equal(0xFF, debugPortsHandler.PostValues.Last());
         } else {
-            //test3865.asm stops at 6 tests...?!
-            Assert.Equal(6, portValues.Count);
+            Assert.Equal(6, debugPortsHandler.PostValues.Count);
         }
         CompareListingWithExpected(binName, enableCfgCpu, machine);
     }
 
-    private class Test386ButNotProtectedModeHandler : IIOPortHandler {
-        private readonly IOPortDispatcher _ioPortDispatcher;
-        private readonly Action<ushort, byte> _assert;
-        public Test386ButNotProtectedModeHandler(IOPortDispatcher ioPortDispatcher, Action<ushort, byte> assert) {
-            this._ioPortDispatcher = ioPortDispatcher;
-            this._assert = assert;
-            AddIoPortHandlers();
+    private class Test386ButNotProtectedModeHandler : DefaultIOPortHandler {
+        private const int PostPort = 0x999;
+        private const int AsciiOutPort = 0x998;
+
+        public List<ushort> PostValues { get; } = new();
+        public string AsciiError { get; private set; } = "";
+
+        public Test386ButNotProtectedModeHandler(State state, ILoggerService loggerService,
+            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
+            ioPortDispatcher.AddIOPortHandler(PostPort, this);
+            ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);
         }
 
-        private void AddIoPortHandlers() {
-            _ioPortDispatcher.AddIOPortHandler(0x999, this);
-            _ioPortDispatcher.AddIOPortHandler(0x998, this);
-        }
+        public override void WriteByte(ushort port, byte value) {
+            if (port == AsciiOutPort) {
+                AsciiError += Encoding.ASCII.GetString(new byte[] { value });
+            } else if (port == PostPort) {
+                if (PostValues.Contains(value)) {
+                    throw new UnhandledOperationException(_state, $"POST value {value} already sent. Is test looping?");
+                }
 
-        public ushort ReadWord(ushort port) {
-            throw new NotImplementedException();
-        }
-
-        public uint ReadDWord(ushort port) {
-            throw new NotImplementedException();
-        }
-
-        public void WriteWord(ushort port, ushort value) {
-            throw new NotImplementedException();
-        }
-
-        public void WriteDWord(ushort port, uint value) {
-            throw new NotImplementedException();
-        }
-
-        public void UpdateLastPortRead(ushort port) {
-            //NOP
-        }
-
-        public void UpdateLastPortWrite(ushort port, uint value) {
-            //NOP
-        }
-
-        public byte ReadByte(ushort port) {
-            throw new NotImplementedException();
-        }
-
-        public void WriteByte(ushort port, byte value) {
-            if(port == 0x998) {
-                string asciiValue = Encoding.ASCII.GetString(new byte[] { value });
-                Log.Logger.Warning($"Port 0x400: {asciiValue}");
+                PostValues.Add(value);
             }
-            _assert(port, value);
         }
     }
 

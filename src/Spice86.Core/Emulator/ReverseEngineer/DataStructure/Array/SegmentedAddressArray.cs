@@ -29,11 +29,11 @@ public class SegmentedAddressArray : MemoryBasedArray<SegmentedAddress> {
     public override SegmentedAddress this[int i] {
         get {
             uint offset = IndexToOffset(i);
-            return SegmentedAddress[offset];
+            return SegmentedAddress16[offset];
         }
         set {
             uint offset = IndexToOffset(i);
-            SegmentedAddress[offset] = value;
+            SegmentedAddress16[offset] = value;
         }
     }
 }

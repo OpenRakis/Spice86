@@ -1,0 +1,34 @@
+@moxy
+@attribute required int OperandSize
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+#nullable enable
+public partial class {{ moxy.Class.Name }} : InstructionWithValueField<ushort>, IReturnInstruction {
+
+    public {{ moxy.Class.Name }}(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes,
+        InstructionField<ushort> valueField) : base(address, opcodeField, prefixes, valueField, null) {
+    }
+
+    public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.HandleFarRet{{OperandSize}}(this, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.RET_FAR, builder.InstructionField.ToNode(ValueField)!);
+    }
+}

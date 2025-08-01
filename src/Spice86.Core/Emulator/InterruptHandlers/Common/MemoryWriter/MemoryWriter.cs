@@ -57,7 +57,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="address">data to write</param>
     public void WriteSegmentedAddress(SegmentedAddress address) {
-        _memory.SegmentedAddress[CurrentAddress.Segment, CurrentAddress.Offset] = address;
+        _memory.SegmentedAddress16[CurrentAddress.Segment, CurrentAddress.Offset] = address;
         CurrentAddress += 4;
     }
 
