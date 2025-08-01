@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 public class Interrupt3 : CfgInstruction {
-    public Interrupt3(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public Interrupt3(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, null) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

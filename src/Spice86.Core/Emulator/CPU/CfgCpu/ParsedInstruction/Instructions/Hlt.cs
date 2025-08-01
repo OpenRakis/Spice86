@@ -7,7 +7,7 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Hlt : CfgInstruction {
     public Hlt(SegmentedAddress address, InstructionField<ushort> opcodeField) :
-        base(address, opcodeField) {
+        base(address, opcodeField, 0) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

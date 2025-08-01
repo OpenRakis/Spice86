@@ -24,6 +24,11 @@ public interface IRegistersViewModel : INotifyPropertyChanged {
     ObservableCollection<RegisterViewModel> PointerRegisters { get; }
 
     /// <summary>
+    /// Gets the eflag register.
+    /// </summary>
+    public RegisterViewModel EFlagRegister { get; }
+
+    /// <summary>
     /// Gets the CPU flags.
     /// </summary>
     ObservableCollection<FlagViewModel> Flags { get; }

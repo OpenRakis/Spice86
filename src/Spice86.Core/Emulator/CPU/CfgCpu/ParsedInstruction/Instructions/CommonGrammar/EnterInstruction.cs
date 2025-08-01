@@ -7,7 +7,8 @@ public abstract class EnterInstruction : CfgInstruction {
     public EnterInstruction(SegmentedAddress address,
         InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
         InstructionField<ushort> storageField,
-        InstructionField<byte> levelField) : base(address, opcodeField, prefixes) {
+        InstructionField<byte> levelField,
+        int? maxSuccessorsCount) : base(address, opcodeField, prefixes, maxSuccessorsCount) {
         StorageField = storageField;
         LevelField = levelField;
         AddField(StorageField);

@@ -16,6 +16,8 @@ using Spice86.Shared.Emulator.Memory;
 public partial class {{ moxy.Class.Name }} : JmpNearImm{{Size}} {
     public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, InstructionField<{{SignedType}}> offsetField) :
         base(address, opcodeField, prefixes, offsetField) {
+        // JmpNearImm8 Has 1 but we are a conditional instruction, so 2
+        MaxSuccessorsCount = 2;
     }
 
     public override void Execute(InstructionExecutionHelper helper) {

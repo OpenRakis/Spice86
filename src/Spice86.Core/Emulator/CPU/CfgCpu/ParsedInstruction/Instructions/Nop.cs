@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Shared.Emulator.Memory;
 
 public class Nop : CfgInstruction {
-    public Nop(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField) {
+    public Nop(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, 1) {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
