@@ -32,7 +32,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = baseMemory;
         RegisterMapping(0, memorySize, Ram);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(this);
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(this);
         A20Gate = a20gate;
     }
 
@@ -184,7 +184,12 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     }
 
     /// <inheritdoc/>
-    public override SegmentedAddressIndexer SegmentedAddress {
+    public override SegmentedAddress16Indexer SegmentedAddress16 {
+        get;
+    }
+    
+    /// <inheritdoc/>
+    public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
 

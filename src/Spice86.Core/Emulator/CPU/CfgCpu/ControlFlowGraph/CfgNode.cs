@@ -32,4 +32,8 @@ public abstract class CfgNode : ICfgNode {
     public bool CanHaveMoreSuccessors { get; set; } = true;
     
     public ICfgNode? UniqueSuccessor { get; set; }
+
+    public override string ToString() {
+        return $"CfgNode of type {GetType()} with address {Address} and id {Id} IsLive {IsLive}";
+    }
 }

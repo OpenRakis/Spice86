@@ -1,0 +1,36 @@
+@moxy
+@attribute required String SignedType
+@attribute required int OperandSize
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithOffsetField<{{SignedType}}> {
+    private readonly ushort _targetIp;
+
+    public {{ moxy.Class.Name }}(
+        SegmentedAddress address,
+        InstructionField<ushort> opcodeField,
+        List<InstructionPrefix> prefixes,
+        InstructionField<{{SignedType}}> offsetField) :
+        base(address, opcodeField, prefixes, offsetField, null) {
+        _targetIp = (ushort)(NextInMemoryAddress.Offset + offsetField.Value);
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.NearCallWithReturnIpNextInstruction{{OperandSize}}(this, _targetIp);
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.CALL_NEAR, builder.Constant.ToNode(_targetIp));
+    }
+}

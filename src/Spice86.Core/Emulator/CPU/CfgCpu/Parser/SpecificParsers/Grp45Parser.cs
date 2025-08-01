@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Shared.Emulator.Memory;
 
 public class Grp45Parser : BaseGrpOperationParser {
     public Grp45Parser(BaseInstructionParser other) : base(other) {
@@ -29,8 +30,12 @@ public class Grp45Parser : BaseGrpOperationParser {
             1 => context.HasOperandSize32
                 ? new Grp45RmDec32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
                 : new Grp45RmDec16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
-            2 => new Grp5RmCallNear(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
-            3 => new Grp5RmCallFar(context.Address, context.OpcodeField, context.Prefixes, _modRmParser.EnsureNotMode3(modRmContext)),
+            2 => context.HasOperandSize32
+                ? new Grp5RmCallNear32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
+                : new Grp5RmCallNear16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            3 => context.HasOperandSize32
+                ? new Grp5RmCallFar32(context.Address, context.OpcodeField, context.Prefixes, _modRmParser.EnsureNotMode3(modRmContext))
+                : new Grp5RmCallFar16(context.Address, context.OpcodeField, context.Prefixes, _modRmParser.EnsureNotMode3(modRmContext)),
             4 => new Grp5RmJumpNear(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
             5 => new Grp5RmJumpFar(context.Address, context.OpcodeField, context.Prefixes, _modRmParser.EnsureNotMode3(modRmContext)),
             6 => context.HasOperandSize32

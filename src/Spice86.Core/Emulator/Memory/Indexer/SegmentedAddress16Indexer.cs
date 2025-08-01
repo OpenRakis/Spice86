@@ -10,14 +10,14 @@ using Spice86.Shared.Emulator.Memory;
 /// Instantiates objects of type SegmentedAddress for the return address.
 /// </para>
 /// </summary>
-public class SegmentedAddressIndexer : MemoryIndexer<SegmentedAddress> {
+public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     private readonly UInt16Indexer _uInt16Indexer;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="uInt16Indexer">The class that provides indexed unsigned 16-byte integer access over memory.</param>
-    public SegmentedAddressIndexer(UInt16Indexer uInt16Indexer) {
+    public SegmentedAddress16Indexer(UInt16Indexer uInt16Indexer) {
         _uInt16Indexer = uInt16Indexer;
     }
 

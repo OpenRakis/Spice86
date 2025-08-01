@@ -39,7 +39,12 @@ public class ByteArrayBasedIndexable : Indexable {
     public override Int32Indexer Int32 { get; }
 
     /// <inheritdoc/>
-    public override SegmentedAddressIndexer SegmentedAddress {
+    public override SegmentedAddress16Indexer SegmentedAddress16 {
+        get;
+    }
+    
+    /// <inheritdoc/>
+    public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
 
@@ -49,6 +54,6 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <param name="array">The byte array used as RAM storage.</param>
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayReaderWriter(array);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter);
     }
 }

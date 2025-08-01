@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
@@ -37,7 +38,7 @@ public class InstructionParser : BaseInstructionParser {
     private readonly LeaParser _leaParser;
     private readonly LeaveParser _leaveParser;
     private readonly LesParser _lesParser;
-    private readonly LesParser _lssParser;
+    private readonly LssParser _lssParser;
     private readonly LfsParser _lfsParser;
     private readonly LgsParser _lgsParser;
     private readonly LodsParser _lodsParser;
@@ -164,8 +165,11 @@ public class InstructionParser : BaseInstructionParser {
         List<InstructionPrefix> prefixes = ParsePrefixes();
         InstructionField<ushort> opcodeField = ReadOpcode();
         ParsingContext context = new(address, opcodeField, prefixes);
-        CfgInstruction res = ParseCfgInstruction(context);
-        return res;
+        try {
+            return ParseCfgInstruction(context);
+        } catch (CpuException e) {
+            return new InvalidInstruction(address, opcodeField, prefixes, e);
+        }
     }
 
     private static bool HasOperandSize32(IList<InstructionPrefix> prefixes) {
@@ -389,8 +393,12 @@ public class InstructionParser : BaseInstructionParser {
             case 0x99:
                 return _cwdParser.Parse(context);
             case 0x9A:
-                return new CallFarImm16(context.Address, context.OpcodeField,
-                    _instructionReader.SegmentedAddress.NextField(true));
+                if (context.HasOperandSize32) {
+                    return new CallFarImm32(context.Address, context.OpcodeField, context.Prefixes,
+                        _instructionReader.SegmentedAddress32.NextField(true));
+                }
+                return new CallFarImm16(context.Address, context.OpcodeField, context.Prefixes,
+                    _instructionReader.SegmentedAddress16.NextField(true));
             case 0x9B:
                 return new Fwait(context.Address, context.OpcodeField);
             case 0x9C:
@@ -447,9 +455,17 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC1:
                 return _grp2Parser.Parse(context);
             case 0xC2:
-                return new RetNearImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                if (context.HasOperandSize32) {
+                    return new RetNearImm32(context.Address, context.OpcodeField, context.Prefixes,
+                        _instructionReader.UInt16.NextField(false));
+                }
+                return new RetNearImm16(context.Address, context.OpcodeField, context.Prefixes,
+                    _instructionReader.UInt16.NextField(false));
             case 0xC3:
-                return new RetNear(context.Address, context.OpcodeField);
+                if (context.HasOperandSize32) {
+                    return new RetNear32(context.Address, context.OpcodeField, context.Prefixes);
+                }
+                return new RetNear16(context.Address, context.OpcodeField, context.Prefixes);
             case 0xC4:
                 return _lesParser.Parse(context);
             case 0xC5:
@@ -469,9 +485,17 @@ public class InstructionParser : BaseInstructionParser {
             case 0xC9:
                 return _leaveParser.Parse(context);
             case 0xCA:
-                return new RetFarImm(context.Address, context.OpcodeField, _instructionReader.UInt16.NextField(false));
+                if (context.HasOperandSize32) {
+                    return new RetFarImm32(context.Address, context.OpcodeField, context.Prefixes,
+                        _instructionReader.UInt16.NextField(false));
+                }
+                return new RetFarImm16(context.Address, context.OpcodeField, context.Prefixes,
+                    _instructionReader.UInt16.NextField(false));
             case 0xCB:
-                return new RetFar(context.Address, context.OpcodeField);
+                if (context.HasOperandSize32) {
+                    return new RetFar32(context.Address, context.OpcodeField, context.Prefixes);
+                }
+                return new RetFar16(context.Address, context.OpcodeField, context.Prefixes);
             case 0xCC:
                 return new Interrupt3(context.Address, context.OpcodeField);
             case 0xCD:
@@ -544,7 +568,11 @@ public class InstructionParser : BaseInstructionParser {
             case 0xE7:
                 return _outAccImmParser.Parse(context);
             case 0xE8:
-                return new CallNearImm(context.Address, context.OpcodeField, context.Prefixes,
+                if (HasOperandSize32(context.Prefixes)) {
+                    return new CallNearImm32(context.Address, context.OpcodeField, context.Prefixes,
+                        _instructionReader.Int32.NextField(true));
+                }
+                return new CallNearImm16(context.Address, context.OpcodeField, context.Prefixes,
                     _instructionReader.Int16.NextField(true));
             case 0xE9:
                 if (HasOperandSize32(context.Prefixes)) {
@@ -555,8 +583,12 @@ public class InstructionParser : BaseInstructionParser {
                 return new JmpNearImm16(context.Address, context.OpcodeField, context.Prefixes,
                     _instructionReader.Int16.NextField(true));
             case 0xEA:
-                return new JmpFarImm(context.Address, context.OpcodeField,
-                    _instructionReader.SegmentedAddress.NextField(true));
+                if (HasOperandSize32(context.Prefixes)) {
+                    return new JmpFarImm(context.Address, context.OpcodeField, context.Prefixes,
+                        _instructionReader.SegmentedAddress32.NextField(true));
+                }
+                return new JmpFarImm(context.Address, context.OpcodeField, context.Prefixes,
+                    _instructionReader.SegmentedAddress16.NextField(true));
             case 0xEB:
                 return new JmpNearImm8(context.Address, context.OpcodeField, context.Prefixes,
                     _instructionReader.Int8.NextField(true));
