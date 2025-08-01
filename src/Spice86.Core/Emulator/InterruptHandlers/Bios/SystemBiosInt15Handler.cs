@@ -32,7 +32,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="xms">The DOS Extended Memory Manager. Optional.<br/>
-    /// Hooks functions <see cref="GetExtendedMemorySize"/> and <see cref="CopyExtendedMemory"/> if present.</param>
+    /// Hooks function <see cref="GetExtendedMemorySize"/> if present.</param>
     public SystemBiosInt15Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, bool initializeResetVector,
@@ -87,7 +87,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
                 SetCarryFlag(false, calledFromVm);
                 break;
             case 2:
-                State.AL = (byte) (_a20Gate.IsEnabled ? 0x1 : 0x0);
+                State.AL = (byte)(_a20Gate.IsEnabled ? 0x1 : 0x0);
                 State.AH = 0; // success
                 SetCarryFlag(false, calledFromVm);
                 break;
@@ -100,7 +100,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
             default:
                 if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("Unrecognized command in AL for {MethodName}", 
+                    LoggerService.Error("Unrecognized command in AL for {MethodName}",
                         nameof(ToggleA20GateOrGetStatus));
                 }
                 break;
@@ -132,6 +132,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// INT 15h, AH=87h - SYSTEM - COPY EXTENDED MEMORY
     /// <para>
     /// Copies data in extended memory using a global descriptor table.
+    /// This is a reimplementation of the SeaBIOS handle_1587 function.
     /// </para><br/>
     /// <b>Inputs:</b><br/>
     /// AH = 87h<br/>
@@ -143,23 +144,82 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// AH = status (see RBIL #00498)<br/>
     /// </summary>
     public void CopyExtendedMemory(bool calledFromVm) {
-        if (_extendedMemoryManager is not null) {
-            _extendedMemoryManager.CopyExtendedMemory();
-            State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+        // Save current A20 state and enable it for extended memory access
+        bool prevA20Enable = _a20Gate.IsEnabled;
+        _a20Gate.IsEnabled = true;
+
+        uint wordCount = State.CX;
+        uint byteCount = wordCount * 2;
+        
+        // Validate word count first
+        if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+            _a20Gate.IsEnabled = prevA20Enable;
             return;
         }
-        bool enabled = _a20Gate.IsEnabled;
-        _a20Gate.IsEnabled = true;
-        ushort numberOfWordsToCopy = State.CX;
-        uint globalDescriptorTableAddress = MemoryUtils.ToPhysicalAddress(
-            State.ES, State.SI);
-        var descriptor = new GlobalDescriptorTable(Memory,
-            globalDescriptorTableAddress);
-        Memory.MemCopy(descriptor.GetLinearSourceAddress(),
-            descriptor.GetLinearDestAddress(),
-            numberOfWordsToCopy);
-        _a20Gate.IsEnabled = enabled;
+
+        // Maximum 128K transfer on 386+ (following SeaBIOS comment)
+        if (wordCount > 0x8000) {
+            SetCarryFlag(true, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.InvalidLength;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        uint gdtPhysicalAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.SI);
+        var gdt = new GlobalDescriptorTable(Memory, gdtPhysicalAddress);
+
+        uint sourceAddress = gdt.GetLinearSourceAddress();
+        uint destinationAddress = gdt.GetLinearDestAddress();
+
+        // Validate addresses for overflow
+        if (sourceAddress + byteCount < sourceAddress) {
+            SetCarryFlag(true, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        if (destinationAddress + byteCount < destinationAddress) {
+            SetCarryFlag(true, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.InvalidDestination;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        // Validate memory bounds - ensure we don't exceed available memory
+        uint maxMemoryAddress = (uint)Memory.Length;
+        if (sourceAddress + byteCount > maxMemoryAddress) {
+            SetCarryFlag(true, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        if (destinationAddress + byteCount > maxMemoryAddress) {
+            SetCarryFlag(true, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.InvalidDestination;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        // Check for problematic overlap where source == destination would be a no-op anyway
+        if (sourceAddress == destinationAddress) {
+            SetCarryFlag(false, calledFromVm);
+            State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
+            _a20Gate.IsEnabled = prevA20Enable;
+            return;
+        }
+
+        // Perform the memory copy using spans (following XMS pattern)
+        Span<byte> sourceSpan = Memory.GetSpan((int)sourceAddress, (int)byteCount);
+        Span<byte> destinationSpan = Memory.GetSpan((int)destinationAddress, (int)byteCount);
+        
+        sourceSpan.CopyTo(destinationSpan);
+
+        // Restore A20 state
+        _a20Gate.IsEnabled = prevA20Enable;
         SetCarryFlag(false, calledFromVm);
         State.AH = (byte)ExtendedMemoryCopyStatus.SourceCopiedIntoDest;
     }
