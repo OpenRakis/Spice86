@@ -389,6 +389,9 @@ Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into f
 
 Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 17. That's how Ghidra likes it.
 
+### Cfg Cpu
+Doc [here](doc/cfgcpuReadme.md)
+
 ### Some screenshots
 Cryo dune:
 

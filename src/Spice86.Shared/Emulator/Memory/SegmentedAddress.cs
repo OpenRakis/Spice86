@@ -47,15 +47,6 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     }
 
     /// <summary>
-    /// Determines whether the current SegmentedAddress object is equivalent to another SegmentedAddress object.
-    /// </summary>
-    /// <param name="other">The object to compare with the current SegmentedAddress object.</param>
-    /// <returns>true if the objects are equivalent; otherwise, false.</returns>
-    public bool Equals(SegmentedAddress other) {
-        return Linear == other.Linear;
-    }
-
-    /// <summary>
     /// Compares the current SegmentedAddress object with another SegmentedAddress object.
     /// </summary>
     /// <param name="other">The SegmentedAddress to compare with the current SegmentedAddress.</param>
@@ -145,14 +136,6 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     /// <returns>A new SegmentedAddress object.</returns>
     public static implicit operator SegmentedAddress((ushort sgement, ushort offset) segmentOffset) {
         return new SegmentedAddress(segmentOffset.sgement, segmentOffset.offset);
-    }
-
-    /// <summary>
-    /// Gets the hash code for the current SegmentedAddress object.
-    /// </summary>
-    /// <returns>A 32-bit signed integer hash code.</returns>
-    public override int GetHashCode() {
-        return (int)Linear;
     }
 
     /// <summary>

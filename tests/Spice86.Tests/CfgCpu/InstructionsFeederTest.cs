@@ -225,6 +225,6 @@ public class InstructionsFeederTest {
 
 
         // Assert
-        Assert.Equal(instruction1, instruction2);
+        Assert.NotEqual(instruction1, instruction2);
     }
 }

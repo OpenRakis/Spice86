@@ -1,0 +1,17 @@
+F000:0000 mov AX,1
+F000:0003 push -17
+F000:0005 push 0x0D
+F000:0007 ret far
+F000:0008 mov SP,0x1000
+F000:000B mov BX,0x1000
+F000:000E mov SS,BX
+F000:0010 mov AX,0
+F000:0013 push 0xF000
+F000:0016 push 0xFEFD
+F000:0019 ret far
+FFEF:000D jmp near 0x0110
+F000:FEFD jmp near 0
+F000:FFF0 jmp near 8
+FFEF:0110 mov AX,2
+FFEF:0113 mov word ptr DS:[0],AX
+FFEF:0116 hlt
