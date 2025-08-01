@@ -48,7 +48,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// <returns>Array of blocks to replace this block.</returns>
     public XmsBlock[] Allocate(int handle, uint length) {
         if (!IsFree) {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("cannot allocate a XMS block that is not free.");
         }
 
         if (length > Length) {
@@ -56,7 +56,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
         }
 
         if (length == Length) {
-            return new XmsBlock[] { new XmsBlock(handle, Offset, length, false) };
+            return [new XmsBlock(handle, Offset, length, false)];
         }
 
         var blocks = new XmsBlock[2];
@@ -80,7 +80,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// <returns>Merged block of memory.</returns>
     public XmsBlock Join(XmsBlock other) {
         if (!IsFree || !other.IsFree) {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException("cannot join XMS blocks when any of them are not free.");
         }
 
         if (Offset + Length != other.Offset) {
