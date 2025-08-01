@@ -188,7 +188,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         }
 
         // Validate memory bounds - ensure we don't exceed available memory
-        uint maxMemoryAddress = (uint)Memory.Length;
+        uint maxMemoryAddress = Memory.Length;
         if (sourceAddress + byteCount > maxMemoryAddress) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
