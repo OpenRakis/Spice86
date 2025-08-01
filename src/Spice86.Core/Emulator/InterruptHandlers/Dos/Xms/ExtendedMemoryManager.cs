@@ -1683,6 +1683,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Zero-length allocations are allowed.
         if (length == 0) {
+            _xmsBlocksLinkedList.AddLast(new XmsBlock(handle, 0, 0, free: false));
             _xmsHandles.Add(handle, 0);
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
