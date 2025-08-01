@@ -94,7 +94,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
-        _logger = loggerService.WithLogLevel(LogEventLevel.Debug);
+        _logger = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         Functions = new AvaloniaList<FunctionInfo>(functionsInformation.Select(x => new FunctionInfo {
