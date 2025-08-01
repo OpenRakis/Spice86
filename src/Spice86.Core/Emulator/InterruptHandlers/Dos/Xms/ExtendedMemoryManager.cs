@@ -106,35 +106,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     private const uint A20MaxTimesEnabled = uint.MaxValue;
 
-    /// <summary>
-    /// Logger service for recording XMS operations and errors.
-    /// </summary>
     private readonly ILoggerService _loggerService;
-
-    /// <summary>
-    /// CPU state containing registers used for XMS function calls and returns.
-    /// </summary>
-    /// <remarks>
-    /// XMS functions take arguments in CPU registers and return results in registers:
-    /// - AH: Contains the XMS function code (e.g., 00h, 09h, 0Ch)
-    /// - AX: Return value, 0001h (success) or 0000h (failure)
-    /// - BL: Error code on failure
-    /// - Other registers: Function-specific parameters and return values
-    /// </remarks>
     private readonly State _state;
-
-    /// <summary>
-    /// Controller for the A20 address line.
-    /// </summary>
-    /// <remarks>
-    /// The A20 address line must be enabled to access memory above 1MB.
-    /// XMS provides functions to control the A20 line state both globally and locally.
-    /// </remarks>
     private readonly A20Gate _a20Gate;
-
-    /// <summary>
-    /// Main memory bus
-    /// </summary>
     private readonly IMemory _memory;
 
     /// <summary>
@@ -260,7 +234,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService;
+        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
