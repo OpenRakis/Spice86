@@ -57,6 +57,8 @@ public class DosInt2fHandler : InterruptHandler {
         AddAction(0x16, () => DosVirtualMachineServices(true));
         AddAction(0x15, () => MscdexServices(true));
         AddAction(0x43, () => XmsServices(true));
+        AddAction(0x46, () => WindowsVirtualMachineServices());
+        AddAction(0x4A, () => HighMemoryAreaServices());
     }
 
     public void ShareRelatedServices(bool calledFromVm) {
@@ -87,6 +89,21 @@ public class DosInt2fHandler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    public void HighMemoryAreaServices() {
+        switch(State.AL) {
+            case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
+                State.BX = 0; // Number of bytes available / Amount allocated
+                State.ES = 0xFFFF; // Location of HMA
+                State.DI = 0xFFFF; // Amount of allocated HMA memory
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("Unhandled INT2F HMA subfunction: {AX:X2}", State.AX);
+                }
+                break;
+        }
+    }
+
     /// <summary>
     /// A service that does nothing, but set the carry flag to false, and CX to 0 to indicate success.
     /// <see href="https://github.com/FDOS/kernel/blob/master/kernel/int2f.asm"/> -> 'int2f_call:'.
@@ -95,6 +112,19 @@ public class DosInt2fHandler : InterruptHandler {
     public void DosVirtualMachineServices(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.CX = 0;
+    }
+
+    public void WindowsVirtualMachineServices() {
+        switch(State.AL) {
+            case 0x80: //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
+                State.AX = 1; //We are not Windows, but plain ol' MS-DOS.
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("Unhandled INT2F Windows VM subfunction: {AX:X2}", State.AX);
+                }
+                break;
+        }
     }
 
     /// <summary>
