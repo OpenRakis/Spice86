@@ -115,7 +115,7 @@ public class DosInt2fHandler : InterruptHandler {
         switch(State.AL) {
             case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
                 State.BX = 0; // Number of bytes available / Amount allocated
-                State.ES = 0xFFFF; // Location of HMA
+                State.ES = A20Gate.SegmentStartOfHighMemoryArea;
                 State.DI = 0xFFFF; // Amount of allocated HMA memory
                 break;
             default:

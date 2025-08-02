@@ -8,6 +8,11 @@ using System.Diagnostics.Contracts;
 /// </summary>
 public class A20Gate {
     /// <summary>
+    /// Represents the segment address marking the start of the high memory area.
+    /// </summary>
+    public const ushort SegmentStartOfHighMemoryArea = 0xFFFF;
+
+    /// <summary>
     /// This is the start of the HMA. <br/>
     /// This value is equal to 1 MB.
     /// </summary>
