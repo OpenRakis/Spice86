@@ -53,12 +53,13 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
+        AddAction(0x1A, () => ShareRelatedServices(true));
         AddAction(0x10, () => ShareRelatedServices(true));
-        AddAction(0x16, () => DosVirtualMachineServices(true));
+        AddAction(0x16, DosVirtualMachineServices);
         AddAction(0x15, () => MscdexServices(true));
         AddAction(0x43, () => XmsServices(true));
-        AddAction(0x46, () => WindowsVirtualMachineServices());
-        AddAction(0x4A, () => HighMemoryAreaServices());
+        AddAction(0x46, WindowsVirtualMachineServices);
+        AddAction(0x4A, HighMemoryAreaServices);
     }
 
     public void ShareRelatedServices(bool calledFromVm) {
@@ -105,13 +106,13 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// A service that does nothing, but set the carry flag to false, and CX to 0 to indicate success.
-    /// <see href="https://github.com/FDOS/kernel/blob/master/kernel/int2f.asm"/> -> 'int2f_call:'.
+    /// A service that does nothing, see dos_misc.cpp in DOSBox Staging
     /// </summary>
-    /// <param name="calledFromVm">Whether it was called by the emulator or not</param>
-    public void DosVirtualMachineServices(bool calledFromVm) {
-        SetCarryFlag(false, calledFromVm);
-        State.CX = 0;
+    public void DosVirtualMachineServices() {
+        //Do nothing, ,ot even set CX or CF...
+        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("Unhandled INT2F DOS VM subfunction: {AX:X2}", State.AX);
+        }
     }
 
     public void WindowsVirtualMachineServices() {
