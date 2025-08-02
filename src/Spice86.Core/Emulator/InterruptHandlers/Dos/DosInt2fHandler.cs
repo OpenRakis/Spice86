@@ -53,8 +53,8 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     private void FillDispatchTable() {
-        AddAction(0x1A, () => ShareRelatedServices(true));
-        AddAction(0x10, () => ShareRelatedServices(true));
+        AddAction(0x10, ShareExeServices);
+        AddAction(0x1A, AnsiConsoleServices);
         AddAction(0x16, DosVirtualMachineServices);
         AddAction(0x15, () => MscdexServices(true));
         AddAction(0x43, () => XmsServices(true));
@@ -62,10 +62,31 @@ public class DosInt2fHandler : InterruptHandler {
         AddAction(0x4A, HighMemoryAreaServices);
     }
 
-    public void ShareRelatedServices(bool calledFromVm) {
-        if(State.AX == 0x1000) {
-            //report SHARE.EXE as installed...
-            State.AL = 0xFF;
+    public void ShareExeServices() {
+        switch (State.AL) {
+            case 0x0:
+                //report SHARE.EXE as installed...
+                State.AL = 0xFF;
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("{MethodName}: value {AX:X2} not supported", nameof(ShareExeServices), State.AX);
+                }
+                break;
+        }
+    }
+
+    public void AnsiConsoleServices() {
+        switch (State.AL) {
+            case 0x0:
+                //Our ANSI console driver is installed
+                State.AL = 0xFF;
+                break;
+            default:
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("{MethodName}: value {AX:X2} not supported", nameof(AnsiConsoleServices), State.AX);
+                }
+                break;
         }
     }
 
