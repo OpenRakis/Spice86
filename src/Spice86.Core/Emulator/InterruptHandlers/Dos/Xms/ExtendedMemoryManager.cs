@@ -253,6 +253,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Initialize XMS memory as a single free block
         _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsRam.Size, true));
+        _a20State.IsGloballyEnabled = _a20Gate.IsEnabled;
     }
 
     /// <summary>
