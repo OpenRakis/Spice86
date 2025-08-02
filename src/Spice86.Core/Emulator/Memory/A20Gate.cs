@@ -18,6 +18,11 @@ public class A20Gate {
     /// Real Mode cannot access memory beyond this. <br/>
     /// This value equals to 1 MB + 65 519 bytes.
     /// </summary>
+    /// <remarks>
+    /// For the DOS XMS device, Microsoft XMS TEST.C considers it an error to allow real mode
+    /// pointers + length to extend past the end of the
+    /// 8086-accessible conventional memory area.
+    /// </remarks>
     public const uint EndOfHighMemoryArea = 0x10FFEF;
 
     /// <summary>

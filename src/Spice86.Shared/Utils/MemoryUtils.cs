@@ -23,8 +23,18 @@ public static class MemoryUtils {
     /// Converts a physical address to its corresponding segment.
     /// </summary>
     /// <param name="physicalAddress">The physical address to convert.</param>
-    /// <returns>The segment of the physical address.</returns>
+    /// <returns>The segment corresponding to the physical address.</returns>
     public static ushort ToSegment(uint physicalAddress) {
         return (ushort)(physicalAddress >> 4);
+    }
+
+    /// <summary>
+    /// Converts a physical address to its offset, to be used in a segment:offset pair.
+    /// </summary>
+    /// <remarks>Ensure that you call <see cref="ToSegment(uint)"/> first in order to get a segmented address.</remarks>
+    /// <param name="physicalAddress">The physical address to convert. Must be a 32-bit unsigned integer.</param>
+    /// <returns>The offset portion of the segmented address as a 16-bit unsigned integer.</returns>
+    public static ushort ToOffset(uint physicalAddress) {
+        return (ushort)(physicalAddress & 0xffff);
     }
 }

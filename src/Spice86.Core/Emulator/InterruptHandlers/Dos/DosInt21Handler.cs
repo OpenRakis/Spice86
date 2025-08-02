@@ -104,9 +104,9 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
-        AddAction(0x3D, () => OpenFile(true));
-        AddAction(0x3E, () => CloseFile(true));
-        AddAction(0x3F, () => ReadFile(true));
+        AddAction(0x3D, () => OpenFileorDevice(true));
+        AddAction(0x3E, () => CloseFileOrDevice(true));
+        AddAction(0x3F, () => ReadFileOrDevice(true));
         AddAction(0x40, () => WriteToFileOrDevice(true));
         AddAction(0x41, () => RemoveFile(true));
         AddAction(0x42, () => MoveFilePointerUsingHandle(true));
@@ -395,12 +395,12 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns> 
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
-    public void CloseFile(bool calledFromVm) {
+    public void CloseFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("CLOSE FILE handle {FileHandle}", ConvertUtils.ToHex(fileHandle));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFile(
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFileOrDevice(
             fileHandle);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -937,7 +937,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    public void OpenFile(bool calledFromVm) {
+    public void OpenFileorDevice(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
@@ -946,7 +946,7 @@ public class DosInt21Handler : InterruptHandler {
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFile(
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFileOrDevice(
             fileName, fileAccessMode);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
@@ -991,7 +991,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
-    public void ReadFile(bool calledFromVm) {
+    public void ReadFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort readLength = State.CX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -1000,7 +1000,7 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFile(
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFileOrDevice(
             fileHandle, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
