@@ -1753,7 +1753,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             handle = null;
             return false;
         }
-        ushort newKey = 0;
+        ushort newKey = 1;
         while (_xmsHandles.ContainsKey(newKey)) {
             newKey++;
         }
