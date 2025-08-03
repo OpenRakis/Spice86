@@ -21,7 +21,7 @@ public class DosFileOperationResult {
     /// </summary>
     /// <param name="errorCode">The error code.</param>
     /// <returns>A new instance of the class indicating an error.</returns>
-    public static DosFileOperationResult Error(ErrorCode errorCode) {
+    public static DosFileOperationResult Error(DosErrorCode errorCode) {
         return new DosFileOperationResult(true, false, (uint?)errorCode);
     }
 

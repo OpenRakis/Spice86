@@ -88,6 +88,23 @@ public class DosProcessManager : DosFileLoader {
     public override byte[] LoadFile(string file, string? arguments) {
         DosProgramSegmentPrefix psp = CurrentPsp;
 
+        //ushort pspSegment = GetCurrentPspSegment();
+        //ushort startSegment = (ushort)(pspSegment - 1);
+        //ushort size = (ushort)(DosMemoryManager.LastFreeSegment - startSegment);
+        //DosMemoryControlBlock pspMcb = new DosMemoryControlBlock(_memory,
+        //    MemoryUtils.ToPhysicalAddress(startSegment, 0));
+
+        //// size -1 because the mcb itself takes 16 bytes which is 1 paragraph
+        //pspMcb.Size = (ushort)(size - 1);
+
+        //string strippedName = Path.GetFileNameWithoutExtension(file);
+        //if (!string.IsNullOrWhiteSpace(strippedName)) {
+        //    strippedName = strippedName[..Math.Min(7, strippedName.Length)];
+        //    pspMcb.Owner = strippedName;
+        //}
+        //pspMcb.PspSegment = pspSegment;
+        //pspMcb.SetLast();
+
         // Set the PSP's first 2 bytes to INT 20h.
         psp.Exit[0] = 0xCD;
         psp.Exit[1] = 0x20;

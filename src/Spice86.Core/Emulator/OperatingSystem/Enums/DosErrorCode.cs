@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Enums;
 /// <summary>
 /// Defines error codes for MS-DOS operations.
 /// </summary>
-public enum ErrorCode : byte
+public enum DosErrorCode : byte
 {
     /// <summary>
     /// No error occurred during the operation.

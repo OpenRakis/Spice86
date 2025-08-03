@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 /// In DOSBox, this is the 'DOS_InfoBlock' class 
 /// </remarks>
 public class DosSysVars : MemoryBasedDataStructure {
+    public const int FirstMcbSegment = 0x16F;
     private readonly DosDeviceHeader _nullDeviceHeader;
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
@@ -30,7 +31,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         ExtendedMemorySize = (ushort)(byteReaderWriter.Length / 1024);
         MinMemForExec = 0x0;
         A20GateFixRoutineOffset = 0x0;
-        MemAllocScanStart = 0x16f;
+        MemAllocScanStart = FirstMcbSegment;
         MaxSectorLength = 0x200;
         RegCXfrom5e = 0x0;
         CountLRUCache = 0x0;
@@ -38,7 +39,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         SharingCount = 0x0;
         SharingDelay = 0x0;
         PtrCONInput = 0x0;
-        FirstMCB = 0x16F;
+        FirstMCB = FirstMcbSegment;
         DirtyDiskBuffers = 0x0;
         LookaheadBufPt = 0x0;
         LookaheadBufNumber = 0x0;
