@@ -30,8 +30,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [ObservableProperty]
     private VideoCardViewModel _videoCardViewModel;
 
-    [ObservableProperty]
-    private CpuViewModel _cpuViewModel;
+    [ObservableProperty] private ICpuViewModel _cpuViewModel;
 
     [ObservableProperty]
     private MidiViewModel _midiViewModel;
@@ -43,13 +42,12 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private SoftwareMixerViewModel _softwareMixerViewModel;
 
     [ObservableProperty]
-    private CfgCpuViewModel _cfgCpuViewModel;
-
-    [ObservableProperty]
     private StatusMessageViewModel _statusMessageViewModel;
 
     [ObservableProperty]
     private BreakpointsViewModel _breakpointsViewModel;
+
+    [ObservableProperty] private int _selectedTabIndex;
 
     private readonly IPauseHandler _pauseHandler;
 
@@ -57,9 +55,9 @@ public partial class DebugWindowViewModel : ViewModelBase,
         IPauseHandler pauseHandler, BreakpointsViewModel breakpointsViewModel,
         DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
         SoftwareMixerViewModel softwareMixerViewModel, VideoCardViewModel videoCardViewModel,
-        CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
+        ICpuViewModel cpuViewModel, MidiViewModel midiViewModel,
         MemoryViewModel memoryViewModel, StackMemoryViewModel stackMemoryViewModel
-        ) {
+    ) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
@@ -81,7 +79,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MidiViewModel = midiViewModel;
         MemoryViewModels.Add(memoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
-        CfgCpuViewModel = cfgCpuViewModel;
+        SelectedTabIndex = cpuViewModel.IsCfgCpuEnabled ? 1 : 0;
     }
 
     [RelayCommand]

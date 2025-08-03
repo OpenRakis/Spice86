@@ -15,10 +15,9 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
+public class CfgCpu : ICPU {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
-    private readonly State _state;
     private readonly DualPic _dualPic;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
@@ -26,7 +25,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _state = state;
+        State = state;
         _dualPic = dualPic;
         
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
@@ -65,8 +64,8 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         }
 
         ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
-        
-        _state.IncCycles();
+
+        State.IncCycles();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;
@@ -81,9 +80,10 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         _executionContextManager.SignalEntry();
         // Parse the first instruction and register it as entry point
         CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
-        _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.MACHINE, _state.IpSegmentedAddress, null, null);
+        _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.MACHINE,
+            State.IpSegmentedAddress, null, null);
         // expected return address from machine start is never defined.
-        _executionContextManager.SignalNewExecutionContext(_state.IpSegmentedAddress, SegmentedAddress.ZERO);
+        _executionContextManager.SignalNewExecutionContext(State.IpSegmentedAddress, SegmentedAddress.ZERO);
     }
 
     public void SignalEnd() {
@@ -95,9 +95,10 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         if (toExecute.CanCauseContextRestore) {
             // We only attempt to restore contexts after IRET
             // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it. 
-            _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
+            _executionContextManager.RestoreExecutionContextIfNeeded(State.IpSegmentedAddress);
         }
-        if (!_state.InterruptFlag) {
+
+        if (!State.InterruptFlag) {
             return;
         }
 
@@ -108,6 +109,23 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
-        _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT, _state.IpSegmentedAddress, expectedReturn, null);
+        _executionContextManager.CurrentExecutionContext.FunctionHandler.Call(CallType.EXTERNAL_INTERRUPT,
+            State.IpSegmentedAddress, expectedReturn, null);
+    }
+
+    public Stack Stack => _instructionExecutionHelper.Stack;
+    public State State { get; }
+    public InterruptVectorTable InterruptVectorTable => _instructionExecutionHelper.InterruptVectorTable;
+
+    public void FarRet(ushort numberOfBytesToPop) {
+        throw new NotImplementedException();
+    }
+
+    public void InterruptRet() {
+        throw new NotImplementedException();
+    }
+
+    public void NearRet(int numberOfBytesToPop) {
+        throw new NotImplementedException();
     }
 }

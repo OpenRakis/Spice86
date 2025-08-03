@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -54,23 +53,13 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu { get; }
-
-    /// <summary>
-    /// The emulated CPU.
-    /// </summary>
-    public CfgCpu CfgCpu { get; }
+    public ICPU Cpu { get; }
 
     /// <summary>
     /// The emulated CPU state.
     /// </summary>
     public State CpuState { get; }
     
-    /// <summary>
-    /// The in memory stack used by the CPU
-    /// </summary>
-    public Stack Stack { get; }
-
     /// <summary>
     /// DOS Services.
     /// </summary>
@@ -233,8 +222,7 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
         BiosKeyboardInt9Handler biosKeyboardInt9Handler,
         CallbackHandler callbackHandler,
-        Cpu cpu,
-        CfgCpu cfgCpu,
+        ICPU cpu,
         State cpuState,
         Dos dos,
         GravisUltraSound gravisUltraSound,
@@ -271,9 +259,7 @@ public sealed class Machine : IDisposable {
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
         CallbackHandler = callbackHandler;
         Cpu = cpu;
-        CfgCpu = cfgCpu;
         CpuState = cpuState;
-        Stack = cpu.Stack;
         Dos = dos;
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;

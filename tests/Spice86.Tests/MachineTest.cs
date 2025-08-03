@@ -17,7 +17,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.IO;
 using System.Text;
 
 using Xunit;
@@ -170,7 +169,8 @@ public class MachineTest
         Machine machine = TestOneBin("segpr", enableCfgCpu);
         if (enableCfgCpu) {
             // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
-            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CurrentInstructions currentInstructions = ((Core.Emulator.CPU.CfgCpu.CfgCpu)machine.Cpu).CfgNodeFeeder
+                .InstructionsFeeder.CurrentInstructions;
             CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
             CfgInstruction? divBy0HandlerEntry = currentInstructions.GetAtAddress(new(0xF000, 0x1100));
             CfgInstruction? divBy0HandlerIret = currentInstructions.GetAtAddress(new(0xF000, 0x1111));
@@ -224,7 +224,8 @@ public class MachineTest
         expected[0x03] = 0xff;
         Machine machine = TestOneBin("selfmodifyvalue", expected, enableCfgCpu);
         if (enableCfgCpu) {
-            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CurrentInstructions currentInstructions = ((Core.Emulator.CPU.CfgCpu.CfgCpu)machine.Cpu).CfgNodeFeeder
+                .InstructionsFeeder.CurrentInstructions;
             CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x008));
             Assert.NotNull(instruction);
             if (instruction is MovRegImm16 movAxModifiedImm) {

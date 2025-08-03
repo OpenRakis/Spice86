@@ -7,15 +7,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.PropertiesMappers;
+using Spice86.ViewModels.Services;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.ComponentModel;
 using System.Reflection;
-using Spice86.ViewModels.PropertiesMappers;
-using Spice86.ViewModels.Services;
 
-public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
+public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel, ICpuViewModel {
     private readonly State _cpuState;
     private readonly IMemory _memory;
     
@@ -25,6 +25,8 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
 
+    [ObservableProperty] private bool _isCfgCpuEnabled;
+
     public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         _memory = memory;
@@ -32,6 +34,7 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
+        IsCfgCpuEnabled = false;
     }
 
     public bool IsVisible { get; set; }

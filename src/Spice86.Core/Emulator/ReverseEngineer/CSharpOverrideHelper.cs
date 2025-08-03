@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-using System.Linq;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -14,10 +12,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Linq;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -56,7 +56,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu { get; }
+    public ICPU Cpu { get; }
 
     /// <summary>
     /// The emulator machine.
@@ -86,7 +86,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
-    public Stack Stack => Machine.Stack;
+    public Stack Stack => Machine.Cpu.Stack;
 
     /// <summary>
     /// Gets the state of the CPU.
