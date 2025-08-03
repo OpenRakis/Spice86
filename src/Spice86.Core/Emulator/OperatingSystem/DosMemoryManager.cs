@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -134,13 +135,13 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The new size for the MCB, in paragraphs.</param>
     /// <param name="dosMemoryControlBlock">The modified memory control block, or <c>null</c> if the operation was not successful.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public bool TryModifyBlock(ushort blockSegment, ref ushort requestedSizeInParagraphs,
+    public DosErrorCode TryModifyBlock(ushort blockSegment, ref ushort requestedSizeInParagraphs,
         [NotNullWhen(true)] out DosMemoryControlBlock? dosMemoryControlBlock) {
         dosMemoryControlBlock = null;
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
             requestedSizeInParagraphs = this.FindLargestFree().Size;
-            return false;
+            return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
         // Make the block the biggest it can get
@@ -149,7 +150,7 @@ public class DosMemoryManager {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
             requestedSizeInParagraphs = this.FindLargestFree().Size;
-            return false;
+            return DosErrorCode.InsufficientMemory;
         }
 
         if (block.Size < requestedSizeInParagraphs - 1) {
@@ -158,7 +159,7 @@ public class DosMemoryManager {
                     block.Size, requestedSizeInParagraphs);
             }
             requestedSizeInParagraphs = this.FindLargestFree().Size;
-            return false;
+            return DosErrorCode.InsufficientMemory;
         }
 
         if (block.Size > requestedSizeInParagraphs) {
@@ -167,7 +168,7 @@ public class DosMemoryManager {
 
         dosMemoryControlBlock = block;
         dosMemoryControlBlock.PspSegment = _processManager.GetCurrentPspSegment();
-        return true;
+        return DosErrorCode.NoError;
     }
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {

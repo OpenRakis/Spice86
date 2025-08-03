@@ -887,15 +887,15 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
                 requestedSizeInParagraphs, blockSegment);
         }
-        if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSizeInParagraphs,
-            out _)) {
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
+            ref requestedSizeInParagraphs, out _);
+        if (errorCode == DosErrorCode.NoError) {
             State.AX = requestedSizeInParagraphs;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);
-            // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
-            State.AX = (byte)DosErrorCode.InsufficientMemory;
+            State.AX = (byte)errorCode;
             State.BX = requestedSizeInParagraphs;
         }
     }
