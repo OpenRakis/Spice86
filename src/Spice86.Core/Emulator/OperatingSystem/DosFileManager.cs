@@ -194,15 +194,15 @@ public class DosFileManager {
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult ForceDuplicateFileHandle(ushort fileHandle, ushort newHandle) {
         if (fileHandle == newHandle) {
-            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
         }
         // Out of range in our array
         if (!IsHandleInRange(newHandle)) {
-            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
         }
         // New handle is already opened
         if (OpenFiles[newHandle] != null) {
-            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
         }
         // Open it and assign it to a var named file.
         // Should always pass: we already called IsValidFileHandle for our own error code.
@@ -264,11 +264,11 @@ public class DosFileManager {
         }
 
         if (IsOnlyADosDriveRoot(fileSpec)) {
-            return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
+            return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
         }
 
         if (!GetSearchFolder(fileSpec, out string? searchFolder)) {
-            return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+            return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
         }
 
         EnumerationOptions enumerationOptions = GetEnumerationOptions(searchAttributes);
@@ -281,7 +281,7 @@ public class DosFileManager {
                 enumerationOptions);
 
             if (matchingPaths.Length == 0) {
-                return DosFileOperationResult.Error(ErrorCode.NoMoreFiles);
+                return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
             }
 
             if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
@@ -300,7 +300,7 @@ public class DosFileManager {
                     searchFolder);
             }
         }
-        return DosFileOperationResult.Error(ErrorCode.PathNotFound);
+        return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
     }
 
     private uint GenerateNewKey() {
@@ -390,12 +390,12 @@ public class DosFileManager {
         uint key = dta.SearchId;
         if (!_activeFileSearches.TryGetValue(key, out FileSearchPrivateData? search)) {
             return FileOperationErrorWithLog($"Call FindFirst first to initiate a search.",
-                ErrorCode.NoMoreFiles);
+                DosErrorCode.NoMoreFiles);
         }
 
         if (!GetSearchFolder(search.FileSpec, out string? searchFolder)) {
             return FileOperationErrorWithLog("Search in an invalid folder",
-                ErrorCode.NoMoreFiles);
+                DosErrorCode.NoMoreFiles);
         }
 
         string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder,
@@ -405,7 +405,7 @@ public class DosFileManager {
         string? fileMatch = matchingFiles.ElementAtOrDefault(search.Index);
         if (matchingFiles.Length == 0 || fileMatch is null) {
             return FileOperationErrorWithLog($"No more files matching for {search.FileSpec} in path {searchFolder}",
-                ErrorCode.NoMoreFiles);
+                DosErrorCode.NoMoreFiles);
         }
 
         search.Index++;
@@ -413,7 +413,7 @@ public class DosFileManager {
         if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
             fileMatch, searchFolder, out _)) {
             return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.",
-                ErrorCode.NoMoreFiles);
+                DosErrorCode.NoMoreFiles);
         }
         UpdateActiveSearch(key, search.FileSpec);
 
@@ -456,7 +456,7 @@ public class DosFileManager {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred while seeking file {Error}", e);
             }
-            return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+            return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
         }
     }
 
@@ -620,23 +620,23 @@ public class DosFileManager {
     private int CountHandles(DosFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
 
     private DosFileOperationResult FileAccessDeniedError(string? filename) {
-        return FileOperationErrorWithLog($"File {filename} already in use!", ErrorCode.AccessDenied);
+        return FileOperationErrorWithLog($"File {filename} already in use!", DosErrorCode.AccessDenied);
     }
 
     private DosFileOperationResult FileNotFoundError(string? fileName) {
-        return FileOperationErrorWithLog($"File {fileName} not found!", ErrorCode.FileNotFound);
+        return FileOperationErrorWithLog($"File {fileName} not found!", DosErrorCode.FileNotFound);
     }
 
     private DosFileOperationResult PathNotFoundError(string? path) {
-        return FileOperationErrorWithLog($"File {path} not found!", ErrorCode.PathNotFound);
+        return FileOperationErrorWithLog($"File {path} not found!", DosErrorCode.PathNotFound);
     }
 
     private DosFileOperationResult RemoveCurrentDirError(string? path) {
         return FileOperationErrorWithLog($"Attempted to remove current dir {path}",
-            ErrorCode.AttemptedToRemoveCurrentDirectory);
+            DosErrorCode.AttemptedToRemoveCurrentDirectory);
     }
 
-    private DosFileOperationResult FileOperationErrorWithLog(string message, ErrorCode errorCode) {
+    private DosFileOperationResult FileOperationErrorWithLog(string message, DosErrorCode errorCode) {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("{FileNotFoundErrorWithLog}: {Message}", nameof(FileOperationErrorWithLog), message);
         }
@@ -648,7 +648,7 @@ public class DosFileManager {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("File not opened: {FileHandle}", fileHandle);
         }
-        return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+        return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
     }
 
     private int? FindNextFreeFileIndex() {
@@ -677,7 +677,7 @@ public class DosFileManager {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("Could not find a free handle {MethodName}", nameof(NoFreeHandleError));
         }
-        return DosFileOperationResult.Error(ErrorCode.TooManyOpenFiles);
+        return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
@@ -902,7 +902,7 @@ public class DosFileManager {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("IOCTL: Invalid handle {Handle} for {Operation}", handle, operationName);
                 }
-                return DosFileOperationResult.Error(ErrorCode.InvalidHandle);
+                return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
             }
         } else if (state.AL < 0x12) {
             if (state.AL != 0x0b) {
@@ -913,14 +913,14 @@ public class DosFileManager {
                         _loggerService.Warning("IOCTL: Invalid drive {Drive} for {Operation}",
                             drive, operationName);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.InvalidDrive);
+                    return DosFileOperationResult.Error(DosErrorCode.InvalidDrive);
                 }
             }
         } else {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("IOCTL: Function number 0x{Function:X2} is invalid or unsupported", state.AL);
             }
-            return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+            return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
 
         switch (state.AL) {
@@ -947,7 +947,7 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", state.DH);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.DataInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.DataInvalid);
                 }
                 if (OpenFiles[handle] is IVirtualDevice device && (device.Information & 0x8000) > 9) {
                     state.AL = device.GetStatus(true);
@@ -955,7 +955,7 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Device for handle {Handle} doesn't support Set Device Information", handle);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 return DosFileOperationResult.NoValue();
 
@@ -966,7 +966,7 @@ public class DosFileManager {
                         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("IOCTL: Printer device {Device} doesn't support reading", printer.Name);
                         }
-                        return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                        return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
                     }
                     uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
                     if (readDevice.TryReadFromControlChannel(buffer, state.CX, out ushort? returnCode)) {
@@ -977,7 +977,7 @@ public class DosFileManager {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("IOCTL: Device for handle {Handle} doesn't support reading from control channel", handle);
                 }
-                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
             case 0x03:      /* Write to Device Control Channel */
                 if (OpenFiles[handle] is IVirtualDevice writtenDevice &&
@@ -987,7 +987,7 @@ public class DosFileManager {
                         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("IOCTL: Printer device {Device} doesn't support writing", printer.Name);
                         }
-                        return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                        return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
                     }
                     uint buffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
                     if (writtenDevice.TryWriteToControlChannel(buffer, state.CX, out ushort? returnCode)) {
@@ -998,7 +998,7 @@ public class DosFileManager {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("IOCTL: Device for handle {Handle} doesn't support writing to control channel", handle);
                 }
-                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
             case 0x06:      /* Get Input Status */
                 if (OpenFiles[handle] is IVirtualDevice inputDevice) {
@@ -1047,7 +1047,7 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 return DosFileOperationResult.NoValue();
 
@@ -1067,7 +1067,7 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid retry count 0 for Set sharing retry count");
                     }
-                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 return DosFileOperationResult.NoValue();
 
@@ -1076,14 +1076,14 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.AccessDenied);
+                    return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
                 }
                 if (state.CH != 0x08 || _dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid or unsupported command 0x{Command:X2} for drive {Drive}",
                             state.CH, drive);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 uint ptr = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
 
@@ -1139,7 +1139,7 @@ public class DosFileManager {
                               "IOCTL: Unhandled Generic Block Device request CL=0x{Command:X2} for drive {Drive}",
                               state.CL, drive);
                         }
-                        return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                        return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 state.AX = 0;
                 return DosFileOperationResult.NoValue();
@@ -1155,7 +1155,7 @@ public class DosFileManager {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Get Logical Drive Map not supported for removable drive {Drive}", drive);
                     }
-                    return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 } else { /* Only 1 logical drive assigned */
                     state.AL = 0;
                     state.AH = 0x07;
@@ -1166,7 +1166,7 @@ public class DosFileManager {
                 if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                     _loggerService.Error("IOCTL: Invalid function number 0x{FunctionCode:X2}", state.AL);
                 }
-                return DosFileOperationResult.Error(ErrorCode.FunctionNumberInvalid);
+                return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
     }
 

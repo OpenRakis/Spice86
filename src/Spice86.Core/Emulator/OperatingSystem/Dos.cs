@@ -159,10 +159,9 @@ public sealed class Dos {
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
         ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
-        MemoryManager = new DosMemoryManager(_memory, loggerService, ProcessManager.PspSegment, DosProcessManager.LastFreeSegment);
-        DosSysVars.FirstMCB = ProcessManager.PspSegment;
+        MemoryManager = new DosMemoryManager(_memory, ProcessManager, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
+        DosInt21Handler = new DosInt21Handler(_memory, ProcessManager, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);

@@ -27,6 +27,7 @@ using System.Text;
 public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
+    private readonly DosProcessManager _dosProcessManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
@@ -51,13 +52,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory,
+    public DosInt21Handler(IMemory memory, DosProcessManager dosProcessManager,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
+        _dosProcessManager = dosProcessManager;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
@@ -330,7 +332,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Allocates a memory block of the requested size in BX. <br/>
+    /// Allocates a memory block of the requested size in paragraphs in BX. <br/>
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
@@ -338,21 +340,21 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void AllocateMemoryBlock(bool calledFromVm) {
-        ushort requestedSize = State.BX;
-        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
+        ushort requestedSizeInParagraphs = State.BX;
+        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSizeInParagraphs);
         SetCarryFlag(false, calledFromVm);
-        DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSize);
+        DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSizeInParagraphs);
         if (res == null) {
             LogDosError(calledFromVm);
             // did not find something good, error
             SetCarryFlag(true, calledFromVm);
             DosMemoryControlBlock largest = _dosMemoryManager.FindLargestFree();
             // INSUFFICIENT MEMORY
-            State.AX = 0x08;
+            State.AX = (byte)DosErrorCode.InsufficientMemory;
             State.BX = largest.Size;
             return;
         }
-        State.AX = res.UsableSpaceSegment;
+        State.AX = res.DataBlockSegment;
     }
 
     /// <summary>
@@ -681,7 +683,7 @@ public class DosInt21Handler : InterruptHandler {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
             // INVALID MEMORY BLOCK ADDRESS
-            State.AX = 0x09;
+            State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
         }
     }
 
@@ -810,7 +812,7 @@ public class DosInt21Handler : InterruptHandler {
     /// The segment of the current PSP in BX.
     /// </returns>
     public void GetPspAddress() {
-        ushort pspSegment = _dosMemoryManager.PspSegment;
+        ushort pspSegment = _dosProcessManager.GetCurrentPspSegment();
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
@@ -868,32 +870,34 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Modifies a memory block identified by the block segment in ES, and sets the new requested size to the value in BX. <br/>
+    /// Modifies a memory block identified by the block segment in ES, <br/>
+    /// and sets the new requested size in paragraphs to the value in BX. <br/>
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
-    /// CF is set on error. BX is set to zero on error. <br/>
-    /// Possible error code in AX: 0x08 (Insufficient memory). <br/>
     /// On success, AX is set to the size of the MCB, which is at least equal to the requested size.
+    /// CF is set on error. The error is in AX. <br/>
+    /// Possible error code in AX: 0x08 (Insufficient memory) or 0x09 (MCB block destroyed). <br/>
+    /// BX is set to largest free block size in paragraphs on error. <br/>
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
-        ushort requestedSize = State.BX;
+        ushort requestedSizeInParagraphs = State.BX;
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
-                requestedSize, blockSegment);
+                requestedSizeInParagraphs, blockSegment);
         }
-        if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSize,
-            out DosMemoryControlBlock? modifiedBlock)) {
-            State.AX = requestedSize;
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
+            requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
+        if (errorCode == DosErrorCode.NoError) {
+            State.AX = mcb.Size;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);
-            // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
-            State.AX = 0x08;
-            State.BX = requestedSize;
+            State.AX = (byte)errorCode;
+            State.BX = mcb.Size;
         }
     }
 
