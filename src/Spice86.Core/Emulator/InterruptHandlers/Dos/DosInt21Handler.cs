@@ -350,7 +350,7 @@ public class DosInt21Handler : InterruptHandler {
             SetCarryFlag(true, calledFromVm);
             DosMemoryControlBlock largest = _dosMemoryManager.FindLargestFree();
             // INSUFFICIENT MEMORY
-            State.AX = 0x08;
+            State.AX = (byte)DosErrorCode.InsufficientMemory;
             State.BX = largest.Size;
             return;
         }
@@ -683,7 +683,7 @@ public class DosInt21Handler : InterruptHandler {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
             // INVALID MEMORY BLOCK ADDRESS
-            State.AX = 0x09;
+            State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
         }
     }
 
