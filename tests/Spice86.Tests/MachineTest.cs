@@ -260,6 +260,16 @@ public class MachineTest
         expected[0x00] = 0x01;
         TestOneBin("externalint", expected, enableCfgCpu, 0xFFFFFFF, true);
     }
+    
+    [Theory]
+    [MemberData(nameof(GetCfgCpuConfigurations))]
+    public void TestLinearAddressSameButSegmentedDifferent(bool enableCfgCpu)
+    {
+        byte[] expected = new byte[2];
+        expected[0x00] = 0x02;
+        expected[0x01] = 0x00;
+        TestOneBin("linearsamesegmenteddifferent", expected, enableCfgCpu, enableA20Gate:true);
+    }
 
     [AssertionMethod]
     private Machine TestOneBin(string binName, bool enableCfgCpu)
@@ -269,9 +279,9 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, byte[] expected, bool enableCfgCpu, long maxCycles = 100000L, bool enablePit = false)
+    private Machine TestOneBin(string binName, byte[] expected, bool enableCfgCpu, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
     {
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, enableCfgCpu: enableCfgCpu, maxCycles: maxCycles, enablePit: enablePit, recordData: false).Create();
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, enableCfgCpu: enableCfgCpu, maxCycles: maxCycles, enablePit: enablePit, recordData: false, enableA20Gate: enableA20Gate).Create();
         spice86DependencyInjection.ProgramExecutor.Run();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
