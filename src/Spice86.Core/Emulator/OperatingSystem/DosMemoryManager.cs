@@ -49,10 +49,10 @@ public class DosMemoryManager {
     /// <summary>
     /// Allocates a memory block of the specified size. Returns <c>null</c> if no memory block could be found to fit the requested size.
     /// </summary>
-    /// <param name="requestedSize">The requested size of the memory block.</param>
+    /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
-    public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
-        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
+    public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
+        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // take the smallest
         DosMemoryControlBlock? blockOptional = null;
@@ -64,13 +64,13 @@ public class DosMemoryManager {
         if (blockOptional is null) {
             // Nothing found
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSize);
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
             }
             return null;
         }
 
         DosMemoryControlBlock block = blockOptional;
-        if (!SplitBlock(block, requestedSize)) {
+        if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not spit block {Block}", block);
@@ -131,15 +131,15 @@ public class DosMemoryManager {
     /// Extends or reduces a MCB.
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
-    /// <param name="requestedSize">The new size for the MCB, in bytes.</param>
+    /// <param name="requestedSizeInParagraphs">The new size for the MCB, in paragraphs.</param>
     /// <param name="dosMemoryControlBlock">The modified memory control block, or <c>null</c> if the operation was not successful.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public bool TryModifyBlock(ushort blockSegment, ref ushort requestedSize,
+    public bool TryModifyBlock(ushort blockSegment, ref ushort requestedSizeInParagraphs,
         [NotNullWhen(true)] out DosMemoryControlBlock? dosMemoryControlBlock) {
         dosMemoryControlBlock = null;
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
-            requestedSize = this.FindLargestFree().Size;
+            requestedSizeInParagraphs = this.FindLargestFree().Size;
             return false;
         }
 
@@ -148,20 +148,21 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
-            requestedSize = this.FindLargestFree().Size;
+            requestedSizeInParagraphs = this.FindLargestFree().Size;
             return false;
         }
 
-        if (block.Size < requestedSize - 1) {
+        if (block.Size < requestedSizeInParagraphs - 1) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block.Size, requestedSize);
+                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
+                    block.Size, requestedSizeInParagraphs);
             }
-            requestedSize = this.FindLargestFree().Size;
+            requestedSizeInParagraphs = this.FindLargestFree().Size;
             return false;
         }
 
-        if (block.Size > requestedSize) {
-            SplitBlock(block, requestedSize);
+        if (block.Size > requestedSizeInParagraphs) {
+            SplitBlock(block, requestedSizeInParagraphs);
         }
 
         dosMemoryControlBlock = block;
@@ -261,7 +262,8 @@ public class DosMemoryManager {
         int nextBlockSize = blockSize - size - 1;
         if (nextBlockSize < 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small", block, size);
+                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small",
+                    block, size);
             }
             return false;
         }

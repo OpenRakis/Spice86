@@ -332,7 +332,7 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Allocates a memory block of the requested size in BX. <br/>
+    /// Allocates a memory block of the requested size in paragraphs in BX. <br/>
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
@@ -340,10 +340,10 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void AllocateMemoryBlock(bool calledFromVm) {
-        ushort requestedSize = State.BX;
-        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSize);
+        ushort requestedSizeInParagraphs = State.BX;
+        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSizeInParagraphs);
         SetCarryFlag(false, calledFromVm);
-        DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSize);
+        DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSizeInParagraphs);
         if (res == null) {
             LogDosError(calledFromVm);
             // did not find something good, error
@@ -870,7 +870,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Modifies a memory block identified by the block segment in ES, and sets the new requested size to the value in BX. <br/>
+    /// Modifies a memory block identified by the block segment in ES, <br/>
+    /// and sets the new requested size in paragraphs to the value in BX. <br/>
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
@@ -880,22 +881,22 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
-        ushort requestedSize = State.BX;
+        ushort requestedSizeInParagraphs = State.BX;
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
-                requestedSize, blockSegment);
+                requestedSizeInParagraphs, blockSegment);
         }
-        if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSize,
+        if (_dosMemoryManager.TryModifyBlock(blockSegment, ref requestedSizeInParagraphs,
             out _)) {
-            State.AX = requestedSize;
+            State.AX = requestedSizeInParagraphs;
             SetCarryFlag(false, calledFromVm);
         } else {
             LogDosError(calledFromVm);
             // An error occurred. Report it as not enough memory.
             SetCarryFlag(true, calledFromVm);
             State.AX = (byte)DosErrorCode.InsufficientMemory;
-            State.BX = requestedSize;
+            State.BX = requestedSizeInParagraphs;
         }
     }
 
