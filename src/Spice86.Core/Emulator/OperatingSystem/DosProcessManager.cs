@@ -41,6 +41,10 @@ public class DosProcessManager : DosFileLoader {
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
+        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Initial program entry point at segment: 0x{EntryPointSegment:X2}",
+                configuration.ProgramEntryPointSegment);
+        }
         _programEntryPointSegment = configuration.ProgramEntryPointSegment;
 
         envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
