@@ -8,8 +8,6 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics.CodeAnalysis;
-
 /// <summary>
 /// Implements DOS memory operations, such as allocating and releasing MCBs.
 /// </summary>
@@ -133,14 +131,13 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
     /// <param name="requestedSizeInParagraphs">The new size for the MCB, in paragraphs.</param>
-    /// <param name="dosMemoryControlBlock">The modified memory control block, or <c>null</c> if the operation was not successful.</param>
+    /// <param name="block">The mcb from the blockSegment, or the largest mcb found.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public DosErrorCode TryModifyBlock(ushort blockSegment, ref ushort requestedSizeInParagraphs,
-        [NotNullWhen(true)] out DosMemoryControlBlock? dosMemoryControlBlock) {
-        dosMemoryControlBlock = null;
-        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
+    public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
+        out DosMemoryControlBlock block) {
+        block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
-            requestedSizeInParagraphs = this.FindLargestFree().Size;
+            block = this.FindLargestFree();
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
@@ -149,7 +146,7 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
-            requestedSizeInParagraphs = this.FindLargestFree().Size;
+            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 
@@ -158,16 +155,14 @@ public class DosMemoryManager {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
                     block.Size, requestedSizeInParagraphs);
             }
-            requestedSizeInParagraphs = this.FindLargestFree().Size;
+            block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
         }
 
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-
-        dosMemoryControlBlock = block;
-        dosMemoryControlBlock.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _processManager.GetCurrentPspSegment();
         return DosErrorCode.NoError;
     }
 
