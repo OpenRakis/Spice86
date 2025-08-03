@@ -875,9 +875,10 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     /// <returns>
     /// CF is cleared on success. <br/>
-    /// CF is set on error. BX is set to zero on error. <br/>
-    /// Possible error code in AX: 0x08 (Insufficient memory) or 0x09 (MCB block destroyed). <br/>
     /// On success, AX is set to the size of the MCB, which is at least equal to the requested size.
+    /// CF is set on error. The error is in AX. <br/>
+    /// Possible error code in AX: 0x08 (Insufficient memory) or 0x09 (MCB block destroyed). <br/>
+    /// BX is set to largest free block size in paragraphs on error. <br/>
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void ModifyMemoryBlock(bool calledFromVm) {
