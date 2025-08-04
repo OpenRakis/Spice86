@@ -39,7 +39,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
-using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -56,6 +55,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
+    private readonly IGui _gui;
     private bool _disposed;
 
     public Spice86DependencyInjection(Configuration configuration)
@@ -319,23 +319,26 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindowViewModel = new(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel);
+            _gui = mainWindowViewModel;
+        } else {
+            _gui = new HeadlessGui();
         }
 
-        VgaCard vgaCard = new(mainWindowViewModel, vgaRenderer, loggerService);
+        VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("VGA card created...");
         }
 
         Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-                    mainWindowViewModel, configuration.FailOnUnhandledPort);
+            _gui, configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
             functionHandlerProvider, stack, state, dualPic, keyboard,
             biosKeyboardBuffer, loggerService);
-        Mouse mouse = new(state, dualPic, mainWindowViewModel,
+        Mouse mouse = new(state, dualPic, _gui,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, memory, mouse, mainWindowViewModel,
+        MouseDriver mouseDriver = new(state, memory, mouse, _gui,
             vgaFunctionality, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
@@ -590,6 +593,10 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.Dispose();
                 Machine.Dispose();
+                    
+                if (_gui is HeadlessGui headlessGui) {
+                    headlessGui.Dispose();
+                }
             }
             _disposed = true;
         }
