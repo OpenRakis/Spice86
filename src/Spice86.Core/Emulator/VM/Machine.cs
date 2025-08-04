@@ -53,7 +53,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public ICPU Cpu { get; }
+    public ICpu Cpu { get; }
 
     /// <summary>
     /// The emulated CPU state.
@@ -222,7 +222,7 @@ public sealed class Machine : IDisposable {
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler,
         BiosKeyboardInt9Handler biosKeyboardInt9Handler,
         CallbackHandler callbackHandler,
-        ICPU cpu,
+        ICpu cpu,
         State cpuState,
         Dos dos,
         GravisUltraSound gravisUltraSound,

@@ -196,8 +196,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function handler in external interrupt created...");
         }
 
-        ICPU cpu;
-        Func<UIDispatcher, ICpuViewModel> cpuViewModelSupplier;
+        ICpu cpu;
 
         if (!configuration.CfgCpu) {
             cpu = new Cpu(interruptVectorTable, stack,
@@ -208,8 +207,6 @@ public class Spice86DependencyInjection : IDisposable {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CPU created...");
             }
-
-            cpuViewModelSupplier = uiDispatcher => new CpuViewModel(state, memory, pauseHandler, uiDispatcher);
         } else {
             var cfgCpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler,
                 dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
@@ -218,9 +215,10 @@ public class Spice86DependencyInjection : IDisposable {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("CfgCpu created...");
             }
-
-            cpuViewModelSupplier = _ => new CfgCpuViewModel(cfgCpu.ExecutionContextManager, pauseHandler);
         }
+
+        IInstructionExecutor instructionExecutor = cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
@@ -232,7 +230,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, cpu, stack, state,
+            new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
             dualPic, timer, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -256,7 +254,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is not false);
-        VgaBios vgaBios = new VgaBios(memory, cpu, stack,
+        VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
             state, vgaFunctionality, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -264,18 +262,18 @@ public class Spice86DependencyInjection : IDisposable {
         }
         
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
-            cpu, stack, state, loggerService);
-        SystemBiosInt12Handler systemBiosInt12Handler = new(memory, cpu, stack,
+            functionHandlerProvider, stack, state, loggerService);
+        SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
                     state, biosDataArea, loggerService);
         SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
-            cpu, stack, state, a20Gate,
+            functionHandlerProvider, stack, state, a20Gate,
                     configuration.InitializeDOS is not false, loggerService);
         var rtc = new Clock(loggerService);
 
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, cpu, stack,
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
                     state, loggerService, timerInt8Handler, rtc);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cpu, stack, state, loggerService);
+            functionHandlerProvider, stack, state, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -296,7 +294,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         EmulationLoop emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, cpu,
+            functionHandler, instructionExecutor,
             state, timer, emulatorBreakpointsManager, dmaController,
             pauseHandler);
 
@@ -331,7 +329,7 @@ public class Spice86DependencyInjection : IDisposable {
                     mainWindowViewModel, configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
-            cpu, stack, state, dualPic, keyboard,
+            functionHandlerProvider, stack, state, dualPic, keyboard,
             biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, dualPic, mainWindowViewModel,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
@@ -341,7 +339,7 @@ public class Spice86DependencyInjection : IDisposable {
         EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
             state, stack, emulationLoop);
         KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, biosDataArea, cpu, stack, state, loggerService,
+            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -403,7 +401,7 @@ public class Spice86DependencyInjection : IDisposable {
         
         var dosClock = new Clock(loggerService);
 
-        Dos dos = new Dos(configuration, memory, cpu, stack, state,
+        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             dosClock, loggerService);
@@ -421,7 +419,7 @@ public class Spice86DependencyInjection : IDisposable {
             }
 
             var mouseInt33Handler = new MouseInt33Handler(memory,
-                cpu, stack, state, loggerService, mouseDriver);
+                functionHandlerProvider, stack, state, loggerService, mouseDriver);
             interruptInstaller.InstallInterruptHandler(mouseInt33Handler);
 
             SegmentedAddress mouseDriverAddress = assemblyRoutineInstaller.
@@ -464,7 +462,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
-            cpu, memoryDataExporter, state, dos,
+            functionHandlerProvider, memoryDataExporter, state, dos,
             functionCatalogue, executionFlowRecorder, pauseHandler,
             mainWindowViewModel, loggerService);
 
@@ -498,7 +496,11 @@ public class Spice86DependencyInjection : IDisposable {
 
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
 
-            ICpuViewModel cpuViewModel = cpuViewModelSupplier.Invoke(uiDispatcher);
+            ICpuViewModel cpuViewModel = cpu switch {
+                CfgCpu cfgCpu => new CfgCpuViewModel(configuration, cfgCpu.ExecutionContextManager, pauseHandler),
+                Cpu => new CpuViewModel(configuration, state, memory, pauseHandler, uiDispatcher),
+                _ => throw new InvalidOperationException("Unknown CPU type")
+            };
             
             MidiViewModel midiViewModel = new(midiDevice);
 

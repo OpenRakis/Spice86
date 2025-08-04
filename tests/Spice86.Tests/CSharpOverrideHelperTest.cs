@@ -1,17 +1,13 @@
-using Spice86.Core.CLI;
-
 namespace Spice86.Tests;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-
-using System;
-using System.Collections.Generic;
 
 using Xunit;
 
@@ -60,7 +56,8 @@ class RecursiveJumps : CSharpOverrideHelper {
     public int NumberOfCallsTo2 { get; set; }
 
     public RecursiveJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
+        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations,
+        machine, loggerService, new Configuration(), machine.Cpu.Stack) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -97,7 +94,8 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public int FarCalled2FromStack { get; set; }
 
     public SimpleCallsJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
+        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations,
+        machine, loggerService, configuration, machine.Cpu.Stack) {
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
     }

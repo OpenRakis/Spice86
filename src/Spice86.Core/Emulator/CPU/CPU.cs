@@ -29,7 +29,7 @@ using System.Collections.Frozen;
 /// Pure 8086 instructions: <br/>
 /// https://jbwyatt.com/253/emu/8086_instruction_set.html
 /// </summary>
-public class Cpu : ICPU {
+public class Cpu : ICpu {
     // Extract regIndex from opcode
     private const int RegIndexMask = 0b111;
 

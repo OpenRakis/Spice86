@@ -15,7 +15,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
-public class CfgCpu : ICPU {
+public class CfgCpu : ICpu {
     private readonly ILoggerService _loggerService;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly DualPic _dualPic;

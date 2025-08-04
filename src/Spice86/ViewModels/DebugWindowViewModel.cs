@@ -47,8 +47,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
     [ObservableProperty]
     private BreakpointsViewModel _breakpointsViewModel;
 
-    [ObservableProperty] private int _selectedTabIndex;
-
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
@@ -79,7 +77,6 @@ public partial class DebugWindowViewModel : ViewModelBase,
         MidiViewModel = midiViewModel;
         MemoryViewModels.Add(memoryViewModel);
         MemoryViewModels.Add(stackMemoryViewModel);
-        SelectedTabIndex = cpuViewModel.IsCfgCpuEnabled ? 1 : 0;
     }
 
     [RelayCommand]

@@ -26,7 +26,6 @@
 	<Window.Resources>
 		<FontFamily x:Key="RobotoMonoFont">avares://Spice86/Views/Assets#Roboto Mono</FontFamily>
 		<FontFamily x:Key="ConsolasFont">Consolas</FontFamily>
-		<converters:BooleanInverter x:Key="BooleanInverter" />
 	</Window.Resources>
 	<Design.DataContext>
 		<vm:DebugWindowViewModel />
@@ -62,9 +61,9 @@
 				</Button.Content>
 			</Button>
 		</StackPanel>
-		<TabControl TabStripPlacement="Left" Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+		<TabControl TabStripPlacement="Left" Grid.Row="1" SelectedIndex="2">
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1"
-			                        IsVisible="{Binding CpuViewModel.IsCfgCpuEnabled, Converter={StaticResource BooleanInverter}}"
+			                        IsVisible="{Binding !CpuViewModel.IsCfgCpuEnabled}"
 			                        Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
