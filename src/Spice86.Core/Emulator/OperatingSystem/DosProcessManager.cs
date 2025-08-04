@@ -21,6 +21,7 @@ using System.Text;
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
     private readonly ushort _programEntryPointSegment;
+    private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
 
@@ -41,6 +42,7 @@ public class DosProcessManager : DosFileLoader {
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
+        _interruptVectorTable = new(memory);
         if(_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Initial program entry point at segment: 0x{EntryPointSegment:X2}",
                 configuration.ProgramEntryPointSegment);
@@ -95,6 +97,13 @@ public class DosProcessManager : DosFileLoader {
         // Set the PSP's first 2 bytes to INT 20h.
         psp.Exit[0] = 0xCD;
         psp.Exit[1] = 0x20;
+
+        psp.Service[0] = 0xCD; // INT instruction
+        psp.Service[1] = 0x21; // INT 21h (DOS function)
+        psp.Service[2] = 0xCB; // RETF
+        psp.TerminateAddress = _interruptVectorTable[0x22].Linear;
+        psp.BreakAddress = _interruptVectorTable[0x23].Linear;
+        psp.CriticalErrorAddress = _interruptVectorTable[0x24].Linear;
 
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
 
