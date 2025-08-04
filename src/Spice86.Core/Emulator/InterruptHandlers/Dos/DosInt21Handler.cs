@@ -70,6 +70,9 @@ public class DosInt21Handler : InterruptHandler {
         FillDispatchTable();
     }
 
+    /// <summary>
+    /// Register the handlers for the DOS INT21H services that we support.
+    /// </summary>
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
         AddAction(0x02, DisplayOutput);
@@ -89,11 +92,11 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
-        AddAction(0x2D, SetTime);
         AddAction(0x25, SetInterruptVector);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
+        AddAction(0x2D, SetTime);
         AddAction(0x2F, GetDiskTransferAddress);
         AddAction(0x30, GetDosVersion);
         AddAction(0x31, TerminateAndStayResident);
