@@ -33,8 +33,6 @@ public class DosProcessManager : DosFileLoader {
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
 
-    public DosProgramSegmentPrefix CurrentPsp { get; private set; }
-
     public DosProcessManager(Configuration configuration, IMemory memory,
         State state, DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService)
@@ -54,10 +52,8 @@ public class DosProcessManager : DosFileLoader {
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
         }
-        ushort pspSegment = (ushort)(_programEntryPointSegment - 0x10);
-        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
-        var psp = new DosProgramSegmentPrefix(_memory, pspAddress);
-        CurrentPsp = psp;
+        CurrentPspSegment = (ushort)(_programEntryPointSegment - 0x10);
+
     }
 
     /// <summary>
@@ -89,7 +85,10 @@ public class DosProcessManager : DosFileLoader {
         return res[0..endIndex];
     }
 
-    public ushort GetCurrentPspSegment() => MemoryUtils.ToSegment(CurrentPsp.BaseAddress);
+    public ushort CurrentPspSegment { get; private set; }
+
+    public DosProgramSegmentPrefix CurrentPsp => new DosProgramSegmentPrefix(_memory,
+        MemoryUtils.ToPhysicalAddress(CurrentPspSegment, 0));
 
     public override byte[] LoadFile(string file, string? arguments) {
         DosProgramSegmentPrefix psp = CurrentPsp;
@@ -117,7 +116,7 @@ public class DosProcessManager : DosFileLoader {
         byte[] environmentBlock = CreateEnvironmentBlock(file);
 
         // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        int envBlockPointer = GetCurrentPspSegment() + 1;
+        int envBlockPointer = CurrentPspSegment + 1;
         SegmentedAddress envBlockSegmentAddress = new SegmentedAddress((ushort)envBlockPointer, 0);
 
         // Copy the environment block to memory in a separated segment.
@@ -128,11 +127,11 @@ public class DosProcessManager : DosFileLoader {
         psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
 
         // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(GetCurrentPspSegment(), DosCommandTail.OffsetInPspSegment);
+        _fileManager.SetDiskTransferAreaAddress(CurrentPspSegment, DosCommandTail.OffsetInPspSegment);
 
         return Path.GetExtension(file).ToUpperInvariant() switch {
             ".COM" => LoadComFile(file),
-            ".EXE" => LoadExeFile(file, GetCurrentPspSegment()),
+            ".EXE" => LoadExeFile(file, CurrentPspSegment),
             _ => throw new UnrecoverableException($"Unsupported file type for DOS: {file}"),
         };
     }

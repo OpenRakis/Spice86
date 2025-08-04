@@ -30,7 +30,7 @@ public class DosMemoryManager {
         _processManager = processManager;
         _memory = memory;
 
-        ushort pspSegment = _processManager.GetCurrentPspSegment();
+        ushort pspSegment = _processManager.CurrentPspSegment;
         ushort startSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
         ushort size = (ushort)(LastFreeSegment - startSegment);
@@ -77,7 +77,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _processManager.CurrentPspSegment;
         return block;
     }
 
@@ -162,7 +162,7 @@ public class DosMemoryManager {
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _processManager.CurrentPspSegment;
         return DosErrorCode.NoError;
     }
 

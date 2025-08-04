@@ -812,7 +812,7 @@ public class DosInt21Handler : InterruptHandler {
     /// The segment of the current PSP in BX.
     /// </returns>
     public void GetPspAddress() {
-        ushort pspSegment = _dosProcessManager.GetCurrentPspSegment();
+        ushort pspSegment = _dosProcessManager.CurrentPspSegment;
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
