@@ -31,10 +31,16 @@ public class DosMemoryManager {
         _memory = memory;
 
         ushort pspSegment = _processManager.GetCurrentPspSegment();
+        // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
+        // we're the memory manager, we're the one who needs to read the MCB, so we need to start
+        // with its address by subtracting 1 paragraph from the PSP.
         ushort startSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
         ushort size = (ushort)(LastFreeSegment - startSegment);
-        // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
+        // We adjusted the start address above so that it starts with the MCB, but the MCB itself
+        // isn't actually useable space. We need it here in the DOS memory manager for accounting.
+        // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
+        // size to get the useable space that we can allocate.
         _start.Size = (ushort)(size - 1);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
