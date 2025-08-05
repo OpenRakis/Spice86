@@ -33,6 +33,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly PerformanceViewModel _performanceViewModel;
+    private readonly IExceptionHandler _exceptionHandler;
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -58,10 +59,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
-        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel)
+        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel, IExceptionHandler exceptionHandler)
         : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
+        _exceptionHandler = exceptionHandler;
         _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
@@ -386,7 +388,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     private void OnEmulatorErrorOccured(Exception e) {
-        _pauseHandler.RequestPause("Inspect emulator error");
+        _exceptionHandler.Handle(e);
         _uiDispatcher.Post(() => {
             StatusMessage = "Emulator crashed.";
             ShowError(e);

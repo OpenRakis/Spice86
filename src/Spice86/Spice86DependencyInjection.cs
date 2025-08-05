@@ -46,8 +46,6 @@ using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
-using System;
-
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -304,7 +302,7 @@ public class Spice86DependencyInjection : IDisposable {
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
-
+        
         if(mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
@@ -316,9 +314,13 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindow.PerformanceViewModel = performanceViewModel;
 
-            mainWindowViewModel = new(
+            IExceptionHandler exceptionHandler = configuration.EffectiveHeadlessType != null
+                ? new HeadlessModeExceptionHandler(uiDispatcher)
+                : new MainWindowExceptionHandler(pauseHandler);
+
+            mainWindowViewModel = new MainWindowViewModel(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler);
             _gui = mainWindowViewModel;
         } else {
             _gui = new HeadlessGui();

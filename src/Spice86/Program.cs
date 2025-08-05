@@ -1,9 +1,10 @@
 ﻿namespace Spice86;
 
-using Spice86.Logging;
-using Spice86.Core.CLI;
-using Spice86.Shared.Interfaces;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+
+using Spice86.Core.CLI;
 
 /// <summary>
 /// Entry point for Spice86 application.
@@ -35,12 +36,22 @@ public class Program {
         if (configuration == null) {
             return;
         }
-        if (configuration.HeadlessMode) {
-            Spice86DependencyInjection spice86DependencyInjection = new(configuration);
-            spice86DependencyInjection.HeadlessModeStart();
-        } else {
-            // Run in GUI mode
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+
+        switch (configuration.EffectiveHeadlessType) {
+            case HeadlessType.Default: {
+                Spice86DependencyInjection spice86DependencyInjection = new(configuration);
+                spice86DependencyInjection.HeadlessModeStart();
+                break;
+            }
+            case HeadlessType.Avalonia:
+                BuildAvaloniaApp().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions {
+                    UseHeadlessDrawing = false
+                }).StartWithClassicDesktopLifetime(args, ShutdownMode.OnLastWindowClose);
+                break;
+            default:
+                // Start the application
+                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+                break;
         }
     }
 
