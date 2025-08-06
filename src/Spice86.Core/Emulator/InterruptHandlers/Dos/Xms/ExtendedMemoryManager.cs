@@ -480,12 +480,14 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        if(!_hmaClaimedByDosApp) {
+        if(!_hmaClaimedByDosApp && _state.DX > 0) {
             _state.AX = 1;
             _state.BL = (byte)XmsErrorCodes.Ok;
+            _hmaClaimedByDosApp = true;
         } else {
             _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.HmaInUse;
+            _state.BL = _state.DX == 0 ? (byte)XmsErrorCodes.HmaRequestNotBigEnough
+                : (byte)XmsErrorCodes.HmaInUse;
         }
     }
 
@@ -572,7 +574,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
         // This appears to be how Microsoft HIMEM.SYS implements this
         XmsErrorCodes result = XmsErrorCodes.A20LineError;
-        if (_a20State.IsGloballyEnabled) {
+        if (_a20State.IsGloballyEnabled && _hmaClaimedByDosApp) {
             result = EnableLocalA20Internal();
             if (result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;
@@ -627,7 +629,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
         // This appears to be how Microsoft HIMEM.SYS implements this
         XmsErrorCodes result = XmsErrorCodes.A20LineError;
-        if (_a20State.IsGloballyEnabled) {
+        if (_a20State.IsGloballyEnabled && _hmaClaimedByDosApp) {
             result = DisableLocalA20Internal();
             if(result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;

@@ -66,7 +66,7 @@ public enum XmsErrorCodes : byte {
     /// is less than the minimum size specified by the /HMAMIN= parameter in
     /// the XMS driver configuration. This helps ensure efficient use of the HMA.
     /// </summary>
-    HmaNotBigEnough = 0x92, 
+    HmaRequestNotBigEnough = 0x92, 
     
     /// <summary>
     /// HMA not allocated.
