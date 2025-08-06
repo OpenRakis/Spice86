@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.OperatingSystem.Interfaces;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -18,7 +19,7 @@ using System.Text;
 /// <summary>
 /// Setups the loading and execution of DOS programs and maintains the DOS PSP chains in memory.
 /// </summary>
-public class DosProcessManager : DosFileLoader {
+public class DosProcessManager : DosFileLoader, IDosPspManager {
     private const ushort ComOffset = 0x100;
     private readonly ushort _programEntryPointSegment;
     private readonly DosFileManager _fileManager;

@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Interfaces;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -15,22 +16,22 @@ public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly DosProcessManager _processManager;
+    private readonly IDosPspManager _pspManager;
     private readonly DosMemoryControlBlock _start;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="processManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
+    /// <param name="pspManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosMemoryManager(IMemory memory,
-        DosProcessManager processManager, ILoggerService loggerService) {
+        IDosPspManager pspManager, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _processManager = processManager;
+        _pspManager = pspManager;
         _memory = memory;
 
-        ushort pspSegment = _processManager.GetCurrentPspSegment();
+        ushort pspSegment = _pspManager.GetCurrentPspSegment();
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
         // we're the memory manager, we're the one who needs to read the MCB, so we need to start
         // with its address by subtracting 1 paragraph from the PSP.
@@ -83,7 +84,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _pspManager.GetCurrentPspSegment();
         return block;
     }
 
@@ -156,10 +157,15 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSizeInParagraphs - 1) {
+        if (block.Size < requestedSizeInParagraphs) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block.Size, requestedSizeInParagraphs);
+                    block, requestedSizeInParagraphs);
+
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
+                    _loggerService.Verbose("Next MCB is {Block}", nextBlock);
+                }
             }
             block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
@@ -168,7 +174,7 @@ public class DosMemoryManager {
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _pspManager.GetCurrentPspSegment();
         return DosErrorCode.NoError;
     }
 
