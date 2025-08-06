@@ -314,9 +314,10 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindow.PerformanceViewModel = performanceViewModel;
 
-            IExceptionHandler exceptionHandler = configuration.EffectiveHeadlessType != null
-                ? new HeadlessModeExceptionHandler(uiDispatcher)
-                : new MainWindowExceptionHandler(pauseHandler);
+            IExceptionHandler exceptionHandler = configuration.HeadlessMode switch {
+                null => new MainWindowExceptionHandler(pauseHandler),
+                _ => new HeadlessModeExceptionHandler(uiDispatcher)
+            };
 
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,

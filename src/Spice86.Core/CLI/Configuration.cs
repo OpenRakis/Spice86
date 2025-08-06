@@ -57,22 +57,10 @@ public sealed class Configuration {
     /// <summary>
     ///     Flag indicating if headless mode is enabled. Using this option without a value sets it to Default.
     /// </summary>
-    [Option('h', nameof(HeadlessMode), Default = false, Required = false,
+    [Option('h', nameof(HeadlessMode), Default = null, Required = false,
         HelpText =
-            "Headless mode. Use without parameter for default headless mode, or specify 'Default' or 'Avalonia'.")]
-    public bool HeadlessMode { get; init; }
-
-    /// <summary>
-    ///     The type of headless mode to use if headless mode is enabled.
-    /// </summary>
-    [Value(0, MetaName = "HeadlessType", Default = HeadlessType.Default, Required = false,
-        HelpText = "Type of headless mode to use: Default or Avalonia")]
-    public HeadlessType HeadlessType { get; init; }
-
-    /// <summary>
-    ///     Gets the effective headless type based on the HeadlessMode flag and HeadlessType value.
-    /// </summary>
-    public HeadlessType? EffectiveHeadlessType => HeadlessMode ? HeadlessType : null;
+            "Headless mode. 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.")]
+    public HeadlessType? HeadlessMode { get; init; }
 
     /// <summary> When true, records data at runtime and dumps them at exit time. </summary>
     [Option('d', nameof(DumpDataOnExit), Default = null, Required = false, HelpText = "When true, records data at runtime and dumps them at exit time")]
