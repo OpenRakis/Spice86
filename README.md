@@ -66,7 +66,7 @@ If there is already data there the emulator will load it first and complete it, 
   -i, --InstructionsPerSecond        <number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.
   -t, --TimeMultiplier               (Default: 1) <time multiplier> if >1 will go faster, if <1 will go slower.
   -d, --DumpDataOnExit               (Default: true) When true, records data at runtime and dumps them at exit time
-  -h, --HeadlessMode                 (Default: false) Headless mode. If true, no GUI is shown.
+  -h, --HeadlessMode [Mode]          (Default: false) Headless mode. The mode 'Minimal' does not use any UI components, 'Avalonia' uses the full UI and consumes a bit more memory.
   -l, --VerboseLogs                  (Default: false) Enable verbose level logs
   -w, --WarningLogs                  (Default: false) Enable warning level logs
   -s, --SilencedLogs                 (Default: false) Disable all logs
@@ -388,6 +388,9 @@ General procedure, in order:
 Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions. The code generator only works with functions.
 
 Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 17. That's how Ghidra likes it.
+
+### Cfg Cpu
+Doc [here](doc/cfgcpuReadme.md)
 
 ### Some screenshots
 Cryo dune:

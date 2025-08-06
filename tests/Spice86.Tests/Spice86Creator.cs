@@ -4,8 +4,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
-using System;
-
 using Xunit;
 
 public class Spice86Creator {
@@ -13,7 +11,7 @@ public class Spice86Creator {
     private readonly long _maxCycles;
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000, bool failOnUnhandledPort = false) {
+        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false) {
         _configuration = new Configuration {
             Exe = $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
@@ -23,12 +21,13 @@ public class Spice86Creator {
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
-            HeadlessMode = true,
+            HeadlessMode = HeadlessType.Minimal,
             // Use instructions per second based timer for predictability if timer is enabled
             InstructionsPerSecond = enablePit ? 100000 : null,
             CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
-            FailOnUnhandledPort = failOnUnhandledPort
+            FailOnUnhandledPort = failOnUnhandledPort,
+            A20Gate = enableA20Gate
         };
         _maxCycles = maxCycles;
     }

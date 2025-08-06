@@ -1,59 +1,57 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics.CodeAnalysis;
-
 /// <summary>
-/// Implements DOS memory operations, such as allocating and releasing MCBs
+/// Implements DOS memory operations, such as allocating and releasing MCBs.
 /// </summary>
 public class DosMemoryManager {
+    internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly ushort _pspSegment;
+    private readonly DosProcessManager _processManager;
     private readonly DosMemoryControlBlock _start;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
+    /// <param name="processManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="pspSegment">The segment start of the first PSP.</param>
-    /// <param name="lastFreeSegment">The last free segment for DOS memory manager to use.</param>
-    /// <param name="dosFileName">The full absolute host file path to the DOS executable we are going to execute.</param>
-    public DosMemoryManager(IMemory memory, ILoggerService loggerService,
-        ushort pspSegment, ushort lastFreeSegment, string? dosFileName = null) {
+    public DosMemoryManager(IMemory memory,
+        DosProcessManager processManager, ILoggerService loggerService) {
         _loggerService = loggerService;
+        _processManager = processManager;
         _memory = memory;
-        ushort startSegment = (ushort)(pspSegment - 1);
-        _pspSegment = pspSegment;
-        ushort size = (ushort)(lastFreeSegment - startSegment);
-        _start = GetDosMemoryControlBlockFromSegment(startSegment);
 
+        ushort pspSegment = _processManager.GetCurrentPspSegment();
+        ushort startSegment = (ushort)(pspSegment - 1);
+        _start = GetDosMemoryControlBlockFromSegment(startSegment);
+        ushort size = (ushort)(LastFreeSegment - startSegment);
         // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
         _start.Size = (ushort)(size - 1);
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
+                _start.AllocationSizeInBytes, _start.Size);
+        }
         _start.SetFree();
         _start.SetLast();
-
-        if (!string.IsNullOrWhiteSpace(dosFileName)) {
-            string shortFileName = Path.GetFileNameWithoutExtension(dosFileName).ToUpperInvariant();
-            if(shortFileName.Length > 8) {
-                shortFileName = shortFileName[..8];
-            }
-            _start.FileName = shortFileName;
-        }
     }
 
     /// <summary>
     /// Allocates a memory block of the specified size. Returns <c>null</c> if no memory block could be found to fit the requested size.
     /// </summary>
-    /// <param name="requestedSize">The requested size of the memory block.</param>
+    /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
-    public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSize) {
-        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSize);
+    public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
+        IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // take the smallest
         DosMemoryControlBlock? blockOptional = null;
@@ -64,22 +62,22 @@ public class DosMemoryManager {
         }
         if (blockOptional is null) {
             // Nothing found
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSize);
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
             }
             return null;
         }
 
         DosMemoryControlBlock block = blockOptional;
-        if (!SplitBlock(block, requestedSize)) {
+        if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not spit block {Block}", block);
             }
             return null;
         }
 
-        block.PspSegment = _pspSegment;
+        block.PspSegment = _processManager.GetCurrentPspSegment();
         return block;
     }
 
@@ -103,9 +101,9 @@ public class DosMemoryManager {
                 continue;
             }
 
-            DosMemoryControlBlock? next = current.Next();
+            DosMemoryControlBlock? next = current.GetNextOrDefault();
 
-            if(next is null) {
+            if (next is null) {
                 return current;
             }
 
@@ -129,55 +127,48 @@ public class DosMemoryManager {
     }
 
     /// <summary>
-    /// Gets the segment number of the Process Segment Prefix (PSP)
-    /// </summary>
-    public ushort PspSegment => _pspSegment;
-
-    /// <summary>
     /// Extends or reduces a MCB.
     /// </summary>
     /// <param name="blockSegment">The segment number of the MCB.</param>
-    /// <param name="requestedSize">The new size for the MCB, in bytes.</param>
-    /// <param name="dosMemoryControlBlock">The modified memory control block, or <c>null</c> if the operation was not successful.</param>
+    /// <param name="requestedSizeInParagraphs">The new size for the MCB, in paragraphs.</param>
+    /// <param name="block">The mcb from the blockSegment, or the largest mcb found.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public bool TryModifyBlock(ushort blockSegment, ref ushort requestedSize,
-        [NotNullWhen(true)] out DosMemoryControlBlock? dosMemoryControlBlock) {
-        dosMemoryControlBlock = null;
-        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
+    public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
+        out DosMemoryControlBlock block) {
+        block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         if (!CheckValidOrLogError(block)) {
-            requestedSize = this.FindLargestFree().Size;
-            return false;
+            block = this.FindLargestFree();
+            return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("Could not join MCB {Block}", block);
             }
-            requestedSize = this.FindLargestFree().Size;
-            return false;
+            block = this.FindLargestFree();
+            return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSize - 1) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}", block.Size, requestedSize);
+        if (block.Size < requestedSizeInParagraphs - 1) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
+                    block.Size, requestedSizeInParagraphs);
             }
-            requestedSize = this.FindLargestFree().Size;
-            return false;
+            block = this.FindLargestFree();
+            return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size > requestedSize) {
-            SplitBlock(block, requestedSize);
+        if (block.Size > requestedSizeInParagraphs) {
+            SplitBlock(block, requestedSizeInParagraphs);
         }
-
-        dosMemoryControlBlock = block;
-        dosMemoryControlBlock.PspSegment = _pspSegment;
-        return true;
+        block.PspSegment = _processManager.GetCurrentPspSegment();
+        return DosErrorCode.NoError;
     }
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
         if (block is null || !block.IsValid) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is invalid", block);
             }
             return false;
@@ -201,7 +192,7 @@ public class DosMemoryManager {
                 return candidates;
             }
 
-            DosMemoryControlBlock? next = current?.Next();
+            DosMemoryControlBlock? next = current?.GetNextOrDefault();
 
             if (next is not null) {
                 current = next;
@@ -220,7 +211,7 @@ public class DosMemoryManager {
         }
 
         while (block?.IsNonLast == true) {
-            DosMemoryControlBlock? next = block.Next();
+            DosMemoryControlBlock? next = block.GetNextOrDefault();
             if (next is null || !next.IsFree) {
                 // end of the free blocks reached
                 break;
@@ -266,14 +257,15 @@ public class DosMemoryManager {
 
         int nextBlockSize = blockSize - size - 1;
         if (nextBlockSize < 0) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small", block, size);
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small",
+                    block, size);
             }
             return false;
         }
 
         block.Size = size;
-        DosMemoryControlBlock? next = block.Next();
+        DosMemoryControlBlock? next = block.GetNextOrDefault();
 
         if (next is null) {
             return false;
