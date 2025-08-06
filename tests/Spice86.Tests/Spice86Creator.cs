@@ -4,8 +4,6 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
-using System;
-
 using Xunit;
 
 public class Spice86Creator {
@@ -23,7 +21,7 @@ public class Spice86Creator {
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
-            HeadlessMode = true,
+            HeadlessMode = HeadlessType.Minimal,
             // Use instructions per second based timer for predictability if timer is enabled
             InstructionsPerSecond = enablePit ? 100000 : null,
             CfgCpu = enableCfgCpu,

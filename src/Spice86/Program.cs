@@ -37,8 +37,8 @@ public class Program {
             return;
         }
 
-        switch (configuration.EffectiveHeadlessType) {
-            case HeadlessType.Default: {
+        switch (configuration.HeadlessMode) {
+            case HeadlessType.Minimal: {
                 Spice86DependencyInjection spice86DependencyInjection = new(configuration);
                 spice86DependencyInjection.HeadlessModeStart();
                 break;
