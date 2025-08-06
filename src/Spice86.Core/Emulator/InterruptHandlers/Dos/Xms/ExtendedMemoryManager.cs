@@ -306,14 +306,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RunMultiplex() {
-        if (!Enum.IsDefined(typeof(XmsSubFunctionsCodes), _state.AH)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
-            }
-            _state.AX = 1;
-            _state.BL = (byte)XmsErrorCodes.NotImplemented;
-        }
-
         var operation = (XmsSubFunctionsCodes)_state.AH;
 
         switch (operation) {
@@ -407,6 +399,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
             case XmsSubFunctionsCodes.ReallocateAnyExtendedMemory:
                 ReallocateAnyExtendedMemory();
+                break;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
+                }
+                _state.AX = 1;
+                _state.BL = (byte)XmsErrorCodes.NotImplemented;
                 break;
         }
     }
