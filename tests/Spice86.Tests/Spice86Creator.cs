@@ -10,14 +10,16 @@ public class Spice86Creator {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
 
-    public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false) {
+    public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false,
+        bool recordData = false, long maxCycles = 100000, bool installInterruptVectors = false,
+        bool failOnUnhandledPort = false, bool enableA20Gate = false,
+        bool enableXms = false) {
         _configuration = new Configuration {
-            Exe = $"Resources/cpuTests/{binName}.bin",
+            Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
             ExpectedChecksumValue = Array.Empty<byte>(),
             // making sure int8 is not going to be triggered during the tests
-            InitializeDOS = false,
+            InitializeDOS = installInterruptVectors,
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
@@ -27,7 +29,8 @@ public class Spice86Creator {
             CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
-            A20Gate = enableA20Gate
+            A20Gate = enableA20Gate,
+            Xms = enableXms
         };
         _maxCycles = maxCycles;
     }
