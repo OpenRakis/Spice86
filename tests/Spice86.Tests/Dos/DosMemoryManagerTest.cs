@@ -490,4 +490,145 @@ public class DosMemoryManagerTests : IDosPspManager {
         // Assert
         isBlockFreed.Should().BeFalse();
     }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates a block of memory for the program loaded at the
+    /// data segment and stack address in the given CPU state.
+    /// </summary>
+    [Fact]
+    public void ReserveSpaceForExeAndStack() {
+        // Arrange
+        State cpuState = new();
+        cpuState.SS = 0x4F3C;
+        cpuState.SP = 0x600;
+        cpuState.DS = GetCurrentPspSegment();
+        cpuState.ES = GetCurrentPspSegment();
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExeAndStack(cpuState);
+
+        // Assert
+        block.Should().NotBeNull();
+        if (block is null) {
+            return;
+        }
+        block.IsValid.Should().BeTrue();
+        block.IsFree.Should().BeFalse();
+        block.IsLast.Should().BeFalse();
+        block.PspSegment.Should().Be(GetCurrentPspSegment());
+        block.DataBlockSegment.Should().Be(0xFF0);
+        block.Size.Should().Be(16301);
+        block.AllocationSizeInBytes.Should().Be(260816);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager rounds up to the nearest paragraph when it allocates a block
+    /// of memory for the program loaded at the data segment and stack address in the given CPU
+    /// state.
+    /// </summary>
+    /// <remarks>
+    /// It may not be possible to hit this case outside of a contrived unit test case like this. A
+    /// well-behaved DOS executable should always align to a paragraph boundary when it is loaded.
+    /// However, just in case it doesn't, this test case verifies that DosMemoryManager accounts for
+    /// it.
+    /// </remarks>
+    [Fact]
+    public void ReserveSpaceForExeAndStackWithNonParagraphBoundary() {
+        // Arrange
+        State cpuState = new();
+        cpuState.SS = 0x4F3C;
+        cpuState.SP = 0x601; // This is one byte different than the initial test case.
+        cpuState.DS = GetCurrentPspSegment();
+        cpuState.ES = GetCurrentPspSegment();
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExeAndStack(cpuState);
+
+        // Assert
+        block.Should().NotBeNull();
+        if (block is null) {
+            return;
+        }
+        block.IsValid.Should().BeTrue();
+        block.IsFree.Should().BeFalse();
+        block.IsLast.Should().BeFalse();
+        block.PspSegment.Should().Be(GetCurrentPspSegment());
+        block.DataBlockSegment.Should().Be(0xFF0);
+        block.Size.Should().Be(16302);
+        block.AllocationSizeInBytes.Should().Be(260832);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager does not try to allocate a block of memory after a COM file
+    /// was loaded because the CPU is not in the correct state.
+    /// </summary>
+    /// <remarks>
+    /// We may eventually want to add support for reserving space for COM files as well. This test
+    /// case ensures that we don't do anything bad with them right now (or at least no worse than
+    /// before we started reserving space for any programs), but it doesn't necessarily represent
+    /// the intended final state. It will likely need to change at some point in the future when we
+    /// figure out what we need to do to properly reserve space for COM files too.
+    /// </remarks>
+    [Fact]
+    public void ReserveSpaceForComFile() {
+        // Arrange
+        State cpuState = new();
+        cpuState.SS = 0;
+        cpuState.SP = 0;
+        cpuState.DS = GetCurrentPspSegment();
+        cpuState.ES = GetCurrentPspSegment();
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExeAndStack(cpuState);
+
+        // Assert
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager does not try to allocate a block of memory if the stack
+    /// segment and data segment can't realistically point to the right place.
+    /// </summary>
+    /// <remarks>
+    /// This test case is just testing an additional protection in ReserveSpaceForExeAndStack() that
+    /// should, in theory, never be hit when running a real program as long as it was called
+    /// immediately after the program was loaded and the CPU state was setup correctly, as
+    /// documented. Or we have a bug. Either way, this test case ensures that our handling for this
+    /// unlikely edge case works correctly.
+    /// </remarks>
+    [Fact]
+    public void ReserveSpaceWithCpuInInvalidState() {
+        // Arrange
+        State cpuState = new();
+        cpuState.SS = 0x4F3C;
+        cpuState.SP = 0x600;
+        cpuState.DS = 0x7600;
+        cpuState.ES = 0x7600;
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExeAndStack(cpuState);
+
+        // Assert
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager returns null if the program was loaded at an invalid base
+    /// address that is not the start of a valid block.
+    /// </summary>
+    [Fact]
+    public void ReserveSpaceWithInvalidExeStartSegment() {
+        // Arrange
+        State cpuState = new();
+        cpuState.SS = 0x4F3C;
+        cpuState.SP = 0x600;
+        cpuState.DS = (ushort)(GetCurrentPspSegment() + 1);
+        cpuState.ES = cpuState.DS;
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExeAndStack(cpuState);
+
+        // Assert
+        block.Should().BeNull();
+    }
 }

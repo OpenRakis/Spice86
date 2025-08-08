@@ -80,6 +80,16 @@ public sealed class ProgramExecutor : IDisposable {
             screenPresenter.UserInterfaceInitialized += Run;
         }
         LoadFileToRun(configuration, loader);
+        if (configuration.InitializeDOS is not false) {
+            // Arguably DosProcessManager.SetupCpuForExe() would be a better place to do this since
+            // it sets up the stack after the executable has been loaded.. but DosMemoryManager has
+            // an instance of DosProcessManager, not the other way around, so there isn't a clean
+            // way to do it without creating circular references. ProgramExecutor, on the other
+            // hand, already has an instance of Dos with both DosMemoryManager and
+            // DosProcessManager, and it is responsible for orchestrating loading the program, so
+            // this class is the logical place to do it without creating odd layering problems.
+            dos.MemoryManager.ReserveSpaceForExeAndStack(state);
+        }
     }
 
     /// <summary>

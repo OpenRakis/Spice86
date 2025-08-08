@@ -2,10 +2,12 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Interfaces;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -176,6 +178,95 @@ public class DosMemoryManager {
         }
         block.PspSegment = _pspManager.GetCurrentPspSegment();
         return DosErrorCode.NoError;
+    }
+
+    /// <summary>
+    /// Reserves a memory block for the program and its stack.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DosProcessManager"/> loads an executable into memory, creates the stack
+    /// immediately above it, and sets up the initial stack segment and stack pointer to point to
+    /// the top of the stack. Call this function immediately after it has been loaded (and before
+    /// any other instructions have been executed so that the CPU state still points to the right
+    /// place) to reserve the memory block where the program was loaded and its stack was
+    /// created.<br/><br/>
+    /// If we don't do this after load a program, the next time that this class is asked to allocate
+    /// a block of memory, it will allocate a block that will allow the program to overwrite and
+    /// corrupt parts of itself or its stack.<br/><br/>
+    /// </remarks>
+    /// <param name="cpuState">The CPU state with the allocated stack segment.</param>
+    /// <returns>
+    /// The <see cref="DosMemoryControlBlock"/> allocated for the program and its stack,
+    /// or <c>null</c> if no memory block was allocated.
+    /// </returns>
+    public DosMemoryControlBlock? ReserveSpaceForExeAndStack(State cpuState) {
+        // We will always have a stack allocated after loading an EXE, but not necessarily after
+        // loading a COM file. That's okay. If we don't have it, we'll skip this reservation for
+        // now. We'll likely have to revisit this and handle memory reservations for COM files some
+        // day.
+        if (cpuState.SS == 0) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose(
+                    "SS:SP={stackAddress} - skipping program and stack memory reservation",
+                    new SegmentedAddress(cpuState.SS, cpuState.SP));
+            }
+            return null;
+        }
+
+        // After a program has been loaded but before it has been executed, its data segment will
+        // point to the beginning of the PSP, which is the first structure in memory immediately
+        // before the MCB. That's the beginning the block that we need to reserve.
+        ushort pspSegment = cpuState.DS;
+
+        // After the program has been loaded but before it has been executed, the SS:SP will
+        // temporarily be the top of the stack that is the last memory address that we need to
+        // reserve (because the stack grows down). The PSP that we retrieved above precedes the
+        // program and will be the first memory address that we need to reserve. Knowing both makes
+        // calculating the size easy.
+        uint topOfStack = cpuState.StackPhysicalAddress;
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+        if (topOfStack <= pspAddress) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(
+                    "SS={ss} DS={ds} does not appear to point to a valid program to reserve space for",
+                    ConvertUtils.ToHex16(cpuState.SS),
+                    ConvertUtils.ToHex16(cpuState.DS));
+            }
+            return null;
+        }
+        // Add 1 paragraph (16 bytes) to the reserved space so that we include the top of the stack
+        // in the reserved space as well. If we didn't do that, the top of the stack would be
+        // clobbered with the MCB of the next free block that's created after we reserve this one.
+        uint reservedSizeInBytes = (topOfStack - pspAddress) + 16;
+        ushort reservedSizeInParagraphs = (ushort)(reservedSizeInBytes / 16);
+        // The program that was loaded could be any size. If it didn't end on a paragraph boundary,
+        // round up to the nearest paragraph to ensure that we always allocate enough space.
+        if ((reservedSizeInBytes % 16) != 0) {
+            reservedSizeInParagraphs++;
+        }
+
+        DosMemoryControlBlock block;
+        DosErrorCode errorCode = TryModifyBlock(pspSegment, reservedSizeInParagraphs, out block);
+
+        if (errorCode != DosErrorCode.NoError) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(
+                    "Failed to reserve {reservedSizeInParagraphs} at {pspSegment} for the loaded program and its stack",
+                    reservedSizeInParagraphs,
+                    ConvertUtils.ToHex16(pspSegment));
+            }
+            return null;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose(
+                "Reserved {reservedSizeInBytes} bytes ({reservedSizeInParagraphs} paragraphs) at {pspSegment} for the program and its stack",
+                reservedSizeInBytes,
+                reservedSizeInParagraphs,
+                ConvertUtils.ToHex16(pspSegment));
+        }
+
+        return block;
     }
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
