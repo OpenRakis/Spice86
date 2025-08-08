@@ -15,11 +15,6 @@ internal class AvaloniaKeyScanCodeConverter {
     private static readonly FrozenDictionary<Key, byte> _keyPressedScanCode;
 
     /// <summary>
-    /// A dictionary that maps keyboard scan codes to their corresponding ASCII codes.
-    /// </summary>
-    private static readonly FrozenDictionary<byte, byte> _scanCodeToAscii;
-
-    /// <summary>
     /// Initializes static members of the <see cref="AvaloniaKeyScanCodeConverter"/> class.
     /// </summary>
     static AvaloniaKeyScanCodeConverter() {
@@ -112,81 +107,6 @@ internal class AvaloniaKeyScanCodeConverter {
             //{Key.D5, 0x4C}, ?
             {Key.Multiply, 0x37},
         }.ToFrozenDictionary();
-        _scanCodeToAscii = new Dictionary<byte, byte>()
-        {
-            {0x01, 0x1B},
-            {0x02, 0x31},
-            {0x03, 0x32},
-            {0x04, 0x33},
-            {0x05, 0x34},
-            {0x06, 0x35},
-            {0x07, 0x36},
-            {0x08, 0x37},
-            {0x09, 0x38},
-            {0x0A, 0x39},
-            {0x0B, 0x30},
-            {0x0C, 0x2D},
-            {0x0D, 0x3D},
-            {0x0E, 0x08},
-            {0x0F, 0x09},
-            {0x10, 0x71},
-            {0x11, 0x77},
-            {0x12, 0x65},
-            {0x13, 0x72},
-            {0x14, 0x74},
-            {0x15, 0x79},
-            {0x16, 0x75},
-            {0x17, 0x69},
-            {0x18, 0x6F},
-            {0x19, 0x70},
-            {0x1A, 0x5B},
-            {0x1B, 0x5D},
-            {0x1C, 0x0D},
-            {0x1E, 0x61},
-            {0x1F, 0x73},
-            {0x20, 0x64},
-            {0x21, 0x66},
-            {0x22, 0x67},
-            {0x23, 0x68},
-            {0x24, 0x6A},
-            {0x25, 0x6B},
-            {0x26, 0x6C},
-            {0x27, 0x3B},
-            {0x28, 0x27},
-            {0x29, 0x60},
-            {0x2B, 0x5C},
-            {0x2C, 0x7A},
-            {0x2D, 0x78},
-            {0x2E, 0x63},
-            {0x2F, 0x76},
-            {0x30, 0x62},
-            {0x31, 0x6E},
-            {0x32, 0x6D},
-            {0x33, 0x2C},
-            {0x34, 0x2E},
-            {0x35, 0x2F},
-            {0x37, 0x2A},
-            {0x39, 0x20},
-            {0x4A, 0x2D},
-            {0x4C, 0x35},
-            {0x4E, 0x2B},
-        }.ToFrozenDictionary();
-    }
-
-    /// <summary>
-    /// Gets the ASCII code from the input scancode.
-    /// </summary>
-    /// <param name="keyPressedScanCode">The scancode of the pressed keyboard key</param>
-    /// <returns>The corresponding ASCII code, or <c>null</c> if not found.</returns>
-    public byte? GetAsciiCode(byte? keyPressedScanCode) {
-        if (keyPressedScanCode > 0x7F) {
-            keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
-        }
-        if (keyPressedScanCode is not null && _scanCodeToAscii.TryGetValue((byte)keyPressedScanCode, out byte value)) {
-            return value;
-        }
-
-        return null;
     }
 
     /// <summary>

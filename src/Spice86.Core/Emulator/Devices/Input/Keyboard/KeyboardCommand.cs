@@ -11,19 +11,34 @@ public enum KeyboardCommand : byte {
     /// No command set.
     /// </summary>
     None = 0x0,
-
+    
     /// <summary>
     /// Enable A20 Address Line
     /// </summary>
     EnableA20Gate = 0xDD,
-
+    
     /// <summary>
     /// Disable A20 Address Line
     /// </summary>
     DisableA20Gate = 0xDF,
-
+    
     /// <summary>
     /// Write to the output port
     /// </summary>
     SetOutputPort = 0xD1,
+    
+    /// <summary>
+    /// Reset keyboard or controller
+    /// </summary>
+    Reset = 0xFF,
+    
+    /// <summary>
+    /// Set typematic rate and delay
+    /// </summary>
+    SetTypematicRateAndDelay = 0xF3,
+    
+    /// <summary>
+    /// Read controller configuration byte
+    /// </summary>
+    ReadControllerRamByte = 0x20
 }

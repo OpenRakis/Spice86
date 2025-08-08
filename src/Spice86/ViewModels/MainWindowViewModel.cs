@@ -29,7 +29,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
+    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter = new();
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly PerformanceViewModel _performanceViewModel;
@@ -64,7 +64,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -108,12 +107,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
-        KeyUp?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+        KeyUp?.Invoke(this, new KeyboardEventArgs((Key)e.Key,
+            _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key)));
     }
 
     [RelayCommand]
@@ -159,12 +154,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
 
     internal void OnKeyDown(KeyEventArgs e) {
-        KeyDown?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+        KeyDown?.Invoke(this, new KeyboardEventArgs((Key)e.Key,
+            _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key)));
     }
 
     [ObservableProperty]
