@@ -27,11 +27,11 @@ public class ExecutionFlowDumper {
     /// <summary>
     /// Dumps the execution flow recorded by the provided executionFlowRecorder to a JSON file at the specified <paramref name="destinationFilePath"/>
     /// </summary>
-    /// <param name="executionFlowRecorder">The execution flow recorder to dump.</param>
+    /// <param name="executionDump">The execution flow recorder to dump.</param>
     /// <param name="destinationFilePath">The path to the destination file to create and write the execution flow data to.</param>
-    public void Dump(ExecutionFlowRecorder executionFlowRecorder, string destinationFilePath) {
+    public void Dump(ExecutionDump executionDump, string destinationFilePath) {
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
-        string jsonString = JsonSerializer.Serialize(executionFlowRecorder);
+        string jsonString = JsonSerializer.Serialize(executionDump);
         printWriter.WriteLine(jsonString);
     }
 
@@ -41,7 +41,7 @@ public class ExecutionFlowDumper {
     /// <param name="filePath">The path to the execution flow data file to read.</param>
     /// <returns>An <see cref="ExecutionFlowRecorder"/> instance containing the data read from the file or a new <see cref="ExecutionFlowRecorder"/> object if the file does not exist.</returns>
     /// <exception cref="UnrecoverableException">Thrown if the file at the specified <paramref name="filePath"/> is not valid JSON.</exception>
-    public ExecutionFlowRecorder ReadFromFileOrCreate(string filePath) {
+    public ExecutionDump ReadFromFileOrCreate(string filePath) {
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
@@ -49,7 +49,7 @@ public class ExecutionFlowDumper {
             return new ();
         }
         try {
-            return JsonSerializer.Deserialize<ExecutionFlowRecorder>(File.ReadAllText(filePath)) ?? new();
+            return JsonSerializer.Deserialize<ExecutionDump>(File.ReadAllText(filePath)) ?? new();
         } catch (JsonException e) {
             throw new UnrecoverableException($"File {filePath} is not valid", e);
         }
