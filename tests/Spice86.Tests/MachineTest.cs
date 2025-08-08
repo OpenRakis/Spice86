@@ -179,9 +179,9 @@ public class MachineTest
             Assert.NotNull(divBy0HandlerEntry);
             Assert.NotNull(divBy0HandlerIret);
             Assert.NotNull(divBy0NextInstruction);
-            // Check that the int handler is linked to the division by 0 as a normal successor
+            // Check that the int handler is linked to the division by 0 as a cpu fault type successor
             Assert.Contains(divBy0HandlerEntry, divBy0.Successors);
-            Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.Normal]);
+            Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.CpuFault]);
             // Check that the instruction next to the div by 0 to which the handler returned to  is linked to the division by 0 as a regular "Call to return" link.
             // Side-note, normally, div by 0 int handler should return to the div instruction. However, here the handler edits the call stack making it return to the next instruction which is how a regular function call in a high level language would behave
             Assert.Contains(divBy0NextInstruction, divBy0.Successors);

@@ -20,7 +20,7 @@ using System.Text;
 /// </summary>
 public class GdbCustomCommandsHandler {
     private readonly ILoggerService _loggerService;
-    private readonly RecorderDataWriter _recordedDataWriter;
+    private readonly RecordedDataWriter _recordedDataWriter;
     private readonly GdbIo _gdbIo;
     private readonly IFunctionHandlerProvider _functionHandlerProvider;
     private readonly State _state;
@@ -34,16 +34,25 @@ public class GdbCustomCommandsHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="functionCatalogue">List of encountered functions.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="executionDumpFactory">The class that records machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="onBreakpointReached">The action to invoke when the breakpoint is triggered.</param>
     /// <param name="recordedDataDirectory">The path were program execution data will be dumped, with the 'dumpAll' custom GDB command.</param>
-    public GdbCustomCommandsHandler(IMemory memory, State state, IFunctionHandlerProvider functionHandlerProvider, MemoryDataExporter memoryDataExporter,
-        ExecutionFlowRecorder executionFlowRecorder, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        GdbIo gdbIo, ILoggerService loggerService, Action<BreakPoint> onBreakpointReached,
+    public GdbCustomCommandsHandler(
+        IMemory memory,
+        State state,
+        IFunctionHandlerProvider functionHandlerProvider,
+        FunctionCatalogue functionCatalogue,
+        MemoryDataExporter memoryDataExporter,
+        IExecutionDumpFactory executionDumpFactory,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        GdbIo gdbIo,
+        ILoggerService loggerService,
+        Action<BreakPoint> onBreakpointReached,
         string recordedDataDirectory) {
         _loggerService = loggerService;
         _state = state;
@@ -52,7 +61,7 @@ public class GdbCustomCommandsHandler {
         _functionHandlerProvider = functionHandlerProvider;
         _gdbIo = gdbIo;
         _onBreakpointReached = onBreakpointReached;
-        _recordedDataWriter = new RecorderDataWriter(state, executionFlowRecorder, memoryDataExporter, recordedDataDirectory, _loggerService);
+        _recordedDataWriter = new RecordedDataWriter(state, executionDumpFactory, memoryDataExporter, functionCatalogue, recordedDataDirectory, _loggerService);
     }
 
     /// <summary>
@@ -62,7 +71,7 @@ public class GdbCustomCommandsHandler {
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="command">The command string passed from GDB.</param>
     /// <returns>A response string to be sent back to GDB.</returns>
-    public string HandleCustomCommands(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, string command) {
+    public string HandleCustomCommands(string command) {
         string[] commandSplit = command.Split(",");
         if (commandSplit.Length != 2) {
             return _gdbIo.GenerateResponse("");
@@ -71,7 +80,7 @@ public class GdbCustomCommandsHandler {
         byte[] customHex = ConvertUtils.HexToByteArray(commandSplit[1]);
         string custom = Encoding.UTF8.GetString(customHex);
         string[] customSplit = custom.Split(" ");
-        return ExecuteCustomCommand(executionFlowRecorder, functionCatalogue, customSplit);
+        return ExecuteCustomCommand(customSplit);
     }
 
     private string BreakCycles(string[] args) {
@@ -143,16 +152,16 @@ public class GdbCustomCommandsHandler {
         return sb.ToString();
     }
 
-    private string DumpAll(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue) {
+    private string DumpAll() {
         try {
-            _recordedDataWriter.DumpAll(executionFlowRecorder, functionCatalogue);
+            _recordedDataWriter.DumpAll();
             return _gdbIo.GenerateMessageToDisplayResponse($"Dumped everything in {_recordedDataWriter.DumpDirectory}");
         } catch (IOException e) {
             return _gdbIo.GenerateMessageToDisplayResponse(e.Message);
         }
     }
 
-    private string ExecuteCustomCommand(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, params string[] args) {
+    private string ExecuteCustomCommand(params string[] args) {
         string originalCommand = args[0];
         string command = originalCommand.ToLowerInvariant();
         if (command.StartsWith("ram")) {
@@ -165,7 +174,7 @@ public class GdbCustomCommandsHandler {
             "breakstop" => BreakStop(),
             "callstack" => CallStack(),
             "peekret" => PeekRet(args),
-            "dumpall" => DumpAll(executionFlowRecorder, functionCatalogue),
+            "dumpall" => DumpAll(),
             "breakcycles" => BreakCycles(args),
             "breakcsip" => BreakCsIp(args),
             _ => InvalidCommand(originalCommand),

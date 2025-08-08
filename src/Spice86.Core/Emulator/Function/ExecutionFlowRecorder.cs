@@ -1,77 +1,54 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
-using Newtonsoft.Json;
-
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
 /// A class that records machine code execution flow.
 /// </summary>
-public class ExecutionFlowRecorder {
+public class ExecutionFlowRecorder : IExecutionDumpFactory {
     /// <summary>
     /// Gets or sets whether we register calls, jumps, returns, and unaligned returns.
     /// </summary>
     public bool RecordData { get; set; }
+    
+    /// <summary>
+    /// Gets or sets whether we register self modifying machine code.
+    /// </summary>
+    public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
 
-    /// <summary>
-    /// Gets a dictionary of calls from one address to another.
-    /// </summary>
-    public IDictionary<uint, HashSet<SegmentedAddress>> CallsFromTo { get; set; }
+
+    private readonly ExecutionDump _executionDump;
+
     private readonly HashSet<ulong> _callsEncountered = new(200000);
-    /// <summary>
-    /// Gets a dictionary of jumps from one address to another.
-    /// </summary>
-    public IDictionary<uint, HashSet<SegmentedAddress>> JumpsFromTo { get; set; }
+
     private readonly HashSet<ulong> _jumpsEncountered = new(200000);
-    /// <summary>
-    /// Gets a dictionary of returns from one address to another.
-    /// </summary>
-    public IDictionary<uint, HashSet<SegmentedAddress>> RetsFromTo { get; set; }
+
     private readonly HashSet<ulong> _retsEncountered = new(200000);
-    /// <summary>
-    /// Gets a dictionary of unaligned returns from one address to another.
-    /// </summary>
-    public IDictionary<uint, HashSet<SegmentedAddress>> UnalignedRetsFromTo { get; set; }
+
     private readonly HashSet<ulong> _unalignedRetsEncountered = new(200000);
-    /// <summary>
-    /// Gets the set of executed instructions.
-    /// </summary>
-    public HashSet<SegmentedAddress> ExecutedInstructions { get; set; }
+
     private readonly HashSet<uint> _instructionsEncountered = new(200000);
+
     private readonly HashSet<uint> _executableCodeAreasEncountered = new(200000);
 
     private readonly CircularBuffer<CallRecord> _functionCalls = new(20);
     private ushort _callDepth;
 
     /// <summary>
-    /// Gets or sets whether we register self modifying machine code.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsRegisterExecutableCodeModificationEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Gets a dictionary of executable addresses written by modifying instructions.
-    /// The key of the outer dictionary is the modified byte address.
-    /// The value of the outer dictionary is a dictionary of modifying instructions, where the key is the instruction address and the value is a set of possible changes that the instruction did.
-    /// </summary>
-    public IDictionary<uint, IDictionary<uint, HashSet<ByteModificationRecord>>> ExecutableAddressWrittenBy { get; }
-
-    /// <summary>
     /// Initializes a new instance. <see cref="RecordData"/> is set to false.
     /// </summary>
-    public ExecutionFlowRecorder() {
-        RecordData = false;
-        CallsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
-        JumpsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
-        RetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
-        UnalignedRetsFromTo = new Dictionary<uint, HashSet<SegmentedAddress>>(200000);
-        ExecutedInstructions = new HashSet<SegmentedAddress>();
-        ExecutableAddressWrittenBy = new Dictionary<uint, IDictionary<uint, HashSet<ByteModificationRecord>>>(200000);
+    public ExecutionFlowRecorder(bool recordData, ExecutionDump executionDump) {
+        RecordData = recordData;
+        _executionDump = executionDump;
+    }
+
+    public ExecutionDump Dump() {
+        return _executionDump;
     }
 
     /// <summary>
@@ -82,7 +59,7 @@ public class ExecutionFlowRecorder {
     /// <param name="toCS">The segment of the address being called.</param>
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterCall(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
-        RegisterAddressJump(CallsFromTo, _callsEncountered, fromCS, fromIP, toCS, toIP);
+        RegisterAddressJump(_executionDump.CallsFromTo, _callsEncountered, fromCS, fromIP, toCS, toIP);
 #if DEBUG
         _functionCalls.Add(new CallRecord(_callDepth++, fromCS, fromIP, toCS, toIP));
 #endif
@@ -96,7 +73,7 @@ public class ExecutionFlowRecorder {
     /// <param name="toCS">The segment of the address being called.</param>
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterJump(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
-        RegisterAddressJump(JumpsFromTo, _jumpsEncountered, fromCS, fromIP, toCS, toIP);
+        RegisterAddressJump(_executionDump.JumpsFromTo, _jumpsEncountered, fromCS, fromIP, toCS, toIP);
     }
 
     /// <summary>
@@ -107,7 +84,7 @@ public class ExecutionFlowRecorder {
     /// <param name="toCS">The segment of the address being called.</param>
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
-        RegisterAddressJump(RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
+        RegisterAddressJump(_executionDump.RetsFromTo, _retsEncountered, fromCS, fromIP, toCS, toIP);
         _callDepth--;
     }
 
@@ -119,7 +96,7 @@ public class ExecutionFlowRecorder {
     /// <param name="toCS">The segment of the address being called.</param>
     /// <param name="toIP">The offset of the address being called.</param>
     public void RegisterUnalignedReturn(ushort fromCS, ushort fromIP, ushort toCS, ushort toIP) {
-        RegisterAddressJump(UnalignedRetsFromTo, _unalignedRetsEncountered, fromCS, fromIP, toCS, toIP);
+        RegisterAddressJump(_executionDump.UnalignedRetsFromTo, _unalignedRetsEncountered, fromCS, fromIP, toCS, toIP);
     }
 
     /// <summary>
@@ -132,7 +109,7 @@ public class ExecutionFlowRecorder {
             return;
         }
 
-        ExecutedInstructions.Add(new SegmentedAddress(cs, ip));
+        _executionDump.ExecutedInstructions.Add(new SegmentedAddress(cs, ip));
     }
 
     /// <summary>
@@ -148,7 +125,7 @@ public class ExecutionFlowRecorder {
 
     /// <summary>
     /// Creates a memory write breakpoint on the given executable address.
-    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:
+    /// When triggered will fill <see cref="ExecutionDump.ExecutableAddressWrittenBy"/> appropriately:
     ///  - key of the map is the address being modified
     ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
@@ -167,7 +144,7 @@ public class ExecutionFlowRecorder {
 
     /// <summary>
     /// Creates a memory write breakpoint on the given executable address.
-    /// When triggered will fill <see cref="ExecutableAddressWrittenBy"/> appropriately:<br/>
+    /// When triggered will fill <see cref="ExecutionDump.ExecutableAddressWrittenBy"/> appropriately:<br/>
     ///  - key of the map is the address being modified <br/>
     ///  - value is a dictionary of instruction addresses that modified it, with for each instruction a list of the before and after values.
     /// </summary>
@@ -208,10 +185,10 @@ public class ExecutionFlowRecorder {
             // Probably Exe load
             return;
         }
-        if (!ExecutableAddressWrittenBy.TryGetValue(modifiedAddress,
+        if (!_executionDump.ExecutableAddressWrittenBy.TryGetValue(modifiedAddress,
                 out IDictionary<uint, HashSet<ByteModificationRecord>>? instructionsChangingThisAddress)) {
             instructionsChangingThisAddress = new Dictionary<uint, HashSet<ByteModificationRecord>>();
-            ExecutableAddressWrittenBy[modifiedAddress] = instructionsChangingThisAddress;
+            _executionDump.ExecutableAddressWrittenBy[modifiedAddress] = instructionsChangingThisAddress;
         }
         if (!instructionsChangingThisAddress.TryGetValue(instructionAddressPhysical, out HashSet<ByteModificationRecord>? byteModificationRecords)) {
             byteModificationRecords = new HashSet<ByteModificationRecord>();

@@ -23,15 +23,10 @@ public class RecordedDataReader : RecordedDataIoHandler {
     /// <summary>
     /// Reads the execution flow recorder data from a file or creates a new one if the file does not exist.
     /// </summary>
-    /// <param name="recordData">A value indicating whether the execution flow recorder should record data.</param>
-    /// <returns>The execution flow recorder read from the file, or a new instance if the file does not exist.</returns>
-    public ExecutionFlowRecorder ReadExecutionFlowRecorderFromFileOrCreate(bool recordData) {
-        ExecutionFlowRecorder executionFlowRecorder =
-            new ExecutionFlowDumper(
-                    _loggerService)
+    /// <returns>The execution dump read from the file, or a new instance if the file does not exist.</returns>
+    public ExecutionDump ReadExecutionDumpFromFileOrCreate() {
+           return new ExecutionFlowDumper(_loggerService)
                 .ReadFromFileOrCreate(ExecutionFlowFile);
-        executionFlowRecorder.RecordData = recordData;
-        return executionFlowRecorder;
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+using System.Linq;
 
 /// <summary>
 /// Cache of previous instructions that existed in a memory address at a time.
@@ -18,6 +19,10 @@ public class PreviousInstructions : InstructionReplacer {
     public PreviousInstructions(IMemory memory, InstructionReplacerRegistry replacerRegistry) : base(
         replacerRegistry) {
         _memoryInstructionMatcher = new MemoryInstructionMatcher(memory);
+    }
+
+    public List<CfgInstruction> GetAll() {
+        return _previousInstructionsAtAddress.Values.SelectMany(x => x).ToList();
     }
 
     public HashSet<CfgInstruction>? GetAtAddress(SegmentedAddress address) {

@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
 
@@ -40,4 +41,9 @@ public class ExecutionContext {
     /// Next node to execute according to the CFG Graph.
     /// </summary>
     public ICfgNode? NodeToExecuteNextAccordingToGraph { get; set; }
+    
+    /// <summary>
+    /// True when last executed triggered a CPU fault
+    /// </summary>
+    public bool CpuFault { get; set; } = false;
 }

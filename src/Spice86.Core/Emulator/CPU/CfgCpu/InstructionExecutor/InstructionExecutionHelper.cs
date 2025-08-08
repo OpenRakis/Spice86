@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
@@ -63,9 +64,9 @@ public class InstructionExecutionHelper {
     public UInt32RegistersIndexer UInt32Registers => State.GeneralRegisters.UInt32;
     public UInt16RegistersIndexer SegmentRegisters => State.SegmentRegisters.UInt16;
     private FunctionHandler CurrentFunctionHandler => _executionContextManager.CurrentExecutionContext.FunctionHandler;
-
+    private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
     public ICfgNode? NextNode { get; set; }
-    
+
     public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
         return State.SegmentRegisters.UInt16[instruction.SegmentRegisterIndex];
     }
@@ -100,7 +101,6 @@ public class InstructionExecutionHelper {
     public void JumpNear(CfgInstruction instruction, ushort ip) {
         State.IP = ip;
         SetNextNodeToSuccessorAtCsIp(instruction);
-
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -286,6 +286,7 @@ public class InstructionExecutionHelper {
             // Link to the interrupt handler will likely need to be added
             instruction.IncreaseMaxSuccessorsCount(InterruptVectorTable[cpuException.InterruptVector]);
             HandleInterruptCall(instruction, cpuException.InterruptVector);
+            CurrentExecutionContext.CpuFault = true;
         } catch (UnhandledOperationException e) {
             throw new AggregateException(cpuException, e);
         }
