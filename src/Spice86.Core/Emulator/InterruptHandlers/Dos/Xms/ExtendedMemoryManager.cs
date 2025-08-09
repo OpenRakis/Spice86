@@ -1178,7 +1178,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             }
             if (move.DestOffset > dstBlock.Value.Length) {
                 _state.AX = 0;
-                _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
+                _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
                 return;
             }
             if (move.Length > dstBlock.Value.Length - move.DestOffset) {
