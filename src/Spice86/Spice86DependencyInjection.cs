@@ -197,28 +197,29 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function handler in external interrupt created...");
         }
 
-        Cpu cpu = new(interruptVectorTable, stack,
-            functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+        ICpu cpu;
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("CPU created...");
+        if (!configuration.CfgCpu) {
+            cpu = new Cpu(interruptVectorTable, stack,
+                functionHandler, functionHandlerInExternalInterrupt, memory, state,
+                dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
+                loggerService, executionFlowRecorder);
+
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("CPU created...");
+            }
+        } else {
+            var cfgCpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler,
+                dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
+            cpu = cfgCpu;
+
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("CfgCpu created...");
+            }
         }
 
-        CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("CfgCpu created...");
-        }
-
-        IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
-        IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
-            loggerService.Information("Execution will be done with {CpuType}", cpuType);
-        }
+        IInstructionExecutor instructionExecutor = cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
@@ -262,14 +263,14 @@ public class Spice86DependencyInjection : IDisposable {
         }
         
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
-                    functionHandlerProvider, stack, state, loggerService);
+            functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
                     state, biosDataArea, loggerService);
         SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
-                    functionHandlerProvider, stack, state, a20Gate,
+            functionHandlerProvider, stack, state, a20Gate,
                     configuration.InitializeDOS is not false, loggerService);
         var rtc = new Clock(loggerService);
-        
+
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
                     state, loggerService, timerInt8Handler, rtc);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
@@ -441,8 +442,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
             biosKeyboardInt9Handler,
-            callbackHandler, cpu,
-            cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
+            callbackHandler, cpu, state, dos, gravisUltraSound, ioPortDispatcher,
             joystick, keyboard, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
@@ -505,12 +505,13 @@ public class Spice86DependencyInjection : IDisposable {
 
             VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
 
-            CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
-
+            ICpuViewModel cpuViewModel = cpu switch {
+                CfgCpu cfgCpu => new CfgCpuViewModel(configuration, cfgCpu.ExecutionContextManager, pauseHandler),
+                Cpu => new CpuViewModel(configuration, state, memory, pauseHandler, uiDispatcher),
+                _ => throw new InvalidOperationException("Unknown CPU type")
+            };
+            
             MidiViewModel midiViewModel = new(midiDevice);
-
-            CfgCpuViewModel cfgCpuViewModel = new(configuration, cfgCpu.ExecutionContextManager,
-                pauseHandler);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
@@ -529,7 +530,7 @@ public class Spice86DependencyInjection : IDisposable {
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
                 paletteViewModel, softwareMixerViewModel, videoCardViewModel,
-                cpuViewModel, midiViewModel, cfgCpuViewModel, memoryViewModel,
+                cpuViewModel, midiViewModel, memoryViewModel,
                 stackMemoryViewModel);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =

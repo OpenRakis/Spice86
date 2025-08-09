@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-using System.Linq;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -14,10 +12,12 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Linq;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -56,7 +56,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The emulated CPU.
     /// </summary>
-    public Cpu Cpu { get; }
+    public ICpu Cpu { get; }
 
     /// <summary>
     /// The emulator machine.
@@ -86,7 +86,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
-    public Stack Stack => Machine.Stack;
+    public Stack Stack { get; }
 
     /// <summary>
     /// Gets the state of the CPU.
@@ -310,8 +310,9 @@ public class CSharpOverrideHelper {
     /// <param name="machine">The emulator machine.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
+    /// <param name="stack">The stack</param>
     public CSharpOverrideHelper(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) {
+        Machine machine, ILoggerService loggerService, Configuration configuration, Stack stack) {
         Machine = machine;
         Cpu = machine.Cpu;
         Memory = machine.Memory;
@@ -327,6 +328,7 @@ public class CSharpOverrideHelper {
         Alu8 = new(machine.Cpu.State);
         Alu16 = new(machine.Cpu.State);
         Alu32 = new(machine.Cpu.State);
+        Stack = stack;
     }
 
     /// <summary>

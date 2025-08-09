@@ -10,6 +10,7 @@
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 	xmlns:controls="clr-namespace:Spice86.Views.Controls"
 	xmlns:views="clr-namespace:Spice86.Views"
+	xmlns:converters="clr-namespace:Spice86.Views.Converters"
 	x:CompileBindings="True"
 	x:DataType="vm:DebugWindowViewModel"
 	WindowStartupLocation="CenterOwner"
@@ -60,8 +61,10 @@
 				</Button.Content>
 			</Button>
 		</StackPanel>
-		<TabControl TabStripPlacement="Left" Grid.Row="1">
-			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1" Content="{Binding CpuViewModel}">
+		<TabControl TabStripPlacement="Left" Grid.Row="1" SelectedIndex="2">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1"
+			                        IsVisible="{Binding !CpuViewModel.IsCfgCpuEnabled}"
+			                        Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
@@ -73,8 +76,8 @@
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem
 				HotKeyManager.HotKey="Alt+F2"
-				IsVisible="{Binding CfgCpuViewModel.IsCfgCpuEnabled}"
-				Content="{Binding CfgCpuViewModel}">
+				IsVisible="{Binding CpuViewModel.IsCfgCpuEnabled}"
+				Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>

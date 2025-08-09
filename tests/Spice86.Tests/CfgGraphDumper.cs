@@ -1,8 +1,6 @@
 ﻿namespace Spice86.Tests;
 
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
@@ -22,7 +20,8 @@ public class CfgGraphDumper {
     }
 
     private List<ICfgNode> DumpInOrder(Machine machine) {
-        Dictionary<SegmentedAddress, ISet<CfgInstruction>> executionContextEntryPoints = machine.CfgCpu.ExecutionContextManager.ExecutionContextEntryPoints;
+        Dictionary<SegmentedAddress, ISet<CfgInstruction>> executionContextEntryPoints =
+            ((Core.Emulator.CPU.CfgCpu.CfgCpu)machine.Cpu).ExecutionContextManager.ExecutionContextEntryPoints;
         IEnumerable<CfgInstruction> startNodes = executionContextEntryPoints.Values.SelectMany(i => i);
         ISet<ICfgNode> allNodes = BrowseGraph(startNodes);
         return allNodes.OrderBy(node => node.Address.Linear).ThenByDescending(node => node.Id).ToList();

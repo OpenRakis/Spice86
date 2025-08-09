@@ -18,7 +18,7 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Diagnostics;
 
-public partial class CfgCpuViewModel : ViewModelBase {
+public partial class CfgCpuViewModel : ViewModelBase, ICpuViewModel {
     private readonly ExecutionContextManager _executionContextManager;
     private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly NodeToString _nodeToString = new();
@@ -33,7 +33,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private bool _isCfgCpuEnabled;
 
-    public CfgCpuViewModel(Configuration configuration, ExecutionContextManager executionContextManager, IPauseHandler pauseHandler) {
+    public CfgCpuViewModel(Configuration configuration, ExecutionContextManager executionContextManager,
+        IPauseHandler pauseHandler) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = new PerformanceMeasurer();
         IsCfgCpuEnabled = configuration.CfgCpu;
