@@ -1,4 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+
+using System.Diagnostics;
+
+[DebuggerDisplay("Handle={Handle}, Length={Length}, IsFree={IsFree}")]
 public readonly struct XmsBlock : IEquatable<XmsBlock> {
     public XmsBlock(int handle, uint offset, uint length, bool free) {
         Handle = handle;
@@ -15,6 +19,7 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// Gets the offset of the block from the XMS base address.
     /// </summary>
     public uint Offset { get; }
+
     /// <summary>
     /// Gets the length of the block in bytes.
     /// </summary>
@@ -24,7 +29,6 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
     /// Gets a value indicating whether the block is ready to be used.
     /// </summary>
     public bool IsFree { get; }
-
 
     public override string ToString() {
         if (!IsFree) {
