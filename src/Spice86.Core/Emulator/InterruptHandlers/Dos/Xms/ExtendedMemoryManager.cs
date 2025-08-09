@@ -1785,7 +1785,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         XmsBlock newBlock = firstBlock.Join(nextNode.Value);
         _xmsBlocksLinkedList.Remove(nextNode);
-        _xmsBlocksLinkedList.Replace(firstBlock, newBlock);
+        _xmsBlocksLinkedList.Replace(firstBlock, newBlock.Free());
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
