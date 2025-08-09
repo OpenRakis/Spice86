@@ -130,7 +130,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
             case SelectorNode selectorNode: {
                 Discriminator discriminator = selectorNode.SuccessorsPerDiscriminator
                     .FirstOrDefault(x => x.Value == successor).Key;
-                label = discriminator.ToString();
+                label = discriminator?.ToString() ?? "";
                 break;
             }
         }
