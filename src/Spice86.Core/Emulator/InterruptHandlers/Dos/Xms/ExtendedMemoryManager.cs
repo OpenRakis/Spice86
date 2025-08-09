@@ -1433,7 +1433,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             LinkedListNode<XmsBlock>? node = _xmsBlocksLinkedList.Find(block.Value);
             if (node?.Next != null && node.Next.Value.IsFree) {
                 uint combined = block.Value.Length + node.Next.Value.Length;
-                if (combined >= newSizeInBytes) {
+                if (combined >= newSizeInBytes &&
+                    block.Value.CanBeJoinedWith(node.Next.Value)) {
                     XmsBlock merged = block.Value.Join(node.Next.Value);
                     _xmsBlocksLinkedList.Remove(node.Next);
                     XmsBlock[] newBlocks = merged.Allocate(handle, newSizeInBytes);
@@ -1441,8 +1442,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                     if (newBlocks.Length > 1) {
                         MergeFreeBlocks(newBlocks[1]);
                     }
-                    _state.AX = 1;
                 }
+                _state.AX = 1;
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
@@ -1775,7 +1776,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        LinkedListNode<XmsBlock> nextNode = firstNode.Next;
+        LinkedListNode<XmsBlock>? nextNode = firstNode.Next;
         if (!nextNode.Value.IsFree) {
             return;
         }
@@ -1785,13 +1786,18 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 firstBlock.Offset, firstBlock.Length, nextNode.Value.Offset, nextNode.Value.Length);
         }
 
-        XmsBlock newBlock = firstBlock.Join(nextNode.Value);
-        _xmsBlocksLinkedList.Remove(nextNode);
-        _xmsBlocksLinkedList.Replace(firstBlock, newBlock.Free());
+        if (firstBlock.CanBeJoinedWith(nextNode.Value))
+        {
+            XmsBlock newBlock = firstBlock.Join(nextNode.Value);
+            _xmsBlocksLinkedList.Remove(nextNode);
+            _xmsBlocksLinkedList.Replace(firstBlock, newBlock.Free());
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
-                newBlock.Offset, newBlock.Length);
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
+                    newBlock.Offset, newBlock.Length);
+            }
+        } else if(nextNode.Value.IsFree && nextNode.Value.Length is 0) {
+            _xmsBlocksLinkedList.Remove(nextNode.Value);
         }
     }
 

@@ -94,6 +94,10 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
         return new XmsBlock(0, Offset, Length + other.Length, false);
     }
 
+    public bool CanBeJoinedWith(XmsBlock other) {
+        return IsFree && other.IsFree && Offset + Length == other.Length;
+    }
+
     public static bool operator ==(XmsBlock left, XmsBlock right) {
         return left.Equals(right);
     }
