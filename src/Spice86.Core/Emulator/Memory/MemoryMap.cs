@@ -78,5 +78,5 @@ public static class MemoryMap {
     /// Segment where DOS device driver headers are stored.
     /// <see cref="VirtualDeviceBase"/>
     /// </summary>
-    public const ushort DeviceDriverSegment = 0xF800;
+    public const ushort DeviceDriversSegment = 0xF800;
 }

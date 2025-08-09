@@ -6,8 +6,10 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -116,6 +118,8 @@ public sealed class Dos {
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
 
+    public ExtendedMemoryManager? Xms { get; private set; }
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -135,8 +139,10 @@ public sealed class Dos {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService,
+        ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
+        Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
         _biosDataArea = biosDataArea;
@@ -145,7 +151,7 @@ public sealed class Dos {
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
-        DosSysVars = new DosSysVars((NullDevice)dosDevices[0], memory,
+        DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
@@ -164,7 +170,8 @@ public sealed class Dos {
         DosInt21Handler = new DosInt21Handler(_memory, ProcessManager, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
-        DosInt2FHandler = new DosInt2fHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt2FHandler = new DosInt2fHandler(_memory,
+            functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
@@ -176,9 +183,15 @@ public sealed class Dos {
             _loggerService.Verbose("Initializing DOS");
         }
         OpenDefaultFileHandles(dosDevices);
+
+        if (configuration.Xms && xms is not null) {
+            Xms = xms;
+            AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
+        }
+
         if (configuration.Ems) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
-            AddDevice(Ems, ExpandedMemoryManager.DosDeviceSegment, 0);
+            AddDevice(Ems.AsCharacterDevice(), ExpandedMemoryManager.DosDeviceSegment, 0);
         }
     }
 
@@ -189,7 +202,7 @@ public sealed class Dos {
     }
 
     private uint GetDefaultNewDeviceBaseAddress()
-        => new SegmentedAddress(MemoryMap.DeviceDriverSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
+        => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
     private VirtualFileBase[] AddDefaultDevices(State state, KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
@@ -219,7 +232,7 @@ public sealed class Dos {
     private void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         DosDeviceHeader header = device.Header;
         // Store the location of the header
-        segment ??= MemoryMap.DeviceDriverSegment;
+        segment ??= MemoryMap.DeviceDriversSegment;
         offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
         // Write the DOS device driver header to memory
         ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.

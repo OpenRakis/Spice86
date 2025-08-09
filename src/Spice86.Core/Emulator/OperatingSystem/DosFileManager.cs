@@ -119,7 +119,7 @@ public class DosFileManager {
     /// <param name="fileHandle">The file handle to an open file.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     /// <exception cref="UnrecoverableException">If the host OS refuses to close the file.</exception>
-    public DosFileOperationResult CloseFile(ushort fileHandle) {
+    public DosFileOperationResult CloseFileOrDevice(ushort fileHandle) {
         if (GetOpenFile(fileHandle) is not DosFile file) {
             return FileNotOpenedError(fileHandle);
         }
@@ -210,7 +210,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
         if (newHandle < OpenFiles.Length && OpenFiles[newHandle] != null) {
-            CloseFile(newHandle);
+            CloseFileOrDevice(newHandle);
         }
         SetOpenFile(newHandle, file);
         return DosFileOperationResult.NoValue();
@@ -466,7 +466,7 @@ public class DosFileManager {
     /// <param name="fileName">The name of the file to open.</param>
     /// <param name="accessMode">The access mode (read, write, or read+write)</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenFile(string fileName, FileAccessMode accessMode) {
+    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
         if (device is not null) {
@@ -515,7 +515,7 @@ public class DosFileManager {
     /// <param name="readLength">The amount of data to read.</param>
     /// <param name="targetAddress">The start address of the receiving buffer.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult ReadFile(ushort fileHandle, ushort readLength, uint targetAddress) {
+    public DosFileOperationResult ReadFileOrDevice(ushort fileHandle, ushort readLength, uint targetAddress) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
@@ -926,7 +926,7 @@ public class DosFileManager {
         switch (state.AL) {
             case 0x00:      /* Get Device Information */
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
-                if (fileOrDevice is VirtualDeviceBase virtualDevice) {
+                if (fileOrDevice is IVirtualDevice virtualDevice) {
                     state.DX = virtualDevice.Information;
                 } else if (fileOrDevice is DosFile dosFile) {
                     byte sourceDrive = dosFile.Drive;
@@ -1085,15 +1085,16 @@ public class DosFileManager {
                     }
                     return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
-                uint ptr = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+
+                uint dosStringBuffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
 
                 switch (state.CL) {
                     case 0x60:  // Get Device Parameters
-                        _memory.UInt8[ptr + 1] = (byte)(drive >= 2 ? 0x05 : 0x07);  // type
-                        _memory.UInt16[ptr + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
-                        _memory.UInt16[ptr + 4] = 0x0000;                            // cylinders
-                        _memory.UInt8[ptr + 6] = 0x00;                              // media type
-                        _memory.UInt16[ptr + 7] = 0x0200;                            // bytes per sector
+                        _memory.UInt8[dosStringBuffer + 1] = (byte)(drive >= 2 ? 0x05 : 0x07);  // type
+                        _memory.UInt16[dosStringBuffer + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
+                        _memory.UInt16[dosStringBuffer + 4] = 0x0000;                            // cylinders
+                        _memory.UInt8[dosStringBuffer + 6] = 0x00;                              // media type
+                        _memory.UInt16[dosStringBuffer + 7] = 0x0200;                            // bytes per sector
                         break;
 
                     case 0x46:  // Set Volume Serial Number (not yet implemented)
@@ -1107,18 +1108,9 @@ public class DosFileManager {
                         {
                             // 1) Build the 11-byte volume label (padded with spaces)
                             // 1) pull the raw label (or default), split name/ext
-                            VirtualDrive driveInfo = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            string rawLabel = driveInfo.Label.ToUpperInvariant();
-                            string[] parts = rawLabel.Split(['.'], 2);
-                            string name = parts[0];
-                            string ext = parts.Length > 1 ? parts[1] : "";
-
-                            // 2) build the 11-byte volume label
-                            var sbLabel = new StringBuilder(11);
-                            sbLabel.Append(name.Length > 8 ? name[..8] : name);
-                            sbLabel.Append(ext.Length > 3 ? ext[..3] : ext);
-                            if (sbLabel.Length < 11)
-                                sbLabel.Append(' ', 11 - sbLabel.Length);
+                            VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            string driveLabel = vDrive.Label.ToUpperInvariant();
+                            
 
                             // 3) build the 8-byte FS ID (FAT16 or FAT12 for floppies)
                             var sbFs = new StringBuilder(8);
@@ -1127,9 +1119,9 @@ public class DosFileManager {
                                 sbFs.Append(' ', 8 - sbFs.Length);
 
                             // 4) write serial, label, fs-id into emulated memory
-                            _memory.UInt32[ptr + 2] = 0x1234; // serial
-                            _memory.SetZeroTerminatedString(ptr + 6, sbLabel.ToString(), sbLabel.Length + 1);
-                            _memory.SetZeroTerminatedString(ptr + 0x11, sbFs.ToString(), sbFs.Length + 1);
+                            _memory.UInt32[dosStringBuffer + 2] = 0x1234; // serial
+                            _memory.SetZeroTerminatedString(dosStringBuffer + 6, driveLabel, driveLabel.Length + 1);
+                            _memory.SetZeroTerminatedString(dosStringBuffer + 0x11, sbFs.ToString(), sbFs.Length + 1);
                             break;
                         }
 
