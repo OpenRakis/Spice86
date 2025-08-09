@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
@@ -192,10 +191,10 @@ public sealed class Machine : IDisposable {
     public DmaController DmaController { get; }
 
     /// <summary>
-    /// The OPL3 FM Synth chip.
+    /// The OPL2 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
-
+    public Opl OPL { get; }
+    
     /// <summary>
     /// The internal software mixer for all sound channels.
     /// </summary>
@@ -260,7 +259,7 @@ public sealed class Machine : IDisposable {
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
         DmaController dmaController,
-        OPL3FM opl3FM,
+        Opl opl,
         SoftwareMixer softwareMixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
@@ -298,7 +297,7 @@ public sealed class Machine : IDisposable {
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
         DmaController = dmaController;
-        OPL3FM = opl3FM;
+        OPL = opl;
         SoftwareMixer = softwareMixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;
@@ -315,7 +314,7 @@ public sealed class Machine : IDisposable {
             if (disposing) {
                 MidiDevice.Dispose();
                 SoundBlaster.Dispose();
-                OPL3FM.Dispose();
+                OPL.Dispose();
                 PcSpeaker.Dispose();
                 SoftwareMixer.Dispose();
             }
