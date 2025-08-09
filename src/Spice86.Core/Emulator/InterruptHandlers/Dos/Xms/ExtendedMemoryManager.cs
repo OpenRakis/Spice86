@@ -1221,7 +1221,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
     /// <summary>
     /// XMS Function 0Ch: Lock Extended Memory Block.
-    /// Locks a block and returns its 32-bit linear address at memory pointer DX:BX.
+    /// Locks a block and returns its 32-bit linear address.
     /// </summary>
     /// <remarks>
     /// <b>Inputs:</b> AH = 0Ch, DX = Handle to lock<br/>
@@ -1278,8 +1278,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 handle, fullAddress, _xmsHandles[handle]);
         }
 
-        uint destPointer = MemoryUtils.ToPhysicalAddress(_state.DX, _state.BX);
-        _memory.UInt32[destPointer] = fullAddress;
+        // Return the 32-bit physical address in DX:BX
+        _state.DX = MemoryUtils.GetHighWord(fullAddress);
+        _state.BX = MemoryUtils.GetLowWord(fullAddress);
+
         _state.AX = 1;
         _state.BL = (byte)XmsErrorCodes.Ok;
     }

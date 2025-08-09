@@ -316,8 +316,7 @@ public class XmsUnitTests
         _state.AH = 0x0C;
         _state.DX = destHandle;
         _xms.RunMultiplex();
-        uint pointer = MemoryUtils.ToPhysicalAddress(_state.DX, _state.BX);
-        uint destAddress = _memory.UInt32[pointer];
+        uint destAddress = MemoryUtils.To32BitAddress(_state.DX, _state.BX);
 
         // Verify data was copied
         _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea).Should().Be(0x42, "First byte should be copied");

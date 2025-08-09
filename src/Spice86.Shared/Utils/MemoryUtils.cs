@@ -27,4 +27,32 @@ public static class MemoryUtils {
     public static ushort ToSegment(uint physicalAddress) {
         return (ushort)(physicalAddress >> 4);
     }
+
+    /// <summary>
+    /// Extracts the high 16-bit word from a 32-bit address.
+    /// </summary>
+    /// <param name="address">The 32-bit address.</param>
+    /// <returns>The high 16 bits of the address.</returns>
+    public static ushort GetHighWord(uint address) {
+        return (ushort)(address >> 16);
+    }
+
+    /// <summary>
+    /// Extracts the low 16-bit word from a 32-bit address.
+    /// </summary>
+    /// <param name="address">The 32-bit address.</param>
+    /// <returns>The low 16 bits of the address.</returns>
+    public static ushort GetLowWord(uint address) {
+        return (ushort)(address & 0xFFFF);
+    }
+
+    /// <summary>
+    /// Combines high and low 16-bit words into a single 32-bit address.
+    /// </summary>
+    /// <param name="highWord">The high 16 bits.</param>
+    /// <param name="lowWord">The low 16 bits.</param>
+    /// <returns>The combined 32-bit address.</returns>
+    public static uint To32BitAddress(ushort highWord, ushort lowWord) {
+        return ((uint)highWord << 16) | lowWord;
+    }
 }
