@@ -1442,21 +1442,28 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             LinkedListNode<XmsBlock>? node = _xmsBlocksLinkedList.Find(block.Value);
             if (node?.Next != null && node.Next.Value.IsFree) {
                 uint combined = block.Value.Length + node.Next.Value.Length;
-                if (combined >= newSizeInBytes &&
-                    block.Value.CanBeJoinedWith(node.Next.Value)) {
-                    XmsBlock merged = block.Value.Join(node.Next.Value);
+                if (combined >= newSizeInBytes) {
+                    XmsBlock freedBlock = block.Value.Free();
+                    XmsBlock merged = freedBlock.Join(node.Next.Value);
                     _xmsBlocksLinkedList.Remove(node.Next);
+                    _xmsBlocksLinkedList.Replace(block.Value, merged);
                     XmsBlock[] newBlocks = merged.Allocate(handle, newSizeInBytes);
-                    _xmsBlocksLinkedList.Replace(block.Value, newBlocks);
-                    if (newBlocks.Length > 1) {
-                        MergeFreeBlocks(newBlocks[1]);
-                    }
+                    _xmsBlocksLinkedList.Replace(merged, newBlocks);
+                    _state.BL = (byte)XmsErrorCodes.Ok;
+                    _state.AX = 1;
+                } else {
+                    _state.AX = 0;
+                    _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
+                    return;
                 }
-                _state.AX = 1;
+            } else {
+                _state.AX = 0;
+                _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
+                return;
             }
-            _state.AX = 0;
-            _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
         }
+        _state.BL = (byte)XmsErrorCodes.Ok;
+        _state.AX = 1;
     }
 
     /// <summary>

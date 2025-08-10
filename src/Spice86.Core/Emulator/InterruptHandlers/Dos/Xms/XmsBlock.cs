@@ -91,11 +91,11 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
             throw new ArgumentException($"{nameof(other)} was not joinable", nameof(other));
         }
 
-        return new XmsBlock(0, Offset, Length + other.Length, false);
+        return new XmsBlock(0, Offset, Length + other.Length, true);
     }
 
     public bool CanBeJoinedWith(XmsBlock other) {
-        return IsFree && other.IsFree && Offset + Length == other.Length;
+        return IsFree && other.IsFree && Offset + Length == other.Offset;
     }
 
     public static bool operator ==(XmsBlock left, XmsBlock right) {
