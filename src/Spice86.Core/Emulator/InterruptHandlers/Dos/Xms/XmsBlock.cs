@@ -65,8 +65,8 @@ public readonly struct XmsBlock : IEquatable<XmsBlock> {
 
         var blocks = new XmsBlock[2];
 
-        blocks[0] = new XmsBlock(0, Offset, length, true);
-        blocks[1] = new XmsBlock(handle, Offset + length, Length - length, false);
+        blocks[0] = new XmsBlock(handle, Offset, length, false);
+        blocks[1] = new XmsBlock(0, Offset + length, Length - length, true);
 
         return blocks;
     }

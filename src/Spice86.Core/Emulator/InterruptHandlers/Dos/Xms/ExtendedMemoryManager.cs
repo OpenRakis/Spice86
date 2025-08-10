@@ -260,7 +260,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         Name = XmsIdentifier;
 
         // Initialize XMS memory as a single free block
-        _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsRam.Size, true));
+        if(TryGetFreeHandle(out ushort? handle)) {
+            _xmsBlocksLinkedList.AddLast(new XmsBlock(handle.Value, offset: 0,
+                XmsRam.Size, free: true));
+        }
         _canChangeA20Line = !a20Gate.IsEnabled;
     }
 
@@ -1721,23 +1724,20 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return XmsErrorCodes.XmsOutOfMemory;
         }
 
-        LinkedListNode<XmsBlock>? freeNode = _xmsBlocksLinkedList.Find(smallestFreeBlock.Value);
-        if (freeNode is not null) {
-            XmsBlock[] allocatedBlocks = freeNode.Value.Allocate(handle, length);
-            _xmsBlocksLinkedList.Replace((XmsBlock)smallestFreeBlock, allocatedBlocks);
+        XmsBlock[] allocatedBlocks = smallestFreeBlock.Value.Allocate(handle, length);
+        _xmsBlocksLinkedList.Replace((XmsBlock)smallestFreeBlock, allocatedBlocks);
 
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS TryAllocate: Allocated block of {Length} bytes from free block of {FreeLength} bytes, handle={Handle}",
-                    length, smallestFreeBlock.Value.Length, handle);
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("XMS TryAllocate: Allocated block of {Length} bytes from free block of {FreeLength} bytes, handle={Handle}",
+                length, smallestFreeBlock.Value.Length, handle);
 
-                if (allocatedBlocks.Length > 1) {
-                    _loggerService.Verbose("XMS TryAllocate: Created remainder free block of {RemainderLength} bytes",
-                        allocatedBlocks[1].Length);
-                }
+            if (allocatedBlocks.Length > 1) {
+                _loggerService.Verbose("XMS TryAllocate: Created remainder free block of {RemainderLength} bytes",
+                    allocatedBlocks[1].Length);
             }
         }
+        _xmsHandles.Add(handle, 0); // zero lock count.
 
-        _xmsHandles.Add(handle, 0);
         return XmsErrorCodes.Ok;
     }
 
