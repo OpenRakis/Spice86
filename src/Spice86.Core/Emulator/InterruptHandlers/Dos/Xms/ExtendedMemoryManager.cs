@@ -144,7 +144,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// The segment of the XMS DOS Device Driver in memory.
     /// </summary>
     /// <remarks>
-    /// In a real DOS system, HIMEM.SYS DOS device header would be at this segment.
+    /// Because it manages memory after the end of the HMA, HIMEM.SYS needs to be loaded <b>first</b>.
     /// </remarks>
     public const ushort DosDeviceSegment = MemoryMap.DeviceDriversSegment;
 
@@ -243,7 +243,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _loggerService = loggerService;
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
             .GetDosPrivateTableWritableAddress(0x1) - 1), 0x10);
@@ -1688,7 +1688,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </summary>
     public void ReallocateAnyExtendedMemory() {
         int handle = _state.DX;
-        uint newSizeInBytes = _state.EDX * 1024u;
+        uint newSizeInBytes = _state.EBX * 1024u;
         ReallocateExtendedMemoryBlockInternal(handle, newSizeInBytes);
     }
 

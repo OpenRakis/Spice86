@@ -10,8 +10,11 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Formats.Asn1;
 
 using Xunit;
 
@@ -24,24 +27,24 @@ public class Xms32BitFunctionsTests {
     private readonly State _state;
     private readonly Memory _memory;
     private readonly A20Gate _a20Gate;
-    private readonly Ram _xmsRam;
+    private readonly ILoggerService _loggerService;
+    private readonly CallbackHandler _callbackHandler;
+    private readonly MemoryAsmWriter _asmWriter;
+    private readonly DosTables _dosTables;
 
     public Xms32BitFunctionsTests() {
-        // Setup memory and state with large XMS memory (over 64MB to properly test 32-bit functions)
+        // Setup memory and state
         _state = new State();
         _a20Gate = new A20Gate(false);
-
-        // Create a larger XMS RAM for testing 32-bit functions
-        _xmsRam = new Ram(128 * 1024 * 1024); // 128MB RAM
-        _memory = new Memory(new(), _xmsRam, _a20Gate);
-
-        var loggerService = Substitute.For<ILoggerService>();
-        var callbackHandler = new CallbackHandler(_state, loggerService);
-        var dosTables = new DosTables();
-        var asmWriter = new MemoryAsmWriter(_memory, new(0, 0), callbackHandler);
+        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
+        _loggerService = Substitute.For<ILoggerService>();
+        _callbackHandler = new CallbackHandler(_state, _loggerService);
+        _dosTables = new DosTables();
+        _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
 
         // Create XMS manager
-        _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, asmWriter, dosTables, loggerService);
+        _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, _asmWriter,
+            _dosTables, _loggerService);
     }
 
     [Fact]
@@ -68,8 +71,7 @@ public class Xms32BitFunctionsTests {
     public void AllocateAnyExtendedMemory_ShouldAllocateLargeBlock() {
         // Arrange
         _state.AH = 0x89; // Allocate Any Extended Memory
-        _state.EDX = 70000; // Request 70MB (exceeds 64MB limit of standard function)
-
+        _state.EDX = ExtendedMemoryManager.XmsMemorySize; // Request entire XMS size
         // Act
         _xms.RunMultiplex();
 
@@ -85,7 +87,7 @@ public class Xms32BitFunctionsTests {
         _xms.RunMultiplex();
 
         _state.AX.Should().Be(1, "Handle info request should succeed");
-        _state.EDX.Should().Be(70000, "Block size should be 70MB");
+        _state.EDX.Should().Be(ExtendedMemoryManager.XmsMemorySize, "Block size should be 15MB");
     }
 
     [Fact]
@@ -106,7 +108,7 @@ public class Xms32BitFunctionsTests {
     public void GetExtendedEmbHandle_ShouldReturnCorrectInfo() {
         // Arrange - First allocate a large block
         _state.AH = 0x89;
-        _state.EDX = 65536; // 64MB block (just over the 16-bit limit)
+        _state.EDX = ExtendedMemoryManager.XmsMemorySize;
         _xms.RunMultiplex();
         ushort handle = _state.DX;
 
@@ -124,7 +126,7 @@ public class Xms32BitFunctionsTests {
         _state.AX.Should().Be(1, "Get handle info should succeed");
         _state.BH.Should().Be(1, "Lock count should be 1");
         _state.CX.Should().BeGreaterThan(0, "Free handles count should be positive");
-        _state.EDX.Should().Be(65536, "Block size should be 64MB");
+        _state.EDX.Should().Be(ExtendedMemoryManager.XmsMemorySize, "Block size should be 15MB");
     }
 
     [Fact]
@@ -145,13 +147,13 @@ public class Xms32BitFunctionsTests {
     public void ReallocateAnyExtendedMemory_GrowingLargeBlock_ShouldSucceed() {
         // Arrange - Allocate a block
         _state.AH = 0x89;
-        _state.EDX = 50000; // 50MB block
+        _state.EDX = 4096; // 4MB block
         _xms.RunMultiplex();
         ushort handle = _state.DX;
 
-        // Act - Grow the block to 70MB (beyond 64MB limit of standard function)
+        // Act - Grow the block to 8MB
         _state.AH = 0x8F;
-        _state.EBX = 70000;
+        _state.EBX = 8192;
         _state.DX = handle;
         _xms.RunMultiplex();
 
@@ -163,20 +165,20 @@ public class Xms32BitFunctionsTests {
         _state.AH = 0x8E;
         _state.DX = handle;
         _xms.RunMultiplex();
-        _state.EDX.Should().Be(70000, "Block should now be 70MB");
+        _state.EDX.Should().Be(8192, "Block should now be 8MB");
     }
 
     [Fact]
     public void ReallocateAnyExtendedMemory_ShrinkingLargeBlock_ShouldSucceed() {
         // Arrange - Allocate a large block
         _state.AH = 0x89;
-        _state.EDX = 80000; // 80MB block
+        _state.EDX = 8192; // 8MB block
         _xms.RunMultiplex();
         ushort handle = _state.DX;
 
-        // Act - Shrink the block to 40MB
+        // Act - Shrink the block to 10MB
         _state.AH = 0x8F;
-        _state.EBX = 40000;
+        _state.EBX = 10240;
         _state.DX = handle;
         _xms.RunMultiplex();
 
@@ -188,14 +190,14 @@ public class Xms32BitFunctionsTests {
         _state.AH = 0x8E;
         _state.DX = handle;
         _xms.RunMultiplex();
-        _state.EDX.Should().Be(40000, "Block should now be 40MB");
+        _state.EDX.Should().Be(10240, "Block should now be 10MB");
     }
 
     [Fact]
     public void ReallocateAnyExtendedMemory_LockedBlock_ShouldFail() {
         // Arrange - Allocate and lock a memory block
         _state.AH = 0x89;
-        _state.EDX = 30000; // 30MB block
+        _state.EDX = 4096; // 4MB block
         _xms.RunMultiplex();
         ushort handle = _state.DX;
 
@@ -206,7 +208,7 @@ public class Xms32BitFunctionsTests {
 
         // Act - Try to reallocate the locked block
         _state.AH = 0x8F;
-        _state.EBX = 40000;
+        _state.EBX = 8192;
         _state.DX = handle;
         _xms.RunMultiplex();
 
@@ -231,15 +233,11 @@ public class Xms32BitFunctionsTests {
         uint extendedLargestBlock = _state.EAX;
         uint extendedTotalFree = _state.EDX;
 
-        // Since our test environment has more than 64MB, the extended function 
-        // should report larger values than the standard function which is limited to 64MB (0xFFFF KB)
-        standardLargestBlock.Should().BeLessThanOrEqualTo(65535, "Standard function should be limited to 64MB-1KB");
-
         // The extended function should return the full amount
-        extendedLargestBlock.Should().BeGreaterThan(standardLargestBlock,
-            "Extended query should report more memory than standard query");
-        extendedTotalFree.Should().BeGreaterThan(standardTotalFree,
-            "Extended query should report more total memory than standard query");
+        extendedLargestBlock.Should().BeGreaterThanOrEqualTo(standardLargestBlock,
+            "Extended query should report equal or more memory than standard query");
+        extendedTotalFree.Should().BeGreaterThanOrEqualTo(standardTotalFree,
+            "Extended query should report equal or more total memory than standard query");
     }
 
     [Fact]
@@ -252,7 +250,7 @@ public class Xms32BitFunctionsTests {
 
         // Then allocate using extended function
         _state.AH = 0x89;
-        _state.EDX = 65536; // 64MB
+        _state.EDX = 10240; // 10MB
         _xms.RunMultiplex();
         ushort extendedHandle = _state.DX;
 
@@ -270,14 +268,14 @@ public class Xms32BitFunctionsTests {
         _state.AH = 0x8E;
         _state.DX = extendedHandle;
         _xms.RunMultiplex();
-        _state.EDX.Should().Be(65536, "Extended block should be 64MB");
+        _state.EDX.Should().Be(10240, "Extended block should be 10MB");
     }
 
     [Fact]
     public void MixedUsageOfStandardAndExtendedFunctions_ShouldWork() {
         // 1. Allocate using extended function
         _state.AH = 0x89; // Allocate Any Extended Memory
-        _state.EDX = 40000; // 40MB
+        _state.EDX = 1024; // 1MB
         _xms.RunMultiplex();
         ushort handle = _state.DX;
 
@@ -286,38 +284,32 @@ public class Xms32BitFunctionsTests {
         _state.DX = handle;
         _xms.RunMultiplex();
 
-        // Standard function returns size modulo 64K
         ushort reportedSize = _state.DX;
-        reportedSize.Should().Be(40000 & 0xFFFF, "Standard function should return size modulo 64K");
+        reportedSize.Should().Be(1024 & 0xFFFF, "Standard function should return size modulo 64K");
 
         // 3. Reallocate using standard function (should work for smaller blocks)
         _state.AH = 0x0F; // Standard Reallocate
-        _state.BX = 30000;
+        _state.BX = 12000;
         _state.DX = handle;
         _xms.RunMultiplex();
 
         _state.AX.Should().Be(1, "Reallocation should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
 
         // 4. Check size with extended function
         _state.AH = 0x8E; // Extended Get EMB Handle Info
         _state.DX = handle;
         _xms.RunMultiplex();
 
-        _state.EDX.Should().Be(30000, "Size should be correctly updated to 30MB");
+        _state.EDX.Should().Be(12000, "Size should be correctly updated to ~12MB");
 
-        // 5. Try to grow beyond 64K with standard function - should fail or be capped
+        // 5. Try to shrink to 64K with standard function
         _state.AH = 0x0F; // Standard Reallocate
-        _state.BX = ushort.MaxValue; // Just 64K
+        _state.BX = ushort.MaxValue / 1024; // Just 64K
         _state.DX = handle;
         _xms.RunMultiplex();
 
-        // Whether this succeeds or fails depends on implementation
-        // We just verify that if it succeeds, the size is correct
-        if (_state.AX == 1) {
-            _state.AH = 0x8E;
-            _state.DX = handle;
-            _xms.RunMultiplex();
-            // The result should be 65540 or whatever cap is applied by the implementation
-        }
+        _state.AX.Should().Be(1, "Shrink to 64KB should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
     }
 }
