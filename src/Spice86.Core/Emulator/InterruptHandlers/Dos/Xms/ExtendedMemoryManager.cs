@@ -260,7 +260,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         Name = XmsIdentifier;
 
         // Initialize XMS memory as a single free block
-        if(TryGetFreeHandle(out ushort? handle)) {
+        if (TryGetFreeHandle(out ushort? handle)) {
             _xmsBlocksLinkedList.AddLast(new XmsBlock(handle.Value, offset: 0,
                 XmsRam.Size, free: true));
         }
@@ -776,7 +776,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     private XmsErrorCodes DisableLocalA20Internal() {
-        if(!_canChangeA20Line) {
+        if (!_canChangeA20Line) {
             return XmsErrorCodes.Ok;
         }
         // Microsoft HIMEM.SYS appears to disable A20 only if the local count is 1
@@ -1431,10 +1431,17 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Try to shrink or grow
         if (newSizeInBytes < block.Value.Length) {
-            // Split block and free remainder
-            XmsBlock[] newBlocks = block.Value.Allocate(handle, newSizeInBytes);
-            _xmsBlocksLinkedList.Replace(block.Value, newBlocks);
-            MergeFreeBlocks(newBlocks[1]);
+            // Create two new blocks directly instead of calling Allocate on a non-free block
+            XmsBlock allocatedBlock = new XmsBlock(handle, block.Value.Offset, newSizeInBytes, false);
+            XmsBlock remainderBlock = new XmsBlock(0, block.Value.Offset + newSizeInBytes,
+                block.Value.Length - newSizeInBytes, true);
+
+            // Replace original block with the two new blocks
+            _xmsBlocksLinkedList.Remove(block.Value);
+            _xmsBlocksLinkedList.AddLast(allocatedBlock);
+            _xmsBlocksLinkedList.AddLast(remainderBlock);
+            MergeFreeBlocks(remainderBlock);
+
             _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
         } else {
