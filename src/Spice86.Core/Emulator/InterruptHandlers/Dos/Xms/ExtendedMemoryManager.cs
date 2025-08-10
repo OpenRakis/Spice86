@@ -645,9 +645,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             result = DisableLocalA20Internal();
             if (result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;
+                _state.AX = 1;
             } else {
                 _state.AX = 0;
             }
+            _state.BL = (byte)result;
         } else {
             _state.AX = 0;
             _state.BL = (byte)result;

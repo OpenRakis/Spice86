@@ -245,8 +245,8 @@ public class XmsUnitTests
         _state.AH = 0x04;
         _xms.RunMultiplex();
         _a20Gate.IsEnabled.Should().BeFalse("a20Gate should still be disabled");
-        _state.AX.Should().Be(0, "Global disable should succeed");
-        _state.BL.Should().Be(0, "No error should be reported");
+        _state.AX.Should().Be(0, "Global disable should fail due to A20 error");
+        _state.BL.Should().Be(0x82, "Error code ERR_A20 (82h) should be reported");
     }
 
     [Fact]
