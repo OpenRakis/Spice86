@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -47,20 +48,32 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        byte? scanCode = _keyboard.KeyboardEvent.ScanCode;
-        byte ascii = _keyboard.KeyboardEvent.AsciiCode ?? 0;
-
-        if (scanCode is null) {
-            // No key pressed, nothing to enqueue
+        // Get the keyboard event directly rather than through port reads
+        // This ensures we're handling a single coherent event
+        KeyboardEventArgs keyboardEvent = _keyboard.GetNextKeyboardEvent();
+        
+        if (keyboardEvent.Equals(KeyboardEventArgs.None)) {
+            // No key event available
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
+        }
+        
+        byte? scanCode = keyboardEvent.ScanCode;
+        byte ascii = keyboardEvent.AsciiCode ?? 0;
+        
+        if (!scanCode.HasValue) {
+            // No valid scan code
             _dualPic.AcknowledgeInterrupt(1);
             return;
         }
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{BiosInt9KeyReceived}", scanCode);
+            LoggerService.Verbose("{BiosInt9KeyReceived} ScanCode={ScanCode:X2} ASCII={ASCII:X2}", 
+                scanCode.Value, ascii);
         }
-
-        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode << 8 | ascii));
+        
+        // Enqueue the key code into the BIOS keyboard buffer (as scancode << 8 | ascii)
+        BiosKeyboardBuffer.EnqueueKeyCode((ushort)(scanCode.Value << 8 | ascii));
         _dualPic.AcknowledgeInterrupt(1);
     }
 }
