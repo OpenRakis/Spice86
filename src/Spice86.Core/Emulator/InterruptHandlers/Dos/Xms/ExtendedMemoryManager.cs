@@ -1775,11 +1775,16 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             handle = null;
             return false;
         }
-        ushort newKey = 1;
-        while (_xmsHandles.ContainsKey(newKey)) {
-            newKey++;
+        // Ensure handle ID returned in registers start at 1,
+        // so emulated programs don't believe we returned a NULL handle.
+        int newKey;
+        if (_xmsHandles.Count == 0) {
+            newKey = 1;
+        } else {
+            newKey = _xmsHandles.Keys.Max() + 1;
         }
-        handle = newKey;
+
+        handle = (ushort)newKey;
         return true;
     }
 
