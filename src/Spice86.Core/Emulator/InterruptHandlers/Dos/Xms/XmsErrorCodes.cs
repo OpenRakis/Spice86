@@ -8,9 +8,6 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 public enum XmsErrorCodes : byte {
     /// <summary>
     /// Operation completed successfully.
-    /// This value (0) indicates no error occurred during the XMS operation.
-    /// This is not actually returned as an error code, but is used internally
-    /// to represent successful operations.
     /// </summary>
     Ok = 0x00,
     
@@ -24,9 +21,10 @@ public enum XmsErrorCodes : byte {
     /// <summary>
     /// VDISK device detected.
     /// Returned when a VDISK device is detected in the system, which may
-    /// conflict with XMS operations. VDISK was an early disk-caching
+    /// conflict with XMS operations. IBM VDISK was an early disk-caching
     /// utility that used extended memory.
     /// </summary>
+    /// <remarks>VDISK detection is not implemented.</remarks>
     VDiskDetected = 0x81,
     
     /// <summary>

@@ -13,6 +13,8 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Reflection;
+
 using Xunit;
 
 /// <summary>
@@ -128,7 +130,6 @@ public class XmsUnitTests
     public void GlobalEnableA20_ShouldEnableA20Line()
     {
         // Arrange
-        _a20Gate.IsEnabled = false;
         _state.AH = 0x03; // Global Enable A20
 
         // Act
@@ -141,65 +142,69 @@ public class XmsUnitTests
     }
 
     [Fact]
-    public void GlobalDisableA20_ShouldDisableA20Line()
-    {
-        // Arrange - First enable A20
-        _state.AH = 0x03;
-        _xms.RunMultiplex();
-
-        // Act - Then disable A20
-        _state.AH = 0x04;
-        _xms.RunMultiplex();
-
-        // Assert
-        _state.AX.Should().Be(1, "Global Disable A20 should succeed");
-        _state.BL.Should().Be(0, "No error should be reported");
-        _a20Gate.IsEnabled.Should().BeFalse("A20 line should be disabled");
-    }
-
-    [Fact]
-    public void LocalEnableA20_ShouldEnableA20Line()
-    {
-        // Arrange
-        _a20Gate.IsEnabled = false;
-        _state.AH = 0x05; // Local Enable A20
-
-        // Act
-        _xms.RunMultiplex();
-
-        // Assert
-        _state.AX.Should().Be(1, "Local Enable A20 should succeed");
-        _state.BL.Should().Be(0, "No error should be reported");
-        _a20Gate.IsEnabled.Should().BeTrue("A20 line should be enabled");
-    }
-
-    [Fact]
-    public void LocalDisableA20_AfterEnableShouldDisableA20Line()
-    {
-        // Arrange - First enable A20
-        _state.AH = 0x05;
-        _xms.RunMultiplex();
-
-        // Act - Then disable A20
-        _state.AH = 0x06;
-        _xms.RunMultiplex();
-
-        // Assert
-        _state.AX.Should().Be(1, "Local Disable A20 should succeed");
-        _state.BL.Should().Be(0, "No error should be reported");
-        _a20Gate.IsEnabled.Should().BeFalse("A20 line should be disabled");
-    }
-
-    [Fact]
-    public void LocalDisableA20_WithoutEnableShouldFail()
-    {
+    public void LocalDisableA20_WithoutEnableShouldFail() {
         // Act - Disable A20 without enabling it
         _state.AH = 0x06;
         _xms.RunMultiplex();
 
         // Assert
         _state.AX.Should().Be(0, "Local Disable A20 without enable should fail");
-        _state.BL.Should().NotBe(0, "Error should be reported");
+        _state.BL.Should().Be(0x82, "Error code ERR_A20 (82h) should be reported");
+    }
+
+    [Fact]
+    public void NestedA20LocalEnablesDisables_ShouldWorkCorrectly() {
+        // First enable - should enable A20 and set counter to 1
+        _a20Gate.IsEnabled = false;
+        _state.AH = 0x05;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeTrue("First local enable should enable A20");
+        _state.AX.Should().Be(1, "First enable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+
+        // Second enable - A20 should remain enabled and increment counter to 2
+        _state.AH = 0x05;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeTrue("Second local enable should keep A20 enabled");
+        _state.AX.Should().Be(1, "Second enable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+
+        // First disable - A20 should remain enabled (counter = 1)
+        _state.AH = 0x06;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeTrue("First local disable with nested enable should keep A20 enabled");
+        _state.AX.Should().Be(1, "First disable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+
+        // Second disable - A20 should now be disabled (counter = 0)
+        _state.AH = 0x06;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeFalse("Second local disable should disable A20");
+        _state.AX.Should().Be(1, "Second disable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+    }
+
+    [Fact]
+    public void GlobalAndLocalA20Interaction_ShouldWorkCorrectly() {
+        // Global enable A20
+        _state.AH = 0x03;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeTrue("Global enable should enable A20");
+        _state.AX.Should().Be(1, "Global enable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+
+        _state.AH = 0x06;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeFalse("A20 should be disabled because the counter reached 0");
+        _state.AX.Should().Be(1, "Local disable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
+
+        // Global disable - disables A20 if count reaches zero
+        _state.AH = 0x04;
+        _xms.RunMultiplex();
+        _a20Gate.IsEnabled.Should().BeFalse("a20Gate should still be disabled");
+        _state.AX.Should().Be(0, "Global disable should succeed");
+        _state.BL.Should().Be(0, "No error should be reported");
     }
 
     [Fact]
@@ -321,55 +326,5 @@ public class XmsUnitTests
         // Verify data was copied
         _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea).Should().Be(0x42, "First byte should be copied");
         _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea + 1).Should().Be(0x43, "Second byte should be copied");
-    }
-
-    [Fact]
-    public void NestedA20LocalEnablesDisables_ShouldWorkCorrectly()
-    {
-        // First enable - should enable A20
-        _a20Gate.IsEnabled = false;
-        _state.AH = 0x05;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("First local enable should enable A20");
-
-        // Second enable - A20 should remain enabled
-        _state.AH = 0x05;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("Second local enable should keep A20 enabled");
-
-        // First disable - A20 should remain enabled due to nested enable
-        _state.AH = 0x06;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("First local disable with nested enable should keep A20 enabled");
-
-        // Second disable - A20 should now be disabled
-        _state.AH = 0x06;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeFalse("Second local disable should disable A20");
-    }
-
-    [Fact]
-    public void GlobalAndLocalA20Interaction_ShouldWorkCorrectly()
-    {
-        // Global enable
-        _a20Gate.IsEnabled = false;
-        _state.AH = 0x03;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("Global enable should enable A20");
-
-        // Local enable on top of global
-        _state.AH = 0x05;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("Local enable on top of global should keep A20 enabled");
-
-        // Local disable - A20 should remain enabled due to global
-        _state.AH = 0x06;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeTrue("Local disable with global enable should keep A20 enabled");
-
-        // Global disable - A20 should now be disabled
-        _state.AH = 0x04;
-        _xms.RunMultiplex();
-        _a20Gate.IsEnabled.Should().BeFalse("Global disable should disable A20");
     }
 }

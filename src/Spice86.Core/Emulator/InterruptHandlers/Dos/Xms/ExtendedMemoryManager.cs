@@ -254,7 +254,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Initialize XMS memory as a single free block
         _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsRam.Size, true));
-        _a20State.IsGloballyEnabled = _a20Gate.IsEnabled;
     }
 
     /// <summary>
@@ -480,7 +479,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void RequestHighMemoryArea() {
-        if(!_hmaClaimedByDosApp && _state.DX > 0) {
+        if (!_hmaClaimedByDosApp && _state.DX > 0) {
             _state.AX = 1;
             _state.BL = (byte)XmsErrorCodes.Ok;
             _hmaClaimedByDosApp = true;
@@ -524,7 +523,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void ReleaseHighMemoryArea() {
-        if(_hmaClaimedByDosApp) {
+        if (_hmaClaimedByDosApp) {
             _hmaClaimedByDosApp = false;
             _state.AX = 1;
             _state.BL = (byte)XmsErrorCodes.Ok;
@@ -577,10 +576,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         if (!_a20State.IsGloballyEnabled) {
             result = EnableLocalA20Internal();
             if (result == XmsErrorCodes.Ok) {
-                _a20State.IsGloballyEnabled = false;
+                _a20State.IsGloballyEnabled = true;
                 _state.AX = 1;
-                _state.BL = 0;
+            } else {
+                _state.AX = 0;
             }
+            _state.BL = (byte)result;
         } else {
             _state.AX = 0;
             _state.BL = (byte)result;
@@ -631,10 +632,10 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         XmsErrorCodes result = XmsErrorCodes.A20LineError;
         if (_a20State.IsGloballyEnabled) {
             result = DisableLocalA20Internal();
-            if(result == XmsErrorCodes.Ok) {
+            if (result == XmsErrorCodes.Ok) {
                 _a20State.IsGloballyEnabled = false;
-                _state.BL = 0;
-                _state.AX = 1;
+            } else {
+                _state.AX = 0;
             }
         } else {
             _state.AX = 0;
@@ -739,17 +740,15 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         if (errorCode != XmsErrorCodes.Ok) {
             _state.BL = (byte)errorCode;
             _state.AX = 0;
-        }else {
+        } else {
             _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
         }
     }
 
     private XmsErrorCodes EnableLocalA20Internal() {
-
         // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
         // at entering this call
-
         if (_a20State.NumTimesEnabled == A20MaxTimesEnabled) {
             return XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
         }
@@ -759,30 +758,23 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             SetA20(true);
         }
 
-        if (!_a20Gate.IsEnabled) {
-            return XmsErrorCodes.A20LineError;
-        }
         return XmsErrorCodes.Ok;
     }
 
     private XmsErrorCodes DisableLocalA20Internal() {
-        
-        // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
+        // Microsoft HIMEM.SYS appears to disable A20 only if the local count is 1
         // at entering this call
-
         if (_a20State.NumTimesEnabled == 0) {
             return XmsErrorCodes.A20LineError; //HIMEM.SYS behavior
         }
 
-        // Only disable A20 if count is 0
-        if (--_a20State.NumTimesEnabled != 0) {
-            return XmsErrorCodes.A20StillEnabled;
+        // Only physically disable A20 if count is 1 before decrement
+        if (_a20State.NumTimesEnabled == 1) {
+            SetA20(false);
         }
 
-        SetA20(false);
-        if (_a20Gate.IsEnabled) {
-            return XmsErrorCodes.A20StillEnabled;
-        }
+        // Decrement counter and always return success
+        _a20State.NumTimesEnabled--;
         return XmsErrorCodes.Ok;
     }
 
@@ -1201,7 +1193,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             }
         }
 
-        if(move.Length != 0) {
+        if (move.Length != 0) {
             bool a20WasEnabled = _a20Gate.IsEnabled;
             ++_a20State.NumTimesEnabled;
             SetA20(true);
@@ -1574,7 +1566,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state.EAX = largestKB;
         _state.EDX = totalKB;
 
-        if(totalKB > 0) {
+        if (totalKB > 0) {
             _state.BL = 0;
         }
 
@@ -1786,8 +1778,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 firstBlock.Offset, firstBlock.Length, nextNode.Value.Offset, nextNode.Value.Length);
         }
 
-        if (firstBlock.CanBeJoinedWith(nextNode.Value))
-        {
+        if (firstBlock.CanBeJoinedWith(nextNode.Value)) {
             XmsBlock newBlock = firstBlock.Join(nextNode.Value);
             _xmsBlocksLinkedList.Remove(nextNode);
             _xmsBlocksLinkedList.Replace(firstBlock, newBlock.Free());
@@ -1796,7 +1787,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _loggerService.Verbose("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
                     newBlock.Offset, newBlock.Length);
             }
-        } else if(nextNode.Value.IsFree && nextNode.Value.Length is 0) {
+        } else if (nextNode.Value.IsFree && nextNode.Value.Length is 0) {
             _xmsBlocksLinkedList.Remove(nextNode.Value);
         }
     }
