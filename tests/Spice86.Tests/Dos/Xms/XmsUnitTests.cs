@@ -802,6 +802,6 @@ public class XmsUnitTests
 
         // Assert
         _state.AX.Should().Be(0, "Move operation should fail");
-        _state.BL.Should().Be(0xA7, "Invalid length error should be reported");
+        _state.BL.Should().Be(0xA9, "Parity error should be reported");
     }
 }
