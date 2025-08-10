@@ -13,8 +13,6 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Reflection;
-
 using Xunit;
 
 /// <summary>
@@ -25,7 +23,6 @@ public class XmsUnitTests
 {
     private readonly ExtendedMemoryManager _xms;
     private readonly State _state;
-    private readonly Ram _ram;
     private readonly Memory _memory;
     private readonly A20Gate _a20Gate;
     private readonly ILoggerService _loggerService;
@@ -36,9 +33,8 @@ public class XmsUnitTests
     public XmsUnitTests()
     {
         // Setup memory and state
-        _ram = new Ram(16384 * 1024); // 16MB RAM
         _state = new State();
-        _a20Gate = new A20Gate(true);
+        _a20Gate = new A20Gate(false);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
         _loggerService = Substitute.For<ILoggerService>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
@@ -46,7 +42,8 @@ public class XmsUnitTests
         _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
 
         // Create XMS manager
-        _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, _asmWriter, _dosTables, _loggerService);
+        _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, _asmWriter,
+            _dosTables, _loggerService);
     }
 
     [Fact]
@@ -139,6 +136,50 @@ public class XmsUnitTests
         _state.AX.Should().Be(1, "Global Enable A20 should succeed");
         _state.BL.Should().Be(0, "No error should be reported");
         _a20Gate.IsEnabled.Should().BeTrue("A20 line should be enabled");
+    }
+
+    [Fact]
+    public void A20AlreadyEnabledAtStartup_ShouldPreventDisabling() {
+        // Arrange - Create a new XMS manager with A20 already enabled
+        var ram = new Ram(16384 * 1024);
+        var state = new State();
+        var a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
+        var memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate);
+        var loggerService = Substitute.For<ILoggerService>();
+        var callbackHandler = new CallbackHandler(state, loggerService);
+        var dosTables = new DosTables();
+        var asmWriter = new MemoryAsmWriter(memory, new(0, 0), callbackHandler);
+        var xms = new ExtendedMemoryManager(memory, state, a20Gate, asmWriter, dosTables, loggerService);
+
+        // Verify initial state
+        a20Gate.IsEnabled.Should().BeTrue("A20 gate should be enabled at startup");
+
+        // Act - Try to disable A20 locally
+        state.AH = 0x06; // Local Disable A20
+        xms.RunMultiplex();
+
+        // Assert - Disabling should "succeed" but A20 should remain enabled
+        state.AX.Should().Be(1, "Local Disable A20 should report success");
+        state.BL.Should().Be(0, "No error should be reported");
+        a20Gate.IsEnabled.Should().BeTrue("A20 should remain enabled because it was already enabled at startup");
+
+        // Act - Try to disable A20 globally
+        state.AH = 0x04; // Global Disable A20
+        xms.RunMultiplex();
+
+        // Assert - Global disabling should also "succeed" but A20 should remain enabled
+        state.AX.Should().Be(0, "Global Disable A20 should report success");
+        state.BL.Should().Be(0x82, "Error code ERR_A20 (82h) should be reported");
+        a20Gate.IsEnabled.Should().BeTrue("A20 should remain enabled because it was already enabled at startup");
+
+        // Act - Try to enable A20 (which should already be enabled)
+        state.AH = 0x05; // Local Enable A20
+        xms.RunMultiplex();
+
+        // Assert - Enabling should work normally
+        state.AX.Should().Be(1, "Local Enable A20 should succeed");
+        state.BL.Should().Be(0, "No error should be reported");
+        a20Gate.IsEnabled.Should().BeTrue("A20 should remain enabled");
     }
 
     [Fact]

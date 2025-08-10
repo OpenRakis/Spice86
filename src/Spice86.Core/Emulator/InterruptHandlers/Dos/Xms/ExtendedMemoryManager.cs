@@ -110,6 +110,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     private readonly State _state;
     private readonly A20Gate _a20Gate;
     private readonly IMemory _memory;
+    /// <summary>
+    /// Set on DOS XMS driver startup - we don't touch it if was enabled at startup.
+    /// </summary>
+    /// <remarks>
+    /// See fCanChangeA20 in HIMEM.ASM
+    /// </remarks>
+    private readonly bool _canChangeA20Line;
     private bool _hmaClaimedByDosApp = false;
 
     /// <summary>
@@ -254,6 +261,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         // Initialize XMS memory as a single free block
         _xmsBlocksLinkedList.AddLast(new XmsBlock(0, 0, XmsRam.Size, true));
+        _canChangeA20Line = !a20Gate.IsEnabled;
     }
 
     /// <summary>
@@ -747,6 +755,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     private XmsErrorCodes EnableLocalA20Internal() {
+        if (!_canChangeA20Line) {
+            return XmsErrorCodes.Ok;
+        }
         // Microsoft HIMEM.SYS appears to set A20 only if the local count is 0
         // at entering this call
         if (_a20State.NumTimesEnabled == A20MaxTimesEnabled) {
@@ -762,6 +773,9 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     private XmsErrorCodes DisableLocalA20Internal() {
+        if(!_canChangeA20Line) {
+            return XmsErrorCodes.Ok;
+        }
         // Microsoft HIMEM.SYS appears to disable A20 only if the local count is 1
         // at entering this call
         if (_a20State.NumTimesEnabled == 0) {
