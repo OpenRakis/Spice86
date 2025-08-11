@@ -2,6 +2,7 @@ namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -11,7 +12,14 @@ public class Spice86Creator {
     private readonly long _maxCycles;
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false) {
+        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false,
+        string? overrideSupplierClassName = null) {
+        IOverrideSupplier? overrideSupplier = null;
+        if (overrideSupplierClassName != null) {
+            CommandLineParser parser = new();
+            overrideSupplier = parser.ParseCommandLine(["--OverrideSupplierClassName", overrideSupplierClassName])?.OverrideSupplier;
+        }
+
         _configuration = new Configuration {
             Exe = $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
@@ -27,8 +35,10 @@ public class Spice86Creator {
             CfgCpu = enableCfgCpu,
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
-            A20Gate = enableA20Gate
+            A20Gate = enableA20Gate,
+            OverrideSupplier = overrideSupplier
         };
+        
         _maxCycles = maxCycles;
     }
 
