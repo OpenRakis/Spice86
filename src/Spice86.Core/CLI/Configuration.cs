@@ -168,6 +168,6 @@ public sealed class Configuration {
     [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
-    [Option(nameof(Xms), Default = false, Required = false, HelpText = "Enable XMS")]
+    [Option(nameof(Xms), Default = true, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool Xms { get; init; }
 }
