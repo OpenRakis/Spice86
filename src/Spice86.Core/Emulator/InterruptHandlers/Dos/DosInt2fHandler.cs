@@ -130,7 +130,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// A service that does nothing, see dos_misc.cpp in DOSBox Staging
     /// </summary>
     public void DosVirtualMachineServices() {
-        //Do nothing, ,ot even set CX or CF...
+        //Do nothing,not even set CX or CF...
         if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("Unhandled INT2F DOS VM subfunction: {AX:X2}", State.AX);
         }
