@@ -10,11 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
-
-using System.Formats.Asn1;
 
 using Xunit;
 
