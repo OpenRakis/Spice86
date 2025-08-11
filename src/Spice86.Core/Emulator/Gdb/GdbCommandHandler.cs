@@ -23,8 +23,6 @@ public class GdbCommandHandler {
     private readonly GdbIo _gdbIo;
     private readonly IPauseHandler _pauseHandler;
     private readonly State _state;
-    private readonly FunctionCatalogue _functionCatalogue;
-    private readonly ExecutionFlowRecorder _executionFlowRecorder;
 
     /// <summary>
     /// Constructs a new instance of <see cref="GdbCommandHandler"/>
@@ -35,25 +33,23 @@ public class GdbCommandHandler {
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="executionDumpFactory">The class that dumps machine code execution flow.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The configuration object containing GDB settings.</param>
     public GdbCommandHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, State state, MemoryDataExporter memoryDataExporter, IPauseHandler pauseHandler,
-        EmulatorBreakpointsManager emulatorBreakpointsManager, ExecutionFlowRecorder executionFlowRecorder,
+        EmulatorBreakpointsManager emulatorBreakpointsManager, IExecutionDumpFactory executionDumpFactory,
         FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;
-        _functionCatalogue = functionCatalogue;
-        _executionFlowRecorder = executionFlowRecorder;
         _pauseHandler = pauseHandler;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
         _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService);
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
-            memory, state, functionHandlerProvider, memoryDataExporter, executionFlowRecorder, emulatorBreakpointsManager, gdbIo,
+            memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, executionDumpFactory, emulatorBreakpointsManager, gdbIo,
             _loggerService,
             _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
     }
@@ -189,7 +185,7 @@ public class GdbCommandHandler {
         }
 
         if (command.StartsWith("Rcmd")) {
-            return _gdbCustomCommandsHandler.HandleCustomCommands(_executionFlowRecorder, _functionCatalogue, command);
+            return _gdbCustomCommandsHandler.HandleCustomCommands(command);
         }
 
         if (command.StartsWith("Search")) {

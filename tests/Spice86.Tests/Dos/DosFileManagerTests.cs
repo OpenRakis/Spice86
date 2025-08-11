@@ -102,8 +102,7 @@ public class DosFileManagerTests {
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
-        ExecutionFlowRecorder executionFlowRecorder =
-            reader.ReadExecutionFlowRecorderFromFileOrCreate(configuration.DumpDataOnExit is not false);
+        ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
         IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);

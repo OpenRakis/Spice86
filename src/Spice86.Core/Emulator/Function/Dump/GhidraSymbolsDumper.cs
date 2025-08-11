@@ -6,7 +6,6 @@ using System.Linq;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -26,22 +25,22 @@ public class GhidraSymbolsDumper {
     /// <summary>
     /// Dumps function information and labels to a file.
     /// </summary>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="executionDump">The class that holds machine code execution flow.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Dump(ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, string destinationFilePath) {
+    public void Dump(ExecutionDump executionDump, FunctionCatalogue functionCatalogue, string destinationFilePath) {
         ICollection<FunctionInformation> functionInformationsValues = functionCatalogue.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformationsValues);
-        DumpLabels(lines, dumpedAddresses, executionFlowRecorder);
+        DumpLabels(lines, dumpedAddresses, executionDump);
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionFlowRecorder executionFlowRecorder) {
-        executionFlowRecorder.JumpsFromTo
+    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionDump executionDump) {
+        executionDump.JumpsFromTo
             .SelectMany(x => x.Value)
             .Where(address => !dumpedAddresses.Contains(address))
             .OrderBy(x => x)

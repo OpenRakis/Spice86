@@ -32,6 +32,10 @@ public class CurrentInstructions : InstructionReplacer {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
     }
 
+    public IEnumerable<CfgInstruction> GetAll() {
+        return _currentInstructionAtAddress.Values;
+    }
+
     public CfgInstruction? GetAtAddress(SegmentedAddress address) {
         _currentInstructionAtAddress.TryGetValue(address, out CfgInstruction? res);
         return res;
