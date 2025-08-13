@@ -3,7 +3,6 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -109,12 +108,14 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// If the source handle is non-zero (extended memory), uses the address directly.
     /// </summary>
     /// <returns>The linear source address as an unsigned 32-bit integer.</returns>
-    public uint GetLinearSourceAddress() {
-        ushort handle = SourceHandle;
-        uint offsetOrAddress = SourceOffsetOrAddress;
+    public uint LinearSourceAddress {
+        get {
+            ushort handle = SourceHandle;
+            uint offsetOrAddress = SourceOffsetOrAddress;
 
-        return DecodeAddressInternal(handle, offsetOrAddress);
+            return DecodeAddressInternal(handle, offsetOrAddress);
 
+        }
     }
 
     /// <summary>
@@ -123,11 +124,13 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// If the destination handle is non-zero (extended memory), uses the address directly.
     /// </summary>
     /// <returns>The linear destination address as an unsigned 32-bit integer.</returns>
-    public uint GetLinearDestAddress() {
-        ushort handle = DestinationHandle;
-        uint offsetOrAddress = DestinationOffsetOrAddress;
+    public uint LinearDestAddress {
+        get {
+            ushort handle = DestinationHandle;
+            uint offsetOrAddress = DestinationOffsetOrAddress;
 
-        return DecodeAddressInternal(handle, offsetOrAddress);
+            return DecodeAddressInternal(handle, offsetOrAddress);
+        }
     }
 
     private static uint DecodeAddressInternal(ushort handle, uint offsetOrAddress) {
@@ -147,18 +150,14 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// Limit is stored in bytes 0-1 (bits 15:0) and bits 0-3 of byte 6 (bits 19:16).
     /// </summary>
     /// <returns>The source segment limit</returns>
-    public uint GetSourceSegmentLimit() {
-        return GetLimitFromDescriptor(SourceDescriptor);
-    }
+    public uint SourceSegmentLimit => GetLimitFromDescriptor(SourceDescriptor);
 
     /// <summary>
     /// Gets the destination segment limit from the destination descriptor.
     /// Limit is stored in bytes 0-1 (bits 15:0) and bits 0-3 of byte 6 (bits 19:16).
     /// </summary>
     /// <returns>The destination segment limit</returns>
-    public uint GetDestinationSegmentLimit() {
-        return GetLimitFromDescriptor(DestinationDescriptor);
-    }
+    public uint DestinationSegmentLimit => GetLimitFromDescriptor(DestinationDescriptor);
 
     /// <summary>
     /// Gets the limit from a GDT descriptor.
@@ -187,16 +186,12 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// Typically set to 93h for read/write data segment access.
     /// </summary>
     /// <returns>The source access rights byte</returns>
-    public byte GetSourceAccessRights() {
-        return GetAccessRightsFromDescriptor(SourceDescriptor);
-    }
+    public byte SourceAccessRights => GetAccessRightsFromDescriptor(SourceDescriptor);
 
     /// <summary>
     /// Gets the destination segment access rights.
     /// Typically set to 93h for read/write data segment access.
     /// </summary>
     /// <returns>The destination access rights byte</returns>
-    public byte GetDestinationAccessRights() {
-        return GetAccessRightsFromDescriptor(DestinationDescriptor);
-    }
+    public byte DestinationAccessRights => GetAccessRightsFromDescriptor(DestinationDescriptor);
 }

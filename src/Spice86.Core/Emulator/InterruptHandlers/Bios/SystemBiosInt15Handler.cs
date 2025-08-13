@@ -168,8 +168,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
         uint gdtPhysicalAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.SI);
         var gdt = new GlobalDescriptorTable(Memory, gdtPhysicalAddress);
 
-        uint sourceAddress = gdt.GetLinearSourceAddress();
-        uint destinationAddress = gdt.GetLinearDestAddress();
+        uint sourceAddress = gdt.LinearSourceAddress;
+        uint destinationAddress = gdt.LinearDestAddress;
 
         // Validate addresses for overflow
         if (sourceAddress + byteCount < sourceAddress) {
