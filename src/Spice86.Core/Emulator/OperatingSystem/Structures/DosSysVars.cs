@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
@@ -18,17 +20,24 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
     /// </summary>
-    /// <param name="nullDevice"></param>
-    /// <param name="byteReaderWriter">The memory reader/writer.</param>
+    /// <param name="configuration"></param>
+    /// <param name="nullDevice">The DOS NUL device. Its DOS device header is copied into sysvars table.</param>
+    /// <param name="byteReaderWriter">The main memory bus.</param>
     /// <param name="baseAddress">The base address of the structure in memory.</param>
-    public DosSysVars(NullDevice nullDevice, IByteReaderWriter byteReaderWriter,
-        uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosSysVars(Configuration configuration, NullDevice nullDevice,
+        IByteReaderWriter byteReaderWriter, uint baseAddress)
+        : base(byteReaderWriter, baseAddress) {
         _nullDeviceHeader = nullDevice.Header;
         CopyArray(_nullDeviceHeader, 0x22);
         ClockDeviceHeaderPointer = 0x0;
         MagicWord = 0x1;
         BootDrive = 0x0;
-        ExtendedMemorySize = (ushort)(byteReaderWriter.Length / 1024);
+        if (configuration.Xms) {
+            ExtendedMemorySize = ExtendedMemoryManager.XmsMemorySize;
+        } else {
+            // Size of HMA
+            ExtendedMemorySize = (ushort)(A20Gate.EndOfHighMemoryArea - A20Gate.StartOfHighMemoryArea);
+        }
         MinMemForExec = 0x0;
         A20GateFixRoutineOffset = 0x0;
         MemAllocScanStart = FirstMcbSegment;

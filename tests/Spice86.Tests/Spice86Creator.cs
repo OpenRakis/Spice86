@@ -12,8 +12,8 @@ public class Spice86Creator {
     private readonly long _maxCycles;
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
-        long maxCycles = 100000, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        string? overrideSupplierClassName = null) {
+        long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
+        bool enableXms = false, string? overrideSupplierClassName = null) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             CommandLineParser parser = new();
@@ -21,11 +21,11 @@ public class Spice86Creator {
         }
 
         _configuration = new Configuration {
-            Exe = $"Resources/cpuTests/{binName}.bin",
+            Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
             // Don't expect any hash for the exe
             ExpectedChecksumValue = Array.Empty<byte>(),
-            // making sure int8 is not going to be triggered during the tests
-            InitializeDOS = false,
+            // when false: making sure int8 is not going to be triggered during the tests
+            InitializeDOS = installInterruptVectors,
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
@@ -36,7 +36,8 @@ public class Spice86Creator {
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,
-            OverrideSupplier = overrideSupplier
+            OverrideSupplier = overrideSupplier,
+            Xms = enableXms
         };
         
         _maxCycles = maxCycles;

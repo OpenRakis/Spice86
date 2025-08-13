@@ -1,5 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory;
+﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;

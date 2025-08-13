@@ -10,11 +10,10 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Timer;
@@ -60,11 +59,11 @@ public class DosFileManagerTests {
         DosFileManager dosFileManager = ArrangeDosFileManager(@$"{MountPoint}\foo\bar");
 
         // Act
-        DosFileOperationResult result = dosFileManager.OpenFile("C.txt", FileAccessMode.WriteOnly);
+        DosFileOperationResult result = dosFileManager.OpenFileOrDevice("C.txt", FileAccessMode.ReadOnly);
 
         // Assert
-        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(0));
-        dosFileManager.OpenFiles.ElementAtOrDefault(0)?.Name.Should().Be("C.txt");
+        result.Should().BeEquivalentTo(DosFileOperationResult.Value16(3));
+        dosFileManager.OpenFiles.ElementAtOrDefault(3)?.Name.Should().Be("C.txt");
     }
 
     [Theory]
@@ -94,10 +93,11 @@ public class DosFileManagerTests {
 
     private static DosFileManager ArrangeDosFileManager(string mountPoint) {
         Configuration configuration = new Configuration() {
+            AudioEngine = AudioEngine.Dummy,
             DumpDataOnExit = false,
             CDrive = mountPoint
         };
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
@@ -164,7 +164,7 @@ public class DosFileManagerTests {
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-    biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
         var clock = new Clock(loggerService);
 
@@ -173,8 +173,6 @@ public class DosFileManagerTests {
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             clock, loggerService);
 
-        DosDriveManager dosDriveManager = new(loggerService, configuration.CDrive, configuration.Exe);
-
-        return new DosFileManager(memory, new DosStringDecoder(memory, state), dosDriveManager, loggerService, dos.Devices);
+        return dos.FileManager;
     }
 }

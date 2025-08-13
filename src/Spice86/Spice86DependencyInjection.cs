@@ -25,9 +25,11 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -36,6 +38,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
@@ -266,13 +269,35 @@ public class Spice86DependencyInjection : IDisposable {
                     functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
                     state, biosDataArea, loggerService);
-        SystemBiosInt15Handler systemBiosInt15Handler = new(memory,
-                    functionHandlerProvider, stack, state, a20Gate,
-                    configuration.InitializeDOS is not false, loggerService);
+
+        // memoryAsmWriter is common to InterruptInstaller and
+        // AssemblyRoutineInstaller so that they both write at the
+        // same address (Bios Segment F000)
+        MemoryAsmWriter memoryAsmWriter = new(memory,
+            new SegmentedAddress(
+                configuration.ProvidedAsmHandlersSegment, 0),
+            callbackHandler);
+
+        ExtendedMemoryManager? xms = null;
+
+        DosTables dosTables = new();
+
+        if (configuration.Xms) {
+            xms = new(memory, state, a20Gate, memoryAsmWriter, dosTables, loggerService);
+        }
+        if (configuration.Xms && loggerService.IsEnabled(
+            LogEventLevel.Information)) {
+            loggerService.Information("DOS XMS driver created...");
+        }
+
+        SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
+            functionHandlerProvider, stack, state, a20Gate,
+            configuration.InitializeDOS is not false, loggerService);
         var rtc = new Clock(loggerService);
         
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, functionHandlerProvider, stack,
-                    state, loggerService, timerInt8Handler, rtc);
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
+            functionHandlerProvider, stack,
+            state, loggerService, timerInt8Handler, rtc);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
 
@@ -379,14 +404,6 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulation loop created...");
         }
-
-        // memoryAsmWriter is common to InterruptInstaller and
-        // AssemblyRoutineInstaller so that they both write at the
-        // same address (Bios Segment F000)
-        MemoryAsmWriter memoryAsmWriter = new(memory,
-            new SegmentedAddress(
-                configuration.ProvidedAsmHandlersSegment, 0),
-            callbackHandler);
         InterruptInstaller interruptInstaller =
             new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
         AssemblyRoutineInstaller assemblyRoutineInstaller =
@@ -407,13 +424,14 @@ public class Spice86DependencyInjection : IDisposable {
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
-        
-        var dosClock = new Clock(loggerService);
 
-        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
-            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
-            new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            dosClock, loggerService);
+        var dosClock = new Clock(loggerService);
+        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
+            state, biosKeyboardBuffer,
+            keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            new Dictionary<string, string> {
+                { "BLASTER", soundBlaster.BlasterString } }, dosClock, loggerService,
+            xms);
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers

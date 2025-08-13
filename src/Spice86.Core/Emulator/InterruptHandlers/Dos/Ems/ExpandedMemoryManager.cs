@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -109,6 +108,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         set => throw new InvalidOperationException("Cannot rename DOS device!");
     }
 
+    private readonly EMMCharacterDevice _emmCharacterDevice;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -136,6 +137,46 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             EmmPageFrame.Add(i, emmRegister);
             Memory.RegisterMapping(startAddress, EmmPageSize, emmRegister);
         }
+
+        // A character device wrapper so EMS can be opened via DOSINT21H OpenFile function
+        // fixes Wolf3D not finding Expanded Memory.
+        _emmCharacterDevice = new EMMCharacterDevice(memory, DosDeviceSegment, Header, this);
+    }
+
+    private sealed class EMMCharacterDevice : CharacterDevice {
+        private readonly ExpandedMemoryManager _ems;
+
+        public EMMCharacterDevice(IMemory memory, ushort segment, DosDeviceHeader header, ExpandedMemoryManager ems)
+            : base(memory, new SegmentedAddress(segment, 0).Linear, EmsIdentifier,
+                   DeviceAttributes.Ioctl | DeviceAttributes.Character) {
+            _ems = ems;
+            Header = header;
+        }
+
+        public override ushort Information => _ems.Information;
+        public override string Name {
+            get => _ems.Name;
+            set => throw new InvalidOperationException("Cannot rename DOS device!");
+        }
+
+        // Stream overrides: EMS is not a readable/writable stream
+        public override int Read(byte[] buffer, int offset, int count) => 0;
+        public override void Write(byte[] buffer, int offset, int count) { }
+        public override long Seek(long offset, SeekOrigin origin) => 0;
+        public override void SetLength(long value) { }
+        public override void Flush() { }
+        public override bool CanRead => false;
+        public override bool CanWrite => false;
+        public override bool CanSeek => false;
+        public override long Length => 0;
+        public override long Position { get; set; }
+
+        // IOCTL and status delegation
+        public override byte GetStatus(bool inputFlag) => _ems.GetStatus(inputFlag);
+        public override bool TryReadFromControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode)
+            => _ems.TryReadFromControlChannel(address, size, out returnCode);
+        public override bool TryWriteToControlChannel(uint address, ushort size, [NotNullWhen(true)] out ushort? returnCode)
+            => _ems.TryWriteToControlChannel(address, size, out returnCode);
     }
 
     /// <inheritdoc />
@@ -170,6 +211,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         AddAction(0x58, GetMappablePhysicalAddressArray);
         AddAction(0x59, GetExpandedMemoryHardwareInformation);
     }
+
+    public CharacterDevice AsCharacterDevice() => _emmCharacterDevice;
 
     /// <inheritdoc />
     public override void Run() {
@@ -617,7 +660,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
 
         State.AH = EmmStatus.EmmNoError;
         switch (operation) {
-            case EmmSubFunctions.UsePhysicalPageNumbers:
+            case EmmSubFunctionsCodes.UsePhysicalPageNumbers:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = Memory.UInt16[mapAddress];
                     mapAddress += 2;
@@ -629,7 +672,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                     }
                 }
                 break;
-            case EmmSubFunctions.UseSegmentedAddress:
+            case EmmSubFunctionsCodes.UseSegmentedAddress:
                 for (int i = 0; i < numberOfPages; i++) {
                     ushort logicalPage = Memory.UInt16[mapAddress];
                     mapAddress += 2;
@@ -729,11 +772,11 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmInvalidHandle;
         }
         switch (operation) {
-            case EmmSubFunctions.HandleNameGet:
+            case EmmSubFunctionsCodes.HandleNameGet:
                 GetHandleName(handleId);
                 break;
 
-            case EmmSubFunctions.HandleNameSet:
+            case EmmSubFunctionsCodes.HandleNameSet:
                 SetHandleName(handleId,
                     Memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(State.SI, State.DI),
                         8));
@@ -791,7 +834,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// </summary>
     public void GetExpandedMemoryHardwareInformation() {
         switch (State.AL) {
-            case EmmSubFunctions.GetHardwareConfigurationArray:
+            case EmmSubFunctionsCodes.GetHardwareConfigurationArray:
                 uint data = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
                 // 1 page is 1K paragraphs (16KB)
                 Memory.UInt16[data] = 0x0400;
@@ -808,7 +851,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 // Always 0 for LIM standard
                 Memory.UInt16[data] = 0x0000;
                 break;
-            case EmmSubFunctions.GetUnallocatedRawPages:
+            case EmmSubFunctionsCodes.GetUnallocatedRawPages:
                 // Return number of pages available in BX.
                 State.BX = GetFreePageCount();
                 // Return total number of pages in DX.

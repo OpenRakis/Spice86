@@ -13,7 +13,7 @@ public interface IVirtualDevice : IVirtualFile {
     /// Gets the device status
     /// </summary>
     /// <param name="inputFlag">Whether it's for input data or output data</param>
-    /// <returns>The DOS device status in a byte.</returns>
+    /// <returns>The DOS device status in a <see langword="byte"/>.</returns>
     public byte GetStatus(bool inputFlag);
 
     /// <summary>
@@ -44,6 +44,8 @@ public interface IVirtualDevice : IVirtualFile {
     /// </summary>
     public DosDeviceHeader Header { get; init; }
 
+    /// <summary>
     /// Gets the DOS Device characteristics. Largely undocumented, and device-specific.
+    /// </summary>
     public ushort Information { get; }
 }
