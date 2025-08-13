@@ -5,6 +5,8 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics;
+
 /// <summary>
 /// Provides access to Global Descriptor Table (GDT) memory structure used in BIOS function <see cref="SystemBiosInt15Handler.CopyExtendedMemory(bool)"/>. <br/>
 /// The GDT is a BIOS structure to copy data into extended memory. <br/>
@@ -28,6 +30,7 @@ using Spice86.Shared.Utils;
 /// - For conventional memory (handle 0): segment:offset format in offset 06h and 0Ch
 /// - For extended memory (handle != 0): linear address in offset 06h and 0Ch
 /// </remarks>
+[DebuggerDisplay("BaseAddress = {BaseAddress}, SourceHandle = {SourceHandle}, DestHandle = {DestinationHandle}, LinearSource = {LinearSourceAddress}, LinearDest = {LinearDestAddress}")]
 public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance.
