@@ -35,7 +35,8 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
     /// <param name="baseAddress">The physical memory address where the GDT is located.</param>
-    public GlobalDescriptorTable(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public GlobalDescriptorTable(IByteReaderWriter byteReaderWriter, uint baseAddress)
+        : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>
@@ -112,15 +113,8 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
         ushort handle = SourceHandle;
         uint offsetOrAddress = SourceOffsetOrAddress;
 
-        if (handle == 0) {
-            // Conventional memory: convert segment:offset to linear address
-            ushort segment = (ushort)(offsetOrAddress >> 16);
-            ushort offset = (ushort)(offsetOrAddress & 0xFFFF);
-            return MemoryUtils.ToPhysicalAddress(segment, offset);
-        } else {
-            // Extended memory: use linear address directly
-            return offsetOrAddress;
-        }
+        return DecodeAddressInternal(handle, offsetOrAddress);
+
     }
 
     /// <summary>
@@ -133,6 +127,10 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
         ushort handle = DestinationHandle;
         uint offsetOrAddress = DestinationOffsetOrAddress;
 
+        return DecodeAddressInternal(handle, offsetOrAddress);
+    }
+
+    private static uint DecodeAddressInternal(ushort handle, uint offsetOrAddress) {
         if (handle == 0) {
             // Conventional memory: convert segment:offset to linear address
             ushort segment = (ushort)(offsetOrAddress >> 16);
