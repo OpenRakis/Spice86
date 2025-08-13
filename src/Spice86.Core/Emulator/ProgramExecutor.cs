@@ -54,7 +54,7 @@ public sealed class ProgramExecutor : IDisposable {
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
-        ExecutionFlowRecorder executionFlowRecorder, IPauseHandler pauseHandler,
+        IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
         IScreenPresenter? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
@@ -64,7 +64,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (configuration.GdbPort.HasValue) {
             _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
                 state, functionCatalogue,
-                executionFlowRecorder,
+                executionDumpFactory,
                 emulatorBreakpointsManager, pauseHandler, _loggerService);
         }
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
@@ -131,14 +131,14 @@ public sealed class ProgramExecutor : IDisposable {
 
     private static GdbServer? CreateGdbServer(Configuration configuration, IMemory memory,
         MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
-        FunctionCatalogue functionCatalogue, ExecutionFlowRecorder executionFlowRecorder,
+        FunctionCatalogue functionCatalogue, IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ILoggerService loggerService) {
         if (configuration.GdbPort is null) {
             return null;
         }
         return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,
-                functionCatalogue, executionFlowRecorder,
+                functionCatalogue, executionDumpFactory,
             emulatorBreakpointsManager, pauseHandler, loggerService);
     }
 

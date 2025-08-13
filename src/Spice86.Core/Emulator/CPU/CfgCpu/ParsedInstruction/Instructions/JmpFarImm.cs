@@ -4,10 +4,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
-public class JmpFarImm : InstructionWithSegmentedAddressField {
+public class JmpFarImm : InstructionWithSegmentedAddressField, IJumpInstruction {
     private readonly SegmentedAddress _targetAddress;
 
     public JmpFarImm(

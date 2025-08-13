@@ -10,7 +10,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class EmulatorStateSerializer {
     private readonly State _state;
-    private readonly ExecutionFlowRecorder _executionFlowRecorder;
+    private readonly IExecutionDumpFactory _executionDumpFactory;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
 
@@ -20,10 +20,10 @@ public class EmulatorStateSerializer {
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
     public EmulatorStateSerializer(MemoryDataExporter memoryDataExporter, State state,
-        ExecutionFlowRecorder executionFlowRecorder, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
+        IExecutionDumpFactory executionDumpFactory, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
         _state = state;
         _memoryDataExporter = memoryDataExporter;
-        _executionFlowRecorder = executionFlowRecorder;
+        _executionDumpFactory = executionDumpFactory;
         _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
     }
@@ -34,11 +34,12 @@ public class EmulatorStateSerializer {
     /// </summary>
     /// <param name="path">The directory used for dumping the emulator state.</param>
     public void SerializeEmulatorStateToDirectory(string path) {
-        new RecorderDataWriter(
+        new RecordedDataWriter(
                 _state,
-                _executionFlowRecorder,
+                _executionDumpFactory,
                 _memoryDataExporter,
+                _functionCatalogue,
                 path, _loggerService)
-            .DumpAll(_executionFlowRecorder, _functionCatalogue);
+            .DumpAll();
     }
 }

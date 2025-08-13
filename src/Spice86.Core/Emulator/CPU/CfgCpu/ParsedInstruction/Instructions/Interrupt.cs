@@ -4,9 +4,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.CommonGrammar;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 
-public class Interrupt : InstructionWithValueField<byte> {
+public class Interrupt : InstructionWithValueField<byte>, ICallInstruction {
     public Interrupt(SegmentedAddress address, InstructionField<ushort> opcodeField,
         InstructionField<byte> valueField) : base(address, opcodeField, valueField, null) {
     }

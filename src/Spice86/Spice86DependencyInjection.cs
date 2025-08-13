@@ -89,9 +89,8 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Recorded data reader created...");
         }
 
-        ExecutionFlowRecorder executionFlowRecorder =
-            reader.ReadExecutionFlowRecorderFromFileOrCreate(
-                configuration.DumpDataOnExit is not false);
+        ExecutionDump executionDump =  reader.ReadExecutionDumpFromFileOrCreate();
+        ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, executionDump);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Execution flow recorder created...");
@@ -218,6 +217,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
+        IExecutionDumpFactory executionDumpFactory =
+            configuration.CfgCpu ? new CfgCpuFlowDumper(cfgCpu, executionDump) : executionFlowRecorder;
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             string cpuType = configuration.CfgCpu ? nameof(CfgCpu) : nameof(Cpu);
             loggerService.Information("Execution will be done with {CpuType}", cpuType);
@@ -312,7 +313,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
-            executionFlowRecorder, functionCatalogue, loggerService);
+            executionDumpFactory, functionCatalogue, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -490,7 +491,7 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
             functionHandlerProvider, memoryDataExporter, state, dos,
-            functionCatalogue, executionFlowRecorder, pauseHandler,
+            functionCatalogue, executionDumpFactory, pauseHandler,
             mainWindowViewModel, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

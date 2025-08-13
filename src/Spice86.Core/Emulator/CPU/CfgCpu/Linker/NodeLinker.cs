@@ -20,19 +20,20 @@ public class NodeLinker : InstructionReplacer {
     /// <summary>
     /// Ensure current and next are linked together.
     /// </summary>
+    /// <param name="linkToNextType"></param>
     /// <param name="current"></param>
     /// <param name="next"></param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Link(ICfgNode current, ICfgNode next) {
+    public void Link(InstructionSuccessorType linkToNextType, ICfgNode current, ICfgNode next) {
         switch (current) {
             case IReturnInstruction retInstruction:
                 // Special cases for ret.
                 // We not only attach next but also the return target to the list of next for the corresponding call.
                 // This involves recording data via the Call Flow Handler and linking it in a special way here.
-                LinkRetInstruction(retInstruction, next);
+                LinkRetInstruction(linkToNextType, retInstruction, next);
                 break;
             case CfgInstruction currentCfgInstruction:
-                LinkCfgInstructionWithType(InstructionSuccessorType.Normal, currentCfgInstruction, next);
+                LinkCfgInstructionWithType(linkToNextType, currentCfgInstruction, next);
                 break;
             case SelectorNode selectorNode:
                 LinkSelectorNode(selectorNode, next);
@@ -40,8 +41,8 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
-    private void LinkRetInstruction(IReturnInstruction returnInstruction, ICfgNode next) {
-        LinkCfgInstructionWithType(InstructionSuccessorType.Normal, returnInstruction, next);
+    private void LinkRetInstruction(InstructionSuccessorType linkToNextType, IReturnInstruction returnInstruction, ICfgNode next) {
+        LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
         // Need to link the call instruction now that ret is known 
         CfgInstruction? callInstruction = returnInstruction.CurrentCorrespondingCallInstruction;
         returnInstruction.CurrentCorrespondingCallInstruction = null;
@@ -54,11 +55,11 @@ public class NodeLinker : InstructionReplacer {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void LinkCfgInstructionWithType(InstructionSuccessorType type, ICfgInstruction current, ICfgNode next) {
+    private void LinkCfgInstructionWithType(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
         Dictionary<SegmentedAddress, ICfgNode> successors = current.SuccessorsPerAddress;
         if (!successors.TryGetValue(next.Address, out ICfgNode? shouldBeNext)) {
             // New link found
-            AttachNewLink(type, current, next);
+            AttachNewLink(linkToNextType, current, next);
             return;
         }
 
@@ -67,11 +68,11 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
-    private void AttachNewLink(InstructionSuccessorType type, ICfgInstruction current, ICfgNode next) {
+    private void AttachNewLink(InstructionSuccessorType linkToNextType, ICfgInstruction current, ICfgNode next) {
         AttachToNext(current, next);
-        if (!current.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? successorsForType)) {
+        if (!current.SuccessorsPerType.TryGetValue(linkToNextType, out ISet<ICfgNode>? successorsForType)) {
             successorsForType = new HashSet<ICfgNode>();
-            current.SuccessorsPerType[type] = successorsForType;
+            current.SuccessorsPerType[linkToNextType] = successorsForType;
         }
         successorsForType.Add(next);
     }
