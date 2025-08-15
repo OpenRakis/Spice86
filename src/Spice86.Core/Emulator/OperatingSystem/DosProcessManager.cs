@@ -21,6 +21,7 @@ using System.Text;
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
+    private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
 
@@ -33,11 +34,12 @@ public class DosProcessManager : DosFileLoader {
     private readonly EnvironmentVariables _environmentVariables;
 
     public DosProcessManager(IMemory memory, State state,
-        DosProgramSegmentPrefixTracker dosPspTracker,
+        DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService)
         : base(memory, state, loggerService) {
         _pspTracker = dosPspTracker;
+        _memoryManager = dosMemoryManager;
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
@@ -171,7 +173,23 @@ public class DosProcessManager : DosFileLoader {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
-        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, pspSegment);
+        if (block is null) {
+            throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
+        }
+        // The program image is typically loaded immediately above the PSP, which is the start of
+        // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
+        // get our starting point.
+        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
+        // There is one special case that we need to account for: if the EXE doesn't have any extra
+        // allocations, we need to load it as high as possible in the memory block rather than
+        // immediately after the PSP like we normally do. This will give the program extra space
+        // between the PSP and the start of the program image that it can use however it wants.
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphs);
+            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
+        }
+
         LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
         SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
     }

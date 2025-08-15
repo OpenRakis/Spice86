@@ -8,7 +8,9 @@ using State = Spice86.Core.Emulator.CPU.State;
 using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
 using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 
+using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -98,6 +100,38 @@ public class DosMemoryManagerTests {
         for (int i = 0; i < sizeInBytes; i++) {
             _memory.UInt8[startAddress + i] = fillByte;
         }
+    }
+
+    /// <summary>
+    /// Creates a mocked EXE file header in memory with the given properties that can be used to
+    /// test the memory allocator.
+    /// <summary>
+    /// <param name="pages">Number of whole/partial pages in the executable.</param>
+    /// <param name="minAlloc">Number of extra paragraphs required by the program.</param>
+    /// <param name="maxAlloc">Number of extra paragraphs requested by the program.</param>
+    /// <returns>Returns a new EXE file header to use for these unit tests.</returns>
+    public DosExeFile CreateMockExe(ushort pages, ushort minAlloc, ushort maxAlloc) {
+        // The DOS EXE header is 64 bytes, excluding the relocation table if one is present. It is
+        // normally followed by the program image, but we don't need that for these unit tests. We
+        // just need the header itself.
+        byte[] exe = new byte[64];
+        // Start with the signature that identifies the DOS EXE format, "MZ".
+        exe[0x00] = 0x4D;
+        exe[0x01] = 0x5A;
+        // Number of whole/partial pages.
+        exe[0x04] = (byte)((pages >> 0) & 0xFF);
+        exe[0x05] = (byte)((pages >> 8) & 0xFF);
+        // Number of paragraphs in the header.
+        exe[0x08] = 0x04;
+        exe[0x09] = 0x00;
+        // Minimum number of extra paragraphs.
+        exe[0x0A] = (byte)((minAlloc >> 0) & 0xFF);
+        exe[0x0B] = (byte)((minAlloc >> 8) & 0xFF);
+        // Maximum number of extra paragraphs.
+        exe[0x0C] = (byte)((maxAlloc >> 0) & 0xFF);
+        exe[0x0D] = (byte)((maxAlloc >> 8) & 0xFF);
+
+        return new DosExeFile(new ByteArrayReaderWriter(exe));
     }
 
     /// <summary>
@@ -637,5 +671,379 @@ public class DosMemoryManagerTests {
 
         // Assert
         isBlockFreed.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the given block of memory for an EXE.
+    /// </summary>
+    [Fact]
+    public void ReserveSpecificMemoryBlockForExe() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 65);
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeFalse();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(16301);
+        block!.AllocationSizeInBytes.Should().Be(260816);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates a new block of memory for an EXE.
+    /// </summary>
+    [Fact]
+    public void ReserveNewMemoryBlockForExe() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 65);
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeFalse();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(16301);
+        block!.AllocationSizeInBytes.Should().Be(260816);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the given block of memory with the minimum number
+    /// of paragraphs that the EXE requires if there is not enough space after it to support the
+    /// maximum requested allocation, even if there is a large enough block to support the maximum
+    /// allocation at a different address than the one specified.
+    /// </summary>
+    [Fact]
+    public void ReserveSpecificMinSizeMemoryBlockForExe() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 382, minAlloc: 10, maxAlloc: 65);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(6146);
+        bool isOtherBlock1Freed = false;
+        if (otherBlock1 is not null) {
+            isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        isOtherBlock1Freed.Should().BeTrue();
+        otherBlock2.Should().NotBeNull();
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeFalse();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(12292);
+        block!.AllocationSizeInBytes.Should().Be(196672);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates a new block of memory with the minimum number of
+    /// paragraphs that the EXE requires if there is not a large enough block remaining to support
+    /// the maximum requested allocation.
+    /// </summary>
+    [Fact]
+    public void ReserveNewMinSizeMemoryBlockForExe() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 382, minAlloc: 10, maxAlloc: 65);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock3 = _memoryManager.AllocateMemoryBlock(6146);
+        bool isOtherBlock2Freed = false;
+        if (otherBlock2 is not null) {
+            isOtherBlock2Freed = _memoryManager.FreeMemoryBlock(otherBlock2);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        otherBlock1.Should().NotBeNull();
+        isOtherBlock2Freed.Should().BeTrue();
+        otherBlock3.Should().NotBeNull();
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeFalse();
+        block!.PspSegment.Should().Be(0x3FF5);
+        block!.DataBlockSegment.Should().Be(0x3FF5);
+        block!.Size.Should().Be(12292);
+        block!.AllocationSizeInBytes.Should().Be(196672);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the maximum amount of memory available at the
+    /// given segment address for the EXE if it has no minimum/maximum extra allocation requested.
+    /// </summary>
+    [Fact]
+    public void ReserveSpecificMemoryBlockForExeWithNoExtraAlloc() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeTrue();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(36880);
+        block!.AllocationSizeInBytes.Should().Be(590080);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the largest free block of memory for the EXE if it
+    /// has no minimum/maximum extra allocation requested.
+    /// </summary>
+    [Fact]
+    public void ReserveNewMemoryBlockForExeWithNoExtraAlloc() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeTrue();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(36880);
+        block!.AllocationSizeInBytes.Should().Be(590080);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the maximum amount of memory available at the
+    /// given segment address for the EXE if it has no minimum/maximum extra allocation requested
+    /// and doesn't have the full memory space available to it.
+    /// </summary>
+    [Fact]
+    public void ReserveLargestMemoryBlockForExeWithNoExtraAllocAtSpecificAddress() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 382, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(6146);
+        bool isOtherBlock1Freed = false;
+        if (otherBlock1 is not null) {
+            isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        isOtherBlock1Freed.Should().BeTrue();
+        otherBlock2.Should().NotBeNull();
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeFalse();
+        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.DataBlockSegment.Should().Be(0xFF0);
+        block!.Size.Should().Be(12292);
+        block!.AllocationSizeInBytes.Should().Be(196672);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates the maximum amount of memory available for the EXE
+    /// if it has no minimum/maximum extra allocation requested and doesn't have the full memory
+    /// space available to it.
+    /// </summary>
+    [Fact]
+    public void ReserveLargestMemoryBlockForExeWithNoExtraAlloc() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 382, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(6146);
+        bool isOtherBlock1Freed = false;
+        if (otherBlock1 is not null) {
+            isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        isOtherBlock1Freed.Should().BeTrue();
+        otherBlock2.Should().NotBeNull();
+        block.Should().NotBeNull();
+        block!.IsValid.Should().BeTrue();
+        block!.IsFree.Should().BeFalse();
+        block!.IsLast.Should().BeTrue();
+        block!.PspSegment.Should().Be(0x57F8);
+        block!.DataBlockSegment.Should().Be(0x57F8);
+        block!.Size.Should().Be(18440);
+        block!.AllocationSizeInBytes.Should().Be(295040);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager allocates a new block of memory for each EXE when more than
+    /// one is loaded.
+    /// </summary>
+    [Fact]
+    public void ReserveNewMemoryBlockForMultipleExes() {
+        // Arrange
+        DosExeFile exeFile1 = CreateMockExe(pages: 382, minAlloc: 10, maxAlloc: 65);
+        DosExeFile exeFile2 = CreateMockExe(pages: 500, minAlloc: 0, maxAlloc: 100);
+
+        // Act
+        DosMemoryControlBlock? block1 = _memoryManager.ReserveSpaceForExe(exeFile1);
+        if (block1 is not null) {
+            _pspTracker.PushPspSegment(block1.PspSegment);
+        }
+        DosMemoryControlBlock? block2 = _memoryManager.ReserveSpaceForExe(exeFile2);
+        if (block2 is not null) {
+            _pspTracker.PushPspSegment(block2.PspSegment);
+        }
+
+        // Assert
+        block1.Should().NotBeNull();
+        block2.Should().NotBeNull();
+
+        block1!.IsValid.Should().BeTrue();
+        block1!.IsFree.Should().BeFalse();
+        block1!.IsLast.Should().BeFalse();
+        block1!.PspSegment.Should().Be(_pspTracker.InitialPspSegment);
+        block1!.DataBlockSegment.Should().Be(0xFF0);
+        block1!.Size.Should().Be(12301);
+        block1!.AllocationSizeInBytes.Should().Be(196816);
+
+        block2!.IsValid.Should().BeTrue();
+        block2!.IsFree.Should().BeFalse();
+        block2!.IsLast.Should().BeFalse();
+        block2!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block2!.DataBlockSegment.Should().Be(0x3FFE);
+        block2!.Size.Should().Be(16112);
+        block2!.AllocationSizeInBytes.Should().Be(257792);
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager fails to allocate a specific memory block for the EXE if the
+    /// minimum number of required paragraphs can't be satisfied for that block.
+    /// </summary>
+    [Fact]
+    public void DoNotReserveSpecificMemoryBlockForExeWithoutMinSpace() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 99, maxAlloc: 205);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(16334);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(12292);
+        bool isOtherBlock1Freed = false;
+        if (otherBlock1 is not null) {
+            isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        isOtherBlock1Freed.Should().BeTrue();
+        otherBlock2.Should().NotBeNull();
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager fails to allocate a new memory block for the EXE if the
+    /// minimum number of required paragraphs can't be satisfied by any free memory block.
+    /// </summary>
+    [Fact]
+    public void DoNotReserveNewMemoryBlockForExeWithoutMinSpace() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 99, maxAlloc: 205);
+
+        // Act
+        DosMemoryControlBlock? initialBlock = _memoryManager.AllocateMemoryBlock(20545);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        initialBlock.Should().NotBeNull();
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager fails to allocate a memory block for the EXE if it has no
+    /// minimum/maximum extra allocation requested and the block at the given segment address isn't
+    /// large enough to hold the PSP and program image.
+    /// </summary>
+    [Fact]
+    public void DoNotReserveSpecificMemoryBlockForExeWithNoExtraAlloc() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(6146);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(12292);
+        bool isOtherBlock1Freed = false;
+        if (otherBlock1 is not null) {
+            isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        isOtherBlock1Freed.Should().BeTrue();
+        otherBlock2.Should().NotBeNull();
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager fails to allocate a new memory block for the EXE if it has
+    /// no minimum/maximum extra allocation requested and there isn't a large enough block to hold
+    /// the PSP and program image.
+    /// </summary>
+    [Fact]
+    public void DoNotReserveNewMemoryBlockForExeWithNoExtraAlloc() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? otherBlock1 = _memoryManager.AllocateMemoryBlock(12292);
+        DosMemoryControlBlock? otherBlock2 = _memoryManager.AllocateMemoryBlock(16235);
+        DosMemoryControlBlock? otherBlock3 = _memoryManager.AllocateMemoryBlock(8349);
+        bool isOtherBlock2Freed = false;
+        if (otherBlock2 is not null) {
+            isOtherBlock2Freed = _memoryManager.FreeMemoryBlock(otherBlock2);
+        }
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+
+        // Assert
+        otherBlock1.Should().NotBeNull();
+        isOtherBlock2Freed.Should().BeTrue();
+        otherBlock3.Should().NotBeNull();
+        block.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Ensures that the memory manager fails to allocate/resize the requested memory block for an
+    /// EXE if it has already been allocated.
+    /// </summary>
+    [Fact]
+    public void DoNotReserveAlreadyAllocatedBlockForExe() {
+        // Arrange
+        DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
+
+        // Act
+        DosMemoryControlBlock? existingBlock = _memoryManager.AllocateMemoryBlock(18700);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+
+        // Assert
+        existingBlock.Should().NotBeNull();
+        block.Should().BeNull();
     }
 }

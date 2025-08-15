@@ -110,12 +110,12 @@ public class DosExeFile : MemoryBasedDataStructure {
     }
 
     /// <summary>
-    /// Size of header in bytes
+    /// Size of the header in bytes.
     /// </summary>
     public uint HeaderSizeInBytes => (uint)(HeaderSizeInParagraphs * 16);
 
     /// <summary>
-    /// Size of the program code in the executable file.
+    /// Size of the program code in the executable file in bytes.
     /// </summary>
     public uint ProgramSize {
         get {
@@ -127,6 +127,11 @@ public class DosExeFile : MemoryBasedDataStructure {
             return result;
         }
     }
+
+    /// <summary>
+    /// Number of paragraphs that are need to load the program code in the executable file.
+    /// </summary>
+    public ushort ProgramSizeInParagraphs => (ushort)((Pages << 5) - HeaderSizeInParagraphs);
 
     /// <summary>
     /// True when represented EXE is valid.
