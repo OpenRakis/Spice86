@@ -296,7 +296,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// A dictionary that stores the function information of each function defined in memory.
     /// </summary>
-    protected readonly IDictionary<SegmentedAddress, FunctionInformation> _functionInformations;
+    public IDictionary<SegmentedAddress, FunctionInformation> FunctionInformations { get; private set; }
 
     /// <summary>
     /// Gets or sets the <see cref="JumpDispatcher"/>
@@ -321,7 +321,7 @@ public class CSharpOverrideHelper {
         EmulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         _loggerService = loggerService;
         Configuration = configuration;
-        _functionInformations = functionInformations;
+        FunctionInformations = functionInformations;
         Machine = machine;
         JumpDispatcher = new();
         Alu8 = new(machine.Cpu.State);
@@ -342,7 +342,7 @@ public class CSharpOverrideHelper {
         SegmentedAddress address = new(segment, offset);
         GetFunctionAtAddress(true, address);
         FunctionInformation functionInformation = new(address, name, null);
-        _functionInformations.Add(address, functionInformation);
+        FunctionInformations.Add(address, functionInformation);
     }
 
     /// <summary>
@@ -383,7 +383,7 @@ public class CSharpOverrideHelper {
             functionName = parsedFunctionInformation.Name;
         }
 
-        _functionInformations[address] = (new(address, functionName, overrideFunc));
+        FunctionInformations[address] = (new(address, functionName, overrideFunc));
     }
 
     /// <summary>
@@ -394,7 +394,7 @@ public class CSharpOverrideHelper {
     /// <returns>The function information for the function at the specified address, or null if no function exists at that address.</returns>
     /// <exception cref="UnrecoverableException">Thrown if a function already exists at the specified address and failOnExisting is true.</exception>
     public FunctionInformation? GetFunctionAtAddress(bool failOnExisting, SegmentedAddress address) {
-        if (_functionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
+        if (FunctionInformations.TryGetValue(address, out FunctionInformation? existingFunctionInformation)) {
             if (!failOnExisting) {
                 return existingFunctionInformation;
             }
@@ -537,7 +537,7 @@ public class CSharpOverrideHelper {
     /// <param name="target">The <see cref="SegmentedAddress"/> where the function is defined.</param>
     /// <returns>The C# function override, or <c>null</c> if not found.</returns>
     public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
-        if (!_functionInformations.TryGetValue(target,
+        if (!FunctionInformations.TryGetValue(target,
                 out FunctionInformation? functionInformation)) {
             return null;
         }
@@ -563,7 +563,7 @@ public class CSharpOverrideHelper {
                 "The original code is trying to jump via call stack modification. Expected to return at: " +
                 expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
                 expectedStackAddress + " Stack address after: " + actualStackAddress;
-            if (!_functionInformations.TryGetValue(actualReturn, out FunctionInformation? actualTarget)) {
+            if (!FunctionInformations.TryGetValue(actualReturn, out FunctionInformation? actualTarget)) {
                 throw FailAsUntested(message);
             }
 

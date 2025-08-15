@@ -107,8 +107,7 @@ class SimpleCallsJumpsOverrideSupplier : IOverrideSupplier {
         Configuration configuration,
         ushort programStartSegment,
         Machine machine) {
-        SimpleCallsJumps callsJumps = new(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration);
-        return callsJumps.DefineOverrides();
+        return new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration).FunctionInformations;
     }
 }
 
@@ -123,13 +122,9 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public SimpleCallsJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
         CurrentInstance = this;
-    }
-
-    public IDictionary<SegmentedAddress, FunctionInformation> DefineOverrides() {
         DefineFunction(0xF000, 0xFFF0, Entry_F000_FFF0_FFFF0);
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
-        return _functionInformations;
     }
 
     // bios entry point
