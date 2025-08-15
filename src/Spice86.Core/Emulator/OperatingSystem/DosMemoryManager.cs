@@ -31,10 +31,16 @@ public class DosMemoryManager {
         _memory = memory;
 
         ushort pspSegment = _pspTracker.InitialPspSegment;
+        // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
+        // we're the memory manager, we're the one who needs to read the MCB, so we need to start
+        // with its address by subtracting 1 paragraph from the PSP.
         ushort startSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
         ushort size = (ushort)(LastFreeSegment - startSegment);
-        // size -1 because the mcb itself takes 16 bytes which is 1 paragraph
+        // We adjusted the start address above so that it starts with the MCB, but the MCB itself
+        // isn't actually useable space. We need it here in the DOS memory manager for accounting.
+        // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
+        // size to get the useable space that we can allocate.
         _start.Size = (ushort)(size - 1);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
@@ -117,7 +123,15 @@ public class DosMemoryManager {
     /// <param name="blockSegment">The segment number of the MCB.</param>
     /// <returns>Whether the operation was successful.</returns>
     public bool FreeMemoryBlock(ushort blockSegment) {
-        DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(blockSegment);
+        return FreeMemoryBlock(GetDosMemoryControlBlockFromSegment(blockSegment));
+    }
+
+    /// <summary>
+    /// Releases an MCB.
+    /// </summary>
+    /// <param name="block">The MCB to free.</param>
+    /// <returns>Whether the operation was successful.</returns>
+    public bool FreeMemoryBlock(DosMemoryControlBlock block) {
         if (!CheckValidOrLogError(block)) {
             return false;
         }
@@ -150,10 +164,15 @@ public class DosMemoryManager {
             return DosErrorCode.InsufficientMemory;
         }
 
-        if (block.Size < requestedSizeInParagraphs - 1) {
+        if (block.Size < requestedSizeInParagraphs) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
-                    block.Size, requestedSizeInParagraphs);
+                    block, requestedSizeInParagraphs);
+
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
+                    _loggerService.Verbose("Next MCB is {Block}", nextBlock);
+                }
             }
             block = this.FindLargestFree();
             return DosErrorCode.InsufficientMemory;
