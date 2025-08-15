@@ -17,6 +17,7 @@ public class ExecutionContextManager : InstructionReplacer {
     private readonly State _state;
     private int _currentDepth;
     private readonly FunctionCatalogue _functionCatalogue;
+    private readonly bool _useCodeOverride;
     private readonly ExecutionContextReturns _executionContextReturns = new();
 
     public ExecutionContextManager(IMemory memory,
@@ -24,12 +25,14 @@ public class ExecutionContextManager : InstructionReplacer {
         CfgNodeFeeder cfgNodeFeeder,
         InstructionReplacerRegistry replacerRegistry,
         FunctionCatalogue functionCatalogue,
+        bool useCodeOverride,
         ILoggerService loggerService) : base(replacerRegistry) {
         _loggerService = loggerService;
         _cfgNodeFeeder = cfgNodeFeeder;
         _memory = memory;
         _state = state;
         _functionCatalogue = functionCatalogue;
+        _useCodeOverride = useCodeOverride;
         // Initial fake but non-null context at init
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
     }
@@ -54,7 +57,7 @@ public class ExecutionContextManager : InstructionReplacer {
     }
 
     private ExecutionContext NewExecutionContext(SegmentedAddress entryPoint) {
-        return new(entryPoint, CurrentDepth, new(_memory, _state, null, _functionCatalogue, _loggerService));
+        return new(entryPoint, CurrentDepth, new(_memory, _state, null, _functionCatalogue, _useCodeOverride, _loggerService));
     }
 
     public void SignalNewExecutionContext(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress) {

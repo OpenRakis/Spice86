@@ -39,7 +39,7 @@ public class CfgNodeFeederTest {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), _state);
         _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
         _state = new State();
-        FunctionHandler functionHandler = new(_memory, _state, null, new(), loggerService);
+        FunctionHandler functionHandler = new(_memory, _state, null, new(), false, loggerService);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, new());
         ExecutionContext executionContext = new ExecutionContext(SegmentedAddress.ZERO, 0, functionHandler);
         return (cfgNodeFeeder, executionContext);
