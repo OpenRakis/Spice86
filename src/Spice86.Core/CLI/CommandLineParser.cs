@@ -36,6 +36,9 @@ public class CommandLineParser {
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             initialConfig.ExeArgs = exeArgs;
+            if(initialConfig.Cycles != null) {
+                initialConfig.InstructionsPerSecond = null;
+            }
             return initialConfig;
         }, error => null);
     }
