@@ -42,7 +42,10 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// Gets or sets the name of the file associated with the MCB.
     /// </summary>
     [Range(0, 8)]
-    public string Owner { get => GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize); set => SetZeroTerminatedString(FilenameFieldOffset, value, FilenameFieldSize); }
+    public string Owner {
+        get => IsValid ? GetZeroTerminatedString(FilenameFieldOffset, FilenameFieldSize) : "";
+        set => SetZeroTerminatedString(FilenameFieldOffset, value, FilenameFieldSize);
+    }
 
     /// <summary>
     /// Gets or sets the PSP segment associated with the MCB.
@@ -57,13 +60,21 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// </remarks>
     public ushort Size { get => UInt16[SizeFieldOffset]; set => UInt16[SizeFieldOffset] = value; }
 
+    /// <summary>
+    /// Gets the size of the MCB in bytes.
+    /// </summary>
+    /// <remarks>
+    /// This property is just for convenience. The size of an MCB is always specified in paragraphs.
+    /// Use <see cref="Size"/> if you want to set the size (in paragraphs).
+    /// </remarks>
     public int AllocationSizeInBytes => Size * 16;
 
     /// <summary>
     /// Gets the usable space segment associated with the MCB.
     /// </summary>
     /// <remarks>
-    /// Allocation starts here and extends for <see cref="Size"/> * 16 bytes.
+    /// Allocation starts here and extends for <see cref="Size"/> paragraphs.
+    /// You can also use <see cref="AllocationSizeInBytes"/> to retrieve the size of this block in bytes.
     /// </remarks>
     public ushort DataBlockSegment => (ushort)(MemoryUtils.ToSegment(BaseAddress) + 1);
 
@@ -134,14 +145,14 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
 
     /// <inheritdoc />
     public override string ToString() {
-        return new StringBuilder("IsValid").Append(IsValid)
-            .Append(" IsFree:").Append(IsFree)
-            .Append(" IsLast:").Append(IsLast)
-            .Append(" IsNonLast:").Append(IsNonLast)
-            .Append(" BaseAddress: ").Append(BaseAddress)
-            .Append(" UsableSpaceSegment: ").Append(DataBlockSegment)
+        return new StringBuilder("IsValid: ").Append(IsValid)
+            .Append(" IsFree: ").Append(IsFree)
+            .Append(" IsLast: ").Append(IsLast)
+            .Append(" IsNonLast: ").Append(IsNonLast)
+            .Append(" BaseAddress: ").Append(ConvertUtils.ToHex32(BaseAddress))
+            .Append(" UsableSpaceSegment: ").Append(ConvertUtils.ToHex16(DataBlockSegment))
             .Append(" TypeField: ").Append(TypeField)
-            .Append(" PspSegment: ").Append(PspSegment)
+            .Append(" PspSegment: ").Append(ConvertUtils.ToHex16(PspSegment))
             .Append(" Size: ").Append(Size)
             .Append(" FileName: ").Append(Owner)
             .ToString();

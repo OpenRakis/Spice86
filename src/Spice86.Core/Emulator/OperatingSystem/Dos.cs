@@ -93,6 +93,9 @@ public sealed class Dos {
     /// </summary>
     public DosFileManager FileManager { get; }
 
+    /// <summary>
+    /// Gets the DOS process manager.
+    /// </summary>
     public DosProcessManager ProcessManager { get; }
 
     /// <summary>
@@ -164,10 +167,11 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, this.Devices);
-        ProcessManager = new(configuration, memory, state, FileManager, DosDriveManager, envVars, loggerService);
-        MemoryManager = new DosMemoryManager(_memory, ProcessManager, loggerService);
+        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, loggerService);
+        MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
+        ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, ProcessManager, functionHandlerProvider, stack, state,
+        DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
