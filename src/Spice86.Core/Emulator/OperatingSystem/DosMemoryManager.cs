@@ -15,22 +15,22 @@ public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
     private readonly ILoggerService _loggerService;
     private readonly IMemory _memory;
-    private readonly DosProcessManager _processManager;
+    private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryControlBlock _start;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
-    /// <param name="processManager">The class responsible to launch DOS programs and take care of the DOS PSP chain.</param>
+    /// <param name="pspTracker">The class responsible for DOS program loader configuration.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosMemoryManager(IMemory memory,
-        DosProcessManager processManager, ILoggerService loggerService) {
+        DosProgramSegmentPrefixTracker pspTracker, ILoggerService loggerService) {
         _loggerService = loggerService;
-        _processManager = processManager;
+        _pspTracker = pspTracker;
         _memory = memory;
 
-        ushort pspSegment = _processManager.GetCurrentPspSegment();
+        ushort pspSegment = _pspTracker.InitialPspSegment;
         ushort startSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(startSegment);
         ushort size = (ushort)(LastFreeSegment - startSegment);
@@ -77,7 +77,7 @@ public class DosMemoryManager {
             return null;
         }
 
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _pspTracker.GetCurrentPspSegment();
         return block;
     }
 
@@ -162,7 +162,7 @@ public class DosMemoryManager {
         if (block.Size > requestedSizeInParagraphs) {
             SplitBlock(block, requestedSizeInParagraphs);
         }
-        block.PspSegment = _processManager.GetCurrentPspSegment();
+        block.PspSegment = _pspTracker.GetCurrentPspSegment();
         return DosErrorCode.NoError;
     }
 

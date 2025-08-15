@@ -27,7 +27,7 @@ using System.Text;
 public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
-    private readonly DosProcessManager _dosProcessManager;
+    private readonly DosProgramSegmentPrefixTracker _dosPspTracker;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
@@ -42,6 +42,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The emulator memory.</param>
+    /// <param name="dosPspTracker">The DOS class used to track the current loaded program.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
@@ -51,15 +52,16 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
+    /// <param name="clock">The class responsible for the clock exposed to DOS programs.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt21Handler(IMemory memory, DosProcessManager dosProcessManager,
+    public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
-        _dosProcessManager = dosProcessManager;
+        _dosPspTracker = dosPspTracker;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
@@ -815,7 +817,7 @@ public class DosInt21Handler : InterruptHandler {
     /// The segment of the current PSP in BX.
     /// </returns>
     public void GetPspAddress() {
-        ushort pspSegment = _dosProcessManager.GetCurrentPspSegment();
+        ushort pspSegment = _dosPspTracker.GetCurrentPspSegment();
         State.BX = pspSegment;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
