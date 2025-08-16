@@ -13,7 +13,7 @@ public sealed class Configuration {
     /// CPU cycles per ms. Can be more precisely specified than instructions per second. Overrides instructions per second if used.
     /// </summary>
     [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is 8000. Overrides instructions per second option if used.")]
-    public long? Cycles { get; init; }
+    public int? Cycles { get; init; }
 
     /// <summary>
     /// Gets if the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.
