@@ -41,9 +41,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public int TargetCyclesPerMs {
         get => _cyclesLimiter.TargetCpuCyclesPerMs;
         set {
-            if(SetProperty(ref _targetCyclesPerMs, value)) {
-                _cyclesLimiter.TargetCpuCyclesPerMs = value;
-            }
+            // Set limiter first (it may clamp), then update backing field with the effective value
+            _cyclesLimiter.TargetCpuCyclesPerMs = value;
+            SetProperty(ref _targetCyclesPerMs, _cyclesLimiter.TargetCpuCyclesPerMs);
         }
     }
 
@@ -94,7 +94,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
         _cyclesLimiter = cyclesLimiter;
-        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+        // Initialize backing field from limiter without double notifications
+        _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;

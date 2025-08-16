@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -11,7 +13,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
-
 
 /// <summary>
 /// This class orchestrates the execution of the emulated CPU, <br/>
@@ -30,9 +31,15 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly Stopwatch _highPrecisionSleepStopwatch = new();
     private readonly DmaController _dmaController;
-    private long _surplusCycles = 0;
+
+    // Signed error accumulator: positive means we're ahead (should slow down), negative means behind.
+    private long _cycleErrorAccumulator;
     private long _cyclesAtLastCheck;
-    private long _lastCheckTime;
+    private long _lastCheckTicks;
+    private long _nextCycleCheckThreshold;
+    private double _adjustWindowMs; // dynamic gate window
+    private readonly double _ticksToMsFactor = 1000.0 / Stopwatch.Frequency;
+    private int _lastTargetCpuCyclesPerMs;
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
     private const int MaxCyclesPerMs = 60000;
@@ -45,6 +52,12 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     public bool IsPaused { get; set; }
     public int TargetCpuCyclesPerMs { get; set; } = ICyclesLimiter.RealModeCpuCylcesPerMs;
+
+    private const int MinAdjustWindowMs = 4; // min window to reduce jitter
+    private const int MaxAdjustWindowMs = 16; // larger window at high targets to reduce QPC calls
+
+    // Above this target, limiter is fully disabled and avoids any Stopwatch calls.
+    private const int DisableLimiterThreshold = 500_000;
 
     /// <summary>
     /// Initializes a new instance.
@@ -72,9 +85,15 @@ public class EmulationLoop : ICyclesLimiter {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         if (configuration.Cycles != null) {
-            TargetCpuCyclesPerMs = (int)Math.Min(MaxCyclesPerMs, configuration.Cycles.Value);
+            long cfg = configuration.Cycles.Value;
+            if (cfg <= 0) {
+                TargetCpuCyclesPerMs = ICyclesLimiter.RealModeCpuCylcesPerMs;
+            } else {
+                TargetCpuCyclesPerMs = (int)Math.Clamp(cfg, MinCyclesPerMs, MaxCyclesPerMs);
+            }
         }
-        if (TargetCpuCyclesPerMs == 0) {
+
+        if (TargetCpuCyclesPerMs <= 0) {
             TargetCpuCyclesPerMs = ICyclesLimiter.RealModeCpuCylcesPerMs;
         }
     }
@@ -115,7 +134,14 @@ public class EmulationLoop : ICyclesLimiter {
     private void RunLoop() {
         _performanceStopwatch.Start();
         _cyclesAtLastCheck = _cpuState.Cycles;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
+        _lastCheckTicks = _performanceStopwatch.ElapsedTicks;
+        _lastTargetCpuCyclesPerMs = TargetCpuCyclesPerMs;
+        _adjustWindowMs = ComputeAdjustWindowMs(_lastTargetCpuCyclesPerMs);
+        // If disabled, avoid any future timing checks by parking the threshold.
+        _nextCycleCheckThreshold = _lastTargetCpuCyclesPerMs >= DisableLimiterThreshold
+            ? long.MaxValue
+            : _cyclesAtLastCheck + (long)(_lastTargetCpuCyclesPerMs * _adjustWindowMs);
+
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
             RunOnce();
@@ -135,45 +161,91 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     private void AdjustCycles() {
-        long currentTime = _performanceStopwatch.ElapsedMilliseconds;
-        long elapsedTime = currentTime - _lastCheckTime;
-
-        if (elapsedTime <= 0) {
-            _lastCheckTime = currentTime;
-            return;
+        // Fast path 1: fully disabled limiter — absolutely no QPC calls.
+        if (_nextCycleCheckThreshold == long.MaxValue) {
+            // If target changed downwards later, next block will reconfigure.
+            if (TargetCpuCyclesPerMs == _lastTargetCpuCyclesPerMs) {
+                return;
+            }
         }
 
         long currentCycles = _cpuState.Cycles;
-        long cyclesExecuted = currentCycles - _cyclesAtLastCheck;
-        long targetCyclesForPeriod = TargetCpuCyclesPerMs * elapsedTime;
-        long cyclesDifference = cyclesExecuted - targetCyclesForPeriod;
 
-        if (cyclesDifference < 0) {
-            // We're behind, accumulate surplus cycles
-            _surplusCycles += Math.Abs(cyclesDifference);
-        } else {
-            // We're ahead, reduce surplus cycles first
-            if (_surplusCycles > 0) {
-                long toConsume = Math.Min(_surplusCycles, cyclesDifference);
-                _surplusCycles -= toConsume;
-                cyclesDifference -= toConsume;
+        // Fast path 2: target changed — reconfigure thresholds with zero timestamp calls.
+        int target = TargetCpuCyclesPerMs;
+        if (target != _lastTargetCpuCyclesPerMs) {
+            _lastTargetCpuCyclesPerMs = target;
+            _adjustWindowMs = ComputeAdjustWindowMs(target);
+            if (target >= DisableLimiterThreshold) {
+                _cycleErrorAccumulator = 0;
+                _nextCycleCheckThreshold = long.MaxValue; // fully disable
+                return;
             }
-            // Only sleep if still ahead after surplus is consumed
-            DoHighPrecisionSleep(cyclesDifference / TargetCpuCyclesPerMs);
+
+            _cyclesAtLastCheck = currentCycles;
+            _lastCheckTicks = _performanceStopwatch.ElapsedTicks; // single read on re-enable
+            _nextCycleCheckThreshold = currentCycles + (long)(target * _adjustWindowMs);
+            return;
+        }
+
+        // Fast path 3: not yet time to check — zero-cost.
+        if (currentCycles < _nextCycleCheckThreshold) {
+            return;
+        }
+
+        long nowTicks = _performanceStopwatch.ElapsedTicks;
+        long elapsedTicks = nowTicks - _lastCheckTicks;
+        if (elapsedTicks <= 0) {
+            _lastCheckTicks = nowTicks;
+            _cyclesAtLastCheck = currentCycles;
+            _nextCycleCheckThreshold = currentCycles + (long)(_lastTargetCpuCyclesPerMs * _adjustWindowMs);
+            return;
+        }
+
+        // Window already adjusted on target change; no need to recompute here.
+        double elapsedMs = elapsedTicks * _ticksToMsFactor;
+        long cyclesExecuted = currentCycles - _cyclesAtLastCheck;
+        double targetCyclesForPeriod = _lastTargetCpuCyclesPerMs * elapsedMs;
+
+        long cyclesDifference = (long)Math.Round(cyclesExecuted - targetCyclesForPeriod);
+
+        // Signed accumulator: positive -> ahead (need to sleep), negative -> behind (carry debt)
+        _cycleErrorAccumulator += cyclesDifference;
+        if (_cycleErrorAccumulator > 0) {
+            double msToSleep = _cycleErrorAccumulator / (double)_lastTargetCpuCyclesPerMs;
+            DoHybridSleep(msToSleep);
+            // After sleeping, assume consumed the positive error (best effort)
+            _cycleErrorAccumulator = 0;
         }
 
         _cyclesAtLastCheck = currentCycles;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
+        _lastCheckTicks = nowTicks;
+        // Schedule next check based on cycles to avoid extra QPC calls in the hot path
+        _nextCycleCheckThreshold = currentCycles + (long)(_lastTargetCpuCyclesPerMs * _adjustWindowMs);
     }
 
-    private void DoHighPrecisionSleep(double msToSleep) {
+    private static double ComputeAdjustWindowMs(int targetCyclesPerMs) {
+        return targetCyclesPerMs switch {
+            // Larger windows for high targets reduce frequency of QPC calls while keeping control responsiveness
+            >= 50_000 => MaxAdjustWindowMs,
+            >= 20_000 => 8.0,
+            _ => MinAdjustWindowMs
+        };
+    }
+
+
+    private void DoHybridSleep(double msToSleep) {
         if (msToSleep <= 0) {
             return;
         }
+
         _highPrecisionSleepStopwatch.Restart();
-        while (_cpuState.IsRunning && _highPrecisionSleepStopwatch.ElapsedMilliseconds < msToSleep) {
-            Thread.SpinWait(1);
+        long targetTicks = (long)(msToSleep * Stopwatch.Frequency / 1000.0);
+        var spinner = new SpinWait();
+        while (_cpuState.IsRunning && _highPrecisionSleepStopwatch.ElapsedTicks < targetTicks) {
+            spinner.SpinOnce();
         }
+
     }
 
     internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
@@ -184,20 +256,23 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
             long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
             _loggerService.Warning(
-                "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
+                "Executed {Cycles} cycles in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} cycles per second on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }
     }
 
     public void IncreaseCycles() {
-        TargetCpuCyclesPerMs = Math.Min(TargetCpuCyclesPerMs + CyclesUp, MaxCyclesPerMs);
+        // Percentage step with floor to keep low values usable
+        int step = Math.Max(CyclesUp, (int)(TargetCpuCyclesPerMs * 0.10));
+        TargetCpuCyclesPerMs = Math.Min(TargetCpuCyclesPerMs + step, MaxCyclesPerMs);
     }
 
     public void DecreaseCycles() {
-        TargetCpuCyclesPerMs = Math.Max(TargetCpuCyclesPerMs - CyclesDown, MinCyclesPerMs);
+        int step = Math.Max(CyclesDown, (int)(TargetCpuCyclesPerMs * 0.10));
+        TargetCpuCyclesPerMs = Math.Max(TargetCpuCyclesPerMs - step, MinCyclesPerMs);
     }
 }
