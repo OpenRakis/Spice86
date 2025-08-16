@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -19,6 +21,7 @@ using Spice86.Shared.Utils;
 public class SystemBiosInt15Handler : InterruptHandler {
     private readonly A20Gate _a20Gate;
     private readonly Configuration _configuration;
+    private readonly EmulationLoop _emulationLoop;
 
     /// <summary>
     /// Initializes a new instance.
@@ -29,15 +32,17 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
+    /// <param name="emulationLoop">The emulation loop for timed operations.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, A20Gate a20Gate, bool initializeResetVector,
+        State state, A20Gate a20Gate, EmulationLoop emulationLoop, bool initializeResetVector,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         _configuration = configuration;
+        _emulationLoop = emulationLoop;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
@@ -53,6 +58,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
+        AddAction(0x83, () => WaitFunction(true));
     }
 
     /// <inheritdoc />
@@ -62,6 +68,74 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = State.AH;
         Run(operation);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=83h - SYSTEM - WAIT (WAIT FUNCTION)
+    /// <para>
+    /// This function allows programs to request a timed delay with optional user callback.
+    /// </para><br/>
+    /// <b>Inputs:</b><br/>
+    /// AH = 83h<br/>
+    /// AL = 00h to set alarm, 01h to cancel alarm<br/>
+    /// CX:DX = microseconds to wait<br/>
+    /// ES:BX = address of user interrupt routine (0000:0000 means no callback)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF clear if successful<br/>
+    /// CF set on error<br/>
+    /// </summary>
+    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
+    public void WaitFunction(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION");
+        }
+
+        // Check if setting or canceling alarm
+        if (State.AL == 0x01) {
+            // Cancel alarm - we just return success as we don't track pending alarms
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
+
+        // We only handle setting alarms (AL=0)
+        if (State.AL != 0x00) {
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+
+        // Get microsecond count from CX:DX
+        uint microseconds = ((uint)State.CX << 16) | State.DX;
+        
+        // Check for user callback
+        SegmentedAddress? callbackAddress = null;
+        if (State.ES != 0 || State.BX != 0) {
+            callbackAddress = new SegmentedAddress(State.ES, State.BX);
+        }
+
+        // For now just sleep the thread for the requested time
+        // This is a simplified implementation
+        try {
+            // Convert to milliseconds for Thread.Sleep (with proper rounding)
+            int milliseconds = (int)Math.Ceiling(microseconds / 1000.0);
+            
+            // Sleep for the requested time
+            Thread.Sleep(milliseconds);
+
+            // If there's a callback address, execute it
+            if (callbackAddress != null) {
+                if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    LoggerService.Verbose("Calling user callback at {Callback}", callbackAddress);
+                }
+                FunctionHandlerProvider.FunctionHandlerInUse.Call(CallType.FAR, callbackAddress.Value, null, null, "INT15H_83H_UserCallback", false);
+            }
+
+            SetCarryFlag(false, calledFromVm);
+        } catch (Exception ex) {
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error(ex, "Error in WAIT function");
+            }
+            SetCarryFlag(true, calledFromVm);
+        }
     }
 
     /// <summary>
