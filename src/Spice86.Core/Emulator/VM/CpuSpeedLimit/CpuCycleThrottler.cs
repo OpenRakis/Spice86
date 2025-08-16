@@ -35,7 +35,7 @@ public class CpuCycleThrottler : CycleLimiterBase {
             MaxCyclesPerMs);
         } else {
             TargetCpuCyclesPerMs = Math.Clamp(
-            ICyclesLimiter.RealModeCpuCylcesPerMs,
+            ICyclesLimiter.RealModeCpuCyclesPerMs,
             MinCyclesPerMs,
             MaxCyclesPerMs);
         }

@@ -7,7 +7,7 @@ public interface ICyclesLimiter {
     /// <summary>
     /// The ideal number of CPU cycles for the vast majority of real mode games.
     /// </summary>
-    public const int RealModeCpuCylcesPerMs = 3000;
+    public const int RealModeCpuCyclesPerMs = 3000;
 
     /// <summary>
     /// The current target of CPU cycles to achieve
