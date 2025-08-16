@@ -155,9 +155,9 @@ public class DosFileManagerTests {
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        EmulationLoop emulationLoop = new EmulationLoop(loggerService,
+        EmulationLoop emulationLoop = new EmulationLoop(configuration,
             functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler);
+            emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);

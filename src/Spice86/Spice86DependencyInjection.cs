@@ -201,8 +201,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
-            loggerService, executionFlowRecorder);
+            dualPic, ioPortDispatcher, callbackHandler,
+            emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CPU created...");
@@ -264,7 +264,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Video card support classes created...");
         }
-        
+
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
                     functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt12Handler systemBiosInt12Handler = new(memory, functionHandlerProvider, stack,
@@ -315,21 +315,22 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
             executionDumpFactory, functionCatalogue, loggerService);
 
+        IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
+
+        EmulationLoop emulationLoop = new(configuration, functionHandler,
+            cpuForEmulationLoop, state, timer, emulatorBreakpointsManager,
+            dmaController, pauseHandler, loggerService);
+
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
         }
-
-        EmulationLoop emulationLoop = new EmulationLoop(_loggerService,
-            functionHandler, instructionExecutor,
-            state, timer, emulatorBreakpointsManager, dmaController,
-            pauseHandler);
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
         
-        if(mainWindow != null) {
+        if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer);
@@ -347,7 +348,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, emulationLoop);
             _gui = mainWindowViewModel;
         } else {
             _gui = new HeadlessGui();
@@ -512,10 +513,10 @@ public class Spice86DependencyInjection : IDisposable {
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher);
 
-        DisassemblyViewModel disassemblyViewModel = new(
-            emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
-            breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
-            canCloseTab: false);
+            DisassemblyViewModel disassemblyViewModel = new(
+                emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,
+                breakpointsViewModel, pauseHandler, uiDispatcher, messenger, textClipboard, loggerService,
+                canCloseTab: false);
 
             PaletteViewModel paletteViewModel = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher);
