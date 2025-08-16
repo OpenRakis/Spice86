@@ -36,13 +36,13 @@ public class CommandLineParser {
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             initialConfig.ExeArgs = exeArgs;
-            if(initialConfig.Cycles != null) {
+            if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
             }
             return initialConfig;
         }, error => null);
     }
-    
+
     private static string[] ProcessArgs(string[] args, out string exeArgs) {
         var processedArgs = new List<string>();
         exeArgs = string.Empty;
@@ -50,13 +50,13 @@ public class CommandLineParser {
             if (IsExeArg(args[i]) && i + 1 <= args.Length) {
                 exeArgs = args[i + 1];
                 i++;
-            } else  {
+            } else {
                 processedArgs.Add(args[i]);
             }
         }
         return processedArgs.ToArray();
     }
-    
+
     private static bool IsExeArg(string arg) {
         (string ShortName, string LongName)? exeArgNames = GetCommandLineOptionName<Configuration>(nameof(Configuration.ExeArgs));
         return string.Equals(exeArgNames.Value.ShortName, arg, StringComparison.Ordinal) ||
