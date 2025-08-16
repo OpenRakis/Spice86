@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -17,6 +18,7 @@ using System.Diagnostics;
 /// On Pause, triggers a GDB breakpoint.
 /// </summary>
 public class EmulationLoop {
+    private readonly IGui? _gui;
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -27,8 +29,7 @@ public class EmulationLoop {
     private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly Stopwatch _stopwatch;
     private readonly DmaController _dmaController;
-
-    public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
+    private readonly Keyboard _keyboard;
 
     /// <summary>
     /// Whether the emulation is paused.
@@ -38,7 +39,8 @@ public class EmulationLoop {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="keyboard">The keyboard controller, called on each emulation loop cycle, <br/> 
+    /// to deal with keyboard events from the GUI.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
@@ -46,11 +48,14 @@ public class EmulationLoop {
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService,
-        FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
-        Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController, IPauseHandler pauseHandler) {
-        _loggerService = loggerService;
+    /// <param name="performanceMeasurer">The class used to update perf counters on each loop cycle.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public EmulationLoop(Keyboard keyboard, FunctionHandler functionHandler,
+        IInstructionExecutor cpu, State cpuState, Timer timer,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        DmaController dmaController, IPauseHandler pauseHandler,
+        PerformanceMeasurer performanceMeasurer,  ILoggerService loggerService) {
+        _keyboard = keyboard;
         _dmaController = dmaController;
         _cpu = cpu;
         _functionHandler = functionHandler;
@@ -58,7 +63,8 @@ public class EmulationLoop {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _performanceMeasurer = new PerformanceMeasurer();
+        _performanceMeasurer = performanceMeasurer;
+        _loggerService = loggerService;
         _stopwatch = new();
     }
 
@@ -111,6 +117,7 @@ public class EmulationLoop {
         _cpu.ExecuteNext();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
+        _keyboard.Update(_gui);
         _dmaController.PerformDmaTransfers();
     }
 

@@ -149,15 +149,16 @@ public class DosFileManagerTests {
             bootUpInTextMode: configuration.InitializeDOS is true);
 
         Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            null, configuration.FailOnUnhandledPort);
+            configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        EmulationLoop emulationLoop = new EmulationLoop(loggerService,
+        EmulationLoop emulationLoop = new EmulationLoop(keyboard,
             functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler);
+            emulatorBreakpointsManager, dmaController, pauseHandler, new(),
+            loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
