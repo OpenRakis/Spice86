@@ -282,10 +282,10 @@ public class Spice86DependencyInjection : IDisposable {
 
         DosTables dosTables = new();
 
-        if (configuration.Xms) {
+        if (configuration.Xms is not false) {
             xms = new(memory, state, a20Gate, memoryAsmWriter, dosTables, loggerService);
         }
-        if (configuration.Xms && loggerService.IsEnabled(
+        if (configuration.Xms is not false && loggerService.IsEnabled(
             LogEventLevel.Information)) {
             loggerService.Information("DOS XMS driver created...");
         }

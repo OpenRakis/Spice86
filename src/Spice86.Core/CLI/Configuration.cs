@@ -141,8 +141,8 @@ public sealed class Configuration {
     /// <summary>
     /// Determines whether EMS (Expanded Memory Specification) should be enabled or not.
     /// </summary>
-    [Option(nameof(Ems), Default = true, Required = false, HelpText = "Enable EMS")]
-    public bool Ems { get; init; }
+    [Option(nameof(Ems), Default = null, Required = false, HelpText = "Enable EMS")]
+    public bool? Ems { get; init; }
 
     /// <summary>
     /// Specify the type of mouse to use.
@@ -168,6 +168,6 @@ public sealed class Configuration {
     [Option(nameof(AudioEngine), Default = AudioEngine.PortAudio, Required = false, HelpText = "Audio engine to use. Values are PortAudio or Dummy")]
     public AudioEngine AudioEngine { get; init; }
 
-    [Option(nameof(Xms), Default = true, Required = false, HelpText = "Enable XMS. Default is true.")]
-    public bool Xms { get; init; }
+    [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
+    public bool? Xms { get; init; }
 }
