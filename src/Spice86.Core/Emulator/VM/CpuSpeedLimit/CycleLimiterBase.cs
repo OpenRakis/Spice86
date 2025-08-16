@@ -14,8 +14,7 @@ public abstract class CycleLimiterBase : ICyclesLimiter {
     /// Adjusts CPU cycles to control emulation speed.
     /// </summary>
     /// <param name="cpuState">The CPU state containing cycle information.</param>
-    /// <param name="isRunning">Whether the emulation is still running.</param>
-    internal abstract void RegulateCycles(State cpuState, bool isRunning);
+    internal abstract void RegulateCycles(State cpuState);
     
     /// <inheritdoc />
     public abstract void DecreaseCycles();

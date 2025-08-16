@@ -19,7 +19,7 @@ public class NullCycleLimiter : CycleLimiterBase {
     }
 
     /// <inheritdoc/>
-    internal override void RegulateCycles(State cpuState, bool isRunning) {
+    internal override void RegulateCycles(State cpuState) {
         // Do nothing - run at full speed
     }
 }

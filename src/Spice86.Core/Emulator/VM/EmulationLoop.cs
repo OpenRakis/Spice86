@@ -123,7 +123,7 @@ public class EmulationLoop : ICyclesLimiter {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
-        _cycleAdjuster.RegulateCycles(_cpuState, _cpuState.IsRunning);
+        _cycleAdjuster.RegulateCycles(_cpuState);
     }
 
     private void OutputPerfStats() {

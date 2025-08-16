@@ -1,19 +1,23 @@
 ﻿namespace Spice86.Core.Emulator.VM.CpuSpeedLimit;
 
 using Spice86.Core.Emulator.CPU;
+using static Spice86.Core.Emulator.Devices.Timer.Timer;
 
 using System.Diagnostics;
 
 /// <summary>
-/// Throttles CPU execution to maintain a target number of cycles per millisecond.
+/// Throttles CPU execution to maintain a target number of cycles per millisecond,
+/// using a budget-based approach similar to DOSBox.
 /// </summary>
 public class CpuCycleThrottler : CycleLimiterBase {
-    private readonly Stopwatch _performanceStopwatch = new();
-    private readonly Stopwatch _highPrecisionSleepStopwatch = new();
-    private long _surplusCycles = 0;
-    private long _cyclesAtLastCheck;
-    private long _lastCheckTime;
+    // Keep track of timing and cycles
+    private readonly SpinWait _spinner = new();
+    private readonly Stopwatch _stopwatch = new();
+    private long _cycleRemain;
+    private long _lastTicks;
 
+    // Constants for cycle control
+    private const int MaxCyclesPerWindow = 20;
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
     private const int MaxCyclesPerMs = 60000;
@@ -24,57 +28,68 @@ public class CpuCycleThrottler : CycleLimiterBase {
     /// </summary>
     /// <param name="targetCpuCyclesPerMs">The target CPU cycles per millisecond.</param>
     public CpuCycleThrottler(int targetCpuCyclesPerMs) {
-        TargetCpuCyclesPerMs = targetCpuCyclesPerMs > 0
-            ? targetCpuCyclesPerMs
-            : ICyclesLimiter.RealModeCpuCylcesPerMs;
+        if (targetCpuCyclesPerMs > 0) {
+            TargetCpuCyclesPerMs = Math.Clamp(
+            targetCpuCyclesPerMs,
+            MinCyclesPerMs,
+            MaxCyclesPerMs);
+        } else {
+            TargetCpuCyclesPerMs = Math.Clamp(
+            ICyclesLimiter.RealModeCpuCylcesPerMs,
+            MinCyclesPerMs,
+            MaxCyclesPerMs);
+        }
 
-        _performanceStopwatch.Start();
-        _cyclesAtLastCheck = 0;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
+        _stopwatch.Start();
+        _lastTicks = _stopwatch.ElapsedTicks;
     }
 
     /// <inheritdoc/>
-    internal override void RegulateCycles(State cpuState, bool isRunning) {
-        long currentTime = _performanceStopwatch.ElapsedMilliseconds;
-        long elapsedTime = currentTime - _lastCheckTime;
-
-        if (elapsedTime <= 0) {
-            _lastCheckTime = currentTime;
+    internal override void RegulateCycles(State cpuState) {
+        if (!cpuState.IsRunning) {
             return;
         }
 
-        long currentCycles = cpuState.Cycles;
-        long cyclesExecuted = currentCycles - _cyclesAtLastCheck;
-        long targetCyclesForPeriod = TargetCpuCyclesPerMs * elapsedTime;
-        long cyclesDifference = cyclesExecuted - targetCyclesForPeriod;
+        // If we still have cycle budget left, decrement and return
+        if (_cycleRemain > 0) {
+            _cycleRemain--;
+            return;
+        }
 
-        if (cyclesDifference < 0) {
-            // We're behind, accumulate surplus cycles
-            _surplusCycles += Math.Abs(cyclesDifference);
-        } else {
-            // We're ahead, reduce surplus cycles first
-            if (_surplusCycles > 0) {
-                long toConsume = Math.Min(_surplusCycles, cyclesDifference);
-                _surplusCycles -= toConsume;
-                cyclesDifference -= toConsume;
+        // We've used all allocated cycles, need to calculate a new budget
+        long currentTicks = _stopwatch.ElapsedTicks;
+
+        // If time hasn't advanced significantly, make the emulation wait
+        if (currentTicks - _lastTicks < StopwatchTicksPerMillisecond) { 
+            // Less than 0.1ms has passed
+            // Wait until at least 1ms has passed,
+            // using the same fast approach as Renderer.cs
+            long targetTicks = _lastTicks + StopwatchTicksPerMillisecond;
+
+            while (cpuState.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
+                _spinner.SpinOnce();
             }
-            // Only sleep if still ahead after surplus is consumed
-            DoHighPrecisionSleep(cyclesDifference / TargetCpuCyclesPerMs,
-                isRunning);
+
+            // Update current ticks after spinning
+            currentTicks = _stopwatch.ElapsedTicks;
         }
 
-        _cyclesAtLastCheck = currentCycles;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
-    }
+        // Calculate elapsed milliseconds
+        // (floating point for sub-millisecond precision)
+        double elapsedMs = (double)(currentTicks - _lastTicks)
+            / Stopwatch.Frequency * 1000;
 
-    private void DoHighPrecisionSleep(double msToSleep, bool isRunning) {
-        if (msToSleep <= 0) {
-            return;
-        }
-        _highPrecisionSleepStopwatch.Restart();
-        while (isRunning && _highPrecisionSleepStopwatch.ElapsedMilliseconds
-            < msToSleep) {
-            Thread.SpinWait(1);
+        // If we've advanced, update cycle budget
+        if (elapsedMs > 0) {
+            _lastTicks = currentTicks;
+
+            // Calculate cycle budget with floating point to avoid losing
+            // sub-millisecond precision
+            _cycleRemain = (long)Math.Min(
+                TargetCpuCyclesPerMs * elapsedMs,
+                TargetCpuCyclesPerMs * MaxCyclesPerWindow);
+
+            _spinner.Reset();
         }
     }
 
