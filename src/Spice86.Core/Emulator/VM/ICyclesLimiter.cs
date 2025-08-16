@@ -1,18 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 /// <summary>
-/// This interface provides methods to increase or decrease the CPU cycles per millisecond, as well as a
-/// property to  specify the target CPU cycles. It also includes a constant representing the default CPU cycles per
-/// millisecond in real mode.
+/// This interface provides methods to increase or decrease CPU speed, for speed sensitive games.
 /// </summary>
 public interface ICyclesLimiter {
     /// <summary>
     /// The ideal number of CPU cycles for the vast majority of real mode games.
     /// </summary>
-    /// <remarks>
-    /// Below a value of 8000, Dune music is slowed down.
-    /// </remarks>
-    public const int RealModeCpuCylcesPerMs = 8000;
+    public const int RealModeCpuCylcesPerMs = 3000;
 
     /// <summary>
     /// The current target of CPU cycles to achieve

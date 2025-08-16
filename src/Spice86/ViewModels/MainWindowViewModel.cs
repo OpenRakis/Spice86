@@ -14,6 +14,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -25,7 +26,8 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui, IScreenPresenter, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
+    IScreenPresenter, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
@@ -101,10 +103,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         TimeMultiplier = Configuration.TimeMultiplier;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
             DispatcherPriority.Background,
-            (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
+            (_, _) => RefreshMainTitleWithInstructionsPerMs());
     }
 
-    private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
+    private void RefreshMainTitleWithInstructionsPerMs() {
         if (IsPaused) {
             return;
         }

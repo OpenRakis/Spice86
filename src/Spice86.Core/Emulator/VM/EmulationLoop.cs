@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -28,15 +29,8 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly IPauseHandler _pauseHandler;
     private readonly PerformanceMeasurer _performanceMeasurer = new();
     private readonly Stopwatch _performanceStopwatch = new();
-    private readonly Stopwatch _highPrecisionSleepStopwatch = new();
     private readonly DmaController _dmaController;
-    private long _surplusCycles = 0;
-    private long _cyclesAtLastCheck;
-    private long _lastCheckTime;
-    private const int CyclesUp = 1000;
-    private const int CyclesDown = 1000;
-    private const int MaxCyclesPerMs = 60000;
-    private const int MinCyclesPerMs = 100;
+    private readonly CycleLimiterBase _cycleAdjuster;
 
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
@@ -44,7 +38,11 @@ public class EmulationLoop : ICyclesLimiter {
     /// Whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
-    public int TargetCpuCyclesPerMs { get; set; } = ICyclesLimiter.RealModeCpuCylcesPerMs;
+    
+    public int TargetCpuCyclesPerMs {
+        get => _cycleAdjuster.TargetCpuCyclesPerMs;
+        set => _cycleAdjuster.TargetCpuCyclesPerMs = value;
+    }
 
     /// <summary>
     /// Initializes a new instance.
@@ -71,18 +69,14 @@ public class EmulationLoop : ICyclesLimiter {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        if (configuration.Cycles != null) {
-            TargetCpuCyclesPerMs = (int)Math.Min(MaxCyclesPerMs, configuration.Cycles.Value);
-        }
-        if (TargetCpuCyclesPerMs == 0) {
-            TargetCpuCyclesPerMs = ICyclesLimiter.RealModeCpuCylcesPerMs;
-        }
+        _cycleAdjuster = CycleLimiterFactory.Create(configuration);
     }
 
     /// <summary>
     /// Starts and waits for the end of the emulation loop.
     /// </summary>
-    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
+    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. <br/>
+    /// This can occur if the target program is not supported (yet).</exception>
     public void Run() {
         try {
             StartRunLoop(_functionHandler);
@@ -114,8 +108,6 @@ public class EmulationLoop : ICyclesLimiter {
 
     private void RunLoop() {
         _performanceStopwatch.Start();
-        _cyclesAtLastCheck = _cpuState.Cycles;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
             RunOnce();
@@ -131,56 +123,7 @@ public class EmulationLoop : ICyclesLimiter {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
-        AdjustCycles();
-    }
-
-    private void AdjustCycles() {
-        long currentTime = _performanceStopwatch.ElapsedMilliseconds;
-        long elapsedTime = currentTime - _lastCheckTime;
-
-        if (elapsedTime <= 0) {
-            _lastCheckTime = currentTime;
-            return;
-        }
-
-        long currentCycles = _cpuState.Cycles;
-        long cyclesExecuted = currentCycles - _cyclesAtLastCheck;
-        long targetCyclesForPeriod = TargetCpuCyclesPerMs * elapsedTime;
-        long cyclesDifference = cyclesExecuted - targetCyclesForPeriod;
-
-        if (cyclesDifference < 0) {
-            // We're behind, accumulate surplus cycles
-            _surplusCycles += Math.Abs(cyclesDifference);
-        } else {
-            // We're ahead, reduce surplus cycles first
-            if (_surplusCycles > 0) {
-                long toConsume = Math.Min(_surplusCycles, cyclesDifference);
-                _surplusCycles -= toConsume;
-                cyclesDifference -= toConsume;
-            }
-            // Only sleep if still ahead after surplus is consumed
-            DoHighPrecisionSleep(cyclesDifference / TargetCpuCyclesPerMs);
-        }
-
-        _cyclesAtLastCheck = currentCycles;
-        _lastCheckTime = _performanceStopwatch.ElapsedMilliseconds;
-    }
-
-    private void DoHighPrecisionSleep(double msToSleep) {
-        if (msToSleep <= 0) {
-            return;
-        }
-        _highPrecisionSleepStopwatch.Restart();
-        while (_cpuState.IsRunning && _highPrecisionSleepStopwatch.ElapsedMilliseconds < msToSleep) {
-            Thread.SpinWait(1);
-        }
-    }
-
-    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
-        _cpuState.IpSegmentedAddress = startAddress;
-        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
-            RunOnce();
-        }
+        _cycleAdjuster.RegulateCycles(_cpuState, _cpuState.IsRunning);
     }
 
     private void OutputPerfStats() {
@@ -193,11 +136,18 @@ public class EmulationLoop : ICyclesLimiter {
         }
     }
 
+    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
+        _cpuState.IpSegmentedAddress = startAddress;
+        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
+            RunOnce();
+        }
+    }
+
     public void IncreaseCycles() {
-        TargetCpuCyclesPerMs = Math.Min(TargetCpuCyclesPerMs + CyclesUp, MaxCyclesPerMs);
+        _cycleAdjuster.IncreaseCycles();
     }
 
     public void DecreaseCycles() {
-        TargetCpuCyclesPerMs = Math.Max(TargetCpuCyclesPerMs - CyclesDown, MinCyclesPerMs);
+        _cycleAdjuster.DecreaseCycles();
     }
 }
