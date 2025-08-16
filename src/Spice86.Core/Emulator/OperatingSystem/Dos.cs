@@ -184,12 +184,12 @@ public sealed class Dos {
         }
         OpenDefaultFileHandles(dosDevices);
 
-        if (configuration.Xms && xms is not null) {
+        if (configuration.Xms is not false && xms is not null) {
             Xms = xms;
             AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
         }
 
-        if (configuration.Ems) {
+        if (configuration.Ems is not false) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
             AddDevice(Ems.AsCharacterDevice(), ExpandedMemoryManager.DosDeviceSegment, 0);
         }

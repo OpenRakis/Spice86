@@ -32,7 +32,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         ClockDeviceHeaderPointer = 0x0;
         MagicWord = 0x1;
         BootDrive = 0x0;
-        if (configuration.Xms) {
+        if (configuration.Xms is not false) {
             ExtendedMemorySize = ExtendedMemoryManager.XmsMemorySize;
         } else {
             // Size of HMA
