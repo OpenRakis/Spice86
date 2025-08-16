@@ -679,7 +679,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FREE ALLOCATED MEMORY {BlockSegment}",
-                blockSegment);
+                ConvertUtils.ToHex16(blockSegment));
         }
         SetCarryFlag(false, calledFromVm);
         if (!_dosMemoryManager.FreeMemoryBlock((ushort)(blockSegment - 1))) {
@@ -888,8 +888,8 @@ public class DosInt21Handler : InterruptHandler {
         ushort requestedSizeInParagraphs = State.BX;
         ushort blockSegment = State.ES;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MODIFY MEMORY BLOCK {Size}, {BlockSegment}",
-                requestedSizeInParagraphs, blockSegment);
+            LoggerService.Verbose("MODIFY MEMORY BLOCK {Size} at {BlockSegment}",
+                requestedSizeInParagraphs, ConvertUtils.ToHex16(blockSegment));
         }
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
