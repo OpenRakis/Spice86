@@ -50,7 +50,7 @@ If there is already data there the emulator will load it first and complete it, 
 
 ```
   --Debug                            (Default: false) Starts the program paused.
-  --Cycles                           (Default: 8000. 3000 is a good value too) Target CPU cycles per ms. For the rare speed sensitive game. Overrides Instructions per second option below if used.
+  --Cycles                           (Default: 3000) Target CPU cycles per ms. For the rare speed sensitive game. Overrides Instructions per second option below if used.
   --Ems                              (Default: true) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
