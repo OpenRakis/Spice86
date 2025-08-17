@@ -40,7 +40,6 @@ public class CpuCycleLimiter : CycleLimiterBase {
         }
 
         _stopwatch.Start();
-        _lastTicks = _stopwatch.ElapsedTicks;
     }
 
     /// <inheritdoc/>
