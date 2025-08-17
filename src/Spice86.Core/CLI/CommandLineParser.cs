@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.CLI;
 
 using CommandLine;
-using CommandLine.Text;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Errors;
@@ -10,7 +9,6 @@ using Spice86.Shared.Utils;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
 /// <summary>
