@@ -56,10 +56,10 @@ public class CpuCycleLimiter : CycleLimiterBase {
         }
 
         // We've used all allocated cycles, need to calculate a new budget
-        long currentTicks = _stopwatch.ElapsedTicks;
+        long wallClockTicks = _stopwatch.ElapsedTicks;
 
         // If time hasn't advanced significantly, make the emulation wait
-        if (currentTicks - _lastTicks < StopwatchTicksPerMillisecond) {
+        if (wallClockTicks - _lastTicks < StopwatchTicksPerMillisecond) {
             // Less than 0.1ms has passed
             // Wait until at least 1ms has passed,
             // using the same fast approach as Renderer.cs
@@ -69,14 +69,14 @@ public class CpuCycleLimiter : CycleLimiterBase {
                 _spinner.SpinOnce();
             }
 
-            currentTicks = _stopwatch.ElapsedTicks;
+            wallClockTicks = _stopwatch.ElapsedTicks;
         }
 
         // Calculate elapsed milliseconds
         // (floating point for sub-millisecond precision)
-        double elapsedMs = (double)(currentTicks - _lastTicks) / Stopwatch.Frequency * 1000;
+        double elapsedMs = (double)(wallClockTicks - _lastTicks) / Stopwatch.Frequency * 1000;
 
-        _lastTicks = currentTicks;
+        _lastTicks = wallClockTicks;
 
         // Calculate cycle budget with floating point to avoid losing
         // sub-millisecond precision
