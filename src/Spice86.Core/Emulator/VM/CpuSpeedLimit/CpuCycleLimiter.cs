@@ -13,9 +13,8 @@ public class CpuCycleLimiter : CycleLimiterBase {
     // Keep track of timing and cycles
     private readonly SpinWait _spinner = new();
     private readonly Stopwatch _stopwatch = new();
-    private long _cycleRemain;
     private long _lastTicks;
-    private long _lastEmulatedCycles;
+    private long _targetCyclesForPause;
 
     // Constants for cycle control
     private const int MaxCyclesPerWindow = 20;
@@ -43,6 +42,7 @@ public class CpuCycleLimiter : CycleLimiterBase {
 
         _stopwatch.Start();
         _lastTicks = _stopwatch.ElapsedTicks;
+        _targetCyclesForPause = 0; // Will be set on first call to RegulateCycles
     }
 
     /// <inheritdoc/>
@@ -50,19 +50,13 @@ public class CpuCycleLimiter : CycleLimiterBase {
         if (!cpuState.IsRunning) {
             return;
         }
-        // Calculate how many emulated cycles have executed since last call.
-        // (Instructions currently cost 1, but this will automatically handle multi-cycle instructions later.)
-        long currentCycles = cpuState.Cycles;
-        long cyclesDelta = currentCycles - _lastEmulatedCycles;
-        _lastEmulatedCycles = currentCycles;
-        
-        // If we still have cycle budget left, decrement and return
-        if (_cycleRemain > 0) {
-            _cycleRemain -= cyclesDelta;
+
+        // If current cycles haven't reached target yet, no need to regulate
+        if (cpuState.Cycles < _targetCyclesForPause) {
             return;
         }
 
-        // We've used all allocated cycles, need to calculate a new budget
+        // We've reached our target, time to regulate speed
         long wallClockTicks = _stopwatch.ElapsedTicks;
 
         // If time hasn't advanced significantly, make the emulation wait
@@ -85,11 +79,13 @@ public class CpuCycleLimiter : CycleLimiterBase {
 
         _lastTicks = wallClockTicks;
 
-        // Calculate cycle budget with floating point to avoid losing
-        // sub-millisecond precision
-        _cycleRemain = (long)Math.Min(
+        // Calculate how many cycles we should allow before the next pause
+        long cyclesToAdd = (long)Math.Min(
             TargetCpuCyclesPerMs * elapsedMs,
             TargetCpuCyclesPerMs * MaxCyclesPerWindow);
+
+        // Set the new target cycle count for the next pause
+        _targetCyclesForPause = cpuState.Cycles + cyclesToAdd;
 
         _spinner.Reset();
     }
