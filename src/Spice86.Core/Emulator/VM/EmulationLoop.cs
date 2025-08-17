@@ -30,7 +30,7 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly PerformanceMeasurer _performanceMeasurer = new();
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
-    private readonly CycleLimiterBase _cycleAdjuster;
+    private readonly CycleLimiterBase _cyclesLimiter;
 
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
@@ -40,8 +40,8 @@ public class EmulationLoop : ICyclesLimiter {
     public bool IsPaused { get; set; }
     
     public int TargetCpuCyclesPerMs {
-        get => _cycleAdjuster.TargetCpuCyclesPerMs;
-        set => _cycleAdjuster.TargetCpuCyclesPerMs = value;
+        get => _cyclesLimiter.TargetCpuCyclesPerMs;
+        set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class EmulationLoop : ICyclesLimiter {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _cycleAdjuster = CycleLimiterFactory.Create(configuration);
+        _cyclesLimiter = CycleLimiterFactory.Create(configuration);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public class EmulationLoop : ICyclesLimiter {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
-        _cycleAdjuster.RegulateCycles(_cpuState);
+        _cyclesLimiter.RegulateCycles(_cpuState);
     }
 
     private void OutputPerfStats() {
@@ -144,10 +144,10 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     public void IncreaseCycles() {
-        _cycleAdjuster.IncreaseCycles();
+        _cyclesLimiter.IncreaseCycles();
     }
 
     public void DecreaseCycles() {
-        _cycleAdjuster.DecreaseCycles();
+        _cyclesLimiter.DecreaseCycles();
     }
 }

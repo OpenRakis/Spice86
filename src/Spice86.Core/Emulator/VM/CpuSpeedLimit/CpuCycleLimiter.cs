@@ -9,7 +9,7 @@ using System.Diagnostics;
 /// Throttles CPU execution to maintain a target number of cycles per millisecond,
 /// using a budget-based approach similar to DOSBox.
 /// </summary>
-public class CpuCycleThrottler : CycleLimiterBase {
+public class CpuCycleLimiter : CycleLimiterBase {
     // Keep track of timing and cycles
     private readonly SpinWait _spinner = new();
     private readonly Stopwatch _stopwatch = new();
@@ -24,10 +24,10 @@ public class CpuCycleThrottler : CycleLimiterBase {
     private const int MinCyclesPerMs = 100;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CpuCycleThrottler"/> class.
+    /// Initializes a new instance of the <see cref="CpuCycleLimiter"/> class.
     /// </summary>
     /// <param name="targetCpuCyclesPerMs">The target CPU cycles per millisecond. A value of 0 is corrected to 3000.</param>
-    public CpuCycleThrottler(int targetCpuCyclesPerMs) {
+    public CpuCycleLimiter(int targetCpuCyclesPerMs) {
         if (targetCpuCyclesPerMs > 0) {
             TargetCpuCyclesPerMs = Math.Clamp(
             targetCpuCyclesPerMs,
@@ -70,14 +70,12 @@ public class CpuCycleThrottler : CycleLimiterBase {
                 _spinner.SpinOnce();
             }
 
-            // Update current ticks after spinning
             currentTicks = _stopwatch.ElapsedTicks;
         }
 
         // Calculate elapsed milliseconds
         // (floating point for sub-millisecond precision)
-        double elapsedMs = (double)(currentTicks - _lastTicks)
-            / Stopwatch.Frequency * 1000;
+        double elapsedMs = (double)(currentTicks - _lastTicks) / Stopwatch.Frequency * 1000;
 
         // If we've advanced, update cycle budget
         if (elapsedMs > 0) {

@@ -14,7 +14,7 @@ public static class CycleLimiterFactory {
     public static CycleLimiterBase Create(Configuration configuration) {
         return configuration.Cycles switch {
             null => new NullCycleLimiter(),
-            _ => new CpuCycleThrottler(configuration.Cycles.Value)
+            _ => new CpuCycleLimiter(configuration.Cycles.Value)
         };
     }
 }
