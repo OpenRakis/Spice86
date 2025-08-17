@@ -15,6 +15,7 @@ public class CpuCycleLimiter : CycleLimiterBase {
     private readonly Stopwatch _stopwatch = new();
     private long _cycleRemain;
     private long _lastTicks;
+    private long _lastEmulatedCycles;
 
     // Constants for cycle control
     private const int MaxCyclesPerWindow = 20;
@@ -49,10 +50,15 @@ public class CpuCycleLimiter : CycleLimiterBase {
         if (!cpuState.IsRunning) {
             return;
         }
-
+        // Calculate how many emulated cycles have executed since last call.
+        // (Instructions currently cost 1, but this will automatically handle multi-cycle instructions later.)
+        long currentCycles = cpuState.Cycles;
+        long cyclesDelta = currentCycles - _lastEmulatedCycles;
+        _lastEmulatedCycles = currentCycles;
+        
         // If we still have cycle budget left, decrement and return
         if (_cycleRemain > 0) {
-            _cycleRemain--;
+            _cycleRemain -= cyclesDelta;
             return;
         }
 
