@@ -10,13 +10,11 @@ using System.Diagnostics;
 /// using a budget-based approach similar to DOSBox.
 /// </summary>
 public class CpuCycleLimiter : CycleLimiterBase {
-    // Keep track of timing and cycles
     private readonly SpinWait _spinner = new();
     private readonly Stopwatch _stopwatch = new();
     private long _lastTicks;
     private long _targetCyclesForPause;
 
-    // Constants for cycle control
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
     private const int MaxCyclesPerMs = 60000;
