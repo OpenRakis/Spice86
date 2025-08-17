@@ -17,6 +17,11 @@ public class CpuCycleLimiter : CycleLimiterBase {
     private long _targetCyclesForPause;
 
     // Constants for cycle control
+    /// <summary>
+    /// Maximum number of milliseconds worth of cycles to accumulate in a single time window.
+    /// This prevents the emulator from running unconstrained for too long after periods of inactivity
+    /// or system lag. Removing this cap breaks cycle limiting by allowing excessive cycle accumulation.
+    /// </summary>
     private const int MaxCyclesPerWindow = 20;
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
