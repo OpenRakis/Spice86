@@ -13,10 +13,11 @@ public class CpuCycleLimiter : CycleLimiterBase {
     // Keep track of timing and cycles
     private readonly SpinWait _spinner = new();
     private readonly Stopwatch _stopwatch = new();
-    private double _cycleRemain;
+    private long _cycleRemain;
     private long _lastTicks;
 
     // Constants for cycle control
+    private const int MaxCyclesPerWindow = 20;
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
     private const int MaxCyclesPerMs = 60000;
@@ -80,7 +81,9 @@ public class CpuCycleLimiter : CycleLimiterBase {
 
         // Calculate cycle budget with floating point to avoid losing
         // sub-millisecond precision
-        _cycleRemain = TargetCpuCyclesPerMs * elapsedMs;
+        _cycleRemain = (long)Math.Min(
+            TargetCpuCyclesPerMs * elapsedMs,
+            TargetCpuCyclesPerMs * MaxCyclesPerWindow);
 
         _spinner.Reset();
     }
