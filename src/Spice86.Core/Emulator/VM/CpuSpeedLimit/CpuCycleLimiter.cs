@@ -78,7 +78,6 @@ public class CpuCycleLimiter : CycleLimiterBase {
             wallClockTicks = _stopwatch.ElapsedTicks;
         }
 
-        // Calculate elapsed milliseconds
         // (floating point for sub-millisecond precision)
         double elapsedMs = (double)(wallClockTicks - _lastTicks) / Stopwatch.Frequency * 1000;
 
@@ -89,7 +88,6 @@ public class CpuCycleLimiter : CycleLimiterBase {
             TargetCpuCyclesPerMs * elapsedMs,
             TargetCpuCyclesPerMs * MaxCyclesPerWindow);
 
-        // Set the new target cycle count for the next pause
         _targetCyclesForPause = cpuState.Cycles + cyclesToAdd;
 
         _spinner.Reset();
