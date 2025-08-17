@@ -12,7 +12,7 @@ public sealed class Configuration {
     /// <summary>
     /// CPU cycles per ms. Can be more precisely specified than instructions per second. Overrides instructions per second if used.
     /// </summary>
-    [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is 3000. Overrides instructions per second option if used.")]
+    [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is undefined. Overrides instructions per second option if used.")]
     public int? Cycles { get; init; }
 
     /// <summary>
