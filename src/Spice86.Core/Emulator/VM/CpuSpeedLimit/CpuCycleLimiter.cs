@@ -17,12 +17,6 @@ public class CpuCycleLimiter : CycleLimiterBase {
     private long _targetCyclesForPause;
 
     // Constants for cycle control
-    /// <summary>
-    /// Maximum number of milliseconds worth of cycles to accumulate in a single time window.
-    /// This prevents the emulator from running unconstrained for too long after periods of inactivity
-    /// or system lag. Removing this cap breaks cycle limiting by allowing excessive cycle accumulation.
-    /// </summary>
-    private const int MaxCyclesPerWindow = 20;
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
     private const int MaxCyclesPerMs = 60000;
@@ -84,9 +78,7 @@ public class CpuCycleLimiter : CycleLimiterBase {
         _lastTicks = wallClockTicks;
 
         // Calculate how many cycles we should allow before the next pause
-        long cyclesToAdd = (long)Math.Min(
-            TargetCpuCyclesPerMs * elapsedMs,
-            TargetCpuCyclesPerMs * MaxCyclesPerWindow);
+        long cyclesToAdd = (long)(TargetCpuCyclesPerMs * elapsedMs);
 
         _targetCyclesForPause = cpuState.Cycles + cyclesToAdd;
 
