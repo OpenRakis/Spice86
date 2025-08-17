@@ -89,7 +89,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Recorded data reader created...");
         }
 
-        ExecutionDump executionDump =  reader.ReadExecutionDumpFromFileOrCreate();
+        ExecutionDump executionDump = reader.ReadExecutionDumpFromFileOrCreate();
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, executionDump);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -294,7 +294,7 @@ public class Spice86DependencyInjection : IDisposable {
             functionHandlerProvider, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
         var rtc = new Clock(loggerService);
-        
+
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
             functionHandlerProvider, stack,
             state, loggerService, timerInt8Handler, rtc);
@@ -329,7 +329,7 @@ public class Spice86DependencyInjection : IDisposable {
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
-        
+
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
@@ -616,7 +616,7 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.Dispose();
                 Machine.Dispose();
-                    
+
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
                 }
