@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM.CpuSpeedLimit;
 
 /// <summary>
 /// This interface provides methods to increase or decrease CPU speed, for speed sensitive games.
