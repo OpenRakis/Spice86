@@ -56,21 +56,13 @@ public class CpuCycleLimiter : CycleLimiterBase {
         }
 
         // We've reached our target, time to regulate speed
-        long wallClockTicks = _stopwatch.ElapsedTicks;
+        long targetTicks = _lastTicks + StopwatchTicksPerMillisecond;
 
-        // If time hasn't advanced significantly, make the emulation wait
-        if (wallClockTicks - _lastTicks < StopwatchTicksPerMillisecond) {
-            // Less than 0.1ms has passed
-            // Wait until at least 1ms has passed,
-            // using the same fast approach as Renderer.cs
-            long targetTicks = _lastTicks + StopwatchTicksPerMillisecond;
-
-            while (cpuState.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
-                _spinner.SpinOnce();
-            }
-
-            wallClockTicks = _stopwatch.ElapsedTicks;
+        while (cpuState.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
+            _spinner.SpinOnce();
         }
+
+        long wallClockTicks = _stopwatch.ElapsedTicks;
 
         // (floating point for sub-millisecond precision)
         double elapsedMs = (double)(wallClockTicks - _lastTicks) / Stopwatch.Frequency * 1000;
