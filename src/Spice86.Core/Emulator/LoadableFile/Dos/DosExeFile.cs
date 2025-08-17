@@ -9,6 +9,11 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class DosExeFile : MemoryBasedDataStructure {
     /// <summary>
+    /// Minimal size an exe file can have to be parseable.
+    /// </summary>
+    public const int MinExeSize = 0x1C;
+
+    /// <summary>
     /// Creates a new instance of the ExeFile class.
     /// </summary>
     /// <param name="byteReaderWriter">The class that allows writing and reading at specific addresses in memory.</param>
