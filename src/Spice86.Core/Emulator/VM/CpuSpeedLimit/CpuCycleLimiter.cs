@@ -41,7 +41,6 @@ public class CpuCycleLimiter : CycleLimiterBase {
 
         _stopwatch.Start();
         _lastTicks = _stopwatch.ElapsedTicks;
-        _targetCyclesForPause = 0; // Will be set on first call to RegulateCycles
     }
 
     /// <inheritdoc/>
