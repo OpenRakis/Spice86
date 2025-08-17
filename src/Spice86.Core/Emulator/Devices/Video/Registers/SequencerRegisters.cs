@@ -11,7 +11,11 @@ public class SequencerRegisters {
     ///     The Sequencer Address field (bits 2− 0) contains the index value that points to the data register to be
     ///     accessed.
     /// </summary>
-    public SequencerRegister Address { get; set; }
+    private SequencerRegister _address;
+    public SequencerRegister Address {
+        get => _address;
+        set => _address = (SequencerRegister)((int)value & 0x07);
+    }
 
     /// <summary>
     ///     Gets the Reset register.
