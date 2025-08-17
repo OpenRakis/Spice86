@@ -163,7 +163,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     public void QueryButtonReleasedCounter() {
         if(!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
-            ReturnNothingInCpuRegsiters();
+            ReturnNothingInCpuRegisters();
             return;
         }
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
@@ -210,7 +210,7 @@ public class MouseInt33Handler : InterruptHandler {
             return;
         }
         if (button == MouseButton.None) {
-            ReturnNothingInCpuRegsiters();
+            ReturnNothingInCpuRegisters();
             return;
         }
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
@@ -220,7 +220,7 @@ public class MouseInt33Handler : InterruptHandler {
         State.DX = (ushort)_mouseDriver.GetLastPressedY(button);
     }
 
-    private void ReturnNothingInCpuRegsiters() {
+    private void ReturnNothingInCpuRegisters() {
         State.AX = 0;
         State.BX = 0;
         State.CX = 0;
