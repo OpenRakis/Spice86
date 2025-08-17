@@ -26,7 +26,7 @@ public class CpuCycleThrottler : CycleLimiterBase {
     /// <summary>
     /// Initializes a new instance of the <see cref="CpuCycleThrottler"/> class.
     /// </summary>
-    /// <param name="targetCpuCyclesPerMs">The target CPU cycles per millisecond.</param>
+    /// <param name="targetCpuCyclesPerMs">The target CPU cycles per millisecond. A value of 0 is corrected to 3000.</param>
     public CpuCycleThrottler(int targetCpuCyclesPerMs) {
         if (targetCpuCyclesPerMs > 0) {
             TargetCpuCyclesPerMs = Math.Clamp(
