@@ -121,11 +121,7 @@ public class DosProcessManager : DosFileLoader {
         // Set the disk transfer area address to the command-line offset in the PSP.
         _fileManager.SetDiskTransferAreaAddress(GetCurrentPspSegment(), DosCommandTail.OffsetInPspSegment);
 
-        return Path.GetExtension(file).ToUpperInvariant() switch {
-            ".COM" => LoadComFile(file),
-            ".EXE" => LoadExeFile(file, GetCurrentPspSegment()),
-            _ => throw new UnrecoverableException($"Unsupported file type for DOS: {file}"),
-        };
+        return LoadExeOrComFile(file, GetCurrentPspSegment());
     }
 
     /// <summary>
@@ -165,8 +161,7 @@ public class DosProcessManager : DosFileLoader {
 
     
 
-    private byte[] LoadComFile(string file) {
-        byte[] com = ReadFile(file);
+    private void LoadComFile(byte[] com) {
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_programEntryPointSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 
@@ -175,31 +170,48 @@ public class DosProcessManager : DosFileLoader {
         _state.ES = _programEntryPointSegment;
         SetEntryPoint(_programEntryPointSegment, ComOffset);
         _state.InterruptFlag = true;
-        return com;
     }
 
-    private byte[] LoadExeFile(string file, ushort pspSegment) {
-        byte[] exe = ReadFile(file);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Exe size: {ExeSize}", exe.Length);
-        }
-        DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(exe));
-        if (!exeFile.IsValid) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Invalid EXE file {File}", file);
-            }
-            throw new UnrecoverableException($"Invalid EXE file {file}");
-        }
+    private void LoadExeFile(DosExeFile exeFile, ushort pspSegment) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
         LoadExeFileInMemoryAndApplyRelocations(exeFile, _programEntryPointSegment);
         SetupCpuForExe(exeFile, _programEntryPointSegment, pspSegment);
+    }
+
+    private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
+        byte[] fileBytes = ReadFile(file);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Initial CPU State: {CpuState}", _state);
+            _loggerService.Debug("Executable file size: {Size}", fileBytes.Length);
         }
-        return exe;
+
+        // Check if file size is at least EXE header size
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
+            // Try to read it as exe
+            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            if (exeFile.IsValid) {
+                LoadExeFile(exeFile, pspSegment);
+            } else {
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("File {File} does not have a valid EXE header. Considering it a COM file.", file);
+                }
+
+                LoadComFile(fileBytes);
+            }
+        } else {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("File {File} size is {Size} bytes, which is less than minimum allowed. Consider it a COM file.",
+                    file, fileBytes.Length);
+            }
+            LoadComFile(fileBytes);
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Initial CPU State: {CpuState}", _state);
+        }
+
+        return fileBytes;
     }
 
     /// <summary>
