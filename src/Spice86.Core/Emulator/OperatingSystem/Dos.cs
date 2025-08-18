@@ -135,13 +135,12 @@ public sealed class Dos {
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="clock"></param>
     /// <param name="loggerService">The logger service implementation.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, Clock clock, ILoggerService loggerService,
+        IDictionary<string, string> envVars, ILoggerService loggerService,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -172,12 +171,15 @@ public sealed class Dos {
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
-        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);
-        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
+            functionHandlerProvider, stack, state, _loggerService);
+        DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
+            stack, state, _loggerService);
 
         if (configuration.InitializeDOS is false) {
             return;

@@ -166,12 +166,10 @@ public class DosFileManagerTests {
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
-        var clock = new Clock(loggerService);
-
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
-            clock, loggerService);
+            loggerService);
 
         return dos.FileManager;
     }
