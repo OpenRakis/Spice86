@@ -293,11 +293,9 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             functionHandlerProvider, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
-        var rtc = new Clock(loggerService);
-
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory,
-            functionHandlerProvider, stack,
-            state, loggerService, timerInt8Handler, rtc);
+        
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
+            functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
 
@@ -433,12 +431,11 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
         }
 
-        var dosClock = new Clock(loggerService);
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, dosClock, loggerService,
+                { "BLASTER", soundBlaster.BlasterString } }, loggerService,
             xms);
 
         if (configuration.InitializeDOS is not false) {
