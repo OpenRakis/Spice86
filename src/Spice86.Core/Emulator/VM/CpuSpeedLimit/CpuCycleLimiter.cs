@@ -60,15 +60,9 @@ public class CpuCycleLimiter : CycleLimiterBase {
 
         long wallClockTicks = _stopwatch.ElapsedTicks;
 
-        // (floating point for sub-millisecond precision)
-        double elapsedMs = (double)(wallClockTicks - _lastTicks) / Stopwatch.Frequency * 1000;
-
         _lastTicks = wallClockTicks;
 
-        // Calculate how many cycles we should allow before the next pause
-        long cyclesToAdd = (long)(TargetCpuCyclesPerMs * elapsedMs);
-
-        _targetCyclesForPause = cpuState.Cycles + cyclesToAdd;
+        _targetCyclesForPause = cpuState.Cycles + TargetCpuCyclesPerMs;
 
         _spinner.Reset();
     }
