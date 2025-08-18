@@ -111,7 +111,7 @@
 					Focusable="False" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
 			<TextBlock Focusable="False" VerticalAlignment="Center" Text="Target cycles/ms:" Margin="0,0,5,0" />
 			<Button Margin="0,0,5,0" HotKey="Ctrl+F11" Focusable="False" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
-			<NumericUpDown Focusable="False" Text="{Binding TargetCyclesPerMs}" Minimum="50" Maximum="60000" />
+			<NumericUpDown Focusable="False" FormatString="0" Minimum="100" Text="{Binding TargetCyclesPerMs}" Maximum="60000" />
 			<Button Margin="5,0,0,0" HotKey="Ctrl+F12" Focusable="False" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
 		</StackPanel>
 		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
