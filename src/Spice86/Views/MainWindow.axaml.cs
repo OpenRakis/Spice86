@@ -68,7 +68,8 @@ internal partial class MainWindow : Window {
 
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnVideoBuffer();
-        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        var mainWindowViewModel = (DataContext as MainWindowViewModel);
+        mainWindowViewModel?.OnKeyUp(e);
         e.Handled = true;
     }
 

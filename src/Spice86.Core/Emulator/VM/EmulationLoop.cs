@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -6,17 +6,20 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
+
 /// <summary>
-/// Runs the emulation loop in a dedicated thread. <br/>
-/// On Pause, triggers a GDB breakpoint.
-/// </summary>
-public class EmulationLoop {
+/// This class orchestrates the execution of the emulated CPU, <br/>
+/// throttles CPU speed for the rare speed sensitive games, <br/>
+/// checks breakpoints each cycle, triggers PIT ticks, and ensures DMA transfers are performed
+///.</summary>
+public class EmulationLoop : ICyclesLimiter {
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -24,9 +27,10 @@ public class EmulationLoop {
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly PerformanceMeasurer _performanceMeasurer;
-    private readonly Stopwatch _stopwatch;
+    private readonly PerformanceMeasurer _performanceMeasurer = new();
+    private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
+    private readonly CycleLimiterBase _cyclesLimiter;
 
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
@@ -34,10 +38,16 @@ public class EmulationLoop {
     /// Whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
+    
+    public int TargetCpuCyclesPerMs {
+        get => _cyclesLimiter.TargetCpuCyclesPerMs;
+        set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
+    }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
+    /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
@@ -46,10 +56,11 @@ public class EmulationLoop {
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">The Direct Memory Access controller chip.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(ILoggerService loggerService,
+    public EmulationLoop(Configuration configuration,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController, IPauseHandler pauseHandler) {
+        DmaController dmaController,
+        IPauseHandler pauseHandler, ILoggerService loggerService) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -58,14 +69,14 @@ public class EmulationLoop {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _performanceMeasurer = new PerformanceMeasurer();
-        _stopwatch = new();
+        _cyclesLimiter = CycleLimiterFactory.Create(configuration);
     }
 
     /// <summary>
     /// Starts and waits for the end of the emulation loop.
     /// </summary>
-    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. This can occur if the target program is not supported (yet).</exception>
+    /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. <br/>
+    /// This can occur if the target program is not supported (yet).</exception>
     public void Run() {
         try {
             StartRunLoop(_functionHandler);
@@ -96,12 +107,12 @@ public class EmulationLoop {
     }
 
     private void RunLoop() {
-        _stopwatch.Start();
+        _performanceStopwatch.Start();
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
             RunOnce();
         }
-        _stopwatch.Stop();
+        _performanceStopwatch.Stop();
         OutputPerfStats();
     }
 
@@ -112,6 +123,17 @@ public class EmulationLoop {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
+        _cyclesLimiter.RegulateCycles(_cpuState);
+    }
+
+    private void OutputPerfStats() {
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+            long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
+            long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
+            _loggerService.Warning(
+                "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
+                _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
+        }
     }
 
     internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
@@ -121,13 +143,11 @@ public class EmulationLoop {
         }
     }
 
-    private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
-            long elapsedTimeInMilliseconds = _stopwatch.ElapsedMilliseconds;
-            _loggerService.Warning(
-                "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
-                _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
-        }
+    public void IncreaseCycles() {
+        _cyclesLimiter.IncreaseCycles();
+    }
+
+    public void DecreaseCycles() {
+        _cyclesLimiter.DecreaseCycles();
     }
 }

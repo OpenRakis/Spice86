@@ -94,20 +94,24 @@
 				</MenuItem>
 			</MenuItem>
 		</Menu>
-		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-			<Button Focusable="False" Command="{Binding PauseCommand}" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
+		<StackPanel IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+			<Label Focusable="False" VerticalAlignment="Center" Content="Cycles/ms:" />
+			<Button Margin="10,0,5,0" HotKey="Ctrl+F11" Focusable="False" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
+			<NumericUpDown Focusable="False" FormatString="0" Minimum="100" Text="{Binding TargetCyclesPerMs}" Maximum="60000" />
+			<Button Margin="5,0,10,0" HotKey="Ctrl+F12" Focusable="False" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
+			<Button Focusable="False" Command="{Binding PauseCommand}" Margin="5,0,5,0" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
 				<fluent:SymbolIcon Symbol="Pause" />
 			</Button>
-			<Button Focusable="False" Command="{Binding PlayCommand}" ToolTip.Tip="Continue (F5)" HotKey="F5" IsVisible="{Binding IsPaused}">
+			<Button Focusable="False" Command="{Binding PlayCommand}" Margin="5,0,5,0" ToolTip.Tip="Continue (F5)" HotKey="F5" IsVisible="{Binding IsPaused}">
 				<fluent:SymbolIcon Symbol="Play" />
 			</Button>
-			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier" />
-			<NumericUpDown FormatString="0" Focusable="False" Margin="5,0,0,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
-			<Button Focusable="False" Margin="5,0,0,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
+			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier:" />
+			<NumericUpDown FormatString="0" Focusable="False" Margin="5,0,5,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
+			<Button Focusable="False" Margin="2,0,5,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
 				<fluent:SymbolIcon Symbol="ArrowReset" />
 			</Button>
 		</StackPanel>
-		<ContentPresenter Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+		<ContentPresenter Grid.Row="0" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top"
 			Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>

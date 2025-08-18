@@ -14,6 +14,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -25,15 +26,40 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui, IScreenPresenter, IDisposable {
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
+    IScreenPresenter, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
+    private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
+
+    private int _targetCyclesPerMs;
+
+    public int TargetCyclesPerMs {
+        get => _cyclesLimiter.TargetCpuCyclesPerMs;
+        set {
+            if(SetProperty(ref _targetCyclesPerMs, value)) {
+                _cyclesLimiter.TargetCpuCyclesPerMs = value;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void IncreaseTargetCycles() {
+        _cyclesLimiter.IncreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+    }
+
+    [RelayCommand]
+    private void DecreaseTargetCycles() {
+        _cyclesLimiter.DecreaseCycles();
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+    }
 
     [ObservableProperty]
     private Configuration _configuration;
@@ -59,7 +85,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
-        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel, IExceptionHandler exceptionHandler)
+        IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
+        IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
         : base(uiDispatcher, textClipboard) {
         _pit = pit;
         _performanceViewModel = performanceViewModel;
@@ -68,16 +95,18 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
+        _cyclesLimiter = cyclesLimiter;
+        TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
             DispatcherPriority.Background,
-            (_, _) => UpdateCpuInstructionsPerMillisecondsInMainWindowTitle());
+            (_, _) => RefreshMainTitleWithInstructionsPerMs());
     }
 
-    private void UpdateCpuInstructionsPerMillisecondsInMainWindowTitle() {
+    private void RefreshMainTitleWithInstructionsPerMs() {
         if (IsPaused) {
             return;
         }
