@@ -61,6 +61,7 @@ public class DosFileManager {
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
+    private readonly LocalFileSearchManager _localFileSearchManager;
 
     /// <summary>
     /// Initializes a new instance.
@@ -70,14 +71,17 @@ public class DosFileManager {
     /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    /// <param name="localFileSearchManager">Provides cached file searches</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices,
+        LocalFileSearchManager localFileSearchManager) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
-        _dosPathResolver = new(dosDriveManager);
+        _dosPathResolver = new DosPathResolver(dosDriveManager, localFileSearchManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        _localFileSearchManager = localFileSearchManager;
     }
 
     /// <summary>
@@ -274,11 +278,9 @@ public class DosFileManager {
         EnumerationOptions enumerationOptions = GetEnumerationOptions(searchAttributes);
 
         try {
-            string? searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
-            string[] matchingPaths = Directory.GetFileSystemEntries(
-                searchFolder,
-                searchPattern,
-                enumerationOptions);
+            string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
+            string[] matchingPaths =
+                _localFileSearchManager.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions);
 
             if (matchingPaths.Length == 0) {
                 return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
@@ -398,9 +400,10 @@ public class DosFileManager {
                 DosErrorCode.NoMoreFiles);
         }
 
-        string[] matchingFiles = Directory.GetFileSystemEntries(searchFolder,
-            GetFileSpecWithoutSubFolderOrDriveInIt(search.FileSpec) ?? search.FileSpec,
-            GetEnumerationOptions(search.SearchAttributes));
+        string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(search.FileSpec) ?? search.FileSpec;
+        EnumerationOptions enumerationOptions = GetEnumerationOptions(search.SearchAttributes);
+        string[] matchingFiles =
+            _localFileSearchManager.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions);
 
         string? fileMatch = matchingFiles.ElementAtOrDefault(search.Index);
         if (matchingFiles.Length == 0 || fileMatch is null) {

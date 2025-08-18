@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
-using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -18,13 +17,16 @@ internal class DosPathResolver {
     private const int MaxPathLength = 255;
 
     private readonly DosDriveManager _dosDriveManager;
+    private readonly LocalFileSearchManager _localFileSearchManager;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="dosDriveManager">The shared class to get all mounted DOS drives.</param>
-    public DosPathResolver(DosDriveManager dosDriveManager) {
+    /// <param name="localFileSearchManager">Provides cached file searches</param>
+    public DosPathResolver(DosDriveManager dosDriveManager, LocalFileSearchManager localFileSearchManager) {
         _dosDriveManager = dosDriveManager;
+        _localFileSearchManager = localFileSearchManager;
     }
 
     /// <summary>
@@ -49,7 +51,7 @@ internal class DosPathResolver {
     }
 
     private static string GetFullCurrentDosPathOnDrive(VirtualDrive virtualDrive) =>
-        Path.Combine($"{virtualDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
+        Path.Combine($"{virtualDrive.DosVolume}{DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
@@ -165,18 +167,18 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashFolderPath(fullHostPath);
     }
 
-    private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
+    private (string hostPrefixPath, string dosRelativePath) DeconstructDosPath(string dosPath) {
         if (IsPathRooted(dosPath)) {
             int length = 1;
             if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
                 length = 3;
             }
             return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath[length..]);
-        } else if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
-            return (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..]);
-        } else {
-            return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
         }
+
+        return StartsWithDosDriveAndVolumeSeparator(dosPath)
+            ? (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..])
+            : (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
     }
 
     /// <summary>
@@ -190,32 +192,63 @@ internal class DosPathResolver {
         }
         dosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
 
-        if (string.IsNullOrWhiteSpace(DosRelativePath)) {
-            return ConvertUtils.ToSlashPath(HostPrefix);
+        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
+            return ConvertUtils.ToSlashPath(hostPrefix);
         }
 
-        DirectoryInfo hostDirInfo = new DirectoryInfo(HostPrefix);
+        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
+        int lastSlash = slashedRelative.LastIndexOf('/');
+        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
+        string lastSegment = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
 
-        string? relativeHostPath = hostDirInfo
-            .EnumerateDirectories("*", new EnumerationOptions() {
-                RecurseSubdirectories = true,
-            })
-            .Cast<FileSystemInfo>()
-            .Concat(
-            hostDirInfo.EnumerateFiles("*", new EnumerationOptions() {
-                RecurseSubdirectories = true,
-            }))
-            .FirstOrDefault(x => IsRelativeHostFileOrFolderPathEqualIgnoreCase(x, HostPrefix, DosRelativePath))?.FullName;
-
-        if (string.IsNullOrWhiteSpace(relativeHostPath)) {
+        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
+        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
             return null;
         }
 
-        return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return ConvertUtils.ToSlashPath(resolvedHostDir);
+        }
+
+        var options = new EnumerationOptions {
+            RecurseSubdirectories = false,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            ReturnSpecialDirectories = false
+        };
+
+        string[] matches = _localFileSearchManager.FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options);
+        string? firstMatch = matches.FirstOrDefault();
+        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
     }
 
+    private static string? ResolveCaseInsensitiveDirectory(string hostPrefix, string dirPart) {
+        if (string.IsNullOrWhiteSpace(dirPart)) {
+            return hostPrefix;
+        }
+
+        string current = hostPrefix;
+        foreach (string seg in dirPart.Split('/',
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+            var di = new DirectoryInfo(current);
+            DirectoryInfo? next = di
+                .EnumerateDirectories("*", new EnumerationOptions {
+                    RecurseSubdirectories = false,
+                    MatchCasing = MatchCasing.CaseInsensitive
+                })
+                .FirstOrDefault(d => string.Equals(d.Name, seg, StringComparison.OrdinalIgnoreCase));
+
+            if (next == null) {
+                return null;
+            }
+
+            current = next.FullName;
+        }
+
+        return current;
+    }
+    
     internal static string GetShortFileName(string hostFileName, string hostDir) {
         string fileName = Path.GetFileNameWithoutExtension(hostFileName);
         string extension = Path.GetExtension(hostFileName);
@@ -251,20 +284,7 @@ internal class DosPathResolver {
         }
         return shortName.ToString().ToUpperInvariant();
     }
-
-    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
-        string relativePath = fileOrDirInfo.FullName[hostPrefix.Length..];
-        if (fileOrDirInfo is FileInfo) {
-            return string.Equals(ConvertUtils.ToSlashPath(relativePath),
-                ConvertUtils.ToSlashPath(dosRelativePath),
-                    StringComparison.OrdinalIgnoreCase);
-        } else {
-            return string.Equals(ConvertUtils.ToSlashFolderPath(relativePath),
-                ConvertUtils.ToSlashFolderPath(dosRelativePath),
-                    StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
+    
     /// <summary>
     /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
     /// Does not convert to a case sensitive path. <br/>
