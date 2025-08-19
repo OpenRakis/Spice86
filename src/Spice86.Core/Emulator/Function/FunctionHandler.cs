@@ -37,13 +37,21 @@ public class FunctionHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="useCodeOverride">Whether or not to call overrides.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public FunctionHandler(IMemory memory, State state, ExecutionFlowRecorder? executionFlowRecorder, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
+    public FunctionHandler(
+        IMemory memory, 
+        State state, 
+        ExecutionFlowRecorder? executionFlowRecorder, 
+        FunctionCatalogue functionCatalogue, 
+        bool useCodeOverride,
+        ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _executionFlowRecorder = executionFlowRecorder;
         _loggerService = loggerService;
         _functionCatalogue = functionCatalogue;
+        UseCodeOverride = useCodeOverride;
     }
 
     

@@ -58,10 +58,12 @@ public class BreakPointHolder {
     /// Triggers all breakpoints that match the specified address.
     /// </summary>
     /// <param name="address">The address to match.</param>
-    public void TriggerMatchingBreakPoints(long address) {
+    /// <returns>true if trigged, false instead</returns>
+    public bool TriggerMatchingBreakPoints(long address) {
+        bool triggered = false;
         if (_addressBreakPoints.Count > 0) {
             if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList)) {
-                TriggerBreakPointsFromList(breakPointList, address);
+                triggered = TriggerBreakPointsFromList(breakPointList, address);
                 if (breakPointList.Count == 0) {
                     _addressBreakPoints.Remove(address);
                 }
@@ -69,11 +71,14 @@ public class BreakPointHolder {
         }
 
         if (_unconditionalBreakPoints.Count > 0) {
-            TriggerBreakPointsFromList(_unconditionalBreakPoints, address);
+            triggered |= TriggerBreakPointsFromList(_unconditionalBreakPoints, address);
         }
+
+        return triggered;
     }
 
-    private static void TriggerBreakPointsFromList(List<BreakPoint> breakPointList, long address) {
+    private static bool TriggerBreakPointsFromList(List<BreakPoint> breakPointList, long address) {
+        bool triggered = false;
         for (int i = 0; i < breakPointList.Count; i++) {
             BreakPoint breakPoint = breakPointList[i];
             if (breakPoint.Matches(address)) {
@@ -81,8 +86,12 @@ public class BreakPointHolder {
                 if (breakPoint.IsRemovedOnTrigger) {
                     breakPointList.Remove(breakPoint);
                 }
+
+                triggered = true;
             }
         }
+
+        return triggered;
     }
 
     /// <summary>

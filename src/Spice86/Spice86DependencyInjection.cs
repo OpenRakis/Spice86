@@ -186,14 +186,14 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         FunctionHandler functionHandler = new(memory, state,
-            executionFlowRecorder, functionCatalogue, loggerService);
+            executionFlowRecorder, functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function handler created...");
         }
 
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
-            executionFlowRecorder, functionCatalogue, loggerService);
+            executionFlowRecorder, functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function handler in external interrupt created...");
@@ -209,7 +209,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, emulatorBreakpointsManager, functionCatalogue, loggerService);
+            dualPic, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
+            loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -484,10 +485,6 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Function overrides added...");
         }
-
-        bool useCodeOverride = configuration.UseCodeOverrideOption;
-        functionHandler.UseCodeOverride = useCodeOverride;
-        functionHandlerInExternalInterrupt.UseCodeOverride = useCodeOverride;
 
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,

@@ -86,8 +86,13 @@ public sealed class EmulatorBreakpointsManager {
     /// </summary>
     public void CheckExecutionBreakPoints() {
         if (!_executionBreakPoints.IsEmpty) {
-            uint address = _state.IpPhysicalAddress;
-            _executionBreakPoints.TriggerMatchingBreakPoints(address);
+            uint address;
+            // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
+            bool triggered;
+            do {
+                address = _state.IpPhysicalAddress;
+                triggered = _executionBreakPoints.TriggerMatchingBreakPoints(address);
+            } while (triggered && address != _state.IpPhysicalAddress);
         }
 
         if (!_cycleBreakPoints.IsEmpty) {
