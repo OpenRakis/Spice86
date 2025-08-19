@@ -195,6 +195,10 @@ public class Alu8 : Alu<byte, sbyte, ushort, short> {
         throw new NotImplementedException("Shld is not available for 8bits operations");
     }
 
+    public override byte Shrd(byte destination, byte source, byte count) {
+        throw new NotImplementedException("Shrd is not available for 8bits operations");
+    }
+
     public override byte Shr(byte value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {

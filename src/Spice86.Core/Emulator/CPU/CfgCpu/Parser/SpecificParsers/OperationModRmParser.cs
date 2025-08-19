@@ -35,6 +35,9 @@ partial class LeaParser;
 partial class PopRmParser;
 [OperationModRmParser("ShldClRm", false)]
 partial class ShldClRmParser;
+
+[OperationModRmParser("ShrdClRm", false)]
+partial class ShrdClRmParser;
 [OperationModRmParser("ImulRm", false)]
 partial class ImulRmParser;
 [OperationModRmParser("MovRmZeroExtendByte", false)]

@@ -210,6 +210,34 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         return res;
     }
 
+    public override ushort Shrd(ushort destination, ushort source, byte count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return destination;
+        }
+
+        ushort msbBefore = (ushort)(destination & MsbMask);
+        ushort res;
+
+        if (count > 16) {
+            // Undefined. We shift the source in again (opposite direction of SHLD).
+            int shiftFromSource = count - 16;
+            res = (ushort)(source >> shiftFromSource);
+
+            // Carry flag is the last bit shifted out of the 32-bit concatenation.
+            // For count > 16, this is bit (count - 17) of the source.
+            _state.CarryFlag = ((source >> (count - 17)) & 1) != 0;
+        } else {
+            _state.CarryFlag = ((destination >> (count - 1)) & 1) != 0;
+            res = (ushort)((destination >> count) | (source << (16 - count)));
+        }
+
+        UpdateFlags(res);
+        ushort msb = (ushort)(res & MsbMask);
+        _state.OverflowFlag = msb != msbBefore;
+        return res;
+    }
+
     public override ushort Shr(ushort value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {

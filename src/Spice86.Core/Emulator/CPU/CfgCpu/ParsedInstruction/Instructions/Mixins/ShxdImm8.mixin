@@ -1,5 +1,7 @@
 @moxy
+@attribute required string Operation
 @attribute required int Size
+@attribute required string Mnemonic=null
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
@@ -19,12 +21,12 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRmAndValueField<b
     
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.Shld(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
+        helper.ModRm.RM{{Size}} = helper.Alu{{Size}}.{{Operation}}(helper.ModRm.RM{{Size}}, helper.ModRm.R{{Size}}, helper.InstructionFieldValueRetriever.GetFieldValue(ValueField));
         helper.MoveIpAndSetNextNode(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.SHLD,
+        return new InstructionNode(InstructionOperation.{{if Mnemonic}}{{Mnemonic | string.upcase}}{{else}}{{Operation | string.upcase}}{{end}},
         builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
         builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
         builder.InstructionField.ToNode(ValueField));
