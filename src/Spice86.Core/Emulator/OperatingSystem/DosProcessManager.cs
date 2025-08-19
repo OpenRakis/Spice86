@@ -20,7 +20,8 @@ using System.Text;
 /// </summary>
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
-    private readonly ushort _programEntryPointSegment;
+    private readonly DosProgramSegmentPrefixTracker _pspTracker;
+    private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
 
@@ -32,30 +33,22 @@ public class DosProcessManager : DosFileLoader {
     /// </remarks>
     private readonly EnvironmentVariables _environmentVariables;
 
-    public DosProgramSegmentPrefix CurrentPsp { get; private set; }
-
-    public DosProcessManager(Configuration configuration, IMemory memory,
-        State state, DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+    public DosProcessManager(IMemory memory, State state,
+        DosProgramSegmentPrefixTracker dosPspTracker, DosMemoryManager dosMemoryManager,
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDictionary<string, string> envVars, ILoggerService loggerService)
         : base(memory, state, loggerService) {
+        _pspTracker = dosPspTracker;
+        _memoryManager = dosMemoryManager;
         _fileManager = dosFileManager;
         _driveManager = dosDriveManager;
         _environmentVariables = new();
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Initial program entry point at segment: 0x{EntryPointSegment:X2}",
-                configuration.ProgramEntryPointSegment);
-        }
-        _programEntryPointSegment = configuration.ProgramEntryPointSegment;
 
         envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
         }
-        ushort pspSegment = (ushort)(_programEntryPointSegment - 0x10);
-        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
-        var psp = new DosProgramSegmentPrefix(_memory, pspAddress);
-        CurrentPsp = psp;
     }
 
     /// <summary>
@@ -87,10 +80,13 @@ public class DosProcessManager : DosFileLoader {
         return res[0..endIndex];
     }
 
-    public ushort GetCurrentPspSegment() => MemoryUtils.ToSegment(CurrentPsp.BaseAddress);
-
     public override byte[] LoadFile(string file, string? arguments) {
-        DosProgramSegmentPrefix psp = CurrentPsp;
+        // TODO: We should be asking DosMemoryManager for a new block for the PSP, program, its
+        // stack, and its requested extra space first. We shouldn't always assume that this is the
+        // first program to be loaded and that we have enough space for it like we do right now.
+        // This will need to be fixed for DOS program load/exec support.
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(_pspTracker.InitialPspSegment);
+        ushort pspSegment = MemoryUtils.ToSegment(psp.BaseAddress);
 
         // Set the PSP's first 2 bytes to INT 20h.
         psp.Exit[0] = 0xCD;
@@ -108,8 +104,8 @@ public class DosProcessManager : DosFileLoader {
         byte[] environmentBlock = CreateEnvironmentBlock(file);
 
         // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        int envBlockPointer = GetCurrentPspSegment() + 1;
-        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress((ushort)envBlockPointer, 0);
+        ushort envBlockPointer = (ushort)(pspSegment + 1);
+        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
 
         // Copy the environment block to memory in a separated segment.
         _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
@@ -119,9 +115,10 @@ public class DosProcessManager : DosFileLoader {
         psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
 
         // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(GetCurrentPspSegment(), DosCommandTail.OffsetInPspSegment);
+        _fileManager.SetDiskTransferAreaAddress(
+            pspSegment, DosCommandTail.OffsetInPspSegment);
 
-        return LoadExeOrComFile(file, GetCurrentPspSegment());
+        return LoadExeOrComFile(file, pspSegment);
     }
 
     /// <summary>
@@ -159,16 +156,15 @@ public class DosProcessManager : DosFileLoader {
         return ms.ToArray();
     }
 
-    
-
     private void LoadComFile(byte[] com) {
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(_programEntryPointSegment, ComOffset);
+        ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
         _memory.LoadData(physicalStartAddress, com);
 
         // Make DS and ES point to the PSP
-        _state.DS = _programEntryPointSegment;
-        _state.ES = _programEntryPointSegment;
-        SetEntryPoint(_programEntryPointSegment, ComOffset);
+        _state.DS = programEntryPointSegment;
+        _state.ES = programEntryPointSegment;
+        SetEntryPoint(programEntryPointSegment, ComOffset);
         _state.InterruptFlag = true;
     }
 
@@ -177,8 +173,25 @@ public class DosProcessManager : DosFileLoader {
             _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
         }
 
-        LoadExeFileInMemoryAndApplyRelocations(exeFile, _programEntryPointSegment);
-        SetupCpuForExe(exeFile, _programEntryPointSegment, pspSegment);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, pspSegment);
+        if (block is null) {
+            throw new UnrecoverableException($"Failed to reserve space for EXE file at {pspSegment}");
+        }
+        // The program image is typically loaded immediately above the PSP, which is the start of
+        // the memory block that we just allocated. Seek 16 paragraphs into the allocated block to
+        // get our starting point.
+        ushort programEntryPointSegment = (ushort)(block.DataBlockSegment + 0x10);
+        // There is one special case that we need to account for: if the EXE doesn't have any extra
+        // allocations, we need to load it as high as possible in the memory block rather than
+        // immediately after the PSP like we normally do. This will give the program extra space
+        // between the PSP and the start of the program image that it can use however it wants.
+        if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
+            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphs);
+            programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
+        }
+
+        LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
+        SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
     }
 
     private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
