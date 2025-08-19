@@ -314,17 +314,8 @@ public class Pit8254Counter {
                         CurrentCount = ReloadValue;
                         break;
 
-                    case PitMode.SoftwareStrobe:
+                    case PitMode.HardwareStrobe:case PitMode.SoftwareStrobe:
                         // Mode 4: Software triggered strobe - output goes low when counter reaches zero
-                        OutputState = OutputStatus.Low;
-                        // Reload the counter
-                        CurrentCount = ReloadValue;
-                        // Start pulse timing using hardware-accurate timing
-                        StartPulse();
-                        break;
-
-                    case PitMode.HardwareStrobe:
-                        // Mode 5: Hardware triggered strobe - similar to mode 4 but hardware triggered
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
