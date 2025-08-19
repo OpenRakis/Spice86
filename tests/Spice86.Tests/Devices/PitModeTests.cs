@@ -127,8 +127,18 @@ public class PitModeTests {
 
         // Act & Assert: Counter reaches 0
         SimulateActivations(counter, 3);
+        // Output should go LOW when counter reaches 0
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
         // Counter should reload automatically
         Assert.Equal(3, counter.CurrentCount);
+        
+        // Output should remain LOW for the pulse duration (PulseCycleCount)
+        SimulateActivations(counter, 1);
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
+
+        // After enough cycles, output should return to HIGH
+        SimulateActivations(counter, 2);
+        Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
 
         // Act & Assert: Gate state change
         counter.SetGateState(false);
@@ -179,7 +189,15 @@ public class PitModeTests {
         // Act & Assert: Counter reaches 0
         SimulateActivations(counter, 3);
         Assert.Equal(3, counter.CurrentCount); // Counter reloads
-        // Output should briefly go low then high again
+        // Output should go LOW when counter reaches 0
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
+
+        // Output should remain LOW for the pulse duration
+        SimulateActivations(counter, 2);
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
+        
+        // After enough cycles, output should return to HIGH
+        SimulateActivations(counter, 1);
         Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
     }
 
@@ -201,7 +219,15 @@ public class PitModeTests {
         // Act & Assert: Counter reaches 0
         SimulateActivations(counter, 3);
         Assert.Equal(3, counter.CurrentCount); // Counter reloads
-        // Output should briefly go low then high again
+        // Output should go LOW when counter reaches 0
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
+
+        // Output should remain LOW for the pulse duration
+        SimulateActivations(counter, 2);
+        Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
+        
+        // After enough cycles, output should return to HIGH
+        SimulateActivations(counter, 1);
         Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
     }
 

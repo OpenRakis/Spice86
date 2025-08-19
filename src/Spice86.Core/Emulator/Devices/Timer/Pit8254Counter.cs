@@ -18,12 +18,19 @@ public class Pit8254Counter {
     /// </summary>
     public const float MsPerPitTick = 1000.0f / HardwareFrequency;
 
+    // Number of cycles to keep output LOW before returning to HIGH
+    private const int PulseCycleCount = 3;
+
     private readonly ILoggerService _loggerService;
 
     private bool _latchMode = false;
     private readonly Pit8254Register _latchRegister = new();
     private readonly Pit8254Register _currentCountRegister = new();
     private readonly Pit8254Register _reloadValueRegister = new();
+    
+    // Track pulse state for proper timing
+    private int _pulseCyclesRemaining;
+    private bool _inPulseState;
 
     /// <summary>
     /// PIT operation modes as defined in Intel 8254 datasheet section 3.3
@@ -133,6 +140,8 @@ public class Pit8254Counter {
         // Initialize values to trigger initial frequency setup
         ReloadValue = 0;
         CurrentCount = 0xFFFF;
+        _pulseCyclesRemaining = 0;
+        _inPulseState = false;
     }
 
     /// <summary>
@@ -252,6 +261,12 @@ public class Pit8254Counter {
     /// <returns>Whether the activation was processed.</returns>
     public bool ProcessActivation() {
         if (Activator.IsActivated) {
+            // Handle pulse state machine for accurate timing
+            if (_inPulseState) {
+                ProcessPulseState();
+                return true;
+            }
+
             // For certain modes, counting is inhibited when gate is low
             // "When GATE is low, counting is inhibited." - Intel 8254 datasheet
             bool shouldCount = GetIfWeShouldCount();
@@ -285,8 +300,9 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Output should quickly go back high
-                        OutputState = OutputStatus.High;
+                        // Start pulse timing instead of immediately going high
+                        _inPulseState = true;
+                        _pulseCyclesRemaining = PulseCycleCount;
                         break;
 
                     case PitMode.SquareWave:
@@ -302,8 +318,9 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Output quickly goes back high
-                        OutputState = OutputStatus.High;
+                        // Start pulse timing instead of immediately going high
+                        _inPulseState = true;
+                        _pulseCyclesRemaining = PulseCycleCount;
                         break;
 
                     case PitMode.HardwareStrobe:
@@ -311,8 +328,9 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Output quickly goes back high
-                        OutputState = OutputStatus.High;
+                        // Start pulse timing instead of immediately going high
+                        _inPulseState = true;
+                        _pulseCyclesRemaining = PulseCycleCount;
                         break;
                 }
             } else {
@@ -332,6 +350,25 @@ public class Pit8254Counter {
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Processes the pulse timing state machine
+    /// </summary>
+    private void ProcessPulseState() {
+        if (_pulseCyclesRemaining > 0) {
+            _pulseCyclesRemaining--;
+            
+            if (_pulseCyclesRemaining == 0) {
+                // Pulse complete, return output to HIGH
+                OutputState = OutputStatus.High;
+                _inPulseState = false;
+                
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("Counter {Index}: Pulse complete, output returned to HIGH", Index);
+                }
+            }
+        }
     }
 
     private bool GetIfWeShouldCount() {
@@ -369,6 +406,11 @@ public class Pit8254Counter {
         ReadWritePolicy = readWritePolicy;
         Mode = (ushort)(value >> 1 & 0b111);
         Bcd = (value & 1) == 1;
+        
+        // Reset pulse state when mode changes
+        _inPulseState = false;
+        _pulseCyclesRemaining = 0;
+        
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
     }
 
@@ -437,6 +479,8 @@ public class Pit8254Counter {
                 // Reference: Intel 8254 Datasheet, Mode 2 Operation
                 if (!enabled) {
                     OutputState = OutputStatus.High;
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
                 } else {
                     // Reload counter on gate rising edge
                     CurrentCount = ReloadValue;
@@ -462,13 +506,19 @@ public class Pit8254Counter {
             case PitMode.SoftwareStrobe:
                 // Mode 4: "The GATE input is level sensitive and active high. When GATE is low, counting is inhibited."
                 // Reference: Intel 8254 Datasheet, Mode 4 Operation
-                // Suspend counting is done above in ProcessActivation
+                if (!enabled) {
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
+                }
                 break;
 
             case PitMode.HardwareStrobe:
                 // Mode 5: "The GATE input is edge sensitive and rising-edge triggered. A rising edge of GATE initiates counting."
                 // Reference: Intel 8254 Datasheet, Mode 5 Operation
-                // Nothing to do above in ProcessActivation, we don't suspend counting
+                if (!enabled) {
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
+                }
                 break;
         }
 
