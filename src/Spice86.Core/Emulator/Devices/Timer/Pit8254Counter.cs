@@ -1,5 +1,6 @@
-﻿using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Shared.Interfaces;
+﻿using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
@@ -17,9 +18,10 @@ public class Pit8254Counter {
     /// Milliseconds per PIT tick
     /// </summary>
     public const float MsPerPitTick = 1000.0f / HardwareFrequency;
-
-    // Number of cycles to keep output LOW before returning to HIGH
-    private const int PulseCycleCount = 3;
+    /// <summary>
+    /// Duration of a single PIT clock pulse in nanoseconds
+    /// </summary>
+    public const double PitClockPulseNs = 1_000_000_000.0 / HardwareFrequency; // ~838 nanoseconds
 
     private readonly ILoggerService _loggerService;
 
@@ -27,10 +29,11 @@ public class Pit8254Counter {
     private readonly Pit8254Register _latchRegister = new();
     private readonly Pit8254Register _currentCountRegister = new();
     private readonly Pit8254Register _reloadValueRegister = new();
-    
-    // Track pulse state for proper timing
-    private int _pulseCyclesRemaining;
+
+    // Track pulse timing
     private bool _inPulseState;
+    private long _pulseStartTimestamp;
+    private readonly Stopwatch _pulseTimer = Stopwatch.StartNew();
 
     /// <summary>
     /// PIT operation modes as defined in Intel 8254 datasheet section 3.3
@@ -140,7 +143,6 @@ public class Pit8254Counter {
         // Initialize values to trigger initial frequency setup
         ReloadValue = 0;
         CurrentCount = 0xFFFF;
-        _pulseCyclesRemaining = 0;
         _inPulseState = false;
     }
 
@@ -300,9 +302,8 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Start pulse timing instead of immediately going high
-                        _inPulseState = true;
-                        _pulseCyclesRemaining = PulseCycleCount;
+                        // Start pulse timing using hardware-accurate timing
+                        StartPulse();
                         break;
 
                     case PitMode.SquareWave:
@@ -318,9 +319,8 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Start pulse timing instead of immediately going high
-                        _inPulseState = true;
-                        _pulseCyclesRemaining = PulseCycleCount;
+                        // Start pulse timing using hardware-accurate timing
+                        StartPulse();
                         break;
 
                     case PitMode.HardwareStrobe:
@@ -328,9 +328,8 @@ public class Pit8254Counter {
                         OutputState = OutputStatus.Low;
                         // Reload the counter
                         CurrentCount = ReloadValue;
-                        // Start pulse timing instead of immediately going high
-                        _inPulseState = true;
-                        _pulseCyclesRemaining = PulseCycleCount;
+                        // Start pulse timing using hardware-accurate timing
+                        StartPulse();
                         break;
                 }
             } else {
@@ -353,20 +352,39 @@ public class Pit8254Counter {
     }
 
     /// <summary>
-    /// Processes the pulse timing state machine
+    /// Starts a new hardware-accurate pulse
+    /// </summary>
+    private void StartPulse() {
+        _inPulseState = true;
+        _pulseStartTimestamp = _pulseTimer.ElapsedTicks;
+
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Counter {Index}: Starting pulse, output LOW", Index);
+        }
+    }
+
+    /// <summary>
+    /// Processes the pulse timing state machine using accurate hardware timing
     /// </summary>
     private void ProcessPulseState() {
-        if (_pulseCyclesRemaining > 0) {
-            _pulseCyclesRemaining--;
-            
-            if (_pulseCyclesRemaining == 0) {
-                // Pulse complete, return output to HIGH
-                OutputState = OutputStatus.High;
-                _inPulseState = false;
-                
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Counter {Index}: Pulse complete, output returned to HIGH", Index);
-                }
+        if (!_inPulseState) {
+            return;
+        }
+
+        // Calculate elapsed time in nanoseconds
+        long currentTicks = _pulseTimer.ElapsedTicks;
+        long elapsedTicks = currentTicks - _pulseStartTimestamp;
+        double elapsedNanoseconds = (elapsedTicks * 1_000_000_000.0) / Stopwatch.Frequency;
+
+        // Check if pulse duration (one PIT clock cycle) has elapsed
+        if (elapsedNanoseconds >= PitClockPulseNs) {
+            // Pulse complete, return output to HIGH
+            OutputState = OutputStatus.High;
+            _inPulseState = false;
+
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Counter {Index}: Pulse complete after {ElapsedNs:F2}ns, output returned to HIGH",
+                    Index, elapsedNanoseconds);
             }
         }
     }
@@ -406,11 +424,10 @@ public class Pit8254Counter {
         ReadWritePolicy = readWritePolicy;
         Mode = (ushort)(value >> 1 & 0b111);
         Bcd = (value & 1) == 1;
-        
+
         // Reset pulse state when mode changes
         _inPulseState = false;
-        _pulseCyclesRemaining = 0;
-        
+
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
     }
 
