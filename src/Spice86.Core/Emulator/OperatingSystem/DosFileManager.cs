@@ -61,7 +61,6 @@ public class DosFileManager {
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
-    private readonly LocalFileSearchManager _localFileSearchManager;
 
     /// <summary>
     /// Initializes a new instance.
@@ -73,15 +72,13 @@ public class DosFileManager {
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     /// <param name="localFileSearchManager">Provides cached file searches</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices,
-        LocalFileSearchManager localFileSearchManager) {
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
-        _dosPathResolver = new DosPathResolver(dosDriveManager, localFileSearchManager);
+        _dosPathResolver = new DosPathResolver(dosDriveManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
-        _localFileSearchManager = localFileSearchManager;
     }
 
     /// <summary>
@@ -280,7 +277,7 @@ public class DosFileManager {
         try {
             string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
             string[] matchingPaths =
-                _localFileSearchManager.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions);
+                _dosPathResolver.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
 
             if (matchingPaths.Length == 0) {
                 return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
@@ -403,7 +400,7 @@ public class DosFileManager {
         string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(search.FileSpec) ?? search.FileSpec;
         EnumerationOptions enumerationOptions = GetEnumerationOptions(search.SearchAttributes);
         string[] matchingFiles =
-            _localFileSearchManager.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions);
+            _dosPathResolver.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
 
         string? fileMatch = matchingFiles.ElementAtOrDefault(search.Index);
         if (matchingFiles.Length == 0 || fileMatch is null) {

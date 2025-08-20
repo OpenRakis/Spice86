@@ -2,13 +2,16 @@
 
 using FluentAssertions;
 
+using JetBrains.Annotations;
+
 using Spice86.Core.Emulator.OperatingSystem;
 
 using Xunit;
 
-public class LocalFileSearchManagerTest {
+[TestSubject(typeof(DosPathResolver))]
+public class DosPathResolverTest {
     private static bool DoCmp(string file, string pattern) {
-        return LocalFileSearchManager.WildFileCmp(file, pattern);
+        return DosPathResolver.WildFileCmp(file, pattern);
     }
 
     [Theory]
@@ -95,6 +98,9 @@ public class LocalFileSearchManagerTest {
     [InlineData("READ", "READ*.*", true)] // with no extension still matches
     [InlineData("READ.TXT", "READ*.*", true)] // with extension also matches
     [InlineData("READ.TXT", "", false)]
+    [InlineData("MYTEST.TXT", "MY*.T*", true)]
+    [InlineData("MYTEST.TXT", "MY*.TXT", true)]
+    [InlineData("MYTEST.TXT", "MY*.TET", false)]
     public void DosWildcard_Spec_Cases(string file, string pattern, bool expected) {
         DoCmp(file, pattern).Should().Be(expected,
             $"file '{file}' should {(expected ? "" : "NOT ")}match '{pattern}' per DOS 8.3 wildcard rules");

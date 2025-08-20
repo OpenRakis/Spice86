@@ -164,9 +164,8 @@ public sealed class Dos {
         DosStringDecoder dosStringDecoder = new(memory, state);
 
         CountryInfo = new();
-        var localFileSearchManager = new LocalFileSearchManager();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, Devices, localFileSearchManager);
+            _loggerService, Devices);
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
