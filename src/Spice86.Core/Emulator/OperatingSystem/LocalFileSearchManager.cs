@@ -3,6 +3,10 @@
 using System.Runtime.CompilerServices;
 
 public class LocalFileSearchManager {
+    private const int DosMfnlength = 8;
+    private const int DosExtlength = 3;
+    private const int LfnNamelength = 255; // for the sanity check only
+    
     public string[] FindFilesUsingWildCmp(string searchFolder, string searchPattern,
         EnumerationOptions enumerationOptions) {
         var matches = new List<string>();
@@ -17,127 +21,114 @@ public class LocalFileSearchManager {
         return matches.ToArray();
     }
 
-    private const int DosMfnlength = 8;
-    private const int DosExtlength = 3;
-    private const int LfnNamelength = 255; // for the sanity check only
-
-    public static bool WildFileCmp(string? file, string? wild) {
-        if (file is null || wild is null) {
+    public static bool WildFileCmp(string? filename, string? pattern) {
+        if (filename is null || pattern is null) {
             return false;
         }
 
-        return WildFileCmp(file.AsSpan(), wild.AsSpan());
+        return WildFileCmp(filename.AsSpan(), pattern.AsSpan());
     }
 
-    // ... existing code ...
-    private static bool WildFileCmp(ReadOnlySpan<char> file, ReadOnlySpan<char> wild) {
-        if (file.Length > 0 && wild.Length == 0) {
+    private static bool WildFileCmp(ReadOnlySpan<char> sourceFilename, ReadOnlySpan<char> pattern) {
+        if (sourceFilename.Length > 0 && pattern.Length == 0) {
             return false;
         }
 
-        if (wild.Length > LfnNamelength) {
+        if (pattern.Length > LfnNamelength) {
             return false;
         }
 
         // Fast path: exact case-insensitive match (covers common no-wildcard cases)
-        if (file.Equals(wild, StringComparison.OrdinalIgnoreCase)) {
+        if (sourceFilename.Equals(pattern, StringComparison.OrdinalIgnoreCase)) {
             return true;
         }
 
-        // Skip “hidden” dot-files if pattern uses wildcards (except "." / "..")
-        if (WildcardMatchesHiddenFile(file, wild)) {
+        // Skip “hidden” dot-files if the pattern uses wildcards (except "." / "..")
+        if (WildcardMatchesHiddenFile(sourceFilename, pattern)) {
             return false;
         }
-
-        // Split file
-        int dot = file.LastIndexOf('.');
-        ReadOnlySpan<char> fileNameRaw = dot >= 0 ? file[..dot] : file;
-        ReadOnlySpan<char> fileExtRaw =
-            dot >= 0 && dot + 1 < file.Length ? file[(dot + 1)..] : ReadOnlySpan<char>.Empty;
-
-        // Split pattern
-        int wdot = wild.LastIndexOf('.');
-        ReadOnlySpan<char> wildNameRaw = wdot >= 0 ? wild[..wdot] : wild;
-        ReadOnlySpan<char> wildExtRaw =
-            wdot >= 0 && wdot + 1 < wild.Length ? wild[(wdot + 1)..] : ReadOnlySpan<char>.Empty;
-
+        
         // Uppercase once into fixed-size 8.3 stacks with space padding
-        Span<char> fn = stackalloc char[DosMfnlength];
-        Span<char> fe = stackalloc char[DosExtlength];
-        Span<char> wn = stackalloc char[DosMfnlength];
+        Span<char> fileName = stackalloc char[DosMfnlength];
+        Span<char> fileExt = stackalloc char[DosExtlength];
+        Span<char> wildName = stackalloc char[DosMfnlength];
         // wild ext needs an extra slot to check the 4th char like DOSBox
-        Span<char> we = stackalloc char[DosExtlength + 1];
+        Span<char> wildExt = stackalloc char[DosExtlength + 1];
 
-        FillWithSpaces(fn);
-        FillWithSpaces(fe);
-        FillWithSpaces(wn);
-        FillWithSpaces(we);
-
-        ToUpperInto(fileNameRaw[..Math.Min(fileNameRaw.Length, DosMfnlength)], fn);
-        ToUpperInto(fileExtRaw[..Math.Min(fileExtRaw.Length, DosExtlength)], fe);
-        // DOSBox clamps wild name to 8 (+1 in original buffer is only for internal check), wild ext to 3 (+1 extra for trailing check)
-        ToUpperInto(wildNameRaw[..Math.Min(wildNameRaw.Length, DosMfnlength)], wn);
-        ToUpperInto(wildExtRaw[..Math.Min(wildExtRaw.Length, DosExtlength + 1)], we);
+        SplitTo83(sourceFilename, fileName, fileExt, out _);
+        SplitTo83(pattern, wildName, wildExt, out int wildExtLength);
 
         // ---- NAME compare (no early '*' accept; '*' just ends name matching) ----
-        for (int i = 0; i < DosMfnlength; i++) {
-            char wc = wn[i];
-            if (wc == '*') {
-                break;
-            }
-
-            if (wc != '?' && wc != fn[i])
-                return false;
+        if (CompareSegment(fileName, wildName, DosMfnlength, false) == false) {
+            return false;
         }
-        // original code tolerated extra chars in pattern name beyond 8 unless it's a non-'*' check byte; our fixed-size truncation mirrors that behavior
+        // the original code tolerated extra chars in pattern name beyond 8 unless it's a non-'*' check byte; our fixed-size truncation mirrors that behavior
 
         // ---- EXT compare (early '*' accept) ----
-        for (int i = 0; i < DosExtlength; i++) {
-            char wc = we[i];
+        return CompareSegment(fileExt, wildExt, DosExtlength, true) switch {
+            true => true,
+            false => false,
+            // If wild ext has a 4th char, and it's not '*', reject (DOSBox-like behavior)
+            _ => wildExtLength <= DosExtlength || wildExt[DosExtlength] == '*'
+        };
+    }
+
+    // Common 8.3 segment compare:
+    // - Compares up to 'length' characters.
+    // - '?' matches any char (including space padding).
+    // - If '*' is encountered:
+    //     - when earlyStarAcceptsTrue == true (extension), return true immediately;
+    //     - otherwise (name), treat as "stop comparing here" and return null (no decision).
+    // Returns:
+    //   true => definitively accept (only possible with earlyStarAcceptsTrue and '*' seen)
+    //   false => mismatch
+    //   null => matched the segment fully (or name-stopped at '*'), no final decision
+    private static bool? CompareSegment(ReadOnlySpan<char> target, ReadOnlySpan<char> pattern, int length,
+        bool earlyStarAcceptsTrue) {
+        for (int i = 0; i < length; i++) {
+            char wc = pattern[i];
             if (wc == '*') {
-                return true;
+                return earlyStarAcceptsTrue ? true : null;
             }
 
-            if (wc != '?' && wc != fe[i]) {
+            if (wc != '?' && wc != target[i]) {
                 return false;
             }
         }
 
-        // If wild ext has a 4th char and it's not '*', reject (DOSBox-like behavior)
-        if (wildExtRaw.Length <= DosExtlength) {
-            return true;
-        }
-
-        char c4 = we[DosExtlength];
-        return c4 == '*';
+        return null;
     }
 
-    // ---------- helpers ----------
+    private static void SplitTo83(ReadOnlySpan<char> file, Span<char> targetFileName, Span<char> targetFileExt,
+        out int extLength) {
+        targetFileName.Fill(' ');
+        targetFileExt.Fill(' ');
 
-    private static bool WildcardMatchesHiddenFile(ReadOnlySpan<char> filename, ReadOnlySpan<char> wildcard) {
-        if (filename.IsEmpty) {
+        int dotPos = file.LastIndexOf('.');
+        ReadOnlySpan<char> fileNameRaw = dotPos >= 0 ? file[..dotPos] : file;
+        ReadOnlySpan<char> fileExtRaw =
+            dotPos >= 0 && dotPos + 1 < file.Length ? file[(dotPos + 1)..] : ReadOnlySpan<char>.Empty;
+        ToUpperInto(fileNameRaw[..Math.Min(fileNameRaw.Length, targetFileName.Length)], targetFileName);
+        ToUpperInto(fileExtRaw[..Math.Min(fileExtRaw.Length, targetFileExt.Length)], targetFileExt);
+        extLength = fileExtRaw.Length; // actual (untruncated) length for the DOSBox-style 4th-char check
+    }
+
+    private static bool WildcardMatchesHiddenFile(ReadOnlySpan<char> fileName, ReadOnlySpan<char> wildcard) {
+        if (fileName.IsEmpty) {
             return false;
         }
 
-        bool hasWildcard = wildcard.IndexOfAny('?', '*') >= 0;
-
-        bool isHidden = filename.Length >= 5 &&
-                        filename[0] == '.' &&
-                        !filename.Equals(".", StringComparison.Ordinal) &&
-                        !filename.Equals("..", StringComparison.Ordinal);
-
-        return hasWildcard && isHidden;
-    }
-
-    private static void FillWithSpaces(Span<char> buf) {
-        for (int i = 0; i < buf.Length; i++) {
-            buf[i] = ' ';
+        if (wildcard.IndexOfAny('?', '*') < 0) {
+            return false;
         }
+
+        return fileName.Length >= 5 && fileName[0] == '.' &&
+               !fileName.Equals(".", StringComparison.Ordinal) &&
+               !fileName.Equals("..", StringComparison.Ordinal);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ToUpperInto(ReadOnlySpan<char> src, Span<char> dst) {
-        // Write uppercase without allocations
         src.ToUpperInvariant(dst);
     }
 }
