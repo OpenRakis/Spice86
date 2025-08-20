@@ -119,19 +119,21 @@ public class DosExeFile : MemoryBasedDataStructure {
     /// </summary>
     public uint ProgramSize {
         get {
-            uint result = Pages * 512U;
-            if (LenFinalPage != 0) {
-                result = result - 512 + LenFinalPage;
-            }
-            result -= HeaderSizeInBytes;
-            return result;
+            uint declaredTotalSize = LenFinalPage == 0
+                ? Pages * 512U
+                : (uint)((Pages == 0 ? 0 : Pages - 1) * 512) + LenFinalPage;
+
+            uint headerSize = HeaderSizeInBytes;
+            uint fileLength = ByteReaderWriter.Length;
+            uint availableAfterHeader = fileLength > headerSize ? fileLength - headerSize : 0;
+            return declaredTotalSize <= availableAfterHeader ? declaredTotalSize : availableAfterHeader;
         }
     }
 
     /// <summary>
     /// Number of paragraphs that are need to load the program code in the executable file.
     /// </summary>
-    public ushort ProgramSizeInParagraphs => (ushort)((Pages << 5) - HeaderSizeInParagraphs);
+    public ushort ProgramSizeInParagraphs => (ushort)((ProgramSize + 15) / 16);
 
     /// <summary>
     /// True when represented EXE is valid.
