@@ -320,7 +320,7 @@ public class DosMemoryManager {
     private AllocRange CalculateSizeForExe(DosExeFile exeFile, ushort pspSegment) {
         // Every program requires at least enough space for itself and the 16 paragraph (256 byte)
         // PSP that precedes it.
-        ushort baseSizeInParagraphs = (ushort)(exeFile.ProgramSizeInParagraphs + 0x10);
+        ushort baseSizeInParagraphs = (ushort)(exeFile.ProgramSizeInParagraphsPerHeader + 0x10);
 
         ushort minSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MinAlloc);
         ushort maxSizeInParagraphs = (ushort)(baseSizeInParagraphs + exeFile.MaxAlloc);

@@ -186,7 +186,7 @@ public class DosProcessManager : DosFileLoader {
         // immediately after the PSP like we normally do. This will give the program extra space
         // between the PSP and the start of the program image that it can use however it wants.
         if (exeFile.MinAlloc == 0 && exeFile.MaxAlloc == 0) {
-            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphs);
+            ushort programEntryPointOffset = (ushort)(block.Size - exeFile.ProgramSizeInParagraphsPerHeader);
             programEntryPointSegment = (ushort)(block.DataBlockSegment + programEntryPointOffset);
         }
 
