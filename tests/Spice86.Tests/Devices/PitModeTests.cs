@@ -11,7 +11,6 @@ using Spice86.Shared.Interfaces;
 using Xunit;
 
 using Timer = Spice86.Core.Emulator.Devices.Timer.Timer;
-using System.Threading;
 
 namespace Spice86.Tests.Devices;
 
@@ -130,21 +129,17 @@ public class PitModeTests {
         SimulateActivations(counter, 3);
         
         // Output should initially go LOW when counter reaches 0
-        // The test needs to check the initial LOW state
         Assert.Equal(Pit8254Counter.OutputStatus.Low, counter.OutputState);
         
         // Counter should reload automatically
         Assert.Equal(3, counter.CurrentCount);
         
-        // Wait for the pulse to naturally complete (at least 1ms should be sufficient)
-        // This mimics the hardware behavior where the pulse is one clock cycle
-        Thread.Sleep(10);
+        // Simulate one more activation to finish the pulse
+        SimulateActivations(counter, 1);
         
-        // Process additional activations to ensure the pulse completes
-        SimulateActivations(counter, 10);
-        
-        // After pulse completes, output should return to HIGH
+        // After pulse completes (1 activation), output should return to HIGH
         Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
+        Assert.Equal(2, counter.CurrentCount); // Now counting from reloaded value
 
         // Act & Assert: Gate state change
         counter.SetGateState(false);
@@ -201,14 +196,12 @@ public class PitModeTests {
         // Counter should reload automatically
         Assert.Equal(3, counter.CurrentCount);
         
-        // Wait for the pulse to naturally complete
-        Thread.Sleep(10);
+        // Simulate one more activation to finish the pulse
+        SimulateActivations(counter, 1);
         
-        // Process additional activations to ensure the pulse completes
-        SimulateActivations(counter, 10);
-        
-        // After pulse completes, output should return to HIGH
+        // After pulse completes (1 activation), output should return to HIGH
         Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
+        Assert.Equal(2, counter.CurrentCount); // Now counting from reloaded value
     }
 
     [Fact]
@@ -235,14 +228,12 @@ public class PitModeTests {
         // Counter should reload automatically
         Assert.Equal(3, counter.CurrentCount);
         
-        // Wait for the pulse to naturally complete
-        Thread.Sleep(10);
+        // Simulate one more activation to finish the pulse
+        SimulateActivations(counter, 1);
         
-        // Process additional activations to ensure the pulse completes
-        SimulateActivations(counter, 10);
-        
-        // After pulse completes, output should return to HIGH
+        // After pulse completes (1 activation), output should return to HIGH
         Assert.Equal(Pit8254Counter.OutputStatus.High, counter.OutputState);
+        Assert.Equal(2, counter.CurrentCount); // Now counting from reloaded value
     }
 
     private byte GenerateConfigureCounterByte(byte counter, byte readWritePolicy, byte mode, byte bcd) {
