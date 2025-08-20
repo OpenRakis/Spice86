@@ -202,6 +202,21 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         return res;
     }
 
+    public override uint Shrd(uint destination, uint source, byte count) {
+        count &= ShiftCountMask;
+        if (count == 0) {
+            return destination;
+        }
+
+        uint msbBefore = destination & MsbMask;
+        _state.CarryFlag = ((destination >> (count - 1)) & 1) != 0;
+        uint res = (destination >> count) | (source << (32 - count));
+        UpdateFlags(res);
+        uint msb = res & MsbMask;
+        _state.OverflowFlag = msb != msbBefore;
+        return res;
+    }
+
     public override uint Shr(uint value, int count) {
         count &= ShiftCountMask;
         if (count == 0) {

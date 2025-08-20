@@ -3,6 +3,9 @@
 [OperationModRmImmParser(Operation: "ShldImm8Rm", Has8: false, IsOnlyField8: true, IsUnsignedField: true)]
 public partial class ShldImm8RmParser;
 
+[OperationModRmImmParser(Operation: "ShrdImm8Rm", Has8: false, IsOnlyField8: true, IsUnsignedField: true)]
+public partial class ShrdImm8RmParser;
+
 [OperationModRmImmParser(Operation: "MovRmImm", Has8: true, IsOnlyField8: false, IsUnsignedField: true)]
 public partial class MovRmImmParser;
 

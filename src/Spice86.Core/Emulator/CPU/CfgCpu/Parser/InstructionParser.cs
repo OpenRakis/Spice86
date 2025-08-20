@@ -79,6 +79,8 @@ public class InstructionParser : BaseInstructionParser {
     private readonly XchgRmParser _xchgRmParser;
     private readonly XorAluOperationParser _xorAluOperationParser;
     private readonly XaddRmParser _xaddRmParser;
+    private readonly ShrdClRmParser _shrdClRmParser;
+    private readonly ShrdImm8RmParser _shrdImm8RmParser;
 
     public InstructionParser(IIndexable memory, State state) : base(new(memory), state) {
         _adcAluOperationParser = new(this);
@@ -139,6 +141,8 @@ public class InstructionParser : BaseInstructionParser {
         _setRmccParser = new(this);
         _shldClRmParser = new(this);
         _shldImm8RmParser = new(this);
+        _shrdClRmParser = new(this);
+        _shrdImm8RmParser = new(this);
         _stosParser = new(this);
         _subAluOperationParser = new(this);
         _testAccImmParser = new(this);
@@ -678,6 +682,10 @@ public class InstructionParser : BaseInstructionParser {
             case 0x0FA9:
                 return new PopSReg(context.Address, context.OpcodeField, context.Prefixes,
                     (int)SegmentRegisterIndex.GsIndex);
+            case 0xFAC:
+                return _shrdImm8RmParser.Parse(context);
+            case 0xFAD:
+                return _shrdClRmParser.Parse(context);
             case 0x0FAF:
                 return _imulRmParser.Parse(context);
             case 0x0FB2:

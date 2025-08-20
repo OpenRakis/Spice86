@@ -142,6 +142,7 @@ public enum InstructionOperation {
     SETS,
     SHL,
     SHLD,
+    SHRD,
     SHR,
     STC,
     STD,

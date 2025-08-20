@@ -150,6 +150,8 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
 
     public abstract TUnsigned Shld(TUnsigned destination, TUnsigned source, byte count);
 
+    public abstract TUnsigned Shrd(TUnsigned destination, TUnsigned source, byte count);
+
     public abstract TUnsigned Shr(TUnsigned value, int count);
 
     protected static uint BorrowBitsSub(uint value1, uint value2, uint dst) {
