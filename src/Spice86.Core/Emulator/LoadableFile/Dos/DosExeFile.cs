@@ -133,7 +133,7 @@ public class DosExeFile : MemoryBasedDataStructure {
     /// <summary>
     /// Number of paragraphs that are need to load the program code in the executable file.
     /// </summary>
-    public ushort ProgramSizeInParagraphs => (ushort)((Pages << 5) - HeaderSizeInParagraphs);
+    public ushort ProgramSizeInParagraphsPerHeader => (ushort)((Pages << 5) - HeaderSizeInParagraphs);
 
     /// <summary>
     /// True when represented EXE is valid.
