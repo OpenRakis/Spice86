@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -166,7 +165,7 @@ public sealed class Dos {
 
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, this.Devices);
+            _loggerService, Devices);
         DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);

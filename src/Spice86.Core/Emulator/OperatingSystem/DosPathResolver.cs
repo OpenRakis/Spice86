@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
-using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -16,6 +15,9 @@ internal class DosPathResolver {
     internal const char DirectorySeparatorChar = '\\';
     internal const char AltDirectorySeparatorChar = '/';
     private const int MaxPathLength = 255;
+    private const int DosMfnlength = 8;
+    private const int DosExtlength = 3;
+    private const int LfnNamelength = 255; // for the sanity check only
 
     private readonly DosDriveManager _dosDriveManager;
 
@@ -49,7 +51,7 @@ internal class DosPathResolver {
     }
 
     private static string GetFullCurrentDosPathOnDrive(VirtualDrive virtualDrive) =>
-        Path.Combine($"{virtualDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
+        Path.Combine($"{virtualDrive.DosVolume}{DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
         string fallbackValue = ConvertUtils.ToSlashFolderPath(Environment.CurrentDirectory);
@@ -165,18 +167,18 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashFolderPath(fullHostPath);
     }
 
-    private (string HostPrefixPath, string DosRelativePath) DeconstructDosPath(string dosPath) {
+    private (string hostPrefixPath, string dosRelativePath) DeconstructDosPath(string dosPath) {
         if (IsPathRooted(dosPath)) {
             int length = 1;
             if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
                 length = 3;
             }
             return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath[length..]);
-        } else if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
-            return (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..]);
-        } else {
-            return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
         }
+
+        return StartsWithDosDriveAndVolumeSeparator(dosPath)
+            ? (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..])
+            : (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
     }
 
     /// <summary>
@@ -190,32 +192,62 @@ internal class DosPathResolver {
         }
         dosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
 
-        if (string.IsNullOrWhiteSpace(DosRelativePath)) {
-            return ConvertUtils.ToSlashPath(HostPrefix);
+        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
+            return ConvertUtils.ToSlashPath(hostPrefix);
         }
 
-        DirectoryInfo hostDirInfo = new DirectoryInfo(HostPrefix);
+        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
+        int lastSlash = slashedRelative.LastIndexOf('/');
+        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
+        string lastSegment = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
 
-        string? relativeHostPath = hostDirInfo
-            .EnumerateDirectories("*", new EnumerationOptions() {
-                RecurseSubdirectories = true,
-            })
-            .Cast<FileSystemInfo>()
-            .Concat(
-            hostDirInfo.EnumerateFiles("*", new EnumerationOptions() {
-                RecurseSubdirectories = true,
-            }))
-            .FirstOrDefault(x => IsRelativeHostFileOrFolderPathEqualIgnoreCase(x, HostPrefix, DosRelativePath))?.FullName;
-
-        if (string.IsNullOrWhiteSpace(relativeHostPath)) {
+        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
+        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
             return null;
         }
 
-        return ConvertUtils.ToSlashPath(Path.Combine(HostPrefix, relativeHostPath));
+        if (string.IsNullOrWhiteSpace(lastSegment)) {
+            return ConvertUtils.ToSlashPath(resolvedHostDir);
+        }
+
+        var options = new EnumerationOptions {
+            RecurseSubdirectories = false,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            ReturnSpecialDirectories = false
+        };
+
+        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
     }
 
+    private static string? ResolveCaseInsensitiveDirectory(string hostPrefix, string dirPart) {
+        if (string.IsNullOrWhiteSpace(dirPart)) {
+            return hostPrefix;
+        }
+
+        string current = hostPrefix;
+        foreach (string seg in dirPart.Split('/',
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+            var di = new DirectoryInfo(current);
+            DirectoryInfo? next = di
+                .EnumerateDirectories("*", new EnumerationOptions {
+                    RecurseSubdirectories = false,
+                    MatchCasing = MatchCasing.CaseInsensitive
+                })
+                .FirstOrDefault(d => string.Equals(d.Name, seg, StringComparison.OrdinalIgnoreCase));
+
+            if (next == null) {
+                return null;
+            }
+
+            current = next.FullName;
+        }
+
+        return current;
+    }
+    
     internal static string GetShortFileName(string hostFileName, string hostDir) {
         string fileName = Path.GetFileNameWithoutExtension(hostFileName);
         string extension = Path.GetExtension(hostFileName);
@@ -251,20 +283,7 @@ internal class DosPathResolver {
         }
         return shortName.ToString().ToUpperInvariant();
     }
-
-    private static bool IsRelativeHostFileOrFolderPathEqualIgnoreCase(FileSystemInfo fileOrDirInfo, string hostPrefix, string dosRelativePath) {
-        string relativePath = fileOrDirInfo.FullName[hostPrefix.Length..];
-        if (fileOrDirInfo is FileInfo) {
-            return string.Equals(ConvertUtils.ToSlashPath(relativePath),
-                ConvertUtils.ToSlashPath(dosRelativePath),
-                    StringComparison.OrdinalIgnoreCase);
-        } else {
-            return string.Equals(ConvertUtils.ToSlashFolderPath(relativePath),
-                ConvertUtils.ToSlashFolderPath(dosRelativePath),
-                    StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
+    
     /// <summary>
     /// Prefixes the given DOS path by either the mapped drive folder or the current host folder depending on whether there is a root in the path.<br/>
     /// Does not convert to a case sensitive path. <br/>
@@ -306,5 +325,128 @@ internal class DosPathResolver {
         return Directory
             .GetDirectories(hostPath, searchPattern)
             .Concat(Directory.GetFiles(hostPath, searchPattern));
+    }
+
+
+    public IEnumerable<string> FindFilesUsingWildCmp(string searchFolder, string searchPattern,
+        EnumerationOptions enumerationOptions) {
+        return Directory.EnumerateFileSystemEntries(searchFolder, "*", enumerationOptions)
+            .Where(path => WildFileCmp(Path.GetFileName(path), searchPattern));
+    }
+
+    public static bool WildFileCmp(string? filename, string? pattern) {
+        if (filename is null || pattern is null) {
+            return false;
+        }
+
+        return WildFileCmp(filename.AsSpan(), pattern.AsSpan());
+    }
+
+    private static bool WildFileCmp(ReadOnlySpan<char> sourceFilename, ReadOnlySpan<char> pattern) {
+        if (sourceFilename.Length > 0 && pattern.Length == 0) {
+            return false;
+        }
+
+        if (pattern.Length > LfnNamelength) {
+            return false;
+        }
+
+        // Fast path: exact case-insensitive match (covers common no-wildcard cases)
+        if (sourceFilename.Equals(pattern, StringComparison.OrdinalIgnoreCase)) {
+            return true;
+        }
+
+        // Skip “hidden” dot-files if the pattern uses wildcards (except "." / "..")
+        if (WildcardMatchesHiddenFile(sourceFilename, pattern)) {
+            return false;
+        }
+
+        // Uppercase once into fixed-size 8.3 stacks with space padding
+        Span<char> fileName = stackalloc char[DosMfnlength];
+        Span<char> fileExt = stackalloc char[DosExtlength];
+        Span<char> wildName = stackalloc char[DosMfnlength];
+        // wild ext needs an extra slot to check the 4th char like DOSBox
+        Span<char> wildExt = stackalloc char[DosExtlength + 1];
+
+        SplitTo83(sourceFilename, fileName, fileExt, out _);
+        SplitTo83(pattern, wildName, wildExt, out int wildExtLength);
+
+        // ---- NAME compare (no early '*' accept; '*' just ends name matching) ----
+        if (CompareSegment(fileName, wildName, DosMfnlength) == false) {
+            return false;
+        }
+        // the original code tolerated extra chars in pattern name beyond 8 unless it's a non-'*' check byte; our fixed-size truncation mirrors that behavior
+
+        // ---- EXT compare (early '*' accept) ----
+        return CompareSegment(fileExt, wildExt, DosExtlength) switch {
+            true => true,
+            false => false,
+            // If wild ext has a 4th char, and it's not '*', reject (DOSBox-like behavior)
+            _ => wildExtLength <= DosExtlength || wildExt[DosExtlength] == '*'
+        };
+    }
+
+    /// <summary>
+    /// Common 8.3 segment compare.
+    /// </summary>
+    /// <param name="filenameOrExt">The segment to compare against.</param>
+    /// <param name="pattern">The pattern to match.</param>
+    /// <param name="length">Maximum number of characters to compare.</param>
+    /// <returns>
+    /// true - definitively accept (only possible with earlyStarAcceptsTrue and '*' seen)
+    /// false - mismatch 
+    /// null - matched the segment fully (or name-stopped at '*'), no final decision
+    /// </returns>
+    /// <remarks>
+    /// '?' matches any char (including space padding).
+    /// If '*' is encountered:
+    /// - For extension compare (earlyStarAcceptsTrue=true): returns true immediately
+    /// - For name compare (earlyStarAcceptsTrue=false): treats as "stop comparing here" and returns null
+    /// </remarks>
+    private static bool? CompareSegment(ReadOnlySpan<char> filenameOrExt, ReadOnlySpan<char> pattern, int length) {
+        for (int i = 0; i < length; i++) {
+            char patternChar = pattern[i];
+            if (patternChar == '*') {
+                return true;
+            }
+
+            if (patternChar != '?' && patternChar != filenameOrExt[i]) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    private static void SplitTo83(ReadOnlySpan<char> file, Span<char> targetFileName, Span<char> targetFileExt,
+        out int extLength) {
+        targetFileName.Fill(' ');
+        targetFileExt.Fill(' ');
+
+        int dotPos = file.LastIndexOf('.');
+        ReadOnlySpan<char> fileNameRaw = dotPos >= 0 ? file[..dotPos] : file;
+        ReadOnlySpan<char> fileExtRaw =
+            dotPos >= 0 && dotPos + 1 < file.Length ? file[(dotPos + 1)..] : ReadOnlySpan<char>.Empty;
+        ToUpperCopy(fileNameRaw[..Math.Min(fileNameRaw.Length, targetFileName.Length)], targetFileName);
+        ToUpperCopy(fileExtRaw[..Math.Min(fileExtRaw.Length, targetFileExt.Length)], targetFileExt);
+        extLength = fileExtRaw.Length; // actual (untruncated) length for the DOSBox-style 4th-char check
+    }
+
+    private static bool WildcardMatchesHiddenFile(ReadOnlySpan<char> fileName, ReadOnlySpan<char> wildcard) {
+        if (fileName.IsEmpty) {
+            return false;
+        }
+
+        if (wildcard.IndexOfAny('?', '*') < 0) {
+            return false;
+        }
+
+        return fileName.Length >= 5 && fileName[0] == '.' &&
+               !fileName.Equals(".", StringComparison.Ordinal) &&
+               !fileName.Equals("..", StringComparison.Ordinal);
+    }
+
+    private static void ToUpperCopy(ReadOnlySpan<char> src, Span<char> dst) {
+        src.ToUpperInvariant(dst);
     }
 }
