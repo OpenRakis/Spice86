@@ -35,22 +35,33 @@ General process:
   - Rewriting code function by function allows you to discover the intent of the author.
 
 ## Running your exe
-This is a .NET program, you run it with the regular command line or dotnet run. Example with running a program called file.exe:
-```
-Spice86 -e file.exe
-```
-COM files and BIOS files are also supported.
+
+| Command | Description |
+|---------|-------------|
+| `Spice86 -e file.exe` | Run the specified executable |
+| `Spice86 -e file.com` | Run a COM file |
+| `Spice86 -e file.bin` | Run a BIOS file |
 
 ## Dumping data
-It is recommended to set SPICE86_DUMPS_FOLDER environment variable pointing to where the emulator should dump the runtime data.
-If the variable is set or if --RecordedDataDirectory parameter is passed, the emulator will dump a bunch of information about the run there. If nothing is set, data will be dumped in the current directory.
-If there is already data there the emulator will load it first and complete it, you don't need to start from zero each time!
 
-## More command line options
+| Setting | Description |
+|---------|-------------|
+| Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control where data is dumped |
+| Command Line | Use `--RecordedDataDirectory` to specify the dump location |
+| Default Location | Current directory if neither of the above is specified |
+
+The emulator dumps the following files:
+- **spice86dumpMemoryDump.bin**: Snapshot of the real mode address space
+- **spice86dumpExecutionFlow.json**: Contains function addresses, labels, and executed instructions
+
+When there is already data in the specified location, the emulator will load it first and complement it.
+
+## Command line options
 
 ```
   --Debug                            (Default: false) Starts the program paused.
   --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. Unused by default. Overrides Instructions per second option below if used.
+  --Xms                              (Default: true) Enables 15 MB of XMS memory.
   --Ems                              (Default: true) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
@@ -166,6 +177,55 @@ If you use a different port for gdb, adjust `spice86.seer` correspondingly.
 
 Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 “Length”, otherwise the Assembly View won't work.
+
+## Emulator features
+
+| Component | Support Level |
+|-----------|--------------|
+| **CPU** | 8086/8088 fully implemented and tested |
+|  | 80186 (BOUND instruction missing) |
+|  | 80286 (protected mode not implemented) |
+|  | 80386 (partial support, protected mode not implemented) |
+|  | Only 16-bit instructions fully supported |
+|  | Most 32-bit instructions implemented but not fully tested |
+|  | No FPU except detection instructions |
+| **Memory** | 1MB address space with segmented addressing |
+|  | A20 Gate support |
+|  | EMS 3.2 implemented |
+|  | XMS 4.0 is implemented |
+|  | HMA is implemented |
+|  | No paging support |
+| **Graphics** | Text modes, VGA, EGA, and CGA implemented |
+|  | No VESA support |
+| **DOS** | Partial int 21h implementation (DOS 5.0) |
+| **Input** | Keyboard and mouse supported |
+|  | No joystick support |
+| **CD-ROM** | No MSCDEX support |
+| **Floppy** | No Floppy Disk support |
+
+## Sound support
+
+| Sound Type | Support Level | Notes |
+|------------|---------------|-------|
+| PC Speaker | ✅ Full | Implemented |
+| Adlib/SB OPL | ✅ Full | FM synthesis supported |
+| SoundBlaster PCM | ✅ Full | Digital audio supported |
+| SoundBlaster Mixer | ⚠️ Partial | Some registers are unimplemented |
+| MT-32 | ⚠️ Partial | Not available on macOS |
+| Gravis Ultrasound | ❌ None | Not implemented yet | 
+| General MIDI | ✅ Full | Supported |
+
+On Unix-like systems, libportaudio must be installed for sound to work.
+
+## Misc
+
+| Feature | Details |
+|---------|---------|
+| **C Drive** | Configurable with `--CDrive`, defaults to current folder |
+| **Program Arguments** | Pass up to 127 chars with `--ExeArgs` |
+| **Time Handling** | Real elapsed time (adjustable with `--TimeMultiplier`) or instruction-based timing with `--InstructionsPerSecond` |
+| **Screen Refresh** | 30 FPS and on VGA retrace wait detection |
+| **Structure Viewer** | Requires C header file (`--StructureFile`) to display memory structures |
 
 ## Reverse engineering process
 Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
@@ -287,7 +347,7 @@ Exporting a new C header file from Ghidra or IDA will also update the structure 
 
 You can also enter the Structure view by selecting a range of bytes in the Memory tab and right-clicking on it.
 
-## Misc
+## Misc details
 ### C Drive
 It is possible to provide a C: Drive for emulated DOS functions with the option **--CDrive**. Default is current folder. For some games you may need to set the C drive to the game folder.
 
@@ -298,53 +358,6 @@ You can pass arguments (max 127 chars!) to the emulated program with the option 
 The emulated Timer hardware of the PC (Intel 8259) supports measuring time from either:
 - The real elapsed time. Speed can be altered with parameter **--TimeMultiplier**.
 - The number of instructions the emulated CPU executed. This is the behaviour that is activated with parameter **--InstructionsPerSecond** and is forced when in GDB mode so that you can debug with peace of mind without the timer triggering.
-
-### Screen refresh
-Screen is refreshed 30 times per second and each time a VGA retrace wait is detected (see Renderer.cs).
-
-### Emulator features
-CPU:
-- Only 16 bits instructions are fully supported, memory size is 1MB
-- Most 32 bits instructions are implemented, but not validated via integration tests for now.
-- The only supported addressing mode is real mode. 286/386 Protected mode and the related instructions are not implemented.
-- Instruction set is (hopefully!) fully implemented for 8086, and validated via automated tests.
-- For 80186, BOUND instruction is missing.
-- For 80286, instructions related to protected mode are not implemented
-- For 80386, protected mode is not implemented.
-- No FPU instruction implemented apart those used for FPU detection.
-
-Memory:
-- Segmented addressing is implemented.
-- The A20 Gate is supported.
-- Helpers are available in order to convert a segmented address into a physical address, and vice-versa.
-- EMS (Expanded Memory) 3.2 is partially implemented.
-- XMS (Extended Memory) is not implemented.
-- X86 Paging (virtual memory) is not implemented.
-
-Graphics:
-- Text modes, VGA, EGA, and CGA are implemented.
-
-DOS:
-- Part of int 21 is implemented. Identifies itself as dos 5.0 for now.
-
-Input:
-- Keyboard
-- Mouse
-- No joystick for now
-
-CD-ROM:
-- No MSCDEX support for now. Some games, like DUNE, can be copied entirely from the CD and run from the hard drive.
-
-Sound:
-
-On *nix systems, you'll need to have libportaudio installed.
-Without it, there will be no sound.
-
-- PC Speaker is implemented.
-- Adlib/SoundBlaster MIDI OPL is supported.
-- SoundBlaster PCM is supported.
-- MT-32 is supported. However, not on macOS, as a static build of MUNT is missing for that platform. (PRs welcome !)
-- General MIDI is supported.
 
 Compatibility list available [here](COMPATIBILITY.md).
 
