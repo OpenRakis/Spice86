@@ -31,5 +31,5 @@ public class EmmPage : IMemoryDevice {
     public void Write(uint address, byte value) => _pageMemory.Write(address, value);
 
     /// <inheritdoc />
-    public Span<byte> GetSpan(int address, int length) => _pageMemory.GetSpan(address, length);
+    public IList<byte> GetSlice(int address, int length) => _pageMemory.GetSlice(address, length);
 }

@@ -3,7 +3,9 @@ namespace Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
-public abstract class MemoryIndexer<T> : Indexer<T> {
+using System.Collections;
+
+public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     
     /// <summary>
     /// Gets or sets the data at the specified segment and offset in the memory.
@@ -23,4 +25,60 @@ public abstract class MemoryIndexer<T> : Indexer<T> {
         get => this[address.Segment, address.Offset];
         set => this[address.Segment, address.Offset] = value;
     }
+
+    /// <inheritdoc />
+    public IEnumerator<T> GetEnumerator() {
+        for (int i = 0; i < Count; i++) {
+            yield return this[i];
+        }
+    }
+
+    /// <inheritdoc />
+    IEnumerator IEnumerable.GetEnumerator() {
+        return GetEnumerator();
+    }
+
+    /// <inheritdoc />
+    public void Add(T item) => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public void Clear() => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public bool Contains(T item) {
+        return IndexOf(item) != -1;
+    }
+
+    /// <inheritdoc />
+    public void CopyTo(T[] array, int arrayIndex) {
+        for (int i = 0; i < Count; i++) {
+            array[arrayIndex + i] = this[i];
+        }
+    }
+
+    /// <inheritdoc />
+    public bool Remove(T item) => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public abstract int Count { get; }
+
+    /// <inheritdoc />
+    public bool IsReadOnly => false;
+
+    /// <inheritdoc />
+    public int IndexOf(T item) {
+        for (int i = 0; i < Count; i++) {
+            if (EqualityComparer<T>.Default.Equals(this[i], item)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <inheritdoc />
+    public void Insert(int index, T item) => throw new NotImplementedException();
+
+    /// <inheritdoc />
+    public void RemoveAt(int index) => throw new NotImplementedException();
 }

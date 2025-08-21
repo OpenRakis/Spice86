@@ -16,7 +16,7 @@ public interface IDmaDevice8 {
     /// </summary>
     /// <param name="source">Bytes to write to the device.</param>
     /// <returns>Number of bytes actually written to the device.</returns>
-    int WriteBytes(ReadOnlySpan<byte> source);
+    int WriteBytes(IList<byte> source);
 
     /// <summary>
     /// Invoked when a transfer is completed in single-cycle mode.

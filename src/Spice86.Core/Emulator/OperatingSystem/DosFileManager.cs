@@ -585,9 +585,7 @@ public class DosFileManager {
         }
 
         try {
-            // Do not access Ram property directly to trigger breakpoints if needed
-            Span<byte> data = _memory.GetSpan((int)bufferAddress, writeLength);
-
+            byte[] data = _memory.GetSlice((int)bufferAddress, writeLength).ToArray();
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 string valueAsString = _dosStringDecoder.ConvertDosChars(data);
                 _loggerService.Verbose("Writing to file or device content: {Name} {Bytes} {CodePage850String}",

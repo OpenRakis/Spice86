@@ -17,4 +17,7 @@ public class Int32Indexer : MemoryIndexer<int> {
         get => (int)_uInt32Indexer[address];
         set => _uInt32Indexer[address] = (uint)value;
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _uInt32Indexer.Count;
 }

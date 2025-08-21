@@ -27,8 +27,8 @@ public class SelectorNode(SegmentedAddress address) : CfgNode(address, null) {
     public override void Execute(InstructionExecutionHelper helper) {
         foreach (Discriminator discriminator in SuccessorsPerDiscriminator.Keys) {
             int length = discriminator.DiscriminatorValue.Count;
-            Span<byte> bytes = helper.Memory.GetSpan((int)Address.Linear, length);
-            if (discriminator.SpanEquivalent(bytes)) {
+            IList<byte> bytes = helper.Memory.GetSlice((int)Address.Linear, length);
+            if (discriminator.ListEquivalent(bytes)) {
                 helper.NextNode = SuccessorsPerDiscriminator[discriminator];
                 return;
             }

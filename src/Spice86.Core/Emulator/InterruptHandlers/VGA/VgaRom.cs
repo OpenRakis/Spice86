@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 /// <summary>
 ///    Represents the VGA ROM.
@@ -75,7 +76,7 @@ public class VgaRom : IMemoryDevice {
     }
 
     /// <inheritdoc />
-    public Span<byte> GetSpan(int address, int length) {
-        return _storage.AsSpan(address - BaseAddress, length);
+    public IList<byte> GetSlice(int address, int length) {
+        return _storage.GetSlice(address - BaseAddress, length);
     }
 }

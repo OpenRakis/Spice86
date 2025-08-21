@@ -17,4 +17,7 @@ public class Int16Indexer : MemoryIndexer<short> {
         get => (short)_uInt16Indexer[address];
         set => _uInt16Indexer[address] = (ushort)value;
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _uInt16Indexer.Count;
 }

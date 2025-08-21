@@ -17,8 +17,8 @@ public class MemoryInstructionMatcher {
     }
 
     private bool IsMatchingWithCurrentMemory(CfgInstruction instruction) {
-        Span<byte> bytesInMemory = _memory.GetSpan((int)instruction.Address.Linear, instruction.Length);
-        return instruction.Discriminator.SpanEquivalent(bytesInMemory);
+        IList<byte> bytesInMemory = _memory.GetSlice((int)instruction.Address.Linear, instruction.Length);
+        return instruction.Discriminator.ListEquivalent(bytesInMemory);
     }
 
 }

@@ -64,8 +64,8 @@ public class Discriminator : IComparable<Discriminator> {
     /// </summary>
     /// <param name="bytes">Span of bytes to compare with the discriminator</param>
     /// <returns>true if they are equivalent, false otherwise</returns>
-    public bool SpanEquivalent(Span<byte> bytes) {
-        if (DiscriminatorValue.Count != bytes.Length) {
+    public bool ListEquivalent(IList<byte> bytes) {
+        if (DiscriminatorValue.Count != bytes.Count) {
             return false;
         }
 
@@ -77,7 +77,7 @@ public class Discriminator : IComparable<Discriminator> {
 
         return true;
     }
-    
+
     /// <summary>
     /// Checks that the given list of bytes is equivalent to the discriminator.
     /// Equivalence means that they have the same length and their content is identical at each position or null

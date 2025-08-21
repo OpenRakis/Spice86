@@ -20,7 +20,7 @@ public class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
     }
 
     /// <inheritdoc/>
-    public uint Length => _byteReaderWriter.Length;
+    public int Length => _byteReaderWriter.Length;
 
     /// <inheritdoc/>
     public byte this[uint address] {

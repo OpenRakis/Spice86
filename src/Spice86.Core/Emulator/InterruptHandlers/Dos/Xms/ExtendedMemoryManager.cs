@@ -1137,7 +1137,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         // Determine source
-        Span<byte> srcSpan;
+        IList<byte> srcBytes;
         if (move.SourceHandle == 0) {
             // Real mode address
             uint srcAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.SourceOffset >> 16),
@@ -1147,7 +1147,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidSrcOffset;
                 return;
             }
-            srcSpan = _memory.GetSpan((int)srcAddr, (int)move.Length);
+            srcBytes = _memory.GetSlice((int)srcAddr, (int)move.Length);
         } else {
             // XMS block
             if (!TryGetBlock(move.SourceHandle, out XmsBlock? srcBlock)) {
@@ -1165,11 +1165,11 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
-            srcSpan = XmsRam.GetSpan((int)(srcBlock.Value.Offset + move.SourceOffset), (int)move.Length);
+            srcBytes = XmsRam.GetSlice((int)(srcBlock.Value.Offset + move.SourceOffset), (int)move.Length);
         }
 
         // Determine destination
-        Span<byte> dstSpan;
+        IList<byte> dstBytes;
         if (move.DestHandle == 0) {
             // Real mode address
             uint dstAddr = MemoryUtils.ToPhysicalAddress((ushort)(move.DestOffset >> 16),
@@ -1179,7 +1179,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidDestOffset;
                 return;
             }
-            dstSpan = _memory.GetSpan((int)dstAddr, (int)move.Length);
+            dstBytes = _memory.GetSlice((int)dstAddr, (int)move.Length);
         } else {
             // XMS block
             if (!TryGetBlock(move.DestHandle, out XmsBlock? dstBlock)) {
@@ -1197,7 +1197,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
-            dstSpan = XmsRam.GetSpan((int)(dstBlock.Value.Offset + move.DestOffset), (int)move.Length);
+            dstBytes = XmsRam.GetSlice((int)(dstBlock.Value.Offset + move.DestOffset), (int)move.Length);
         }
 
         // Check for overlap if both source and destination are in the same XMS block
@@ -1216,7 +1216,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             bool a20WasEnabled = _a20Gate.IsEnabled;
             ++_a20State.NumTimesEnabled;
             SetA20(true);
-            srcSpan.CopyTo(dstSpan);
+            srcBytes.CopyTo(dstBytes);
             --_a20State.NumTimesEnabled;
             if (!a20WasEnabled) {
                 SetA20(false);

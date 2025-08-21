@@ -23,4 +23,7 @@ public class UInt16Indexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address + 1] = (byte)(value >> 8);
         }
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _byteReaderWriter.Length / 2;
 }

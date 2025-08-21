@@ -32,4 +32,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress> {
             _uInt16Indexer[address + 4] = value.Segment;
         }
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _uInt16Indexer.Count / 3;
 }

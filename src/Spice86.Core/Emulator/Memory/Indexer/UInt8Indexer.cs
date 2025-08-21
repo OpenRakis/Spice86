@@ -19,4 +19,7 @@ public class UInt8Indexer : MemoryIndexer<byte> {
         get => _byteReaderWriter[address];
         set => _byteReaderWriter[address] = value;
     }
+
+    /// <inheritdoc/>
+    public override int Count => _byteReaderWriter.Length;
 }

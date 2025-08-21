@@ -23,4 +23,7 @@ public class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address + 1] = (byte)value;
         }
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _byteReaderWriter.Length / 2;
 }

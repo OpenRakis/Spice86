@@ -33,13 +33,13 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     public void WriteRam(byte[] array, uint offset = 0);
 
     /// <summary>
-    /// Returns a <see cref="Span{T}"/> that represents the specified range of memory. Will trigger memory read breakpoints.
+    /// Returns a <see cref="IList{T}"/> that represents the specified range of memory.
+    /// The list is backed by memory so no data copy happens and memory breakpoints are triggered as if operations were done on memory.
     /// </summary>
     /// <param name="address">The starting address of the memory range.</param>
     /// <param name="length">The length of the memory range.</param>
-    /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
-    public Span<byte> GetSpan(int address, int length);
+    /// <returns>A <see cref="IList{T}"/> instance that represents the specified range of memory.</returns>
+    public IList<byte> GetSlice(int address, int length);
 
     /// <summary>
     ///     Find the address of a value in memory.

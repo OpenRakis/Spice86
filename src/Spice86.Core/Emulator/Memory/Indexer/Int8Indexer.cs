@@ -17,4 +17,7 @@ public class Int8Indexer : MemoryIndexer<sbyte> {
         get => (sbyte)_uInt8Indexer[address];
         set => _uInt8Indexer[address] = (byte)value;
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _uInt8Indexer.Count;
 }

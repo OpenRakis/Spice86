@@ -18,5 +18,5 @@ public abstract class ArrayReaderWriter<T>: IReaderWriter<T> {
     }
 
     /// <inheritdoc/>
-    public uint Length { get => (uint)Array.Length; }
+    public int Length { get => Array.Length; }
 }
