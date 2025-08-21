@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -126,7 +127,7 @@ public class DosFileManagerTests {
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
@@ -147,15 +148,16 @@ public class DosFileManagerTests {
             bootUpInTextMode: configuration.InitializeDOS is true);
 
         Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            null, configuration.FailOnUnhandledPort);
+            configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
-            state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
         EmulationLoop emulationLoop = new EmulationLoop(configuration,
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
+
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
+            new BiosKeyboardInt9Handler(memory, stack, state, functionHandlerProvider,
+            keyboard, biosKeyboardBuffer, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);

@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -31,7 +32,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
+    private readonly AvaloniaKeyConverter _avaloniaKeyConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -91,7 +92,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
+        _avaloniaKeyConverter = new AvaloniaKeyConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -143,9 +144,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+                _avaloniaKeyConverter.GetKeyReleasedScancode((Key)e.Key),
+                _avaloniaKeyConverter.GetAsciiCode(
+                    _avaloniaKeyConverter.GetKeyReleasedScancode((Key)e.Key))));
     }
 
     [RelayCommand]
@@ -197,9 +198,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+                _avaloniaKeyConverter.GetKeyPressedScancode((Key)e.Key),
+                _avaloniaKeyConverter.GetAsciiCode(
+                    _avaloniaKeyConverter.GetKeyPressedScancode((Key)e.Key))));
     }
 
     [ObservableProperty]
