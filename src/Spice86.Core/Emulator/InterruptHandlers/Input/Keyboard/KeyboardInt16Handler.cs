@@ -6,14 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
-
-using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 /// <summary>
 /// The keyboard controller interrupt (INT16H)
@@ -45,26 +41,10 @@ public class KeyboardInt16Handler : InterruptHandler {
         AddAction(0x00, GetKeystroke);
         AddAction(0x01, () => GetKeystrokeStatus(true));
         AddAction(0x02, GetShiftFlags);
-        AddAction(0x1D, () => Unsupported(0x1D));
-    }
-
-    private void Unsupported(int operation) {
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning(
-                "{ClassName} INT {Int:X2} {operation}: Unhandled/undocumented keyboard interrupt called, will ignore",
-                nameof(KeyboardInt16Handler), VectorNumber, operation);
-        }
-
-        //If games that use those unsupported interrupts misbehave or crash, check if certain flags/registers have to be set
-        //properly, e.g., AX = 0 and/or setting the carry flag accordingly.
     }
 
     /// <inheritdoc/>
     public override byte VectorNumber => 0x16;
-
-    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        return base.WriteAssemblyInRam(memoryAsmWriter);
-    }
 
     /// <summary>
     /// Returns in the AX register the pending key code.

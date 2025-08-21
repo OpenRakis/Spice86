@@ -1,4 +1,4 @@
-﻿namespace Spice86.ViewModels.Services;
+﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Spice86.Shared.Emulator.Keyboard;
 
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 /// <summary>
 /// A utility class that provides mapping from AvaloniaUI <see cref="Key"/> values to keyboard scan codes.
 /// </summary>
-internal class AvaloniaKeyScanCodeConverter {
+public class AvaloniaKeyConverter {
     /// <summary>
     /// A dictionary that maps <see cref="Key"/> values to their corresponding keyboard scan codes.
     /// </summary>
@@ -20,9 +20,9 @@ internal class AvaloniaKeyScanCodeConverter {
     private static readonly FrozenDictionary<byte, byte> _scanCodeToAscii;
 
     /// <summary>
-    /// Initializes static members of the <see cref="AvaloniaKeyScanCodeConverter"/> class.
+    /// Initializes static members of the <see cref="AvaloniaKeyConverter"/> class.
     /// </summary>
-    static AvaloniaKeyScanCodeConverter() {
+    static AvaloniaKeyConverter() {
         // Some keys are not supported by AvaloniaUI so not putting them.
         _keyPressedScanCode = new Dictionary<Key, byte>()
         {
@@ -176,13 +176,13 @@ internal class AvaloniaKeyScanCodeConverter {
     /// <summary>
     /// Gets the ASCII code from the input scancode.
     /// </summary>
-    /// <param name="keyPressedScanCode">The scancode of the pressed keyboard key</param>
+    /// <param name="scanCode">The scancode of the pressed keyboard key</param>
     /// <returns>The corresponding ASCII code, or <c>null</c> if not found.</returns>
-    public byte? GetAsciiCode(byte? keyPressedScanCode) {
-        if (keyPressedScanCode > 0x7F) {
-            keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
+    public byte? GetAsciiCode(byte? scanCode) {
+        if (scanCode > 0x7F) {
+            scanCode = (byte?)(scanCode - 0x80);
         }
-        if (keyPressedScanCode is not null && _scanCodeToAscii.TryGetValue((byte)keyPressedScanCode, out byte value)) {
+        if (scanCode is not null && _scanCodeToAscii.TryGetValue((byte)scanCode, out byte value)) {
             return value;
         }
 
