@@ -41,7 +41,9 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Logging;
+using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -316,13 +318,14 @@ public class Spice86DependencyInjection : IDisposable {
 
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
-            cpuForEmulationLoop, state, timer, emulatorBreakpointsManager,
-            dmaController, pauseHandler, loggerService);
-
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
         }
+
+        EmulationLoop emulationLoop = new(configuration, functionHandler,
+            cpuForEmulationLoop, state, timer,
+            emulatorBreakpointsManager, dmaController,
+            pauseHandler, loggerService);
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
@@ -353,28 +356,32 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = new HeadlessGui();
         }
 
+        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
+            loggerService, configuration.FailOnUnhandledPort, _gui);
+
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("VGA card created...");
         }
 
-        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            _gui, configuration.FailOnUnhandledPort);
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
-            functionHandlerProvider, stack, state, dualPic, keyboard,
-            biosKeyboardBuffer, loggerService);
+        EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
+            state, stack, emulationLoop);
+
         Mouse mouse = new(state, dualPic, _gui,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(state, memory, mouse, _gui,
             vgaFunctionality, loggerService);
 
-        EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
-            state, stack, emulationLoop);
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
+            state, functionHandlerProvider, keyboard, biosKeyboardBuffer,
+            loggerService);
+
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+            biosKeyboardBuffer, emulationLoopRecall);
+
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 

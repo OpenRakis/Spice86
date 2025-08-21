@@ -26,4 +26,14 @@ public enum KeyboardCommand : byte {
     /// Write to the output port
     /// </summary>
     SetOutputPort = 0xD1,
+
+    /// <summary>
+    /// Disable keyboard input
+    /// </summary>
+    DisableKeyboard = 0xAD,
+
+    /// <summary>
+    /// Enable keyboard input
+    /// </summary>
+    EnableKeyboard = 0xAE
 }
