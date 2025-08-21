@@ -125,8 +125,9 @@ public class DosExeFile : MemoryBasedDataStructure {
 
             uint headerSize = HeaderSizeInBytes;
             uint fileLength = ByteReaderWriter.Length;
+            uint declaredImageSize = declaredTotalSize > headerSize ? declaredTotalSize - headerSize : 0;
             uint availableAfterHeader = fileLength > headerSize ? fileLength - headerSize : 0;
-            return declaredTotalSize <= availableAfterHeader ? declaredTotalSize : availableAfterHeader;
+            return declaredImageSize <= availableAfterHeader ? declaredImageSize : availableAfterHeader;
         }
     }
 
