@@ -1,5 +1,6 @@
-﻿using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Shared.Interfaces;
+﻿using Spice86.Shared.Interfaces;
+
+using System.Diagnostics;
 
 namespace Spice86.Core.Emulator.Devices.Timer;
 
@@ -17,6 +18,10 @@ public class Pit8254Counter {
     /// Milliseconds per PIT tick
     /// </summary>
     public const float MsPerPitTick = 1000.0f / HardwareFrequency;
+    /// <summary>
+    /// Duration of a single PIT clock pulse in nanoseconds
+    /// </summary>
+    public const double PitClockPulseNs = 1_000_000_000.0 / HardwareFrequency; // ~838 nanoseconds
 
     private readonly ILoggerService _loggerService;
 
@@ -25,18 +30,75 @@ public class Pit8254Counter {
     private readonly Pit8254Register _currentCountRegister = new();
     private readonly Pit8254Register _reloadValueRegister = new();
 
+    // Track pulse state
+    private bool _inPulseState;
+
     /// <summary>
-    /// PIT operation modes
+    /// PIT operation modes as defined in Intel 8254 datasheet section 3.3
     /// </summary>
     public enum PitMode : byte {
+        /// <summary>
+        /// Mode 0: Interrupt on Terminal Count
+        /// Output starts low, goes high when counter reaches zero
+        /// Counting stops when terminal count is reached
+        /// Reference: Intel 8254 Datasheet, Mode 0 Operation
+        /// </summary>
         InterruptOnTerminalCount = 0,
+
+        /// <summary>
+        /// Mode 1: Programmable One-Shot
+        /// Output goes low on gate rising edge, goes high when terminal count is reached
+        /// Counter is retriggerable
+        /// Reference: Intel 8254 Datasheet, Mode 1 Operation
+        /// </summary>
         OneShot = 1,
+
+        /// <summary>
+        /// Mode 2: Rate Generator
+        /// Output stays high except for one clock cycle before terminal count
+        /// Counter automatically reloads after reaching zero
+        /// Reference: Intel 8254 Datasheet, Mode 2 Operation
+        /// </summary>
         RateGenerator = 2,
+
+        /// <summary>
+        /// Mode 3: Square Wave Generator
+        /// Output is high for half the count and low for half the count
+        /// Counter automatically reloads after reaching zero
+        /// Reference: Intel 8254 Datasheet, Mode 3 Operation
+        /// </summary>
         SquareWave = 3,
+
+        /// <summary>
+        /// Mode 4: Software Triggered Strobe
+        /// Output stays high until terminal count is reached, then goes low for one clock cycle
+        /// Counter automatically reloads after reaching zero
+        /// Reference: Intel 8254 Datasheet, Mode 4 Operation
+        /// </summary>
         SoftwareStrobe = 4,
+
+        /// <summary>
+        /// Mode 5: Hardware Triggered Strobe
+        /// Output stays high until terminal count after gate trigger, then goes low for one clock cycle
+        /// Reference: Intel 8254 Datasheet, Mode 5 Operation
+        /// </summary>
         HardwareStrobe = 5,
+
+        /// <summary>
+        /// Mode 6: Alias of Mode 2 (Rate Generator)
+        /// Intel 8254 datasheet specifies that modes 2 and 6 are equivalent
+        /// </summary>
         RateGeneratorAlias = 6,
+
+        /// <summary>
+        /// Mode 7: Alias of Mode 3 (Square Wave Generator)
+        /// Intel 8254 datasheet specifies that modes 3 and 7 are equivalent
+        /// </summary>
         SquareWaveAlias = 7,
+
+        /// <summary>
+        /// Not an actual mode, used to indicate the counter is not operational
+        /// </summary>
         Inactive = 8
     }
 
@@ -44,6 +106,12 @@ public class Pit8254Counter {
         Low = 0,
         High = 1,
     }
+
+    /// <summary>
+    /// Gets whether the gate input is currently enabled
+    /// </summary>
+    public bool IsGateEnabled { get; private set; } = true;
+
 
     /// <summary>
     /// Gets the current PIT mode as enum type
@@ -58,7 +126,7 @@ public class Pit8254Counter {
     /// <summary>
     /// Gets the current output state (high/low) for speaker signal
     /// </summary>
-    public OutputStatus OutputState { get; private set; } = OutputStatus.High;
+    public OutputStatus OutputState { get; set; } = OutputStatus.High;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Pit8254Counter"/> class.
@@ -73,8 +141,9 @@ public class Pit8254Counter {
         // Initialize values to trigger initial frequency setup
         ReloadValue = 0;
         CurrentCount = 0xFFFF;
+        _inPulseState = false;
     }
-    
+
     /// <summary>
     /// Gets or sets the activator for the counter.
     /// </summary>
@@ -136,12 +205,12 @@ public class Pit8254Counter {
             OnReloadValueWrite();
         }
     }
-    
+
     /// <summary>
     /// Gets the period in milliseconds based on the reload value
     /// </summary>
     public float PeriodMs => MsPerPitTick * (ReloadValue == 0 ? 0x10000 : ReloadValue);
-    
+
     /// <summary>
     /// Calculates the cycle length for audio generation at the given sample rate
     /// </summary>
@@ -152,7 +221,7 @@ public class Pit8254Counter {
         float cycleLength = (sampleRate * counterMs) / 1000.0f;
         return cycleLength <= 2 ? 2 : cycleLength; // Minimum cycle length
     }
-    
+
     /// <summary>
     /// Calculates the cycle step for each sample based on the sample rate
     /// </summary>
@@ -161,7 +230,7 @@ public class Pit8254Counter {
     public float CalculateCycleStep(int sampleRate) {
         return 1.0f / CalculateCycleLength(sampleRate);
     }
-    
+
     /// <summary>
     /// Access the value of the counter using the current mode.
     /// </summary>
@@ -187,15 +256,119 @@ public class Pit8254Counter {
 
     /// <summary>
     /// Checks whether the counter is activated and if so, decrements the ticks.
+    /// Implements the behavior defined in Intel 8254 Datasheet section 3.3 "Mode Definitions"
     /// </summary>
     /// <returns>Whether the activation was processed.</returns>
     public bool ProcessActivation() {
         if (Activator.IsActivated) {
-            CurrentCount--;
+            // Handle pulse state - if we were in a pulse state (output LOW),
+            // return to HIGH on the next activation
+            if (_inPulseState) {
+                OutputState = OutputStatus.High;
+                _inPulseState = false;
+                
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                    _loggerService.Verbose("Counter {Index}: Pulse complete, output returned to HIGH", Index);
+                }
+                
+            }
+
+            // For certain modes, counting is inhibited when gate is low
+            // "When GATE is low, counting is inhibited." - Intel 8254 datasheet
+            bool shouldCount = GetIfWeShouldCount();
+            if (!shouldCount) {
+                return false;
+            }
+
+            // Fix: Prevent rollover
+            if (CurrentCount > 0) {
+                CurrentCount--;
+            }
+
+            // Handle counter reaching zero based on the mode
+            if (CurrentCount == 0) {
+                switch (CurrentPitMode) {
+                    case PitMode.InterruptOnTerminalCount:
+                        // Mode 0: Output goes high when counter reaches terminal count
+                        OutputState = OutputStatus.High;
+                        // Counter stops at zero
+                        break;
+
+                    case PitMode.OneShot:
+                        // Mode 1: One-shot - output goes low until counter reaches zero, then high
+                        OutputState = OutputStatus.High;
+                        // Counter stops at zero
+                        break;
+
+                    case PitMode.RateGenerator:
+                    case PitMode.RateGeneratorAlias:
+                        // Mode 2: Rate generator - output goes low for one clock cycle when counter reaches zero
+                        OutputState = OutputStatus.Low;
+                        // Reload the counter
+                        CurrentCount = ReloadValue;
+                        // Set pulse state so next activation will return output to HIGH
+                        _inPulseState = true;
+                        
+                        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                            _loggerService.Verbose("Counter {Index}: Starting pulse, output LOW", Index);
+                        }
+                        break;
+
+                    case PitMode.SquareWave:
+                    case PitMode.SquareWaveAlias:
+                        // Mode 3: Square wave - output toggles between high and low
+                        OutputState = OutputState == OutputStatus.High ? OutputStatus.Low : OutputStatus.High;
+                        // Reload the counter
+                        CurrentCount = ReloadValue;
+                        break;
+
+                    case PitMode.SoftwareStrobe:
+                    case PitMode.HardwareStrobe:
+                        // Mode 4/5: Strobe - output goes low when counter reaches zero
+                        OutputState = OutputStatus.Low;
+                        // Reload the counter
+                        CurrentCount = ReloadValue;
+                        // Set pulse state so next activation will return output to HIGH
+                        _inPulseState = true;
+                        
+                        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+                            _loggerService.Verbose("Counter {Index}: Starting pulse, output LOW", Index);
+                        }
+                        break;
+                }
+            } else {
+                // Handle mid-count behavior for certain modes
+                switch (CurrentPitMode) {
+                    case PitMode.SquareWave:
+                    case PitMode.SquareWaveAlias:
+                        // For square wave, toggle halfway through the count
+                        if (CurrentCount == ReloadValue / 2) {
+                            OutputState = OutputState == OutputStatus.High ? OutputStatus.Low : OutputStatus.High;
+                        }
+                        break;
+                }
+            }
+
             return true;
         }
 
         return false;
+    }
+
+    private bool GetIfWeShouldCount() {
+        bool shouldCount = true;
+        switch (CurrentPitMode) {
+            case PitMode.InterruptOnTerminalCount:
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+            case PitMode.SquareWave:
+            case PitMode.SquareWaveAlias:
+            case PitMode.SoftwareStrobe:
+                // These modes don't count when gate is disabled
+                shouldCount = IsGateEnabled;
+                break;
+        }
+        return shouldCount;
     }
 
     /// <summary>
@@ -216,10 +389,11 @@ public class Pit8254Counter {
         }
         ReadWritePolicy = readWritePolicy;
         Mode = (ushort)(value >> 1 & 0b111);
-        if (Mode != 3 && _loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("Counter {Index} Mode updated to {Mode} which is not supported.", Index, Mode);
-        }
         Bcd = (value & 1) == 1;
+
+        // Reset pulse state when mode changes
+        _inPulseState = false;
+
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
     }
 
@@ -233,9 +407,9 @@ public class Pit8254Counter {
         } else {
             UpdateDesiredFrequency(HardwareFrequency / ReloadValue);
         }
-        
+
         // Update square wave state if needed
-        if (CurrentPitMode == PitMode.SquareWave || CurrentPitMode == PitMode.SquareWaveAlias) {
+        if (CurrentPitMode is PitMode.SquareWave or PitMode.SquareWaveAlias) {
             // Only consider valid counter values
             IsSquareWaveActive = ReloadValue >= 2;
         }
@@ -252,32 +426,88 @@ public class Pit8254Counter {
         Activator.Frequency = desiredFrequency;
         SettingChangedEvent?.Invoke(this, EventArgs.Empty);
     }
-    
+
     /// <summary>
-    /// Triggers the gate for this counter
+    /// Triggers the gate for this counter.
+    /// Implements the GATE input behavior as defined in Intel 8254 Datasheet section 3.3
     /// </summary>
+    /// <param name="enabled">Whether the gate is enabled (high) or disabled (low)</param>
     public void SetGateState(bool enabled) {
+        // Store gate state for modes where it inhibits counting
+        IsGateEnabled = enabled;
+
         // Handle gate trigger based on current mode
-        switch(CurrentPitMode) {
+        switch (CurrentPitMode) {
+            case PitMode.InterruptOnTerminalCount:
+                // Mode 0: "The GATE input is level sensitive and active high. When GATE is low, counting is inhibited."
+                // Reference: Intel 8254 Datasheet, Mode 0 Operation
+                // Suspend counting is done above in ProcessActivation
+                break;
+
             case PitMode.OneShot:
+                // Mode 1: "The GATE input is edge sensitive and rising-edge triggered. A rising edge of GATE loads the counter
+                // with the initial count and initiates counting."
+                // Reference: Intel 8254 Datasheet, Mode 1 Operation
                 if (enabled) {
                     OutputState = OutputStatus.Low;
+                    // Load counter with reload value and start counting
+                    CurrentCount = ReloadValue;
                 }
                 break;
-                
+
+            case PitMode.RateGenerator:
+            case PitMode.RateGeneratorAlias:
+                // Mode 2: "The GATE input is level sensitive and active high. When GATE is low, counting is inhibited.
+                // When GATE goes from low to high, the counter is reloaded with the initial count and counting begins."
+                // Reference: Intel 8254 Datasheet, Mode 2 Operation
+                if (!enabled) {
+                    OutputState = OutputStatus.High;
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
+                } else {
+                    // Reload counter on gate rising edge
+                    CurrentCount = ReloadValue;
+                }
+                break;
+
             case PitMode.SquareWave:
             case PitMode.SquareWaveAlias:
+                // Mode 3: "The GATE input is level sensitive and active high. When GATE is low, counting is inhibited.
+                // When GATE goes from low to high, the counter is reloaded with the initial count and counting begins."
+                // Reference: Intel 8254 Datasheet, Mode 3 Operation
                 IsSquareWaveActive = enabled;
                 if (enabled) {
                     // Reset the output state to high when starting
                     OutputState = OutputStatus.High;
+                    // Reload counter on gate rising edge
+                    CurrentCount = ReloadValue;
+                } else {
+                    OutputState = OutputStatus.High;
+                }
+                break;
+
+            case PitMode.SoftwareStrobe:
+                // Mode 4: "The GATE input is level sensitive and active high. When GATE is low, counting is inhibited."
+                // Reference: Intel 8254 Datasheet, Mode 4 Operation
+                if (!enabled) {
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
+                }
+                break;
+
+            case PitMode.HardwareStrobe:
+                // Mode 5: "The GATE input is edge sensitive and rising-edge triggered. A rising edge of GATE initiates counting."
+                // Reference: Intel 8254 Datasheet, Mode 5 Operation
+                if (!enabled) {
+                    // Cancel any ongoing pulse
+                    _inPulseState = false;
                 }
                 break;
         }
-        
+
         GateStateChanged?.Invoke(this, enabled);
     }
-    
+
     /// <inheritdoc/>
     public override string ToString() {
         return System.Text.Json.JsonSerializer.Serialize(this);
