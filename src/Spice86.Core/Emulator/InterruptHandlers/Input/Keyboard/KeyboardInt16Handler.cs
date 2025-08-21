@@ -42,18 +42,6 @@ public class KeyboardInt16Handler : InterruptHandler {
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x01, () => GetKeystrokeStatus(true));
         AddAction(0x02, GetShiftFlags);
-        AddAction(0x1D, () => Unsupported(0x1D));
-    }
-
-    private void Unsupported(int operation) {
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning(
-                "{ClassName} INT {Int:X2} {operation}: Unhandled/undocumented keyboard interrupt called, will ignore",
-                nameof(KeyboardInt16Handler), VectorNumber, operation);
-        }
-
-        //If games that use those unsupported interrupts misbehave or crash, check if certain flags/registers have to be set
-        //properly, e.g., AX = 0 and/or setting the carry flag accordingly.
     }
 
     /// <inheritdoc/>

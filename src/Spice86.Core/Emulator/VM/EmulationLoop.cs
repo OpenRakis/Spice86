@@ -38,7 +38,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// Whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
-    
+
     public int TargetCpuCyclesPerMs {
         get => _cyclesLimiter.TargetCpuCyclesPerMs;
         set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
