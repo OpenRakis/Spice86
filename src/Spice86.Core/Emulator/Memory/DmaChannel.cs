@@ -2,8 +2,6 @@
 
 using Spice86.Core.Emulator.CPU;
 
-using System;
-
 /// <summary>
 /// Contains information about a DMA channel.
 /// </summary>
@@ -197,7 +195,7 @@ public sealed class DmaChannel {
 
         int count = Math.Min(TransferChunkSize, TransferBytesRemaining);
         int startAddress = (int)(memoryAddress + sourceOffset);
-        Span<byte> source = _memory.GetSpan(startAddress, count);
+        IList<byte> source = _memory.GetSlice(startAddress, count);
 
         count = device.WriteBytes(source);
         TransferBytesRemaining -= count;

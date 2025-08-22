@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System;
+using System.Linq;
 using System.Text;
 
 /// <summary>
@@ -36,14 +37,20 @@ public class DosStringDecoder {
     /// Converts a single DOS character byte to a string using the current encoding.
     /// </summary>
     public string ConvertSingleDosChar(byte characterByte) {
-        ReadOnlySpan<byte> sourceAsArray = [characterByte];
-        return Encoding.GetString(sourceAsArray);
+        return ConvertDosChars([characterByte]);
     }
 
     /// <summary>
+    /// Converts an array of DOS character bytes to a string using the current encoding.
+    /// </summary>
+    public string ConvertDosChars(byte[] characterBytes) {
+        return ConvertDosChars(characterBytes.AsSpan());
+    }
+    
+    /// <summary>
     /// Converts a span of DOS character bytes to a string using the current encoding.
     /// </summary>
-    public string ConvertDosChars(Span<byte> characterBytes) {
+    public string ConvertDosChars(ReadOnlySpan<byte> characterBytes) {
         return Encoding.GetString(characterBytes);
     }
 
@@ -71,6 +78,7 @@ public class DosStringDecoder {
 
         return ConvertDosChars(data[..dataIndex]);
     }
+
 
     /// <summary>
     /// Gets a zero terminated string from the memory at DS:DX.

@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Memory;
 
+using Spice86.Shared.Utils;
+
 /// <summary>
 /// Represents plain old RAM.
 /// </summary>
@@ -28,7 +30,7 @@ public class Ram : IMemoryDevice {
     }
 
     /// <inheritdoc />
-    public Span<byte> GetSpan(int address, int length) {
-        return _memory.AsSpan(address, length);
+    public IList<byte> GetSlice(int address, int length) {
+        return _memory.GetSlice(address, length);
     }
 }

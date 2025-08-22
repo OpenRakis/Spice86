@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the memory bus of the IBM PC.
@@ -81,26 +82,10 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     }
 
     /// <inheritdoc/>
-    public uint Length => (uint)_memoryDevices.Length;
+    public int Length => _memoryDevices.Length;
 
-    /// <summary>
-    /// Returns a <see cref="Span{T}"/> that represents the specified range of memory.
-    /// </summary>
-    /// <param name="address">The starting address of the memory range.</param>
-    /// <param name="length">The length of the memory range.</param>
-    /// <returns>A <see cref="Span{T}"/> instance that represents the specified range of memory.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when no memory device supports the specified memory range.</exception>
-    public Span<byte> GetSpan(int address, int length) {
-        address = A20Gate.TransformAddress(address);
-        foreach (DeviceRegistration device in _devices) {
-            if (address < device.StartAddress || address + length > device.EndAddress) {
-                continue;
-            }
-            _memoryBreakpoints.MonitorRangeReadAccess((uint)address, (uint)(address + length));
-            return device.Device.GetSpan(address, length);
-        }
-
-        throw new InvalidOperationException($"No Memory Device supports a span from {address} to {address + length}");
+    public IList<byte> GetSlice(int address, int length) {
+        return UInt8.GetSlice(address, length);
     }
 
     /// <summary>

@@ -205,7 +205,7 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="source">Pointer to data in memory.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int DmaWrite(ReadOnlySpan<byte> source) {
+    public int DmaWrite(IList<byte> source) {
         int actualCount = _waveBuffer.Write(source);
         if (AutoInitialize) {
             _autoInitTotal += actualCount;

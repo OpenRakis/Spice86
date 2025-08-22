@@ -187,7 +187,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         }
 
         // Validate memory bounds - ensure we don't exceed available memory
-        uint maxMemoryAddress = Memory.Length;
+        uint maxMemoryAddress = (uint)Memory.Length;
         if (sourceAddress + byteCount > maxMemoryAddress) {
             SetCarryFlag(true, calledFromVm);
             State.AH = (byte)ExtendedMemoryCopyStatus.InvalidSource;
@@ -211,8 +211,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
         }
 
         // Perform the memory copy using spans (following XMS pattern)
-        Span<byte> sourceSpan = Memory.GetSpan((int)sourceAddress, (int)byteCount);
-        Span<byte> destinationSpan = Memory.GetSpan((int)destinationAddress, (int)byteCount);
+        IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
+        IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
         
         sourceSpan.CopyTo(destinationSpan);
 

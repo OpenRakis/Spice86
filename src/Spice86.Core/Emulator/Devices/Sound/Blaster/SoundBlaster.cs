@@ -433,7 +433,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
 
     void IDmaDevice16.SingleCycleComplete() => throw new NotImplementedException();
 
-    int IDmaDevice8.WriteBytes(ReadOnlySpan<byte> source) => _dsp.DmaWrite(source);
+    int IDmaDevice8.WriteBytes(IList<byte> source) => _dsp.DmaWrite(source);
 
     int IDmaDevice16.WriteWords(IntPtr source, int count) => throw new NotImplementedException();
 

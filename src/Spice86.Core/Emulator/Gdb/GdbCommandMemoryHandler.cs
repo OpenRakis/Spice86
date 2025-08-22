@@ -44,7 +44,7 @@ public class GdbCommandMemoryHandler {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Reading memory at address {Address} for a length of {Length}", address, length);
             }
-            uint memorySize = _memory.Length;
+            uint memorySize = (uint)_memory.Length;
             StringBuilder response = new StringBuilder((int)length * 2);
             for (long i = 0; i < length; i++) {
                 long readAddress = address + i;

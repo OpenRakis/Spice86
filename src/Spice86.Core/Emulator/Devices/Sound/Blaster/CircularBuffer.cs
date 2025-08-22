@@ -1,7 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
-using System;
-using System.Threading;
+using Spice86.Shared.Utils;
+
+using System.Linq;
 
 /// <summary>
 /// Stores bytes of data in a circular buffer.
@@ -54,33 +55,33 @@ public sealed class CircularBuffer {
 
         return count;
     }
+    
     /// <summary>
     /// Writes bytes from a location in memory to the buffer and advances the write pointer.
     /// </summary>
     /// <param name="source">Data to read.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int Write(ReadOnlySpan<byte> source) {
+    public int Write(IList<byte> source) {
         int bytesAvailable = _bytesInBuffer;
         int bytesFree = Capacity - bytesAvailable;
 
-        ReadOnlySpan<byte> sourceSpan = source.Length <= bytesFree ? source : source[..bytesFree];
-
-        if (sourceSpan.Length > 0) {
+        IList<byte> sourceWindow = source.Count <= bytesFree ? source : source.GetSlice(..bytesFree);
+        if (sourceWindow.Count > 0) {
             int writePos = _writePosition;
-            Span<byte> target = _data.AsSpan(writePos);
-            if (!sourceSpan.TryCopyTo(target)) {
-                ReadOnlySpan<byte> src1 = sourceSpan[..target.Length];
-                ReadOnlySpan<byte> src2 = sourceSpan[target.Length..];
+            IList<byte> dataListAtPosition = _data.GetSlice(writePos..);
+            if (!sourceWindow.TryCopyTo(dataListAtPosition)) {
+                IList<byte> src1 = source.GetSlice(..dataListAtPosition.Count);
+                IList<byte> src2 = sourceWindow.GetSlice(dataListAtPosition.Count..);
 
-                src1.CopyTo(target);
-                src2.CopyTo(_data.AsSpan());
+                src1.CopyTo(dataListAtPosition);
+                src2.CopyTo(_data);
             }
 
-            Interlocked.Add(ref _bytesInBuffer, sourceSpan.Length);
-            _writePosition = writePos + sourceSpan.Length & _sizeMask;
+            Interlocked.Add(ref _bytesInBuffer, sourceWindow.Count);
+            _writePosition = writePos + sourceWindow.Count & _sizeMask;
         }
 
-        return sourceSpan.Length;
+        return sourceWindow.Count;
     }
 
     /// <summary>

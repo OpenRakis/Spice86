@@ -42,7 +42,7 @@ public class EmmRegister : IMemoryDevice {
     }
 
     /// <inheritdoc />
-    public Span<byte> GetSpan(int address, int length) {
-        return PhysicalPage.GetSpan((int)(address - Offset), length);
+    public IList<byte> GetSlice(int address, int length) {
+        return PhysicalPage.GetSlice((int)(address - Offset), length);
     }
 }

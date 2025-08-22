@@ -55,7 +55,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (TryParseAddressString(endAddress, _state, out uint? endAddressValue)) {
             EndAddress = ConvertUtils.ToHex32(endAddressValue.Value);
         } else {
-            EndAddress = ConvertUtils.ToHex32(_memory.Length);
+            EndAddress = ConvertUtils.ToHex32((uint)_memory.Length);
         }
         CanCloseTab = canCloseTab;
         TryUpdateHeaderAndMemoryDocument();

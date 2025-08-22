@@ -60,13 +60,15 @@ public class BreakpointTests {
 
         // GetData
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_READ, 5, 1, true, () => {
-            memory.GetSpan(5, 10);
+            // Should trigger once
+            ReadAll(memory.GetSlice(5, 10));
             // Should not trigger for this
-            memory.GetSpan(0, 5);
-            memory.GetSpan(6, 5);
+            ReadAll(memory.GetSlice(0, 5));
+            ReadAll(memory.GetSlice(6, 5));
         });
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_READ, 5, 1, true, () => {
-            memory.GetSpan(0, 6);
+            // Should trigger once
+            ReadAll(memory.GetSlice(0, 6));
         });
 
         // LoadData
@@ -108,6 +110,12 @@ public class BreakpointTests {
             memory.UInt16[0] = 0;
             memory.UInt32[0] = 0;
         });
+    }
+
+    private static void ReadAll<T>(IList<T> list) {
+        foreach (T _ in list) {
+            // dummy read of each item of the list to eventually trigger breakpoints
+        }
     }
 
     [AssertionMethod]

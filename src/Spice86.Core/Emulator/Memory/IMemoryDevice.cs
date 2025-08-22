@@ -26,10 +26,10 @@ public interface IMemoryDevice {
     void Write(uint address, byte value);
 
     /// <summary>
-    /// Get a span of bytes from the device.
+    /// Get a list of bytes from the device.
     /// </summary>
     /// <param name="address">The start address of the memory</param>
-    /// <param name="length">The length of the span</param>
-    /// <returns>A byte span</returns>
-    Span<byte> GetSpan(int address, int length);
+    /// <param name="length">The length of the slice</param>
+    /// <returns>A byte list</returns>
+    public IList<byte> GetSlice(int address, int length);
 }

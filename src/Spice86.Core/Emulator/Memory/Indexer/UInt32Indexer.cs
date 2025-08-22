@@ -25,4 +25,7 @@ public class UInt32Indexer : MemoryIndexer<uint> {
             _byteReaderWriter[address + 3] = (byte)(value >> 24);
         }
     }
+    
+    /// <inheritdoc/>
+    public override int Count => _byteReaderWriter.Length / 4;
 }

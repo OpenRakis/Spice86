@@ -127,7 +127,7 @@ public class VideoMemory : IVideoMemory {
     }
 
     /// <inheritdoc />
-    public Span<byte> GetSpan(int address, int length) {
+    public IList<byte> GetSlice(int address, int length) {
         throw new NotSupportedException();
     }
 

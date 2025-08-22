@@ -13,5 +13,5 @@ public interface IReaderWriter<T> {
     /// <summary>
     /// Length of the address space
     /// </summary>
-    public uint Length { get; }
+    public int Length { get; }
 }
