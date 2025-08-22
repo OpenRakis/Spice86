@@ -21,6 +21,7 @@ using System.Text;
 /// allocating file handles, and updating the Disk Transfer Area.
 /// </summary>
 public class DosFileManager {
+    private const int ExtDeviceBit = 0x0200;
     private static readonly char[] _directoryChars = {
         DosPathResolver.DirectorySeparatorChar,
         DosPathResolver.AltDirectorySeparatorChar };
@@ -70,7 +71,6 @@ public class DosFileManager {
     /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
-    /// <param name="localFileSearchManager">Provides cached file searches</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
         DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
@@ -925,7 +925,7 @@ public class DosFileManager {
             case 0x00:      /* Get Device Information */
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
-                    state.DX = virtualDevice.Information;
+                    state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
                 } else if (fileOrDevice is DosFile dosFile) {
                     byte sourceDrive = dosFile.Drive;
                     if (sourceDrive == 0xff) {
@@ -946,14 +946,15 @@ public class DosFileManager {
                         _loggerService.Warning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", state.DH);
                     }
                     return DosFileOperationResult.Error(DosErrorCode.DataInvalid);
-                }
-                if (OpenFiles[handle] is IVirtualDevice device && (device.Information & 0x8000) > 9) {
-                    state.AL = device.GetStatus(true);
                 } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                        _loggerService.Warning("IOCTL: Device for handle {Handle} doesn't support Set Device Information", handle);
+                    if (OpenFiles[handle] is IVirtualDevice device && (device.Information & 0x8000) > 0) {
+                        state.AL = device.GetStatus(true);
+                    } else {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("IOCTL: Device for handle {Handle} doesn't support Set Device Information", handle);
+                        }
+                        return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                     }
-                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
                 return DosFileOperationResult.NoValue();
 
@@ -1026,7 +1027,7 @@ public class DosFileManager {
 
             case 0x07:      /* Get Output Status */
                 if (OpenFiles[handle] is IVirtualDevice outputDevice &&
-                    (outputDevice.Information & 0x0200) > 0) {
+                    (outputDevice.Information & ExtDeviceBit) > 0) {
                     state.AL = outputDevice.GetStatus(false);
                 }
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -1092,7 +1093,7 @@ public class DosFileManager {
                         _memory.UInt16[dosStringBuffer + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
                         _memory.UInt16[dosStringBuffer + 4] = 0x0000;                            // cylinders
                         _memory.UInt8[dosStringBuffer + 6] = 0x00;                              // media type
-                        _memory.UInt16[dosStringBuffer + 7] = 0x0200;                            // bytes per sector
+                        _memory.UInt16[dosStringBuffer + 7] = 0x0200; // bytes per sector (Win3 File Mgr. uses it)
                         break;
 
                     case 0x46:  // Set Volume Serial Number (not yet implemented)
