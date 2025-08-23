@@ -1,35 +1,72 @@
-<UserControl
-    x:Class="Spice86.Views.CfgCpuView"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
-    x:CompileBindings="True"
-    x:DataType="viewModels:CfgCpuViewModel"
-    mc:Ignorable="d">
+﻿<UserControl
+	x:Class="Spice86.Views.CfgCpuView"
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	x:CompileBindings="True"
+	x:DataType="viewModels:CfgCpuViewModel"
+	mc:Ignorable="d">
 	<Design.DataContext>
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
-	<Grid RowDefinitions="Auto,*,Auto">
+	<Grid RowDefinitions="Auto,Auto,*,Auto">
 		<Grid Grid.Row="0" Margin="5" ColumnDefinitions="*,*,*" DockPanel.Dock="Top">
 			<StackPanel Grid.Column="0" Margin="5" Orientation="Horizontal">
 				<Label HorizontalAlignment="Center" Margin="5">Number of nodes</Label>
 				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding NumberOfNodes}" />
 			</StackPanel>
 			<StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
-				<Label HorizontalAlignment="Center" Margin="5">Average time (ms) for adding a node</Label>
+				<Label HorizontalAlignment="Center" Margin="5">Average time (ms)</Label>
 				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding AverageNodeTime}" />
 			</StackPanel>
 			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
-				<Label HorizontalAlignment="Center" Margin="5">Max number of nodes to display</Label>
-				<NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" Value="{Binding MaxNodesToDisplay}" FormatString="0" Minimum="0" Maximum="1000" />
+				<Label HorizontalAlignment="Center" Margin="5">Max nodes</Label>
+				<NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" 
+							   Value="{Binding MaxNodesToDisplay}" FormatString="0" 
+							   Minimum="0" Maximum="1000" />
+				<CheckBox Margin="8,0,0,0" Content="Auto-follow" IsChecked="{Binding AutoFollow}" />
 			</StackPanel>
 		</Grid>
-		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+		
+		<!-- Enhanced search panel with AutoCompleteBox -->
+		<Grid Grid.Row="1" Margin="5" ColumnDefinitions="*,Auto,Auto">
+			<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+				<TextBlock VerticalAlignment="Center" Text="Node:" />
+				<AutoCompleteBox 
+					Width="300"
+					ItemsSource="{Binding NodeEntries}"
+					SelectedItem="{Binding SelectedNodeEntry}"
+					ItemFilter="{Binding NodeFilter}"
+					ItemSelector="{Binding NodeItemSelector}"
+					Watermark="Type to select a node"
+					MinimumPrefixLength="1"
+					IsTextCompletionEnabled="True">
+					<AutoCompleteBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding}" />
+						</DataTemplate>
+					</AutoCompleteBox.ItemTemplate>
+				</AutoCompleteBox>
+				<Button 
+					Content="Go"
+					Command="{Binding NavigateToSelectedNodeCommand}" 
+					IsEnabled="{Binding SelectedNodeEntry, Converter={x:Static ObjectConverters.IsNotNull}}" />
+			</StackPanel>
+
+			<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+				<TextBox Width="150" Watermark="Search by text..." Text="{Binding SearchText}" />
+				<Button Content="Search" Command="{Binding SearchNodeCommand}" />
+			</StackPanel>
+			
+			<Button Grid.Column="2" Margin="8,0,0,0" Content="Refresh Graph" Command="{Binding UpdateGraphCommand}" />
+		</Grid>
+		
+		<ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
 			<Border Background="White">
 				<ZoomBorder 
 					Name="ZoomBorder"
@@ -43,5 +80,20 @@
 				</ZoomBorder>
 			</Border>
 		</ScrollViewer>
+		
+		<!-- Status message and legend -->
+		<Grid Grid.Row="3" ColumnDefinitions="*,Auto">
+			<TextBlock Grid.Column="0" Margin="5" Text="{Binding StatusMessage}" />
+			
+			<Border Grid.Column="1" Background="#AAFFFFFF" CornerRadius="3" Padding="5" Margin="0,5,5,5">
+				<StackPanel Orientation="Horizontal" Spacing="8">
+					<TextBlock Text="🔴 Current node" />
+					<TextBlock Text="→ Jump" />
+					<TextBlock Text="⟱ Call" />
+					<TextBlock Text="⟰ Return" />
+					<TextBlock Text="☰ Selector" />
+				</StackPanel>
+			</Border>
+		</Grid>
 	</Grid>
 </UserControl>
