@@ -1,40 +1,48 @@
 ﻿<UserControl
-	x:Class="Spice86.Views.CfgCpuView"
-	xmlns="https://github.com/avaloniaui"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
-	d:DesignHeight="450"
-	d:DesignWidth="800"
-	x:CompileBindings="True"
-	x:DataType="viewModels:CfgCpuViewModel"
-	mc:Ignorable="d">
+    x:Class="Spice86.Views.CfgCpuView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:CompileBindings="True"
+    x:DataType="viewModels:CfgCpuViewModel"
+    mc:Ignorable="d">
 	<Design.DataContext>
 		<viewModels:CfgCpuViewModel />
 	</Design.DataContext>
+	
+	<UserControl.Styles>
+    	<StyleInclude Source="avares://AvaloniaProgressRing/Styles/ProgressRing.xaml"/>
+	</UserControl.Styles>
+	
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
-		<Grid Grid.Row="0" Margin="5" ColumnDefinitions="*,*,*" DockPanel.Dock="Top">
+		<!-- Controls panel -->
+		<Grid Grid.Row="0" Margin="5" ColumnDefinitions="*,*,*,Auto" DockPanel.Dock="Top">
 			<StackPanel Grid.Column="0" Margin="5" Orientation="Horizontal">
-				<Label HorizontalAlignment="Center" Margin="5">Number of nodes</Label>
-				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding NumberOfNodes}" />
+				<TextBlock VerticalAlignment="Center">Number of nodes:</TextBlock>
+				<TextBlock Padding="5,0,0,0" VerticalAlignment="Center" Text="{Binding NumberOfNodes}" />
 			</StackPanel>
 			<StackPanel Grid.Column="1" Margin="5" Orientation="Horizontal">
-				<Label HorizontalAlignment="Center" Margin="5">Average time (ms)</Label>
-				<TextBlock Padding="0,5,0,0" HorizontalAlignment="Center" Text="{Binding AverageNodeTime}" />
+				<TextBlock VerticalAlignment="Center">Average time (ms):</TextBlock>
+				<TextBlock Padding="5,0,0,0" VerticalAlignment="Center" Text="{Binding AverageNodeTime}" />
 			</StackPanel>
 			<StackPanel Grid.Column="2" Margin="5" Orientation="Horizontal">
-				<Label HorizontalAlignment="Center" Margin="5">Max nodes</Label>
-				<NumericUpDown Padding="0,5,0,0"  HorizontalAlignment="Center" 
-							   Value="{Binding MaxNodesToDisplay}" FormatString="0" 
-							   Minimum="0" Maximum="1000" />
-				<CheckBox Margin="8,0,0,0" Content="Auto-follow" IsChecked="{Binding AutoFollow}" />
+				<TextBlock VerticalAlignment="Center">Max nodes:</TextBlock>
+				<NumericUpDown Margin="5,0,0,0" VerticalAlignment="Center" 
+                               Value="{Binding MaxNodesToDisplay}" 
+                               FormatString="0" Minimum="0" Maximum="1000" 
+                               Width="80" />
 			</StackPanel>
+			<CheckBox Grid.Column="3" Margin="5" Content="Auto-follow execution" IsChecked="{Binding AutoFollow}" />
 		</Grid>
 		
-		<!-- Enhanced search panel with AutoCompleteBox -->
-		<Grid Grid.Row="1" Margin="5" ColumnDefinitions="*,Auto,Auto">
+		<!-- Search panel with AutoCompleteBox -->
+		<Grid IsEnabled="{Binding !IsLoading}" Grid.Row="1" Margin="5" ColumnDefinitions="*,Auto,Auto">
 			<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
 				<TextBlock VerticalAlignment="Center" Text="Node:" />
 				<AutoCompleteBox 
@@ -44,11 +52,12 @@
 					ItemFilter="{Binding NodeFilter}"
 					ItemSelector="{Binding NodeItemSelector}"
 					Watermark="Type to select a node"
+					KeyDown="OnAutoCompleteKeyDown"
 					MinimumPrefixLength="1"
 					IsTextCompletionEnabled="True">
 					<AutoCompleteBox.ItemTemplate>
 						<DataTemplate>
-							<TextBlock Text="{Binding}" />
+							<TextBlock Text="{Binding}" TextWrapping="Wrap" />
 						</DataTemplate>
 					</AutoCompleteBox.ItemTemplate>
 				</AutoCompleteBox>
@@ -66,20 +75,34 @@
 			<Button Grid.Column="2" Margin="8,0,0,0" Content="Refresh Graph" Command="{Binding UpdateGraphCommand}" />
 		</Grid>
 		
-		<ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-			<Border Background="White">
-				<ZoomBorder 
-					Name="ZoomBorder"
-					ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
-					Stretch="None"
-					ZoomSpeed="1.5"
-					EnableConstrains="True"
-					ClipToBounds="True" Focusable="True"
-					VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-					<agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
-				</ZoomBorder>
-			</Border>
-		</ScrollViewer>
+		<!-- Graph panel -->
+		<Grid Grid.Row="2">
+			<!-- Loading indicator -->
+			<progRing:ProgressRing
+                Width="100"
+                Height="100"
+				IsVisible="{Binding IsLoading}"
+                IsActive="{Binding IsLoading}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Foreground="{DynamicResource SystemAccentColor}" />
+				
+			<!-- Graph display -->
+			<ScrollViewer IsVisible="{Binding !IsLoading}" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+				<Border Background="White">
+					<ZoomBorder 
+						Name="ZoomBorder"
+						ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
+						Stretch="None"
+						ZoomSpeed="1.5"
+						EnableConstrains="True"
+						ClipToBounds="True" Focusable="True"
+						VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+						<agc:GraphPanel Graph="{Binding Graph}" LayoutMethod="SugiyamaScheme" />
+					</ZoomBorder>
+				</Border>
+			</ScrollViewer>
+		</Grid>
 		
 		<!-- Status message and legend -->
 		<Grid Grid.Row="3" ColumnDefinitions="*,Auto">
