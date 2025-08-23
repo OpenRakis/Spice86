@@ -48,8 +48,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
     [ObservableProperty] private string? _selectedNodeEntry;
 
     [ObservableProperty] private bool _autoFollow = false;
+    
+    [ObservableProperty] private bool _isLoading;
 
-    public CfgCpuViewModel(Configuration configuration, ExecutionContextManager executionContextManager, IPauseHandler pauseHandler) {
+    public CfgCpuViewModel(Configuration configuration,
+        ExecutionContextManager executionContextManager,
+        IPauseHandler pauseHandler) {
         _executionContextManager = executionContextManager;
         _performanceMeasurer = new PerformanceMeasurer();
         IsCfgCpuEnabled = configuration.CfgCpu;
@@ -89,12 +93,18 @@ public partial class CfgCpuViewModel : ViewModelBase {
             return;
         }
 
-        ICfgNode? foundNode = await FindNodeByTextAsync(SearchText);
-        if (foundNode != null) {
-            StatusMessage = $"Found node: {_nodeToString.ToHeaderString(foundNode)}";
-            await RegenerateGraphFromNodeAsync(foundNode);
-        } else {
-            StatusMessage = $"No node found matching: {SearchText}";
+        try {
+            IsLoading = true;
+            ICfgNode? foundNode = await FindNodeByTextAsync(SearchText);
+            if (foundNode != null) {
+                StatusMessage = $"Found node: {_nodeToString.ToHeaderString(foundNode)}";
+                await RegenerateGraphFromNodeAsync(foundNode);
+                IsLoading = false;
+            } else {
+                StatusMessage = $"No node found matching: {SearchText}";
+            }
+        } finally {
+            IsLoading = false;
         }
     }
 
@@ -102,7 +112,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private async Task NavigateToSelectedNode() {
         if (SelectedNodeEntry != null && _searchableNodes.TryGetValue(SelectedNodeEntry, out ICfgNode? node)) {
             StatusMessage = $"Navigating to: {_nodeToString.ToHeaderString(node)}";
+            IsLoading = true;
             await RegenerateGraphFromNodeAsync(node);
+            IsLoading = false;
         }
     }
 
@@ -148,75 +160,83 @@ public partial class CfgCpuViewModel : ViewModelBase {
     }
 
     private async Task RegenerateGraphFromNodeAsync(ICfgNode startNode) {
-        await Task.Run(async () => {
-            long localNumberOfNodes = 0;
-            Graph currentGraph = new();
-            Queue<ICfgNode> queue = new();
-            queue.Enqueue(startNode);
-            HashSet<ICfgNode> visitedNodes = new();
-            HashSet<(int, int)> existingEdges = new();
-            Stopwatch stopwatch = new();
+        try {
+            IsLoading = true;
+            StatusMessage = "Generating graph...";
+            
+            await Task.Run(async () => {
+                long localNumberOfNodes = 0;
+                Graph currentGraph = new();
+                Queue<ICfgNode> queue = new();
+                queue.Enqueue(startNode);
+                HashSet<ICfgNode> visitedNodes = new();
+                HashSet<(int, int)> existingEdges = new();
+                Stopwatch stopwatch = new();
 
-            // Clear the searchable nodes
-            _searchableNodes.Clear();
+                // Clear the searchable nodes
+                _searchableNodes.Clear();
 
-            while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
-                ICfgNode node = queue.Dequeue();
-                if (visitedNodes.Contains(node)) {
-                    continue;
+                while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
+                    ICfgNode node = queue.Dequeue();
+                    if (visitedNodes.Contains(node)) {
+                        continue;
+                    }
+
+                    visitedNodes.Add(node);
+                    stopwatch.Restart();
+
+                    // Format node text with visual indicators for node type
+                    string nodeText = FormatNodeText(node, node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id);
+
+                    // Add to searchable nodes
+                    string searchableText = $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
+                    _searchableNodes[searchableText] = node;
+
+                    foreach (ICfgNode successor in node.Successors) {
+                        (int, int) edgeKey = GenerateEdgeKey(node, successor);
+                        if (!existingEdges.Contains(edgeKey)) {
+                            currentGraph.Edges.Add(CreateEdge(node, successor));
+                            existingEdges.Add(edgeKey);
+                        }
+
+                        if (!visitedNodes.Contains(successor)) {
+                            queue.Enqueue(successor);
+                        }
+                    }
+
+                    foreach (ICfgNode predecessor in node.Predecessors) {
+                        (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
+                        if (!existingEdges.Contains(edgeKey)) {
+                            currentGraph.Edges.Add(CreateEdge(predecessor, node));
+                            existingEdges.Add(edgeKey);
+                        }
+
+                        if (!visitedNodes.Contains(predecessor)) {
+                            queue.Enqueue(predecessor);
+                        }
+                    }
+
+                    stopwatch.Stop();
+                    _performanceMeasurer.UpdateValue(stopwatch.ElapsedMilliseconds);
+                    localNumberOfNodes++;
                 }
 
-                visitedNodes.Add(node);
-                stopwatch.Restart();
+                long averageNodeTime = _performanceMeasurer.ValuePerMillisecond;
 
-                // Format node text with visual indicators for node type
-                string nodeText = FormatNodeText(node, node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id);
+                await Dispatcher.UIThread.InvokeAsync(() => {
+                    Graph = currentGraph;
+                    IsLoading = false;
+                    NumberOfNodes = localNumberOfNodes;
+                    AverageNodeTime = averageNodeTime;
+                    StatusMessage = $"Graph generated with {localNumberOfNodes} nodes";
 
-                // Add to searchable nodes
-                string searchableText = $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
-                _searchableNodes[searchableText] = node;
-
-                foreach (ICfgNode successor in node.Successors) {
-                    (int, int) edgeKey = GenerateEdgeKey(node, successor);
-                    if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(CreateEdge(node, successor));
-                        existingEdges.Add(edgeKey);
-                    }
-
-                    if (!visitedNodes.Contains(successor)) {
-                        queue.Enqueue(successor);
-                    }
-                }
-
-                foreach (ICfgNode predecessor in node.Predecessors) {
-                    (int, int) edgeKey = GenerateEdgeKey(predecessor, node);
-                    if (!existingEdges.Contains(edgeKey)) {
-                        currentGraph.Edges.Add(CreateEdge(predecessor, node));
-                        existingEdges.Add(edgeKey);
-                    }
-
-                    if (!visitedNodes.Contains(predecessor)) {
-                        queue.Enqueue(predecessor);
-                    }
-                }
-
-                stopwatch.Stop();
-                _performanceMeasurer.UpdateValue(stopwatch.ElapsedMilliseconds);
-                localNumberOfNodes++;
-            }
-
-            long averageNodeTime = _performanceMeasurer.ValuePerMillisecond;
-
-            await Dispatcher.UIThread.InvokeAsync(() => {
-                Graph = currentGraph;
-                NumberOfNodes = localNumberOfNodes;
-                AverageNodeTime = averageNodeTime;
-                StatusMessage = $"Graph regenerated with {localNumberOfNodes} nodes";
-
-                // Update the node entries for the AutoCompleteBox
-                NodeEntries = new ObservableCollection<string>(_searchableNodes.Keys.OrderBy(k => k));
+                    // Update the node entries for the AutoCompleteBox
+                    NodeEntries = new ObservableCollection<string>(_searchableNodes.Keys.OrderBy(k => k));
+                });
             });
-        });
+        } finally {
+            IsLoading = false;
+        }
     }
 
     partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
