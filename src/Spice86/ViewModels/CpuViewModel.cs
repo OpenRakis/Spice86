@@ -24,10 +24,14 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
 
     [ObservableProperty]
     private CpuFlagsInfo _flags = new();
+    
+    [ObservableProperty]
+    private RegistersViewModel _registers;
 
     public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
         _cpuState = state;
         _memory = memory;
+        _registers = new RegistersViewModel(state);
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = true);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = false);
@@ -81,6 +85,9 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private void UpdateCpuState(State state) {
         state.CopyToStateInfo(this.State);
         state.CopyFlagsToStateInfo(this.Flags);
+        // Update the registers view model
+        Registers.Update();
+        
         EsDiString = _memory.GetZeroTerminatedString(
             MemoryUtils.ToPhysicalAddress(State.ES, State.DI),
             32);
