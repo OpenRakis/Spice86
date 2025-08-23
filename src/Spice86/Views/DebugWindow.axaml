@@ -61,15 +61,24 @@
 			</Button>
 		</StackPanel>
 		<TabControl TabStripPlacement="Left" Grid.Row="1">
-			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1" Content="{Binding CpuViewModel}">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F1">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="CPU" ToolTip.Tip="Alt-F1" />
+						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F1" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
+				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
+					<TabControl.ItemTemplate>
+						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+							<TabItem Header="{Binding Header}">
+								<ContentPresenter Content="{Binding}"/>
+							</TabItem>
+						</DataTemplate>
+					</TabControl.ItemTemplate>
+				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem
 				HotKeyManager.HotKey="Alt+F2"
@@ -84,24 +93,15 @@
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
 			</controls:HotKeyTabItem>
-			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F3">
+			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F3" Content="{Binding CpuViewModel}">
 				<controls:HotKeyTabItem.Header>
 					<LayoutTransformControl>
 						<LayoutTransformControl.LayoutTransform>
 							<RotateTransform Angle="-90" />
 						</LayoutTransformControl.LayoutTransform>
-						<TextBlock Margin="5,0,0,5" Text="Disassembly" ToolTip.Tip="Alt-F3" />
+						<TextBlock Margin="5,0,0,5" Text="CPU" ToolTip.Tip="Alt-F3" />
 					</LayoutTransformControl>
 				</controls:HotKeyTabItem.Header>
-						<TabControl ItemsSource="{Binding DisassemblyViewModels}">
-							<TabControl.ItemTemplate>
-								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-									<TabItem Header="{Binding Header}">
-										<ContentPresenter Content="{Binding}"/>
-									</TabItem>
-								</DataTemplate>
-							</TabControl.ItemTemplate>
-				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F4">
 				<controls:HotKeyTabItem.Header>
