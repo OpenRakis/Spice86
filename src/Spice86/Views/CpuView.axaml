@@ -5,37 +5,42 @@
              xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              xmlns:controls="clr-namespace:Spice86.Views.Controls"
+             xmlns:views="clr-namespace:Spice86.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.CpuView"
              x:DataType="viewModels:CpuViewModel">
-    <ScrollViewer>
-        <Grid ColumnDefinitions="*,*,*">
-            <controls:GroupBox Grid.Column="0" Header="Registers and misc">
-                <pgc:PropertyGrid
-                    DataContext="{CompiledBinding State}">
-                    <TextElement.FontFamily>
-                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                    </TextElement.FontFamily>
-                </pgc:PropertyGrid>
-            </controls:GroupBox>
-            <controls:GroupBox Grid.Column="1" Header="Flag Registers">
-                <pgc:PropertyGrid
-                    DataContext="{CompiledBinding Flags}">
-                    <TextElement.FontFamily>
-                        <OnPlatform Default="{StaticResource RobotoMonoFont}" />
-                    </TextElement.FontFamily>
-                </pgc:PropertyGrid>
-            </controls:GroupBox>
-            <Expander Grid.Column="2" Header="Possibly zero-terminated ASCII strings" IsExpanded="True">
-				<WrapPanel Orientation="Vertical">
-					<Label>ES:DI:</Label>
-					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding EsDiString, Mode=OneWay}" />
-					<Label>DS:SI:</Label>
-					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsSiString, Mode=OneWay}" />
-					<Label>DS:DX:</Label>
-					<TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsDxString, Mode=OneWay}" />
-				</WrapPanel>
-            </Expander>
-        </Grid>
-    </ScrollViewer>
+    <UniformGrid>
+        <controls:GroupBox Header="Registers">
+            <pgc:PropertyGrid
+                DataContext="{CompiledBinding State}">
+                <TextElement.FontFamily>
+                    <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                </TextElement.FontFamily>
+            </pgc:PropertyGrid>
+        </controls:GroupBox>
+			
+		<ScrollViewer>
+            <views:RegistersView DataContext="{Binding Registers}" />
+		</ScrollViewer>
+            
+        <controls:GroupBox Header="Flag Registers">
+            <pgc:PropertyGrid
+                DataContext="{CompiledBinding Flags}">
+                <TextElement.FontFamily>
+                    <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                </TextElement.FontFamily>
+            </pgc:PropertyGrid>
+        </controls:GroupBox>
+            
+		<controls:GroupBox Header="Possibly zero-terminated ASCII strings">
+            <StackPanel Orientation="Vertical">
+                <Label>ES:DI:</Label>
+                <TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding EsDiString, Mode=OneWay}" />
+                <Label>DS:SI:</Label>
+                <TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsSiString, Mode=OneWay}" />
+                <Label>DS:DX:</Label>
+                <TextBox IsReadOnly="True" MinWidth="100" TextWrapping="Wrap" Text="{Binding DsDxString, Mode=OneWay}" />
+            </StackPanel>
+        </controls:GroupBox>
+    </UniformGrid>
 </UserControl>
