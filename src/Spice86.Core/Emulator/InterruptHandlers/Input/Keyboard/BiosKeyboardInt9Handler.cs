@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -17,6 +18,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly AvaloniaKeyConverter _scanCodeConverter = new();
     private readonly Keyboard _keyboard;
     private static readonly SegmentedAddress CallbackLocation = new(0xf000, 0xe987);
+    private readonly DualPic _dualPic;
 
     /// <summary>
     /// Initializes a new instance.
@@ -29,12 +31,13 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, Stack stack, State state,
-        IFunctionHandlerProvider functionHandlerProvider,
+        IFunctionHandlerProvider functionHandlerProvider, DualPic dualPic,
         Keyboard keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         BiosKeyboardBuffer = biosKeyboardBuffer;
         _keyboard = keyboard;
+        _dualPic = dualPic;
     }
 
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
@@ -118,5 +121,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         // Enqueue the key code into the BIOS keyboard buffer
         ushort keyCode = (ushort)((scanCode << 8) | (ascii ?? 0));
         BiosKeyboardBuffer.EnqueueKeyCode(keyCode);
+        _dualPic.AcknowledgeInterrupt(1);
     }
 }
