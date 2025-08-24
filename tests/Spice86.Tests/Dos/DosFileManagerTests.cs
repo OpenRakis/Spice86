@@ -150,7 +150,7 @@ public class DosFileManagerTests {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
 
-        KeyboardController keyboard = new KeyboardController(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+        PS2Keyboard keyboard = new PS2Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
             configuration.FailOnUnhandledPort, null);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 
