@@ -358,7 +358,7 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = new HeadlessGui();
         }
 
-        KeyboardController keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
+        PS2Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
             loggerService, configuration.FailOnUnhandledPort, _gui);
 
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
