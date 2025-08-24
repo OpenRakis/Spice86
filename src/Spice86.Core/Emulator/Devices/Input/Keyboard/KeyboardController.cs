@@ -278,6 +278,11 @@ public sealed class KeyboardController : DefaultIOPortHandler {
                                 _loggerService.Verbose("Keyboard enabled via command 0xAE");
                             }
                             break;
+                        default:
+                            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                                _loggerService.Warning("Keyboard command {Command:X2} not recognized or not implemented", value);
+                            }
+                            break;
                     }
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
