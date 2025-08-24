@@ -249,9 +249,9 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                 }
                 
                 _a20Gate.IsEnabled = Command switch {
-                    KeyboardCommand.SetOutputPort => (value & 2) > 0,
-                    KeyboardCommand.EnableA20Gate => true,
-                    KeyboardCommand.DisableA20Gate => false,
+                    KeyboardCommand.WriteOutputPort => (value & 2) > 0,
+                    KeyboardCommand.EnableA20 => true,
+                    KeyboardCommand.DisableA20 => false,
                     _ => _a20Gate.IsEnabled
                 };
                 Command = KeyboardCommand.None;
@@ -265,14 +265,14 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                     
                     // Handle specific keyboard commands
                     switch (Command) {
-                        case KeyboardCommand.DisableKeyboard:
+                        case KeyboardCommand.DisablePortKbd:
                             _isKeyboardDisabled = true;
                             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                                 _loggerService.Verbose("Keyboard disabled via command 0xAD");
                             }
                             break;
                             
-                        case KeyboardCommand.EnableKeyboard:
+                        case KeyboardCommand.EnablePortKbd:
                             _isKeyboardDisabled = false;
                             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                                 _loggerService.Verbose("Keyboard enabled via command 0xAE");
@@ -280,13 +280,13 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                             break;
                         default:
                             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                                _loggerService.Warning("Keyboard command {Command:X2} not recognized or not implemented", value);
+                                _loggerService.Warning("Keyboard command {Command:X2} not implemented", value);
                             }
                             break;
                     }
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                        _loggerService.Warning("Keyboard command {Command:X2} not recognized or not implemented", value);
+                        _loggerService.Warning("Keyboard command {Command:X2} not recognized", value);
                     }
                 }
                 break;
