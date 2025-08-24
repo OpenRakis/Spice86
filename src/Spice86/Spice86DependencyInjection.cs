@@ -322,10 +322,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Emulator state serializer created...");
         }
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
-            cpuForEmulationLoop, state, timer,
-            emulatorBreakpointsManager, dmaController,
-            pauseHandler, loggerService);
+        PerformanceMeasurer perfMeasurer = new();
+
+        CycleLimiterBase cyclesLimiter = CycleLimiterFactory.Create(configuration);
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
@@ -339,7 +338,7 @@ public class Spice86DependencyInjection : IDisposable {
             textClipboard = new TextClipboard(mainWindow.Clipboard);
 
             PerformanceViewModel performanceViewModel = new(
-                state, pauseHandler, uiDispatcher, emulationLoop.CpuPerformanceMeasurer);
+                state, pauseHandler, uiDispatcher, perfMeasurer);
 
             mainWindow.PerformanceViewModel = performanceViewModel;
 
@@ -350,14 +349,22 @@ public class Spice86DependencyInjection : IDisposable {
 
             mainWindowViewModel = new MainWindowViewModel(
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, emulationLoop);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler,
+                cyclesLimiter);
             _gui = mainWindowViewModel;
         } else {
             _gui = new HeadlessGui();
         }
 
         Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
-            loggerService, configuration.FailOnUnhandledPort, _gui);
+            loggerService, configuration.FailOnUnhandledPort);
+
+        InputEventProcessor inputEventProcessor = new(keyboard, loggerService, _gui);
+
+        EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
+            cpuForEmulationLoop, state, timer,
+            emulatorBreakpointsManager, dmaController,
+            pauseHandler, cyclesLimiter, inputEventProcessor, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
@@ -368,14 +375,14 @@ public class Spice86DependencyInjection : IDisposable {
         EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
             state, stack, emulationLoop);
 
-        Mouse mouse = new(state, dualPic, _gui,
-                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
+        Mouse mouse = new(state, dualPic, _gui, configuration.Mouse, loggerService,
+            configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(state, memory, mouse, _gui,
             vgaFunctionality, loggerService);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
-            state, functionHandlerProvider, keyboard, biosKeyboardBuffer,
+            state, functionHandlerProvider, dualPic, keyboard, biosKeyboardBuffer,
             loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
