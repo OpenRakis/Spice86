@@ -30,7 +30,6 @@ public class EmulationLoop {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
-    private readonly InputEventProcessor _inputEventProcessor;
 
     /// <summary>
     /// Whether the emulation is paused.
@@ -49,14 +48,12 @@ public class EmulationLoop {
     /// <param name="dmaController">Used to perform DMA Channel data transfers regularly.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="cyclesLimiter">The class shared with the UI to control CPU speed.</param>
-    /// <param name="inputEventProcessor">The processor that handles keyboard and mouse events</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(PerformanceMeasurer perfMeasurer,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
         DmaController dmaController, IPauseHandler pauseHandler,
-        CycleLimiterBase cyclesLimiter, InputEventProcessor inputEventProcessor,
-        ILoggerService loggerService) {
+        CycleLimiterBase cyclesLimiter, ILoggerService loggerService) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -66,7 +63,6 @@ public class EmulationLoop {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _cyclesLimiter = cyclesLimiter;
-        _inputEventProcessor = inputEventProcessor;
         _performanceMeasurer = perfMeasurer;
     }
 
@@ -122,9 +118,6 @@ public class EmulationLoop {
         _cpu.ExecuteNext();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
-        // Process input events sequentially, not directly with C# events,
-        // which was out of this emulation loop and was prone to bugs
-        _inputEventProcessor.ProcessEvents();
         _dmaController.PerformDmaTransfers();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }

@@ -9,13 +9,24 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics;
+
 /// <summary>
-/// Implementation of a PC/AT keyboard controller
+/// Emulates the Intel 8042 keyboard/mouse controller. <br/>
+/// See keyboard.cpp and intel8042.cpp in DOSBox Staging.
+/// Reference: <br/>
+/// - https://wiki.osdev.org/%228042%22_PS/2_Controller <br/>
+/// - https://homepages.cwi.nl/~aeb/linux/kbd/scancodes.html <br/>
+/// - http://www-ug.eecg.toronto.edu/msl/nios_devices/datasheets/PS2%20Keyboard%20Protocol.htm <br/>
+/// - https://k.lse.epita.fr/data/8042.pdf (SMSC KBD43W13 whitepaper) <br/>
+/// - https://tvsat.com.pl/PDF/W/W83C42P_win.pdf (Winbond W83C42 whitepaper) <br/>
+/// - http://www.os2museum.com/wp/ibm-pcat-8042-keyboard-controller-commands/ <br/>
+/// - http://www.os2museum.com/wp/ibm-ps2-model-50-keyboard-controller/ <br/>
 /// </summary>
-public sealed class Keyboard : DefaultIOPortHandler {
+public sealed class KeyboardController : DefaultIOPortHandler {
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
-
+    
     // Buffer constants and variables, similar to DOSBox implementation
     private const int KeyboardBufferSize = 16; // Buffer size in scancodes
     private readonly byte[] _buffer = new byte[KeyboardBufferSize];
@@ -28,7 +39,12 @@ public sealed class Keyboard : DefaultIOPortHandler {
     private byte _currentScanCode = 0;
     // Indicates whether there is data available to be read
     private bool _hasDataAvailable = false;
-
+    
+    // Delay timer implementation, or else we get way too many keys
+    // in a very short time frame.
+    private const double PortDelayMs = 300;
+    private readonly Stopwatch _delayTimer = new();
+    
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
     /// </summary>
@@ -37,20 +53,20 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte SystemTestStatusMask = 1 << 2;
+    public const byte SystemTestStatusMask = 1<<2;
 
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte KeyboardEnableStatusMask = 1 << 4;
-
+    public const byte KeyboardEnableStatusMask = 1<<4;
+    
     /// <summary>
     /// Output buffer full flag (bit 0)
     /// </summary>
-    public const byte OutputBufferFullMask = 1 << 0;
+    public const byte OutputBufferFullMask = 1<<0;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Keyboard"/> class.
+    /// Initializes a new instance of the <see cref="KeyboardController"/> class.
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
@@ -58,12 +74,22 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public Keyboard(State state, IOPortDispatcher ioPortDispatcher,
-        A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, bool failOnUnhandledPort)
+    public KeyboardController(State state, IOPortDispatcher ioPortDispatcher,
+        A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService,
+        bool failOnUnhandledPort, IGui? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
         InitPortHandlers(ioPortDispatcher);
+        _delayTimer.Start();
+        if(gui is not null) {
+            gui.KeyDown += OnKeyEvent;
+            gui.KeyUp += OnKeyEvent;
+        }
+    }
+
+    private void OnKeyEvent(object? sender, KeyboardEventArgs e) {
+        AddKeyToBuffer(e);
     }
 
     /// <summary>
@@ -72,74 +98,91 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="e">The keyboard event arguments</param>
     public void AddKeyToBuffer(KeyboardEventArgs e) {
         // Don't process keyboard events when disabled
-        if (_isKeyboardDisabled) {
-            return;
-        }
-
-        // Only process events with valid scan codes
-        if (!e.ScanCode.HasValue) {
+        if (_isKeyboardDisabled || HasDelayExpired is false || e.ScanCode is null or 0) {
             return;
         }
 
         byte scanCode = e.ScanCode.Value;
-
+        
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Adding to keyboard buffer: {KeyboardEvent}, Scan Code: 0x{ScanCode:X2}", e, scanCode);
         }
-
+        
         // Add the scan code to the buffer
         AddScanCodeToBuffer(scanCode);
-
-        // Generate interrupt if we have keys in buffer
-        if (HasScanCode()) {
+        
+        // Generate interrupt if we have keys in buffer and data is available
+        if (_hasDataAvailable) {
             _dualPic.ProcessInterruptRequest(1);
         }
     }
-
+    
     /// <summary>
     /// Adds a scancode to the keyboard buffer
     /// </summary>
     /// <param name="scanCode">The scancode to add</param>
     private void AddScanCodeToBuffer(byte scanCode) {
-        // If buffer overflowed, drop everything until the buffer gets free
+        // If buffer overflowed, drop everything until the buffer gets free.
+        // ignore unknown keys.
         if (_bufferOverflowed) {
             return;
         }
-
+        
         // If buffer is full, mark as overflowed and return
         if (_bufferNumUsed == KeyboardBufferSize) {
             _bufferNumUsed = 0;
             _bufferOverflowed = true;
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Keyboard buffer overflow");
+            }
             return;
         }
-
+        
         // We can safely add a scancode to the buffer
         int index = (_bufferStartIndex + _bufferNumUsed++) % KeyboardBufferSize;
         _buffer[index] = scanCode;
-
-        // Make the first scancode available if no data is currently available
-        if (!_hasDataAvailable && _bufferNumUsed > 0) {
-            MakeNextScanCodeAvailable();
+        
+        // Transfer scancode to output port if no data is currently available
+        MaybeTransferBuffer();
+    }
+    
+    /// <summary>
+    /// Transfers a scancode from the buffer to the output port if possible
+    /// </summary>
+    private void MaybeTransferBuffer() {
+        // If data is already available or buffer is empty, nothing to do
+        if (_hasDataAvailable || _bufferNumUsed == 0) {
+            return;
         }
+
+        // Make scancode available for reading
+        _currentScanCode = _buffer[_bufferStartIndex];
+        _hasDataAvailable = true;
+        
+        // Start delay timer for next scancode
+        RestartDelayTimer();
+        
+        // Generate IRQ if data is available
+        _dualPic.ProcessInterruptRequest(1);
+    }
+    
+    /// <summary>
+    /// Restarts the delay timer for keyboard timing simulation
+    /// </summary>
+    private void RestartDelayTimer() {
+        _delayTimer.Restart();
     }
 
     /// <summary>
-    /// Makes the next scancode from the buffer available for reading
-    /// without removing it from the buffer
+    /// Checks if the delay timer has expired
     /// </summary>
-    private void MakeNextScanCodeAvailable() {
-        if (_bufferNumUsed > 0) {
-            _currentScanCode = _buffer[_bufferStartIndex];
-            _hasDataAvailable = true;
+    private bool HasDelayExpired {
+        get {
+            if (_delayTimer.IsRunning && _delayTimer.ElapsedMilliseconds >= PortDelayMs) {
+                return true;
+            }
+            return false;
         }
-    }
-
-    /// <summary>
-    /// Checks if there are scan codes in the keyboard buffer
-    /// </summary>
-    /// <returns>True if the keyboard buffer has scan codes, false otherwise</returns>
-    public bool HasScanCode() {
-        return _bufferNumUsed > 0;
     }
 
     /// <summary>
@@ -150,34 +193,15 @@ public sealed class Keyboard : DefaultIOPortHandler {
         if (_bufferNumUsed == 0) {
             return 0;
         }
-
+        
         byte scancode = _buffer[_bufferStartIndex];
         _bufferStartIndex = (_bufferStartIndex + 1) % KeyboardBufferSize;
         _bufferNumUsed--;
-
+        
         // Buffer is no longer overflowed once we read from it
         _bufferOverflowed = false;
-
-        // Update the current scancode if more data is available
-        if (_bufferNumUsed > 0) {
-            MakeNextScanCodeAvailable();
-        } else {
-            _hasDataAvailable = false;
-        }
-
+        
         return scancode;
-    }
-
-    /// <summary>
-    /// Peeks at the next scancode without removing it from the buffer
-    /// </summary>
-    /// <returns>The next scancode or 0 if buffer is empty</returns>
-    public byte PeekScanCode() {
-        if (_bufferNumUsed == 0) {
-            return 0;
-        }
-
-        return _buffer[_bufferStartIndex];
     }
 
     /// <inheritdoc/>
@@ -185,23 +209,25 @@ public sealed class Keyboard : DefaultIOPortHandler {
         switch (port) {
             case KeyboardPorts.Data:
                 // Return the current scancode but don't immediately advance the buffer
-                // This allows both INT9 and direct port reads to get the same scancode
                 byte result = _currentScanCode;
-
+                
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("Keyboard data port read: 0x{ScanCode:X2}", result);
                 }
-
-                // Mark data as read and advance to next scancode
+                
+                // Mark data as read
                 _hasDataAvailable = false;
+                
+                // Advance buffer and prepare next scancode if available
                 GetNextScanCode();
-
+                MaybeTransferBuffer();
+                
                 return result;
 
             case KeyboardPorts.StatusRegister:
                 byte status = SystemTestStatusMask | KeyboardEnableStatusMask;
 
-                // Set output buffer full flag if we have keys in the buffer
+                // Set output buffer full flag if we have data available
                 if (_hasDataAvailable) {
                     status |= OutputBufferFullMask;
                 }
@@ -221,7 +247,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
                 if (_isKeyboardDisabled) {
                     return;
                 }
-
+                
                 _a20Gate.IsEnabled = Command switch {
                     KeyboardCommand.SetOutputPort => (value & 2) > 0,
                     KeyboardCommand.EnableA20Gate => true,
@@ -230,13 +256,13 @@ public sealed class Keyboard : DefaultIOPortHandler {
                 };
                 Command = KeyboardCommand.None;
                 break;
-
+                
             case KeyboardPorts.Command:
                 // Always process commands, even if keyboard is disabled
                 // This allows re-enabling a disabled keyboard
                 if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
                     Command = (KeyboardCommand)value;
-
+                    
                     // Handle specific keyboard commands
                     switch (Command) {
                         case KeyboardCommand.DisableKeyboard:
@@ -245,7 +271,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
                                 _loggerService.Verbose("Keyboard disabled via command 0xAD");
                             }
                             break;
-
+                            
                         case KeyboardCommand.EnableKeyboard:
                             _isKeyboardDisabled = false;
                             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -259,7 +285,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
                     }
                 }
                 break;
-
+                
             default:
                 base.WriteByte(port, value);
                 break;
@@ -274,6 +300,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
         _bufferNumUsed = 0;
         _bufferOverflowed = false;
         _hasDataAvailable = false;
+        _delayTimer.Reset();
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
