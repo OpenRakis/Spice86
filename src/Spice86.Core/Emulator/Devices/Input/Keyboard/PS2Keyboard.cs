@@ -42,7 +42,7 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
     
     // Delay timer implementation, or else we get way too many keys
     // in a very short time frame.
-    private const double PortDelayMs = 300;
+    private const double PortDelayMs = 150;
     private readonly Stopwatch _delayTimer = new();
     
     /// <summary>
