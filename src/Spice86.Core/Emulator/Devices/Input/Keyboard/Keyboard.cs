@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 public sealed class Keyboard : DefaultIOPortHandler {
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
-    
+
     // Buffer constants and variables, similar to DOSBox implementation
     private const int KeyboardBufferSize = 16; // Buffer size in scancodes
     private readonly byte[] _buffer = new byte[KeyboardBufferSize];
@@ -23,6 +23,11 @@ public sealed class Keyboard : DefaultIOPortHandler {
     private int _bufferStartIndex = 0;
     private int _bufferNumUsed = 0;
     private bool _isKeyboardDisabled;
+
+    // Tracks the current scancode that's available for reading
+    private byte _currentScanCode = 0;
+    // Indicates whether there is data available to be read
+    private bool _hasDataAvailable = false;
 
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
@@ -32,17 +37,17 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte SystemTestStatusMask = 1<<2;
+    public const byte SystemTestStatusMask = 1 << 2;
 
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte KeyboardEnableStatusMask = 1<<4;
-    
+    public const byte KeyboardEnableStatusMask = 1 << 4;
+
     /// <summary>
     /// Output buffer full flag (bit 0)
     /// </summary>
-    public const byte OutputBufferFullMask = 1<<0;
+    public const byte OutputBufferFullMask = 1 << 0;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Keyboard"/> class.
@@ -54,62 +59,79 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public Keyboard(State state, IOPortDispatcher ioPortDispatcher,
-        A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, bool failOnUnhandledPort,
-        IGui? gui = null)
+        A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
-        if (gui is not null) {
-            gui.KeyDown += (_, e) => ProcessKeyEvent(e);
-            gui.KeyUp += (_, e) => ProcessKeyEvent(e);
-        }
         InitPortHandlers(ioPortDispatcher);
     }
 
     /// <summary>
-    /// Process a keyboard event from the host system
+    /// Adds a key event to the keyboard buffer and triggers an interrupt if needed
     /// </summary>
     /// <param name="e">The keyboard event arguments</param>
-    public void ProcessKeyEvent(KeyboardEventArgs e) {
+    public void AddKeyToBuffer(KeyboardEventArgs e) {
+        // Don't process keyboard events when disabled
+        if (_isKeyboardDisabled) {
+            return;
+        }
+
         // Only process events with valid scan codes
         if (!e.ScanCode.HasValue) {
             return;
         }
 
         byte scanCode = e.ScanCode.Value;
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Keyboard event: {KeyboardEvent}, Scan Code: 0x{ScanCode:X2}", e, scanCode);
+            _loggerService.Verbose("Adding to keyboard buffer: {KeyboardEvent}, Scan Code: 0x{ScanCode:X2}", e, scanCode);
         }
-        
-        AddToBuffer(scanCode);
-        
+
+        // Add the scan code to the buffer
+        AddScanCodeToBuffer(scanCode);
+
         // Generate interrupt if we have keys in buffer
         if (HasScanCode()) {
             _dualPic.ProcessInterruptRequest(1);
         }
     }
-    
+
     /// <summary>
     /// Adds a scancode to the keyboard buffer
     /// </summary>
     /// <param name="scanCode">The scancode to add</param>
-    private void AddToBuffer(byte scanCode) {
+    private void AddScanCodeToBuffer(byte scanCode) {
         // If buffer overflowed, drop everything until the buffer gets free
         if (_bufferOverflowed) {
             return;
         }
-        
+
         // If buffer is full, mark as overflowed and return
         if (_bufferNumUsed == KeyboardBufferSize) {
             _bufferNumUsed = 0;
             _bufferOverflowed = true;
             return;
         }
-        
+
         // We can safely add a scancode to the buffer
         int index = (_bufferStartIndex + _bufferNumUsed++) % KeyboardBufferSize;
         _buffer[index] = scanCode;
+
+        // Make the first scancode available if no data is currently available
+        if (!_hasDataAvailable && _bufferNumUsed > 0) {
+            MakeNextScanCodeAvailable();
+        }
+    }
+
+    /// <summary>
+    /// Makes the next scancode from the buffer available for reading
+    /// without removing it from the buffer
+    /// </summary>
+    private void MakeNextScanCodeAvailable() {
+        if (_bufferNumUsed > 0) {
+            _currentScanCode = _buffer[_bufferStartIndex];
+            _hasDataAvailable = true;
+        }
     }
 
     /// <summary>
@@ -119,7 +141,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     public bool HasScanCode() {
         return _bufferNumUsed > 0;
     }
-    
+
     /// <summary>
     /// Gets the next scancode from the buffer
     /// </summary>
@@ -128,14 +150,21 @@ public sealed class Keyboard : DefaultIOPortHandler {
         if (_bufferNumUsed == 0) {
             return 0;
         }
-        
+
         byte scancode = _buffer[_bufferStartIndex];
         _bufferStartIndex = (_bufferStartIndex + 1) % KeyboardBufferSize;
         _bufferNumUsed--;
-        
+
         // Buffer is no longer overflowed once we read from it
         _bufferOverflowed = false;
-        
+
+        // Update the current scancode if more data is available
+        if (_bufferNumUsed > 0) {
+            MakeNextScanCodeAvailable();
+        } else {
+            _hasDataAvailable = false;
+        }
+
         return scancode;
     }
 
@@ -147,7 +176,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
         if (_bufferNumUsed == 0) {
             return 0;
         }
-        
+
         return _buffer[_bufferStartIndex];
     }
 
@@ -155,17 +184,25 @@ public sealed class Keyboard : DefaultIOPortHandler {
     public override byte ReadByte(ushort port) {
         switch (port) {
             case KeyboardPorts.Data:
-                byte scancode = GetNextScanCode();
+                // Return the current scancode but don't immediately advance the buffer
+                // This allows both INT9 and direct port reads to get the same scancode
+                byte result = _currentScanCode;
+
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Keyboard data port read: 0x{ScanCode:X2}", scancode);
+                    _loggerService.Verbose("Keyboard data port read: 0x{ScanCode:X2}", result);
                 }
-                return scancode;
+
+                // Mark data as read and advance to next scancode
+                _hasDataAvailable = false;
+                GetNextScanCode();
+
+                return result;
 
             case KeyboardPorts.StatusRegister:
                 byte status = SystemTestStatusMask | KeyboardEnableStatusMask;
 
                 // Set output buffer full flag if we have keys in the buffer
-                if (HasScanCode()) {
+                if (_hasDataAvailable) {
                     status |= OutputBufferFullMask;
                 }
 
@@ -178,11 +215,13 @@ public sealed class Keyboard : DefaultIOPortHandler {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        if (_isKeyboardDisabled) {
-            return;
-        }
         switch (port) {
             case KeyboardPorts.Data:
+                // If keyboard is disabled, don't process data port writes except commands
+                if (_isKeyboardDisabled) {
+                    return;
+                }
+
                 _a20Gate.IsEnabled = Command switch {
                     KeyboardCommand.SetOutputPort => (value & 2) > 0,
                     KeyboardCommand.EnableA20Gate => true,
@@ -191,11 +230,13 @@ public sealed class Keyboard : DefaultIOPortHandler {
                 };
                 Command = KeyboardCommand.None;
                 break;
-                
+
             case KeyboardPorts.Command:
+                // Always process commands, even if keyboard is disabled
+                // This allows re-enabling a disabled keyboard
                 if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
                     Command = (KeyboardCommand)value;
-                    
+
                     // Handle specific keyboard commands
                     switch (Command) {
                         case KeyboardCommand.DisableKeyboard:
@@ -204,15 +245,12 @@ public sealed class Keyboard : DefaultIOPortHandler {
                                 _loggerService.Verbose("Keyboard disabled via command 0xAD");
                             }
                             break;
-                            
+
                         case KeyboardCommand.EnableKeyboard:
                             _isKeyboardDisabled = false;
                             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                                 _loggerService.Verbose("Keyboard enabled via command 0xAE");
                             }
-                            break;
-                        default:
-                            _isKeyboardDisabled = false;
                             break;
                     }
                 } else {
@@ -221,7 +259,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
                     }
                 }
                 break;
-                
+
             default:
                 base.WriteByte(port, value);
                 break;
@@ -235,6 +273,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
         _bufferStartIndex = 0;
         _bufferNumUsed = 0;
         _bufferOverflowed = false;
+        _hasDataAvailable = false;
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
