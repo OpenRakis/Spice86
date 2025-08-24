@@ -97,7 +97,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// An IBM PC Keyboard
     /// </summary>
-    public KeyboardController Keyboard { get; }
+    public PS2Keyboard Keyboard { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -243,7 +243,7 @@ public sealed class Machine : IDisposable {
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
-        KeyboardController keyboard,
+        PS2Keyboard keyboard,
         KeyboardInt16Handler keyboardInt16Handler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory,
