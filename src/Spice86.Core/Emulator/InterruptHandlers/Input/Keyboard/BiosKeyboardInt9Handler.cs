@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly AvaloniaKeyConverter _scanCodeConverter = new();
-    private readonly Keyboard _keyboard;
+    private readonly KeyboardController _keyboard;
     private static readonly SegmentedAddress CallbackLocation = new(0xf000, 0xe987);
     private readonly DualPic _dualPic;
 
@@ -32,7 +32,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, Stack stack, State state,
         IFunctionHandlerProvider functionHandlerProvider, DualPic dualPic,
-        Keyboard keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
+        KeyboardController keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         BiosKeyboardBuffer = biosKeyboardBuffer;
