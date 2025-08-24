@@ -12,8 +12,8 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
 /// <summary>
-/// Emulates the Intel 8042 keyboard/mouse controller. <br/>
-/// See keyboard.cpp and intel8042.cpp in DOSBox Staging.
+/// Emulates the PS/2 keyboard. <br/>
+/// See keyboard.cpp for this file and intel8042.cpp for more in DOSBox Staging.
 /// Reference: <br/>
 /// - https://wiki.osdev.org/%228042%22_PS/2_Controller <br/>
 /// - https://homepages.cwi.nl/~aeb/linux/kbd/scancodes.html <br/>
@@ -23,7 +23,7 @@ using System.Diagnostics;
 /// - http://www.os2museum.com/wp/ibm-pcat-8042-keyboard-controller-commands/ <br/>
 /// - http://www.os2museum.com/wp/ibm-ps2-model-50-keyboard-controller/ <br/>
 /// </summary>
-public sealed class KeyboardController : DefaultIOPortHandler {
+public sealed class PS2Keyboard : DefaultIOPortHandler {
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
     
@@ -66,7 +66,7 @@ public sealed class KeyboardController : DefaultIOPortHandler {
     public const byte OutputBufferFullMask = 1<<0;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="KeyboardController"/> class.
+    /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
@@ -74,7 +74,7 @@ public sealed class KeyboardController : DefaultIOPortHandler {
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public KeyboardController(State state, IOPortDispatcher ioPortDispatcher,
+    public PS2Keyboard(State state, IOPortDispatcher ioPortDispatcher,
         A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService,
         bool failOnUnhandledPort, IGui? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
