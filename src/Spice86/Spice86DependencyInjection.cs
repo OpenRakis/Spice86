@@ -356,15 +356,13 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = new HeadlessGui();
         }
 
-        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
-            loggerService, configuration.FailOnUnhandledPort);
-
-        InputEventProcessor inputEventProcessor = new(keyboard, loggerService, _gui);
+        KeyboardController keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
+            loggerService, configuration.FailOnUnhandledPort, _gui);
 
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
             emulatorBreakpointsManager, dmaController,
-            pauseHandler, cyclesLimiter, inputEventProcessor, loggerService);
+            pauseHandler, cyclesLimiter, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
