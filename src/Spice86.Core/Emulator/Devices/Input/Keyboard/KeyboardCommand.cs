@@ -4,7 +4,8 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 /// Keyboard and keyboard controller commands. <br/>
 /// Reference: <br/>
 /// - https://www.win.tue.nl/~aeb/linux/kbd/scancodes-11.html#kcc60 <br/>
-/// - https://kbd-project.org/docs/scancodes/scancodes.html <br/>
+/// A20 Gate commands: <br/>
+/// - https://mrhopehub.github.io/2014/12/26/enabling-the-A20-Gate.html <br/>
 /// </summary>
 /// <remarks>
 /// Most of them are unimplemented right now.
@@ -14,8 +15,6 @@ public enum KeyboardCommand : byte {
     /// No command set.
     /// </summary>
     None = 0x00,
-
-    // PS/2 keyboard commands (sent to port 0x60 after controller command 0xD4)
 
     /// <summary>
     /// Set keyboard LEDs
