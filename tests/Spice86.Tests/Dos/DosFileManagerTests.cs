@@ -159,17 +159,17 @@ public class DosFileManagerTests {
             emulatorBreakpointsManager, dmaController, pauseHandler,
             new NullCycleLimiter(), loggerService);
 
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, stack, state,
-            functionHandlerProvider, dualPic,
-            keyboard, biosKeyboardBuffer, loggerService);
-
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
 
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
+            new BiosKeyboardInt9Handler(memory, stack, state,
+            functionHandlerProvider, dualPic,
+            keyboard, biosKeyboardBuffer, emulationLoopRecall, loggerService);
+
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
         var clock = new Clock(loggerService);
 
