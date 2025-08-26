@@ -381,7 +381,7 @@ public class Spice86DependencyInjection : IDisposable {
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
             state, functionHandlerProvider, dualPic, keyboard, biosKeyboardBuffer,
-            loggerService);
+            emulationLoopRecall, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,

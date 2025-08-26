@@ -26,25 +26,23 @@ using System.Diagnostics;
 public sealed class PS2Keyboard : DefaultIOPortHandler {
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
-    
+
     // Buffer constants and variables, similar to DOSBox implementation
     private const int KeyboardBufferSize = 16; // Buffer size in scancodes
     private readonly byte[] _buffer = new byte[KeyboardBufferSize];
     private bool _bufferOverflowed = false;
     private int _bufferStartIndex = 0;
-    private int _bufferNumUsed = 0;
+    private int _bufferCount = 0;
     private bool _isKeyboardDisabled;
-
-    // Tracks the current scancode that's available for reading
     private byte _currentScanCode = 0;
     // Indicates whether there is data available to be read
     private bool _hasDataAvailable = false;
-    
+
     // Delay timer implementation, or else we get way too many keys
     // in a very short time frame.
     private const double PortDelayMs = 150;
     private readonly Stopwatch _delayTimer = new();
-    
+
     /// <summary>
     /// The current keyboard command, such as 'Perform self-test' (0xAA)
     /// </summary>
@@ -53,17 +51,17 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte SystemTestStatusMask = 1<<2;
+    public const byte SystemTestStatusMask = 1 << 2;
 
     /// <summary>
     /// Part of the value sent when the CPU reads the status register.
     /// </summary>
-    public const byte KeyboardEnableStatusMask = 1<<4;
-    
+    public const byte KeyboardEnableStatusMask = 1 << 4;
+
     /// <summary>
     /// Output buffer full flag (bit 0)
     /// </summary>
-    public const byte OutputBufferFullMask = 1<<0;
+    public const byte OutputBufferFullMask = 1 << 0;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
@@ -85,150 +83,102 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
         if(gui is not null) {
             gui.KeyDown += OnKeyEvent;
             gui.KeyUp += OnKeyEvent;
-        }
+    }
     }
 
     private void OnKeyEvent(object? sender, KeyboardEventArgs e) {
-        AddKeyToBuffer(e);
-    }
-
-    /// <summary>
-    /// Adds a key event to the keyboard buffer and triggers an interrupt if needed
-    /// </summary>
-    /// <param name="e">The keyboard event arguments</param>
-    public void AddKeyToBuffer(KeyboardEventArgs e) {
-        // Don't process keyboard events when disabled
-        if (_isKeyboardDisabled || HasDelayExpired is false || e.ScanCode is null or 0) {
-            return;
+        if (e.ScanCode.HasValue && e.ScanCode.Value != 0) {
+            AddKeyToBuffer(e);
         }
-
-        byte scanCode = e.ScanCode.Value;
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Adding to keyboard buffer: {KeyboardEvent}, Scan Code: 0x{ScanCode:X2}", e, scanCode);
-        }
-        
-        // Add the scan code to the buffer
-        AddScanCodeToBuffer(scanCode);
-        
         // Generate interrupt if we have keys in buffer and data is available
         if (_hasDataAvailable) {
             _dualPic.ProcessInterruptRequest(1);
         }
     }
-    
-    /// <summary>
-    /// Adds a scancode to the keyboard buffer
-    /// </summary>
-    /// <param name="scanCode">The scancode to add</param>
+
+    private void AddKeyToBuffer(KeyboardEventArgs e) {
+        // Only process if delay expired and not disabled
+        if (!GetHasDelayExpired(e) || e.ScanCode is null) {
+            return;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("Processing keyboard event: {KeyboardEvent}, Scan Code: 0x{ScanCode:X2}", e, e.ScanCode);
+        }
+
+        AddScanCodeToBuffer(e.ScanCode.Value);
+    }
+
     private void AddScanCodeToBuffer(byte scanCode) {
         // If buffer overflowed, drop everything until the buffer gets free.
         // ignore unknown keys.
         if (_bufferOverflowed) {
             return;
         }
-        
+
         // If buffer is full, mark as overflowed and return
-        if (_bufferNumUsed == KeyboardBufferSize) {
-            _bufferNumUsed = 0;
+        if (_bufferCount == KeyboardBufferSize) {
+            _bufferCount = 0;
             _bufferOverflowed = true;
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Keyboard buffer overflow");
             }
             return;
         }
-        
+
+        _bufferCount++;
         // We can safely add a scancode to the buffer
-        int index = (_bufferStartIndex + _bufferNumUsed++) % KeyboardBufferSize;
+        int index = (_bufferStartIndex + _bufferCount) % KeyboardBufferSize;
         _buffer[index] = scanCode;
-        
+
         // Transfer scancode to output port if no data is currently available
         MaybeTransferBuffer();
     }
-    
-    /// <summary>
-    /// Transfers a scancode from the buffer to the output port if possible
-    /// </summary>
+
     private void MaybeTransferBuffer() {
         // If data is already available or buffer is empty, nothing to do
-        if (_hasDataAvailable || _bufferNumUsed == 0) {
+        if (_bufferCount == 0) {
             return;
         }
 
         // Make scancode available for reading
         _currentScanCode = _buffer[_bufferStartIndex];
         _hasDataAvailable = true;
-        
+
         // Start delay timer for next scancode
-        RestartDelayTimer();
-        
-        // Generate IRQ if data is available
-        _dualPic.ProcessInterruptRequest(1);
-    }
-    
-    /// <summary>
-    /// Restarts the delay timer for keyboard timing simulation
-    /// </summary>
-    private void RestartDelayTimer() {
         _delayTimer.Restart();
-    }
 
-    /// <summary>
-    /// Checks if the delay timer has expired
-    /// </summary>
-    private bool HasDelayExpired {
-        get {
-            if (_delayTimer.IsRunning && _delayTimer.ElapsedMilliseconds >= PortDelayMs) {
-                return true;
-            }
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Gets the next scancode from the buffer
-    /// </summary>
-    /// <returns>The next scancode or 0 if buffer is empty</returns>
-    private byte GetNextScanCode() {
-        if (_bufferNumUsed == 0) {
-            return 0;
-        }
-        
-        byte scancode = _buffer[_bufferStartIndex];
         _bufferStartIndex = (_bufferStartIndex + 1) % KeyboardBufferSize;
-        _bufferNumUsed--;
-        
-        // Buffer is no longer overflowed once we read from it
+        _bufferCount--;
+
+        // Buffer is no longer overflowed once we advanced
         _bufferOverflowed = false;
-        
-        return scancode;
+    }
+
+    private bool GetHasDelayExpired(KeyboardEventArgs e) {
+        return _delayTimer.ElapsedMilliseconds >= PortDelayMs ||
+            e.ScanCode.HasValue && e.ScanCode.Value != _currentScanCode;
     }
 
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
         switch (port) {
             case KeyboardPorts.Data:
+
                 // Return the current scancode but don't immediately advance the buffer
                 byte result = _currentScanCode;
-                
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Keyboard data port read: 0x{ScanCode:X2}", result);
-                }
-                
-                // Mark data as read
+
                 _hasDataAvailable = false;
-                
-                // Advance buffer and prepare next scancode if available
-                GetNextScanCode();
+
                 MaybeTransferBuffer();
-                
+
                 return result;
 
             case KeyboardPorts.StatusRegister:
                 byte status = SystemTestStatusMask | KeyboardEnableStatusMask;
 
                 // Set output buffer full flag if we have data available
-                if (_hasDataAvailable) {
+                if (_bufferCount > 0) {
                     status |= OutputBufferFullMask;
                 }
 
@@ -247,7 +197,7 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                 if (_isKeyboardDisabled) {
                     return;
                 }
-                
+
                 _a20Gate.IsEnabled = Command switch {
                     KeyboardCommand.WriteOutputPort => (value & 2) > 0,
                     KeyboardCommand.EnableA20 => true,
@@ -256,13 +206,13 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                 };
                 Command = KeyboardCommand.None;
                 break;
-                
+
             case KeyboardPorts.Command:
                 // Always process commands, even if keyboard is disabled
                 // This allows re-enabling a disabled keyboard
                 if (Enum.IsDefined(typeof(KeyboardCommand), value)) {
                     Command = (KeyboardCommand)value;
-                    
+
                     // Handle specific keyboard commands
                     switch (Command) {
                         case KeyboardCommand.DisablePortKbd:
@@ -271,7 +221,7 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                                 _loggerService.Verbose("Keyboard disabled via command 0xAD");
                             }
                             break;
-                            
+
                         case KeyboardCommand.EnablePortKbd:
                             _isKeyboardDisabled = false;
                             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -290,22 +240,11 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
                     }
                 }
                 break;
-                
+
             default:
                 base.WriteByte(port, value);
                 break;
         }
-    }
-
-    /// <summary>
-    /// Clears the keyboard buffer
-    /// </summary>
-    public void ClearBuffer() {
-        _bufferStartIndex = 0;
-        _bufferNumUsed = 0;
-        _bufferOverflowed = false;
-        _hasDataAvailable = false;
-        _delayTimer.Reset();
     }
 
     private void InitPortHandlers(IOPortDispatcher ioPortDispatcher) {
