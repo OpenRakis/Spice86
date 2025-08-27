@@ -23,7 +23,7 @@
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.9.3" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.303" />
+    <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.1.308" />
     <PackageVersion Include="Iced" Version="1.21.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.0" />
     <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
