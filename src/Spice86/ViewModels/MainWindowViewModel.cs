@@ -138,6 +138,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
+        if (IsPaused) {
+            return;
+        }
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
@@ -189,6 +192,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
 
     internal void OnKeyDown(KeyEventArgs e) {
+        if (IsPaused) {
+            return;
+        }
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,
@@ -217,16 +223,25 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseY { get; set; }
     
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         if (image.Source is null) {
             return;
         }
@@ -290,6 +305,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
+            if(IsPaused) {
+                return;
+            }
             ValidateRequiredPropertyIsNotNull(value);
             SetProperty(ref _timeMultiplier, value);
             if (value is not null) {
@@ -318,7 +336,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     private void DrawScreen() {
-        if (_disposed || _isSettingResolution || _isAppClosing || Bitmap is null || RenderScreen is null) {
+        if (_disposed || _isSettingResolution || IsPaused || _isAppClosing || Bitmap is null || RenderScreen is null) {
             return;
         }
         _drawingSemaphoreSlim?.Wait();
