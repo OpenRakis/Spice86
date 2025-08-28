@@ -302,6 +302,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
+            if(IsPaused) {
+                return;
+            }
             ValidateRequiredPropertyIsNotNull(value);
             SetProperty(ref _timeMultiplier, value);
             if (value is not null) {
