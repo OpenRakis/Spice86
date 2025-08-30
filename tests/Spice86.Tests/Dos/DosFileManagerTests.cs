@@ -138,7 +138,7 @@ public class DosFileManagerTests {
             loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
-            dualPic, timer, biosDataArea, loggerService);
+            dualPic, biosDataArea, loggerService);
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);

@@ -238,7 +238,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         TimerInt8Handler timerInt8Handler =
             new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
-            dualPic, timer, biosDataArea, loggerService);
+            dualPic, biosDataArea, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Timer int8 handler created...");
