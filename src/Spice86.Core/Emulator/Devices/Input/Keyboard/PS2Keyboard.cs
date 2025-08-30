@@ -74,7 +74,7 @@ public sealed class PS2Keyboard : DefaultIOPortHandler {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public PS2Keyboard(State state, IOPortDispatcher ioPortDispatcher,
         A20Gate a20Gate, DualPic dualPic, ILoggerService loggerService,
-        bool failOnUnhandledPort, IGui? gui = null)
+        bool failOnUnhandledPort, IGuiKeyboardEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
