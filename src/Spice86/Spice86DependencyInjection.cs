@@ -58,7 +58,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
-    private readonly IGui _gui;
+    private readonly IGuiVideoPresentation _gui;
     private bool _disposed;
 
     public Spice86DependencyInjection(Configuration configuration)
@@ -357,7 +357,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         PS2Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
-            loggerService, configuration.FailOnUnhandledPort, _gui);
+            loggerService, configuration.FailOnUnhandledPort, _gui as IGuiKeyboardEvents);
 
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
@@ -373,10 +373,10 @@ public class Spice86DependencyInjection : IDisposable {
         EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
             state, stack, emulationLoop);
 
-        Mouse mouse = new(state, dualPic, _gui, configuration.Mouse, loggerService,
-            configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, memory, mouse, _gui,
-            vgaFunctionality, loggerService);
+        Mouse mouse = new(state, dualPic, configuration.Mouse, loggerService,
+            configuration.FailOnUnhandledPort, _gui as IGuiMouseEvents);
+        MouseDriver mouseDriver = new(state, memory, mouse,
+            vgaFunctionality, loggerService, _gui as IGuiMouseEvents);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
