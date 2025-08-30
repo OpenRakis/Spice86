@@ -36,7 +36,7 @@ public class MouseDriver : IMouseDriver {
     };
 
     private const int VirtualScreenWidth = 640;
-    private readonly IGui? _gui;
+    private readonly IGuiMouseEvents? _gui;
     private readonly ILoggerService _logger;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
@@ -56,10 +56,11 @@ public class MouseDriver : IMouseDriver {
     /// <param name="state">CPU registers. Used to save/restore registers</param>
     /// <param name="memory">Memory instance to look into the interrupt vector table</param>
     /// <param name="mouseDevice">The mouse device / hardware</param>
-    /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The service used to log messages, such as runtime warnings.</param>
-    public MouseDriver(State state, IIndexable memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
+    /// <param name="gui">The gui to show, hide and position mouse cursor.</param>
+    public MouseDriver(State state, IIndexable memory, IMouseDevice mouseDevice,
+        IVgaFunctionality vgaFunctions, ILoggerService loggerService, IGuiMouseEvents? gui = null) {
         _state = state;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
