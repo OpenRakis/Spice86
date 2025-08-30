@@ -14,7 +14,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
-    private readonly IGui? _gui;
+    private readonly IGuiMouseEvents? _gui;
     private readonly ILoggerService _logger;
     private long _lastUpdateTimestamp;
     private bool _previousIsLeftButtonDown;
@@ -31,11 +31,13 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
-    /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
-    public Mouse(State state, DualPic dualPic, IGui? gui, MouseType mouseType, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    /// <param name="gui">The graphical user interface. Can be <see langword="null"/> in headless mode.</param>
+    public Mouse(State state, DualPic dualPic, MouseType mouseType,
+        ILoggerService loggerService, bool failOnUnhandledPort, IGuiMouseEvents? gui = null)
+        : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _dualPic = dualPic;
         MouseType = mouseType;
