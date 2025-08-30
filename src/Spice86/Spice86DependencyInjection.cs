@@ -60,7 +60,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
-    private readonly IGui _gui;
+    private readonly IGuiVideoPresentation? _gui;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -405,22 +405,26 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("VGA card created...");
         }
 
-        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            _gui, configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+
+        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+           _gui as IGuiKeyboardEvents, configuration.FailOnUnhandledPort);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
             functionHandlerProvider, stack, state, dualPic, keyboard,
             biosKeyboardBuffer, loggerService);
-        Mouse mouse = new(state, sharedMouseData, dualPic, _gui,
-                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse, _gui,
-            vgaFunctionality, loggerService);
+        Mouse mouse = new(state, sharedMouseData, dualPic,
+                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort,
+                     _gui as IGuiMouseEvents);
+        MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
+            vgaFunctionality, loggerService,
+             _gui as IGuiMouseEvents);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
             biosKeyboardInt9Handler.BiosKeyboardBuffer);
+
         Joystick joystick = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+    configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Input devices created...");

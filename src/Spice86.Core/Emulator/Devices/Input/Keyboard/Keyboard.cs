@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// Basic implementation of a keyboard
 /// </summary>
 public sealed class Keyboard : DefaultIOPortHandler {
-    private readonly IGui? _gui;
+    private readonly IGuiKeyboardEvents? _gui;
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
     private KeyboardEventArgs _lastKeyUpOrKeyDownEvent = KeyboardEventArgs.None;
@@ -44,7 +44,7 @@ public sealed class Keyboard : DefaultIOPortHandler {
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public Keyboard(State state, IOPortDispatcher ioPortDispatcher, A20Gate a20Gate, DualPic dualPic,
-        ILoggerService loggerService, IGui? gui, bool failOnUnhandledPort)
+        ILoggerService loggerService, IGuiKeyboardEvents? gui, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _a20Gate = a20Gate;

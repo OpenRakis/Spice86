@@ -5,8 +5,9 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed class HeadlessGui : IGui, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
+    IGuiKeyboardEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
