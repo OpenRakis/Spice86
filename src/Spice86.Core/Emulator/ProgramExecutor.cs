@@ -43,7 +43,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="executionDumpFactory"></param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="loggerService">The logging service to use.</param>
@@ -55,7 +55,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, ILoggerService loggerService) {
+        IGuiVideoPresentation? screenPresenter, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;

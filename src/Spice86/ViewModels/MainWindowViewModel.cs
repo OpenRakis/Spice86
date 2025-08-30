@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -25,13 +26,13 @@ using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
-    IScreenPresenter, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
+    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
+    private readonly AvaloniaKeyConverter _avaloniaKeyConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -91,7 +92,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
+        _avaloniaKeyConverter = new AvaloniaKeyConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -137,12 +138,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
     internal void OnKeyUp(KeyEventArgs e) {
+        if (IsPaused) {
+            return;
+        }
         KeyUp?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+                _avaloniaKeyConverter.GetKeyReleasedScancode((Key)e.Key),
+                _avaloniaKeyConverter.GetAsciiCode(
+                    _avaloniaKeyConverter.GetKeyReleasedScancode((Key)e.Key))));
     }
 
     [RelayCommand]
@@ -188,12 +192,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
 
     internal void OnKeyDown(KeyEventArgs e) {
+        if (IsPaused) {
+            return;
+        }
         KeyDown?.Invoke(this,
             new KeyboardEventArgs((Key)e.Key,
                 true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+                _avaloniaKeyConverter.GetKeyPressedScancode((Key)e.Key),
+                _avaloniaKeyConverter.GetAsciiCode(
+                    _avaloniaKeyConverter.GetKeyPressedScancode((Key)e.Key))));
     }
 
     [ObservableProperty]
@@ -216,16 +223,25 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseY { get; set; }
     
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonDown?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, true));
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
         MouseButtonUp?.Invoke(this, new MouseButtonEventArgs((MouseButton)mouseButton, false));
     }
 
     public void OnMouseMoved(PointerEventArgs @event, Image image) {
+        if (IsPaused) {
+            return;
+        }
         if (image.Source is null) {
             return;
         }
@@ -289,6 +305,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
+            if(IsPaused) {
+                return;
+            }
             ValidateRequiredPropertyIsNotNull(value);
             SetProperty(ref _timeMultiplier, value);
             if (value is not null) {
@@ -317,7 +336,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     private void DrawScreen() {
-        if (_disposed || _isSettingResolution || _isAppClosing || Bitmap is null || RenderScreen is null) {
+        if (_disposed || _isSettingResolution || IsPaused || _isAppClosing || Bitmap is null || RenderScreen is null) {
             return;
         }
         _drawingSemaphoreSlim?.Wait();

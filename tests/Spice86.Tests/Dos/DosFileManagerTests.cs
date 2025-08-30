@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -105,7 +106,8 @@ public class DosFileManagerTests {
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
+        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints,
+            state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
@@ -118,21 +120,25 @@ public class DosFileManagerTests {
         InterruptVectorTable interruptVectorTable = new(memory);
         Stack stack = new(memory, state);
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(reader.ReadGhidraSymbolsFromFileOrCreate());
-        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
-        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
+        FunctionHandler functionHandler = new(memory, state, executionFlowRecorder,
+            functionCatalogue, false, loggerService);
+        FunctionHandler functionHandlerInExternalInterrupt = new(memory, state,
+            executionFlowRecorder, functionCatalogue, false, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
             dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService),
+            loggerService, dualPic);
         TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, functionHandlerProvider, stack, state, dualPic, timer, biosDataArea, loggerService);
+            new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
+            dualPic, biosDataArea, loggerService);
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
@@ -148,23 +154,26 @@ public class DosFileManagerTests {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
 
-        Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            null, configuration.FailOnUnhandledPort);
+        PS2Keyboard keyboard = new PS2Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+            configuration.FailOnUnhandledPort, null);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
-            state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        EmulationLoop emulationLoop = new EmulationLoop(configuration,
+        EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
+            emulatorBreakpointsManager, dmaController, pauseHandler,
+            new NullCycleLimiter(), loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
 
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler =
+            new BiosKeyboardInt9Handler(memory, stack, state,
+            functionHandlerProvider, dualPic,
+            keyboard, biosKeyboardBuffer, emulationLoopRecall, loggerService);
+
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
 
         var clock = new Clock(loggerService);
 
