@@ -41,6 +41,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -323,9 +324,11 @@ public class Spice86DependencyInjection : IDisposable {
       
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
+        InputEventQueue inputEventQueue = new();
+
+        EmulationLoop emulationLoop = new(new(), functionHandler,
             cpuForEmulationLoop, state, timer, emulatorBreakpointsManager,
-            dmaController, pauseHandler, loggerService);
+            dmaController, pauseHandler, CycleLimiterFactory.Create(configuration), inputEventQueue, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
