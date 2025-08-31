@@ -30,9 +30,10 @@ public class EmulationLoop {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
+    private readonly InputEventQueue _inputEventQueue;
 
     /// <summary>
-    /// Whether the emulation is paused.
+    /// Gets or sets whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
 
@@ -48,12 +49,14 @@ public class EmulationLoop {
     /// <param name="dmaController">Used to perform DMA Channel data transfers regularly.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="cyclesLimiter">The class shared with the UI to control CPU speed.</param>
+    /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(PerformanceMeasurer perfMeasurer,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
         DmaController dmaController, IPauseHandler pauseHandler,
-        CycleLimiterBase cyclesLimiter, ILoggerService loggerService) {
+        CycleLimiterBase cyclesLimiter, InputEventQueue inputEventQueue,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -64,6 +67,7 @@ public class EmulationLoop {
         _pauseHandler = pauseHandler;
         _cyclesLimiter = cyclesLimiter;
         _performanceMeasurer = perfMeasurer;
+        _inputEventQueue = inputEventQueue;
     }
 
     /// <summary>
@@ -119,6 +123,7 @@ public class EmulationLoop {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
+        _inputEventQueue.ProcessAllPendingInputEvents();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }
 
