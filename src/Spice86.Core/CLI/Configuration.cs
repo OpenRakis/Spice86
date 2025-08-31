@@ -22,9 +22,9 @@ public sealed class Configuration {
     public bool A20Gate { get; init; }
     
     /// <summary>
-    /// Gets if the program will be paused on startup. If <see cref="GdbPort"/> is set, the program will be paused anyway.
+    /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>
-    [Option(nameof(Debug), Default = false, Required = false, HelpText = "Gets if the program will be paused on startup.")]
+    [Option(nameof(Debug), Default = false, Required = false, HelpText = "Starts the program paused and pauses once again when stopping.")]
     public bool Debug { get; init; }
 
     /// <summary> Path to C drive, default is exe parent. </summary>
@@ -79,10 +79,10 @@ public sealed class Configuration {
     public bool FailOnUnhandledPort { get; init; }
 
     /// <summary>
-    /// gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects.
+    /// GDB port spice86 will listen to.
     /// </summary>
-    [Option('g', nameof(GdbPort), Default = null, Required = false, HelpText = "gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects")]
-    public int? GdbPort { get; init; }
+    [Option('g', nameof(GdbPort), Default = 10000, Required = false, HelpText = "GDB port. If 0, GDB server will be disabled.")]
+    public int GdbPort { get; init; }
 
     /// <summary>
     /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory.

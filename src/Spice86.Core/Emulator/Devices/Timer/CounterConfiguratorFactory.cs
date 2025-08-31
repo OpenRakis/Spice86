@@ -32,14 +32,6 @@ public class CounterConfiguratorFactory {
     /// </summary>
     public virtual CounterActivator InstantiateCounterActivator() {
         long? instructionsPerSecond = _configuration.InstructionsPerSecond;
-        if (instructionsPerSecond == null && _configuration.GdbPort != null) {
-            // With GDB, force to instructions per seconds as time based timers could perturbate steps
-            instructionsPerSecond = DefaultInstructionsPerSecond;
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                _loggerService.Warning("Forcing Counter to use instructions per seconds since in GDB mode. If speed is too slow or too fast adjust the --InstructionsPerSecond parameter");
-            }
-        }
-
         if (instructionsPerSecond != null) {
             return new CyclesCounterActivator(_state, _pauseHandler, instructionsPerSecond.Value, _configuration.TimeMultiplier);
         }

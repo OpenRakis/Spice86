@@ -13,7 +13,6 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class GdbServer : IDisposable {
     private readonly ILoggerService _loggerService;
-    private EventWaitHandle? _waitFirstConnectionHandle;
     private readonly Configuration _configuration;
     private bool _disposed;
     private bool _isRunning = true;
@@ -77,11 +76,7 @@ public sealed class GdbServer : IDisposable {
                 // Prevent it from restarting when the connection is killed
                 _isRunning = false;
                 _gdbIo?.Dispose();
-                // Release lock if called before the first connection to gdb server has been done
-                _waitFirstConnectionHandle?.Set();
-                _waitFirstConnectionHandle?.Dispose();
                 _gdbServerThread?.Join();
-                _isRunning = false;
             }
             _disposed = true;
         }
@@ -100,8 +95,7 @@ public sealed class GdbServer : IDisposable {
             _loggerService,
             _configuration);
         gdbCommandHandler.PauseEmulator();
-        OnConnect();
-        while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected) {
+        while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected()) {
             string command = gdbIo.ReadCommand();
             if (!string.IsNullOrWhiteSpace(command)) {
                 gdbCommandHandler.RunCommand(command);
@@ -114,12 +108,9 @@ public sealed class GdbServer : IDisposable {
     /// Runs the GDB server and handles incoming connections.
     /// </summary>
     private void RunServer() {
-        if (_configuration.GdbPort is null) {
-            return;
-        }
-        int port = _configuration.GdbPort.Value;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Starting GDB server");
+        int port = _configuration.GdbPort;
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("Starting GDB server on port {Port} ...", port);
         }
         try {
             while (_isRunning) {
@@ -133,12 +124,13 @@ public sealed class GdbServer : IDisposable {
                     if (_isRunning) {
                         _loggerService.Error(e, "Error in the GDB server, restarting it...");
                     } else {
-                        _loggerService.Verbose("GDB Server connection closed and server is not running. Terminating it");
+                        // Error occurred while stopping the server.
+                        _loggerService.Error(e, "GDB Server connection closed and server is not running. Terminating it");
                     }
                 }
             }
         } catch (Exception e) {
-            _loggerService.Error(e, "Unhandled error in the GDB server, restarting it");
+            _loggerService.Error(e, "Unhandled error in the GDB server. Stopping it.");
         } finally {
             _state.IsRunning = false;
             _pauseHandler.Resume();
@@ -149,34 +141,12 @@ public sealed class GdbServer : IDisposable {
     }
 
     /// <summary>
-    /// Starts the GDB server thread and waits for the initial connection to be made.
+    /// Starts the GDB server.
     /// </summary>
-    public void StartServerAndWait() {
-        if (_configuration.GdbPort is not null) {
-            StartServerThread();
-        }
-    }
-
-    /// <summary>
-    /// Starts the GDB server thread and waits for the initial connection to be made.
-    /// </summary>
-    private void StartServerThread() {
-        _waitFirstConnectionHandle = new AutoResetEvent(false);
+    public void StartServer() {
         _gdbServerThread = new(RunServer) {
             Name = "GdbServer"
         };
         _gdbServerThread?.Start();
-        // wait for thread to start and the initial connection to be made
-        _waitFirstConnectionHandle.WaitOne();
-        // Remove the handle so that no wait
-        _waitFirstConnectionHandle.Dispose();
-        _waitFirstConnectionHandle = null;
-    }
-
-    /// <summary>
-    /// Sets the auto-reset event for the initial connection.
-    /// </summary>
-    private void OnConnect() {
-        _waitFirstConnectionHandle?.Set();
     }
 }

@@ -10,6 +10,7 @@ public sealed class EmulatorBreakpointsManager {
     private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
     private readonly IPauseHandler _pauseHandler;
+    private BreakPoint? _machineStartBreakPoint;
     private BreakPoint? _machineStopBreakPoint;
 
     /// <summary>
@@ -33,9 +34,20 @@ public sealed class EmulatorBreakpointsManager {
     /// <summary>
     /// Called when the machine stops.
     /// </summary>
+    public void OnMachineStart() {
+        WaitSingleBreakpoint(_machineStartBreakPoint);
+    }
+
+    /// <summary>
+    /// Called when the machine stops.
+    /// </summary>
     public void OnMachineStop() {
-        if (_machineStopBreakPoint is not null) {
-            _machineStopBreakPoint.Trigger();
+        WaitSingleBreakpoint(_machineStopBreakPoint);
+    }
+
+    private void WaitSingleBreakpoint(BreakPoint? breakPoint) {
+        if (breakPoint is not null) {
+            breakPoint.Trigger();
             _pauseHandler.WaitIfPaused();
         }
     }
@@ -56,6 +68,9 @@ public sealed class EmulatorBreakpointsManager {
                 break;
             case BreakPointType.CPU_INTERRUPT:
                 InterruptBreakPoints.ToggleBreakPoint(breakPoint, on);
+                break;
+            case BreakPointType.MACHINE_START:
+                _machineStartBreakPoint = breakPoint;
                 break;
             case BreakPointType.MACHINE_STOP:
                 _machineStopBreakPoint = breakPoint;

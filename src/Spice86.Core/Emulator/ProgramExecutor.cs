@@ -28,6 +28,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly Configuration _configuration;
     private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
 
     /// <summary>
@@ -43,7 +44,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="dos">The DOS kernel.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
-    /// <param name="executionFlowRecorder">The class that records machine code execution flow.</param>
+    /// <param name="executionDumpFactory">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
     /// <param name="loggerService">The logging service to use.</param>
@@ -61,12 +62,11 @@ public sealed class ProgramExecutor : IDisposable {
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
-        if (configuration.GdbPort.HasValue) {
-            _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
-                state, functionCatalogue,
-                executionDumpFactory,
-                emulatorBreakpointsManager, pauseHandler, _loggerService);
-        }
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
+            state, functionCatalogue,
+            executionDumpFactory,
+            emulatorBreakpointsManager, pauseHandler, _loggerService);
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
             memory, state, dos);
         if (configuration.InitializeDOS is null) {
@@ -89,16 +89,21 @@ public sealed class ProgramExecutor : IDisposable {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Starting the emulation loop");
         }
-        if (_gdbServer is not null) {
-            _gdbServer?.StartServerAndWait();
-        } else if (_configuration.Debug) {
-            _pauseHandler.RequestPause("Starting the emulated program paused was requested");
+        if (_configuration.Debug) {
+            ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START, "Starting the emulated program in paused state.");
+            ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP, "Stopping the emulated program in paused state.");
         }
+        _gdbServer?.StartServer();
         _emulationLoop.Run();
 
         if (_configuration.DumpDataOnExit is not false) {
             _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
         }
+    }
+
+    private void ToggleStartOrStopBreakpoint(BreakPointType type, string reason) {
+        BreakPoint breakPoint = new UnconditionalBreakPoint(type, (breakpoint) => { _pauseHandler.RequestPause(reason); }, false);
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
@@ -134,7 +139,10 @@ public sealed class ProgramExecutor : IDisposable {
         FunctionCatalogue functionCatalogue, IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ILoggerService loggerService) {
-        if (configuration.GdbPort is null) {
+        if (configuration.GdbPort == 0) {
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("GDB port is 0, disabling GDB server.");
+            }
             return null;
         }
         return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,

@@ -59,7 +59,7 @@ When there is already data in the specified location, the emulator will load it 
 ## Command line options
 
 ```
-  --Debug                            (Default: false) Starts the program paused.
+  --Debug                            (Default: false) Starts the program paused and pauses once again when stopping.
   --Cycles                           (Default: null) Target CPU cycles per ms, for the rare speed sensitive game. Unused by default. Overrides Instructions per second option below if used.
   --Xms                              (Default: true) Enables 15 MB of XMS memory.
   --Ems                              (Default: true) Enables EMS memory. EMS adds 8 MB of memory accessible to DOS programs through the EMM Page Frame.
@@ -71,7 +71,7 @@ When there is already data in the specified location, the emulator will load it 
   -a, --ExeArgs                      List of parameters to give to the emulated program
   -x, --ExpectedChecksum             Hexadecimal string representing the expected SHA256 checksum of the emulated program
   -f, --FailOnUnhandledPort          (Default: false) If true, will fail when encountering an unhandled IO port. Useful to check for unimplemented hardware. false by default.
-  -g, --GdbPort                      gdb port, if empty gdb server will not be created. If not empty, application will pause until gdb connects
+  -g, --GdbPort                      GDB port. If 0, GDB server will be disabled. Default is 10000.
   -o, --OverrideSupplierClassName    Name of a class that will generate the initial function information. See documentation for more information.
   -p, --ProgramEntryPointSegment     (Default: 4096) Segment where to load the program. DOS PSP and MCB will be created before it.
   -u, --UseCodeOverride              (Default: true) <true or false> if false it will use the names provided by overrideSupplierClassName but not the code
@@ -94,12 +94,10 @@ Spice86 speaks the [GDB](https://www.gnu.org/software/gdb/) remote protocol:
 - it also provides custom GDB commands to do dynamic analysis.
 
 ### Connecting to GDB
-You need to specify a port for the GDB server to start when launching Spice86:
-```
-Spice86 --GdbPort=10000
-```
+The GDB server is always started along with the program to execute unless option is set to 0.
+Default port is 10000.
 
-Spice86 will wait for GDB to connect before starting execution so that you can setup breakpoints and so on.
+If you want to pause before starting execution to setup breakpoints and so on, use the --Debug option.
 
 Here is how to connect from GDB command line client and how to set the architecture:
 ```
@@ -160,18 +158,11 @@ Break at the end of the emulated program:
 (gdb) monitor breakStop
 ```
 
-#Refreshing screen or buffers while debugging
-```
-(gdb) monitor vbuffer refresh
-```
-
 ## Seer
 For a pleasing and productive experience with GDB, the
 [seerGDB](https://github.com/epasveer/seer) client is highly recommended.
 
-At best, use the configuration file `spice86.seer` provided in the `doc`
-directory ([here](doc/spice86.seer)): start Spice86 with `--GdbPort=10000`, and
-run Seer with `seergdb --project spice86.seer`.
+At best, use the configuration file `spice86.seer` provided in the `doc` directory ([here](doc/spice86.seer)): run Seer with `seergdb --project spice86.seer`.
 
 If you use a different port for gdb, adjust `spice86.seer` correspondingly.
 

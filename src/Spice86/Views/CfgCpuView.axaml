@@ -110,7 +110,7 @@
 			
 			<Border Grid.Column="1" Background="#AAFFFFFF" CornerRadius="3" Padding="5" Margin="0,5,5,5">
 				<StackPanel Orientation="Horizontal" Spacing="8">
-					<TextBlock Text="🔴 Current node" />
+					<TextBlock Text="🔴 Last run" />
 					<TextBlock Text="→ Jump" />
 					<TextBlock Text="⟱ Call" />
 					<TextBlock Text="⟰ Return" />
