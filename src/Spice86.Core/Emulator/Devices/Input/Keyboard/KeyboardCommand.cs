@@ -154,6 +154,11 @@ public enum KeyboardCommand : byte {
     EnablePortKbd = 0xAE,
 
     /// <summary>
+    /// Obsolete, only some controllers implement it.
+    /// </summary>
+    ReadKeyboardVersion = 0xAF,
+
+    /// <summary>
     /// Read input port
     /// </summary>
     ReadInputPort = 0xC0,
