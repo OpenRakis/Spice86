@@ -361,10 +361,12 @@ public class Spice86DependencyInjection : IDisposable {
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
         ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
+        InputEventQueue inputEventQueue = new();
 
         EmulationLoop emulationLoop = new(functionHandler,
             cpuForEmulationLoop, state, picPitCpuState, dualPic,
-            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
+            emulatorBreakpointsManager, pauseHandler, cyclesLimiter, inputEventQueue, cyclesBudgeter,
+            loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
