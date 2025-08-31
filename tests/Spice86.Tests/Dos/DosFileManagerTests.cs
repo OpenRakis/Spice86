@@ -24,6 +24,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -152,9 +153,12 @@ public class DosFileManagerTests {
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        EmulationLoop emulationLoop = new EmulationLoop(configuration,
+        InputEventQueue inputEventQueue = new InputEventQueue();
+
+        EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
+            emulatorBreakpointsManager, dmaController, pauseHandler,
+            new NullCycleLimiter(), inputEventQueue, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
