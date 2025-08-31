@@ -61,7 +61,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
         pauseHandler.Paused += () => {
             if (AutoFollow) {
-                UpdateGraphCommand.Execute(null);
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                    UpdateGraphCommand.Execute(null);
+                });
             }
         };
     }
@@ -258,13 +260,13 @@ public partial class CfgCpuViewModel : ViewModelBase {
         string label = string.Empty;
 
         // Check if it's the current execution node
-        ICfgNode? currentNode = _executionContextManager.CurrentExecutionContext?.LastExecuted;
-        bool isNodeCurrent = node.Id == currentNode?.Id;
-        bool isSuccessorCurrent = successor.Id == currentNode?.Id;
+        ICfgNode? lastExecutedNode = _executionContextManager.CurrentExecutionContext?.LastExecuted;
+        bool isNodeLastExecuted = node.Id == lastExecutedNode?.Id;
+        bool isSuccessorLastExecuted = successor.Id == lastExecutedNode?.Id;
 
         // Format node text with visual indicators for node type
-        string nodeText = FormatNodeText(node, isNodeCurrent);
-        string successorText = FormatNodeText(successor, isSuccessorCurrent);
+        string nodeText = FormatNodeText(node, isNodeLastExecuted);
+        string successorText = FormatNodeText(successor, isSuccessorLastExecuted);
 
         // Add more detailed labels for different edge types
         switch (node) {
@@ -297,7 +299,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
         return new Edge(nodeText, successorText, label);
     }
 
-    private string FormatNodeText(ICfgNode node, bool isCurrent) {
+    private string FormatNodeText(ICfgNode node, bool isLastExecuted) {
         // Get the basic text representation
         string headerText = _nodeToString.ToHeaderString(node);
         string assemblyText = _nodeToString.ToAssemblyString(node);
@@ -305,9 +307,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
         // Add visual indicators for node type and current execution node
         string prefix = "";
 
-        // Mark current execution node
-        if (isCurrent) {
-            prefix += "🔴 current ";
+        // Mark last executed node
+        if (isLastExecuted) {
+            prefix += "🔴 last run ";
         }
 
         // Add node type indicators

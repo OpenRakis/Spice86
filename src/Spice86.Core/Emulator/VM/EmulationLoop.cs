@@ -78,6 +78,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. <br/>
     /// This can occur if the target program is not supported (yet).</exception>
     public void Run() {
+        _emulatorBreakpointsManager.OnMachineStart();
         try {
             StartRunLoop(_functionHandler);
         } catch (HaltRequestedException) {
@@ -104,6 +105,7 @@ public class EmulationLoop : ICyclesLimiter {
         // Entry could be overridden and could throw exceptions
         functionHandler.Call(CallType.MACHINE, _cpuState.IpSegmentedAddress, null, null, "entry", false);
         RunLoop();
+        functionHandler.Ret(CallType.MACHINE, null);
     }
 
     private void RunLoop() {

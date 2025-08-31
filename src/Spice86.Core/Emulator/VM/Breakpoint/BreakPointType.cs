@@ -51,6 +51,9 @@ public enum BreakPointType {
     /// </summary>
     IO_ACCESS,
 
+    /// <summary> Breakpoint is triggered when the machine starts. </summary>
+    MACHINE_START,
+
     /// <summary> Breakpoint is triggered when the machine stops. </summary>
     MACHINE_STOP
 }

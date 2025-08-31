@@ -28,8 +28,9 @@ public sealed class GdbIo : IDisposable {
     /// <param name="loggerService">The logger service implementation.</param>
     public GdbIo(int port, ILoggerService loggerService) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Debug);
-        IPAddress ip = IPAddress.Any;
-        _tcpListener = new TcpListener(ip, port);
+        // Listen to connections in IPv4 or IPv6
+        _tcpListener = new TcpListener(IPAddress.IPv6Any, port);
+        _tcpListener.Server.DualMode = true;
     }
 
     /// <summary>
@@ -37,10 +38,11 @@ public sealed class GdbIo : IDisposable {
     /// </summary>
     public void WaitForConnection() {
         _tcpListener.Start();
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("GDB Server listening on port {Port}", ((IPEndPoint)_tcpListener.LocalEndpoint).Port);
+        }
         _socket = _tcpListener.AcceptSocket();
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
-            _loggerService.Information("GDB Server listening on port {Port}", port);
             _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
         }
         _stream = new NetworkStream(_socket);
@@ -49,7 +51,16 @@ public sealed class GdbIo : IDisposable {
     /// <summary>
     /// Gets a value indicating whether the GDB client is still connected to the server.
     /// </summary>
-    public bool IsClientConnected => !(_socket is null || !_socket.Connected || (_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0));
+    public bool IsClientConnected() {
+        if (_socket is null) {
+            return false;
+        }
+        if(!_socket.Connected) {
+            return false;
+        }
+        
+        return !(_socket.Poll(1000, SelectMode.SelectRead) && _socket.Available == 0);
+    }
 
     /// <inheritdoc />
     public void Dispose() {
@@ -131,7 +142,7 @@ public sealed class GdbIo : IDisposable {
     /// </summary>
     /// <param name="data">The response data to send.</param>
     public void SendResponse(string? data) {
-        if (!IsClientConnected) {
+        if (!IsClientConnected()) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Cannot send response, client is not connected anymore");
             }
@@ -148,13 +159,14 @@ public sealed class GdbIo : IDisposable {
 
     private void Dispose(bool disposing) {
         if (!_disposed) {
+            _disposed = true;
             if (disposing) {
                 // dispose managed state (managed objects)
-                _tcpListener.Stop();
-                _socket?.Close();
                 _stream?.Close();
+                _socket?.Shutdown(SocketShutdown.Both);
+                _socket?.Close();
+                _tcpListener.Stop();
             }
-            _disposed = true;
         }
     }
 
