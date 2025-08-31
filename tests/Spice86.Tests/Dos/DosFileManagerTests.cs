@@ -154,10 +154,12 @@ public class DosFileManagerTests {
             configuration.FailOnUnhandledPort, null);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 
+        InputEventQueue inputEventQueue = new InputEventQueue();
+
         EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler,
-            new NullCycleLimiter(), loggerService);
+            new NullCycleLimiter(), inputEventQueue, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
