@@ -150,7 +150,7 @@ public class DosFileManagerTests {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
 
-        PS2Keyboard keyboard = new PS2Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+        Intel8042PS2KeyboardMouseController keyboard = new Intel8042PS2KeyboardMouseController(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
             configuration.FailOnUnhandledPort, null);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 
@@ -159,7 +159,7 @@ public class DosFileManagerTests {
         EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler,
-            new NullCycleLimiter(), inputEventQueue, loggerService);
+            new NullCycleLimiter(), inputEventQueue, keyboard, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);

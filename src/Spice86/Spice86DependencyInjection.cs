@@ -359,14 +359,15 @@ public class Spice86DependencyInjection : IDisposable {
         InputEventQueue inputEventQueue = new InputEventQueue(
             _gui as IGuiKeyboardEvents, _gui as IGuiMouseEvents);
 
-        PS2Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
+        Intel8042PS2KeyboardMouseController keyboard = new(
+            state, ioPortDispatcher, a20Gate, dualPic,
             loggerService, configuration.FailOnUnhandledPort,
             inputEventQueue);
 
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
             emulatorBreakpointsManager, dmaController,
-            pauseHandler, cyclesLimiter, inputEventQueue, loggerService);
+            pauseHandler, cyclesLimiter, inputEventQueue, keyboard, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 

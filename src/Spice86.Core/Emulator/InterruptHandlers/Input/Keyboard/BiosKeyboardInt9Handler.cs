@@ -17,7 +17,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly AvaloniaKeyConverter _scanCodeConverter = new();
-    private readonly PS2Keyboard _keyboard;
+    private readonly Intel8042PS2KeyboardMouseController _keyboard;
     private static readonly SegmentedAddress CallbackLocation = new(0xf000, 0xe987);
     private readonly DualPic _dualPic;
     private readonly EmulationLoopRecall _emulationLoopRecall;
@@ -36,7 +36,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, Stack stack, State state,
         IFunctionHandlerProvider functionHandlerProvider, DualPic dualPic,
-        PS2Keyboard keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
+        Intel8042PS2KeyboardMouseController keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
         EmulationLoopRecall emulationLoopRecall, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         BiosKeyboardBuffer = biosKeyboardBuffer;
