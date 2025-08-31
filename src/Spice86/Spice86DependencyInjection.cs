@@ -356,13 +356,17 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = new HeadlessGui();
         }
 
+        InputEventQueue inputEventQueue = new InputEventQueue(
+            _gui as IGuiKeyboardEvents, _gui as IGuiMouseEvents);
+
         PS2Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic,
-            loggerService, configuration.FailOnUnhandledPort, _gui as IGuiKeyboardEvents);
+            loggerService, configuration.FailOnUnhandledPort,
+            inputEventQueue);
 
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
             emulatorBreakpointsManager, dmaController,
-            pauseHandler, cyclesLimiter, loggerService);
+            pauseHandler, cyclesLimiter, inputEventQueue, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
@@ -374,9 +378,9 @@ public class Spice86DependencyInjection : IDisposable {
             state, stack, emulationLoop);
 
         Mouse mouse = new(state, dualPic, configuration.Mouse, loggerService,
-            configuration.FailOnUnhandledPort, _gui as IGuiMouseEvents);
+            configuration.FailOnUnhandledPort, inputEventQueue);
         MouseDriver mouseDriver = new(state, memory, mouse,
-            vgaFunctionality, loggerService, _gui as IGuiMouseEvents);
+            vgaFunctionality, loggerService, inputEventQueue);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
@@ -396,8 +400,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         Midi midiDevice = new Midi(configuration, softwareMixer, state,
-                    ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
-                    configuration.FailOnUnhandledPort, loggerService);
+            ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+            configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
             ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
