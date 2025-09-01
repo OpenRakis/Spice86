@@ -3,8 +3,8 @@
 /// Represents a disk image mounted as a floppy disk drive.
 /// </summary>
 /// <remarks>Unimplemented.</remarks>
-public class FloppyDiskDrive : DosDriveBase {
-    public FloppyDiskDrive() {
+public class FloppyDiskImage : DosDriveBase {
+    public FloppyDiskImage() {
         IsRemovable = true;
     }
 }
