@@ -41,8 +41,10 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels;
@@ -311,8 +313,16 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory data exporter created...");
         }
 
-        EmulatorStateSerializer emulatorStateSerializer = new(memoryDataExporter, state,
-            executionDumpFactory, functionCatalogue, loggerService);
+        EmulatorBreakpointsSerializer emulatorBreakpointsSerializer = new
+            EmulatorBreakpointsSerializer(configuration, _loggerService);
+
+        EmulatorStateSerializer emulatorStateSerializer = new(
+            memoryDataExporter, 
+            state,
+            executionDumpFactory, 
+            functionCatalogue, 
+            loggerService,
+            emulatorBreakpointsSerializer);
 
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
@@ -508,6 +518,11 @@ public class Spice86DependencyInjection : IDisposable {
 
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher);
+
+            emulatorBreakpointsSerializer.AddSerializableBreakpointsHolder(breakpointsViewModel);
+
+            SerializedBreakpoints serializedBreakpoints = emulatorBreakpointsSerializer.LoadBreakpoints();
+            breakpointsViewModel.RestoreBreakpoints(serializedBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
                 emulatorBreakpointsManager, memory, state, functionCatalogue.FunctionInformations,

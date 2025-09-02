@@ -145,7 +145,7 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     public void StartServer() {
         _gdbServerThread = new(RunServer) {
-            Name = "GdbServer"
+            Name = "GdbServer",
         };
         _gdbServerThread?.Start();
     }

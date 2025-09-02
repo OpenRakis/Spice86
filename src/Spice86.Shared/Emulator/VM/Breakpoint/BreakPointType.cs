@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
+﻿namespace Spice86.Shared.Emulator.VM.Breakpoint;
 
 /// <summary>
 /// Types of breakpoints available
