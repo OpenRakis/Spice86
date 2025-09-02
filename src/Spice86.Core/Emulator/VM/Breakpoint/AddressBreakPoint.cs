@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using Spice86.Shared.Emulator.VM.Breakpoint;
+
 /// <summary>
 /// Represents a breakpoint triggered when the program reaches a specific memory address.
 /// </summary>
