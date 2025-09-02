@@ -1,8 +1,8 @@
 namespace Spice86.Core.Emulator.Function.Dump;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM.Breakpoint.Serializable;
+using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -13,33 +13,41 @@ public class EmulatorStateSerializer {
     private readonly IExecutionDumpFactory _executionDumpFactory;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
-
     private readonly MemoryDataExporter _memoryDataExporter;
+    private readonly EmulatorBreakpointsSerializer _emulatorBreakpointsSerializer;
     
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
-    public EmulatorStateSerializer(MemoryDataExporter memoryDataExporter, State state,
-        IExecutionDumpFactory executionDumpFactory, FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
+    public EmulatorStateSerializer(
+        MemoryDataExporter memoryDataExporter, 
+        State state,
+        IExecutionDumpFactory executionDumpFactory, 
+        FunctionCatalogue functionCatalogue, 
+        ILoggerService loggerService,
+        EmulatorBreakpointsSerializer emulatorBreakpointsSerializer) {
+        
         _state = state;
         _memoryDataExporter = memoryDataExporter;
         _executionDumpFactory = executionDumpFactory;
         _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
+        _emulatorBreakpointsSerializer = emulatorBreakpointsSerializer;
     }
-    
     
     /// <summary>
     /// Dumps the emulator state to the specified directory.
     /// </summary>
-    /// <param name="path">The directory used for dumping the emulator state.</param>
     public void SerializeEmulatorStateToDirectory(string path) {
         new RecordedDataWriter(
                 _state,
                 _executionDumpFactory,
                 _memoryDataExporter,
                 _functionCatalogue,
-                path, _loggerService)
+                path, 
+                _loggerService)
             .DumpAll();
+            
+        _emulatorBreakpointsSerializer.SaveBreakpoints();
     }
 }

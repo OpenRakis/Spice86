@@ -9,13 +9,16 @@ using CommunityToolkit.Mvvm.Messaging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.ViewModels.Messages;
+using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
+using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelBase {
+public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpointsHolder {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -469,5 +472,116 @@ public partial class BreakpointsViewModel : ViewModelBase {
     /// <returns>An enumerable collection of breakpoints that are of type CPU_EXECUTION_ADDRESS and match the specified address.</returns>
     public IEnumerable<BreakpointViewModel> GetExecutionBreakPointsAtAddress(uint addressLinear) {
         return Breakpoints.Where(bp => bp.Address == addressLinear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
+    }
+
+    /// <summary>
+    /// Creates a serializable representation of all breakpoints in the class
+    /// </summary>
+    /// <returns>A SerializedBreakpoints object containing all the internal debugger breakpoints.</returns>
+    public SerializedBreakpoints CreateSerializableBreakpoints() {
+        var serializedBreakpoints = new SerializedBreakpoints {
+            Breakpoints = new List<SerializedBreakpoint>()
+        };
+
+        foreach (BreakpointViewModel breakpoint in Breakpoints) {
+            SerializedBreakpoint serializedBreakpoint;
+
+            if (breakpoint is BreakpointRangeViewModel rangeBreakpoint) {
+                serializedBreakpoint = new SerializedBreakpointRange {
+                    Trigger = rangeBreakpoint.Address,
+                    EndTrigger = rangeBreakpoint.EndTrigger,
+                    Type = rangeBreakpoint.Type,
+                    IsRemovedOnTrigger = rangeBreakpoint.IsRemovedOnTrigger,
+                    Comment = rangeBreakpoint.Comment ?? string.Empty,
+                    IsEnabled = rangeBreakpoint.IsEnabled
+                };
+            } else {
+                serializedBreakpoint = new SerializedBreakpoint {
+                    Trigger = breakpoint.Address,
+                    Type = breakpoint.Type,
+                    IsRemovedOnTrigger = breakpoint.IsRemovedOnTrigger,
+                    Comment = breakpoint.Comment ?? string.Empty,
+                    IsEnabled = breakpoint.IsEnabled
+                };
+            }
+
+            serializedBreakpoints.Breakpoints.Add(serializedBreakpoint);
+        }
+
+        return serializedBreakpoints;
+    }
+
+    /// <summary>
+    /// Restores breakpoints from saved breakpoint data.
+    /// </summary>
+    /// <param name="breakpointsData">The saved breakpoint data to restore from.</param>
+    public void RestoreBreakpoints(SerializedBreakpoints breakpointsData) {
+        if (breakpointsData?.Breakpoints == null || breakpointsData.Breakpoints.Count == 0) {
+            return;
+        }
+
+        foreach (SerializedBreakpoint breakpointData in breakpointsData.Breakpoints) {
+            if (breakpointData is SerializedBreakpointRange rangeData) {
+                RestoreRangeBreakpoint(rangeData);
+            } else {
+                RestoreBreakpoint(breakpointData);
+            }
+        }
+    }
+
+    private void RestoreBreakpoint(SerializedBreakpoint breakpointData) {
+        Action onReached = () => { };
+
+        switch (breakpointData.Type) {
+            case BreakPointType.CPU_EXECUTION_ADDRESS:
+                onReached = () => PauseAndReportAddress($"0x{breakpointData.Trigger:X}");
+                break;
+            case BreakPointType.CPU_CYCLES:
+                onReached = () => PauseAndReportCycles(breakpointData.Trigger);
+                break;
+            case BreakPointType.CPU_INTERRUPT:
+                onReached = () => PauseAndReportInterrupt((uint)breakpointData.Trigger);
+                break;
+            case BreakPointType.IO_ACCESS:
+            case BreakPointType.IO_READ:
+            case BreakPointType.IO_WRITE:
+                onReached = () => PauseAndReportIoPort((ushort)breakpointData.Trigger);
+                break;
+            case BreakPointType.MEMORY_ACCESS:
+            case BreakPointType.MEMORY_READ:
+            case BreakPointType.MEMORY_WRITE:
+                onReached = () => PauseAndReportAddress($"0x{breakpointData.Trigger:X}");
+                break;
+        }
+
+        BreakpointViewModel breakpointVm = AddAddressBreakpoint(
+            breakpointData.Trigger,
+            breakpointData.Type,
+            breakpointData.IsRemovedOnTrigger,
+            onReached,
+            breakpointData.Comment);
+
+        if (!breakpointData.IsEnabled) {
+            breakpointVm.Disable();
+        }
+    }
+
+    private void RestoreRangeBreakpoint(SerializedBreakpointRange rangeData) {
+        string startAddressHex = $"0x{rangeData.Trigger:X}";
+        string endAddressHex = $"0x{rangeData.EndTrigger:X}";
+
+        void onReached() => PauseAndReportAddressRange(startAddressHex, endAddressHex);
+
+        BreakpointRangeViewModel breakpointVm = AddAddressRangeBreakpoint(
+            rangeData.Trigger,
+            rangeData.EndTrigger,
+            rangeData.Type,
+            rangeData.IsRemovedOnTrigger,
+            onReached,
+            rangeData.Comment);
+
+        if (!rangeData.IsEnabled) {
+            breakpointVm.Disable();
+        }
     }
 }

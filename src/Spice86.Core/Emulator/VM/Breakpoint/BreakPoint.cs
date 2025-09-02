@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using Spice86.Shared.Emulator.VM.Breakpoint;
+
 
 /// <summary>
 /// Base class for all breakpoints.
