@@ -18,6 +18,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
