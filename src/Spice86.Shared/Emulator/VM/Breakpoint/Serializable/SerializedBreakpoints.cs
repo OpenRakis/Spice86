@@ -2,15 +2,14 @@
 /// <summary>
 /// Container class for a collection of serialized breakpoints.
 /// </summary>
-public record SerializedBreakpoints
-{
+public record SerializedBreakpoints {
     /// <summary>
-    /// Gets the format version of the serialized breakpoints collection.
+    /// Gets the format version.
     /// </summary>
     public int Version { get; init; } = 1;
-    
+
     /// <summary>
-    /// Gets the collection of breakpoints.
+    /// Gets the collection of serialized breakpoints.
     /// </summary>
-    public List<SerializedBreakpoint> Breakpoints { get; init; } = new();
+    public IList<SerializedBreakpoint> Breakpoints { get; init; } = new List<SerializedBreakpoint>();
 }
