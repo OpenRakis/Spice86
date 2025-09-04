@@ -2,13 +2,11 @@ namespace Spice86.Views;
 
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Threading;
-using Avalonia.Platform;
 
-using Spice86.ViewModels;
 using Spice86.Native;
+using Spice86.ViewModels;
 
 using System;
 
@@ -16,7 +14,7 @@ internal partial class MainWindow : Window {
     private bool _isMouseCaptured = false;
     private bool _wantToCapture = true;
     private IntPtr _windowHandle;
-    
+
     /// <summary>
     /// Initializes a new instance
     /// </summary>
@@ -31,7 +29,7 @@ internal partial class MainWindow : Window {
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
         // Get native window handle when window is loaded
         _windowHandle = GetNativeWindowHandle();
-        
+
         Dispatcher.UIThread.Post(() => {
             if (DataContext is MainWindowViewModel mainVm) {
                 mainVm.CloseMainWindow += (_, _) => Close();
@@ -57,14 +55,25 @@ internal partial class MainWindow : Window {
         get => GetValue(PerformanceViewModelProperty);
         set => SetValue(PerformanceViewModelProperty, value);
     }
-    
+
     private void OnMouseMoved(object? sender, PointerEventArgs e) {
         if (this.DataContext is MainWindowViewModel mainVm) {
-            if(!_isMouseCaptured && _wantToCapture) {
+            if (!_isMouseCaptured && _wantToCapture) {
                 _wantToCapture = false;
                 _isMouseCaptured = true;
-                // Use native mouse capture instead of Avalonia's e.Pointer.Capture()
-                NativeMouseCapture.EnableCapture(_windowHandle);
+
+                // Get the bounds of the ScreenView control
+                Rect screenViewBounds = ScreenView.Bounds;
+                Point screenViewPoint = ScreenView.PointToClient(new(0, 0));
+
+                // Use the new method with the ScreenView bounds
+                NativeMouseCapture.EnableCaptureWithBounds(
+                    _windowHandle,
+                    (int)screenViewPoint.X,
+                    (int)screenViewPoint.Y,
+                    (int)(screenViewPoint.X + screenViewBounds.Width),
+                    (int)(screenViewPoint.Y + screenViewBounds.Height)
+                );
             }
             mainVm.OnMouseMoved(e, Image);
         }
@@ -74,13 +83,24 @@ internal partial class MainWindow : Window {
         if (this.DataContext is not MainWindowViewModel mainVm) {
             return;
         }
-        
+
         if (e.GetCurrentPoint(Image).Properties.IsMiddleButtonPressed) {
             _isMouseCaptured = !_isMouseCaptured;
             _wantToCapture = !_wantToCapture;
 
             if (_isMouseCaptured) {
-                NativeMouseCapture.EnableCapture(_windowHandle);
+                // Get the bounds of the ScreenView control
+                Rect screenViewBounds = ScreenView.Bounds;
+                Point screenViewPoint = ScreenView.PointToClient(new(0, 0));
+
+                // Use the new method with the ScreenView bounds
+                NativeMouseCapture.EnableCaptureWithBounds(
+                    _windowHandle,
+                    (int)screenViewPoint.X,
+                    (int)screenViewPoint.Y,
+                    (int)(screenViewPoint.X + screenViewBounds.Width),
+                    (int)(screenViewPoint.Y + screenViewBounds.Height)
+                );
             } else {
                 NativeMouseCapture.DisableCapture();
             }
@@ -88,7 +108,7 @@ internal partial class MainWindow : Window {
             e.Handled = true;
             return;
         }
-        
+
         mainVm.OnMouseButtonDown(e, Image);
     }
 
@@ -109,8 +129,8 @@ internal partial class MainWindow : Window {
     }
 
     private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
-          (DataContext as MainWindowViewModel)?.OnKeyUp(e);
-          e.Handled = true;
+        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        e.Handled = true;
     }
 
     private void OnMenuKeyDown(object? sender, KeyEventArgs e) {
@@ -138,7 +158,7 @@ internal partial class MainWindow : Window {
     protected override void OnClosing(WindowClosingEventArgs e) {
         // Release mouse capture when closing
         NativeMouseCapture.Cleanup();
-        
+
         (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
         base.OnClosing(e);
     }

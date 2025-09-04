@@ -1,34 +1,31 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Spice86.Native
-{
-    internal static class NativeMouseCapture
-    {
+namespace Spice86.Native {
+    internal static class NativeMouseCapture {
         // Platform detection
         private static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         private static readonly bool IsMacOS = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
         private static readonly bool IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-        
+
         #region Windows API
         [DllImport("user32.dll")]
         private static extern bool ClipCursor(ref RECT rect);
-        
+
         [DllImport("user32.dll")]
         private static extern bool ClipCursor(IntPtr rect);
-        
+
         [DllImport("user32.dll")]
         private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-        
+
         [DllImport("user32.dll")]
         private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
-        
+
         [DllImport("user32.dll")]
         private static extern bool ShowCursor(bool bShow);
-        
+
         [StructLayout(LayoutKind.Sequential)]
-        private struct RECT
-        {
+        private struct RECT {
             public int Left;
             public int Top;
             public int Right;
@@ -36,8 +33,7 @@ namespace Spice86.Native
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
-        {
+        private struct POINT {
             public int X;
             public int Y;
         }
@@ -46,19 +42,18 @@ namespace Spice86.Native
         #region macOS API
         [DllImport("libSystem.dylib")]
         private static extern IntPtr CGMainDisplayID();
-        
+
         [DllImport("libSystem.dylib")]
         private static extern void CGDisplayHideCursor(IntPtr display);
-        
+
         [DllImport("libSystem.dylib")]
         private static extern void CGDisplayShowCursor(IntPtr display);
-        
+
         [DllImport("libSystem.dylib")]
         private static extern void CGAssociateMouseAndMouseCursorPosition(bool connected);
-        
+
         [StructLayout(LayoutKind.Sequential)]
-        private struct CGPoint
-        {
+        private struct CGPoint {
             public double X;
             public double Y;
         }
@@ -68,35 +63,33 @@ namespace Spice86.Native
         [DllImport("libX11.so.6")]
         private static extern int XGrabPointer(IntPtr display, IntPtr window, bool ownerEvents,
             int eventMask, int pointerMode, int keyboardMode, IntPtr confineTo, IntPtr cursor, ulong time);
-        
+
         [DllImport("libX11.so.6")]
         private static extern int XUngrabPointer(IntPtr display, ulong time);
-        
+
         [DllImport("libX11.so.6")]
         private static extern IntPtr XOpenDisplay(string display);
-        
+
         [DllImport("libX11.so.6")]
         private static extern int XCloseDisplay(IntPtr display);
-        
+
         [DllImport("libX11.so.6")]
         private static extern IntPtr XDefaultRootWindow(IntPtr display);
-        
+
         private static IntPtr? x11Display = null;
         #endregion
-        
+
         private static bool _isCaptured = false;
-        
+
         /// <summary>
-        /// Enable relative mouse mode using native methods
+        /// Enable relative mouse mode using native methods for the entire window
         /// </summary>
-        public static bool EnableCapture(IntPtr windowHandle)
-        {
+        public static bool EnableCapture(IntPtr windowHandle) {
             if (windowHandle == IntPtr.Zero) return false;
-            
+
             _isCaptured = true;
-            
-            if (IsWindows)
-            {
+
+            if (IsWindows) {
                 GetClientRect(windowHandle, out RECT rect);
                 POINT p = new() { X = rect.Left, Y = rect.Top };
                 ClientToScreen(windowHandle, ref p);
@@ -108,30 +101,24 @@ namespace Spice86.Native
                 rect.Right = p.X;
                 rect.Bottom = p.Y;
                 return ClipCursor(ref rect);
-            }
-            else if (IsMacOS)
-            {
+            } else if (IsMacOS) {
                 IntPtr mainDisplay = CGMainDisplayID();
                 CGDisplayHideCursor(mainDisplay);
                 CGAssociateMouseAndMouseCursorPosition(false); // Relative mode
                 return true;
-            }
-            else if (IsLinux)
-            {
-                if (x11Display == null)
-                {
+            } else if (IsLinux) {
+                if (x11Display == null) {
                     x11Display = XOpenDisplay(null!);
                 }
-                
-                if (x11Display != IntPtr.Zero)
-                {
+
+                if (x11Display != IntPtr.Zero) {
                     const int GrabModeAsync = 1;
                     const int PointerMotionMask = 1 << 6;
                     const int ButtonPressMask = 1 << 2;
                     const int ButtonReleaseMask = 1 << 3;
-                    
+
                     int eventMask = PointerMotionMask | ButtonPressMask | ButtonReleaseMask;
-                    
+
                     int result = XGrabPointer(
                         x11Display.Value,
                         XDefaultRootWindow(x11Display.Value),
@@ -142,58 +129,82 @@ namespace Spice86.Native
                         IntPtr.Zero,
                         IntPtr.Zero,
                         0);
-                        
+
                     return result == 0; // GrabSuccess is 0
                 }
             }
-            
+
             return false;
         }
-        
+
+        /// <summary>
+        /// Enable mouse capture constrained to a specific rectangle
+        /// </summary>
+        public static bool EnableCaptureWithBounds(IntPtr windowHandle, int left, int top, int right, int bottom) {
+            if (windowHandle == IntPtr.Zero) return false;
+
+            _isCaptured = true;
+
+            if (IsWindows) {
+                // Convert the bounds to screen coordinates
+                POINT topLeft = new() { X = left, Y = top };
+                POINT bottomRight = new() { X = right, Y = bottom };
+
+                ClientToScreen(windowHandle, ref topLeft);
+                ClientToScreen(windowHandle, ref bottomRight);
+
+                RECT rect = new() {
+                    Left = topLeft.X,
+                    Top = topLeft.Y,
+                    Right = bottomRight.X,
+                    Bottom = bottomRight.Y
+                };
+
+                return ClipCursor(ref rect);
+            } else if (IsMacOS || IsLinux) {
+                // For Mac and Linux, we'll use the same approach as the window capture
+                // since we don't have direct control over the bounding box
+                return EnableCapture(windowHandle);
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Disable mouse capture and return to normal mode
         /// </summary>
-        public static bool DisableCapture()
-        {
+        public static bool DisableCapture() {
             _isCaptured = false;
-            
-            if (IsWindows)
-            {
+
+            if (IsWindows) {
                 return ClipCursor(IntPtr.Zero);
-            }
-            else if (IsMacOS)
-            {
+            } else if (IsMacOS) {
                 IntPtr mainDisplay = CGMainDisplayID();
                 CGDisplayShowCursor(mainDisplay);
                 CGAssociateMouseAndMouseCursorPosition(true); // Normal mode
                 return true;
-            }
-            else if (IsLinux && x11Display != null)
-            {
+            } else if (IsLinux && x11Display != null) {
                 int result = XUngrabPointer(x11Display.Value, 0);
                 return result == 0;
             }
-            
+
             return false;
         }
-        
+
         /// <summary>
         /// Clean up any resources
         /// </summary>
-        public static void Cleanup()
-        {
-            if (_isCaptured)
-            {
+        public static void Cleanup() {
+            if (_isCaptured) {
                 DisableCapture();
             }
-            
-            if (IsLinux && x11Display != null)
-            {
+
+            if (IsLinux && x11Display != null) {
                 XCloseDisplay(x11Display.Value);
                 x11Display = null;
             }
         }
-        
+
         /// <summary>
         /// Check if mouse is currently captured
         /// </summary>

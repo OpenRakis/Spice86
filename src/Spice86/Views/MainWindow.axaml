@@ -113,7 +113,7 @@
 		</StackPanel>
 		<ContentPresenter Grid.Row="0" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top"
 			Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
-		<Viewbox Grid.Row="1">
+		<Viewbox Name="ScreenView" Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
 					<ScaleTransform
