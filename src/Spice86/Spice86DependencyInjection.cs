@@ -319,10 +319,10 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer = new(
             memoryDataExporter, 
             state,
-            executionDumpFactory, 
+            executionDumpFactory,
+            emulatorBreakpointsSerializer,
             functionCatalogue, 
-            loggerService,
-            emulatorBreakpointsSerializer);
+            loggerService);
 
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 

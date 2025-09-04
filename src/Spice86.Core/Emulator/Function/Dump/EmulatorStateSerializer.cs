@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.Function.Dump;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Breakpoint.Serializable;
-using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -22,10 +21,10 @@ public class EmulatorStateSerializer {
     public EmulatorStateSerializer(
         MemoryDataExporter memoryDataExporter, 
         State state,
-        IExecutionDumpFactory executionDumpFactory, 
+        IExecutionDumpFactory executionDumpFactory,
+        EmulatorBreakpointsSerializer emulatorBreakpointsSerializer,
         FunctionCatalogue functionCatalogue, 
-        ILoggerService loggerService,
-        EmulatorBreakpointsSerializer emulatorBreakpointsSerializer) {
+        ILoggerService loggerService) {
         
         _state = state;
         _memoryDataExporter = memoryDataExporter;
