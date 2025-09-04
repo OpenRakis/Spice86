@@ -1,11 +1,10 @@
 ﻿namespace Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 /// <summary>
-/// Class for serializing range breakpoint data.
+/// Class for serializing memory range breakpoints
 /// </summary>
-public record SerializedBreakpointRange : SerializedBreakpoint
-{
+public record SerializedBreakpointRange : SerializedBreakpoint {
     /// <summary>
-    /// Gets or sets the end trigger value for the range breakpoint.
+    /// Gets the end trigger value for the range breakpoint.
     /// </summary>
     public long EndTrigger { get; init; }
 }

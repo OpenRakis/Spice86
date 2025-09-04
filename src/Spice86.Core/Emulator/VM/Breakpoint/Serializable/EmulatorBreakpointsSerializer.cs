@@ -56,7 +56,7 @@ public class EmulatorBreakpointsSerializer {
                     ProgramHash = _programHash,
                     SerializedBreakpoints = serializedBreakpoints
                 };
-                
+
                 string jsonString = JsonSerializer.Serialize(programSerializedBreakpoints, new JsonSerializerOptions { WriteIndented = true });
                 using FileStream fileStream = File.Open(filePath, FileMode.Create);
                 fileStream.Write(Encoding.UTF8.GetBytes(jsonString));
@@ -80,31 +80,31 @@ public class EmulatorBreakpointsSerializer {
         if (!File.Exists(filePath) || new FileInfo(filePath).Length == 0) {
             return new();
         }
-        
+
         try {
             string jsonString = File.ReadAllText(filePath);
-            
-            if(string.IsNullOrWhiteSpace(jsonString)) {
+
+            if (string.IsNullOrWhiteSpace(jsonString)) {
                 return new();
             }
 
             ProgramSerializedBreakpoints? programSerializedBreakpoints = JsonSerializer.Deserialize<ProgramSerializedBreakpoints>(jsonString);
-            
+
             if (programSerializedBreakpoints == null) {
                 return new();
             }
-            
+
             if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_programHash)) {
                 _loggerService.Warning("Breakpoints on disk were for program {LoadedHash} but current program is {CurrentHash}",
                     programSerializedBreakpoints.ProgramHash, _programHash);
                 return new();
             }
-            
+
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("Loaded {Count} breakpoints for program {ProgramHash}",
                     programSerializedBreakpoints.SerializedBreakpoints.Breakpoints.Count, _programHash);
             }
-            
+
             return programSerializedBreakpoints.SerializedBreakpoints;
         } catch (Exception ex) {
             _loggerService.Error(ex, "Failed to load breakpoints from {FilePath}", filePath);
