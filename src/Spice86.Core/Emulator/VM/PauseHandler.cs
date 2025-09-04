@@ -5,7 +5,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Provides functionality to handle pausing of the emulator.
 /// </summary>
-public class PauseHandler : IDisposable, IPauseHandler {
+public class PauseHandler : IPauseHandler {
     /// <summary>
     /// Delegate for handling pause request events.
     /// </summary>
@@ -41,8 +41,10 @@ public class PauseHandler : IDisposable, IPauseHandler {
         if (_disposed) {
             return;
         }
-        _manualResetEvent.Dispose();
         _disposed = true;
+        // Resume all waiting threads before teardown
+        _manualResetEvent.Set();
+        _manualResetEvent.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -57,6 +59,9 @@ public class PauseHandler : IDisposable, IPauseHandler {
 
     /// <inheritdoc />
     public void RequestPause(string? reason = null) {
+        if (_disposed) {
+            return;
+        }
         _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke();
@@ -67,6 +72,9 @@ public class PauseHandler : IDisposable, IPauseHandler {
 
     /// <inheritdoc />
     public void Resume() {
+        if (_disposed) {
+            return;
+        }
         _loggerService.Debug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.Set();
         _pausing = false;
@@ -76,6 +84,9 @@ public class PauseHandler : IDisposable, IPauseHandler {
     /// <inheritdoc />
     public void WaitIfPaused() {
         if (!_pausing) {
+            return;
+        }
+        if (_disposed) {
             return;
         }
         _loggerService.Debug("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());

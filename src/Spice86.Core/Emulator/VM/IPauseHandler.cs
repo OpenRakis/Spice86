@@ -3,7 +3,7 @@ namespace Spice86.Core.Emulator.VM;
 /// <summary>
 /// Interface for handling pausing and resuming the emulator.
 /// </summary>
-public interface IPauseHandler {
+public interface IPauseHandler : IDisposable {
     /// <summary>
     /// Gets a value indicating whether the emulator is currently paused.
     /// </summary>
