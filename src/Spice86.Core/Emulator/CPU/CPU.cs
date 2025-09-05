@@ -416,6 +416,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
             case 0x17:
                 // POP SS
                 State.SS = Stack.Pop16();
+                State.InterruptShadowing = true;
                 break;
             case 0x18:
                 _instructions8.SbbRmReg();
@@ -1063,6 +1064,11 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 break;
             case 0xFB:
                 // STI
+                // Intel® 64 and IA-32 Architectures Software Developer’s Manual: Execution of STI with RFLAGS.IF = 0
+                // blocks maskable interrupts on the instruction boundary following its execution
+                if (!State.InterruptFlag) {
+                    State.InterruptShadowing = true;
+                }
                 State.InterruptFlag = true;
                 break;
             case 0xFC:
@@ -1105,6 +1111,13 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     }
 
     private void HandleExternalInterrupt() {
+        if (State.InterruptShadowing) {
+            // Interrupts are inhibited for this instruction only.
+            // Is set either via POP SS, MOV SS/sreg or STI.
+            State.InterruptShadowing = false;
+            return;
+        }
+        
         if (!State.InterruptFlag) {
             return;
         }
