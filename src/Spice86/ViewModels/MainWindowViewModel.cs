@@ -365,6 +365,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 // Unsubscribe from PauseHandler events
                 _pauseHandler.Paused -= OnPaused;
                 _pauseHandler.Resumed -= OnResumed;
+                _pauseHandler.Dispose();
 
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
