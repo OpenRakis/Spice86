@@ -2,10 +2,9 @@
 
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 using System.Text;
-
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Represents the state of the CPU Registers and Flags.
@@ -388,9 +387,22 @@ public class State {
             res.Append(" (");
             res.Append(Flags);
             res.Append(')');
+            res.Append(" " + nameof(InterruptShadowing) + "=").Append(InterruptShadowing);
             return res.ToString();
         }
     }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether interrupt shadowing is enabled for the current CPU state.
+    /// <para>
+    /// Interrupt shadowing temporarily prevents external interrupts from being handled for a limited duration,
+    /// typically during the execution of certain critical instructions such as POP SS, MOV SS/sreg, or STI.
+    /// Once the shadowing period ends, external interrupts can be processed as usual.
+    ///
+    /// More details in the Intel Manual Volume 3A, 6.8.3 - Masking Exceptions and Interrupts When Switching Stacks
+    /// </para>
+    /// </summary>
+    public bool InterruptShadowing { get; set; }
 
     /// <summary>
     /// Returns all the CPU registers dumped into a string

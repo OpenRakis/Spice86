@@ -90,7 +90,11 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public void SignalEnd() {
         _executionContextManager.CurrentExecutionContext.FunctionHandler.Ret(CallType.MACHINE, null);
     }
-    
+
+    /// <summary>
+    /// Handles external interrupts that may need to be processed after the execution of a control flow graph (CFG) node.
+    /// </summary>
+    /// <param name="toExecute">The CFG node currently being executed, which may influence interrupt and context handling.</param>
     private void HandleExternalInterrupt(ICfgNode toExecute) {
         // Before any external interrupt has a chance to execute, check if we landed in a place where context should be switched.
         if (toExecute.CanCauseContextRestore) {
@@ -98,6 +102,14 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
             // Otherwise, we may hit via regular flow an instruction that is at the return address of an existing IRET and that is waiting to be restored, and restore it. 
             _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
         }
+
+        if (_state.InterruptShadowing) {
+            // Interrupts are inhibited for this instruction only.
+            // Is set either via POP SS, MOV SS/sreg or STI.
+            _state.InterruptShadowing = false;
+            return;
+        }
+
         if (!_state.InterruptFlag) {
             return;
         }

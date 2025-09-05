@@ -16,6 +16,13 @@ public partial class {{ moxy.Class.Name }} : CfgInstruction {
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
+{{ if Mnemonic == "STI" }}
+        // Intel® 64 and IA-32 Architectures Software Developer’s Manual: Execution of STI with RFLAGS.IF = 0
+        // blocks maskable interrupts on the instruction boundary following its execution
+        if(!helper.State.InterruptFlag) {
+            helper.State.InterruptShadowing = true;
+        }
+{{ end }}    
         helper.State.{{FlagName}} = {{FlagValue}};
         helper.MoveIpAndSetNextNode(this);
     }

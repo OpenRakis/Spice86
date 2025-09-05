@@ -23,6 +23,9 @@ public class MovSregRm16 : InstructionWithModRm {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
         helper.State.SegmentRegisters.UInt16[ModRmContext.RegisterIndex] = helper.ModRm.RM16;
+        if (ModRmContext.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
+            helper.State.InterruptShadowing = true;
+        }
         helper.MoveIpAndSetNextNode(this);
     }
 

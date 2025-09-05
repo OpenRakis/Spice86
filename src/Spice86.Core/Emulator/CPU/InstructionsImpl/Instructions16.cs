@@ -1,13 +1,13 @@
-using Spice86.Core.Emulator.CPU.Exceptions;
-
 namespace Spice86.Core.Emulator.CPU.InstructionsImpl;
 
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
 
 public class Instructions16 : Instructions16Or32 {
     private readonly Alu16 _alu16;
 
-    public Instructions16(State state, Cpu cpu, Memory.IMemory memory, ModRM modRm)
+    public Instructions16(State state, Cpu cpu, IMemory memory, ModRM modRm)
         : base(cpu, memory, modRm) {
         _alu16 = new(state);
     }
@@ -469,6 +469,10 @@ public class Instructions16 : Instructions16Or32 {
             throw new CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         ModRM.SegmentRegister = ModRM.GetRm16();
+        if (ModRM.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
+            // Loading SS requires interrupt shadowing for one subsequent instruction
+            State.InterruptShadowing = true;
+        }
     }
 
     public override void Lea() {
