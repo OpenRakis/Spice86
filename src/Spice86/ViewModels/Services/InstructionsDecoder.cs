@@ -89,7 +89,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
 
         return new EnrichedInstruction(customInstruction) {
             Bytes = memory.ReadRam(CallbackOpcodeLength, address.Linear),
-            Function = functions.SingleOrDefault(pair => pair.Key.Linear == address.Linear).Value,
+            Function = functions.SingleOrDefault(pair => pair.Key == address).Value,
             SegmentedAddress = address,
             Breakpoints = breakpointsViewModel.GetExecutionBreakPointsAtAddress(address.Linear).ToImmutableList(),
             InstructionFormatOverride = [
@@ -111,7 +111,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
     private EnrichedInstruction CreateStandardInstruction(Instruction instruction, SegmentedAddress address) {
         return new EnrichedInstruction(instruction) {
             Bytes = memory.ReadRam((uint)instruction.Length, address.Linear),
-            Function = functions.SingleOrDefault(pair => pair.Key.Linear == address.Linear).Value,
+            Function = functions.SingleOrDefault(pair => pair.Key == address).Value,
             SegmentedAddress = address,
             Breakpoints = breakpointsViewModel.GetExecutionBreakPointsAtAddress(address.Linear).ToImmutableList(),
         };
