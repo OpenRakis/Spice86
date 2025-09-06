@@ -22,7 +22,7 @@ using Spice86.ViewModels.Services;
 using System.Diagnostics;
 
 public partial class CfgCpuViewModel : ViewModelBase {
-    private List<NodeTableEntry> _tableNodesList = new();
+    private readonly List<NodeTableEntry> _tableNodesList = new();
     private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly PerformanceMeasurer _performanceMeasurer;
