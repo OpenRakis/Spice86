@@ -89,7 +89,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
     };
 
     partial void OnTableFilterChanged(string value) {
-        UpdateTableNodes();
+        FilterTableNodes();
     }
 
     [RelayCommand]
@@ -255,10 +255,10 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     AverageNodeTime = averageNodeTime;
                     StatusMessage = $"Graph generated with {localNumberOfNodes} nodes";
 
-                    NodeEntries = new AvaloniaList<string>(_searchableNodes.Keys.OrderBy(k => k));
-                    
-                    TableNodes = new AvaloniaList<NodeTableEntry>(_tableNodesList);
-                    UpdateTableNodes();
+                    NodeEntries.Clear();
+                    NodeEntries.AddRange(_searchableNodes.Keys.OrderBy(k => k));
+
+                    FilterTableNodes();
                 });
             });
         } finally {
@@ -266,9 +266,10 @@ public partial class CfgCpuViewModel : ViewModelBase {
         }
     }
     
-    private void UpdateTableNodes() {
+    private void FilterTableNodes() {
         if (string.IsNullOrWhiteSpace(TableFilter)) {
-            TableNodes = new AvaloniaList<NodeTableEntry>(_tableNodesList);
+            TableNodes.Clear();
+            TableNodes.AddRange(_tableNodesList);
             return;
         }
         
