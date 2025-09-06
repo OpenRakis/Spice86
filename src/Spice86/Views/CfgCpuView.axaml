@@ -127,8 +127,37 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Address" Binding="{Binding Address}" />
                             <DataGridTextColumn Header="Type" Binding="{Binding Type}" />
-                            <DataGridTextColumn Header="Predecessors Count" Binding="{Binding PredecessorsCount}"/>
-                            <DataGridTextColumn Header="Successors Count" Binding="{Binding SuccessorsCount}" />
+                            
+                            <!-- Predecessors ComboBox -->
+                            <DataGridTemplateColumn Header="Predecessors">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding Predecessors}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Successors ComboBox -->
+                            <DataGridTemplateColumn Header="Successors">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding Successors}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Address}" ToolTip.Tip="{Binding Assembly}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
                             <DataGridCheckBoxColumn Header="Is the last executed node ?" Binding="{Binding IsLastExecuted}" />
                             <DataGridTextColumn Header="Assembly" Binding="{Binding Assembly}" Width="*"/>
                         </DataGrid.Columns>

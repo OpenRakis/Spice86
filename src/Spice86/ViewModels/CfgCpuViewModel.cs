@@ -378,12 +378,30 @@ public partial class CfgCpuViewModel : ViewModelBase {
         
         bool isLastExecuted = node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id;
         
+        AvaloniaList<NodeTableEntry> predecessors = new();
+        foreach (ICfgNode predecessor in node.Predecessors) {
+            predecessors.Add(new NodeTableEntry {
+                Address = $"0x{predecessor.Address}",
+                Assembly = _nodeToString.ToAssemblyString(predecessor),
+                Node = predecessor
+            });
+        }
+        
+        AvaloniaList<NodeTableEntry> successors = new();
+        foreach (ICfgNode successor in node.Successors) {
+            successors.Add(new NodeTableEntry {
+                Address = $"0x{successor.Address}",
+                Assembly = _nodeToString.ToAssemblyString(successor),
+                Node = successor
+            });
+        }
+        
         return new NodeTableEntry {
             Address = $"0x{node.Address}",
             Assembly = _nodeToString.ToAssemblyString(node),
             Type = nodeType,
-            PredecessorsCount = node.Predecessors.Count,
-            SuccessorsCount = node.Successors.Count,
+            Predecessors = predecessors,
+            Successors = successors,
             IsLastExecuted = isLastExecuted,
             Node = node
         };
@@ -393,8 +411,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
         public string Address { get; init; } = string.Empty;
         public string Assembly { get; init; } = string.Empty;
         public string Type { get; init; } = string.Empty;
-        public int PredecessorsCount { get; init; }
-        public int SuccessorsCount { get; init; }
+        public AvaloniaList<NodeTableEntry> Predecessors { get; init; } = new();
+        public AvaloniaList<NodeTableEntry> Successors { get; init; } = new();
+
         public bool IsLastExecuted { get; init; }
         public ICfgNode? Node { get; init; }
     }
