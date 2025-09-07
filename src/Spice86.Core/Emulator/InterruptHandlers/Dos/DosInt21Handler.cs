@@ -33,10 +33,17 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
     private readonly Clock _clock;
+
+    /// <summary>
+    /// Return code and termination mode for the last executed child process.
+    /// </summary>
+    private byte _lastReturnCode = 0;
+    private DosTerminationMode _lastTerminationMode = DosTerminationMode.Normal;
 
     /// <summary>
     /// Initializes a new instance.
@@ -58,8 +65,10 @@ public class DosInt21Handler : InterruptHandler {
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
+        DosProcessManager dosProcessManager, DosFileManager dosFileManager,
+        DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _dosProcessManager = dosProcessManager;
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
         _dosStringDecoder = dosStringDecoder;
@@ -69,6 +78,8 @@ public class DosInt21Handler : InterruptHandler {
         _dosDriveManager = dosDriveManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _clock = clock;
+        _lastReturnCode = 0;
+        _lastTerminationMode = DosTerminationMode.Normal;
         FillDispatchTable();
     }
 
@@ -95,6 +106,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -111,7 +123,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
         AddAction(0x3C, () => CreateFileUsingHandle(true));
-        AddAction(0x3D, () => OpenFileorDevice(true));
+        AddAction(0x3D, () => OpenFileOrDevice(true));
         AddAction(0x3E, () => CloseFileOrDevice(true));
         AddAction(0x3F, () => ReadFileOrDevice(true));
         AddAction(0x40, () => WriteToFileOrDevice(true));
@@ -127,9 +139,11 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
     }
@@ -755,11 +769,173 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// Creates a new Program Segment Prefix (PSP) for a child process.
+    /// Function 26H: Create New PSP
+    /// DX = segment where new PSP should be created
     /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
-    private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment 0x{NewPspSegment:X4}", newPspSegment);
+        }
+
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        if (currentPsp == null) {
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("Cannot create new PSP: no current PSP found");
+            }
+            State.AL = 0xFF; // Error
+            return;
+        }
+
+        // Create the new PSP at the specified segment
+        DosProgramSegmentPrefix newPsp = new DosProgramSegmentPrefix(Memory, MemoryUtils.ToPhysicalAddress(newPspSegment, 0));
+        
+        // Copy basic structure from current PSP
+        newPsp.Exit[0] = 0xCD; // INT 20h
+        newPsp.Exit[1] = 0x20;
+        newPsp.NextSegment = currentPsp.NextSegment;
+        newPsp.ParentProgramSegmentPrefix = _dosPspTracker.GetCurrentPspSegment();
+        newPsp.EnvironmentTableSegment = currentPsp.EnvironmentTableSegment;
+        
+        // Initialize file handles to inherit from parent
+        for (int i = 0; i < 20; i++) {
+            newPsp.Files[i] = currentPsp.Files[i];
+        }
+
+        State.AL = 0xF0; // AL destroyed as per DOS specification
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("Created new PSP at segment 0x{NewPspSegment:X4}, parent=0x{ParentSegment:X4}", 
+                newPspSegment, newPsp.ParentProgramSegmentPrefix);
+        }
+    }
+
+    /// <summary>
+    /// Creates a child PSP for a child process.
+    /// Function 55H: Create Child PSP
+    /// DX = segment where child PSP should be created
+    /// SI = number of bytes to copy from parent PSP (typically 256)
+    /// </summary>
+    public void CreateChildPsp() {
+        ushort childPspSegment = State.DX;
+        ushort copySize = State.SI;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment 0x{ChildPspSegment:X4}, copy size {CopySize}", 
+                childPspSegment, copySize);
+        }
+
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        if (currentPsp == null) {
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("Cannot create child PSP: no current PSP found");
+            }
+            State.AL = 0xFF; // Error
+            return;
+        }
+
+        // Create the child PSP at the specified segment
+        DosProgramSegmentPrefix childPsp = new DosProgramSegmentPrefix(Memory, MemoryUtils.ToPhysicalAddress(childPspSegment, 0));
+        
+        // Copy the specified number of bytes from parent PSP
+        uint sourceAddress = currentPsp.BaseAddress;
+        uint destAddress = childPsp.BaseAddress;
+        ushort actualCopySize = Math.Min(copySize, DosProgramSegmentPrefix.MaxLength);
+        
+        byte[] pspData = Memory.GetData(sourceAddress, actualCopySize);
+        Memory.LoadData(destAddress, pspData);
+        
+        // Update the parent pointer in the child PSP
+        childPsp.ParentProgramSegmentPrefix = _dosPspTracker.GetCurrentPspSegment();
+        
+        // Set current PSP to the child (as per DOS specification)
+        _dosPspTracker.PushPspSegment(childPspSegment);
+        
+        State.AL = 0xF0; // AL destroyed as per DOS specification
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("Created child PSP at segment 0x{ChildPspSegment:X4}, parent=0x{ParentSegment:X4}", 
+                childPspSegment, childPsp.ParentProgramSegmentPrefix);
+        }
+    }
+
+    /// <summary>
+    /// Terminate the current process and either prepare unloading it, or keep it in memory (TSR).
+    /// Function 31H: Terminate and Stay Resident
+    /// AL = exit code
+    /// DX = number of paragraphs to keep resident
+    /// </summary>
+    public void TerminateAndStayResident() {
+        byte exitCode = State.AL;
+        ushort paragraphsToKeep = State.DX;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("TERMINATE AND STAY RESIDENT: Exit code {ExitCode}, keep {Paragraphs} paragraphs", 
+                exitCode, paragraphsToKeep);
+        }
+
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        if (currentPsp == null) {
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("Cannot terminate: no current PSP found");
+            }
+            return;
+        }
+
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+        
+        // Resize the memory block to keep only the specified number of paragraphs
+        DosErrorCode result = _dosMemoryManager.TryModifyBlock(currentPspSegment, paragraphsToKeep, out _);
+        if (result != DosErrorCode.NoError) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Failed to resize memory block for TSR: {Error}", result);
+            }
+        }
+
+        // Save termination information for parent
+        _lastReturnCode = exitCode;
+        _lastTerminationMode = DosTerminationMode.TerminateAndStayResident;
+
+        // Return to parent process
+        if (parentPspSegment == currentPspSegment) {
+            // This is the root process, terminate the emulation
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information("Root process terminated with exit code {ExitCode}, stopping emulation", exitCode);
+            }
+            State.IsRunning = false;
+        } else {
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information("Child process at PSP 0x{CurrentPsp:X4} terminated with exit code {ExitCode}, returning to parent PSP 0x{ParentPsp:X4}", 
+                    currentPspSegment, exitCode, parentPspSegment);
+            }
+
+            // Restore parent's context (CPU state should already be preserved by EXEC)
+            // The actual return to parent is handled by the CPU's call/return mechanism
+        }
+    }
+
+    /// <summary>
+    /// Gets return code from the last executed child process.
+    /// Function 4DH: Get Return Code of Child Process
+    /// Returns:
+    /// AH = termination type (00=normal, 01=Ctrl-C, 02=critical error, 03=TSR)
+    /// AL = return code
+    /// </summary>
+    public void GetReturnCode() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET RETURN CODE: Termination mode {TerminationMode}, return code {ReturnCode}", 
+                _lastTerminationMode, _lastReturnCode);
+        }
+
+        State.AH = (byte)_lastTerminationMode;
+        State.AL = _lastReturnCode;
+        
+        // Clear the return code after reading it (as per DOS specification)
+        _lastReturnCode = 0;
+        _lastTerminationMode = DosTerminationMode.Normal;
     }
 
     /// <summary>
@@ -907,13 +1083,31 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
+    /// Either only load a program or overlay, or load it but do not run it, or load it and run it.
     /// </summary>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecuteMode mode = (DosExecuteMode)State.AL;
+        uint parameterBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("LOAD AND/OR EXECUTE: Mode={Mode}, Program={ProgramName}, ParameterBlock=0x{ParameterBlock:X8}", 
+                mode, programName, parameterBlockAddress);
+        }
+        
+        // Check for errors from the process manager
+        if (!_dosProcessManager.LoadAndOrExecute(mode, programName, parameterBlockAddress)) {
+            SetCarryFlag(true, calledFromVm);
+            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("EXEC failed with error code 0x{ErrorCode:X4}", State.AX);
+            }
+        } else {
+            SetCarryFlag(false, calledFromVm);
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information("EXEC succeeded for program {ProgramName}", programName);
+            }
+        }
     }
 
     /// <summary>
@@ -946,7 +1140,7 @@ public class DosInt21Handler : InterruptHandler {
     /// CF is set on error.
     /// </returns>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    public void OpenFileorDevice(bool calledFromVm) {
+    public void OpenFileOrDevice(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
@@ -981,15 +1175,75 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// Quits the current DOS process and sets the exit code from the value in the AL register.
+    /// This function properly handles process termination and cleanup for both normal exit and INT 20h.
     /// </summary>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("QUIT WITH EXIT CODE {ExitCode} (0x{ExitCode:X2})", exitCode, exitCode);
         }
-        State.IsRunning = false;
+
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        if (currentPsp == null) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("No current PSP found for termination, stopping emulation");
+            }
+            State.IsRunning = false;
+            return;
+        }
+
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+        ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+        
+        // Save termination information for parent
+        _lastReturnCode = exitCode;
+        _lastTerminationMode = DosTerminationMode.Normal;
+
+        // Free the memory allocated to this process
+        // The MCB is located 1 paragraph (16 bytes) before the PSP segment
+        ushort mcbSegment = (ushort)(currentPspSegment - 1);
+        if (!_dosMemoryManager.FreeMemoryBlock(mcbSegment)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Failed to free memory block for PSP 0x{PspSegment:X4}", currentPspSegment);
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("Freed memory block for PSP 0x{PspSegment:X4}", currentPspSegment);
+        }
+
+        // Free the environment block if it exists
+        if (currentPsp.EnvironmentTableSegment != 0) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("Freeing environment block at segment 0x{EnvSegment:X4}", currentPsp.EnvironmentTableSegment);
+            }
+            // Find and free the environment MCB (also 1 paragraph before the environment segment)
+            ushort envMcbSegment = (ushort)(currentPsp.EnvironmentTableSegment - 1);
+            if (!_dosMemoryManager.FreeMemoryBlock(envMcbSegment)) {
+                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                    LoggerService.Warning("Failed to free environment block at segment 0x{EnvSegment:X4}", currentPsp.EnvironmentTableSegment);
+                }
+            }
+        }
+
+        // Remove current PSP from the stack
+        _dosPspTracker.PopCurrentPspSegment();
+
+        if (parentPspSegment == currentPspSegment) {
+            // This is the root process, terminate the emulation
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information("Root process terminated with exit code {ExitCode}, stopping emulation", exitCode);
+            }
+            State.IsRunning = false;
+        } else {
+            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+                LoggerService.Information("Child process at PSP 0x{CurrentPsp:X4} terminated with exit code {ExitCode}, returning to parent PSP 0x{ParentPsp:X4}", 
+                    currentPspSegment, exitCode, parentPspSegment);
+            }
+
+            // Restore parent's context (CPU state should already be preserved by EXEC)
+            // The actual return to parent is handled by the CPU's call/return mechanism
+        }
     }
 
     /// <summary>

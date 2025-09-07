@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+﻿
+namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
@@ -88,9 +89,7 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
 
     public UInt8Array FirstFileControlBlock => GetUInt8Array(0x5C, 16);
 
-    public UInt8Array SecondFileControlBlock => GetUInt8Array(0x6C, 16);
+    public UInt8Array SecondFileControlBlock => GetUInt8Array(0x6C, 20);
 
-    public UInt8Array Unused3 => GetUInt8Array(0x7C, 4);
-
-    public DosCommandTail DosCommandTail => new (ByteReaderWriter, BaseAddress + 0x80);
+    public DosCommandTail DosCommandTail => new(ByteReaderWriter, BaseAddress + 0x80);
 }
