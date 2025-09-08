@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
+using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -269,6 +271,36 @@ public class MachineTest
         expected[0x00] = 0x02;
         expected[0x01] = 0x00;
         TestOneBin("linearsamesegmenteddifferent", expected, enableCfgCpu, enableA20Gate:true);
+    }
+    
+    [Theory]
+    [MemberData(nameof(GetCfgCpuConfigurations))]
+    public void TestCallbacks(bool enableCfgCpu) {
+        string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, enableCfgCpu: enableCfgCpu, maxCycles: 1000, enablePit: false, installInterruptVectors: true, recordData: false, enableA20Gate: false).Create();
+        Machine machine = spice86DependencyInjection.Machine;
+        IMemory memory = machine.Memory;
+        SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
+        spice86DependencyInjection.ProgramExecutor.Run();
+        
+        InterruptVectorTable ivt = new(memory);
+        if (enableCfgCpu) {
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CfgInstruction? int8 = currentInstructions.GetAtAddress(entryPoint);
+            Assert.NotNull(int8);
+            CfgInstruction? callbackInt8 = currentInstructions.GetAtAddress(ivt[8]);
+            Assert.NotNull(callbackInt8);
+            CfgInstruction? iretInt8 = currentInstructions.GetAtAddress(callbackInt8.Address + 2);
+            Assert.NotNull(iretInt8);
+            CfgInstruction? callbackInt1C = currentInstructions.GetAtAddress(ivt[0x1C]);
+            Assert.NotNull(callbackInt1C);
+            CfgInstruction? iretInt1C = currentInstructions.GetAtAddress(callbackInt8.Address + 2);
+            Assert.NotNull(iretInt1C);
+            
+            Assert.Contains(callbackInt8, int8.Successors);
+            Assert.Contains(callbackInt1C, callbackInt8.Successors);
+            Assert.DoesNotContain(callbackInt1C, int8.Successors);
+        }
     }
 
     [AssertionMethod]

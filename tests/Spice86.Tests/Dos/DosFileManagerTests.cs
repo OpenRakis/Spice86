@@ -131,8 +131,6 @@ public class DosFileManagerTests {
         // IO devices
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
             new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
-        TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, functionHandlerProvider, stack, state, dualPic, timer, biosDataArea, loggerService);
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
