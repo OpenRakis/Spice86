@@ -67,9 +67,9 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(vectorNumber);
     }
 
-    public void WriteJumpNear(uint offset) {
+    public void WriteJumpNear(ushort offset) {
         WriteUInt8(0xE9);
-        WriteUInt32(offset);
+        WriteUInt16(offset);
     }
 
     /// <summary>
