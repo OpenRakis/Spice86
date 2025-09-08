@@ -188,7 +188,10 @@ public partial class CfgCpuViewModel : ViewModelBase {
         try {
             IsLoading = true;
             StatusMessage = "Generating graph...";
-            
+
+            _searchableNodes.Clear();
+            _tableNodesList.Clear();
+
             await Task.Run(async () => {
                 long localNumberOfNodes = 0;
                 Graph currentGraph = new();
@@ -197,9 +200,6 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 HashSet<ICfgNode> visitedNodes = new();
                 HashSet<(int, int)> existingEdges = new();
                 Stopwatch stopwatch = new();
-
-                _searchableNodes.Clear();
-                _tableNodesList.Clear();
 
                 while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                     ICfgNode node = queue.Dequeue();
