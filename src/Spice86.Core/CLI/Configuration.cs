@@ -111,8 +111,9 @@ public sealed class Configuration {
     /// <summary>
     /// The memory segment where the program will be loaded. The DOS PSP (Program Segment Prefix) and MCB (Memory Control Block) will be created before it.
     /// </summary>
-    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x1000, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
+    [Option('p', nameof(ProgramEntryPointSegment), Default = (ushort)0x170, Required = false, HelpText = "Segment where to load the program. DOS PSP and MCB will be created before it.")]
     public ushort ProgramEntryPointSegment { get; init; }
+
 
     /// <summary>
     /// The memory address where the ASM handlers for interrupts and so on are to be written. Default is F000 which is the bios segment. Not all games will be happy with this changed to something else.
