@@ -1,7 +1,7 @@
 ﻿namespace Spice86.ViewModels;
 
+using Avalonia.Collections;
 using Avalonia.Controls;
-using Avalonia.Threading;
 
 using AvaloniaGraphControl;
 
@@ -17,11 +17,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.Services;
 
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 public partial class CfgCpuViewModel : ViewModelBase {
+    private readonly List<NodeTableEntry> _tableNodesList = new();
+    private readonly IUIDispatcher _uiDispatcher;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly NodeToString _nodeToString = new();
@@ -43,7 +45,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     [ObservableProperty] private string _statusMessage = string.Empty;
 
-    [ObservableProperty] private ObservableCollection<string> _nodeEntries = new();
+    [ObservableProperty] private AvaloniaList<string> _nodeEntries = new();
 
     [ObservableProperty] private string? _selectedNodeEntry;
 
@@ -51,9 +53,19 @@ public partial class CfgCpuViewModel : ViewModelBase {
     
     [ObservableProperty] private bool _isLoading;
 
+    [ObservableProperty] private string _tableFilter = string.Empty;
+    
+    [ObservableProperty] private AvaloniaList<NodeTableEntry> _tableNodes = new();
+    
+    [ObservableProperty] private NodeTableEntry? _selectedTableNode;
+    
+    [ObservableProperty] private int _selectedTabIndex;
+
     public CfgCpuViewModel(Configuration configuration,
+        IUIDispatcher uiDispatcher,
         ExecutionContextManager executionContextManager,
         IPauseHandler pauseHandler) {
+        _uiDispatcher = uiDispatcher;
         _executionContextManager = executionContextManager;
         _performanceMeasurer = new PerformanceMeasurer();
         IsCfgCpuEnabled = configuration.CfgCpu;
@@ -61,26 +73,24 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
         pauseHandler.Paused += () => {
             if (AutoFollow) {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                _uiDispatcher.Post(() => {
                     UpdateGraphCommand.Execute(null);
                 });
             }
         };
     }
 
-    /// <summary>
-    /// Filter function for the AutoCompleteBox
-    /// </summary>
     public AutoCompleteFilterPredicate<object?> NodeFilter => (search, item) =>
         string.IsNullOrWhiteSpace(search) ||
         item is string nodeText && nodeText.Contains(search, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Text selector function for the AutoCompleteBox
-    /// </summary>
     public AutoCompleteSelector<object>? NodeItemSelector { get; } = (_, item) => {
         return item?.ToString() ?? "Unknown";
     };
+
+    partial void OnTableFilterChanged(string value) {
+        FilterTableNodes();
+    }
 
     [RelayCommand]
     private async Task UpdateGraph() {
@@ -116,6 +126,18 @@ public partial class CfgCpuViewModel : ViewModelBase {
             StatusMessage = $"Navigating to: {_nodeToString.ToHeaderString(node)}";
             IsLoading = true;
             await RegenerateGraphFromNodeAsync(node);
+            IsLoading = false;
+        }
+    }
+    
+    [RelayCommand]
+    private async Task NavigateToTableNode(NodeTableEntry? node) {
+        if (node?.Node != null) {
+            StatusMessage = $"Navigating to: {_nodeToString.ToHeaderString(node.Node)}";
+            IsLoading = true;
+            await RegenerateGraphFromNodeAsync(node.Node);
+            // Switch to graph view
+            SelectedTabIndex = 0;
             IsLoading = false;
         }
     }
@@ -160,6 +182,7 @@ public partial class CfgCpuViewModel : ViewModelBase {
             return null;
         });
     }
+    
 
     private async Task RegenerateGraphFromNodeAsync(ICfgNode startNode) {
         try {
@@ -175,8 +198,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
                 HashSet<(int, int)> existingEdges = new();
                 Stopwatch stopwatch = new();
 
-                // Clear the searchable nodes
                 _searchableNodes.Clear();
+                _tableNodesList.Clear();
 
                 while (queue.Count > 0 && localNumberOfNodes < MaxNodesToDisplay) {
                     ICfgNode node = queue.Dequeue();
@@ -187,12 +210,12 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     visitedNodes.Add(node);
                     stopwatch.Restart();
 
-                    // Format node text with visual indicators for node type
                     string nodeText = FormatNodeText(node, node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id);
 
-                    // Add to searchable nodes
                     string searchableText = $"{_nodeToString.ToHeaderString(node)} - {_nodeToString.ToAssemblyString(node)}";
                     _searchableNodes[searchableText] = node;
+
+                    _tableNodesList.Add(CreateTableEntry(node));
 
                     foreach (ICfgNode successor in node.Successors) {
                         (int, int) edgeKey = GenerateEdgeKey(node, successor);
@@ -225,20 +248,39 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
                 long averageNodeTime = _performanceMeasurer.ValuePerMillisecond;
 
-                await Dispatcher.UIThread.InvokeAsync(() => {
+                await _uiDispatcher.InvokeAsync(() => {
                     Graph = currentGraph;
                     IsLoading = false;
                     NumberOfNodes = localNumberOfNodes;
                     AverageNodeTime = averageNodeTime;
                     StatusMessage = $"Graph generated with {localNumberOfNodes} nodes";
 
-                    // Update the node entries for the AutoCompleteBox
-                    NodeEntries = new ObservableCollection<string>(_searchableNodes.Keys.OrderBy(k => k));
+                    NodeEntries.Clear();
+                    NodeEntries.AddRange(_searchableNodes.Keys.OrderBy(k => k));
+
+                    FilterTableNodes();
                 });
             });
         } finally {
             IsLoading = false;
         }
+    }
+    
+    private void FilterTableNodes() {
+        if (string.IsNullOrWhiteSpace(TableFilter)) {
+            TableNodes.Clear();
+            TableNodes.AddRange(_tableNodesList);
+            return;
+        }
+        
+        string filter = TableFilter;
+
+        TableNodes = new AvaloniaList<NodeTableEntry>(
+            _tableNodesList.Where(n => 
+                (n.Assembly.Contains(filter, StringComparison.InvariantCultureIgnoreCase)) || 
+                n.Address.Contains(filter, StringComparison.InvariantCultureIgnoreCase) ||
+                n.Type.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
+        );
     }
 
     partial void OnMaxNodesToDisplayChanging(int value) => Graph = null;
@@ -259,16 +301,13 @@ public partial class CfgCpuViewModel : ViewModelBase {
     private Edge CreateEdge(ICfgNode node, ICfgNode successor) {
         string label = string.Empty;
 
-        // Check if it's the current execution node
         ICfgNode? lastExecutedNode = _executionContextManager.CurrentExecutionContext?.LastExecuted;
         bool isNodeLastExecuted = node.Id == lastExecutedNode?.Id;
         bool isSuccessorLastExecuted = successor.Id == lastExecutedNode?.Id;
 
-        // Format node text with visual indicators for node type
         string nodeText = FormatNodeText(node, isNodeLastExecuted);
         string successorText = FormatNodeText(successor, isSuccessorLastExecuted);
 
-        // Add more detailed labels for different edge types
         switch (node) {
             case CfgInstruction cfgInstruction: {
                     SegmentedAddress nextAddress = new SegmentedAddress(cfgInstruction.Address.Segment,
@@ -300,27 +339,23 @@ public partial class CfgCpuViewModel : ViewModelBase {
     }
 
     private string FormatNodeText(ICfgNode node, bool isLastExecuted) {
-        // Get the basic text representation
         string headerText = _nodeToString.ToHeaderString(node);
         string assemblyText = _nodeToString.ToAssemblyString(node);
 
-        // Add visual indicators for node type and current execution node
         string prefix = "";
 
-        // Mark last executed node
         if (isLastExecuted) {
             prefix += "🔴 last run ";
         }
 
-        // Add node type indicators
         if (node is IJumpInstruction) {
-            prefix += "→ jump ";  // Arrow for jump
+            prefix += "→ jump ";
         } else if (node is ICallInstruction) {
-            prefix += "⟱ call ";  // Down arrow for call
+            prefix += "⟱ call ";
         } else if (node is IReturnInstruction) {
-            prefix += "⟰ return ";  // Up arrow for return
+            prefix += "⟰ return ";
         } else if (node is SelectorNode) {
-            prefix += "☰ selector ";  // Triple horizontal lines for selector
+            prefix += "☰ selector ";
         }
 
         return $"{prefix}{headerText}{Environment.NewLine}{assemblyText}";
@@ -328,4 +363,58 @@ public partial class CfgCpuViewModel : ViewModelBase {
 
     private static (int, int) GenerateEdgeKey(ICfgNode node, ICfgNode successor)
         => (node.Id, successor.Id);
+        
+    private NodeTableEntry CreateTableEntry(ICfgNode node) {
+        string nodeType = "Instruction";
+        if (node is IJumpInstruction) {
+            nodeType = "Jump";
+        } else if (node is ICallInstruction) {
+            nodeType = "Call";
+        } else if (node is IReturnInstruction) {
+            nodeType = "Return";
+        } else if (node is SelectorNode) {
+            nodeType = "Selector";
+        }
+        
+        bool isLastExecuted = node.Id == _executionContextManager.CurrentExecutionContext?.LastExecuted?.Id;
+        
+        AvaloniaList<NodeTableEntry> predecessors = new();
+        foreach (ICfgNode predecessor in node.Predecessors) {
+            predecessors.Add(new NodeTableEntry {
+                Address = $"0x{predecessor.Address}",
+                Assembly = _nodeToString.ToAssemblyString(predecessor),
+                Node = predecessor
+            });
+        }
+        
+        AvaloniaList<NodeTableEntry> successors = new();
+        foreach (ICfgNode successor in node.Successors) {
+            successors.Add(new NodeTableEntry {
+                Address = $"0x{successor.Address}",
+                Assembly = _nodeToString.ToAssemblyString(successor),
+                Node = successor
+            });
+        }
+        
+        return new NodeTableEntry {
+            Address = $"0x{node.Address}",
+            Assembly = _nodeToString.ToAssemblyString(node),
+            Type = nodeType,
+            Predecessors = predecessors,
+            Successors = successors,
+            IsLastExecuted = isLastExecuted,
+            Node = node
+        };
+    }
+
+    public record NodeTableEntry {
+        public string Address { get; init; } = string.Empty;
+        public string Assembly { get; init; } = string.Empty;
+        public string Type { get; init; } = string.Empty;
+        public AvaloniaList<NodeTableEntry> Predecessors { get; init; } = new();
+        public AvaloniaList<NodeTableEntry> Successors { get; init; } = new();
+
+        public bool IsLastExecuted { get; init; }
+        public ICfgNode? Node { get; init; }
+    }
 }

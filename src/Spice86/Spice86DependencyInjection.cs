@@ -526,8 +526,8 @@ public class Spice86DependencyInjection : IDisposable {
 
             MidiViewModel midiViewModel = new(midiDevice);
 
-            CfgCpuViewModel cfgCpuViewModel = new(configuration, cfgCpu.ExecutionContextManager,
-                pauseHandler);
+            CfgCpuViewModel cfgCpuViewModel = new(configuration, uiDispatcher,
+                cfgCpu.ExecutionContextManager, pauseHandler);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
