@@ -1,5 +1,7 @@
 namespace Spice86.Tests;
 
+using FluentAssertions;
+
 using JetBrains.Annotations;
 
 using Serilog;
@@ -9,8 +11,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -19,7 +19,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.IO;
 using System.Text;
 
 using Xunit;
@@ -262,7 +261,7 @@ public class MachineTest
         expected[0x00] = 0x01;
         TestOneBin("externalint", expected, enableCfgCpu, 0xFFFFFFF, true);
     }
-    
+
     [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestLinearAddressSameButSegmentedDifferent(bool enableCfgCpu)
@@ -272,7 +271,7 @@ public class MachineTest
         expected[0x01] = 0x00;
         TestOneBin("linearsamesegmenteddifferent", expected, enableCfgCpu, enableA20Gate:true);
     }
-    
+
     [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestCallbacks(bool enableCfgCpu) {
@@ -282,24 +281,71 @@ public class MachineTest
         IMemory memory = machine.Memory;
         SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
         spice86DependencyInjection.ProgramExecutor.Run();
-        
+
         InterruptVectorTable ivt = new(memory);
         if (enableCfgCpu) {
-            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-            CfgInstruction? int8 = currentInstructions.GetAtAddress(entryPoint);
-            Assert.NotNull(int8);
-            CfgInstruction? callbackInt8 = currentInstructions.GetAtAddress(ivt[8]);
-            Assert.NotNull(callbackInt8);
-            CfgInstruction? iretInt8 = currentInstructions.GetAtAddress(callbackInt8.Address + 2);
-            Assert.NotNull(iretInt8);
-            CfgInstruction? callbackInt1C = currentInstructions.GetAtAddress(ivt[0x1C]);
-            Assert.NotNull(callbackInt1C);
-            CfgInstruction? iretInt1C = currentInstructions.GetAtAddress(callbackInt8.Address + 2);
-            Assert.NotNull(iretInt1C);
-            
-            Assert.Contains(callbackInt8, int8.Successors);
-            Assert.Contains(callbackInt1C, callbackInt8.Successors);
-            Assert.DoesNotContain(callbackInt1C, int8.Successors);
+            CurrentInstructions currentInstructions =
+                machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+
+            // Entry INT 8 in the COM
+            CfgInstruction? int8Entry = currentInstructions.GetAtAddress(entryPoint);
+            Assert.NotNull(int8Entry);
+
+            // Post-INT8 instruction in COM: int 8 is 2 bytes long
+            SegmentedAddress postInt8Addr = entryPoint + 2;
+            CfgInstruction? postInt8 = currentInstructions.GetAtAddress(postInt8Addr);
+            Assert.NotNull(postInt8);
+
+            // INT 8 handler entry: callback at IVT[8]
+            CfgInstruction? int8HandlerEntry = currentInstructions.GetAtAddress(ivt[8]);
+            Assert.NotNull(int8HandlerEntry);
+
+            // INT 1C handler entry: IRET-only at IVT[1C]
+            CfgInstruction? int1CHandlerEntry = currentInstructions.GetAtAddress(ivt[0x1C]);
+            Assert.NotNull(int1CHandlerEntry);
+
+            // Tight checks:
+
+            // A) Entry INT8 has exactly two successors: handler entry and post-INT8 (call-to-return link)
+            int8Entry.Successors.Should().BeEquivalentTo([int8HandlerEntry, postInt8]);
+
+            // Inside INT8 handler exact layout:
+            // [0] callback at IVT[8] (3 bytes)
+            // [3] INT 1C (2 bytes)
+            // [5] EOI callback (3 bytes)
+            // [8] IRET (1 byte)
+
+            SegmentedAddress addrInt1C = int8HandlerEntry.Address + 3;
+            SegmentedAddress addrEoiCallback = addrInt1C + 2;
+            SegmentedAddress addrIret8 = addrEoiCallback + 3;
+
+            CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
+            CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);
+            CfgInstruction? iret8 = currentInstructions.GetAtAddress(addrIret8);
+
+            Assert.NotNull(intNode1C);
+            Assert.NotNull(eoiCallback);
+            Assert.NotNull(iret8);
+
+            // B) Callback (tick++) must fall through to INT 1C node only
+            int8HandlerEntry.Successors.Should().BeEquivalentTo([intNode1C]);
+
+            // C) INT 1C node must have exactly two successors:
+            //    - INT 1C handler entry (invoke)
+            //    - fallthrough to EOI callback (return target after INT)
+            intNode1C.Successors.Should().BeEquivalentTo([int1CHandlerEntry, eoiCallback]);
+
+            // D) INT 1C handler (IRET-only) must return to EOI callback only
+            int1CHandlerEntry.Successors.Should().BeEquivalentTo([eoiCallback]);
+
+            // E) EOI callback must fall through to IRET of INT8 handler only
+            eoiCallback.Successors.Should().BeEquivalentTo([iret8]);
+
+            // F) INT8 IRET must return to post-INT8 instruction only
+            iret8.Successors.Should().BeEquivalentTo([postInt8]);
+
+            // G) No direct edge from entry INT8 to INT1C handler
+            int8Entry.Successors.Should().NotContain(int1CHandlerEntry);
         }
     }
 
@@ -404,7 +450,7 @@ public class MachineTest
         string resPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
         return File.ReadAllBytes(resPath);
     }
-    
+
     private static List<string> GetExpectedListing(string binName)
     {
         string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
