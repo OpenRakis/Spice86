@@ -133,31 +133,24 @@ public class DosProcessManager : DosFileLoader {
                 mode, programName, parameterBlockAddress);
         }
 
-        try {
-            switch (mode) {
-                case DosExecuteMode.LoadAndExecute:
-                case DosExecuteMode.LoadButDoNotRun:
-                    ExecuteLoadAndExecuteMode(programName, parameterBlockAddress, mode, initialArguments);
-                    break;
+        switch (mode) {
+            case DosExecuteMode.LoadAndExecute:
+            case DosExecuteMode.LoadButDoNotRun:
+                ExecuteLoadAndExecuteMode(programName, parameterBlockAddress, mode, initialArguments);
+                break;
                     
-                case DosExecuteMode.LoadOverlay:
-                    ExecuteLoadOverlayMode(programName, parameterBlockAddress);
-                    break;
+            case DosExecuteMode.LoadOverlay:
+                ExecuteLoadOverlayMode(programName, parameterBlockAddress);
+                break;
                     
-                default:
-                    if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                        _loggerService.Error("Invalid EXEC mode specified: {Mode}", mode);
-                    }
-                    _state.AX = (ushort)DosErrorCode.FunctionNumberInvalid;
-                    return false;
-            }
-        } catch (Exception ex) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(ex, "Unhandled exception in DOS EXEC function for program {ProgramName}", programName);
-            }
-            _state.AX = (ushort)DosErrorCode.FormatInvalid;
-            return false;
+            default:
+                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                    _loggerService.Error("Invalid EXEC mode specified: {Mode}", mode);
+                }
+                _state.AX = (ushort)DosErrorCode.FunctionNumberInvalid;
+                return false;
         }
+        
         return true;
     }
 
