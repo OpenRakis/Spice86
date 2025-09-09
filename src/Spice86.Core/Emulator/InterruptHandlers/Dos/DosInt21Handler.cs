@@ -33,6 +33,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosFileControlBlockManager _fileControlBlockManager;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -69,6 +70,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosDriveManager = dosDriveManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _clock = clock;
+        _fileControlBlockManager = new DosFileControlBlockManager(memory, dosFileManager, dosDriveManager, loggerService);
         FillDispatchTable();
     }
 
@@ -95,6 +97,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x29, () => ParseFilenameIntoFcb(true));
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -132,6 +135,97 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x51, GetPspAddress);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x0F, () => OpenFileUsingFcb(true));
+        AddAction(0x10, () => CloseFileUsingFcb(true));
+        AddAction(0x11, () => FindFirstMatchingFileUsingFcb(true));
+        AddAction(0x12, () => FindNextMatchingFileUsingFcb(true));
+        AddAction(0x13, () => DeleteFileUsingFcb(true));
+        AddAction(0x14, () => SequentialReadFromFcb(true));
+        AddAction(0x15, () => SequentialWriteToFcb(true));
+        AddAction(0x16, () => CreateFileUsingFcb(true));
+        AddAction(0x17, () => RenameFileUsingFcb(true));
+        AddAction(0x21, () => RandomReadFromFcb(true));
+        AddAction(0x22, () => RandomWriteToFcb(true));
+    }
+
+    /// <summary>
+    /// Parses a filename into a File Control Block (FCB).
+    /// Function 29H: Parse Filename into FCB
+    /// AL = parse control flags
+    /// DS:SI = pointer to filename string
+    /// ES:DI = pointer to unopened FCB to be filled
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>
+    /// AL = result code:
+    /// 0 = no wildcards encountered
+    /// 1 = wildcards encountered  
+    /// 0xFF = drive letter invalid
+    /// SI = updated to point past parsed filename
+    /// </returns>
+    public void ParseFilenameIntoFcb(bool calledFromVm) {
+        byte parseControl = State.AL;
+        uint sourceAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
+
+        // Read the filename string from memory (up to 1024 characters, null-terminated)
+        string filename = Memory.GetZeroTerminatedString(sourceAddress, 1024);
+
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("PARSE FILENAME INTO FCB: Control=0x{ParseControl:X2}, Filename='{Filename}', FCB=0x{FcbAddress:X8}",
+                parseControl, filename, fcbAddress);
+        }
+
+        // Create FCB parser and parse the filename
+        DosFileControlBlockParser parser = new DosFileControlBlockParser(Memory, LoggerService);
+        byte result = parser.ParseFilename(fcbAddress, parseControl, filename, out int bytesProcessed);
+
+        // Update SI to point past the parsed portion
+        State.SI = (ushort)(State.SI + bytesProcessed);
+        State.AL = result;
+
+        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Parse result: AL={Result}, bytes processed={BytesProcessed}, new SI=0x{NewSI:X4}",
+                result, bytesProcessed, State.SI);
+        }
+    }
+
+    /// <summary>
+    /// Reads a character from the standard input device and echoes it to the standard output device.
+    /// The character is returned in AL.
+    /// </summary>
+    /// <remarks>
+    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// </remarks>
+    public void ReadCharacterFromStdinWithEcho() {
+        if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) ||
+            !_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)) {
+            State.AL = 0;
+            return;
+        }
+
+        if (!stdIn.CanRead) {
+            State.AL = 0;
+            return;
+        }
+
+        byte[] inputBuffer = new byte[1];
+        int readCount = stdIn.Read(inputBuffer, 0, 1);
+
+        if (readCount < 1) {
+            State.AL = 0;
+            return;
+        }
+
+        byte character = inputBuffer[0];
+        State.AL = character;
+
+        // Echo the character to standard output if possible
+        if (stdOut.CanWrite) {
+            stdOut.Write(character);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("DOS INT21H ReadCharacterFromStdinWithEcho: Cannot echo to standard output device.");
+        }
     }
 
     public void SetDate() {
@@ -622,6 +716,9 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Finds the first file matching the DOS file spec pointed by DS:DX and the attributes in CX. <br/>
     /// </summary>
+    /// <remarks>
+    /// This also updates the File Control Block (FCB) pointed by DS:DX with the found file information.
+    /// </remarks>
     /// <returns>
     /// CF and AX are cleared on success. <br/>
     /// CF is set on error. <br/>
@@ -1235,6 +1332,237 @@ public class DosInt21Handler : InterruptHandler {
         State.AX = (ushort)value.Value;
         if (dosFileOperationResult.IsValueIsUint32) {
             State.DX = (ushort)(value >> 16);
+        }
+    }
+
+    /// <summary>
+    /// Opens a file using an FCB (DOS function 0x0F).
+    /// DS:DX = pointer to unopened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if failed</returns>
+    public void OpenFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("OPEN FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.OpenFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Open result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Closes a file using an FCB (DOS function 0x10).
+    /// DS:DX = pointer to opened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if failed</returns>
+    public void CloseFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CLOSE FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.CloseFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Close result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Finds the first file matching an FCB pattern (DOS function 0x11).
+    /// DS:DX = pointer to unopened FCB with search pattern
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if no files found</returns>
+    public void FindFirstMatchingFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FIND FIRST MATCHING FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.FindFirstFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB FindFirst result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Finds the next file matching an FCB pattern (DOS function 0x12).
+    /// DS:DX = pointer to FCB from previous FindFirst
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if no more files found</returns>
+    public void FindNextMatchingFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FIND NEXT MATCHING FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.FindNextFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB FindNext result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a file using an FCB (DOS function 0x13).
+    /// DS:DX = pointer to unopened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if failed</returns>
+    public void DeleteFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("DELETE FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.DeleteFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Delete result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Performs sequential read from an FCB (DOS function 0x14).
+    /// DS:DX = pointer to opened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0 (success), 1 (EOF), 2 (segment wrap), 3 (partial record)</returns>
+    public void SequentialReadFromFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SEQUENTIAL READ FROM FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        byte result = _fileControlBlockManager.ReadRecord(fcbAddress, false);
+        State.AL = result;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Sequential Read result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Performs sequential write to an FCB (DOS function 0x15).
+    /// DS:DX = pointer to opened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0 (success), 1 (disk full), 2 (segment wrap)</returns>
+    public void SequentialWriteToFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SEQUENTIAL WRITE TO FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        byte result = _fileControlBlockManager.WriteRecord(fcbAddress, false);
+        State.AL = result;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Sequential Write result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Creates or truncates a file using an FCB (DOS function 0x16).
+    /// DS:DX = pointer to unopened FCB
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if failed</returns>
+    public void CreateFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.CreateFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Create result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Renames a file using an FCB (DOS function 0x17).
+    /// DS:DX = pointer to special FCB with old name in bytes 0-10 and new name in bytes 17-27
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0x00 if successful, 0xFF if failed</returns>
+    public void RenameFileUsingFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("RENAME FILE USING FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        bool success = _fileControlBlockManager.RenameFile(fcbAddress);
+        State.AL = success ? (byte)0x00 : (byte)0xFF;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Rename result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Performs random read from an FCB (DOS function 0x21).
+    /// DS:DX = pointer to opened FCB with RandomRecord field set
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0 (success), 1 (EOF), 2 (segment wrap), 3 (partial record)</returns>
+    public void RandomReadFromFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("RANDOM READ FROM FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        byte result = _fileControlBlockManager.ReadRecord(fcbAddress, true);
+        State.AL = result;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Random Read result: AL={Result}", State.AL);
+        }
+    }
+
+    /// <summary>
+    /// Performs random write to an FCB (DOS function 0x22).
+    /// DS:DX = pointer to opened FCB with RandomRecord field set
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    /// <returns>AL = 0 (success), 1 (disk full), 2 (segment wrap)</returns>
+    public void RandomWriteToFcb(bool calledFromVm) {
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("RANDOM WRITE TO FCB at 0x{FcbAddress:X8}", fcbAddress);
+        }
+        
+        byte result = _fileControlBlockManager.WriteRecord(fcbAddress, true);
+        State.AL = result;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB Random Write result: AL={Result}", State.AL);
         }
     }
 }
