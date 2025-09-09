@@ -46,7 +46,7 @@ public class DosProcessManager : DosFileLoader {
         _environmentVariables = new();
 
         envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{HostFolderFileSystemResolver.DirectorySeparatorChar}");
-        //TODO some programs want COMSPEC to launch subshells: envVars.Add("COMSPEC", @"Z:\COMMAND.COM"); //soon...
+        //TODO some programs want COMSPEC to launch subshells: envVars.Add("COMSPEC", @"Z:\COMMAND.COM");
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
             _environmentVariables.Add(envVar.Key, envVar.Value);
