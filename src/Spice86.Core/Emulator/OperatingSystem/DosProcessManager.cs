@@ -580,6 +580,9 @@ public class DosProcessManager : DosFileLoader {
         uint loadAddress = MemoryUtils.ToPhysicalAddress(pspSegment, ComOffset);
         _memory.LoadData(loadAddress, programBytes);
 
+        // Zero memory beyond the loaded program up to the end of the allocated block
+        ZeroMemoryBeyondProgram(loadAddress, (uint)programBytes.Length, pspSegment);
+
         // Setup CPU registers for .COM execution
         _state.DS = pspSegment;  // Data segment = PSP
         _state.ES = pspSegment;  // Extra segment = PSP  
@@ -627,6 +630,9 @@ public class DosProcessManager : DosFileLoader {
         uint physicalLoadAddress = MemoryUtils.ToPhysicalAddress(programLoadSegment, 0);
         _memory.LoadData(physicalLoadAddress, exeFile.ProgramImage, (int)exeFile.ProgramSize);
 
+        // Zero memory beyond the loaded program up to the end of the allocated block
+        ZeroMemoryBeyondProgram(physicalLoadAddress, exeFile.ProgramSize, programBlock.DataBlockSegment, (uint)programBlock.Size * 16);
+
         // Apply relocations
         foreach (SegmentedAddress relocationAddress in exeFile.RelocationTable) {
             uint addressToRelocate = MemoryUtils.ToPhysicalAddress(relocationAddress.Segment, relocationAddress.Offset) + physicalLoadAddress;
@@ -653,6 +659,41 @@ public class DosProcessManager : DosFileLoader {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Loaded .EXE program: CS:IP={CS:X4}:{IP:X4}, SS:SP={SS:X4}:{SP:X4}, DS=ES=0x{DSES:X4}", 
                 _state.CS, _state.IP, _state.SS, _state.SP, _state.DS);
+        }
+    }
+
+    /// <summary>
+    /// Zeros memory beyond the loaded program up to the end of the allocated memory block or conventional memory limit.
+    /// This matches DOS behavior of clearing memory beyond the program image.
+    /// </summary>
+    /// <param name="programStartAddress">Physical address where the program starts</param>
+    /// <param name="programSize">Size of the loaded program in bytes</param>
+    /// <param name="pspSegment">PSP segment for .COM files</param>
+    /// <param name="allocatedBlockSizeBytes">Total allocated block size in bytes for .EXE files</param>
+    private void ZeroMemoryBeyondProgram(uint programStartAddress, uint programSize, ushort pspSegment, uint? allocatedBlockSizeBytes = null) {
+        uint programEndAddress = programStartAddress + programSize;
+        uint zeroEndAddress;
+
+        if (allocatedBlockSizeBytes.HasValue) {
+            // .EXE file: Zero to end of allocated block
+            uint blockStartAddress = MemoryUtils.ToPhysicalAddress((ushort)(pspSegment), 0);
+            zeroEndAddress = Math.Min(blockStartAddress + allocatedBlockSizeBytes.Value, MemoryUtils.ToPhysicalAddress(0x9FFF, 0xFFFF));
+        } else {
+            // .COM file: Zero to end of PSP segment (64KB limit) or conventional memory limit
+            uint pspStartAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
+            uint segmentEndAddress = pspStartAddress + 0x10000; // 64KB segment
+            zeroEndAddress = Math.Min(segmentEndAddress, MemoryUtils.ToPhysicalAddress(0x9FFF, 0xFFFF));
+        }
+
+        if (programEndAddress < zeroEndAddress) {
+            uint bytesToZero = zeroEndAddress - programEndAddress;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Zeroing {BytesToZero} bytes from 0x{StartAddress:X8} to 0x{EndAddress:X8}",
+                    bytesToZero, programEndAddress, zeroEndAddress);
+            }
+            _memory.LoadData(programEndAddress, new byte[bytesToZero]);
+            
         }
     }
 
