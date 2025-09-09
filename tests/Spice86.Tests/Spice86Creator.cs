@@ -26,6 +26,7 @@ public class Spice86Creator {
             ExpectedChecksumValue = Array.Empty<byte>(),
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
+            ProvidedAsmHandlersSegment = 0xF000,
             DumpDataOnExit = recordData,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests

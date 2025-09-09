@@ -234,9 +234,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Timer created...");
         }
 
-        TimerInt8Handler timerInt8Handler =
-            new TimerInt8Handler(memory, functionHandlerProvider, stack, state,
-            dualPic, timer, biosDataArea, loggerService);
+        var timerInt8Handler = new TimerInt8Handler(dualPic, biosDataArea);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Timer int8 handler created...");
@@ -411,10 +409,13 @@ public class Spice86DependencyInjection : IDisposable {
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
 
+        var dummyInt1CHandler = new DummyInt1CHandler();
+
         BiosMouseInt74Handler? mouseIrq12Handler = null;
         if (configuration.InitializeDOS is not false) {
             // Register the BIOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(vgaBios);
+            interruptInstaller.InstallInterruptHandler(dummyInt1CHandler);
             interruptInstaller.InstallInterruptHandler(timerInt8Handler);
             interruptInstaller.InstallInterruptHandler(biosKeyboardInt9Handler);
             interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
