@@ -441,19 +441,28 @@ public class DosProcessManager : DosFileLoader {
 
     /// <summary>
     /// Analyzes the program format and returns EXE file info if it's an EXE, null if it's a COM.
+    /// Now with DOS-compatible lenient parsing.
     /// </summary>
     private DosExeFile? AnalyzeProgramFormat(byte[] fileBytes) {
         if (fileBytes.Length >= DosExeFile.MinExeSize) {
             DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
-            if (exeFile.IsValid) {
+
+            // Check basic signature first
+            if (exeFile.Signature is "MZ" or "ZM") {
+                // Even if other header fields seem inconsistent, try to load like DOS does
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("Detected .EXE file format: MinAlloc={MinAlloc}, MaxAlloc={MaxAlloc}, InitCS:IP={InitCS:X4}:{InitIP:X4}, InitSS:SP={InitSS:X4}:{InitSP:X4}", 
+                    if (exeFile.Pages > 0x07ff) {
+                        _loggerService.Verbose("EXE header has oversized page count (0x{Pages:X4}), clamping to DOS 1MB limit",
+                            exeFile.Pages);
+                    }
+
+                    _loggerService.Verbose("Detected .EXE file format: MinAlloc={MinAlloc}, MaxAlloc={MaxAlloc}, InitCS:IP={InitCS:X4}:{InitIP:X4}, InitSS:SP={InitSS:X4}:{InitSP:X4}",
                         exeFile.MinAlloc, exeFile.MaxAlloc, exeFile.InitCS, exeFile.InitIP, exeFile.InitSS, exeFile.InitSP);
                 }
                 return exeFile;
             }
         }
-        
+
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("Detected .COM file format (memory image)");
         }
