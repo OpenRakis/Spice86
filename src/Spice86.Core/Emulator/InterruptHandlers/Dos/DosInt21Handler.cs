@@ -1281,15 +1281,26 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out HostFolderDrive? mountedDrive)) {
-            _dosDriveManager.CurrentDrive = mountedDrive;
-        } 
-        if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
-            LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
-        }
+        byte driveIndex = State.DL;
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("SELECT DEFAULT DRIVE {@DefaultDrive}", _dosDriveManager.CurrentDrive);
+            LoggerService.Verbose("SELECT DEFAULT DRIVE: Index {DriveIndex}", driveIndex);
         }
+
+        // Attempt to change to the requested drive
+        bool success = _dosDriveManager.ChangeCurrentDriveEntry(driveIndex);
+
+        if (!success) {
+            if (driveIndex > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
+                LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", driveIndex);
+            } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("DOS INT21H: Could not set default drive! Drive {DriveIndex} is not mounted", driveIndex);
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SELECT DEFAULT DRIVE: Successfully changed to {@DefaultDrive}", _dosDriveManager.CurrentDrive);
+        }
+
+        // Always return the number of potentially valid drive letters, regardless of success
         State.AL = _dosDriveManager.NumberOfPotentiallyValidDriveLetters;
     }
 
