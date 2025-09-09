@@ -16,8 +16,11 @@ public class Aad : InstructionWithValueField<byte> {
         byte v2 = helper.InstructionFieldValueRetriever.GetFieldValue(ValueField);
         helper.State.AL = (byte)(helper.State.AL + (helper.State.AH * v2));
         helper.State.AH = 0;
-        helper.State.Flags.FlagRegister = 0;
         helper.Alu8.UpdateFlags(helper.State.AL);
+        // Undefined behaviour
+        helper.State.CarryFlag = false;
+        helper.State.AuxiliaryFlag = false;
+        helper.State.OverflowFlag = false;
         helper.MoveIpAndSetNextNode(this);
     }
     

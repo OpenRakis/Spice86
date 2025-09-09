@@ -25,7 +25,10 @@ public class Instructions8 : Instructions {
     public void Aad(byte v2) {
         State.AL = (byte)(State.AL + (State.AH * v2));
         State.AH = 0;
-        State.Flags.FlagRegister = 0;
+        // Undefined behaviour
+        State.CarryFlag = false;
+        State.AuxiliaryFlag = false;
+        State.OverflowFlag = false;
         _alu8.UpdateFlags(State.AL);
     }
 
