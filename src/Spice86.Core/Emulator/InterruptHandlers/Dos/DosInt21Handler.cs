@@ -88,6 +88,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
+        AddAction(0x01, ReadCharacterFromStdinWithEcho);
         AddAction(0x02, DisplayOutput);
         AddAction(0x03, ReadCharacterFromStdAux);
         AddAction(0x04, WriteCharacterToStdAux);
@@ -146,6 +147,44 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x55, CreateChildPsp);
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+    }
+
+    /// <summary>
+    /// Reads a character from the standard input device and echoes it to the standard output device.
+    /// The character is returned in AL.
+    /// </summary>
+    /// <remarks>
+    /// TODO: Check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
+    /// </remarks>
+    public void ReadCharacterFromStdinWithEcho() {
+        if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) ||
+            !_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)) {
+            State.AL = 0;
+            return;
+        }
+
+        if (!stdIn.CanRead) {
+            State.AL = 0;
+            return;
+        }
+
+        byte[] inputBuffer = new byte[1];
+        int readCount = stdIn.Read(inputBuffer, 0, 1);
+
+        if (readCount < 1) {
+            State.AL = 0;
+            return;
+        }
+
+        byte character = inputBuffer[0];
+        State.AL = character;
+
+        // Echo the character to standard output if possible
+        if (stdOut.CanWrite) {
+            stdOut.Write(character);
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("DOS INT21H ReadCharacterFromStdinWithEcho: Cannot echo to standard output device.");
+        }
     }
 
     public void SetDate() {
