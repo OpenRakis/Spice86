@@ -45,7 +45,7 @@ public class DosProcessManager : DosFileLoader {
         _driveManager = dosDriveManager;
         _environmentVariables = new();
 
-        envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+        envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{HostFolderFileSystemResolver.DirectorySeparatorChar}");
         //TODO some programs want COMSPEC to launch subshells: envVars.Add("COMSPEC", @"Z:\COMMAND.COM"); //soon...
 
         foreach (KeyValuePair<string, string> envVar in envVars) {
@@ -409,6 +409,17 @@ public class DosProcessManager : DosFileLoader {
         }
 
         return (environmentSegment, commandTailAddress, fcb1Address, fcb2Address);
+    }
+
+    protected override byte[] ReadFile(string file) {
+        if (!string.IsNullOrWhiteSpace(file) && File.Exists(file)) {
+            return File.ReadAllBytes(file);
+        }
+        string? hostFilePath = _driveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(file);
+        if (!string.IsNullOrWhiteSpace(hostFilePath) && File.Exists(hostFilePath)) {
+            return File.ReadAllBytes(hostFilePath);
+        }
+        throw new FileNotFoundException(file);
     }
 
     /// <summary>

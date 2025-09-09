@@ -51,7 +51,7 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     /// <param name="file">The path of the file to read.</param>
     /// <returns>The bytes of the read file.</returns>
-    protected byte[] ReadFile(string file) {
+    protected virtual byte[] ReadFile(string file) {
         return File.ReadAllBytes(file);
     }
 

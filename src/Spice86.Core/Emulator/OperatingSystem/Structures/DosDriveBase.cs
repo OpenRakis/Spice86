@@ -27,7 +27,7 @@ public abstract class DosDriveBase {
     /// <summary>
     /// Gets the DOS assigned drive letter, with a volume separator character appended to it.
     /// </summary>
-    public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
+    public string DosVolume => $"{DriveLetter}{HostFolderFileSystemResolver.VolumeSeparatorChar}";
 
     /// <summary>
     /// Gets if it is a network drive. Not supported, always <see langword="false" />
