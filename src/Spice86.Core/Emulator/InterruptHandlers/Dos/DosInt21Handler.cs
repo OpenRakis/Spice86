@@ -983,36 +983,9 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
-        ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
         
-        // Resize the memory block to keep only the specified number of paragraphs
-        DosErrorCode result = _dosMemoryManager.TryModifyBlock(currentPspSegment, paragraphsToKeep, out _);
-        if (result != DosErrorCode.NoError) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Failed to resize memory block for TSR: {Error}", result);
-            }
-        }
-
-        // Save termination information for parent
-        _lastReturnCode = exitCode;
-        _lastTerminationMode = DosTerminationMode.TerminateAndStayResident;
-
-        // Return to parent process
-        if (parentPspSegment == currentPspSegment) {
-            // This is the root process, terminate the emulation
-            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-                LoggerService.Information("Root process terminated with exit code {ExitCode}, stopping emulation", exitCode);
-            }
-            State.IsRunning = false;
-        } else {
-            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-                LoggerService.Information("Child process at PSP 0x{CurrentPsp:X4} terminated with exit code {ExitCode}, returning to parent PSP 0x{ParentPsp:X4}", 
-                    currentPspSegment, exitCode, parentPspSegment);
-            }
-
-            // Restore parent's context (CPU state should already be preserved by EXEC)
-            // The actual return to parent is handled by the CPU's call/return mechanism
-        }
+        // Use DosProcessManager for proper TSR termination
+        _dosProcessManager.TerminateProcess(currentPspSegment, true, exitCode, paragraphsToKeep);
     }
 
     /// <summary>
