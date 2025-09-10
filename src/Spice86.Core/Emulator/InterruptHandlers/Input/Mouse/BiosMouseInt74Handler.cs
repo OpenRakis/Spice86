@@ -21,7 +21,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <param name="memory">The memory bus.</param>
     public BiosMouseInt74Handler(DualPic hardwareInterruptHandler, IIndexable memory) {
         _hardwareInterruptHandler = hardwareInterruptHandler;
-        _driverAddressSwitcher = new(memory);
+        _driverAddressSwitcher = new InMemoryAddressSwitcher(memory);
     }
 
     /// <inheritdoc />
