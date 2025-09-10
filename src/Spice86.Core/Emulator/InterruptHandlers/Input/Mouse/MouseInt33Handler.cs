@@ -9,8 +9,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
-using System.Diagnostics.CodeAnalysis;
-
 /// <summary>
 ///     Interface between the mouse and the emulator.<br />
 ///     Re-implements int33.<br />
@@ -163,7 +161,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     public void QueryButtonReleasedCounter() {
         if(!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
-            ReturnNothingInCpuRegsiters();
+            ReturnNothingInCpuRegisters();
             return;
         }
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
@@ -207,12 +205,10 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     private void QueryButtonPressedCounter() {
         if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
+            ReturnNothingInCpuRegisters();
             return;
         }
-        if (button == MouseButton.None) {
-            ReturnNothingInCpuRegsiters();
-            return;
-        }
+
         MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
@@ -220,7 +216,7 @@ public class MouseInt33Handler : InterruptHandler {
         State.DX = (ushort)_mouseDriver.GetLastPressedY(button);
     }
 
-    private void ReturnNothingInCpuRegsiters() {
+    private void ReturnNothingInCpuRegisters() {
         State.AX = 0;
         State.BX = 0;
         State.CX = 0;
@@ -393,16 +389,21 @@ public class MouseInt33Handler : InterruptHandler {
     public void SetMouseMickeyPixelRatio() {
         ushort horizontal = State.CX;
         ushort vertical = State.DX;
+        if (horizontal == 0 || vertical == 0) {
+            return;
+        }
+        
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseMickeyPixelRatio), horizontal, vertical);
         }
-        _mouseDriver.HorizontalMickeysPerPixel = (ushort)(horizontal << 3);
-        _mouseDriver.VerticalMickeysPerPixel = (ushort)(vertical << 3);
+
+        _mouseDriver.HorizontalMickeysPerPixel = (ushort)(horizontal >> 3);
+        _mouseDriver.VerticalMickeysPerPixel = (ushort)(vertical >> 3);
     }
 
     /// <summary>
-    ///    CX    desired double-speed threshold (mickeys per second)
+    ///    DX    desired double-speed threshold (mickeys per second)
     /// </summary>
     public void SetMouseDoubleSpeedThreshold() {
         ushort threshold = State.DX;
