@@ -1,5 +1,4 @@
-﻿
-namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -23,8 +22,8 @@ using System.Text;
 public class DosFileManager {
     private const int ExtDeviceBit = 0x0200;
     private static readonly char[] _directoryChars = {
-        DosPathResolver.DirectorySeparatorChar,
-        DosPathResolver.AltDirectorySeparatorChar };
+        HostFolderFileSystemResolver.DirectorySeparatorChar,
+        HostFolderFileSystemResolver.AltDirectorySeparatorChar };
 
     private readonly DosDriveManager _dosDriveManager;
 
@@ -35,8 +34,6 @@ public class DosFileManager {
     private ushort _diskTransferAreaAddressSegment;
 
     private readonly IMemory _memory;
-
-    private readonly DosPathResolver _dosPathResolver;
 
     private class FileSearchPrivateData {
         public FileSearchPrivateData(string fileSpec, int index, ushort searchAttributes) {
@@ -75,10 +72,10 @@ public class DosFileManager {
         DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
-        _dosPathResolver = new DosPathResolver(dosDriveManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        // Remove the _dosPathResolver field since we now get it from the drive manager
     }
 
     /// <summary>
@@ -160,7 +157,7 @@ public class DosFileManager {
             return OpenDevice(device);
         }
         
-        string prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
+        string prefixedPath = _dosDriveManager.GetCurrentDosPathResolver().PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
         try {
@@ -277,7 +274,7 @@ public class DosFileManager {
         try {
             string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(fileSpec) ?? fileSpec;
             string[] matchingPaths =
-                _dosPathResolver.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
+                _dosDriveManager.GetCurrentDosPathResolver().FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
 
             if (matchingPaths.Length == 0) {
                 return DosFileOperationResult.Error(DosErrorCode.NoMoreFiles);
@@ -312,7 +309,7 @@ public class DosFileManager {
 
     private bool GetSearchFolder(string fileSpec, [NotNullWhen(true)] out string? searchFolder) {
         string subFolderName = GetSubFoldersInFileSpec(fileSpec) ?? ".";
-        searchFolder = _dosPathResolver.GetFullHostPathFromDosOrDefault(subFolderName);
+        searchFolder = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(subFolderName);
         return searchFolder is not null;
     }
 
@@ -328,7 +325,7 @@ public class DosFileManager {
     private static string? GetFileSpecWithoutSubFolderOrDriveInIt(string fileSpec) {
         int index = fileSpec.LastIndexOfAny(_directoryChars);
         if (index == -1) {
-            index = fileSpec.LastIndexOfAny([DosPathResolver.VolumeSeparatorChar]);
+            index = fileSpec.LastIndexOfAny([HostFolderFileSystemResolver.VolumeSeparatorChar]);
         }
         if (index != -1) {
             int indexIncludingDirChar = index + 1;
@@ -345,8 +342,8 @@ public class DosFileManager {
     }
 
     private static bool IsOnlyADosDriveRoot(string filePath) =>
-        filePath.Length == 3 && (filePath[2] == DosPathResolver.DirectorySeparatorChar ||
-        filePath[2] == DosPathResolver.AltDirectorySeparatorChar);
+        filePath.Length == 3 && (filePath[2] == HostFolderFileSystemResolver.DirectorySeparatorChar ||
+        filePath[2] == HostFolderFileSystemResolver.AltDirectorySeparatorChar);
 
     private EnumerationOptions GetEnumerationOptions(ushort attributes) {
         EnumerationOptions enumerationOptions = new() {
@@ -400,7 +397,7 @@ public class DosFileManager {
         string searchPattern = GetFileSpecWithoutSubFolderOrDriveInIt(search.FileSpec) ?? search.FileSpec;
         EnumerationOptions enumerationOptions = GetEnumerationOptions(search.SearchAttributes);
         string[] matchingFiles =
-            _dosPathResolver.FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
+            _dosDriveManager.GetCurrentDosPathResolver().FindFilesUsingWildCmp(searchFolder, searchPattern, enumerationOptions).ToArray();
 
         string? fileMatch = matchingFiles.ElementAtOrDefault(search.Index);
         if (matchingFiles.Length == 0 || fileMatch is null) {
@@ -476,7 +473,7 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
-        string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
+        string? hostFileName = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error("DOS: File not found! {DosFilePathNotFound} {AccessMode}", fileName, accessMode);
@@ -553,7 +550,7 @@ public class DosFileManager {
     /// </summary>
     /// <param name="newPath">The new current directory path</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult SetCurrentDir(string newPath) => _dosPathResolver.SetCurrentDir(newPath);
+    public DosFileOperationResult SetCurrentDir(string newPath) => _dosDriveManager.GetCurrentDosPathResolver().SetCurrentDir(newPath);
 
     /// <summary>
     /// Sets the segmented address to the DTA.
@@ -678,8 +675,8 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
-        GetFullHostPathFromDosOrDefault(dosPath);
+    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosDriveManager
+        .GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -772,7 +769,7 @@ public class DosFileManager {
             // The FAT node entry size for a directory
             dta.FileSize = 4096;
         }
-        dta.FileName = DosPathResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
+        dta.FileName = HostFolderFileSystemResolver.GetShortFileName(Path.GetFileName(matchingFileSystemEntry), searchFolder);
     }
 
     private DosDiskTransferArea GetDosDiskTransferArea() {
@@ -787,16 +784,16 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to create</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
-        string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
+        string? parentFolder = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostParentPathFromDosOrDefault(dosDirectory);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
             return PathNotFoundError(dosDirectory);
         }
 
-        if (_dosPathResolver.AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
+        if (_dosDriveManager.GetCurrentDosPathResolver().AnyDosDirectoryOrFileWithTheSameName(dosDirectory, new DirectoryInfo(parentFolder))) {
             return FileAccessDeniedError(dosDirectory);
         }
 
-        string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        string prefixedDosDirectory = _dosDriveManager.GetCurrentDosPathResolver().PrefixWithHostDirectory(dosDirectory);
         try {
             Directory.CreateDirectory(prefixedDosDirectory);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -819,7 +816,7 @@ public class DosFileManager {
     /// <param name="dosFile">The file name to delete</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveFile(string dosFile) {
-        string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile);
+        string? fullHostPath = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(dosFile);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return PathNotFoundError(dosFile);
         }
@@ -847,15 +844,15 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to delete</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
-        string? hostDirToDelete = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
+        string? hostDirToDelete = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(dosDirectory);
 
         if (string.IsNullOrWhiteSpace(hostDirToDelete) ||
             Directory.Exists(hostDirToDelete)) {
             return PathNotFoundError(dosDirectory);
         }
 
-        _dosPathResolver.GetCurrentDosDirectory(_dosDriveManager.CurrentDriveIndex, out string currentDir);
-        string? currentHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(currentDir);
+        _dosDriveManager.GetCurrentDosPathResolver().GetCurrentDosDirectory(_dosDriveManager.CurrentDriveIndex, out string currentDir);
+        string? currentHostPath = _dosDriveManager.GetCurrentDosPathResolver().GetFullHostPathFromDosOrDefault(currentDir);
 
         if (!string.IsNullOrWhiteSpace(currentHostPath) &&
             currentHostPath.StartsWith(hostDirToDelete, StringComparison.OrdinalIgnoreCase)) {
@@ -886,7 +883,7 @@ public class DosFileManager {
     /// <param name="currentDir">The string variable receiving the current DOS directory.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) =>
-        _dosPathResolver.GetCurrentDosDirectory(driveNumber, out currentDir);
+        _dosDriveManager.GetCurrentDosPathResolver().GetCurrentDosDirectory(driveNumber, out currentDir);
 
     public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
@@ -1107,7 +1104,7 @@ public class DosFileManager {
                         {
                             // 1) Build the 11-byte volume label (padded with spaces)
                             // 1) pull the raw label (or default), split name/ext
-                            VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            HostFolderDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
                             string driveLabel = vDrive.Label.ToUpperInvariant();
                             
 

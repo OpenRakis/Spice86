@@ -123,10 +123,22 @@ public class DosExeFile : MemoryBasedDataStructure {
                 ? Pages * 512U
                 : (uint)((Pages == 0 ? 0 : Pages - 1) * 512) + LenFinalPage;
 
+            // Add DOS-style clamping like DOSBox does
+            uint clampedPages = (uint)(Pages & 0x07ff); // Clamp to 1MB limit
+            declaredTotalSize = LenFinalPage == 0
+                ? clampedPages * 512U
+                : ((clampedPages == 0 ? 0 : clampedPages - 1) * 512) + LenFinalPage;
+
             uint headerSize = HeaderSizeInBytes;
             uint fileLength = (uint)ByteReaderWriter.Length;
             uint declaredImageSize = declaredTotalSize > headerSize ? declaredTotalSize - headerSize : 0;
             uint availableAfterHeader = fileLength > headerSize ? fileLength - headerSize : 0;
+
+            // DOS fallback: if calculated size is too small, use minimum
+            if (declaredImageSize + headerSize < 512) {
+                declaredImageSize = fileLength > 512 ? 512 - headerSize : availableAfterHeader;
+            }
+
             return declaredImageSize <= availableAfterHeader ? declaredImageSize : availableAfterHeader;
         }
     }
@@ -138,7 +150,22 @@ public class DosExeFile : MemoryBasedDataStructure {
 
     /// <summary>
     /// True when represented EXE is valid.
-    /// Valid means starts with "MZ" and declared header is at least as big as the whole exe.
+    /// DOS-compatible validation that's more lenient about header inconsistencies.
     /// </summary>
-    public bool IsValid => Signature is "MZ" or "ZM" && HeaderSizeInBytes <= ByteReaderWriter.Length;
+    public bool IsValid {
+        get {
+            // Basic signature check
+            if (Signature is not "MZ" and not "ZM") {
+                return false;
+            }
+
+            // Be more lenient about header size - DOS often ignores minor inconsistencies
+            if (HeaderSizeInBytes > ByteReaderWriter.Length) {
+                // Try to work with what we have, like DOS does
+                return ByteReaderWriter.Length >= MinExeSize;
+            }
+
+            return true;
+        }
+    }
 }
