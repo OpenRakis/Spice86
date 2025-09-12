@@ -63,11 +63,6 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         return _counters[counterIndex];
     }
 
-    /// <summary>
-    /// Gets the number of ticks in the first counter.
-    /// </summary>
-    public long NumberOfTicks => _counters[0].CurrentCount;
-
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
         if (IsCounterRegisterPort(port)) {
