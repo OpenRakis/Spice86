@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+             xmlns:local="clr-namespace:AvaloniaGraphControlSample;assembly=AvaloniaGraphControlSample"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AvaloniaGraphControlSample.MainView"
+             x:DataType="local:Model">
+  <Grid ColumnDefinitions="*" RowDefinitions="Auto,*" Background="White">
+    <WrapPanel Grid.Row="0">
+      <ToggleButton x:Name="Hamburger" Background="White" VerticalAlignment="Center">
+        <Image Source="Assets/HamburgerIcon.png" Stretch="None" />
+      </ToggleButton>
+      <ComboBox Name="Graphs" ItemsSource="{Binding SampleGraphs}"/>
+      <Button Click="ResetDisplay">Reset</Button>
+    </WrapPanel>
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsChecked, ElementName=Hamburger}" Margin="20">
+      <WrapPanel>
+        <TextBlock>Demo of the AvaloniaGraphControl. Version:</TextBlock>
+        <TextBlock Margin="0 5" Text="{Binding Version}"/>
+      </WrapPanel>
+      <WrapPanel>
+        <TextBlock>Select Layout Method:</TextBlock>
+        <ComboBox Name="LayoutMethods" ItemsSource="{Binding LayoutMethods}" />
+      </WrapPanel>
+      <WrapPanel>
+        <TextBlock VerticalAlignment="Center">Project page at:</TextBlock>
+        <Button Classes="hyperlink" Command="{Binding OpenUrl}"
+                CommandParameter="https://github.com/Oaz/AvaloniaGraphControl">
+          https://github.com/Oaz/AvaloniaGraphControl
+        </Button>
+      </WrapPanel>
+      <WrapPanel>
+        <TextBlock VerticalAlignment="Center">Web Assembly demo at:</TextBlock>
+        <Button Classes="hyperlink" Command="{Binding OpenUrl}"
+                CommandParameter="https://oaz.github.io/AvaloniaGraphControl/">
+          https://oaz.github.io/AvaloniaGraphControl/
+        </Button>
+      </WrapPanel>
+      <WrapPanel>
+        <TextBlock VerticalAlignment="Center">Android demo at:</TextBlock>
+        <Button Classes="hyperlink" Command="{Binding OpenUrl}"
+                CommandParameter="https://play.google.com/store/apps/details?id=com.azeau.AvaloniaGraphControlSample">
+          Google Play
+        </Button>
+      </WrapPanel>
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                  IsVisible="{Binding !IsChecked, ElementName=Hamburger}">
+      <ZoomBorder x:Name="ZoomBorder" Stretch="Uniform" ZoomSpeed="1.2"
+                  ClipToBounds="True" Focusable="True" Background="White"
+                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+        <ZoomBorder.GestureRecognizers>
+          <PinchGestureRecognizer />
+        </ZoomBorder.GestureRecognizers>
+        <agc:GraphPanel Background="White"
+                        Graph="{Binding SelectedItem, ElementName=Graphs}"
+                        LayoutMethod="{Binding SelectedItem, ElementName=LayoutMethods}">
+          <agc:GraphPanel.DataTemplates>
+            <DataTemplate DataType="{x:Type local:StandardItem}">
+              <agc:TextSticker Text="{Binding Name}"
+                               Shape="Ellipse"
+                               Padding="30,10" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:InteractiveItem}">
+              <ToggleButton Content="{Binding Name}" Padding="20,5" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:CompositeItem}">
+              <agc:TextSticker Text="{Binding Name}"
+                               Shape="RoundedRectangle"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Stretch" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:FamilyMember}">
+              <Button Content="{Binding Name}"
+                      Background="{Binding BackgroundColor}"
+                      Command="{Binding Navigate}" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:Family}">
+              <Canvas Width="17" Height="12">
+                <Rectangle Width="17" Height="12" Fill="Black" />
+                <Rectangle Canvas.Left="1" Canvas.Top="1"
+                           Width="15" Height="10"
+                           Fill="Gray" />
+              </Canvas>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:State}">
+              <agc:TextSticker Text="{Binding Name}"
+                               Background="{Binding Color}"
+                               Shape="RoundedRectangle"
+                               Padding="1" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:CompositeState}">
+              <agc:TextSticker Text="{Binding Name}"
+                               Background="{Binding Color}"
+                               Shape="RoundedRectangle"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Stretch"
+                               Padding="1" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:ColoredEdge}">
+              <agc:Connection Brush="{Binding MyCustomColor}" />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type local:InitialState}">
+              <Ellipse Width="10" Height="10" Fill="Black" />
+            </DataTemplate>
+          </agc:GraphPanel.DataTemplates>
+        </agc:GraphPanel>
+      </ZoomBorder>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

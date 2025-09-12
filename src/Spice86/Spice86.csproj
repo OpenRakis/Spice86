@@ -26,9 +26,8 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
-    <PackageReference Include="Avalonia.Headless"/>
+    <PackageReference Include="Avalonia.Headless" />
     <PackageReference Include="PanAndZoom" />
-    <PackageReference Include="AvaloniaGraphControl" />
     <PackageReference Include="AvaloniaHex" />
     <PackageReference Include="bodong.Avalonia.PropertyGrid" />
     <PackageReference Include="bodong.PropertyModels" />
@@ -48,6 +47,7 @@
     <AvaloniaResource Include="Views\Assets\**" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AvaloniaGraphControl\src\AvaloniaGraphControl.csproj" />
     <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
     <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
     <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
