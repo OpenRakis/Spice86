@@ -18,11 +18,9 @@ using System.Threading;
 /// <summary>
 /// C# port of intel8042.cpp with PS/2 keyboard logic from keyboard.cpp.
 /// The controller buffer is shared with the inner public PS2Keyboard class.
-/// Scan-code conversions are intentionally omitted here (handled by AvalionaKeyConverter).
 /// </summary>
 public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
     private const int BufferSize = 64;
-    private const double DefaultPortDelayMs = 0.300;
 
     // Add a constant for key acceptance delay
     private const int KeyAcceptDelayMs = 30; // Adjust as needed for realism
@@ -113,7 +111,6 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
     // helpers & services
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
-    private readonly ILoggerService _loggerService;
 
     // Public PS/2 keyboard emulation (inner class) using the controller's buffer
     public PS2Keyboard KeyboardDevice { get; }
@@ -125,7 +122,6 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
-        _loggerService = loggerService;
 
         // expose the keyboard implementation (translated from keyboard.cpp)
         KeyboardDevice = new PS2Keyboard(this, loggerService);
@@ -647,6 +643,7 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
     public sealed class PS2Keyboard {
         private readonly Intel8042PS2KeyboardMouseController _controller;
         private readonly ILoggerService _loggerService;
+        private readonly KeyboardScancodeConverter _scancodeConverter = new();
 
         // keyboard-internal scancode buffer (keyboard.cpp had vector<uint8_t> buffer[buffer_size])
         private const int KbdFrameBufferSize = 8; // number of scancode frames
@@ -697,8 +694,11 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
             ScancodeSet(0x01);
         }
 
-        // Called by GUI event subscription
         public void OnKeyEvent(object? sender, KeyboardEventArgs e) {
+            if (e.Key == PhysicalKey.None) {
+                return;
+            }
+
             // Check if enough time has passed since last accepted key
             if (!_controller._keyAcceptStopwatch.IsRunning ||
                 _controller._keyAcceptStopwatch.ElapsedMilliseconds >= KeyAcceptDelayMs) {
@@ -706,47 +706,36 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
                 // Accept the key
                 _controller._keyAcceptStopwatch.Restart();
 
-                if (e.ScanCode.HasValue && e.ScanCode.Value != 0) {
-                    AddKeyEvent(e);
+                // Convert Avalonia Key to KbdKey
+                KbdKey kbdKey = _scancodeConverter.ConvertToKbdKey(e.Key);
+
+                // Get all scancodes for this key using current codeset
+                List<byte> scancodes = _scancodeConverter.GetScancodes(kbdKey, e.IsPressed, _codeSet);
+
+                // Add each scancode byte to the keyboard buffer
+                if (scancodes.Count > 0) {
+                    // Send all bytes as a frame
+                    AddKeyFrame(scancodes);
+
+                    // Set up typematic for this key if pressed
+                    if (e.IsPressed) {
+                        _repeatKey = e;
+                        TypematicUpdate(_repeatKey);
+                    } else if (e.Key == _repeatKey.Key) {
+                        // Stop typematic if this key was being repeated
+                        _repeatKey = KeyboardEventArgs.None;
+                    }
                 }
-                _controller._dualPic.ProcessInterruptRequest(1);
             }
-            // else: ignore the key event (not enough time has passed)
         }
 
-        private void AddKeyEvent(KeyboardEventArgs e) {
-            if (!_isScanning || !e.ScanCode.HasValue) {
+        private void AddKeyFrame(List<byte> scancodes) {
+            if (!_isScanning || scancodes.Count == 0) {
                 return;
             }
 
-            // typematic filtering & delays are handled below: we emulate keyboard.cpp GetHasDelayExpired via controller readiness
-            // For single byte scancode, push to keyboard internal frame buffer as vector
-            var frame = new List<byte> { e.ScanCode.Value };
-
-            lock (_kbdLock) {
-                if (_kbdBufferOverflowed) {
-                    return;
-                }
-                if (_kbdBufferNumUsed == KbdFrameBufferSize) {
-                    _kbdBufferNumUsed = 0;
-                    _kbdBufferOverflowed = true;
-                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                        _loggerService.Warning("Keyboard internal buffer overflow");
-                    }
-                    return;
-                }
-
-                int idx = (_kbdBufferStartIdx + _kbdBufferNumUsed) % KbdFrameBufferSize;
-                _kbdFrames[idx].Clear();
-                _kbdFrames[idx].AddRange(frame);
-                _kbdBufferNumUsed++;
-            }
-
-            // Try to transfer a frame to the controller if the controller is ready
-            MaybeTransferFrameToController();
-
-            // typematic handling: mirror typematic_update logic (we don't have KBD_KEYS; use KeyboardEventArgs.Key to identify)
-            TypematicUpdate(e);
+            // Add frame to controller
+            _controller.AddKbdFrame(scancodes);
         }
 
         // Mirror keyboard.cpp maybe_transfer_buffer that transfers a frame to I8042_AddKbdFrame
@@ -903,7 +892,7 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
         private void TypematicUpdate(KeyboardEventArgs e) {
             // Use Key identity to manage repeat. Pause/rate are in ms.
             // Exclude Pause and PrintScreen from repeat
-            if (e.Key is Key.Pause or Key.PrintScreen) {
+            if (e.Key is PhysicalKey.Pause or PhysicalKey.PrintScreen) {
                 // no-op
                 return;
             }
@@ -937,50 +926,6 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
         private void StopTypematicTimer() {
             _typematicStopwatch = null;
             _typematicNextDueMs = -1;
-        }
-
-        /// <summary>
-        /// Called by the emulation loop (timer/tick system) to advance keyboard typematic handling.
-        /// This replaces the previous System.Threading.Timer approach.
-        /// </summary>
-        public void Tick() {
-            // First handle any pending reset/LED expiry
-            ResetTick();
-
-            // If no repeat in progress, nothing to do
-            if (_typematicStopwatch is null || !_repeatKey.ScanCode.HasValue) {
-                return;
-            }
-
-            long elapsed = _typematicStopwatch.ElapsedMilliseconds;
-            if (elapsed < _typematicNextDueMs) {
-                return;
-            }
-
-            // Emit one typematic key press
-            byte sc = _repeatKey.ScanCode.Value;
-            _controller.AddKbdByte(sc);
-            _controller._dualPic.ProcessInterruptRequest(1);
-
-            // Prepare for subsequent repeats: restart timing and set the repeat rate interval
-            _typematicStopwatch.Restart();
-            _typematicNextDueMs = _typematicRate;
-        }
-
-        // Reset/LED expiry tick called from Tick()
-        private void ResetTick() {
-            if (_resetState != ResetState.LedsAllOnPending || _resetStopwatch is null) {
-                return;
-            }
-            if (_resetStopwatch.ElapsedMilliseconds < LedsAllOnExpireMs) {
-                return;
-            }
-
-            // expiry reached
-            _ledsAllOn = false;
-            _resetStopwatch = null;
-            _resetState = ResetState.Idle;
-            MaybeNotifyLedState();
         }
 
         private void SetTypeRate(byte b) {
@@ -1040,8 +985,6 @@ public sealed class Intel8042PS2KeyboardMouseController : DefaultIOPortHandler {
             ClearInternalBuffer();
             return true;
         }
-
-        private void SetTypeRate(uint p) { /* unused overload in conversion */ }
 
         private void ClearInternalBuffer() {
             lock (_kbdLock) {

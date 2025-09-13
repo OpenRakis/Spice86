@@ -32,7 +32,6 @@ public class EmulationLoop {
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
     private readonly InputEventQueue _inputEventQueue;
-    private readonly Intel8042PS2KeyboardMouseController _keyboardController;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -58,7 +57,6 @@ public class EmulationLoop {
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
         DmaController dmaController, IPauseHandler pauseHandler,
         CycleLimiterBase cyclesLimiter, InputEventQueue inputEventQueue,
-        Intel8042PS2KeyboardMouseController keyboardController,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         _dmaController = dmaController;
@@ -71,7 +69,6 @@ public class EmulationLoop {
         _cyclesLimiter = cyclesLimiter;
         _performanceMeasurer = perfMeasurer;
         _inputEventQueue = inputEventQueue;
-        _keyboardController = keyboardController;
     }
 
     /// <summary>
@@ -128,7 +125,6 @@ public class EmulationLoop {
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
         _inputEventQueue.ProcessAllPendingInputEvents();
-        _keyboardController.KeyboardDevice.Tick();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }
 

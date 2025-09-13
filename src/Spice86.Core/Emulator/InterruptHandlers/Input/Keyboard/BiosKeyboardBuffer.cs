@@ -26,6 +26,8 @@ public class BiosKeyboardBuffer {
         TailAddress = StartAddress;
     }
 
+    public BiosDataArea BiosDataArea => _biosDataArea;
+
     /// <summary>
     /// Address of the start of the buffer
     /// </summary>
