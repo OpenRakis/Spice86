@@ -32,11 +32,14 @@ public class EmulationLoop {
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
     private readonly InputEventQueue _inputEventQueue;
+    private readonly EmulatorEventClock _emulatorEventClock;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
+
+    public EmulatorEventClock EmulatorEventClock => _emulatorEventClock;
 
     /// <summary>
     /// Initializes a new instance.
@@ -69,6 +72,7 @@ public class EmulationLoop {
         _cyclesLimiter = cyclesLimiter;
         _performanceMeasurer = perfMeasurer;
         _inputEventQueue = inputEventQueue;
+        _emulatorEventClock = new(loggerService);
     }
 
     /// <summary>
@@ -125,6 +129,7 @@ public class EmulationLoop {
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
         _inputEventQueue.ProcessAllPendingInputEvents();
+        _emulatorEventClock.Tick();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }
 

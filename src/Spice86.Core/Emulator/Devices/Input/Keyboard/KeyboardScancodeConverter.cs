@@ -99,7 +99,7 @@ public class KeyboardScancodeConverter {
         }
     }
 
-    private List<byte> GetScanCode1(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode1(KbdKey keyType, bool isPressed) {
         byte code = 0x00;
         bool extend = false;
 
@@ -256,13 +256,13 @@ public class KeyboardScancodeConverter {
         return result;
     }
 
-    private List<byte> GetScanCode2(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode2(KbdKey keyType, bool isPressed) {
         // Implement scancode set 2 conversion if needed
         // This would be a direct port of KEYBOARD_GetScanCode2
         return GetScanCode1(keyType, isPressed); // Fallback to set 1 for now
     }
     
-    private List<byte> GetScanCode3(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode3(KbdKey keyType, bool isPressed) {
         // Implement scancode set 3 conversion if needed
         // This would be a direct port of KEYBOARD_GetScanCode3
         return GetScanCode1(keyType, isPressed); // Fallback to set 1 for now

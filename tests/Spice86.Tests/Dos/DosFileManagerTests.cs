@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Tests.Dos;
+
 using FluentAssertions;
 
 using NSubstitute;
@@ -16,7 +17,6 @@ using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -150,16 +150,18 @@ public class DosFileManagerTests {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
 
-        Intel8042PS2KeyboardMouseController keyboard = new Intel8042PS2KeyboardMouseController(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            configuration.FailOnUnhandledPort, null);
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-
         InputEventQueue inputEventQueue = new InputEventQueue();
 
         EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler,
             new NullCycleLimiter(), inputEventQueue, loggerService);
+
+        Intel8042Controller keyboard = new(state, ioPortDispatcher, a20Gate,
+            dualPic, emulationLoop.EmulatorEventClock,
+            loggerService, configuration.FailOnUnhandledPort);
+        
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
