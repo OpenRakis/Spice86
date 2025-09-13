@@ -367,7 +367,7 @@ public class Spice86DependencyInjection : IDisposable {
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
             emulatorBreakpointsManager, dmaController,
-            pauseHandler, cyclesLimiter, inputEventQueue, keyboard, loggerService);
+            pauseHandler, cyclesLimiter, inputEventQueue, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 

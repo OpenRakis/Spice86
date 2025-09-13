@@ -159,7 +159,7 @@ public class DosFileManagerTests {
         EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler,
-            new NullCycleLimiter(), inputEventQueue, keyboard, loggerService);
+            new NullCycleLimiter(), inputEventQueue, loggerService);
 
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
