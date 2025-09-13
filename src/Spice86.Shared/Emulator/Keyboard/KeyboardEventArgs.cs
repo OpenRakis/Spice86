@@ -5,11 +5,9 @@ namespace Spice86.Shared.Emulator.Keyboard;
 /// </summary>
 /// <param name="Key">The Key pressed or released. Enum taken from Avalonia.</param>
 /// <param name="IsPressed">Whether the key is up or down.</param>
-/// <param name="ScanCode">The IBM PC scan code, for Keyboard emulation.</param>
-/// <param name="AsciiCode">The ASCII code, converted from the scan code. Added to the BIOS keyboard buffer.</param>
-public readonly record struct KeyboardEventArgs(Key Key, bool IsPressed, byte? ScanCode, byte? AsciiCode) {
+public readonly record struct KeyboardEventArgs(PhysicalKey Key, bool IsPressed) {
     /// <summary>
     /// Static property representing an empty KeyboardEventArgs instance.
     /// </summary>
-    public static KeyboardEventArgs None { get; } = new(Key.None, false, null, null);
+    public static KeyboardEventArgs None { get; } = new(PhysicalKey.None, false);
 }

@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -13,13 +14,12 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
-
 /// <summary>
 /// This class orchestrates the execution of the emulated CPU, <br/>
 /// throttles CPU speed for the rare speed sensitive games, <br/>
 /// checks breakpoints each cycle, triggers PIT ticks, and ensures DMA transfers are performed
 ///.</summary>
-public class EmulationLoop : ICyclesLimiter {
+public class EmulationLoop {
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
@@ -27,40 +27,37 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly PerformanceMeasurer _performanceMeasurer = new();
+    private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
-
-    public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
+    private readonly InputEventQueue _inputEventQueue;
 
     /// <summary>
-    /// Whether the emulation is paused.
+    /// Gets or sets whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
-    
-    public int TargetCpuCyclesPerMs {
-        get => _cyclesLimiter.TargetCpuCyclesPerMs;
-        set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
-    }
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="perfMeasurer">The class shared with the UI to update performance information.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
-    /// <param name="dmaController">The Direct Memory Access controller chip.</param>
+    /// <param name="dmaController">Used to perform DMA Channel data transfers regularly.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    public EmulationLoop(Configuration configuration,
+    /// <param name="cyclesLimiter">The class shared with the UI to control CPU speed.</param>
+    /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    public EmulationLoop(PerformanceMeasurer perfMeasurer,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        DmaController dmaController,
-        IPauseHandler pauseHandler, ILoggerService loggerService) {
+        DmaController dmaController, IPauseHandler pauseHandler,
+        CycleLimiterBase cyclesLimiter, InputEventQueue inputEventQueue,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _dmaController = dmaController;
         _cpu = cpu;
@@ -69,7 +66,9 @@ public class EmulationLoop : ICyclesLimiter {
         _timer = timer;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _cyclesLimiter = CycleLimiterFactory.Create(configuration);
+        _cyclesLimiter = cyclesLimiter;
+        _performanceMeasurer = perfMeasurer;
+        _inputEventQueue = inputEventQueue;
     }
 
     /// <summary>
@@ -125,6 +124,7 @@ public class EmulationLoop : ICyclesLimiter {
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
+        _inputEventQueue.ProcessAllPendingInputEvents();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }
 
@@ -143,13 +143,5 @@ public class EmulationLoop : ICyclesLimiter {
         while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
             RunOnce();
         }
-    }
-
-    public void IncreaseCycles() {
-        _cyclesLimiter.IncreaseCycles();
-    }
-
-    public void DecreaseCycles() {
-        _cyclesLimiter.DecreaseCycles();
     }
 }
