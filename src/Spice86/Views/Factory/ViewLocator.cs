@@ -20,6 +20,9 @@ internal sealed class ViewLocator : IDataTemplate {
         if(name == "Spice86.Views.StackMemoryView") {
             name = "Spice86.Views.MemoryView";
         }
+        if(name == "Spice86.Views.DataSegmentMemoryView") {
+            name = "Spice86.Views.MemoryView";
+        }
         if (string.IsNullOrWhiteSpace(name)) {
             return new TextBlock { Text = "Not Found: " + name };
         }

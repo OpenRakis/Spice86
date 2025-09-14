@@ -58,8 +58,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         DisassemblyViewModel disassemblyViewModel, PaletteViewModel paletteViewModel,
         SoftwareMixerViewModel softwareMixerViewModel, VideoCardViewModel videoCardViewModel,
         CpuViewModel cpuViewModel, MidiViewModel midiViewModel, CfgCpuViewModel cfgCpuViewModel,
-        MemoryViewModel memoryViewModel, StackMemoryViewModel stackMemoryViewModel
-        ) {
+        IList<MemoryViewModel> memoryViewModels) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
@@ -79,8 +78,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
         VideoCardViewModel = videoCardViewModel;
         CpuViewModel = cpuViewModel;
         MidiViewModel = midiViewModel;
-        MemoryViewModels.Add(memoryViewModel);
-        MemoryViewModels.Add(stackMemoryViewModel);
+        MemoryViewModels.AddRange(memoryViewModels);
         CfgCpuViewModel = cfgCpuViewModel;
     }
 

@@ -543,12 +543,17 @@ public class Spice86DependencyInjection : IDisposable {
                 textClipboard, hostStorageProvider, structureViewModelFactory,
                 canCloseTab: false);
 
+            DataSegmentMemoryViewModel dataSegmentViewModel = new(memory, memoryDataExporter, state,
+                breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
+                textClipboard, hostStorageProvider, structureViewModelFactory,
+                canCloseTab: false);
+
             DebugWindowViewModel debugWindowViewModel = new(
                 WeakReferenceMessenger.Default, uiDispatcher, pauseHandler,
                 breakpointsViewModel, disassemblyViewModel,
                 paletteViewModel, softwareMixerViewModel, videoCardViewModel,
-                cpuViewModel, midiViewModel, cfgCpuViewModel, memoryViewModel,
-                stackMemoryViewModel);
+                cpuViewModel, midiViewModel, cfgCpuViewModel,
+                [memoryViewModel, stackMemoryViewModel, dataSegmentViewModel]);
 
             Application.Current!.Resources[nameof(DebugWindowViewModel)] =
                 debugWindowViewModel;
