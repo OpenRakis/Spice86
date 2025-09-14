@@ -41,17 +41,26 @@ public sealed class GdbIo : IDisposable {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("GDB Server listening on port {Port}", ((IPEndPoint)_tcpListener.LocalEndpoint).Port);
         }
-        _socket = _tcpListener.AcceptSocket();
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
+        try {
+            _socket = _tcpListener.AcceptSocket();
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
+            }
+            _stream = new NetworkStream(_socket);
+        } catch (SocketException e) {
+            if (!_disposed) {
+                throw new InvalidOperationException("A network error occurred while waiting for client to connect", e);
+            }
         }
-        _stream = new NetworkStream(_socket);
     }
 
     /// <summary>
     /// Gets a value indicating whether the GDB client is still connected to the server.
     /// </summary>
     public bool IsClientConnected() {
+        if (_disposed) {
+            return false;
+        }
         if (_socket is null) {
             return false;
         }
@@ -117,24 +126,31 @@ public sealed class GdbIo : IDisposable {
         if (_stream is null) {
             throw new InvalidOperationException("No network stream to read from. Was WaitForConnection called before this?");
         }
-        int chr = _stream.ReadByte();
-        StringBuilder resBuilder = new StringBuilder();
-        while (chr >= 0) {
-            _rawCommand.Add((byte)chr);
-            if ((char)chr == '#') {
-                // Ignore checksum
-                _stream.ReadByte();
-                _stream.ReadByte();
-                break;
+        try {
+            int chr = _stream.ReadByte();
+            StringBuilder resBuilder = new StringBuilder();
+            while (chr >= 0) {
+                _rawCommand.Add((byte)chr);
+                if ((char)chr == '#') {
+                    // Ignore checksum
+                    _stream.ReadByte();
+                    _stream.ReadByte();
+                    break;
+                }
+                resBuilder.Append((char)chr);
+                chr = _stream.ReadByte();
             }
-            resBuilder.Append((char)chr);
-            chr = _stream.ReadByte();
+            string payload = GetPayload(resBuilder);
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Received command from GDB {GdbPayload}", payload);
+            }
+            return payload;
+        } catch (SocketException e) {
+            if (!_disposed) {
+                throw new InvalidOperationException("A network error occurred while reading data", e);
+            }
+            return "";
         }
-        string payload = GetPayload(resBuilder);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Received command from GDB {GdbPayload}", payload);
-        }
-        return payload;
     }
 
     /// <summary>
@@ -153,7 +169,13 @@ public sealed class GdbIo : IDisposable {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("Sending response {ResponseData}", data);
             }
-            _stream?.Write(Encoding.UTF8.GetBytes(data));
+            try {
+                _stream?.Write(Encoding.UTF8.GetBytes(data));
+            } catch (SocketException e) {
+                if (!_disposed) {
+                    throw new InvalidOperationException("A network error occurred while writing data", e);
+                }
+            }
         }
     }
 
