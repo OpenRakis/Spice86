@@ -135,8 +135,8 @@ public class CfgNodeFeederTest {
         MovRegImm16 movBxRegImm16 = AssertIsMovBx(movBx);
         MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1);
         AssertUsesValue(movBxRegImm16, DefaultValue);
-        AssertSuccessorAtDiscriminator(selectorNode, movBxRegImm16);
-        AssertSuccessorAtDiscriminator(selectorNode, movAx1RegImm16);
+        AssertSuccessorAtSignature(selectorNode, movBxRegImm16);
+        AssertSuccessorAtSignature(selectorNode, movAx1RegImm16);
     }
 
     [Fact]
@@ -153,10 +153,10 @@ public class CfgNodeFeederTest {
         WriteMovAx(EndOfMov0Address, NewValue);
         // Execute changed instruction
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
-        ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        ICfgNode movAx1WithNullSignature = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullDiscriminator);
+        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullSignature);
     }
 
     [Fact]
@@ -170,18 +170,18 @@ public class CfgNodeFeederTest {
         WriteMovBx(EndOfMov0Address, DefaultValue);
         ICfgNode selector = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
         WriteMovCx(EndOfMov0Address, DefaultValue);
-        // CPU executed discriminator but Mov CX was in memory => no successor of the discriminator matched
+        // CPU executed signature but Mov CX was in memory => no successor of the signature matched
         executionContext.LastExecuted = selector;
         executionContext.NodeToExecuteNextAccordingToGraph = null;
 
         // Act
-        // We at discriminator but instruction got changed to something that is not yet in the discriminator list of values.
+        // We at signature but instruction got changed to something that is not yet in the signature list of values.
         ICfgNode movCx = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
         SelectorNode selectorNode = AssertIsSelectorNode(selector);
         MovRegImm16 movCxRegImm16 = AssertIsMovCx(movCx);
-        AssertSuccessorAtDiscriminator(selectorNode, movCxRegImm16);
+        AssertSuccessorAtSignature(selectorNode, movCxRegImm16);
     }
 
     [Fact]
@@ -202,16 +202,16 @@ public class CfgNodeFeederTest {
         executionContext.NodeToExecuteNextAccordingToGraph = movAx1;
 
         // Act
-        ICfgNode movAx1WithNullDiscriminator = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
+        ICfgNode movAx1WithNullSignature = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
 
         // Assert
-        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullDiscriminator);
+        AssertMovAxIsSameButValueFieldRefersMemory(movAx1, movAx1WithNullSignature);
     }
 
     [AssertionMethod]
-    private static void AssertSuccessorAtDiscriminator(SelectorNode predecessor, CfgInstruction expectedSuccessor) {
+    private static void AssertSuccessorAtSignature(SelectorNode predecessor, CfgInstruction expectedSuccessor) {
         AssertLinksTo(predecessor, expectedSuccessor);
-        Assert.Equal(expectedSuccessor, predecessor.SuccessorsPerDiscriminator[expectedSuccessor.Discriminator]);
+        Assert.Equal(expectedSuccessor, predecessor.SuccessorsPerSignature[expectedSuccessor.Signature]);
     }
 
     private void AssertSuccessorAtAddress(CfgInstruction predecessor, SegmentedAddress address,
@@ -266,14 +266,14 @@ public class CfgNodeFeederTest {
     }
 
     [AssertionMethod]
-    private void AssertMovAxIsSameButValueFieldRefersMemory(ICfgNode movAx1, ICfgNode movAx1WithNullDiscriminator) {
+    private void AssertMovAxIsSameButValueFieldRefersMemory(ICfgNode movAx1, ICfgNode movAx1WithNullSignature) {
         // Instructions instances are not necessarily the same. However, their types and addresses should be the same.
         // The value of the new instruction should be read from memory.
-        Assert.Equal(movAx1.Address, movAx1WithNullDiscriminator.Address);
-        MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1WithNullDiscriminator);
+        Assert.Equal(movAx1.Address, movAx1WithNullSignature.Address);
+        MovRegImm16 movAx1RegImm16 = AssertIsMovAx(movAx1WithNullSignature);
         // Since value has been overwritten use value should be false. Value need to be read from ram
         Assert.False(movAx1RegImm16.ValueField.UseValue);
-        Assert.Null(movAx1RegImm16.ValueField.DiscriminatorValue[0]);
-        Assert.Null(movAx1RegImm16.ValueField.DiscriminatorValue[1]);
+        Assert.Null(movAx1RegImm16.ValueField.SignatureValue[0]);
+        Assert.Null(movAx1RegImm16.ValueField.SignatureValue[1]);
     }
 }

@@ -19,14 +19,14 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 public class CfgNodeFeeder {
     private readonly State _state;
     private readonly NodeLinker _nodeLinker;
-    private readonly DiscriminatorReducer _discriminatorReducer;
+    private readonly SignatureReducer _signatureReducer;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry) {
         _state = state;
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry);
         _nodeLinker = new(replacerRegistry);
-        _discriminatorReducer = new(replacerRegistry);
+        _signatureReducer = new(replacerRegistry);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
@@ -75,14 +75,14 @@ public class CfgNodeFeeder {
                                                        $"From graph: {currentFromGraph}");
         }
 
-        // Graph and memory are not aligned ... Need to inject Node with discriminator to select the right one from memory at exec time.
+        // Graph and memory are not aligned ... Need to inject Node with signature to select the right one from memory at exec time.
         // If previous was Selector and current was not in its successors we would not be there because 
         // currentFromGraph would have been null and the linker would then link it to SelectorNode
         return CreateSelectorNode(fromMemory, (CfgInstruction)currentFromGraph);
     }
 
     private ICfgNode CreateSelectorNode(CfgInstruction instruction1, CfgInstruction instruction2) {
-        CfgInstruction? reduced = _discriminatorReducer.ReduceToOne(instruction1, instruction2);
+        CfgInstruction? reduced = _signatureReducer.ReduceToOne(instruction1, instruction2);
         if (reduced != null) {
             return reduced;
         }

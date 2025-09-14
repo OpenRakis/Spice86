@@ -104,14 +104,14 @@ public class NodeLinker : InstructionReplacer {
 
     private void LinkSelectorNode(SelectorNode current, ICfgNode next) {
         if (next is CfgInstruction nextCfgInstruction) {
-            Dictionary<Discriminator, CfgInstruction> successors = current.SuccessorsPerDiscriminator;
-            if (!successors.TryGetValue(nextCfgInstruction.Discriminator, out CfgInstruction? shouldBeNextOrNull)) {
+            Dictionary<Signature, CfgInstruction> successors = current.SuccessorsPerSignature;
+            if (!successors.TryGetValue(nextCfgInstruction.Signature, out CfgInstruction? shouldBeNextOrNull)) {
                 // New link discovered, create it
                 AttachToNext(current, next);
                 return;
             }
             if (!ReferenceEquals(shouldBeNextOrNull, next)) {
-                throw new UnhandledCfgDiscrepancyException("Next instruction's discriminator is present in the selector node successors, but the corresponding successor is not next instruction which should never happen.");
+                throw new UnhandledCfgDiscrepancyException("Next instruction's signature is present in the selector node successors, but the corresponding successor is not next instruction which should never happen.");
             }
         } else {
             throw new UnhandledCfgDiscrepancyException("Trying to attach a non ASM instruction to a selector node which is not allowed. This should never happen.");

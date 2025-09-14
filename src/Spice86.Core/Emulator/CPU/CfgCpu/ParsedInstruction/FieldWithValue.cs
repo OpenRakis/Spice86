@@ -2,8 +2,8 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 
 using System.Collections.Immutable;
 
-public abstract class FieldWithValue : Discriminator {
-    public FieldWithValue(ImmutableList<byte?> discriminatorValue, bool final) : base(discriminatorValue) {
+public abstract class FieldWithValue : Signature {
+    public FieldWithValue(ImmutableList<byte?> signatureValue, bool final) : base(signatureValue) {
         Final = final;
     }
 

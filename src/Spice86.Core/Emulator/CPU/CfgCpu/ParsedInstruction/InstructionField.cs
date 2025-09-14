@@ -15,7 +15,7 @@ public class InstructionField<T> : FieldWithValue {
     public int IndexInInstruction { get; }
 
     public InstructionField(int indexInInstruction, int length, uint physicalAddress, T value,
-        ImmutableList<byte?> discriminatorValue, bool final) : base(discriminatorValue, final) {
+        ImmutableList<byte?> signatureValue, bool final) : base(signatureValue, final) {
         IndexInInstruction = indexInInstruction;
         Length = length;
         PhysicalAddress = physicalAddress;
@@ -26,11 +26,11 @@ public class InstructionField<T> : FieldWithValue {
 
     /// <summary>
     /// Value of the field at creation time. Meaningless if UseValue is false.
-    /// Differs to discriminator for fields which do not represent something that changes CPU logic.
+    /// Differs to signature for fields which do not represent something that changes CPU logic.
     /// For example in MOV AX, 1234:
     ///  - 1234 would be a InstructionField&lt;ushort&gt;
     ///  - value would be 1234
-    ///  - ValueForDiscriminator would be [null, null]
+    ///  - ValueForSignature would be [null, null]
     /// </summary>
     public T Value { get; }
 

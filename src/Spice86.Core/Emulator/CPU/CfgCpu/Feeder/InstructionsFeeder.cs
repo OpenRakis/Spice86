@@ -17,14 +17,14 @@ using System.Runtime.CompilerServices;
 /// </summary>
 public class InstructionsFeeder {
     private readonly InstructionParser _instructionParser;
-    private readonly DiscriminatorReducer _discriminatorReducer;
+    private readonly SignatureReducer _signatureReducer;
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
         InstructionReplacerRegistry replacerRegistry) {
         _instructionParser = new(memory, cpuState);
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
         PreviousInstructions = new(memory, replacerRegistry);
-        _discriminatorReducer = new(replacerRegistry);
+        _signatureReducer = new(replacerRegistry);
     }
     
     public CurrentInstructions CurrentInstructions { get; }
@@ -67,11 +67,11 @@ public class InstructionsFeeder {
 
     private CfgInstruction ParseEnsuringUnique(SegmentedAddress address) {
         CfgInstruction parsed = _instructionParser.ParseInstructionAt(address);
-        // Let's try with the discriminator reducer to see if the parsed instruction has an existing match
+        // Let's try with the signature reducer to see if the parsed instruction has an existing match
         HashSet<CfgInstruction>? previousSet = PreviousInstructions.GetAtAddress(address);
         if (previousSet != null) {
             foreach (CfgInstruction existing in previousSet) {
-                CfgInstruction? reduced = _discriminatorReducer.ReduceToOne(parsed, existing);
+                CfgInstruction? reduced = _signatureReducer.ReduceToOne(parsed, existing);
                 if (reduced != null) {
                     return reduced;
                 }

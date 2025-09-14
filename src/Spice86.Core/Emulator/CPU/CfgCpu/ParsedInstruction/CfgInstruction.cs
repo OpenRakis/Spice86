@@ -102,27 +102,27 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     /// What allows to uniquely identify the instruction among other at the same address.
     /// Usually all the fields except in some cases when they are modified (example imm value or disp), in this case instead of bytes there will be nulls
     /// </summary>
-    public Discriminator Discriminator {
+    public Signature Signature {
         get {
-            ImmutableList<byte?> discriminatorBytes = ComputeDiscriminatorBytes(FieldsInOrder);
-            return new Discriminator(discriminatorBytes);
+            ImmutableList<byte?> signatureBytes = ComputeSignatureBytes(FieldsInOrder);
+            return new Signature(signatureBytes);
         }
     }
 
     /// <summary>
-    /// Same as Discriminator but only aggregates final fields, ignoring those that can change.
+    /// Same as Signature but only aggregates final fields, ignoring those that can change.
     /// </summary>
-    public Discriminator DiscriminatorFinal {
+    public Signature SignatureFinal {
         get {
-            ImmutableList<byte?> discriminatorBytes = ComputeDiscriminatorBytes(FieldsInOrder
+            ImmutableList<byte?> signatureBytes = ComputeSignatureBytes(FieldsInOrder
                 .Where(field => field.Final));
-            return new Discriminator(discriminatorBytes);
+            return new Signature(signatureBytes);
         }
     }
 
-    private ImmutableList<byte?> ComputeDiscriminatorBytes(IEnumerable<FieldWithValue> bytes) {
+    private ImmutableList<byte?> ComputeSignatureBytes(IEnumerable<FieldWithValue> bytes) {
         return bytes
-            .Select(field => field.DiscriminatorValue)
+            .Select(field => field.SignatureValue)
             .SelectMany(i => i)
             .ToImmutableList();
     }
