@@ -50,6 +50,15 @@ public class MemoryWriter {
         _memory.UInt16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
+    
+    /// <summary>
+    /// Writes the given signed word at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next word.
+    /// </summary>
+    /// <param name="w">data to write</param>
+    public void WriteInt16(short w) {
+        _memory.Int16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
+        CurrentAddress += 2;
+    }
 
     /// <summary>
     /// Writes the given dword at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next dword.

@@ -35,9 +35,6 @@ public class MouseDriver : IMouseDriver {
         { MouseButton.Middle, new MouseButtonPressCount() }
     };
 
-
-    private const byte BeforeUserHandlerExecutionCallbackNumber = 0xFE;
-    private const byte AfterUserHandlerExecutionCallbackNumber = 0xFF;
     private const int VirtualScreenWidth = 640;
     private readonly IGui? _gui;
     private readonly ILoggerService _logger;
@@ -407,10 +404,10 @@ public class MouseDriver : IMouseDriver {
         memoryAsmWriter.WriteFarRet();
 
         SegmentedAddress driverAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecutionCallbackNumber, BeforeUserHandlerExecution);
+        memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecution);
         // Far call to default handler, can be changed via _inMemoryAddressSwitcher
         memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
-        memoryAsmWriter.RegisterAndWriteCallback(AfterUserHandlerExecutionCallbackNumber, AfterUserHandlerExecution);
+        memoryAsmWriter.RegisterAndWriteCallback(AfterUserHandlerExecution);
         // Far ret to return to caller
         memoryAsmWriter.WriteFarRet();
         return driverAddress;
