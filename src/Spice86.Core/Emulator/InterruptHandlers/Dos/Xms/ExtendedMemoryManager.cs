@@ -254,7 +254,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
-        memoryAsmWriter.RegisterAndWriteCallback(0x43, RunMultiplex);
+        memoryAsmWriter.RegisterAndWriteCallback(RunMultiplex);
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
         Name = XmsIdentifier;

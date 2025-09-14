@@ -14,6 +14,10 @@ using Spice86.Shared.Interfaces;
 /// Acts as a glue between code read by the CPU (callback number) and the C# code behind that is called.
 /// </summary>
 public class CallbackHandler : IndexBasedDispatcher<ICallback> {
+    private const ushort CallbackAllocationStart = 0x100;
+
+    private ushort _nextFreeCallback = CallbackAllocationStart;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -27,6 +31,17 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
         return new UnhandledCallbackException(State, index);
     }
 
+    /// <summary>
+    /// Allocates the number for the next callback
+    /// </summary>
+    /// <returns>A free callback number</returns>
+    /// <exception cref="InvalidOperationException">If no more callbacks are available</exception>
+    public ushort AllocateNextCallback() {
+        if (_nextFreeCallback == ushort.MaxValue) {
+            throw new InvalidOperationException("Callback allocation was requested but there are no free callbacks anymore");
+        }
+        return _nextFreeCallback++;
+    }
     /// <summary>
     /// Adds the callback to the dispatch table.
     /// </summary>
