@@ -5,6 +5,7 @@ using Iced.Intel;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 using Spice86.ViewModels.TextPresentation;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 
@@ -18,9 +19,9 @@ using System.Linq;
 /// </summary>
 internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress, FunctionInformation> functions, BreakpointsViewModel breakpointsViewModel) {
     /// <summary>
-    /// Length of the callback opcode sequence (FE 38 XX)
+    /// Length of the callback opcode sequence (FE 38 XX XX)
     /// </summary>
-    private const int CallbackOpcodeLength = 3;
+    private const int CallbackOpcodeLength = 4;
 
     private const DecoderOptions X86DecoderOptions = DecoderOptions.Loadall286 | DecoderOptions.Loadall386;
 
@@ -62,7 +63,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
     /// <summary>
     /// Checks if the bytes at the given offset match the callback opcode pattern (FE 38 XX).
     /// </summary>
-    private static bool IsCallbackOpcode(byte[] memoryBlock, int offset, out byte opcodeIndex) {
+    private static bool IsCallbackOpcode(byte[] memoryBlock, int offset, out ushort opcodeIndex) {
         opcodeIndex = 0;
 
         if (offset + 2 >= memoryBlock.Length) {
@@ -70,7 +71,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
         }
 
         if (memoryBlock[offset] == 0xFE && memoryBlock[offset + 1] == 0x38) {
-            opcodeIndex = memoryBlock[offset + 2];
+            opcodeIndex = (ushort)(memoryBlock[offset + 2] | memoryBlock[offset + 3] << 8);
 
             return true;
         }
@@ -81,7 +82,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
     /// <summary>
     /// Creates an enriched instruction for a callback opcode at the given address.
     /// </summary>
-    private EnrichedInstruction CreateCallbackOpcodeInstruction(SegmentedAddress address, byte callbackIndex) {
+    private EnrichedInstruction CreateCallbackOpcodeInstruction(SegmentedAddress address, ushort callbackIndex) {
         var customInstruction = new Instruction {
             Code = Code.INVALID,
             Length = CallbackOpcodeLength
@@ -134,7 +135,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
         while (codeReader.Position < centerOffset && currentAddress.Linear < centerAddress.Linear) {
             int currentOffset = codeReader.Position;
 
-            if (IsCallbackOpcode(memoryBlock, currentOffset, out byte callbackIndex)) {
+            if (IsCallbackOpcode(memoryBlock, currentOffset, out ushort callbackIndex)) {
                 instructions[currentAddress.Linear] = CreateCallbackOpcodeInstruction(currentAddress, callbackIndex);
                 codeReader.Position += CallbackOpcodeLength;
                 currentAddress += CallbackOpcodeLength;
@@ -167,7 +168,7 @@ internal class InstructionsDecoder(IMemory memory, IDictionary<SegmentedAddress,
         while (codeReader.Position < maxLength && startOffset + codeReader.Position < memoryBlock.Length) {
             int currentOffset = startOffset + codeReader.Position;
 
-            if (IsCallbackOpcode(memoryBlock, currentOffset, out byte callbackIndex)) {
+            if (IsCallbackOpcode(memoryBlock, currentOffset, out ushort callbackIndex)) {
                 instructions[currentAddress.Linear] = CreateCallbackOpcodeInstruction(currentAddress, callbackIndex);
                 codeReader.Position += CallbackOpcodeLength;
                 currentAddress += CallbackOpcodeLength;

@@ -315,9 +315,9 @@ public class MachineTest
             // [5] EOI callback (3 bytes)
             // [8] IRET (1 byte)
 
-            SegmentedAddress addrInt1C = int8HandlerEntry.Address + 3;
+            SegmentedAddress addrInt1C = int8HandlerEntry.Address + 4;
             SegmentedAddress addrEoiCallback = addrInt1C + 2;
-            SegmentedAddress addrIret8 = addrEoiCallback + 3;
+            SegmentedAddress addrIret8 = addrEoiCallback + 4;
 
             CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
             CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);

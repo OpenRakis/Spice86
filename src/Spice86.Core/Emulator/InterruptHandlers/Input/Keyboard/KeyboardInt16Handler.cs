@@ -103,9 +103,9 @@ public class KeyboardInt16Handler : InterruptHandler {
         memoryAsmWriter.WriteUInt8(0x80);
         memoryAsmWriter.WriteUInt8(0xFC);
         memoryAsmWriter.WriteUInt8(0x00);
-        // JZ L_AH00 (+0x04 to skip the default callback and IRET)
+        // JZ L_AH00 (+0x05 to skip the default callback and IRET)
         memoryAsmWriter.WriteUInt8(0x74);
-        memoryAsmWriter.WriteUInt8(0x04);
+        memoryAsmWriter.WriteInt8(5);
 
         // L_DEFAULT: callback DefaultDispatch then IRET
         memoryAsmWriter.RegisterAndWriteCallback(0xA4, Run);
@@ -116,12 +116,12 @@ public class KeyboardInt16Handler : InterruptHandler {
         memoryAsmWriter.RegisterAndWriteCallback(0xA0, CallbackHasKey);
         // JNZ have_key (+0x04 to skip INT 09h and the backward jump)
         memoryAsmWriter.WriteUInt8(0x75);
-        memoryAsmWriter.WriteUInt8(0x04);
+        memoryAsmWriter.WriteInt8(4);
         // INT 09h
         memoryAsmWriter.WriteInt(0x09);
-        // JMP short back to L_AH00 (-0x09)
+        // JMP short back to L_AH00 (-0x10)
         memoryAsmWriter.WriteUInt8(0xEB);
-        memoryAsmWriter.WriteUInt8(0xF7);
+        memoryAsmWriter.WriteInt8(-10);
         // have_key: dequeue and set AX, then IRET
         memoryAsmWriter.RegisterAndWriteCallback(0xA1, CallbackDequeueAndSetAx);
         memoryAsmWriter.WriteIret();

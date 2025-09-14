@@ -34,6 +34,15 @@ public class MemoryWriter {
     }
 
     /// <summary>
+    /// Writes the given sbyte at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next byte.
+    /// </summary>
+    /// <param name="b">data to write</param>
+    public void WriteInt8(sbyte b) {
+        _memory.Int8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
+        CurrentAddress += 1;
+    }
+
+    /// <summary>
     /// Writes the given word at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next word.
     /// </summary>
     /// <param name="w">data to write</param>
