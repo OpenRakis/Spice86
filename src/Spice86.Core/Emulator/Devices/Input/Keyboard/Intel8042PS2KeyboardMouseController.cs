@@ -16,9 +16,18 @@ using System.Collections.Generic;
 /// C# port of intel8042.cpp - The PS/2 keyboard and mouse controller.
 /// </summary>
 public sealed class Intel8042Controller : DefaultIOPortHandler {
-    private const int BufferSize = 64;
+    private const uint IrqNumKbdPcjr = 6;
+    private const uint IrqNumKbdIbmPc = 1;
+    private const uint IrqNumMouse = 12;
 
-    // Controller buffer entry (maps C++ internal struct)
+    private const byte FirmwareRevision = 0x00;
+    private const string FirmwareCopyright = nameof(Spice86);
+
+    private const int BufferSize = 64; // in bytes
+    // delay appropriate for 20-30 kHz serial clock and 11 bits/byte
+    private const double PortDelayMs = 0.300;
+
+    // Controller internal buffer
     private struct BufferEntry {
         public byte Data;
         public bool IsFromAux;
@@ -30,76 +39,35 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     private int _bufferStartIdx = 0;
     private int _bufferNumUsed = 0;
 
-    // waiting bytes counters (C++)
     private int _waitingBytesFromAux = 0;
     private int _waitingBytesFromKbd = 0;
 
-    // status/config bits (simplified view mapped from C++)
-    private byte _configByte = 0b0000_0111; // controller memory byte 0
-    private byte _statusByte = 0b0001_1100; // port 0x64 returned value
-    private byte _dataByte = 0x00;
+    // true = delay timer is in progress
+    private bool _delayRunning = false;
+    // true = delay timer expired, event can be sent immediately
+    private bool _delayExpired = true;
 
-    // status convenience flags mirrored from unions in C++
-    private bool IsDataNew {
-        get => (_statusByte & (1 << 0)) != 0;
-        set {
-            if (value) _statusByte |= (1 << 0);
-            else _statusByte &= unchecked((byte)~(1 << 0));
-        }
-    }
-    private bool WasLastWriteCmd {
-        get => (_statusByte & (1 << 3)) != 0;
-        set {
-            if (value) _statusByte |= (1 << 3);
-            else _statusByte &= unchecked((byte)~(1 << 3));
-        }
-    }
-    private bool IsDataFromAux {
-        get => (_statusByte & (1 << 5)) != 0;
-        set {
-            if (value) _statusByte |= (1 << 5);
-            else _statusByte &= unchecked((byte)~(1 << 5));
-        }
-    }
-    private bool IsTransmitTimeout {
-        get => (_statusByte & (1 << 6)) != 0;
-        set {
-            if (value) _statusByte |= (1 << 6);
-            else _statusByte &= unchecked((byte)~(1 << 6));
-        }
-    }
-
-    private bool IsKeyboardDisabled {
-        get => (_configByte & (1 << 4)) != 0;
-        set {
-            if (value) _configByte |= (1 << 4);
-            else _configByte &= unchecked((byte)~(1 << 4));
-        }
-    }
-    private bool IsAuxDisabled {
-        get => (_configByte & (1 << 5)) != 0;
-        set {
-            if (value) _configByte |= (1 << 5);
-            else _configByte &= unchecked((byte)~(1 << 5));
-        }
-    }
-    private bool UsesKbdTranslation {
-        get => (_configByte & (1 << 6)) != 0;
-        set {
-            if (value) _configByte |= (1 << 6);
-            else _configByte &= unchecked((byte)~(1 << 6));
-        }
-    }
-
-    // command currently executed (waiting for parameter)
-    private KeyboardCommand _currentCommand = KeyboardCommand.None;
+    // Executing command, do not notify devices about readiness for accepting frame
     private bool _shouldSkipDeviceNotify = false;
 
-    // diagnostic dump flag
+    // Command currently being executed, waiting for parameter
+    private KeyboardCommand _currentCommand = KeyboardCommand.None;
+
+    // Byte 0x00 of the controller memory - configuration byte
+    private byte _configByte = 0b0000_0111;
+
+    // Byte returned from port 0x60
+    private byte _dataByte = 0;
+
+    // Byte returned from port 0x64
+    private byte _statusByte = 0b0001_1100;
+
+    // If enabled, all keyboard events are dropped until secure mode is enabled
     private bool _isDiagnosticDump = false;
 
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
+    private readonly EmulatorEventClock _eventClock;
 
     public PS2Keyboard KeyboardDevice { get; }
 
@@ -114,19 +82,14 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
+        _eventClock = eventClock;
 
         // Create the keyboard implementation
-        KeyboardDevice = new PS2Keyboard(this, eventClock, loggerService,gui);
+        KeyboardDevice = new PS2Keyboard(this, eventClock, loggerService, gui);
 
         InitPortHandlers(ioPortDispatcher);
 
-        // register GUI keyboard events to the PS2Keyboard (keyboard.cpp behavior)
-        if (gui is not null) {
-            gui.KeyDown += KeyboardDevice.OnKeyEvent;
-            gui.KeyUp += KeyboardDevice.OnKeyEvent;
-        }
-
-        // initialize as in I8042_Init() -> flush_buffer()
+        // Initialize hardware
         FlushBuffer();
     }
 
@@ -135,67 +98,245 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.Command, this);
     }
 
+    // ***************************************************************************
+    // Helper routines to log various warnings
+    // ***************************************************************************
+
+    private void WarnBufferFull() {
+        const uint thresholdMs = 15 * 1000; // 15 seconds
+
+        // Static-like behavior using class fields
+        if (!_bufferFullWarned || (_eventClock.EmulatorUpTimeInMs - _lastBufferFullTimestamp > thresholdMs)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Internal buffer overflow");
+            }
+            _lastBufferFullTimestamp = (uint)_eventClock.EmulatorUpTimeInMs;
+            _bufferFullWarned = true;
+        }
+    }
+    private bool _bufferFullWarned = false;
+    private uint _lastBufferFullTimestamp = 0;
+
+    private void WarnControllerMode() {
+        if (!_controllerModeWarned) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Switching controller to AT mode not emulated");
+            }
+            _controllerModeWarned = true;
+        }
+    }
+    private bool _controllerModeWarned = false;
+
+    private void WarnInternalRamAccess() {
+        if (!_internalRamWarned) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Accessing internal RAM (other than byte 0x00) gives vendor-specific results");
+            }
+            _internalRamWarned = true;
+        }
+    }
+    private bool _internalRamWarned = false;
+
+    private void WarnLinePulse() {
+        if (!_linePulseWarned) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Pulsing line other than RESET not emulated");
+            }
+            _linePulseWarned = true;
+        }
+    }
+    private bool _linePulseWarned = false;
+
+    private void WarnReadTestInputs() {
+        if (!_readTestInputsWarned) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Reading test inputs not implemented");
+            }
+            _readTestInputsWarned = true;
+        }
+    }
+    private bool _readTestInputsWarned = false;
+
+    private void WarnVendorLines() {
+        if (!_vendorLinesWarned) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: No vendor-specific commands to manipulate controller lines are emulated");
+            }
+            _vendorLinesWarned = true;
+        }
+    }
+    private bool _vendorLinesWarned = false;
+
+    private void WarnUnknownCommand(KeyboardCommand command) {
+        byte code = (byte)command;
+        if (!_unknownCommandWarned[code]) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("I8042: Unknown command 0x{Command:X2}", code);
+            }
+            _unknownCommandWarned[code] = true;
+        }
+    }
+    private readonly bool[] _unknownCommandWarned = new bool[256];
+
+    // ***************************************************************************
+    // XT translation for keyboard input
+    // ***************************************************************************
+
+    private static byte GetTranslated(byte value) {
+        // A drain bamaged keyboard input translation
+
+        // Intended to make scancode set 2 compatible with software knowing
+        // only scancode set 1. Translates every byte coming from the keyboard,
+        // scancodes and command responses alike!
+
+        // Values from 86Box source code, can also be found in many other places
+
+        byte[] translationTable = {
+            0xff, 0x43, 0x41, 0x3f, 0x3d, 0x3b, 0x3c, 0x58,
+            0x64, 0x44, 0x42, 0x40, 0x3e, 0x0f, 0x29, 0x59,
+            0x65, 0x38, 0x2a, 0x70, 0x1d, 0x10, 0x02, 0x5a,
+            0x66, 0x71, 0x2c, 0x1f, 0x1e, 0x11, 0x03, 0x5b,
+            0x67, 0x2e, 0x2d, 0x20, 0x12, 0x05, 0x04, 0x5c,
+            0x68, 0x39, 0x2f, 0x21, 0x14, 0x13, 0x06, 0x5d,
+            0x69, 0x31, 0x30, 0x23, 0x22, 0x15, 0x07, 0x5e,
+            0x6a, 0x72, 0x32, 0x24, 0x16, 0x08, 0x09, 0x5f,
+            0x6b, 0x33, 0x25, 0x17, 0x18, 0x0b, 0x0a, 0x60,
+            0x6c, 0x34, 0x35, 0x26, 0x27, 0x19, 0x0c, 0x61,
+            0x6d, 0x73, 0x28, 0x74, 0x1a, 0x0d, 0x62, 0x6e,
+            0x3a, 0x36, 0x1c, 0x1b, 0x75, 0x2b, 0x63, 0x76,
+            0x55, 0x56, 0x77, 0x78, 0x79, 0x7a, 0x0e, 0x7b,
+            0x7c, 0x4f, 0x7d, 0x4b, 0x47, 0x7e, 0x7f, 0x6f,
+            0x52, 0x53, 0x50, 0x4c, 0x4d, 0x48, 0x01, 0x45,
+            0x57, 0x4e, 0x51, 0x4a, 0x37, 0x49, 0x46, 0x54,
+            0x80, 0x81, 0x82, 0x41, 0x54, 0x85, 0x86, 0x87,
+            0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+            0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+            0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+            0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,
+            0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
+            0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7,
+            0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+            0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+            0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
+            0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7,
+            0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
+            0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7,
+            0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+            0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+            0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
+        };
+
+        return translationTable[value];
+    }
+
+    // ***************************************************************************
+    // Controller buffer support
+    // ***************************************************************************
+
+    private uint GetIrqMouse() {
+        return IrqNumMouse;
+    }
+
+    private uint GetIrqKeyboard() {
+        // Note: We simplified machine detection, always use standard IRQ1
+        return IrqNumKbdIbmPc;
+    }
+
+    private void ActivateIrqsIfNeeded() {
+        bool isDataFromAux = (_statusByte & (1 << 5)) != 0;
+        bool isDataFromKbd = !isDataFromAux && (_statusByte & (1 << 0)) != 0;
+
+        if (isDataFromAux && (_configByte & (1 << 1)) != 0) {
+            _dualPic.ProcessInterruptRequest((byte)GetIrqMouse());
+        }
+        if (isDataFromKbd && (_configByte & (1 << 0)) != 0) {
+            _dualPic.ProcessInterruptRequest((byte)GetIrqKeyboard());
+        }
+    }
+
     private void FlushBuffer() {
-        IsDataNew = false;
-        IsDataFromAux = false;
-        // controller does track is_data_from_kbd separately in C++; we model by local counters
+        _statusByte &= unchecked((byte)~(1 << 0)); // is_data_new = false
+        _statusByte &= unchecked((byte)~(1 << 5)); // is_data_from_aux = false
+        // is_data_from_kbd tracked separately by buffer contents
+
         _bufferStartIdx = 0;
         _bufferNumUsed = 0;
+
+        bool shouldNotifyAux = !_shouldSkipDeviceNotify && !IsReadyForAuxFrame();
+        bool shouldNotifyKbd = !_shouldSkipDeviceNotify && !IsReadyForKbdFrame();
+
         _waitingBytesFromAux = 0;
         _waitingBytesFromKbd = 0;
-        _isDiagnosticDump = false;
 
-        // No direct callbacks to other devices here. In C++ flush_buffer triggers notify to
-        // devices if their frames are now accepted. The PS2Keyboard exposes notification entry points:
-        // If previously the controller couldn't accept kbd frames, notify the keyboard that it can send more.
-        // This mirrors C++ logic guarded by should_skip_device_notify; keep simple: always notify.
-        if (!_shouldSkipDeviceNotify) {
-            KeyboardDevice?.NotifyReadyForFrame();
+        if (shouldNotifyAux && IsReadyForAuxFrame()) {
+            // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+        }
+
+        if (shouldNotifyKbd && IsReadyForKbdFrame()) {
+            KeyboardDevice.NotifyReadyForFrame();
         }
     }
 
     private void EnforceBufferSpace(int numBytes = 1) {
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(numBytes, BufferSize);
+        if (numBytes > BufferSize) {
+            throw new ArgumentOutOfRangeException(nameof(numBytes));
+        }
+
         if (BufferSize < _bufferNumUsed + numBytes) {
             WarnBufferFull();
             FlushBuffer();
         }
     }
 
+    private void DelayHandler() {
+        _delayRunning = false;
+        _delayExpired = true;
+
+        MaybeTransferBuffer();
+    }
+
+    private void RestartDelayTimer(double timeMs = PortDelayMs) {
+        if (_delayRunning) {
+            _eventClock.RemoveEvent("I8042DelayHandler");
+        }
+        _eventClock.AddEvent(DelayHandler, timeMs, "I8042DelayHandler");
+        _delayRunning = true;
+        _delayExpired = false;
+    }
+
     private void MaybeTransferBuffer() {
-        // mirrors C++ maybe_transfer_buffer
-        if (IsDataNew || _bufferNumUsed == 0) {
+        if ((_statusByte & (1 << 0)) != 0 || _bufferNumUsed == 0) {
+            // There is already some data waiting to be picked up,
+            // or there is nothing waiting in the buffer
             return;
         }
 
+        // If not set to skip the delay, do not send byte until timer expires
         int idx = _bufferStartIdx;
+        if (!_delayExpired && !_buffer[idx].SkipDelay) {
+            return;
+        }
 
-        // take next byte out of internal buffer and put to output register
+        // Mark byte as consumed
         _bufferStartIdx = (_bufferStartIdx + 1) % BufferSize;
         --_bufferNumUsed;
 
+        // Transfer one byte of data from buffer to output port
         _dataByte = _buffer[idx].Data;
-        IsDataFromAux = _buffer[idx].IsFromAux;
-        // C++ tracks is_data_from_kbd separately; we approximate:
-        IsDataNew = true;
-
+        if (_buffer[idx].IsFromAux) {
+            _statusByte |= (1 << 5); // is_data_from_aux = true
+        } else {
+            _statusByte &= unchecked((byte)~(1 << 5)); // is_data_from_aux = false
+        }
+        _statusByte |= (1 << 0); // is_data_new = true
+        RestartDelayTimer();
         ActivateIrqsIfNeeded();
     }
 
-    private void ActivateIrqsIfNeeded() {
-        // Use configuration bits from config byte
-        if (IsDataFromAux && ((_configByte & (1 << 1)) != 0)) {
-            // aux irq bit set
-            _dualPic.ProcessInterruptRequest(12); // IRQ12 in C++
-        }
-        if ((IsDataFromAux == false) && ((_configByte & (1 << 0)) != 0)) {
-            // keyboard irq enabled bit 0 used differently in C++; emulate IRQ1 activation
-            _dualPic.ProcessInterruptRequest(1); // IRQ1 for keyboard typical
-        }
-    }
-
-    private void BufferAdd(byte data, bool isFromAux = false, bool isFromKbd = false, bool skipDelay = false) {
-        if ((isFromAux && IsAuxDisabled) || (isFromKbd && IsKeyboardDisabled)) {
+    private void BufferAdd(byte value, bool isFromAux = false, bool isFromKbd = false, bool skipDelay = false) {
+        if ((isFromAux && (_configByte & (1 << 5)) != 0) || 
+            (isFromKbd && (_configByte & (1 << 4)) != 0)) {
+            // Byte came from a device which is currently disabled
             return;
         }
 
@@ -205,268 +346,280 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
             return;
         }
 
-        int idx = (_bufferStartIdx + _bufferNumUsed) % BufferSize;
+        int idx = (_bufferStartIdx + _bufferNumUsed++) % BufferSize;
 
-        _buffer[idx].Data = UsesKbdTranslation && isFromKbd
-            ? GetTranslated(data)
-            : data;
+        if (isFromKbd && (_configByte & (1 << 6)) != 0) {
+            _buffer[idx].Data = GetTranslated(value);
+        } else {
+            _buffer[idx].Data = value;
+        }
         _buffer[idx].IsFromAux = isFromAux;
         _buffer[idx].IsFromKbd = isFromKbd;
         _buffer[idx].SkipDelay = skipDelay || (!isFromAux && !isFromKbd);
 
-        _bufferNumUsed++;
-        if (isFromAux) _waitingBytesFromAux++;
-        if (isFromKbd) _waitingBytesFromKbd++;
+        if (isFromAux) {
+            ++_waitingBytesFromAux;
+        }
+        if (isFromKbd) {
+            ++_waitingBytesFromKbd;
+        }
+
         MaybeTransferBuffer();
     }
 
-    // Called by PS2Keyboard to add single kbd byte
-    internal void AddKbdByte(byte b) => BufferAdd(b, isFromAux: false, isFromKbd: true);
+    private void BufferAddAux(byte value, bool skipDelay = false) {
+        const bool isFromAux = true;
+        const bool isFromKbd = false;
 
-    // Called by PS2Keyboard to add a whole frame. The C++ keyboard code skips delay timer between subsequent
-    // bytes of a mouse frame; for keyboard frames follow default behavior (skipDelay true for subsequent bytes).
-    internal void AddKbdFrame(IReadOnlyList<byte> bytes) {
-        if (bytes == null || bytes.Count == 0) return;
-        EnforceBufferSpace(bytes.Count);
-        bool skipDelay = false;
-        foreach (byte b in bytes) {
-            BufferAdd(b, isFromAux: false, isFromKbd: true, skipDelay: skipDelay);
-            // PS/2 mouse frame optimization: skip timer between subsequent bytes — for keyboard frames we keep skipDelay false for first then true for next to match C++ attempt
-            skipDelay = true;
-        }
+        BufferAdd(value, isFromAux, isFromKbd, skipDelay);
     }
 
-    // Aux helpers (mirrors I8042_AddAuxByte / Frame)
-    internal void AddAuxByte(byte b) => BufferAdd(b, isFromAux: true, isFromKbd: false);
-    internal void AddAuxFrame(IReadOnlyList<byte> bytes) {
-        if (bytes == null || bytes.Count == 0) return;
-        EnforceBufferSpace(bytes.Count);
-        bool skipDelay = false;
-        foreach (byte b in bytes) {
-            BufferAdd(b, isFromAux: true, isFromKbd: false, skipDelay: skipDelay);
-            skipDelay = true;
-        }
+    private void BufferAddKbd(byte value) {
+        const bool isFromAux = false;
+        const bool isFromKbd = true;
+
+        BufferAdd(value, isFromAux, isFromKbd);
     }
 
-    // translation table stub (C++ has large table). Per request we skip scan tables; keep identity.
-    private static byte GetTranslated(byte b) => b;
+    // ***************************************************************************
+    // Command handlers
+    // ***************************************************************************
 
-    private void WarnBufferFull() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Internal buffer overflow");
-        }
+    private byte GetInputPort() { // aka port P1
+        byte port = 0b1010_0000;
+
+        // bit 0: keyboard data in, ISA - unused
+        // bit 1: mouse data in, ISA - unused
+        // bit 2: ISA, EISA, PS/2 - unused
+        //        MCA - 0 = keyboard has power, 1 = no power
+        //        might be configured for clock switching
+        // bit 3: ISA, EISA, PS/2 - unused
+        //        might be configured for clock switching
+
+        // bit 4: 0 = 512 KB, 1 = 256 KB
+        // bit 5: 0 = manufacturer jumper, infinite diagnostics loop
+        // bit 6: 0 = CGA, 1 = MDA
+        // bit 7: 0 = keyboard locked, 1 = not locked
+
+        // Simplified: assume CGA and not locked
+        return port;
     }
 
-    // --------------------------
-    // I/O port handlers (port 0x60/0x64)
-    // --------------------------
+    private byte GetOutputPort() { // aka port P2
+        byte port = 0b0000_0001;
 
-    public override byte ReadByte(ushort port) {
-        switch (port) {
-            case KeyboardPorts.Data:
-                if (!IsDataNew) {
-                    // Byte already read - return previous
-                    return _dataByte;
-                }
-
-                if (_isDiagnosticDump && _bufferNumUsed == 0) {
-                    _isDiagnosticDump = false;
-                    // notify devices that they can send frames again
-                    KeyboardDevice.NotifyReadyForFrame();
-                }
-
-                if (IsDataFromAux) {
-                    if (_waitingBytesFromAux > 0) --_waitingBytesFromAux;
-                    // notify aux device if ready
-                }
-
-                if (_waitingBytesFromKbd > 0) {
-                    // decrement waiting bytes from keyboard
-                    --_waitingBytesFromKbd;
-                }
-
-                byte retVal = _dataByte;
-                IsDataNew = false;
-                IsDataFromAux = false;
-                // no separate flag for kbd; handled by counters
-
-                return retVal;
-
-            case KeyboardPorts.StatusRegister:
-                return _statusByte;
-
-            default:
-                return base.ReadByte(port);
+        // bit 0: 0 = CPU reset, 1 = normal
+        // bit 1: 0 = A20 disabled, 1 = enabled
+        if (_a20Gate.IsEnabled) {
+            port |= (1 << 1);
         }
+        // bit 2: mouse data out, ISA - unused
+        // bit 3: mouse clock, ISA - unused
+
+        // bit 4: 0 = IRQ1 (keyboard) not active, 1 = active
+        if ((_configByte & (1 << 0)) != 0) {
+            port |= (1 << 4);
+        }
+        // bit 5: 0 = IRQ12 (mouse) not active, 1 = active
+        if ((_configByte & (1 << 1)) != 0) {
+            port |= (1 << 5);
+        }
+        // bit 6: keyboard clock
+        // bit 7: keyboard data out
+
+        return port;
     }
 
-    public override void WriteByte(ushort port, byte value) {
-        switch (port) {
-            case KeyboardPorts.Data: // 0x60
-                WasLastWriteCmd = false;
-                if (_currentCommand != KeyboardCommand.None) {
-                    // a controller command waiting for parameter -> execute
-                    KeyboardCommand cmd = _currentCommand;
-                    _currentCommand = KeyboardCommand.None;
+    private static bool IsCmdMemRead(KeyboardCommand command) {
+        byte code = (byte)command;
+        return (code >= 0x20) && (code <= 0x3f);
+    }
 
-                    bool shouldNotifyAux = !IsReadyForAuxFrame();
-                    bool shouldNotifyKbd = !IsReadyForKbdFrame();
+    private static bool IsCmdMemWrite(KeyboardCommand command) {
+        byte code = (byte)command;
+        return (code >= 0x60) && (code <= 0x7f);
+    }
 
-                    _shouldSkipDeviceNotify = true;
-                    FlushBuffer(); // flush_buffer called in C++ prior to execute_command
-                    ExecuteCommand(cmd, value);
-                    _shouldSkipDeviceNotify = false;
+    private static bool IsCmdPulseLine(KeyboardCommand command) {
+        byte code = (byte)command;
+        return (code >= 0xf0);
+    }
 
-                    if (shouldNotifyAux && IsReadyForAuxFrame()) {
-                        // In C++ this notifies mouse device
-                    }
-                    if (shouldNotifyKbd && IsReadyForKbdFrame()) {
-                        KeyboardDevice.NotifyReadyForFrame();
-                    }
-                } else {
-                    // Send this byte to the keyboard (KEYBOARD_PortWrite)
-                    IsTransmitTimeout = false;
-                    IsKeyboardDisabled = false; // auto-enable keyboard port on write
-                    FlushBuffer();
-                    KeyboardDevice.PortWrite(value);
-                }
-                break;
-
-            case KeyboardPorts.Command: // 0x64 (command port)
-                _shouldSkipDeviceNotify = true;
-
-                if (_isDiagnosticDump) {
-                    _isDiagnosticDump = false;
-                    FlushBuffer();
-                }
-
-                WasLastWriteCmd = true;
-
-                _currentCommand = KeyboardCommand.None;
-                // handle AMI alias special cases like C++ did (byte ranges)
-                if (value is <= 0x1f or >= 0x40 and <= 0x5f) {
-                    // alias: add 0x20
-                    ExecuteCommand((KeyboardCommand)(value + 0x20));
-                } else {
-                    ExecuteCommand((KeyboardCommand)value);
-                }
-
-                _shouldSkipDeviceNotify = false;
-
-                if (!IsReadyForAuxFrame()) {
-                    // nothing; just keep behavior equivalent
-                }
-                if (!IsReadyForKbdFrame()) {
-                    // nothing; keyboard is notified from code paths above
-                }
-                break;
-
-            default:
-                base.WriteByte(port, value);
-                break;
-        }
+    private static bool IsCmdVendorLines(KeyboardCommand command) {
+        byte code = (byte)command;
+        return (code >= 0xb0) && (code <= 0xbd);
     }
 
     private void ExecuteCommand(KeyboardCommand command) {
-        // Partial mapping of C++ I8042 execute_command, adapted to available KeyboardCommand enum.
         switch (command) {
-            case KeyboardCommand.ReadByteConfig:
+            //
+            // Commands requiring a parameter
+            //
+            case KeyboardCommand.WriteByteConfig:  // 0x60
+            case KeyboardCommand.WriteOutputPort:  // 0xd1
+            case KeyboardCommand.SimulateInputKbd: // 0xd2
+            case KeyboardCommand.SimulateInputAux: // 0xd3
+            case KeyboardCommand.WriteAux:         // 0xd4
+                _currentCommand = command;
+                break;
+            case KeyboardCommand.WriteControllerMode: // 0xcb
+                WarnControllerMode();
+                _currentCommand = command;
+                break;
+
+            //
+            // No-parameter commands
+            //
+            case KeyboardCommand.ReadByteConfig: // 0x20
+                // Reads the keyboard controller configuration byte
                 FlushBuffer();
                 BufferAdd(_configByte);
                 break;
-            case KeyboardCommand.WriteByteConfig:
-            case KeyboardCommand.WriteOutputPort:
-            case KeyboardCommand.SimulateInputKbd:
-            case KeyboardCommand.SimulateInputAux:
-            case KeyboardCommand.WriteAux:
-                // require parameter
-                _currentCommand = command;
-                break;
-            case KeyboardCommand.DisablePortAux:
-                IsAuxDisabled = true;
-                break;
-            case KeyboardCommand.EnablePortAux:
-                IsAuxDisabled = false;
-                break;
-            case KeyboardCommand.TestPortAux:
-                IsAuxDisabled = true;
+            case (KeyboardCommand)0xa0: // ReadFwCopyright
+                // Reads the keyboard controller firmware
+                // copyright string, terminated by NUL
                 FlushBuffer();
-                BufferAdd(0x00);
-                break;
-            case KeyboardCommand.TestController:
-                // emulate test controller
-                IsAuxDisabled = true;
-                IsKeyboardDisabled = true;
-                UsesKbdTranslation = true;
-                // mark passed self-test in config byte bit 2
-                _configByte |= (1 << 2);
-                FlushBuffer();
-                BufferAdd(0x55); // passed
-                break;
-            case KeyboardCommand.TestPortKbd:
-                IsKeyboardDisabled = true;
-                FlushBuffer();
-                BufferAdd(0x00);
-                break;
-            case KeyboardCommand.DiagnosticDump:
-                // simplified: produce a diagnostic dump (C++ sends 3 bytes per memory byte)
-                WarnInternalRamAccess();
-                if (BufferSize < 20 * 3) {
-                    // same assert check in C++ (no-op in C#)
+                foreach (char c in FirmwareCopyright) {
+                    BufferAdd((byte)c);
                 }
+                BufferAdd(0);
+                break;
+            case (KeyboardCommand)0xa1: // ReadFwRevision
+                // Reads the keyboard controller firmware
+                // revision, always one byte
+                FlushBuffer();
+                BufferAdd(FirmwareRevision);
+                break;
+            case (KeyboardCommand)0xa4: // PasswordCheck
+                // Check if password installed
+                // 0xf1: not installed, or no hardware support
+                // 0xfa: password installed
+                FlushBuffer();
+                BufferAdd(0xf1);
+                break;
+            case KeyboardCommand.DisablePortAux: // 0xa7
+                // Disable aux (mouse) port
+                _configByte |= (1 << 5);
+                break;
+            case KeyboardCommand.EnablePortAux: // 0xa8
+                // Enable aux (mouse) port
+                _configByte &= unchecked((byte)~(1 << 5));
+                break;
+            case KeyboardCommand.TestPortAux: // 0xa9
+                // Port test. Possible results:
+                // 0x01: clock line stuck low
+                // 0x02: clock line stuck high
+                // 0x03: data line stuck low
+                // 0x04: data line stuck high
+                // Disables the aux (mouse) port
+                _configByte |= (1 << 5); // disable aux
+                FlushBuffer();
+                BufferAdd(0x00);
+                break;
+            case KeyboardCommand.TestController: // 0xaa
+                // Controller test. Possible results:
+                // 0x55: passed; 0xfc: failed
+                // Disables aux (mouse) and keyboard ports, enables translation,
+                // enables A20 line, marks self-test as passed.
+                _a20Gate.IsEnabled = true;
+                _configByte |= (1 << 5); // disable aux
+                _configByte |= (1 << 4); // disable kbd
+                _configByte |= (1 << 6); // enable translation
+                _configByte |= (1 << 2); // mark self-test passed
+                FlushBuffer();
+                BufferAdd(0x55);
+                break;
+            case KeyboardCommand.TestPortKbd: // 0xab
+                // Port test. Possible results:
+                // (as with aux port test)
+                // Disables the keyboard port
+                _configByte |= (1 << 4); // disable kbd
+                FlushBuffer();
+                BufferAdd(0x00); // as with TestPortAux
+                break;
+            case KeyboardCommand.DiagnosticDump: // 0xac
+                // Dump the whole controller internal RAM (16 bytes),
+                // output port, input port, test input, and status byte
+                WarnInternalRamAccess();
                 FlushBuffer();
                 _isDiagnosticDump = true;
-                // add a few bytes simulating dump
                 DiagDumpByte(_configByte);
-                for (byte i = 1; i <= 16; ++i) {
+                for (byte idx = 1; idx <= 16; idx++) {
                     DiagDumpByte(0);
                 }
                 DiagDumpByte(GetInputPort());
                 DiagDumpByte(GetOutputPort());
                 WarnReadTestInputs();
-                DiagDumpByte(0);
+                DiagDumpByte(0); // test input - TODO: not emulated for now
                 DiagDumpByte(_statusByte);
                 break;
-            case KeyboardCommand.DisablePortKbd:
-                IsKeyboardDisabled = true;
+            case KeyboardCommand.DisablePortKbd: // 0xad
+                // Disable keyboard port; any keyboard command
+                // reenables the port
+                _configByte |= (1 << 4);
                 break;
-            case KeyboardCommand.EnablePortKbd:
-                IsKeyboardDisabled = false;
+            case KeyboardCommand.EnablePortKbd: // 0xae
+                // Enable the keyboard port
+                _configByte &= unchecked((byte)~(1 << 4));
                 break;
-            case KeyboardCommand.ReadKeyboardVersion:
+            case KeyboardCommand.ReadKeyboardVersion: // 0xaf
+                // Reads the keyboard version
+                // TODO: not found any meaningful description,
+                // so the code follows 86Box behaviour
                 FlushBuffer();
-                BufferAdd(0x00);
+                BufferAdd(0);
                 break;
-            case KeyboardCommand.ReadInputPort:
+            case KeyboardCommand.ReadInputPort: // 0xc0
+                // Reads the controller input port (P1)
                 FlushBuffer();
                 BufferAdd(GetInputPort());
                 break;
-            case KeyboardCommand.ReadControllerMode:
+            case KeyboardCommand.ReadControllerMode: // 0xca
+                // Reads keyboard controller mode
+                // 0x00: ISA (AT)
+                // 0x01: PS/2 (MCA)
                 FlushBuffer();
-                BufferAdd(0x01); // claim PS/2 (C++)
+                BufferAdd(0x01);
                 break;
-            case KeyboardCommand.ReadOutputPort:
+            case KeyboardCommand.ReadOutputPort: // 0xd0
+                // Reads the controller output port (P2)
                 FlushBuffer();
                 BufferAdd(GetOutputPort());
                 break;
-            case KeyboardCommand.DisableA20:
+            case KeyboardCommand.DisableA20: // 0xdd
+                // Disable A20 line
                 _a20Gate.IsEnabled = false;
                 break;
-            case KeyboardCommand.EnableA20:
+            case KeyboardCommand.EnableA20: // 0xdf
+                // Enable A20 line
                 _a20Gate.IsEnabled = true;
                 break;
-            case KeyboardCommand.ReadTestInputs:
+            case KeyboardCommand.ReadTestInputs: // 0xe0
+                // Read test bits:
+                // bit 0: keyboard clock in
+                // bit 1: (AT) keyboard data in, or (PS/2) mouse clock in
+                // Not fully implemented, follows DOSBox-X behaviour.
                 WarnReadTestInputs();
                 FlushBuffer();
                 BufferAdd(0x00);
                 break;
+            //
+            // Unknown or mostly unsupported commands
+            //
             default:
-                // handle ranges and unknowns:
-                if (IsCmdMemRead(command)) {
+                if (IsCmdMemRead(command)) { // 0x20-0x3f
+                    // Read internal RAM - dummy, unimplemented
                     WarnInternalRamAccess();
                     BufferAdd(0x00);
-                } else if (IsCmdMemWrite(command) || IsCmdPulseLine(command) || IsCmdVendorLines(command)) {
-                    // requires parameter or vendor lines - store as current command
+                } else if (IsCmdMemWrite(command)) { // 0x60-0x7f
+                    // Write internal RAM - dummy, unimplemented
+                    WarnInternalRamAccess();
+                    // requires a parameter
+                    _currentCommand = command;
+                } else if (IsCmdVendorLines(command)) { // 0xb0-0xbd
+                    WarnVendorLines();
+                } else if (IsCmdPulseLine(command)) { // 0xf0-0xff
+                    // requires a parameter
                     _currentCommand = command;
                 } else {
                     WarnUnknownCommand(command);
@@ -476,148 +629,334 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     }
 
     private void ExecuteCommand(KeyboardCommand command, byte param) {
+        // LOG_INFO("I8042: Command 0x%02x, parameter 0x%02x",
+        //          static_cast<int>(command), param);
+
         switch (command) {
-            case KeyboardCommand.WriteByteConfig:
+            case KeyboardCommand.WriteByteConfig: // 0x60
+                // Writes the keyboard controller configuration byte
                 _configByte = param;
-                SanitizeConfigByte();
+                // Force passed self-test bit and clear reserved bits
+                _configByte |= (1 << 2);
+                _configByte &= unchecked((byte)~(1 << 3));
+                _configByte &= unchecked((byte)~(1 << 7));
                 break;
-            case KeyboardCommand.WriteControllerMode:
-                WarnControllerMode();
-                // not implemented: leave as-is
+            case KeyboardCommand.WriteControllerMode: // 0xcb
+                // Changes controller mode to PS/2 or AT
+                // TODO: not implemented for now
+                // ReadControllerMode will always claim PS/2
                 break;
-            case KeyboardCommand.WriteOutputPort:
-                _a20Gate.IsEnabled = (param & 2) != 0;
-                if ((param & 1) == 0) {
+            case KeyboardCommand.WriteOutputPort: // 0xd1
+                // Writes the controller output port (P2)
+                _a20Gate.IsEnabled = (param & (1 << 1)) != 0;
+                if ((param & (1 << 0)) == 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("I8042: Clearing P2 bit 0 locks a real PC");
                     }
+                    // System restart is not suported.
                 }
                 break;
-            case KeyboardCommand.SimulateInputKbd:
+            case KeyboardCommand.SimulateInputKbd: // 0xd2
+                // Acts as if the byte was received from keyboard
                 FlushBuffer();
-                AddKbdByte(param);
+                BufferAddKbd(param);
                 break;
-            case KeyboardCommand.SimulateInputAux:
+            case KeyboardCommand.SimulateInputAux: // 0xd3
+                // Acts as if the byte was received from aux (mouse)
                 FlushBuffer();
-                AddAuxByte(param);
+                BufferAddAux(param);
                 break;
-            case KeyboardCommand.WriteAux:
-                // MOUSEPS2_PortWrite would be called; we don't have mouse impl here.
-                IsTransmitTimeout = false;
+            case KeyboardCommand.WriteAux: // 0xd4
+                // Sends a byte to the mouse.
+                // To prevent excessive inter-module communication,
+                // aux (mouse) part is implemented completely within
+                // the mouse module
+                RestartDelayTimer(PortDelayMs * 2); // 'round trip' delay
+                _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+                // TODO: Mouse support
+                // _statusByte |= (1 << 6) * (!MOUSEPS2_PortWrite(param));
                 break;
             default:
-                if (IsCmdMemWrite(command)) {
-                    // internal mem write - not implemented
-                } else if (IsCmdPulseLine(command)) {
+                if (IsCmdMemWrite(command)) { // 0x60-0x7f
+                    // Internal controller memory write,
+                    // not implemented for most bytes
+                } else if (IsCmdPulseLine(command)) { // 0xf0-0xff
+                    // Pulse controller lines for 6ms,
+                    // bits 0-3 counts, 0 = pulse relevant line
                     byte lines = (byte)(param & 0b0000_1111);
                     byte code = (byte)command;
-                    if ((code == 0xF0 && param != 0b1111 && param != 0b1110) ||
-                        (code != 0xF0 && param != 0b1111)) {
+                    if ((code == 0xf0 && param != 0b1111 && param != 0b1110) ||
+                        (code != 0xf0 && param != 0b1111)) {
                         WarnLinePulse();
                     }
-                    if (code == 0xF0 && (lines & 0b0001) == 0) {
-                        //TODO
+                    if (code == 0xf0 && (lines & 0b0001) == 0) {
+                        // System reset is not supprted.
                     }
                 } else {
-                    // no-op
+                    // If we are here, than either this function
+                    // was wrongly called or it is incomplete
                 }
                 break;
         }
     }
 
-    // --------------------------
-    // Helper methods / warnings from C++
-    // --------------------------
+    private void DiagDumpByte(byte value) {
+        // Based on communication logs collected from real chip
+        // by Vogons forum user 'migry'
 
-    private void DiagDumpByte(byte b) {
-        // produces 3 bytes per nibble similar to C++ diag_dump_byte
-        // small translation table for hex (mirrors C++ table partially)
-        byte[] table = {
+        int nibbleHi = (value & 0b1111_0000) >> 4;
+        int nibbleLo = (value & 0b0000_1111);
+
+        // clang-format off
+        byte[] translationTable = {
             0x0b, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
             0x09, 0x0a, 0x1e, 0x30, 0x2e, 0x20, 0x12, 0x21
         };
-        int hi = (b & 0xF0) >> 4;
-        int lo = (b & 0x0F);
-        BufferAdd(table[hi]);
-        BufferAdd(table[lo]);
-        BufferAdd(0x39); // space
+        // clang-format on
+
+        // Diagnostic dumps send 3 bytes for each byte from memory:
+        // - high nibble in hex ASCII, translated using codeset 1 table
+        // - low nibble, similarly
+        // - 0x39 (space in codeset 1)
+        BufferAdd(translationTable[nibbleHi]);
+        BufferAdd(translationTable[nibbleLo]);
+        BufferAdd(0x39);
     }
 
-    private byte GetInputPort() {
-        // simplified implementation similar to get_input_port() in C++
-        byte port = 0b1010_0000;
-        // bit 6: lacks_cga (example; we cannot call is_machine_cga_or_better here)
-        // keep default
-        return port;
-    }
+    // ***************************************************************************
+    // I/O port handlers
+    // ***************************************************************************
 
-    private byte GetOutputPort() {
-        // simplified implementation similar to get_output_port() in C++
-        byte port = 0b0000_0001;
-        if (_a20Gate != null) {
-            // store A20 state in bit 1
-            if (_a20Gate.IsEnabled) port |= (1 << 1);
-        }
-        // set IRQ active bits if present in config
-        if ((_configByte & (1 << 0)) != 0) port |= (1 << 4);
-        if ((_configByte & (1 << 1)) != 0) port |= (1 << 5);
-        return port;
-    }
+    public override byte ReadByte(ushort port) {
+        switch (port) {
+            case KeyboardPorts.Data: // port 0x60
+                if ((_statusByte & (1 << 0)) == 0) {
+                    // Byte already read - just return the previous one
+                    return _dataByte;
+                }
 
-    private static bool IsCmdMemRead(KeyboardCommand command) {
-        byte code = (byte)command;
-        return code is >= 0x20 and <= 0x3F;
-    }
-    private static bool IsCmdMemWrite(KeyboardCommand command) {
-        byte code = (byte)command;
-        return code is >= 0x60 and <= 0x7F;
-    }
-    private static bool IsCmdPulseLine(KeyboardCommand command) {
-        byte code = (byte)command;
-        return code >= 0xF0;
-    }
-    private static bool IsCmdVendorLines(KeyboardCommand command) {
-        byte code = (byte)command;
-        return code is >= 0xB0 and <= 0xBD;
-    }
+                if (_isDiagnosticDump && _bufferNumUsed == 0) {
+                    // Diagnostic dump finished
+                    _isDiagnosticDump = false;
+                    if (IsReadyForAuxFrame()) {
+                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                    }
+                    if (IsReadyForKbdFrame()) {
+                        KeyboardDevice.NotifyReadyForFrame();
+                    }
+                }
 
-    private void SanitizeConfigByte() {
-        // force passed self-test bit and reserved bits zero (mirror sanitize_config_byte)
-        _configByte |= (1 << 2); // mark self test passed
-        _configByte &= unchecked((byte)~(1 << 3));
-        _configByte &= unchecked((byte)~(1 << 7));
-    }
+                bool isDataFromAux = (_statusByte & (1 << 5)) != 0;
+                bool isDataFromKbd = !isDataFromAux;
 
-    private void WarnInternalRamAccess() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Accessing internal RAM (other than byte 0x00) gives vendor-specific results");
-        }
-    }
-    private void WarnControllerMode() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Switching controller to AT mode not emulated");
-        }
-    }
-    private void WarnLinePulse() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Pulsing line other than RESET not emulated");
-        }
-    }
-    private void WarnReadTestInputs() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Reading test inputs not implemented");
-        }
-    }
-    private void WarnUnknownCommand(KeyboardCommand command) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("I8042: Unknown command 0x{Command:X2}", (byte)command);
+                if (isDataFromAux) {
+                    if (_waitingBytesFromAux > 0) {
+                        --_waitingBytesFromAux;
+                    }
+                    if (IsReadyForAuxFrame()) {
+                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                    }
+                }
+
+                if (isDataFromKbd) {
+                    if (_waitingBytesFromKbd > 0) {
+                        --_waitingBytesFromKbd;
+                    }
+                    if (IsReadyForKbdFrame()) {
+                        KeyboardDevice.NotifyReadyForFrame();
+                    }
+                }
+
+                byte retVal = _dataByte;
+
+                _statusByte &= unchecked((byte)~(1 << 0)); // mark byte as already read
+                _statusByte &= unchecked((byte)~(1 << 5)); // clear aux flag
+
+                // Enforce the simulated data transfer delay, as some software
+                // (Tyrian 2000 setup) reads the port without waiting for the
+                // interrupt.
+                RestartDelayTimer(PortDelayMs);
+
+                return retVal;
+
+            case KeyboardPorts.StatusRegister: // port 0x64
+                return _statusByte;
+
+            default:
+                return base.ReadByte(port);
         }
     }
 
+    public override void WriteByte(ushort port, byte value) {
+        switch (port) {
+            case KeyboardPorts.Data: // port 0x60
+                _statusByte &= unchecked((byte)~(1 << 3)); // was_last_write_cmd = false
+
+                if (_currentCommand != KeyboardCommand.None) {
+                    // A controller command is waiting for a parameter
+                    KeyboardCommand command = _currentCommand;
+                    _currentCommand = KeyboardCommand.None;
+
+                    bool shouldNotifyAux = !IsReadyForAuxFrame();
+                    bool shouldNotifyKbd = !IsReadyForKbdFrame();
+
+                    _shouldSkipDeviceNotify = true;
+                    FlushBuffer();
+                    ExecuteCommand(command, value);
+                    _shouldSkipDeviceNotify = false;
+
+                    if (shouldNotifyAux && IsReadyForAuxFrame()) {
+                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                    }
+                    if (shouldNotifyKbd && IsReadyForKbdFrame()) {
+                        KeyboardDevice.NotifyReadyForFrame();
+                    }
+                } else {
+                    // Send this byte to the keyboard
+                    _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+                    _configByte &= unchecked((byte)~(1 << 4)); // auto-enable keyboard port
+
+                    FlushBuffer();
+                    RestartDelayTimer(PortDelayMs * 2); // 'round trip' delay
+                    KeyboardDevice.PortWrite(value);
+                }
+                break;
+
+            case KeyboardPorts.Command: // port 0x64
+                _shouldSkipDeviceNotify = true;
+
+                bool shouldNotifyAux2 = !IsReadyForAuxFrame();
+                bool shouldNotifyKbd2 = !IsReadyForKbdFrame();
+
+                if (_isDiagnosticDump) {
+                    _isDiagnosticDump = false;
+                    FlushBuffer();
+                }
+
+                _statusByte |= (1 << 3); // was_last_write_cmd = true
+
+                _currentCommand = KeyboardCommand.None;
+                if ((value <= 0x1f) || (value >= 0x40 && value <= 0x5f)) {
+                    // AMI BIOS systems command aliases
+                    ExecuteCommand((KeyboardCommand)(value + 0x20));
+                } else {
+                    ExecuteCommand((KeyboardCommand)value);
+                }
+
+                _shouldSkipDeviceNotify = false;
+
+                if (shouldNotifyAux2 && IsReadyForAuxFrame()) {
+                    // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                }
+                if (shouldNotifyKbd2 && IsReadyForKbdFrame()) {
+                    KeyboardDevice.NotifyReadyForFrame();
+                }
+                break;
+
+            default:
+                base.WriteByte(port, value);
+                break;
+        }
+    }
+
+    // ***************************************************************************
+    // External entry points
+    // ***************************************************************************
+
+    /// <summary>
+    /// Adds a single byte from auxiliary device (mouse).
+    /// </summary>
+    /// <param name="value">The byte to add.</param>
+    public void AddAuxByte(byte value) {
+        if ((_configByte & (1 << 5)) != 0) {
+            return; // aux (mouse) port is disabled
+        }
+
+        _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+
+        EnforceBufferSpace();
+        BufferAddAux(value);
+    }
+
+    /// <summary>
+    /// Adds a frame of bytes from auxiliary device (mouse).
+    /// </summary>
+    /// <param name="bytes">The bytes to add.</param>
+    public void AddAuxFrame(IReadOnlyList<byte> bytes) {
+        if (bytes == null || bytes.Count == 0 || (_configByte & (1 << 5)) != 0) {
+            return; // empty frame or aux (mouse) port is disabled
+        }
+
+        _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+
+        // Cheat a little to improve input latency - skip delay timer between
+        // subsequent bytes of mouse data frame; this seems to be compatible
+        // with all the PS/2 mouse drivers tested so far.
+
+        bool skipDelay = false;
+        EnforceBufferSpace(bytes.Count);
+        foreach (byte b in bytes) {
+            BufferAddAux(b, skipDelay);
+            skipDelay = true;
+        }
+    }
+
+    /// <summary>
+    /// Adds a single byte from keyboard.
+    /// </summary>
+    /// <param name="value">The byte to add.</param>
+    internal void AddKbdByte(byte value) {
+        if ((_configByte & (1 << 4)) != 0) {
+            return; // keyboard port is disabled
+        }
+
+        _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+
+        EnforceBufferSpace();
+        BufferAddKbd(value);
+    }
+
+    /// <summary>
+    /// Adds a frame of bytes from keyboard.
+    /// </summary>
+    /// <param name="bytes">The bytes to add.</param>
+    internal void AddKbdFrame(IReadOnlyList<byte> bytes) {
+        if (bytes == null || bytes.Count == 0 || (_configByte & (1 << 4)) != 0) {
+            return; // empty frame or keyboard port is disabled
+        }
+
+        _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
+
+        EnforceBufferSpace(bytes.Count);
+        foreach (byte b in bytes) {
+            BufferAddKbd(b);
+        }
+    }
+
+    /// <summary>
+    /// Checks if the controller is ready to accept auxiliary frames.
+    /// </summary>
+    /// <returns>True if ready for auxiliary frames.</returns>
     internal bool IsReadyForAuxFrame() {
-        return _waitingBytesFromAux == 0 && !IsAuxDisabled && !_isDiagnosticDump;
+        return _waitingBytesFromAux == 0 && (_configByte & (1 << 5)) == 0 && !_isDiagnosticDump;
     }
+
+    /// <summary>
+    /// Checks if the controller is ready to accept keyboard frames.
+    /// </summary>
+    /// <returns>True if ready for keyboard frames.</returns>
     internal bool IsReadyForKbdFrame() {
-        return _waitingBytesFromKbd == 0 && !IsKeyboardDisabled && !_isDiagnosticDump;
+        return _waitingBytesFromKbd == 0 && (_configByte & (1 << 4)) == 0 && !_isDiagnosticDump;
+    }
+
+    /// <summary>
+    /// Initializes the controller.
+    /// </summary>
+    public void Initialize() {
+        // Initialize the keyboard device
+        KeyboardDevice.Initialize();
+        // Keyboard reset is handled by KeyboardDevice.Initialize()
+        // We just need to flush our buffer
+        FlushBuffer();
     }
 }

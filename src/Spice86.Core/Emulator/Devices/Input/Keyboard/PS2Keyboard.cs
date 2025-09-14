@@ -2,12 +2,10 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
-using System;
 using System.Collections.Generic;
 
 /// <summary>
@@ -19,33 +17,45 @@ public sealed class PS2Keyboard {
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly EmulatorEventClock _eventClock;
 
-    // Typematic/repeat mechanism (mirrors DOSBox's implementation)
-    private KeyboardEventArgs _repeatKey = KeyboardEventArgs.None;
-    private uint _repeatWait = 0;
-    private uint _repeatPause = 500; // Default typematic pause (ms)
-    private uint _repeatRate = 33;   // Default typematic rate (ms)
+    // Internal keyboard scancode buffer - mirrors DOSBox implementation
+    private const int BufferSize = 8; // in scancodes
+    private readonly List<byte>[] _buffer = new List<byte>[BufferSize];
+    private bool _bufferOverflowed = false;
+    private int _bufferStartIdx = 0;
+    private int _bufferNumUsed = 0;
 
-    // Default codeset 1 as in DOSBox
-    private byte _codeSet = 1;
+    // Key repetition mechanism data - mirrors DOSBox struct
+    private struct RepeatData {
+        public KbdKey Key;      // key which went typematic
+        public uint Wait;       // countdown timer
+        public uint Pause;      // initial delay
+        public uint Rate;       // repeat rate
+    }
+    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 500, Rate = 33 };
 
-    // Command state waiting for parameter within keyboard domain
-    private KeyboardCommand _currentKbdCommand = KeyboardCommand.None;
-
-    // LED state management
-    private byte _ledState = 0;
-    private bool _ledsAllOn = false;
-
-    // If false, keyboard does not push keycodes to the controller
-    private bool _isScanning = true;
-
-    // Set3-specific code info
+    // Set3-specific code info - mirrors DOSBox Set3CodeInfoEntry
     private class Set3CodeInfoEntry {
         public bool IsEnabledTypematic = true;
         public bool IsEnabledMake = true;
         public bool IsEnabledBreak = true;
     }
-
     private readonly Dictionary<byte, Set3CodeInfoEntry> _set3CodeInfo = new();
+
+    // State of keyboard LEDs, as requested via keyboard controller
+    private byte _ledState = 0;
+    // If true, all LEDs are on due to keyboard reset
+    private bool _ledsAllOn = false;
+    // If false, keyboard does not push keycodes to the controller
+    private bool _isScanning = true;
+
+    private byte _codeSet = 1; // CodeSet1
+
+    // Command currently being executed, waiting for parameter
+    private KeyboardCommand _currentCommand = KeyboardCommand.None;
+
+    // If enabled, all keyboard events are dropped until secure mode is enabled
+    // NOTE: We skip secure mode implementation as requested
+    // private bool _shouldWaitForSecureMode = false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
@@ -53,372 +63,175 @@ public sealed class PS2Keyboard {
     /// <param name="controller">The keyboard controller.</param>
     /// <param name="eventClock">The emulator event clock.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="guiKeyboardEvents">Optional GUI keyboard events interface.</param>
     public PS2Keyboard(Intel8042Controller controller, EmulatorEventClock eventClock,
         ILoggerService loggerService, IGuiKeyboardEvents? guiKeyboardEvents = null) {
         _controller = controller;
         _eventClock = eventClock;
         _loggerService = loggerService;
 
+        // Initialize buffer array
+        for (int i = 0; i < BufferSize; i++) {
+            _buffer[i] = new List<byte>();
+        }
+
         // Initialize keyboard state with startup flag
         KeyboardReset(isStartup: true);
 
-        if(guiKeyboardEvents is not null) {
+        if (guiKeyboardEvents is not null) {
             guiKeyboardEvents.KeyDown += OnKeyEvent;
             guiKeyboardEvents.KeyUp += OnKeyEvent;
         }
     }
 
-    /// <summary>
-    /// Handles keyboard key events from the UI.
-    /// </summary>
-    /// <param name="sender">The sender of the event.</param>
-    /// <param name="e">The keyboard event arguments.</param>
-    public void OnKeyEvent(object? sender, KeyboardEventArgs e) {
-        if (!_isScanning) {
+    // ***************************************************************************
+    // Helper routines to log various warnings
+    // ***************************************************************************
+
+    private void WarnResend() {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("KEYBOARD: Resend command not implemented");
+        }
+    }
+
+    private void WarnUnknownCommand(KeyboardCommand command) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("KEYBOARD: Unknown command 0x{Command:X2}", (byte)command);
+        }
+    }
+
+    private void WarnUnknownScancodeSet() {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("KEYBOARD: Guest requested unknown scancode set");
+        }
+    }
+
+    // ***************************************************************************
+    // keyboard buffer support
+    // ***************************************************************************
+
+    private void MaybeTransferBuffer() {
+        if (_bufferNumUsed == 0 || !_controller.IsReadyForKbdFrame()) {
             return;
         }
 
-        // Get the appropriate scancode for the key based on code set
-        List<byte> scanCode = GetScanCode(e.Key, e.IsPressed);
+        _controller.AddKbdFrame(_buffer[_bufferStartIdx]);
 
-        // Update typematic state based on code set
-        switch (_codeSet) {
-            case 1:
-                TypematicUpdate(e);
-                break;
-            case 2:
-                TypematicUpdate(e);
-                break;
-            case 3:
-                TypematicUpdateSet3(e, scanCode);
-                break;
-        }
-
-        // Add the scancode to the buffer
-        AddKeyFrame(scanCode);
+        --_bufferNumUsed;
+        _bufferStartIdx = (_bufferStartIdx + 1) % BufferSize;
     }
 
-    private List<byte> GetScanCode(PhysicalKey key, bool isPressed) {
-        // Convert PhysicalKey to KbdKey (assuming you have this mapping)
-        KbdKey kbdKey = ConvertToKbdKey(key);
-
-        switch (_codeSet) {
-            case 2:
-                return _scancodeConverter.GetScanCode2(kbdKey, isPressed);
-            case 3:
-                return _scancodeConverter.GetScanCode3(kbdKey, isPressed);
-            case 1:
-            default:
-                return _scancodeConverter.GetScanCode1(kbdKey, isPressed);
-        }
-    }
-
-    private KbdKey ConvertToKbdKey(PhysicalKey key) {
-        // This method would map PhysicalKey to your KbdKey enum
-        // Implementation depends on your key enums
-        return KbdKey.None; // Placeholder
-    }
-
-    private void AddKeyFrame(List<byte> scancodes) {
-        if (scancodes == null || scancodes.Count == 0) {
+    private void BufferAdd(List<byte> scanCode) {
+        // Ignore unsupported keys, drop everything if buffer overflowed
+        if (scanCode == null || scanCode.Count == 0 || _bufferOverflowed) {
             return;
         }
 
-        MaybeTransferFrameToController();
-        _controller.AddKbdFrame(scancodes);
-    }
-
-    // Mirror keyboard.cpp maybe_transfer_buffer that transfers a frame to I8042_AddKbdFrame
-    private void MaybeTransferFrameToController() {
-        // Controller handles the actual buffer management
-    }
-
-    /// <summary>
-    /// Called when the controller is ready to accept keyboard frames.
-    /// </summary>
-    internal void NotifyReadyForFrame() {
-        // This is called by the controller when it's ready to accept frames
-        // Nothing to do here as the controller handles the buffering
-    }
-
-    // Add a single byte as keyboard would do (I8042_AddKbdByte)
-    internal void AddKbdByte(byte b) {
-        _controller.AddKbdByte(b);
-    }
-
-    /// <summary>
-    /// Handles writes to the keyboard port from the controller.
-    /// </summary>
-    /// <param name="value">The value written to the port.</param>
-    public void PortWrite(byte value) {
-        // Similar to KEYBOARD_PortWrite in keyboard.cpp
-        // Check if it's a command
-        bool isCommand = (value & 0x80) != 0 &&
-                        _currentKbdCommand != KeyboardCommand.Set3KeyTypematic &&
-                        _currentKbdCommand != KeyboardCommand.Set3KeyMakeBreak &&
-                        _currentKbdCommand != KeyboardCommand.Set3KeyMakeOnly;
-
-        if (isCommand) {
-            // Terminate previous command
-            _currentKbdCommand = KeyboardCommand.None;
+        // If buffer got overflowed, drop everything until
+        // the controllers queue gets free for the keyboard
+        if (_bufferNumUsed == BufferSize) {
+            _bufferNumUsed = 0;
+            _bufferOverflowed = true;
+            return;
         }
 
-        KeyboardCommand command = _currentKbdCommand;
-        if (command != KeyboardCommand.None) {
-            // Continue execution of previous command
-            _currentKbdCommand = KeyboardCommand.None;
-            ExecuteKeyboardCommand(command, value);
-        } else if (isCommand) {
-            ExecuteKeyboardCommand((KeyboardCommand)value);
-        }
+        // We can safely add a scancode to the buffer
+        int idx = (_bufferStartIdx + _bufferNumUsed++) % BufferSize;
+        _buffer[idx] = [.. scanCode];
+
+        // If possible, transfer the scancode to keyboard controller
+        MaybeTransferBuffer();
     }
 
-    private void ExecuteKeyboardCommand(KeyboardCommand command) {
-        switch (command) {
-            // Commands requiring a parameter
-            case KeyboardCommand.SetLeds:
-            case KeyboardCommand.SetTypeRate:
-            case KeyboardCommand.CodeSet:
-            case KeyboardCommand.Set3KeyTypematic:
-            case KeyboardCommand.Set3KeyMakeBreak:
-            case KeyboardCommand.Set3KeyMakeOnly:
-                AddKbdByte(0xFA); // acknowledge
-                _currentKbdCommand = command;
-                break;
+    // ***************************************************************************
+    // Key repetition
+    // ***************************************************************************
 
-            // No-parameter commands
-            case KeyboardCommand.Echo: // 0xEE
-                // Diagnostic echo, responds without acknowledge
-                AddKbdByte(0xEE);
-                break;
-            case KeyboardCommand.Identify: // 0xF2
-                // Returns keyboard ID
-                AddKbdByte(0xFA); // acknowledge
-                AddKbdByte(0xAB);
-                AddKbdByte(0x83);
-                break;
-            case KeyboardCommand.ClearEnable: // 0xF4
-                // Clear internal buffer, enable scanning
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                _isScanning = true;
-                break;
-            case KeyboardCommand.DefaultDisable: // 0xF5
-                // Restore defaults, disable scanning
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetDefaults();
-                _isScanning = false;
-                break;
-            case KeyboardCommand.ResetEnable: // 0xF6
-                // Restore defaults, enable scanning
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetDefaults();
-                _isScanning = true;
-                break;
-            case KeyboardCommand.Set3AllTypematic: // 0xF7
-                // Set scanning type for all keys (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetAllKeysSet3Properties(typematic: true, make: false, breakState: false);
-                break;
-            case KeyboardCommand.Set3AllMakeBreak: // 0xF8
-                // Set scanning type for all keys (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetAllKeysSet3Properties(typematic: false, make: true, breakState: true);
-                break;
-            case KeyboardCommand.Set3AllMakeOnly: // 0xF9
-                // Set scanning type for all keys (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetAllKeysSet3Properties(typematic: false, make: true, breakState: false);
-                break;
-            case KeyboardCommand.Set3AllTypeMakeBreak: // 0xFA
-                // Set scanning type for all keys (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetAllKeysSet3Properties(typematic: true, make: true, breakState: true);
-                break;
-            case KeyboardCommand.Resend: // 0xFE
-                // Resend byte
-                WarnResend();
-                AddKbdByte(0xFA); // acknowledge for compatibility
-                break;
-            case KeyboardCommand.Reset: // 0xFF
-                // Full keyboard reset and self test
-                AddKbdByte(0xFA); // acknowledge
-                KeyboardReset();
-                AddKbdByte(0xAA); // self test passed
-                break;
-            default:
-                WarnUnknownKeyboardCommand(command);
-                AddKbdByte(0xFE); // resend request
-                break;
-        }
-    }
-
-    private void ExecuteKeyboardCommand(KeyboardCommand command, byte param) {
-        switch (command) {
-            case KeyboardCommand.SetLeds: // 0xED
-                // Set keyboard LEDs according to bitfield
-                AddKbdByte(0xFA); // acknowledge
-                _ledState = param;
-                MaybeNotifyLedState();
-                break;
-            case KeyboardCommand.CodeSet: // 0xF0
-                // Query or change the scancode set
-                if (param != 0) {
-                    // Change scancode set
-                    if (SetCodeSet(param)) {
-                        AddKbdByte(0xFA); // acknowledge
-                    } else {
-                        _currentKbdCommand = command;
-                        AddKbdByte(0xFE); // resend
-                    }
-                } else {
-                    // Query current scancode set
-                    AddKbdByte(0xFA); // acknowledge
-                    AddKbdByte(_codeSet);
-                }
-                break;
-            case KeyboardCommand.SetTypeRate: // 0xF3
-                // Sets typematic rate/delay
-                AddKbdByte(0xFA); // acknowledge
-                SetTypeRate(param);
-                break;
-            case KeyboardCommand.Set3KeyTypematic: // 0xFB
-                // Set scanning type for the given key (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetKeySet3Properties(param, typematic: true, make: false, breakState: false);
-                break;
-            case KeyboardCommand.Set3KeyMakeBreak: // 0xFC
-                // Set scanning type for the given key (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetKeySet3Properties(param, typematic: false, make: true, breakState: true);
-                break;
-            case KeyboardCommand.Set3KeyMakeOnly: // 0xFD
-                // Set scanning type for the given key (scancode set 3)
-                AddKbdByte(0xFA); // acknowledge
-                ClearInternalBuffer();
-                SetKeySet3Properties(param, typematic: false, make: true, breakState: false);
-                break;
-            default:
-                // If we are here, then either this function was wrongly called or it is incomplete
-                break;
-        }
-    }
-
-    private void TypematicUpdate(KeyboardEventArgs e) {
-        if (e.Key == PhysicalKey.Pause || e.Key == PhysicalKey.PrintScreen) {
+    private void TypematicUpdate(KbdKey keyType, bool isPressed) {
+        if (keyType == KbdKey.Pause || keyType == KbdKey.PrintScreen) {
             // Key is excluded from being repeated
-            return;
-        } else if (e.IsPressed) {
-            if (_repeatKey.Key == e.Key) {
-                _repeatWait = _repeatRate;
+        } else if (isPressed) {
+            if (_repeat.Key == keyType) {
+                _repeat.Wait = _repeat.Rate;
             } else {
-                _repeatWait = _repeatPause;
+                _repeat.Wait = _repeat.Pause;
             }
-            _repeatKey = e;
-        } else if (_repeatKey.Key == e.Key) {
+            _repeat.Key = keyType;
+        } else if (_repeat.Key == keyType) {
             // Currently repeated key being released
-            _repeatKey = KeyboardEventArgs.None;
-            _repeatWait = 0;
-            StopTypematicTimer();
-        }
-
-        // If we're setting up repeat, ensure the timer is running
-        if (_repeatKey.Key != PhysicalKey.None) {
-            StartTypematicTimer();
+            _repeat.Key = KbdKey.None;
+            _repeat.Wait = 0;
         }
     }
 
-    private void TypematicUpdateSet3(KeyboardEventArgs e, List<byte> scanCode) {
+    private void TypematicUpdateSet3(KbdKey keyType, List<byte> scanCode, bool isPressed) {
         // Ignore keys not supported in set 3
         if (scanCode == null || scanCode.Count == 0) {
             return;
         }
 
-        // Get the scan code for typematic check
-        byte code = e.IsPressed
-            ? scanCode[0]  // Make code is the first byte
-            : scanCode[1]; // Break code is second byte after 0xF0
-
-        // Check if this key has typematic behavior enabled
-        if (!GetKeySet3Info(code).IsEnabledTypematic) {
+        // Ignore keys for which typematic behavior was disabled
+        byte code = scanCode[scanCode.Count - 1]; // last byte
+        if (!GetSet3CodeInfo(code).IsEnabledTypematic) {
             return;
         }
 
-        // For all other keys, follow usual behavior
-        TypematicUpdate(e);
-    }
-
-    private void StartTypematicTimer() {
-        StopTypematicTimer();
-        _eventClock.AddEvent(TypematicTick, 10, "KeyboardTypematic"); // Check every 10ms
-    }
-
-    private void StopTypematicTimer() {
-        _eventClock.RemoveEvent("KeyboardTypematic");
+        // For all the other keys, follow usual behavior
+        TypematicUpdate(keyType, isPressed);
     }
 
     private void TypematicTick() {
         // Update countdown, check if we should try to add key press
-        if (_repeatWait > 0) {
-            _repeatWait -= 10; // Decrease by timer interval
-            if (_repeatWait > 0) {
-                // Not time yet, schedule next check
-                StartTypematicTimer();
+        if (_repeat.Wait > 0) {
+            if (--_repeat.Wait > 0) {
                 return;
             }
         }
 
         // No typematic key = nothing to do
-        if (_repeatKey.Key == PhysicalKey.None) {
+        if (_repeat.Key == KbdKey.None) {
+            return;
+        }
+
+        // Check if buffers are free
+        if (_bufferNumUsed > 0 || !_controller.IsReadyForKbdFrame()) {
+            _repeat.Wait = 1;
             return;
         }
 
         // Simulate key press
-        OnKeyEvent(this, new KeyboardEventArgs(_repeatKey.Key, true));
-        _repeatWait = _repeatRate; // Set for next repeat
-        StartTypematicTimer();
+        const bool isPressed = true;
+        AddKey(_repeat.Key, isPressed);
     }
 
-    private void SetTypeRate(byte b) {
-        // Calculate pause and rate from the parameter
-        // Bit 5-6: pause duration
-        int pauseIdx = (b & 0b0110_0000) >> 5;
-        // Bit 0-4: rate
-        int rateIdx = (b & 0b0001_1111);
+    // ***************************************************************************
+    // Keyboard microcontroller high-level emulation
+    // ***************************************************************************
 
-        // These tables match DOSBox's implementation
-        uint[] pauseTable = { 250, 500, 750, 1000 };
-        uint[] rateTable = {
-            33,  37,  42,  46,  50,  54,  58,  63,
-            67,  75,  83,  92, 100, 109, 118, 125,
-            133, 149, 167, 182, 200, 217, 233, 250,
-            270, 303, 333, 370, 400, 435, 476, 500
-        };
+    private void MaybeNotifyLedState() {
+        // TODO: add LED support to BIOS, currently it does not set them
+        // consider displaying LEDs on screen
 
-        _repeatPause = pauseTable[pauseIdx];
-        _repeatRate = rateTable[rateIdx];
-    }
-
-    private void SetDefaults() {
-        _repeatKey = KeyboardEventArgs.None;
-        _repeatPause = 500;
-        _repeatRate = 33;
-        _repeatWait = 0;
-
-        // Reset all set3 code info entries to default values
-        foreach (byte key in _set3CodeInfo.Keys) {
-            SetKeySet3Properties(key, true, true, true);
+        byte currentState = GetLedState();
+        // Here you could add UI notification about LED state changes
+        // or log it for debug purposes
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", currentState);
         }
+    }
 
-        SetCodeSet(1); // Default to codeset 1
+    private void LedsAllOnExpireHandler() {
+        _ledsAllOn = false;
+        MaybeNotifyLedState();
+    }
+
+    private void ClearBuffer() {
+        _bufferStartIdx = 0;
+        _bufferNumUsed = 0;
+        _bufferOverflowed = false;
+
+        _repeat.Key = KbdKey.None;
+        _repeat.Wait = 0;
     }
 
     private bool SetCodeSet(byte requestedSet) {
@@ -427,47 +240,357 @@ public sealed class PS2Keyboard {
             return false;
         }
 
-        // Change code set if it's different
         byte oldSet = _codeSet;
         _codeSet = requestedSet;
 
-        if (_codeSet != oldSet) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("KEYBOARD: Using scancode set #{CodeSet}", _codeSet);
-            }
+        if (_codeSet != oldSet && _loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("KEYBOARD: Using scancode set #{CodeSet}", _codeSet);
         }
 
-        ClearInternalBuffer();
+        ClearBuffer();
         return true;
+    }
+
+    private void SetTypeRate(byte value) {
+        // clang-format off
+        uint[] pauseTable = { 250, 500, 750, 1000 };
+        uint[] rateTable = {
+             33,  37,  42,  46,  50,  54,  58,  63,
+             67,  75,  83,  92, 100, 109, 118, 125,
+            133, 149, 167, 182, 200, 217, 233, 250,
+            270, 303, 333, 370, 400, 435, 476, 500
+        };
+        // clang-format on
+
+        int pauseIdx = (value & 0b0110_0000) >> 5;
+        int rateIdx = (value & 0b0001_1111);
+
+        _repeat.Pause = pauseTable[pauseIdx];
+        _repeat.Rate = rateTable[rateIdx];
+    }
+
+    private void SetDefaults() {
+        _repeat.Key = KbdKey.None;
+        _repeat.Pause = 500;
+        _repeat.Rate = 33;
+        _repeat.Wait = 0;
+
+        foreach (var entry in _set3CodeInfo.Values) {
+            entry.IsEnabledMake = true;
+            entry.IsEnabledBreak = true;
+            entry.IsEnabledTypematic = true;
+        }
+
+        SetCodeSet(1); // Default to codeset 1
     }
 
     private void KeyboardReset(bool isStartup = false) {
         SetDefaults();
-        ClearInternalBuffer();
+        ClearBuffer();
+
         _isScanning = true;
 
-        // Flash all LEDs
+        // Flash all the LEDs
         _eventClock.RemoveEvent("KeyboardLEDsOff");
         _ledState = 0;
         _ledsAllOn = !isStartup;
-
         if (_ledsAllOn) {
-            // Set LEDs expiration timer (666ms as in DOSBox)
-            _eventClock.AddEvent(LedsAllOnExpire, 666, "KeyboardLEDsOff");
+            // To commemorate how evil the whole keyboard
+            // subsystem is, let's set blink expiration
+            // time to 666 milliseconds
+            const double expireTimeMs = 666.0;
+            _eventClock.AddEvent(LedsAllOnExpireHandler, expireTimeMs, "KeyboardLEDsOff");
+        }
+        MaybeNotifyLedState();
+    }
+
+    private void ExecuteCommand(KeyboardCommand command) {
+        // LOG_INFO("KEYBOARD: Command 0x%02x", static_cast<int>(command));
+
+        switch (command) {
+            //
+            // Commands requiring a parameter
+            //
+            case KeyboardCommand.SetLeds:          // 0xed
+            case KeyboardCommand.SetTypeRate:      // 0xf3
+                _controller.AddKbdByte(0xfa); // acknowledge
+                _currentCommand = command;
+                break;
+            case KeyboardCommand.CodeSet:          // 0xf0
+            case KeyboardCommand.Set3KeyTypematic: // 0xfb
+            case KeyboardCommand.Set3KeyMakeBreak: // 0xfc
+            case KeyboardCommand.Set3KeyMakeOnly:  // 0xfd
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                _currentCommand = command;
+                break;
+            //
+            // No-parameter commands
+            //
+            case KeyboardCommand.Echo: // 0xee
+                // Diagnostic echo, responds without acknowledge
+                _controller.AddKbdByte(0xee);
+                break;
+            case KeyboardCommand.Identify: // 0xf2
+                // Returns keyboard ID
+                // - 0xab, 0x83: typical for multifunction PS/2 keyboards
+                // - 0xab, 0x84: many short, space saver keyboards
+                // - 0xab, 0x86: many 122-key keyboards
+                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte(0xab);
+                _controller.AddKbdByte(0x83);
+                break;
+            case KeyboardCommand.ClearEnable: // 0xf4
+                // Clear internal buffer, enable scanning
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                _isScanning = true;
+                break;
+            case KeyboardCommand.DefaultDisable: // 0xf5
+                // Restore defaults, disable scanning
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                SetDefaults();
+                _isScanning = false;
+                break;
+            case KeyboardCommand.ResetEnable: // 0xf6
+                // Restore defaults, enable scanning
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                SetDefaults();
+                _isScanning = true;
+                break;
+            case KeyboardCommand.Set3AllTypematic: // 0xf7
+                // Set scanning type for all the keys,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                foreach (var entry in _set3CodeInfo.Values) {
+                    entry.IsEnabledTypematic = true;
+                    entry.IsEnabledMake = false;
+                    entry.IsEnabledBreak = false;
+                }
+                break;
+            case KeyboardCommand.Set3AllMakeBreak: // 0xf8
+                // Set scanning type for all the keys,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                foreach (var entry in _set3CodeInfo.Values) {
+                    entry.IsEnabledTypematic = false;
+                    entry.IsEnabledMake = true;
+                    entry.IsEnabledBreak = true;
+                }
+                break;
+            case KeyboardCommand.Set3AllMakeOnly: // 0xf9
+                // Set scanning type for all the keys,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                foreach (var entry in _set3CodeInfo.Values) {
+                    entry.IsEnabledTypematic = false;
+                    entry.IsEnabledMake = true;
+                    entry.IsEnabledBreak = false;
+                }
+                break;
+            case KeyboardCommand.Set3AllTypeMakeBreak: // 0xfa
+                // Set scanning type for all the keys,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                foreach (var entry in _set3CodeInfo.Values) {
+                    entry.IsEnabledTypematic = true;
+                    entry.IsEnabledMake = true;
+                    entry.IsEnabledBreak = true;
+                }
+                break;
+            case KeyboardCommand.Resend: // 0xfe
+                // Resend byte, should normally be used on transmission
+                // errors - not implemented, as the emulation can
+                // also send whole multi-byte scancode at once
+                WarnResend();
+                // We have to respond, or else the 'In Extremis' game intro
+                // (sends 0xfe and 0xaa commands) hangs with a black screen
+                _controller.AddKbdByte(0xfa); // acknowledge
+                break;
+            case KeyboardCommand.Reset: // 0xff
+                // Full keyboard reset and self test
+                // 0xaa: passed; 0xfc/0xfd: failed
+                _controller.AddKbdByte(0xfa); // acknowledge
+                KeyboardReset();
+                _controller.AddKbdByte(0xaa);
+                break;
+            //
+            // Unknown commands
+            //
+            default:
+                WarnUnknownCommand(command);
+                _controller.AddKbdByte(0xfe); // resend
+                break;
+        }
+    }
+
+    private void ExecuteCommand(KeyboardCommand command, byte param) {
+        // LOG_INFO("KEYBOARD: Command 0x%02x, parameter 0x%02x",
+        //          static_cast<int>(command), param);
+
+        switch (command) {
+            case KeyboardCommand.SetLeds: // 0xed
+                // Set keyboard LEDs according to bitfield
+                _controller.AddKbdByte(0xfa); // acknowledge
+                _ledState = param;
+                MaybeNotifyLedState();
+                break;
+            case KeyboardCommand.CodeSet: // 0xf0
+                // Query or change the scancode set
+                if (param != 0) {
+                    // Change scancode set
+                    if (SetCodeSet(param)) {
+                        _controller.AddKbdByte(0xfa); // acknowledge
+                    } else {
+                        _currentCommand = command;
+                        _controller.AddKbdByte(0xfe); // resend
+                    }
+                } else {
+                    // Query current scancode set
+                    _controller.AddKbdByte(0xfa); // acknowledge
+                    _controller.AddKbdByte(_codeSet);
+                }
+                break;
+            case KeyboardCommand.SetTypeRate: // 0xf3
+                // Sets typematic rate/delay
+                _controller.AddKbdByte(0xfa); // acknowledge
+                SetTypeRate(param);
+                break;
+            case KeyboardCommand.Set3KeyTypematic: // 0xfb
+                // Set scanning type for the given key,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                GetSet3CodeInfo(param).IsEnabledTypematic = true;
+                GetSet3CodeInfo(param).IsEnabledMake = false;
+                GetSet3CodeInfo(param).IsEnabledBreak = false;
+                break;
+            case KeyboardCommand.Set3KeyMakeBreak: // 0xfc
+                // Set scanning type for the given key,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                GetSet3CodeInfo(param).IsEnabledTypematic = false;
+                GetSet3CodeInfo(param).IsEnabledMake = true;
+                GetSet3CodeInfo(param).IsEnabledBreak = true;
+                break;
+            case KeyboardCommand.Set3KeyMakeOnly: // 0xfd
+                // Set scanning type for the given key,
+                // relevant for scancode set 3 only
+                _controller.AddKbdByte(0xfa); // acknowledge
+                ClearBuffer();
+                GetSet3CodeInfo(param).IsEnabledTypematic = false;
+                GetSet3CodeInfo(param).IsEnabledMake = true;
+                GetSet3CodeInfo(param).IsEnabledBreak = false;
+                break;
+            default:
+                // If we are here, than either this function
+                // was wrongly called or it is incomplete
+                break;
+        }
+    }
+
+    private Set3CodeInfoEntry GetSet3CodeInfo(byte scancode) {
+        if (!_set3CodeInfo.TryGetValue(scancode, out Set3CodeInfoEntry? entry)) {
+            entry = new Set3CodeInfoEntry();
+            _set3CodeInfo[scancode] = entry;
+        }
+        return entry;
+    }
+
+    // ***************************************************************************
+    // External interfaces
+    // ***************************************************************************
+
+    /// <summary>
+    /// Handles keyboard key events from the UI.
+    /// </summary>
+    /// <param name="sender">The sender of the event.</param>
+    /// <param name="e">The keyboard event arguments.</param>
+    public void OnKeyEvent(object? sender, KeyboardEventArgs e) {
+        KbdKey keyType = _scancodeConverter.ConvertToKbdKey(e.Key);
+        AddKey(keyType, e.IsPressed);
+    }
+
+    /// <summary>
+    /// Handles writes to the keyboard port from the controller.
+    /// </summary>
+    /// <param name="value">The value written to the port.</param>
+    public void PortWrite(byte value) {
+        // Highest bit set usually means a command
+        bool isCommand = (value & 0x80) != 0 &&
+                        _currentCommand != KeyboardCommand.Set3KeyTypematic &&
+                        _currentCommand != KeyboardCommand.Set3KeyMakeBreak &&
+                        _currentCommand != KeyboardCommand.Set3KeyMakeOnly;
+
+        if (isCommand) {
+            // Terminate previous command
+            _currentCommand = KeyboardCommand.None;
         }
 
-        MaybeNotifyLedState();
+        KeyboardCommand command = _currentCommand;
+        if (command != KeyboardCommand.None) {
+            // Continue execution of previous command
+            _currentCommand = KeyboardCommand.None;
+            ExecuteCommand(command, value);
+        } else if (isCommand) {
+            ExecuteCommand((KeyboardCommand)value);
+        }
     }
 
-    private void LedsAllOnExpire() {
-        _ledsAllOn = false;
-        MaybeNotifyLedState();
+    /// <summary>
+    /// Called when the controller is ready to accept keyboard frames.
+    /// </summary>
+    internal void NotifyReadyForFrame() {
+        // Since the guest software seems to be reacting on keys again,
+        // clear the buffer overflow flag, do not ignore keys any more
+        _bufferOverflowed = false;
+
+        MaybeTransferBuffer();
     }
 
-    private void MaybeNotifyLedState() {
-        byte currentState = GetLedState();
-        // Here you could add UI notification about LED state changes
-        // or log it for debug purposes
+    /// <summary>
+    /// Adds a key event to be processed by the keyboard.
+    /// </summary>
+    /// <param name="keyType">The key type.</param>
+    /// <param name="isPressed">Whether the key is pressed or released.</param>
+    public void AddKey(KbdKey keyType, bool isPressed) {
+        // NOTE: Skipping secure mode check as requested
+        // if (_shouldWaitForSecureMode && !control->SecureMode()) {
+        //     WarnWaitingForSecureMode();
+        //     return;
+        // }
+
+        if (!_isScanning) {
+            return;
+        }
+
+        List<byte> scanCode = new();
+
+        switch (_codeSet) {
+            case 1:
+                scanCode = _scancodeConverter.GetScanCode1(keyType, isPressed);
+                TypematicUpdate(keyType, isPressed);
+                break;
+            case 2:
+                scanCode = _scancodeConverter.GetScanCode2(keyType, isPressed);
+                TypematicUpdate(keyType, isPressed);
+                break;
+            case 3:
+                scanCode = _scancodeConverter.GetScanCode3(keyType, isPressed);
+                TypematicUpdateSet3(keyType, scanCode, isPressed);
+                break;
+            default:
+                break;
+        }
+
+        BufferAdd(scanCode);
     }
 
     /// <summary>
@@ -475,59 +598,19 @@ public sealed class PS2Keyboard {
     /// </summary>
     /// <returns>The LED state byte.</returns>
     public byte GetLedState() {
-        // We support only 3 LEDs (bits 0-2)
-        return (byte)((_ledsAllOn ? 0xFF : _ledState) & 0b0000_0111);
+        // We support only 3 leds
+        return (byte)((_ledsAllOn ? 0xff : _ledState) & 0b0000_0111);
     }
 
-    private void ClearInternalBuffer() {
-        // Clear any internal buffer state
-        _repeatKey = KeyboardEventArgs.None;
-        _repeatWait = 0;
-        StopTypematicTimer();
-    }
+    /// <summary>
+    /// Initializes the keyboard component.
+    /// </summary>
+    public void Initialize() {
+        // Add typematic tick handler to event clock
+        _eventClock.AddEvent(TypematicTick, 10, "KeyboardTypematic");
 
-    private void SetAllKeysSet3Properties(bool typematic, bool make, bool breakState) {
-        // Initialize dictionary if needed
-        for (byte i = 0; i < 255; i++) {
-            SetKeySet3Properties(i, typematic, make, breakState);
-        }
-    }
-
-    private void SetKeySet3Properties(byte scancode, bool typematic, bool make, bool breakState) {
-        if (!_set3CodeInfo.TryGetValue(scancode, out Set3CodeInfoEntry? entry)) {
-            entry = new Set3CodeInfoEntry();
-            _set3CodeInfo[scancode] = entry;
-        }
-
-        entry.IsEnabledTypematic = typematic;
-        entry.IsEnabledMake = make;
-        entry.IsEnabledBreak = breakState;
-    }
-
-    private Set3CodeInfoEntry GetKeySet3Info(byte scancode) {
-        if (!_set3CodeInfo.TryGetValue(scancode, out Set3CodeInfoEntry? entry)) {
-            // Create default entry
-            entry = new Set3CodeInfoEntry();
-            _set3CodeInfo[scancode] = entry;
-        }
-        return entry;
-    }
-
-    private void WarnResend() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Resend command not implemented");
-        }
-    }
-
-    private void WarnUnknownKeyboardCommand(KeyboardCommand cmd) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Unknown command 0x{Command:X2}", (byte)cmd);
-        }
-    }
-
-    private void WarnUnknownScancodeSet() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Guest requested unknown scancode set");
-        }
+        const bool isStartup = true;
+        KeyboardReset(isStartup);
+        SetCodeSet(1);
     }
 }
