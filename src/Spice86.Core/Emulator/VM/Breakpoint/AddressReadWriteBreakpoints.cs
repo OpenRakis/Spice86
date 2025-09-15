@@ -29,6 +29,9 @@ public class AddressReadWriteBreakpoints {
         }
     }
 
+    internal BreakPointHolder ReadBreakpoints => _readBreakPoints;
+    internal BreakPointHolder WriteBreakpoints => _writeBreakPoints;
+
     /// <summary>
     /// Triggers all the breakpoints matching the specified address, if the memory was read.
     /// </summary>
