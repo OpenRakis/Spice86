@@ -371,12 +371,15 @@ internal class DosPathResolver {
         SplitTo83(sourceFilename, fileName, fileExt, out _);
         SplitTo83(pattern, wildName, wildExt, out int wildExtLength);
 
-        // ---- NAME compare (no early '*' accept; '*' just ends name matching) ----
-        if (CompareSegment(fileName, wildName, DosMfnlength) == false) {
-            return false;
+        // ---- NAME compare ----
+        // DOS semantics: ".EXT" is equivalent to "*.EXT" (empty name matches any)
+        bool patternNameIsEmpty = PatternNameIsEmpty(pattern);
+        if (!patternNameIsEmpty) {
+            if (CompareSegment(fileName, wildName, DosMfnlength) == false) {
+                return false;
+            }
         }
-        // the original code tolerated extra chars in pattern name beyond 8 unless it's a non-'*' check byte; our fixed-size truncation mirrors that behavior
-
+        
         // ---- EXT compare (early '*' accept) ----
         return CompareSegment(fileExt, wildExt, DosExtlength) switch {
             true => true,
@@ -437,10 +440,6 @@ internal class DosPathResolver {
             return false;
         }
 
-        if (wildcard.IndexOfAny('?', '*') < 0) {
-            return false;
-        }
-
         return fileName.Length >= 5 && fileName[0] == '.' &&
                !fileName.Equals(".", StringComparison.Ordinal) &&
                !fileName.Equals("..", StringComparison.Ordinal);
@@ -448,5 +447,10 @@ internal class DosPathResolver {
 
     private static void ToUpperCopy(ReadOnlySpan<char> src, Span<char> dst) {
         src.ToUpperInvariant(dst);
+    }
+
+    private static bool PatternNameIsEmpty(ReadOnlySpan<char> pattern) {
+        int dotPos = pattern.LastIndexOf('.');
+        return dotPos == 0; // begins with a dot, so name part length is zero
     }
 }
