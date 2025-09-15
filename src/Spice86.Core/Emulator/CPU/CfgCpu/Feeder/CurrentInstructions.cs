@@ -51,7 +51,7 @@ public class CurrentInstructions : InstructionReplacer {
 
 
     public void SetAsCurrent(CfgInstruction instruction) {
-        // Clear it because in some cases it can be added twice (discriminator reducer)
+        // Clear it because in some cases it can be added twice (signature reducer)
         ClearCurrentInstruction(instruction);
         // Set breakpoints so that we are notified if instruction changes in memory
         CreateBreakpointsForInstruction(instruction);
@@ -64,8 +64,8 @@ public class CurrentInstructions : InstructionReplacer {
         List<AddressBreakPoint> breakpoints = new();
         _breakpointsForInstruction.Add(instructionAddress, breakpoints);
         foreach (FieldWithValue field in instruction.FieldsInOrder) {
-            for (int i = 0; i < field.DiscriminatorValue.Count; i++) {
-                byte? instructionByte = field.DiscriminatorValue[i];
+            for (int i = 0; i < field.SignatureValue.Count; i++) {
+                byte? instructionByte = field.SignatureValue[i];
                 if (instructionByte is null) {
                     // Do not create breakpoints for fields that are not read from memory
                     continue;

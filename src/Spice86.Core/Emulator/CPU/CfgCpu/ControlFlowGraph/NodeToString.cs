@@ -47,6 +47,6 @@ public class NodeToString {
     }
     
     private IEnumerable<string> SuccessorsToEnumerableString(SelectorNode selectorNode) {
-        return selectorNode.SuccessorsPerDiscriminator.Select(e => $"{e.Key} => {ToString(e.Value)}");
+        return selectorNode.SuccessorsPerSignature.Select(e => $"{e.Key} => {ToString(e.Value)}");
     }
 }

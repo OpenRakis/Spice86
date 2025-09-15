@@ -10,26 +10,26 @@ using System.Linq;
 
 /// <summary>
 /// Node that precedes self modifying code divergence point.
-/// To decide what is next node in the graph, the only way is to compare discriminators in SuccessorsPerDiscriminator with actual memory content. 
+/// To decide what is next node in the graph, the only way is to compare signatures in SuccessorsPerSignature with actual memory content. 
 /// </summary>
 public class SelectorNode(SegmentedAddress address) : CfgNode(address, null) {
     public override bool IsLive => true;
 
-    public Dictionary<Discriminator, CfgInstruction> SuccessorsPerDiscriminator { get; private set; } =
+    public Dictionary<Signature, CfgInstruction> SuccessorsPerSignature { get; private set; } =
         new();
 
     public override void UpdateSuccessorCache() {
-        SuccessorsPerDiscriminator = Successors.OfType<CfgInstruction>()
-            .OrderBy(node => node.Discriminator)
-            .ToDictionary(node => node.Discriminator);
+        SuccessorsPerSignature = Successors.OfType<CfgInstruction>()
+            .OrderBy(node => node.Signature)
+            .ToDictionary(node => node.Signature);
     }
 
     public override void Execute(InstructionExecutionHelper helper) {
-        foreach (Discriminator discriminator in SuccessorsPerDiscriminator.Keys) {
-            int length = discriminator.DiscriminatorValue.Count;
+        foreach (Signature signature in SuccessorsPerSignature.Keys) {
+            int length = signature.SignatureValue.Count;
             IList<byte> bytes = helper.Memory.GetSlice((int)Address.Linear, length);
-            if (discriminator.ListEquivalent(bytes)) {
-                helper.NextNode = SuccessorsPerDiscriminator[discriminator];
+            if (signature.ListEquivalent(bytes)) {
+                helper.NextNode = SuccessorsPerSignature[signature];
                 return;
             }
         }

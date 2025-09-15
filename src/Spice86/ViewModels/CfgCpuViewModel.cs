@@ -328,9 +328,9 @@ public partial class CfgCpuViewModel : ViewModelBase {
                     break;
                 }
             case SelectorNode selectorNode: {
-                    Discriminator? discriminator = selectorNode.SuccessorsPerDiscriminator
+                    Signature? signature = selectorNode.SuccessorsPerSignature
                         .FirstOrDefault(x => x.Value == successor).Key;
-                    label = discriminator?.ToString() ?? "";
+                    label = signature?.ToString() ?? "";
                     break;
                 }
         }

@@ -49,7 +49,7 @@ public class InstructionsFeederTest {
 
     private JmpNearImm8 CreateReplacementInstruction() {
         var opcodeField = new InstructionField<ushort>(0, 1, 0, 0xEB, ImmutableList.Create<byte?>(0xEB), true);
-        // Replacement has a null discriminator byte for offset field -> will not be taken into account when comparing with ram
+        // Replacement has a null signature byte for offset field -> will not be taken into account when comparing with ram
         var offsetField = new InstructionField<sbyte>(1, 1, 1, -2, ImmutableList.Create((byte?)null), false);
         JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, new List<InstructionPrefix>(), offsetField);
         return res;

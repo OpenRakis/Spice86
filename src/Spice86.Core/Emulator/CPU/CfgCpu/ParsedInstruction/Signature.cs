@@ -3,24 +3,24 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using System.Collections.Immutable;
 
 /// <summary>
-/// Base class for objects that have a discriminator value based on a list of bytes.
-/// The bytes are used to compare 2 discriminators.
-/// If at the same position bytes are equal, the discriminators are considered equals.
+/// Base class for objects that have a signature value based on a list of bytes.
+/// The bytes are used to compare 2 signatures.
+/// If at the same position bytes are equal, the signatures are considered equals.
 /// If there are null bytes they are not considered for the equality comparison of the position
-/// If the length of the discriminator value differs, discriminators are different
+/// If the length of the signature value differs, signatures are different
 /// </summary>
-public class Discriminator : IComparable<Discriminator> {
-    public Discriminator(ImmutableList<byte?> discriminatorValue) {
-        DiscriminatorValue = discriminatorValue;
+public class Signature : IComparable<Signature> {
+    public Signature(ImmutableList<byte?> signatureValue) {
+        SignatureValue = signatureValue;
     }
 
     /// <summary>
-    /// Value of the discriminator
+    /// Value of the signature
     /// </summary>
-    public ImmutableList<byte?> DiscriminatorValue { get; private set; }
+    public ImmutableList<byte?> SignatureValue { get; private set; }
 
-    public void NullifyDiscriminator() {
-        DiscriminatorValue = GenerateNullBytes(DiscriminatorValue.Count);
+    public void NullifySignature() {
+        SignatureValue = GenerateNullBytes(SignatureValue.Count);
     }
     
     private static ImmutableList<byte?> GenerateNullBytes(int size) {
@@ -32,19 +32,19 @@ public class Discriminator : IComparable<Discriminator> {
     }
 
     /// <inheritdoc/>
-    public int CompareTo(Discriminator? other) {
+    public int CompareTo(Signature? other) {
         if (other == null) {
             return 1;
         }
 
-        int count = DiscriminatorValue.Count;
-        if (count != other.DiscriminatorValue.Count) {
-            return count.CompareTo(other.DiscriminatorValue.Count);
+        int count = SignatureValue.Count;
+        if (count != other.SignatureValue.Count) {
+            return count.CompareTo(other.SignatureValue.Count);
         }
-        // Size is equal, let's compare the elements of the discriminators
+        // Size is equal, let's compare the elements of the signatures
         for (int i = 0; i < count; i++) {
-            byte? thisByte = DiscriminatorValue[i];
-            byte? otherByte = other.DiscriminatorValue[i];
+            byte? thisByte = SignatureValue[i];
+            byte? otherByte = other.SignatureValue[i];
             if (thisByte != otherByte) {
                 // null is equals here
                 if (thisByte == null || otherByte == null) {
@@ -59,17 +59,17 @@ public class Discriminator : IComparable<Discriminator> {
     }
     
     /// <summary>
-    /// Checks that the given span of bytes is equivalent to the discriminator.
+    /// Checks that the given span of bytes is equivalent to the signature.
     /// Equivalence means that they have the same length and their content is identical at each position or null
     /// </summary>
-    /// <param name="bytes">Span of bytes to compare with the discriminator</param>
+    /// <param name="bytes">Span of bytes to compare with the signature</param>
     /// <returns>true if they are equivalent, false otherwise</returns>
     public bool ListEquivalent(IList<byte> bytes) {
-        if (DiscriminatorValue.Count != bytes.Count) {
+        if (SignatureValue.Count != bytes.Count) {
             return false;
         }
 
-        for (int i = 0; i < DiscriminatorValue.Count; i++) {
+        for (int i = 0; i < SignatureValue.Count; i++) {
             if (Differs(i, bytes[i])) {
                 return false;
             }
@@ -79,17 +79,17 @@ public class Discriminator : IComparable<Discriminator> {
     }
 
     /// <summary>
-    /// Checks that the given list of bytes is equivalent to the discriminator.
+    /// Checks that the given list of bytes is equivalent to the signature.
     /// Equivalence means that they have the same length and their content is identical at each position or null
     /// </summary>
-    /// <param name="bytes">List of bytes to compare with the discriminator</param>
+    /// <param name="bytes">List of bytes to compare with the signature</param>
     /// <returns>true if they are equivalent, false otherwise</returns>
     public bool ListEquivalent(IList<byte?> bytes) {
-        if (DiscriminatorValue.Count != bytes.Count) {
+        if (SignatureValue.Count != bytes.Count) {
             return false;
         }
 
-        for (int i = 0; i < DiscriminatorValue.Count; i++) {
+        for (int i = 0; i < SignatureValue.Count; i++) {
             if (Differs(i, bytes[i])) {
                 return false;
             }
@@ -104,7 +104,7 @@ public class Discriminator : IComparable<Discriminator> {
             return false;
         }
 
-        byte? d = DiscriminatorValue[i];
+        byte? d = SignatureValue[i];
         // Null is considered the same regardless of other
         if (d is null) {
             return false;
@@ -131,17 +131,17 @@ public class Discriminator : IComparable<Discriminator> {
             return false;
         }
 
-        return ListEquivalent(((Discriminator)obj).DiscriminatorValue);
+        return ListEquivalent(((Signature)obj).SignatureValue);
     }
 
     /// <inheritdoc/>
     public override int GetHashCode() {
-        // Hashcode cannot depend on the discriminator value because 2 values can be equals if they have null bytes 
+        // Hashcode cannot depend on the signature value because 2 values can be equals if they have null bytes 
         return 1;
     }
 
     /// <inheritdoc/>
     public override string ToString() {
-        return string.Join(", ", DiscriminatorValue);
+        return string.Join(", ", SignatureValue);
     }
 }
