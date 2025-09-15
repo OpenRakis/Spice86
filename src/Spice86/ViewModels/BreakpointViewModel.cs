@@ -76,9 +76,14 @@ public partial class BreakpointViewModel : ViewModelBase {
     private string? _comment;
 
     private BreakPoint GetOrCreateBreakpoint() {
-        _breakPoint ??= new AddressBreakPoint(Type,
-            Address, (_) => _onReached(),
-            IsRemovedOnTrigger);
+        if (_breakPoint == null) {
+            if (this is BreakpointRangeViewModel rangeViewModel) {
+                _breakPoint = new AddressRangeBreakPoint(Type, Address, rangeViewModel.EndTrigger,
+                    _ => _onReached(), IsRemovedOnTrigger);
+            } else {
+                _breakPoint = new AddressBreakPoint(Type, Address, _ => _onReached(), IsRemovedOnTrigger);
+            }
+        }
         return _breakPoint;
     }
 

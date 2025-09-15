@@ -18,12 +18,14 @@ public class EmulatorBreakpointsSerializer {
     private const string BreakpointsFileNameFormat = "Breakpoints_{0}.json";
     private readonly Configuration _configuration;
     private readonly ILoggerService _loggerService;
-    private ISerializableBreakpointsSource? _serializableBreakpointsHolder = null;
+    private readonly ISerializableBreakpointsSource _serializableBreakpointsHolder;
     private readonly string _programHash;
 
-    public EmulatorBreakpointsSerializer(Configuration configuration, ILoggerService loggerService) {
+    public EmulatorBreakpointsSerializer(Configuration configuration, ILoggerService loggerService,
+        ISerializableBreakpointsSource serializableBreakpointsHolder) {
         _configuration = configuration;
         _loggerService = loggerService;
+        _serializableBreakpointsHolder = serializableBreakpointsHolder;
         _programHash = GetProgramHash(configuration);
     }
 
@@ -35,10 +37,6 @@ public class EmulatorBreakpointsSerializer {
         return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(configuration.Exe)));
     }
 
-    public void SetSerializableBreakpointsHolder(ISerializableBreakpointsSource serializableBreakpointsHolder) {
-        _serializableBreakpointsHolder = serializableBreakpointsHolder;
-    }
-
     public void SaveBreakpoints() {
         string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
         SerializeBreakpoints(Path.Combine(_configuration.RecordedDataDirectory, fileName));
@@ -46,7 +44,7 @@ public class EmulatorBreakpointsSerializer {
 
     private void SerializeBreakpoints(string filePath) {
         try {
-            if (Directory.Exists(Path.GetDirectoryName(filePath)) && _serializableBreakpointsHolder != null) {
+            if (Directory.Exists(Path.GetDirectoryName(filePath))) {
                 SerializableUserBreakpointCollection serializedBreakpoints = _serializableBreakpointsHolder.CreateSerializableBreakpoints();
                 ProgramSerializedBreakpoints programSerializedBreakpoints = new() {
                     ProgramHash = _programHash,
