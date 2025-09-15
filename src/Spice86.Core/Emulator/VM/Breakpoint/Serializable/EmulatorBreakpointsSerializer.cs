@@ -18,7 +18,7 @@ public class EmulatorBreakpointsSerializer {
     private const string BreakpointsFileNameFormat = "Breakpoints_{0}.json";
     private readonly Configuration _configuration;
     private readonly ILoggerService _loggerService;
-    private ISerializableBreakpointsHolder? _serializableBreakpointsHolder = null;
+    private ISerializableBreakpointsSource? _serializableBreakpointsHolder = null;
     private readonly string _programHash;
 
     public EmulatorBreakpointsSerializer(Configuration configuration, ILoggerService loggerService) {
@@ -28,18 +28,14 @@ public class EmulatorBreakpointsSerializer {
     }
 
     private string GetProgramHash(Configuration configuration) {
-        if (configuration.ExpectedChecksumValue != null && configuration.ExpectedChecksumValue.Length > 0) {
-            return ConvertUtils.ByteArrayToHexString(configuration.ExpectedChecksumValue);
-        }
-
-        // If no hash is specified,compute it ourselves
-        if (string.IsNullOrWhiteSpace(configuration.Exe) || !File.Exists(configuration.Exe)) {
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(configuration.Exe);
+        if(!File.Exists(configuration.Exe)) {
             throw new FileNotFoundException(configuration.Exe);
         }
         return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(configuration.Exe)));
     }
 
-    public void AddSerializableBreakpointsHolder(ISerializableBreakpointsHolder serializableBreakpointsHolder) {
+    public void SetSerializableBreakpointsHolder(ISerializableBreakpointsSource serializableBreakpointsHolder) {
         _serializableBreakpointsHolder = serializableBreakpointsHolder;
     }
 
@@ -51,7 +47,7 @@ public class EmulatorBreakpointsSerializer {
     private void SerializeBreakpoints(string filePath) {
         try {
             if (Directory.Exists(Path.GetDirectoryName(filePath)) && _serializableBreakpointsHolder != null) {
-                SerializedBreakpoints serializedBreakpoints = _serializableBreakpointsHolder.CreateSerializableBreakpoints();
+                SerializableUserBreakpointCollection serializedBreakpoints = _serializableBreakpointsHolder.CreateSerializableBreakpoints();
                 ProgramSerializedBreakpoints programSerializedBreakpoints = new() {
                     ProgramHash = _programHash,
                     SerializedBreakpoints = serializedBreakpoints
@@ -71,12 +67,12 @@ public class EmulatorBreakpointsSerializer {
         }
     }
 
-    public SerializedBreakpoints LoadBreakpoints() {
+    public SerializableUserBreakpointCollection LoadBreakpoints() {
         string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
         return DeserializeBreakpoints(Path.Combine(_configuration.RecordedDataDirectory, fileName));
     }
 
-    private SerializedBreakpoints DeserializeBreakpoints(string filePath) {
+    private SerializableUserBreakpointCollection DeserializeBreakpoints(string filePath) {
         if (!File.Exists(filePath) || new FileInfo(filePath).Length == 0) {
             return new();
         }

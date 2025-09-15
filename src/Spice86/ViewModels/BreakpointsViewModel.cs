@@ -18,7 +18,9 @@ using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpointsHolder {
+public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpointsSource {
+    private const string ExecutionBreakpoint = "Execution breakpoint";
+    private const string MemoryRangeBreakpoint = "Memory range breakpoint";
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -235,8 +237,8 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
                 false,
                 () => {
                     PauseAndReportAddress(
-               ExecutionAddressValue);
-                }, "Execution breakpoint");
+                    ExecutionAddressValue);
+                }, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
             if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
@@ -295,7 +297,7 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
             false,
             () => {
                 PauseAndReportAddress(MemoryBreakpointStartAddress);
-            }, "Memory breakpoint");
+            }, MemoryRangeBreakpoint);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -307,7 +309,7 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
             false,
             () => {
                 PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
-            }, "Memory breakpoint");
+            }, MemoryRangeBreakpoint);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -478,29 +480,25 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
     /// Creates a serializable representation of all breakpoints in the class
     /// </summary>
     /// <returns>A SerializedBreakpoints object containing all the internal debugger breakpoints.</returns>
-    public SerializedBreakpoints CreateSerializableBreakpoints() {
-        var serializedBreakpoints = new SerializedBreakpoints {
-            Breakpoints = new List<SerializedBreakpoint>()
+    public SerializableUserBreakpointCollection CreateSerializableBreakpoints() {
+        var serializedBreakpoints = new SerializableUserBreakpointCollection {
+            Breakpoints = new List<SerializableUserBreakpoint>()
         };
 
         foreach (BreakpointViewModel breakpoint in Breakpoints) {
-            SerializedBreakpoint serializedBreakpoint;
+            SerializableUserBreakpoint serializedBreakpoint;
 
             if (breakpoint is BreakpointRangeViewModel rangeBreakpoint) {
-                serializedBreakpoint = new SerializedBreakpointRange {
+                serializedBreakpoint = new SerializableUserBreakpointRange {
                     Trigger = rangeBreakpoint.Address,
                     EndTrigger = rangeBreakpoint.EndTrigger,
                     Type = rangeBreakpoint.Type,
-                    IsRemovedOnTrigger = rangeBreakpoint.IsRemovedOnTrigger,
-                    Comment = rangeBreakpoint.Comment ?? string.Empty,
                     IsEnabled = rangeBreakpoint.IsEnabled
                 };
             } else {
-                serializedBreakpoint = new SerializedBreakpoint {
+                serializedBreakpoint = new SerializableUserBreakpoint {
                     Trigger = breakpoint.Address,
                     Type = breakpoint.Type,
-                    IsRemovedOnTrigger = breakpoint.IsRemovedOnTrigger,
-                    Comment = breakpoint.Comment ?? string.Empty,
                     IsEnabled = breakpoint.IsEnabled
                 };
             }
@@ -511,17 +509,14 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
         return serializedBreakpoints;
     }
 
-    /// <summary>
-    /// Restores breakpoints from saved breakpoint data.
-    /// </summary>
-    /// <param name="breakpointsData">The saved breakpoint data to restore from.</param>
-    public void RestoreBreakpoints(SerializedBreakpoints breakpointsData) {
+    /// <inheritdoc cref="ISerializableBreakpointsSource" />
+    public void RestoreBreakpoints(SerializableUserBreakpointCollection breakpointsData) {
         if (breakpointsData?.Breakpoints == null || breakpointsData.Breakpoints.Count == 0) {
             return;
         }
 
-        foreach (SerializedBreakpoint breakpointData in breakpointsData.Breakpoints) {
-            if (breakpointData is SerializedBreakpointRange rangeData) {
+        foreach (SerializableUserBreakpoint breakpointData in breakpointsData.Breakpoints) {
+            if (breakpointData is SerializableUserBreakpointRange rangeData) {
                 RestoreRangeBreakpoint(rangeData);
             } else {
                 RestoreBreakpoint(breakpointData);
@@ -529,7 +524,7 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
         }
     }
 
-    private void RestoreBreakpoint(SerializedBreakpoint breakpointData) {
+    private void RestoreBreakpoint(SerializableUserBreakpoint breakpointData) {
         Action onReached = () => { };
 
         switch (breakpointData.Type) {
@@ -557,16 +552,16 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
         BreakpointViewModel breakpointVm = AddAddressBreakpoint(
             breakpointData.Trigger,
             breakpointData.Type,
-            breakpointData.IsRemovedOnTrigger,
+            false,
             onReached,
-            breakpointData.Comment);
+            ExecutionBreakpoint);
 
         if (!breakpointData.IsEnabled) {
             breakpointVm.Disable();
         }
     }
 
-    private void RestoreRangeBreakpoint(SerializedBreakpointRange rangeData) {
+    private void RestoreRangeBreakpoint(SerializableUserBreakpointRange rangeData) {
         string startAddressHex = $"0x{rangeData.Trigger:X}";
         string endAddressHex = $"0x{rangeData.EndTrigger:X}";
 
@@ -576,9 +571,9 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
             rangeData.Trigger,
             rangeData.EndTrigger,
             rangeData.Type,
-            rangeData.IsRemovedOnTrigger,
+            false,
             onReached,
-            rangeData.Comment);
+            MemoryRangeBreakpoint);
 
         if (!rangeData.IsEnabled) {
             breakpointVm.Disable();

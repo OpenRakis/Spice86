@@ -519,9 +519,9 @@ public class Spice86DependencyInjection : IDisposable {
             BreakpointsViewModel breakpointsViewModel = new(
                 state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher);
 
-            emulatorBreakpointsSerializer.AddSerializableBreakpointsHolder(breakpointsViewModel);
+            emulatorBreakpointsSerializer.SetSerializableBreakpointsHolder(breakpointsViewModel);
 
-            SerializedBreakpoints serializedBreakpoints = emulatorBreakpointsSerializer.LoadBreakpoints();
+            SerializableUserBreakpointCollection serializedBreakpoints = emulatorBreakpointsSerializer.LoadBreakpoints();
             breakpointsViewModel.RestoreBreakpoints(serializedBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
