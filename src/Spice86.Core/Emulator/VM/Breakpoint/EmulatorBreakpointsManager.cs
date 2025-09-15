@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// A class for managing breakpoints in the emulator.

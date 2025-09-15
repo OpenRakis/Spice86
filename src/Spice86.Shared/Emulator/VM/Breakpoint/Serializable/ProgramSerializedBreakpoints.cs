@@ -10,12 +10,7 @@ public record ProgramSerializedBreakpoints {
     public required string ProgramHash { get; init; }
 
     /// <summary>
-    /// Gets the format version.
-    /// </summary>
-    public int Version { get; init; } = 1;
-
-    /// <summary>
     /// Gets all the breakpoints that are present in the internal Spice86 debugger, serialized when Spice86 exits.
     /// </summary>
-    public required SerializedBreakpoints SerializedBreakpoints { get; init; }
+    public required SerializableUserBreakpointCollection SerializedBreakpoints { get; init; }
 }
