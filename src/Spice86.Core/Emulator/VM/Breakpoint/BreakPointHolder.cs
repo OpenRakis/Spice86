@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using System.Linq;
+
 /// <summary>
 /// Holds breakpoints and triggers them when certain conditions are met.
 /// </summary>
@@ -12,6 +14,12 @@ public class BreakPointHolder {
     /// Gets a value indicating whether this BreakPointHolder is empty.
     /// </summary>
     public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
+
+    /// <summary>
+    /// Gets all the breakpoints in the holder.
+    /// </summary>
+    public IEnumerable<BreakPoint> Breakpoints => _addressBreakPoints.Values
+        .SelectMany(list => list).Concat(_unconditionalBreakPoints);
 
     /// <summary>
     /// Toggles the specified breakpoint on or off.
