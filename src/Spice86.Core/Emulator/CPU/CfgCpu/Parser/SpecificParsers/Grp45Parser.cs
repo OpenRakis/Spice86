@@ -18,7 +18,7 @@ public class Grp45Parser : BaseGrpOperationParser {
                 // Callback, emulator specific instruction FE38 like in dosbox,
                 // to allow interrupts to be overridden by the program
                 7 => new Grp4Callback(context.Address, context.OpcodeField, context.Prefixes, modRmContext,
-                    _instructionReader.UInt8.NextField(true)),
+                    _instructionReader.UInt16.NextField(true)),
                 _ => throw new InvalidGroupIndexException(_state, groupIndex)
             };
         }

@@ -10,7 +10,7 @@ using System;
 public class Callback : ICallback {
     private readonly Action _runnable;
     /// <inheritdoc/>
-    public byte Index { get; }
+    public ushort Index { get; }
     /// <inheritdoc />
     public SegmentedAddress InstructionAddress { get; }
 
@@ -20,7 +20,7 @@ public class Callback : ICallback {
     /// <param name="index">The callback number.</param>
     /// <param name="runnable">The code the callback will run.</param>
     /// <param name="instructionAddress">Physical address of the callback instruction.</param>
-    public Callback(byte index, Action runnable, SegmentedAddress instructionAddress) {
+    public Callback(ushort index, Action runnable, SegmentedAddress instructionAddress) {
         Index = index;
         _runnable = runnable;
         InstructionAddress = instructionAddress;

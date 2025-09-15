@@ -12,7 +12,7 @@ public interface ICallback : IRunnable {
     /// <summary>
     /// Defines the callback number. For example, 0x2F for DOS Interrupt Handler 2F implementation.
     /// </summary>
-    public byte Index { get; }
+    public ushort Index { get; }
 
     /// <summary>
     /// Invoked when interruptions are invoked by machine code overrides. See <see cref="CSharpOverrideHelper"/>

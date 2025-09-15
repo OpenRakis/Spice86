@@ -9,13 +9,13 @@ using Spice86.Shared.Emulator.Memory;
 
 public class Grp4Callback : InstructionWithModRm {
     public Grp4Callback(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
-        ModRmContext modRmContext, InstructionField<byte> callbackNumber) : base(address, opcodeField, prefixes,
+        ModRmContext modRmContext, InstructionField<ushort> callbackNumber) : base(address, opcodeField, prefixes,
         modRmContext, null) {
         CallbackNumber = callbackNumber;
         AddField(callbackNumber);
     }
 
-    public InstructionField<byte> CallbackNumber { get; }
+    public InstructionField<ushort> CallbackNumber { get; }
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);

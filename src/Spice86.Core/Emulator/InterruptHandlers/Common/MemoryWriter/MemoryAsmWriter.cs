@@ -35,10 +35,10 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteCallback(callback.Index);
     }
 
-    private void WriteCallback(byte callbackNumber) {
+    private void WriteCallback(ushort callbackNumber) {
         WriteUInt8(0xFE);
         WriteUInt8(0x38);
-        WriteUInt8(callbackNumber);
+        WriteUInt16(callbackNumber);
     }
 
 
@@ -46,8 +46,14 @@ public class MemoryAsmWriter : MemoryWriter {
     /// Erases a callback instruction at current address and replaces it with an INT + a NOP. Useful to dump memory and avoid unsupported opcodes in ghidra.
     /// </summary>
     /// <param name="callbackNumber">Used to write an INT instruction to memory, followed by the callback number.</param>
-    public void EraseCallbackWithInt(byte callbackNumber) {
-        this.WriteInt(callbackNumber);
+    public void EraseCallbackWithInt(ushort callbackNumber) {
+        if (callbackNumber < 0x100) {
+            this.WriteInt((byte)callbackNumber);
+        } else {
+            // signal this was a callback that has no conventional int representation
+            this.WriteInt(0xFF);
+        }
+        this.WriteNop();
         this.WriteNop();
     }
 

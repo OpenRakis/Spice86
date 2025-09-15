@@ -409,7 +409,7 @@ public class Instructions8 : Instructions {
             case 7:
                 // Callback, emulator specific instruction FE38 like in dosbox,
                 // to allow interrupts to be overridden by the program
-                Cpu.Callback(Cpu.NextUint8());
+                Cpu.Callback(Cpu.NextUint16());
                 break;
             default:
                 throw new InvalidGroupIndexException(State, groupIndex);
