@@ -101,6 +101,7 @@ public class DosPathResolverTest {
     [InlineData("MYTEST.TXT", "MY*.T*", true)]
     [InlineData("MYTEST.TXT", "MY*.TXT", true)]
     [InlineData("MYTEST.TXT", "MY*.TET", false)]
+    [InlineData("MYTEST.TXT", ".TXT", true)]
     public void DosWildcard_Spec_Cases(string file, string pattern, bool expected) {
         DoCmp(file, pattern).Should().Be(expected,
             $"file '{file}' should {(expected ? "" : "NOT ")}match '{pattern}' per DOS 8.3 wildcard rules");
