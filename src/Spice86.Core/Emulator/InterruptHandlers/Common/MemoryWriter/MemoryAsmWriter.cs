@@ -22,14 +22,25 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Registers a new callback that will call the given runnable: <br/>
-    ///  - Callback will know its physical address in memory <br/>
-    ///  - Callback will be registered in the callback handler <br/>
-    ///  - Callback instruction referring this callback will be written as ASM
+    /// Registers a new callback that will call the given runnable with the manually defined callback number.<br/>
     /// </summary>
-    /// <param name="callbackNumber">Callback index</param>
+    /// <param name="callbackNumber">Callback index. For manually defined callbacks, cannot exceed 0xFF</param>
     /// <param name="runnable">Action to run when this callback is executed by the CPU</param>
     public void RegisterAndWriteCallback(byte callbackNumber, Action runnable) {
+        RegisterAndWriteCallback((ushort)callbackNumber, runnable);
+    }
+    
+    /// <summary>
+    /// Registers a new callback that will call the given runnable.<br/>
+    /// Callback number is automatically allocated.
+    /// </summary>
+    /// <param name="runnable"></param>
+    public void RegisterAndWriteCallback(Action runnable) {
+        ushort callbackNumber = _callbackHandler.AllocateNextCallback();
+        RegisterAndWriteCallback(callbackNumber, runnable);
+    }
+    
+    private void RegisterAndWriteCallback(ushort callbackNumber, Action runnable) {
         Callback callback = new Callback(callbackNumber, runnable, CurrentAddress);
         _callbackHandler.AddCallback(callback);
         WriteCallback(callback.Index);
@@ -73,9 +84,24 @@ public class MemoryAsmWriter : MemoryWriter {
         WriteUInt8(vectorNumber);
     }
 
-    public void WriteJumpNear(ushort offset) {
+    public void WriteJumpNear(short offset) {
         WriteUInt8(0xE9);
-        WriteUInt16(offset);
+        WriteInt16(offset);
+    }
+
+    public void WriteJumpShort(sbyte offset) {
+        WriteUInt8(0xEB);
+        WriteInt8(offset);
+    }
+
+    public void WriteJz(sbyte delta) {
+        WriteUInt8(0x74);
+        WriteInt8(delta);
+    }
+
+    public void WriteJnz(sbyte delta) {
+        WriteUInt8(0x75);
+        WriteInt8(delta);
     }
 
     /// <summary>

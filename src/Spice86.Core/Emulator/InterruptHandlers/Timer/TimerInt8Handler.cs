@@ -30,7 +30,7 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         // Call user timer hook
         memoryAsmWriter.WriteInt(0x1C);
         // EOI to PIC after handler execution
-        memoryAsmWriter.RegisterAndWriteCallback(0x99, AfterInt8Execution);
+        memoryAsmWriter.RegisterAndWriteCallback(AfterInt8Execution);
         memoryAsmWriter.WriteIret();
 
         return interruptHandlerAddress;
