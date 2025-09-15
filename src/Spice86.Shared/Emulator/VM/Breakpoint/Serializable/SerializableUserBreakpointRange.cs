@@ -2,7 +2,7 @@
 /// <summary>
 /// Class for serializing memory range breakpoints
 /// </summary>
-public record SerializedBreakpointRange : SerializedBreakpoint {
+public record SerializableUserBreakpointRange : SerializableUserBreakpoint {
     /// <summary>
     /// Gets the end trigger value for the range breakpoint.
     /// </summary>
