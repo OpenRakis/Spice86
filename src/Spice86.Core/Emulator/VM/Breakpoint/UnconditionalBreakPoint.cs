@@ -14,7 +14,9 @@ public class UnconditionalBreakPoint : BreakPoint {
     /// <param name="breakPointType">The type of the breakpoint.</param>
     /// <param name="onReached">The action to perform when the breakpoint is reached.</param>
     /// <param name="removeOnTrigger">A value indicating whether to remove the breakpoint after it has been triggered.</param>
-    public UnconditionalBreakPoint(BreakPointType breakPointType, Action<BreakPoint> onReached, bool removeOnTrigger) : base(breakPointType, onReached, removeOnTrigger) {
+    public UnconditionalBreakPoint(BreakPointType breakPointType,
+        Action<BreakPoint> onReached, bool removeOnTrigger)
+        : base(breakPointType, onReached, removeOnTrigger) {
     }
 
     /// <summary>

@@ -8,9 +8,9 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class BreakpointViewModel : ViewModelBase {
-    private readonly Action _onReached;
+    protected readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private BreakPoint? _breakPoint;
+    protected BreakPoint? _breakPoint;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -33,7 +33,6 @@ public partial class BreakpointViewModel : ViewModelBase {
             _onReached = onReached;
         }
         Comment = comment;
-        Enable();
         Parameter = $"0x{trigger:X2}";
     }
 
@@ -75,15 +74,9 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
-    private BreakPoint GetOrCreateBreakpoint() {
-        if (_breakPoint == null) {
-            if (this is BreakpointRangeViewModel rangeViewModel) {
-                _breakPoint = new AddressRangeBreakPoint(Type, Address, rangeViewModel.EndTrigger,
-                    _ => _onReached(), IsRemovedOnTrigger);
-            } else {
-                _breakPoint = new AddressBreakPoint(Type, Address, _ => _onReached(), IsRemovedOnTrigger);
-            }
-        }
+    protected virtual BreakPoint GetOrCreateBreakpoint() {
+        _breakPoint ??= new AddressBreakPoint(Type, Address, _ => _onReached(), IsRemovedOnTrigger);
+        _breakPoint.CanBeSerialized = true;
         return _breakPoint;
     }
 

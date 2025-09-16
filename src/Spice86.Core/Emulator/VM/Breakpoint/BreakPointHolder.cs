@@ -21,6 +21,9 @@ public class BreakPointHolder {
     public IEnumerable<BreakPoint> Breakpoints => _addressBreakPoints.Values
         .SelectMany(list => list).Concat(_unconditionalBreakPoints);
 
+    internal IEnumerable<BreakPoint> SerializableBreakpoints => Breakpoints.Where
+        (x => x.CanBeSerialized);
+
     /// <summary>
     /// Toggles the specified breakpoint on or off.
     /// </summary>
@@ -100,16 +103,5 @@ public class BreakPointHolder {
         }
 
         return triggered;
-    }
-
-    /// <summary>
-    /// Triggers all breakpoints that match the specified address range.
-    /// </summary>
-    /// <param name="startAddress">The start address of the range.</param>
-    /// <param name="endAddress">The end address of the range. Not included in range.</param>
-    public void TriggerBreakPointsWithAddressRange(long startAddress, long endAddress) {
-        for (long address = startAddress; address < endAddress; address++) {
-            TriggerMatchingBreakPoints(address);
-        }
     }
 }

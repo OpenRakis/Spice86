@@ -25,6 +25,11 @@ public abstract class BreakPoint {
     public Action<BreakPoint> OnReached { get; private set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this breakpoint can be saved/restored to/from a file.
+    /// </summary>
+    public bool CanBeSerialized { get; set; }
+
+    /// <summary>
     /// The type of the breakpoint.
     /// </summary>
     public BreakPointType BreakPointType { get; private set; }

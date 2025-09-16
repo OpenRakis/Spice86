@@ -16,4 +16,11 @@ public partial class BreakpointRangeViewModel : BreakpointViewModel {
     }
 
     public long EndTrigger { get; }
+
+    protected override BreakPoint GetOrCreateBreakpoint() {
+        _breakPoint ??= new AddressRangeBreakPoint(Type, Address, EndTrigger, 
+            _ => _onReached(), IsRemovedOnTrigger);
+        _breakPoint.CanBeSerialized = true;
+        return _breakPoint;
+    }
 }

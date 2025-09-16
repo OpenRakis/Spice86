@@ -37,16 +37,15 @@ public class EmulatorStateSerializer {
     /// <summary>
     /// Dumps the emulator state to the specified directory.
     /// </summary>
-    public void SerializeEmulatorStateToDirectory(string path) {
+    public void SerializeEmulatorStateToDirectory(string dirPath) {
         new RecordedDataWriter(
                 _state,
                 _executionDumpFactory,
                 _memoryDataExporter,
                 _functionCatalogue,
-                path, 
+                dirPath, 
                 _loggerService)
             .DumpAll();
-            
-        _emulatorBreakpointsSerializer.SaveBreakpoints();
+        _emulatorBreakpointsSerializer.SaveBreakpoints(dirPath);
     }
 }

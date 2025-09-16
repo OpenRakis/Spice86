@@ -16,42 +16,43 @@ using System.Security.Cryptography;
 /// </summary>
 public class EmulatorBreakpointsSerializer {
     private const string BreakpointsFileNameFormat = "Breakpoints_{0}.json";
-    private readonly Configuration _configuration;
     private readonly ILoggerService _loggerService;
-    private readonly ISerializableBreakpointsSource _serializableBreakpointsHolder;
+    private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly string _programHash;
 
     public EmulatorBreakpointsSerializer(Configuration configuration, ILoggerService loggerService,
-        ISerializableBreakpointsSource serializableBreakpointsHolder) {
-        _configuration = configuration;
+        ISerializableBreakpointsSource serializableBreakpointsSource) {
         _loggerService = loggerService;
-        _serializableBreakpointsHolder = serializableBreakpointsHolder;
+        _serializableBreakpointsSource = serializableBreakpointsSource;
         _programHash = GetProgramHash(configuration);
     }
 
     private string GetProgramHash(Configuration configuration) {
-        ArgumentNullException.ThrowIfNullOrWhiteSpace(configuration.Exe);
+        ArgumentException.ThrowIfNullOrWhiteSpace(configuration.Exe);
         if(!File.Exists(configuration.Exe)) {
             throw new FileNotFoundException(configuration.Exe);
         }
         return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(configuration.Exe)));
     }
 
-    public void SaveBreakpoints() {
+    public void SaveBreakpoints(string dirPath) {
         string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
-        SerializeBreakpoints(Path.Combine(_configuration.RecordedDataDirectory, fileName));
+        SerializeBreakpoints(Path.Join(dirPath, fileName));
     }
 
     private void SerializeBreakpoints(string filePath) {
         try {
             if (Directory.Exists(Path.GetDirectoryName(filePath))) {
-                SerializableUserBreakpointCollection serializedBreakpoints = _serializableBreakpointsHolder.CreateSerializableBreakpoints();
+                SerializableUserBreakpointCollection serializedBreakpoints =
+                    _serializableBreakpointsSource.CreateSerializableBreakpoints();
+
                 ProgramSerializedBreakpoints programSerializedBreakpoints = new() {
                     ProgramHash = _programHash,
                     SerializedBreakpoints = serializedBreakpoints
                 };
 
-                string jsonString = JsonSerializer.Serialize(programSerializedBreakpoints, new JsonSerializerOptions { WriteIndented = true });
+                string jsonString = JsonSerializer.Serialize(programSerializedBreakpoints,
+                    new JsonSerializerOptions { WriteIndented = true });
                 using FileStream fileStream = File.Open(filePath, FileMode.Create);
                 fileStream.Write(Encoding.UTF8.GetBytes(jsonString));
 
@@ -65,17 +66,17 @@ public class EmulatorBreakpointsSerializer {
         }
     }
 
-    public SerializableUserBreakpointCollection LoadBreakpoints() {
+    public SerializableUserBreakpointCollection LoadBreakpoints(string dirPath) {
         string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
-        return DeserializeBreakpoints(Path.Combine(_configuration.RecordedDataDirectory, fileName));
+        return DeserializeBreakpoints(Path.Combine(dirPath, fileName));
     }
 
     private SerializableUserBreakpointCollection DeserializeBreakpoints(string filePath) {
-        if (!File.Exists(filePath) || new FileInfo(filePath).Length == 0) {
-            return new();
-        }
-
         try {
+            if (!File.Exists(filePath) || new FileInfo(filePath).Length == 0) {
+                return new();
+            }
+
             string jsonString = File.ReadAllText(filePath);
 
             if (string.IsNullOrWhiteSpace(jsonString)) {
@@ -89,8 +90,10 @@ public class EmulatorBreakpointsSerializer {
             }
 
             if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_programHash)) {
-                _loggerService.Warning("Breakpoints on disk were for program {LoadedHash} but current program is {CurrentHash}",
-                    programSerializedBreakpoints.ProgramHash, _programHash);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                    _loggerService.Error("Breakpoints on disk were for program {LoadedHash} but current program is {CurrentHash}",
+                        programSerializedBreakpoints.ProgramHash, _programHash);
+                }
                 return new();
             }
 
@@ -101,7 +104,9 @@ public class EmulatorBreakpointsSerializer {
 
             return programSerializedBreakpoints.SerializedBreakpoints;
         } catch (Exception ex) {
-            _loggerService.Error(ex, "Failed to load breakpoints from {FilePath}", filePath);
+            if(_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
+                _loggerService.Error(ex, "Failed to load breakpoints from {FilePath}", filePath);
+            }
         }
 
         return new();

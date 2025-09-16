@@ -18,7 +18,9 @@ public class AddressBreakPoint : BreakPoint {
     /// <param name="address">The memory address the breakpoint is triggered on.</param>
     /// <param name="onReached">The action to execute when the breakpoint is triggered.</param>
     /// <param name="isRemovedOnTrigger">A value indicating whether the breakpoint is removed when triggered.</param>
-    public AddressBreakPoint(BreakPointType breakPointType, long address, Action<BreakPoint> onReached, bool isRemovedOnTrigger) : base(breakPointType, onReached, isRemovedOnTrigger) {
+    public AddressBreakPoint(BreakPointType breakPointType, long address,
+        Action<BreakPoint> onReached, bool isRemovedOnTrigger)
+        : base(breakPointType, onReached, isRemovedOnTrigger) {
         Address = address;
     }
 

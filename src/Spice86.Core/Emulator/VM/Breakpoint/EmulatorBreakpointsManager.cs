@@ -5,6 +5,8 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
+using System.Linq;
+
 /// <summary>
 /// A class for managing breakpoints in the emulator.
 /// </summary>
@@ -30,12 +32,15 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
     }
+
     public AddressReadWriteBreakpoints MemoryReadWriteBreakpoints { get; }
+
     public AddressReadWriteBreakpoints IoReadWriteBreakpoints { get; }
+
     public BreakPointHolder InterruptBreakPoints { get; }
 
     /// <summary>
-    /// Called when the machine stops.
+    /// Called when the machine starts.
     /// </summary>
     public void OnMachineStart() {
         WaitSingleBreakpoint(_machineStartBreakPoint);
@@ -122,21 +127,20 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
 
     public SerializableUserBreakpointCollection CreateSerializableBreakpoints() {
         var serializableBreakpoints = new SerializableUserBreakpointCollection();
-        AddBreakpointsToCollection(serializableBreakpoints, _executionBreakPoints);
-        AddBreakpointsToCollection(serializableBreakpoints, InterruptBreakPoints);
-        AddBreakpointsToCollection(serializableBreakpoints, _cycleBreakPoints);
-        AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints.ReadBreakpoints);
-        AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints.WriteBreakpoints);
-        AddBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.ReadBreakpoints);
-        AddBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.WriteBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, _executionBreakPoints.SerializableBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, InterruptBreakPoints.SerializableBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, _cycleBreakPoints.SerializableBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints.SerializableBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.SerializableBreakpoints);
         return serializableBreakpoints;
     }
 
     private static void AddBreakpointsToCollection(SerializableUserBreakpointCollection collection,
-        BreakPointHolder breakPointHolder) {
-        foreach (BreakPoint bp in breakPointHolder.Breakpoints) {
+        IEnumerable<BreakPoint> serializableBreakpoints) {
+        foreach (BreakPoint bp in serializableBreakpoints) {
             SerializableUserBreakpoint? serializableUserBreakpoint = ToSerializable(bp, true);
-            if(serializableUserBreakpoint is not null) {
+            if(serializableUserBreakpoint is not null &&
+                !collection.Breakpoints.Any(x => x == serializableUserBreakpoint)) {
                 collection.Breakpoints.Add(serializableUserBreakpoint);
             }
         }
@@ -177,7 +181,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         if(serializableBreakpoint is SerializableUserBreakpointRange rangeBreakpoint) {
             return new AddressRangeBreakPoint(serializableBreakpoint.Type,
                 rangeBreakpoint.Trigger, rangeBreakpoint.EndTrigger,
-                onReached, isRemovedOnTrigger: false);
+                onReached, removeOnTrigger);
         }
 
         return serializableBreakpoint.Type switch {
