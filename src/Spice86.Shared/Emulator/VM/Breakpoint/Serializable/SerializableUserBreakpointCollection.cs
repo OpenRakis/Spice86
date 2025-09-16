@@ -7,5 +7,5 @@ public record SerializableUserBreakpointCollection {
     /// <summary>
     /// Gets the collection of serialized breakpoints.
     /// </summary>
-    public IList<SerializableUserBreakpoint> Breakpoints { get; init; } = new List<SerializableUserBreakpoint>();
+    public IList<SerializableUserBreakpoint> Breakpoints { get; init; } = [];
 }

@@ -3,8 +3,9 @@
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Base class for serializable breakpoint data crated by the user in the internal Spice86 debugger.
+/// Base class for serializable breakpoint data created by the user in the internal Spice86 debugger.
 /// </summary>
+/// <remarks>Not everything is serialized, this is why this is a different set of classes.</remarks>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(SerializableUserBreakpoint), typeDiscriminator: "breakpoint")]
 [JsonDerivedType(typeof(SerializableUserBreakpointRange), typeDiscriminator: "range")]

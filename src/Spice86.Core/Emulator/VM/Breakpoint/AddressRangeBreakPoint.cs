@@ -7,7 +7,7 @@ using System;
 /// <summary>
 /// Represents a breakpoint that is triggered when the CPU's execution address is within a specified range.
 /// </summary>
-public class AddressRangeBreakPoint : BreakPoint {
+public class AddressRangeBreakPoint : AddressBreakPoint {
     /// <summary>
     /// The start of the address range for the breakpoint.
     /// </summary>
@@ -28,7 +28,7 @@ public class AddressRangeBreakPoint : BreakPoint {
     /// <param name="isRemovedOnTrigger">A value indicating whether the breakpoint should be removed after it is triggered.</param>
     public AddressRangeBreakPoint(BreakPointType breakPointType, long startAddress,
         long endAddress, Action<BreakPoint> onReached, bool isRemovedOnTrigger)
-        : base(breakPointType, onReached, isRemovedOnTrigger) {
+        : base(breakPointType, startAddress, onReached, isRemovedOnTrigger) {
         StartAddress = startAddress;
         EndAddress = endAddress;
     }

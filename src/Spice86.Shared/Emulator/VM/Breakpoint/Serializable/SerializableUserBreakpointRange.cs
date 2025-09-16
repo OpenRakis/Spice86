@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
+
 /// <summary>
 /// Class for serializing memory range breakpoints
 /// </summary>
