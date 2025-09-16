@@ -12,15 +12,15 @@ using System.IO;
 using System.Security.Cryptography;
 
 /// <summary>
-/// Serializes (on startup) and deserialize (on app shutdown) internal debugger breakpoints from disk.
+/// Serializes (on startup) and deserialize (on app shutdown) breakpoints created by the user in the internal Spice86 debugger UI.
 /// </summary>
-public class EmulatorBreakpointsSerializer {
+public class UserBreakpointsSerializer {
     private const string BreakpointsFileNameFormat = "Breakpoints_{0}.json";
     private readonly ILoggerService _loggerService;
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly string _programHash;
 
-    public EmulatorBreakpointsSerializer(Configuration configuration, ILoggerService loggerService,
+    public UserBreakpointsSerializer(Configuration configuration, ILoggerService loggerService,
         ISerializableBreakpointsSource serializableBreakpointsSource) {
         _loggerService = loggerService;
         _serializableBreakpointsSource = serializableBreakpointsSource;
@@ -46,7 +46,7 @@ public class EmulatorBreakpointsSerializer {
                 SerializableUserBreakpointCollection serializedBreakpoints =
                     _serializableBreakpointsSource.CreateSerializableBreakpoints();
 
-                ProgramSerializedBreakpoints programSerializedBreakpoints = new() {
+                ProgramSerializableBreakpoints programSerializedBreakpoints = new() {
                     ProgramHash = _programHash,
                     SerializedBreakpoints = serializedBreakpoints
                 };
@@ -83,7 +83,7 @@ public class EmulatorBreakpointsSerializer {
                 return new();
             }
 
-            ProgramSerializedBreakpoints? programSerializedBreakpoints = JsonSerializer.Deserialize<ProgramSerializedBreakpoints>(jsonString);
+            ProgramSerializableBreakpoints? programSerializedBreakpoints = JsonSerializer.Deserialize<ProgramSerializableBreakpoints>(jsonString);
 
             if (programSerializedBreakpoints == null) {
                 return new();
