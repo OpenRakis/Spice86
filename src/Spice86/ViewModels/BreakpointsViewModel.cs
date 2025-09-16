@@ -458,6 +458,30 @@ public partial class BreakpointsViewModel : ViewModelBase {
         DeleteBreakpoint(SelectedBreakpoint);
     }
 
+    private bool AllBreakpointsCommandCanExecute() => Breakpoints.Any();
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void RemoveAllBreakpoints() {
+        for (int i = 0; i < Breakpoints.Count; i++) {
+            BreakpointViewModel breakpoint = Breakpoints[i];
+            DeleteBreakpoint(breakpoint);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void DisableAllBreakpoints() {
+        foreach (BreakpointViewModel breakpoint in Breakpoints) {
+            breakpoint.Disable();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void EnableAllBreakpoints() {
+        foreach (BreakpointViewModel breakpoint in Breakpoints) {
+            breakpoint.Enable();
+        }
+    }
+
     public void RemoveBreakpointInternal(BreakpointViewModel vm) {
         DeleteBreakpoint(vm);
     }
