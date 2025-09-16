@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using System.Linq;
+
 /// <summary>
 /// Manages breakpoints for read / write access to memory
 /// </summary>
@@ -29,8 +31,8 @@ public class AddressReadWriteBreakpoints {
         }
     }
 
-    internal BreakPointHolder ReadBreakpoints => _readBreakPoints;
-    internal BreakPointHolder WriteBreakpoints => _writeBreakPoints;
+    internal IEnumerable<BreakPoint> SerializableBreakpoints => _readBreakPoints.
+        SerializableBreakpoints.Concat(_writeBreakPoints.SerializableBreakpoints);
 
     /// <summary>
     /// Triggers all the breakpoints matching the specified address, if the memory was read.
@@ -46,24 +48,6 @@ public class AddressReadWriteBreakpoints {
     /// <param name="address">The address to match.</param>
     public void MonitorWriteAccess(uint address) {
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
-    }
-
-    /// <summary>
-    /// Triggers all the read breakpoints matching the specified memory range.
-    /// </summary>
-    /// <param name="startAddress">The start of the range.</param>
-    /// <param name="endAddress">The inclusive end of the range.</param>
-    public void MonitorRangeReadAccess(uint startAddress, uint endAddress) {
-        _readBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
-    }
-
-    /// <summary>
-    /// Triggers all the write breakpoints matching the specified memory range.
-    /// </summary>
-    /// <param name="startAddress">The start of the range.</param>
-    /// <param name="endAddress">The inclusive end of the range.</param>
-    public void MonitorRangeWriteAccess(uint startAddress, uint endAddress) {
-        _writeBreakPoints.TriggerBreakPointsWithAddressRange(startAddress, endAddress);
     }
 
 }

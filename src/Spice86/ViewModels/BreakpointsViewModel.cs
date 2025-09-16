@@ -18,7 +18,7 @@ using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpointsSource {
+public partial class BreakpointsViewModel : ViewModelBase {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -401,12 +401,14 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
             new UnconditionalBreakPoint(
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                 (_) => onReached(),
-                removedOnTrigger), on: true);
+                removedOnTrigger) { CanBeSerialized = true },
+            on: true);
     }
 
     private void AddBreakpointInternal<T>(T breakpointViewModel) where T : BreakpointViewModel {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
+        breakpointViewModel.Enable();
         BreakpointCreated?.Invoke(breakpointViewModel);
     }
 
@@ -476,40 +478,6 @@ public partial class BreakpointsViewModel : ViewModelBase, ISerializableBreakpoi
         return Breakpoints.Where(bp => bp.Address == addressLinear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
     }
 
-    /// <summary>
-    /// Creates a serializable representation of all breakpoints in the class
-    /// </summary>
-    /// <returns>A SerializedBreakpoints object containing all the internal debugger breakpoints.</returns>
-    public SerializableUserBreakpointCollection CreateSerializableBreakpoints() {
-        var serializedBreakpoints = new SerializableUserBreakpointCollection {
-            Breakpoints = new List<SerializableUserBreakpoint>()
-        };
-
-        foreach (BreakpointViewModel breakpoint in Breakpoints) {
-            SerializableUserBreakpoint serializedBreakpoint;
-
-            if (breakpoint is BreakpointRangeViewModel rangeBreakpoint) {
-                serializedBreakpoint = new SerializableUserBreakpointRange {
-                    Trigger = rangeBreakpoint.Address,
-                    EndTrigger = rangeBreakpoint.EndTrigger,
-                    Type = rangeBreakpoint.Type,
-                    IsEnabled = rangeBreakpoint.IsEnabled
-                };
-            } else {
-                serializedBreakpoint = new SerializableUserBreakpoint {
-                    Trigger = breakpoint.Address,
-                    Type = breakpoint.Type,
-                    IsEnabled = breakpoint.IsEnabled
-                };
-            }
-
-            serializedBreakpoints.Breakpoints.Add(serializedBreakpoint);
-        }
-
-        return serializedBreakpoints;
-    }
-
-    /// <inheritdoc cref="ISerializableBreakpointsSource" />
     public void RestoreBreakpoints(SerializableUserBreakpointCollection breakpointsData) {
         if (breakpointsData?.Breakpoints == null || breakpointsData.Breakpoints.Count == 0) {
             return;

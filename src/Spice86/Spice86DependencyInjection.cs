@@ -315,7 +315,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         EmulatorBreakpointsSerializer emulatorBreakpointsSerializer = new(
             configuration, _loggerService, emulatorBreakpointsManager);
-        SerializableUserBreakpointCollection deserializedUserBreakpoints = emulatorBreakpointsSerializer.LoadBreakpoints();
+        SerializableUserBreakpointCollection deserializedUserBreakpoints =
+            emulatorBreakpointsSerializer.LoadBreakpoints(configuration.RecordedDataDirectory);
         emulatorBreakpointsManager.RestoreBreakpoints(deserializedUserBreakpoints);
 
         EmulatorStateSerializer emulatorStateSerializer = new(
