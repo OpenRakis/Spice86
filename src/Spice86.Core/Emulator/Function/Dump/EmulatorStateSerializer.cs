@@ -13,7 +13,7 @@ public class EmulatorStateSerializer {
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
-    private readonly EmulatorBreakpointsSerializer _emulatorBreakpointsSerializer;
+    private readonly UserBreakpointsSerializer _userBreakpointsSerializer;
     
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
@@ -22,7 +22,7 @@ public class EmulatorStateSerializer {
         MemoryDataExporter memoryDataExporter, 
         State state,
         IExecutionDumpFactory executionDumpFactory,
-        EmulatorBreakpointsSerializer emulatorBreakpointsSerializer,
+        UserBreakpointsSerializer userBreakpointsSerializer,
         FunctionCatalogue functionCatalogue, 
         ILoggerService loggerService) {
         
@@ -31,7 +31,7 @@ public class EmulatorStateSerializer {
         _executionDumpFactory = executionDumpFactory;
         _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
-        _emulatorBreakpointsSerializer = emulatorBreakpointsSerializer;
+        _userBreakpointsSerializer = userBreakpointsSerializer;
     }
     
     /// <summary>
@@ -46,6 +46,6 @@ public class EmulatorStateSerializer {
                 dirPath, 
                 _loggerService)
             .DumpAll();
-        _emulatorBreakpointsSerializer.SaveBreakpoints(dirPath);
+        _userBreakpointsSerializer.SaveBreakpoints(dirPath);
     }
 }
