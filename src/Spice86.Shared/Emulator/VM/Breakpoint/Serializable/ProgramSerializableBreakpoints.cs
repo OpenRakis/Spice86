@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents a collection of breakpoints associated with a specific program, identified by its SHA256 hash.
 /// </summary>
-public record ProgramSerializedBreakpoints {
+public record ProgramSerializableBreakpoints {
     /// <summary>
     /// Gets the SHA256 hash of the program these breakpoints belong to.
     /// </summary>
