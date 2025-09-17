@@ -851,7 +851,7 @@ public class DosProcessManager : DosFileLoader {
                 length--;
             }
 
-            psp.DosCommandTail.Length = length;
+            psp.DosCommandTail.Length = (byte)(length + 1);
             psp.DosCommandTail.Command = command;
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
