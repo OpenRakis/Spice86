@@ -521,7 +521,7 @@ public class Spice86DependencyInjection : IDisposable {
 
             SoftwareMixerViewModel softwareMixerViewModel = new(softwareMixer);
 
-            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState);
+            VideoCardViewModel videoCardViewModel = new(vgaRenderer, videoState, hostStorageProvider);
 
             CpuViewModel cpuViewModel = new(state, memory, pauseHandler, uiDispatcher);
 
