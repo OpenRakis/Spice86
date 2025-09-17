@@ -4,16 +4,16 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.5" />
-    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.5" />
+    <PackageVersion Include="Avalonia" Version="11.3.6" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="11.3.6" />
     <PackageVersion Include="Avalonia.Controls.TreeDataGrid" Version="11.1.1" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.3.5" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.3" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.5" />
-    <PackageVersion Include="Avalonia.Headless" Version="11.3.5" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.3.6" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.6" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.6" />
+    <PackageVersion Include="Avalonia.Headless" Version="11.3.6" />
     <PackageVersion Include="AvaloniaGraphControl" Version="0.6.1" />
     <PackageVersion Include="AvaloniaHex" Version="0.1.8" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.2" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.3" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="11.3.3.2" />
     <PackageVersion Include="bodong.PropertyModels" Version="11.3.3.2" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
@@ -30,7 +30,7 @@
     <PackageVersion Include="MeltySynth" Version="2.4.1" />
     <PackageVersion Include="Morris.Moxy" Version="1.10" />
     <PackageVersion Include="Mt32emu.net" Version="1.0.0-rc.1" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="PanAndZoom" Version="11.3.0.5" />
