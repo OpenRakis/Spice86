@@ -68,7 +68,7 @@ public class UserBreakpointsSerializer {
 
     public SerializableUserBreakpointCollection LoadBreakpoints(string dirPath) {
         string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
-        return DeserializeBreakpoints(Path.Combine(dirPath, fileName));
+        return DeserializeBreakpoints(Path.Join(dirPath, fileName));
     }
 
     private SerializableUserBreakpointCollection DeserializeBreakpoints(string filePath) {
