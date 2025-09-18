@@ -34,7 +34,7 @@ public class XmsUnitTests
     public XmsUnitTests()
     {
         // Setup memory and state
-        _state = new State();
+        _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
         _loggerService = Substitute.For<ILoggerService>();
@@ -142,8 +142,7 @@ public class XmsUnitTests
     [Fact]
     public void A20AlreadyEnabledAtStartup_ShouldPreventDisabling() {
         // Arrange - Create a new XMS manager with A20 already enabled
-        var ram = new Ram(16384 * 1024);
-        var state = new State();
+        var state = new State(CpuModel.INTEL_80286);
         var a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
         var memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate);
         var loggerService = Substitute.For<ILoggerService>();

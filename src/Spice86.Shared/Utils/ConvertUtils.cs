@@ -236,6 +236,9 @@ public static partial class ConvertUtils {
         return $"{ToHex16(ToAbsoluteSegment(physical))}:{ToHex16(ToAbsoluteOffset(physical))}";
     }
 
+    public static string ToBin32(uint value) {
+        return $"0b{value:B}";
+    }
     /// <summary>
     /// Converts a 16-bit unsigned integer to a binary string representation.
     /// </summary>

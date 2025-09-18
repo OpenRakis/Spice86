@@ -96,7 +96,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Execution flow recorder created...");
         }
 
-        State state = new();
+        State state = new(configuration.CpuModel);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("State created...");

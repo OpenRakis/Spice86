@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.Memory;
 public class ModRmHelper {
     public Memory Memory { get; private set; } = new(new(), new Ram(64), new());
     public InstructionFieldValueRetriever InstructionFieldValueRetriever { get; private set; }
-    public State State { get; private set; } = new();
+    public State State { get; private set; } = new(CpuModel.INTEL_80286);
 
     public ModRmHelper() {
         InstructionFieldValueRetriever = new(Memory);
@@ -19,7 +19,7 @@ public class ModRmHelper {
     private void Init() {
         Memory = new(new(), new Ram(64), new A20Gate());
         InstructionFieldValueRetriever = new(Memory);
-        State = new();
+        State = new(CpuModel.INTEL_80286);
     }
 
     public byte GenerateModRm(int mod, int reg, int rm) {

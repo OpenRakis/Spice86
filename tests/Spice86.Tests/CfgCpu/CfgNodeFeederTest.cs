@@ -32,13 +32,13 @@ public class CfgNodeFeederTest {
     private static readonly SegmentedAddress EndOfMov0Address = new(0, MovRegImm16Length);
 
     private Memory _memory = new(new(), new Ram(64), new A20Gate());
-    private State _state = new();
+    private State _state = new(CpuModel.INTEL_80286);
 
     private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), _state);
         _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
-        _state = new State();
+        _state = new State(CpuModel.INTEL_80286);
         FunctionHandler functionHandler = new(_memory, _state, null, new(), false, loggerService);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, new());
         ExecutionContext executionContext = new ExecutionContext(SegmentedAddress.ZERO, 0, functionHandler);

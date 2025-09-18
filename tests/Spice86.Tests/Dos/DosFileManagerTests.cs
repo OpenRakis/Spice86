@@ -103,7 +103,7 @@ public class DosFileManagerTests {
 
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
-        State state = new();
+        State state = new(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
         IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);

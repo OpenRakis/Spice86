@@ -29,7 +29,7 @@ public class InstructionsFeederTest {
 
     private InstructionsFeeder CreateInstructionsFeeder() {
         ILoggerService loggerService = Substitute.For<LoggerService>();
-        State state = new();
+        State state = new(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), state);
         _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
         _instructionReplacer = new();
