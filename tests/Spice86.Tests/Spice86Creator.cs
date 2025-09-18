@@ -1,6 +1,7 @@
 namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -46,7 +47,7 @@ public class Spice86Creator {
 
     public Spice86DependencyInjection Create() {
         Spice86DependencyInjection res = new(_configuration);
-        res.Machine.CpuState.Flags.IsDOSBoxCompatible = false;
+        res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
             (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);

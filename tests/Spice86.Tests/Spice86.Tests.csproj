@@ -48,4 +48,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\SingleStepTests\" />
+  </ItemGroup>
 </Project>
