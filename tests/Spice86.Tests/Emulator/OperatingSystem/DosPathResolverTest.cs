@@ -8,10 +8,10 @@ using Spice86.Core.Emulator.OperatingSystem;
 
 using Xunit;
 
-[TestSubject(typeof(DosPathResolver))]
+[TestSubject(typeof(HostFolderFileSystemResolver))]
 public class DosPathResolverTest {
     private static bool DoCmp(string file, string pattern) {
-        return DosPathResolver.WildFileCmp(file, pattern);
+        return HostFolderFileSystemResolver.WildFileCmp(file, pattern);
     }
 
     [Theory]

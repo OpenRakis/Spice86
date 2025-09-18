@@ -5,8 +5,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.IO;
-
 /// <summary>
 /// Base class for loading executable files in the VM like exe, bios, ...
 /// </summary>
@@ -43,17 +41,17 @@ public abstract class ExecutableFileLoader {
     /// <summary>
     /// Loads an executable file and returns its bytes.
     /// </summary>
-    /// <param name="file">The path of the file to load.</param>
+    /// <param name="filePath">The absolute path to the executable file.</param>
     /// <param name="arguments">Optional arguments to pass to the loaded file.</param>
     /// <returns>The bytes of the loaded file.</returns>
-    public abstract byte[] LoadFile(string file, string? arguments);
+    public abstract byte[] LoadFile(string filePath, string? arguments);
 
     /// <summary>
     /// Reads the contents of a file and returns its bytes.
     /// </summary>
     /// <param name="file">The path of the file to read.</param>
     /// <returns>The bytes of the read file.</returns>
-    protected byte[] ReadFile(string file) {
+    protected virtual byte[] ReadFile(string file) {
         return File.ReadAllBytes(file);
     }
 
