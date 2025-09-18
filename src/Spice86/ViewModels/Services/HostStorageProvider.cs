@@ -77,6 +77,24 @@ public class HostStorageProvider : IHostStorageProvider {
         }
     }
 
+    public async Task SaveVideoCardInfoFile(string videoCardInfoJson) {
+        if (CanSave && CanPickFolder) {
+            FilePickerSaveOptions options = new() {
+                Title = "Save video card info...",
+                SuggestedFileName = "VideoCardInfo.json",
+                DefaultExtension = "json",
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
+            };
+            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+                options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
+            }
+            string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(file)) {
+                await File.WriteAllTextAsync(file, videoCardInfoJson);
+            }
+        }
+    }
+
     public async Task DumpEmulatorStateToFile() {
         if (CanSave && CanPickFolder) {
             FolderPickerOpenOptions options = new() {
@@ -164,4 +182,11 @@ public interface IHostStorageProvider {
     /// <param name="bytes">The binary content of the file.</param>
     /// <returns>The operation as an awaitable Task.</returns>
     Task SaveBinaryFile(byte[] bytes);
+
+    /// <summary>
+    /// Spawns the file picker to save the video card information to a file.
+    /// </summary>
+    /// <param name="videoCardInfoJson">The serialized video card information in JSON format.</param>
+    /// <returns>The operation as an awaitable Task.</returns>
+    Task SaveVideoCardInfoFile(string videoCardInfoJson);
 }
