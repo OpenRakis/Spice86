@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -15,7 +15,7 @@ public sealed class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
-    private readonly EmulatorEventClock _eventClock;
+    private readonly State _cpuState;
 
     // Internal keyboard scancode buffer - mirrors DOSBox implementation
     private const int BufferSize = 8; // in scancodes
@@ -27,11 +27,11 @@ public sealed class PS2Keyboard {
     // Key repetition mechanism data - mirrors DOSBox struct
     private struct RepeatData {
         public KbdKey Key;      // key which went typematic
-        public uint Wait;       // countdown timer
-        public uint Pause;      // initial delay
-        public uint Rate;       // repeat rate
+        public long Wait;       // countdown timer in CPU cycles
+        public long Pause;      // initial delay in CPU cycles
+        public long Rate;       // repeat rate in CPU cycles
     }
-    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 500, Rate = 33 };
+    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 500000, Rate = 33000 }; // Default values in cycles
 
     // Set3-specific code info - mirrors DOSBox Set3CodeInfoEntry
     private class Set3CodeInfoEntry {
@@ -45,6 +45,8 @@ public sealed class PS2Keyboard {
     private byte _ledState = 0;
     // If true, all LEDs are on due to keyboard reset
     private bool _ledsAllOn = false;
+    // LED timeout tracking in CPU cycles
+    private long _ledTimeoutCycles = 0;
     // If false, keyboard does not push keycodes to the controller
     private bool _isScanning = true;
 
@@ -53,26 +55,25 @@ public sealed class PS2Keyboard {
     // Command currently being executed, waiting for parameter
     private KeyboardCommand _currentCommand = KeyboardCommand.None;
 
-    // If enabled, all keyboard events are dropped until secure mode is enabled
-    // NOTE: We skip secure mode implementation as requested
-    // private bool _shouldWaitForSecureMode = false;
+    // CPU cycles conversion constants (approximate)
+    private const long CyclesPerMs = 1000; // Approximate cycles per millisecond for timing conversion
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
     /// </summary>
     /// <param name="controller">The keyboard controller.</param>
-    /// <param name="eventClock">The emulator event clock.</param>
+    /// <param name="cpuState">The CPU state for cycle-based timing.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="guiKeyboardEvents">Optional GUI keyboard events interface.</param>
-    public PS2Keyboard(Intel8042Controller controller, EmulatorEventClock eventClock,
+    public PS2Keyboard(Intel8042Controller controller, State cpuState,
         ILoggerService loggerService, IGuiKeyboardEvents? guiKeyboardEvents = null) {
         _controller = controller;
-        _eventClock = eventClock;
+        _cpuState = cpuState;
         _loggerService = loggerService;
 
         // Initialize buffer array
         for (int i = 0; i < BufferSize; i++) {
-            _buffer[i] = new List<byte>();
+            _buffer[i] = [];
         }
 
         // Initialize keyboard state with startup flag
@@ -115,6 +116,12 @@ public sealed class PS2Keyboard {
             return;
         }
 
+        // Check for typematic repeat on buffer transfer (keyboard read)
+        ProcessTypematic();
+
+        // Check for LED timeout on buffer transfer (keyboard read)
+        ProcessLedTimeout();
+
         _controller.AddKbdFrame(_buffer[_bufferStartIdx]);
 
         --_bufferNumUsed;
@@ -152,9 +159,9 @@ public sealed class PS2Keyboard {
             // Key is excluded from being repeated
         } else if (isPressed) {
             if (_repeat.Key == keyType) {
-                _repeat.Wait = _repeat.Rate;
+                _repeat.Wait = _cpuState.Cycles + _repeat.Rate;
             } else {
-                _repeat.Wait = _repeat.Pause;
+                _repeat.Wait = _cpuState.Cycles + _repeat.Pause;
             }
             _repeat.Key = keyType;
         } else if (_repeat.Key == keyType) {
@@ -180,28 +187,25 @@ public sealed class PS2Keyboard {
         TypematicUpdate(keyType, isPressed);
     }
 
-    private void TypematicTick() {
-        // Update countdown, check if we should try to add key press
-        if (_repeat.Wait > 0) {
-            if (--_repeat.Wait > 0) {
-                return;
-            }
-        }
-
+    private void ProcessTypematic() {
         // No typematic key = nothing to do
         if (_repeat.Key == KbdKey.None) {
             return;
         }
 
-        // Check if buffers are free
-        if (_bufferNumUsed > 0 || !_controller.IsReadyForKbdFrame()) {
-            _repeat.Wait = 1;
-            return;
-        }
+        // Check if we should try to add key press
+        if (_repeat.Wait > 0 && _cpuState.Cycles >= _repeat.Wait) {
+            // Check if buffers are free
+            if (_bufferNumUsed > 0 || !_controller.IsReadyForKbdFrame()) {
+                _repeat.Wait = _cpuState.Cycles + CyclesPerMs; // Try again in ~1ms worth of cycles
+                return;
+            }
 
-        // Simulate key press
-        const bool isPressed = true;
-        AddKey(_repeat.Key, isPressed);
+            // Simulate key press
+            const bool isPressed = true;
+            AddKey(_repeat.Key, isPressed);
+            _repeat.Wait = _cpuState.Cycles + _repeat.Rate; // Set for next repeat
+        }
     }
 
     // ***************************************************************************
@@ -220,8 +224,15 @@ public sealed class PS2Keyboard {
         }
     }
 
-    private void LedsAllOnExpireHandler() {
+    private void ProcessLedTimeout() {
+        if (_ledsAllOn && _ledTimeoutCycles > 0 && _cpuState.Cycles >= _ledTimeoutCycles) {
+            LedsAllOnExpire();
+        }
+    }
+
+    private void LedsAllOnExpire() {
         _ledsAllOn = false;
+        _ledTimeoutCycles = 0;
         MaybeNotifyLedState();
     }
 
@@ -252,15 +263,13 @@ public sealed class PS2Keyboard {
     }
 
     private void SetTypeRate(byte value) {
-        // clang-format off
-        uint[] pauseTable = { 250, 500, 750, 1000 };
-        uint[] rateTable = {
-             33,  37,  42,  46,  50,  54,  58,  63,
-             67,  75,  83,  92, 100, 109, 118, 125,
-            133, 149, 167, 182, 200, 217, 233, 250,
-            270, 303, 333, 370, 400, 435, 476, 500
+        long[] pauseTable = { 250 * CyclesPerMs, 500 * CyclesPerMs, 750 * CyclesPerMs, 1000 * CyclesPerMs };
+        long[] rateTable = {
+             33 * CyclesPerMs,  37 * CyclesPerMs,  42 * CyclesPerMs,  46 * CyclesPerMs,  50 * CyclesPerMs,  54 * CyclesPerMs,  58 * CyclesPerMs,  63 * CyclesPerMs,
+             67 * CyclesPerMs,  75 * CyclesPerMs,  83 * CyclesPerMs,  92 * CyclesPerMs, 100 * CyclesPerMs, 109 * CyclesPerMs, 118 * CyclesPerMs, 125 * CyclesPerMs,
+            133 * CyclesPerMs, 149 * CyclesPerMs, 167 * CyclesPerMs, 182 * CyclesPerMs, 200 * CyclesPerMs, 217 * CyclesPerMs, 233 * CyclesPerMs, 250 * CyclesPerMs,
+            270 * CyclesPerMs, 303 * CyclesPerMs, 333 * CyclesPerMs, 370 * CyclesPerMs, 400 * CyclesPerMs, 435 * CyclesPerMs, 476 * CyclesPerMs, 500 * CyclesPerMs
         };
-        // clang-format on
 
         int pauseIdx = (value & 0b0110_0000) >> 5;
         int rateIdx = (value & 0b0001_1111);
@@ -271,8 +280,8 @@ public sealed class PS2Keyboard {
 
     private void SetDefaults() {
         _repeat.Key = KbdKey.None;
-        _repeat.Pause = 500;
-        _repeat.Rate = 33;
+        _repeat.Pause = 500 * CyclesPerMs;
+        _repeat.Rate = 33 * CyclesPerMs;
         _repeat.Wait = 0;
 
         foreach (var entry in _set3CodeInfo.Values) {
@@ -291,15 +300,11 @@ public sealed class PS2Keyboard {
         _isScanning = true;
 
         // Flash all the LEDs
-        _eventClock.RemoveEvent("KeyboardLEDsOff");
+        _ledTimeoutCycles = 0;
         _ledState = 0;
         _ledsAllOn = !isStartup;
         if (_ledsAllOn) {
-            // To commemorate how evil the whole keyboard
-            // subsystem is, let's set blink expiration
-            // time to 666 milliseconds
-            const double expireTimeMs = 666.0;
-            _eventClock.AddEvent(LedsAllOnExpireHandler, expireTimeMs, "KeyboardLEDsOff");
+            _ledTimeoutCycles = _cpuState.Cycles + (666 * CyclesPerMs);
         }
         MaybeNotifyLedState();
     }
@@ -606,9 +611,6 @@ public sealed class PS2Keyboard {
     /// Initializes the keyboard component.
     /// </summary>
     public void Initialize() {
-        // Add typematic tick handler to event clock
-        _eventClock.AddEvent(TypematicTick, 10, "KeyboardTypematic");
-
         const bool isStartup = true;
         KeyboardReset(isStartup);
         SetCodeSet(1);

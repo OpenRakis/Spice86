@@ -88,15 +88,15 @@ public class KeyboardScancodeConverter {
     /// </summary>
     public List<byte> GetScancodes(KbdKey keyType, bool isPressed, byte codeSet) {
         if (keyType == KbdKey.None) {
-            return new List<byte>();
+            return [];
         }
 
-        switch(codeSet) {
-            case 1: return GetScanCode1(keyType, isPressed);
-            case 2: return GetScanCode2(keyType, isPressed);
-            case 3: return GetScanCode3(keyType, isPressed);
-            default: return GetScanCode1(keyType, isPressed); // Default to set 1
-        }
+        return codeSet switch {
+            1 => GetScanCode1(keyType, isPressed),
+            2 => GetScanCode2(keyType, isPressed),
+            3 => GetScanCode3(keyType, isPressed),
+            _ => GetScanCode1(keyType, isPressed),// Default to set 1
+        };
     }
 
     public List<byte> GetScanCode1(KbdKey keyType, bool isPressed) {
@@ -227,26 +227,26 @@ public class KeyboardScancodeConverter {
             case KbdKey.Pause:
                 if (isPressed) {
                     // Pause key gets released as soon as it is pressed
-                    return new List<byte> { 
+                    return [ 
                         0xE1, 0x1D, 0x45, 0xE1, 
                         (byte)(0x1D | 0x80), (byte)(0x45 | 0x80) 
-                    };
+                    ];
                 }
-                return new List<byte>();
+                return [];
                 
             case KbdKey.PrintScreen:
-                return new List<byte> {
+                return [
                     0xE0,
                     (byte)(0x2A | (isPressed ? 0 : 0x80)),
                     0xE0,
                     (byte)(0x37 | (isPressed ? 0 : 0x80))
-                };
+                ];
                 
             default:
-                return new List<byte>();
+                return [];
         }
         
-        List<byte> result = new List<byte>();
+        List<byte> result = [];
         
         if (extend) {
             result.Add(0xE0);

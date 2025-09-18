@@ -12,7 +12,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
 /// Used by the emulation loop thread to avoid the UI thread modifying keyboard state via events,
-/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042PS2KeyboardMouseController"/> class. <br/>
+/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
 /// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
 /// </summary>
 /// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 

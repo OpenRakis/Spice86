@@ -366,8 +366,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Intel8042Controller keyboard = new(
             state, ioPortDispatcher, a20Gate, dualPic,
-            emulationLoop.EmulatorEventClock, loggerService,
-            configuration.FailOnUnhandledPort, inputEventQueue);
+            loggerService, configuration.FailOnUnhandledPort, inputEventQueue);
 
         
 
