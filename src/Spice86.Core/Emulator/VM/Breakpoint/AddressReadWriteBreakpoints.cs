@@ -31,7 +31,7 @@ public class AddressReadWriteBreakpoints {
         }
     }
 
-    internal IEnumerable<BreakPoint> SerializableBreakpoints => _readBreakPoints.
+    internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => _readBreakPoints.
         SerializableBreakpoints.Concat(_writeBreakPoints.SerializableBreakpoints);
 
     /// <summary>
