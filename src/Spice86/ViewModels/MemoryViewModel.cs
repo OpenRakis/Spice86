@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.ViewModels.Messages;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
@@ -19,6 +18,7 @@ using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System.Text;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IMemory _memory;
