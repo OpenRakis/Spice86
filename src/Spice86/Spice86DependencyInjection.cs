@@ -41,7 +41,6 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Core.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -313,20 +312,15 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory data exporter created...");
         }
 
-        UserBreakpointsSerializer userBreakpointsSerializer = new(
-            configuration, _loggerService, emulatorBreakpointsManager);
+       
+        EmulatorStateSerializer emulatorStateSerializer = new(configuration,
+            memoryDataExporter, state, executionDumpFactory, functionCatalogue,
+            emulatorBreakpointsManager, loggerService);
+
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
-            userBreakpointsSerializer.LoadBreakpoints(configuration.RecordedDataDirectory);
+              emulatorStateSerializer.LoadBreakpoints(configuration.RecordedDataDirectory);
         emulatorBreakpointsManager.RestoreBreakpoints(deserializedUserBreakpoints);
-
-        EmulatorStateSerializer emulatorStateSerializer = new(
-            memoryDataExporter,
-            state,
-            executionDumpFactory,
-            userBreakpointsSerializer,
-            functionCatalogue,
-            loggerService);
-
+      
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
         EmulationLoop emulationLoop = new(configuration, functionHandler,
