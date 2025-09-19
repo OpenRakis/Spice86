@@ -74,31 +74,41 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
-    internal BreakPoint GetOrCreateBreakpoint() {
-        _breakPoint ??= new AddressBreakPoint(Type, Address, _ => _onReached(), IsRemovedOnTrigger);
+    private BreakPoint GetOrCreateBreakpoint() {
+        _breakPoint ??= CreateBreakpointWithAddress(Address);
         _breakPoint.CanBeSerialized = true;
         return _breakPoint;
     }
 
-    [RelayCommand]
-    public void Enable() {
-        if (IsEnabled) {
-            return;
-        }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
-            on: true);
-        _isEnabled = true;
-        OnPropertyChanged(nameof(IsEnabled));
+    protected AddressBreakPoint CreateBreakpointWithAddress(long address) {
+        return new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger);
     }
 
     [RelayCommand]
-    public void Disable() {
+    public virtual void Enable() {
+        if (IsEnabled) {
+            return;
+        }
+        EnableInternal(GetOrCreateBreakpoint());
+        OnPropertyChanged(nameof(IsEnabled));
+    }
+
+    protected void EnableInternal(BreakPoint breakpoint) {
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: true);
+        _isEnabled = true;
+    }
+
+    protected void DisableInternal(BreakPoint breakpoint) {
+        _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: false);
+        _isEnabled = false;
+    }
+
+    [RelayCommand]
+    public virtual void Disable() {
         if (!IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
-            on: false);
-        _isEnabled = false;
+        DisableInternal(GetOrCreateBreakpoint());
         OnPropertyChanged(nameof(IsEnabled));
     }
 }

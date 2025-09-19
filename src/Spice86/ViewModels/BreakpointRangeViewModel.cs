@@ -16,4 +16,22 @@ public partial class BreakpointRangeViewModel : BreakpointViewModel {
     }
 
     public long EndTrigger { get; }
+
+    public override void Disable() {
+        if(!IsEnabled) {
+            return;
+        }
+        for(long i = Address; i < EndTrigger; i++) {
+            DisableInternal(CreateBreakpointWithAddress(i));
+        }
+    }
+
+    public override void Enable() {
+        if(IsEnabled) {
+            return;
+        }
+        for (long i = Address; i < EndTrigger; i++) {
+            EnableInternal(CreateBreakpointWithAddress(i));
+        }
+    }
 }
