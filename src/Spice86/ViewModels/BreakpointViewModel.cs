@@ -74,7 +74,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     [ObservableProperty]
     private string? _comment;
 
-    protected virtual BreakPoint GetOrCreateBreakpoint() {
+    internal BreakPoint GetOrCreateBreakpoint() {
         _breakPoint ??= new AddressBreakPoint(Type, Address, _ => _onReached(), IsRemovedOnTrigger);
         _breakPoint.CanBeSerialized = true;
         return _breakPoint;

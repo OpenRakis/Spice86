@@ -21,8 +21,8 @@ public class BreakPointHolder {
     public IEnumerable<BreakPoint> Breakpoints => _addressBreakPoints.Values
         .SelectMany(list => list).Concat(_unconditionalBreakPoints);
 
-    internal IEnumerable<BreakPoint> SerializableBreakpoints => Breakpoints.Where
-        (x => x.CanBeSerialized);
+    internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => Breakpoints.Where
+        (x => x.CanBeSerialized).OfType<AddressBreakPoint>();
 
     /// <summary>
     /// Toggles the specified breakpoint on or off.
