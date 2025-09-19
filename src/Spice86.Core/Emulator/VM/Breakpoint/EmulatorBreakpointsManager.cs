@@ -136,8 +136,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     }
 
     private static void AddBreakpointsToCollection(SerializableUserBreakpointCollection collection,
-        IEnumerable<BreakPoint> serializableBreakpoints) {
-        foreach (BreakPoint bp in serializableBreakpoints) {
+        IEnumerable<AddressBreakPoint> serializableBreakpoints) {
+        foreach (AddressBreakPoint bp in serializableBreakpoints) {
             SerializableUserBreakpoint? serializableUserBreakpoint = ToSerializable(bp, true);
             if(serializableUserBreakpoint is not null &&
                 !collection.Breakpoints.Any(x => x == serializableUserBreakpoint)) {
@@ -146,51 +146,48 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-    private static SerializableUserBreakpoint? ToSerializable(BreakPoint breakpoint, bool isEnabled) {
-        if (breakpoint is AddressRangeBreakPoint addressRangeBreakPoint) {
-            return new SerializableUserBreakpointRange {
-                Trigger = addressRangeBreakPoint.StartAddress,
-                EndTrigger = addressRangeBreakPoint.EndAddress,
-                Type = addressRangeBreakPoint.BreakPointType,
-                IsEnabled = isEnabled
-            };
-        }
-        if (breakpoint is AddressBreakPoint addressBreakPoint) {
-            return new SerializableUserBreakpoint {
-                Trigger = addressBreakPoint.Address,
-                Type = addressBreakPoint.BreakPointType,
-                IsEnabled = isEnabled
-            };
-        }
-        return null;
+    private static SerializableUserBreakpoint? ToSerializable(AddressBreakPoint breakpoint, bool isEnabled) {
+        return new SerializableUserBreakpoint {
+            Trigger = breakpoint.Address,
+            Type = breakpoint.BreakPointType,
+            IsEnabled = isEnabled
+        };
     }
 
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
         foreach (SerializableUserBreakpoint serializableBreakpoint in serializableUserBreakpointCollection.Breakpoints) {
-            BreakPoint? breakPoint = FromSerializable(serializableBreakpoint);
-            if(breakPoint is not null) {
-                ToggleBreakPoint(breakPoint, true);
+            IEnumerable<AddressBreakPoint> breakpoints = FromSerializedBreakpoints(serializableBreakpoint);
+            foreach (AddressBreakPoint breakpoint in breakpoints) {
+                ToggleBreakPoint(breakpoint, true);
             }
         }
     }
 
-    private BreakPoint? FromSerializable(SerializableUserBreakpoint serializableBreakpoint) {
+    private IEnumerable<AddressBreakPoint> FromSerializedBreakpoints(SerializableUserBreakpoint serializableBreakpoint) {
         Action<BreakPoint> onReached = b => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
         bool removeOnTrigger = false;
 
-        if(serializableBreakpoint is SerializableUserBreakpointRange rangeBreakpoint) {
-            return new AddressRangeBreakPoint(serializableBreakpoint.Type,
-                rangeBreakpoint.Trigger, rangeBreakpoint.EndTrigger,
-                onReached, removeOnTrigger);
+        if (serializableBreakpoint is SerializableUserBreakpointRange rangeBreakpoint) {
+            for (long i = rangeBreakpoint.Trigger; i < rangeBreakpoint.EndTrigger; i++) {
+                yield return FromSerializable(serializableBreakpoint, onReached, removeOnTrigger);
+            }
         }
 
+        yield return FromSerializable(serializableBreakpoint, onReached, removeOnTrigger);
+    }
+
+    private static AddressBreakPoint FromSerializable(
+        SerializableUserBreakpoint serializableBreakpoint,
+        Action<BreakPoint> onReached, bool removeOnTrigger) {
         return serializableBreakpoint.Type switch {
-            BreakPointType.CPU_EXECUTION_ADDRESS or BreakPointType.CPU_INTERRUPT or
-            BreakPointType.CPU_CYCLES or BreakPointType.MEMORY_READ or
-            BreakPointType.MEMORY_WRITE or BreakPointType.IO_READ or BreakPointType.IO_WRITE
+            BreakPointType.CPU_EXECUTION_ADDRESS or BreakPointType.CPU_INTERRUPT or BreakPointType.CPU_CYCLES or
+            BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE or
+            BreakPointType.IO_ACCESS or BreakPointType.IO_READ or BreakPointType.IO_WRITE
                 => new AddressBreakPoint(serializableBreakpoint.Type,
                     serializableBreakpoint.Trigger, onReached, removeOnTrigger),
-            _ => null
+            BreakPointType.MACHINE_START => throw new NotSupportedException("Emulator start/stop breakpoints don't need to be serialized"),
+            BreakPointType.MACHINE_STOP => throw new NotSupportedException("Machine breakpoint are not serialized"),
+            _ => throw new NotImplementedException("Cannot deserialize unrecognized BreakpointType"),
         };
     }
 }
