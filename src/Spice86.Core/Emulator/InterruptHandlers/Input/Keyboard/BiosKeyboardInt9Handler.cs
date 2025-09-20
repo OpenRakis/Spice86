@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -17,9 +17,9 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Intel8042Controller _keyboard;
+    private readonly SystemBiosInt15Handler _systemBiosInt15Handler;
     private static readonly SegmentedAddress CallbackLocation = new(0xf000, 0xe987);
     private readonly DualPic _dualPic;
-    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Initializes a new instance.
@@ -29,25 +29,26 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="dualPic">The interrupt controller, used to eventually acknowledge IRQ1 hardware interrupt.</param>
+    /// <param name="systemBiosInt15Handler">INT15H BIOS handler used for the keyboard intercept function.</param>
     /// <param name="keyboard">The keyboard device for direct port access.</param>
     /// <param name="biosKeyboardBuffer">The structure in emulated memory this interrupt handler writes to.</param>
-    /// <param name="emulationLoopRecall">The class used to call the INT15H AH=4F interrupt for keyboard intercept.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public BiosKeyboardInt9Handler(IMemory memory, Stack stack, State state,
         IFunctionHandlerProvider functionHandlerProvider, DualPic dualPic,
-        Intel8042Controller keyboard, BiosKeyboardBuffer biosKeyboardBuffer,
-        EmulationLoopRecall emulationLoopRecall, ILoggerService loggerService)
+        SystemBiosInt15Handler systemBiosInt15Handler, Intel8042Controller keyboard,
+        BiosKeyboardBuffer biosKeyboardBuffer, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         BiosKeyboardBuffer = biosKeyboardBuffer;
+        _systemBiosInt15Handler = systemBiosInt15Handler;
         _keyboard = keyboard;
         _dualPic = dualPic;
-        _emulationLoopRecall = emulationLoopRecall;
     }
 
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         SegmentedAddress savedAddress = memoryAsmWriter.CurrentAddress;
         memoryAsmWriter.CurrentAddress = CallbackLocation;
-        base.WriteAssemblyInRam(memoryAsmWriter);
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.WriteIret();
         memoryAsmWriter.CurrentAddress = savedAddress;
         return CallbackLocation;
     }
@@ -62,55 +63,34 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        // This method is called when IRQ1 fires from hardware
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
-        byte scanCode = _keyboard.ReadByte(KeyboardPorts.Data);
+        byte scancode = _keyboard.ReadByte(KeyboardPorts.Data);
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnablePortKbd);
-
-        // Process through INT15H AH=4F for keyboard intercept
-        byte savedAl = State.AL;
-        State.AL = scanCode;
-        bool savedCarryFlag = State.CarryFlag;
-        byte savedAh = State.AH;
-        
-        State.AH = 0x4F;
-        _emulationLoopRecall.RunInterrupt(0x15);
-        bool shouldBeProcessed = State.CarryFlag;
-        byte finalScanCode = State.AL;
-        
-        State.AH = savedAh;
-        State.AL = savedAl;
-        State.CarryFlag = savedCarryFlag;
-
-        if(!shouldBeProcessed) {
-            return;
-        }
+        _systemBiosInt15Handler.KeyboardIntercept(calledFromVm: true);
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 9 processing scan code: 0x{ScanCode:X2}", finalScanCode);
+            LoggerService.Verbose("INT 9 processing scan code: 0x{ScanCode:X2}", scancode);
         }
 
-        // Get keyboard flags from BIOS data area
         byte flags1 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag;
         byte flags2 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag2;
         byte flags3 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag3;
         byte leds = BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus;
-        
-        // Process scancode like DOSBox's IRQ1_Handler
-        ProcessScancode(finalScanCode, ref flags1, ref flags2, ref flags3, ref leds);
-        
-        // Update BIOS data area with new flag states
+
+        ProcessScancode(scancode, ref flags1, ref flags2, ref flags3, ref leds);
+
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag = flags1;
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag2 = flags2;
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag3 = flags3;
         BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus = leds;
-        
+
+        // PIC EOI
         _dualPic.AcknowledgeInterrupt(1);
     }
 
     private void ProcessScancode(byte scanCode, ref byte flags1, ref byte flags2, ref byte flags3, ref byte leds) {
         KeyboardScancodeConverter converter = new KeyboardScancodeConverter();
-        
+
         // Implementation matching DOSBox's IRQ1_Handler
         switch (scanCode) {
             case 0xFA: // Acknowledge
@@ -156,7 +136,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
             case 0xB8: // Alt Released
                 if ((flags3 & 0x02) != 0) flags3 = (byte)(flags3 & ~0x08); // Right Alt
                 else flags2 = (byte)(flags2 & ~0x02); // Left Alt
-                
+
                 if (((flags3 & 0x08) == 0) && ((flags2 & 0x02) == 0)) {
                     flags1 = (byte)(flags1 & ~0x08);
                     // Handle Alt+Numpad key combinations
@@ -204,15 +184,22 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     break;
                 }
                 goto default;
-                
+
             // Keypad handling
-            case 0x47: case 0x48: case 0x49:
-            case 0x4B: case 0x4C: case 0x4D:
-            case 0x4F: case 0x50: case 0x51:
-            case 0x52: case 0x53:
+            case 0x47:
+            case 0x48:
+            case 0x49:
+            case 0x4B:
+            case 0x4C:
+            case 0x4D:
+            case 0x4F:
+            case 0x50:
+            case 0x51:
+            case 0x52:
+            case 0x53:
                 if ((flags3 & 0x02) != 0) { // Extended key
                     if (scanCode == 0x52) flags2 |= 0x80; // press insert
-                    
+
                     ushort code = 0;
                     if ((flags1 & 0x08) != 0) { // Alt
                         // Alt+Arrow/etc
@@ -228,7 +215,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                         // Normal extended key
                         code = (ushort)(((converter.GetAsciiCode(scanCode, flags1) & 0xFF00)) | 0xE0);
                     }
-                    
+
                     BiosKeyboardBuffer.EnqueueKeyCode(code);
                 } else {
                     // Regular keypad key
@@ -253,14 +240,14 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     }
                 }
                 break;
-                
+
             default:
                 // Normal key handling
                 if ((scanCode & 0x80) != 0) {
                     // Key release - just update flags
                     break;
                 }
-                
+
                 // Get appropriate ASCII/scancode combination
                 byte ascii = converter.GetAsciiCode(scanCode, flags1);
                 ushort keyCode = (ushort)((scanCode << 8) | ascii);

@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -162,17 +163,21 @@ public class DosFileManagerTests {
         
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 
+        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(configuration, memory,
+            functionHandlerProvider, stack, state, a20Gate, configuration.InitializeDOS is not false, loggerService);
+
         EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
             interruptVectorTable, state, stack, emulationLoop);
 
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
             new BiosKeyboardInt9Handler(memory, stack, state,
             functionHandlerProvider, dualPic,
-            keyboard, biosKeyboardBuffer, emulationLoopRecall, loggerService);
+            systemBiosInt15Handler, keyboard,
+            biosKeyboardBuffer, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+            biosKeyboardBuffer, emulationLoopRecall);
 
         var clock = new Clock(loggerService);
 

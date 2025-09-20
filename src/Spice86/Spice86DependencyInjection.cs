@@ -364,7 +364,7 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorBreakpointsManager, dmaController,
             pauseHandler, cyclesLimiter, inputEventQueue, loggerService);
 
-        Intel8042Controller keyboard = new(
+        Intel8042Controller ps2Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
             loggerService, configuration.FailOnUnhandledPort, inputEventQueue);
 
@@ -386,8 +386,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
-            state, functionHandlerProvider, dualPic, keyboard, biosKeyboardBuffer,
-            emulationLoopRecall, loggerService);
+            state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
+            ps2Controller, biosKeyboardBuffer, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
@@ -483,7 +483,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardInt9Handler,
             callbackHandler, cpu,
             cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, keyboard, keyboardInt16Handler,
+            joystick, ps2Controller, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler,
