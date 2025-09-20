@@ -7,9 +7,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -18,7 +16,6 @@ using Spice86.Shared.Interfaces;
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Intel8042Controller _keyboard;
     private readonly SystemBiosInt15Handler _systemBiosInt15Handler;
-    private static readonly SegmentedAddress CallbackLocation = new(0xf000, 0xe987);
     private readonly DualPic _dualPic;
 
     /// <summary>
@@ -42,15 +39,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         _systemBiosInt15Handler = systemBiosInt15Handler;
         _keyboard = keyboard;
         _dualPic = dualPic;
-    }
-
-    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        SegmentedAddress savedAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.CurrentAddress = CallbackLocation;
-        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
-        memoryAsmWriter.WriteIret();
-        memoryAsmWriter.CurrentAddress = savedAddress;
-        return CallbackLocation;
     }
 
     /// <summary>
