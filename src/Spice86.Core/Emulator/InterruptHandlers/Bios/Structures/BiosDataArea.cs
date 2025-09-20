@@ -13,6 +13,9 @@ using Spice86.Shared.Utils;
 /// </summary>
 public sealed class BiosDataArea : MemoryBasedDataStructure
 {
+    public const byte KeyboardBufferHeadIndex = 0x1A;
+    public const byte KeyboardBufferTailIndex = 0x1C;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -74,12 +77,12 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// <summary>
     /// Gets or sets the keyboard buffer head.
     /// </summary>
-    public ushort KbdBufHead { get => UInt16[0x1A]; set => UInt16[0x1A] = value; }
+    public ushort KbdBufHead { get => UInt16[KeyboardBufferHeadIndex]; set => UInt16[KeyboardBufferHeadIndex] = value; }
 
     /// <summary>
     /// Gets or sets the keyboard buffer tail.
     /// </summary>
-    public ushort KbdBufTail { get => UInt16[0x1C]; set => UInt16[0x1C] = value; }
+    public ushort KbdBufTail { get => UInt16[KeyboardBufferTailIndex]; set => UInt16[KeyboardBufferTailIndex] = value; }
 
     /// <summary>
     /// Gets the keyboard buffer.
@@ -321,7 +324,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// </summary>
     public byte RtcWaitFlag { get => UInt8[0xA0]; set => UInt8[0xA0] = value; }
 
-    // 7 btyes of padding at 0xA1
+    // 7 bytes of padding at 0xA1
 
     /// <summary>
     /// Gets or sets the video save table. <br/>

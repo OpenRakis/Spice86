@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -157,16 +158,14 @@ public class DosFileManagerTests {
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
 
-        EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
-            interruptVectorTable, state, stack, emulationLoop);
-
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+        biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         var clock = new Clock(loggerService);
 
-        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
+        Dos dos = new Dos(configuration, memory, new(memory, SegmentedAddress.ZERO, callbackHandler),
+            functionHandlerProvider, stack, state,
             biosKeyboardBuffer, keyboardInt16Handler, biosDataArea,
             vgaFunctionality, new Dictionary<string, string> { { "BLASTER", soundBlaster.BlasterString } },
             clock, loggerService);

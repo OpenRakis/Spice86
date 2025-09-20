@@ -1,9 +1,12 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
+
+using System;
 
 /// <summary>
 /// Writes x86 ASM instructions to Memory bus
@@ -142,5 +145,68 @@ public class MemoryAsmWriter : MemoryWriter {
     /// </summary>
     public void WriteFarRet() {
         WriteUInt8(0xCB);
+    }
+
+    /// <summary>
+    /// Writes a PUSH of a 16-bit register to memory.
+    /// </summary>
+    public void WritePush(SegmentRegisterIndex index) {
+        // PUSH reg: 0x50 + reg index
+        WriteUInt8((byte)(0x50 + (byte)index));
+    }
+
+    /// <summary>
+    /// Writes a POP of a 16-bit register to memory.
+    /// </summary>
+    public void WritePop(SegmentRegisterIndex index) {
+        // POP reg: 0x58 + reg index
+        WriteUInt8((byte)(0x58 + (byte)index));
+    }
+
+    /// <summary>
+    /// Writes MOV AX, imm16 to memory.
+    /// </summary>
+    public void WriteMovAx(ushort imm16) {
+        WriteUInt8(0xB8); // MOV AX, imm16
+        WriteUInt16(imm16);
+    }
+
+    /// <summary>
+    /// Writes MOV DS, AX to memory.
+    /// </summary>
+    public void WriteMovDsAx() {
+        WriteUInt8(0x8E); // MOV Sreg, r/m16
+        WriteUInt8(0xD8); // DS <- AX
+    }
+
+    /// <summary>
+    /// Writes MOV AX, [mem16] (DS:imm16) to memory.
+    /// </summary>
+    public void WriteMemoryAddressToAx(ushort mem16) {
+        WriteUInt8(0xA1); // MOV AX, moffs16
+        WriteUInt16(mem16);
+    }
+
+    /// <summary>
+    /// Writes CMP AX, [mem16] (DS:imm16) to memory.
+    /// </summary>
+    public void WriteCmpAxToMemoryAddress(ushort mem16) {
+        WriteUInt8(0x3B); // CMP r16, r/m16
+        WriteUInt8(0x06); // ModRM: r16=AX, r/m16=[imm16]
+        WriteUInt16(mem16);
+    }
+
+    /// <summary>
+    /// Writes a STI instruction
+    /// </summary>
+    internal void WriteSti() {
+        WriteUInt8(0xFB);
+    }
+
+    /// <summary>
+    /// Writes a CLI instruction
+    /// </summary>
+    internal void WriteCli() {
+        WriteUInt8(0xFA);
     }
 }

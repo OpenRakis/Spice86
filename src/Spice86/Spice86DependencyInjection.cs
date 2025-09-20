@@ -370,11 +370,9 @@ public class Spice86DependencyInjection : IDisposable {
         MouseDriver mouseDriver = new(state, memory, mouse, _gui,
             vgaFunctionality, loggerService);
 
-        EmulationLoopRecall emulationLoopRecall = new(interruptVectorTable,
-            state, stack, emulationLoop);
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+            biosKeyboardInt9Handler.BiosKeyboardBuffer);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -429,7 +427,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         var dosClock = new Clock(loggerService);
-        Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack,
+        Dos dos = new Dos(configuration, memory, memoryAsmWriter,
+            functionHandlerProvider, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {

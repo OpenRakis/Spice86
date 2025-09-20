@@ -5,7 +5,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -14,12 +13,11 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics.CodeAnalysis;
 
 /// <summary>
-/// The keyboard controller interrupt (INT16H)
+/// BIOS keyboard services interrupt (INT 16h).
 /// </summary>
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
-    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Initializes a new instance.
@@ -31,13 +29,10 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    /// <param name="emulationLoopRecall">Class used to wait for keyboard input from hardware interrupt 0x9 (IRQ1)</param>
     public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer,
-        EmulationLoopRecall emulationLoopRecall)
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _emulationLoopRecall = emulationLoopRecall;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x01, () => GetKeystrokeStatus(true));
@@ -60,80 +55,92 @@ public class KeyboardInt16Handler : InterruptHandler {
     public override byte VectorNumber => 0x16;
 
     /// <summary>
-    ///     Emits a minimal INT 16h handler stub into guest RAM that handles AH=00h (GetKeystroke) in-place
-    ///     and dispatches all other AH values back to the C# handler via a callback.
+    /// Emits a minimal INT 16h handler stub into guest RAM.
     /// </summary>
     /// <remarks><![CDATA[
-    ///     Assembled control flow (labels for readability):
-    ///     L_HANDLER:
+    /// Handles AH=00h (Get Keystroke) locally with a busy-wait loop driven by a callback that sets ZF,
+    /// and dispatches all other AH values back to the C# handler.
+    /// 
+    /// Pseudo-assembly (labels for readability):
+    /// 
+    ///   L_HANDLER:
     ///     cmp ah, 00h
     ///     jz  L_AH00
     /// 
-    ///     L_DEFAULT:
-    ///     int 0A4h   ; DefaultDispatch -> calls C# Run()
+    ///   L_DEFAULT:
+    ///     int cbDefaultDispatch   ; calls C# Run() to handle AH != 00h
     ///     iret
     /// 
-    ///     L_AH00:
-    ///     int 0A0h   ; CallbackHasKey -> sets ZF=0 if a key is present
-    ///     jnz have_key
-    ///     int 09h    ; invoke hardware keyboard ISR (IRQ1) to fetch a key
-    ///     jmp short L_AH00
-    /// 
-    ///     have_key:
-    ///     int 0A1h   ; CallbackDequeueAndSetAx -> AX = (scan<<8 | ascii)
+    ///   L_AH00:
+    ///   L_WAIT:
+    ///     int cbGetKeystrokeStatus ; sets AX and ZF
+    ///     jz  L_WAIT               ; ZF=1 => no key available, keep spinning with IF enabled
+    ///     cli
+    ///     int cbDequeueAndSetAx    ; AX = (scan<<8 | ascii), consumes the key
+    ///     sti
     ///     iret
     /// 
-    ///     Callback vector mapping:
-    ///     - 0xA0 => CallbackHasKey
-    ///     - 0xA1 => CallbackDequeueAndSetAx
-    ///     - 0xA4 => Run (default C# dispatcher for unsupported AH values)
-    ///     Notes:
-    ///     - The short jumps are encoded to skip over the DefaultDispatch+IRET and to loop back while waiting.
-    ///     - This keeps the common AH=00h path fast in RAM while preserving behavior for other functions.
+    /// Notes:
+    /// - Interrupts remain enabled during the wait loop so IRQ1 can populate the BIOS buffer.
+    /// - A short JZ right after the CMP skips exactly the default-dispatch INT+IRET sequence.
     /// ]]></remarks>
     /// <param name="memoryAsmWriter">Helper used to write machine code and callbacks into guest memory.</param>
     /// <returns>The segment:offset address where the handler stub was emitted.</returns>
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        // Only AH=00 (GetKeystroke) is implemented in the in-RAM handler.
-        // All other AH values jump to the default C# dispatcher via callback.
-
         SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
+
+        // Ensure IF is set on entry (like PC XT BIOS does)
+        memoryAsmWriter.WriteSti();
 
         // CMP AH, 00
         memoryAsmWriter.WriteUInt8(0x80);
         memoryAsmWriter.WriteUInt8(0xFC);
         memoryAsmWriter.WriteUInt8(0x00);
-        // JZ L_AH00 (+0x05 to skip the default callback and IRET)
-        memoryAsmWriter.WriteJz(4 + 1);
+        // JZ L_AH00 (+3 to skip: INT <cb>, IRET)
+        memoryAsmWriter.WriteJz(3);
 
-        // L_DEFAULT: callback DefaultDispatch then IRET
+        // L_DEFAULT: callback DefaultDispatch, then IRET
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
         memoryAsmWriter.WriteIret();
 
-        // L_AH00:
-        // callback HasKey (sets ZF=0 when key present)
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackHasKey);
-        // JNZ have_key (+0x04 to skip INT 09h and the backward jump)
-        memoryAsmWriter.WriteJnz(4);
-        // INT 09h
-        memoryAsmWriter.WriteInt(0x09);
-        // JMP short back to L_AH00 (-0x10)
-        memoryAsmWriter.WriteJumpShort(-10);
-        // have_key: dequeue and set AX, then IRET
+        // L_AH00: Busy-wait using GetKeystrokeStatus callback (sets AX and ZF)
+        SegmentedAddress ah00Address = memoryAsmWriter.CurrentAddress;
+
+        // Call C# status: ZF=1 if empty (AX=0), ZF=0 and AX=key if pending (non-destructive)
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackGetKeystrokeStatus);
+
+        // If key is available (ZF=0), skip the back-jump; else loop
+        memoryAsmWriter.WriteJnz(2);
+
+        // JMP short L_AH00
+        sbyte offset = (sbyte)(ah00Address.Offset - (memoryAsmWriter.CurrentAddress.Offset + 2));
+        memoryAsmWriter.WriteJumpShort(offset);
+
+        // Key is available: dequeue atomically and return
+        memoryAsmWriter.WriteCli();
         memoryAsmWriter.RegisterAndWriteCallback(CallbackDequeueAndSetAx);
+        memoryAsmWriter.WriteSti();
         memoryAsmWriter.WriteIret();
 
         return handlerAddress;
     }
 
-    // Callbacks used by the in-memory INT 16h stub
-    private void CallbackHasKey() {
-        // ZF = 1 when empty, 0 when a key is available
-        SetZeroFlag(_biosKeyboardBuffer.IsEmpty, false);
+    /// <summary>
+    /// Callback invoked by the ASM stub to query the keystroke status.
+    /// Sets ZF and AX like BIOS INT 16h AH=01h (non-destructive read).
+    /// </summary>
+    private void CallbackGetKeystrokeStatus() {
+        // Called from ASM callback
+        GetKeystrokeStatus(false);
     }
 
+    /// <summary>
+    /// Callback invoked by the ASM stub to dequeue the pending key
+    /// and place it in AX (AH=scan code, AL=ASCII or 0 for extended).
+    /// </summary>
     private void CallbackDequeueAndSetAx() {
         if (!TryGetPendingKeyCode(out ushort? keyCode)) {
+            // This should not happen if the ASM part is correct
             return;
         }
 
@@ -142,24 +149,23 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns in the AX register the pending key code.
+    /// Returns the pending key code. For use by C# overrides of machine code.
+    /// Not for the Spice86 emulator.
     /// </summary>
-    /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
-    public void GetKeystroke() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("READ KEY STROKE");
-        }
+    /// <remarks>high byte is the scan code, low byte is the ASCII character code</remarks>
+    public ushort GetKeystroke() {
         if (TryGetPendingKeyCode(out ushort? keyCode)) {
             _biosKeyboardBuffer.DequeueKeyCode();
-            State.AX = keyCode.Value;
+            return keyCode.Value;
         } else {
-            while (_biosKeyboardBuffer.IsEmpty) {
-                //Wait for hardware interrupt 0x9 (IRQ1) to be processed
-                _emulationLoopRecall.RunInterrupt(0x9);
-            }
+            return 0;
         }
     }
 
+    /// <summary>
+    /// INT 16h AH=02h — Get Shift Flags.
+    /// Returns the BIOS keyboard status flags in AL.
+    /// </summary>
     public void GetShiftFlags() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET SHIFT FLAGS");
@@ -168,10 +174,10 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Tries to get the pending keycode from the BIOS keyboard buffer without removing it.
+    /// Tries to read the pending key code from the BIOS keyboard buffer without removing it.
     /// </summary>
-    /// <param name="keyCode">When this method returns, contains the keycode if one was available; otherwise, the default value.</param>
-    /// <returns><c>True</c> if a keycode was available; otherwise, <c>False</c>.</returns>
+    /// <param name="keyCode">On success, receives the key code; otherwise <c>null</c>.</param>
+    /// <returns><c>true</c> if a key is pending; otherwise, <c>false</c>.</returns>
     public bool TryGetPendingKeyCode([NotNullWhen(true)] out ushort? keyCode) {
         ushort? code = _biosKeyboardBuffer.PeekKeyCode();
         if (code.HasValue) {
@@ -183,23 +189,23 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets whether the BIOS keyboard buffer has a pending key code in its queue.
+    /// Returns whether the BIOS keyboard buffer contains a pending key code.
     /// </summary>
-    /// <returns><c>True</c> if the BIOS keyboard buffer is not empty, <c>False</c> otherwise.</returns>
     public bool HasKeyCodePending() {
         return TryGetPendingKeyCode(out _);
     }
 
     /// <summary>
-    /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
+    /// INT 16h AH=01h — Check for Keystroke (non-destructive).
+    /// Sets ZF=0 and returns AX=key if a keystroke is pending; otherwise sets ZF=1 and AX=0.
     /// </summary>
-    /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
+    /// <param name="calledFromVm">True if the method was called by internal emulator code; false otherwise.</param>
     public void GetKeystrokeStatus(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("KEY STROKE STATUS");
         }
 
-        // ZF = 0 if a key pressed (even in the case of Ctrl-Break)
+        // ZF = 0 if a key is pending (even in the case of Ctrl-Break)
         // AX = 0 if no scan code is available
         // AH = scan code
         // AL = ASCII character or zero if special function key
@@ -216,7 +222,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Tells the BIOS keyboard buffer to flush its contents, setting the head and tail addresses to the start of the buffer.
+    /// Flushes the BIOS keyboard buffer, resetting head and tail to the start of the buffer.
     /// </summary>
     public void FlushKeyboardBuffer() {
         _biosKeyboardBuffer.Flush();

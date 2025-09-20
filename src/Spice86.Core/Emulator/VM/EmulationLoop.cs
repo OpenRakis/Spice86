@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Diagnostics;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -77,7 +76,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <exception cref="InvalidVMOperationException">When an unhandled exception occurs. <br/>
     /// This can occur if the target program is not supported (yet).</exception>
-    public void Run() {
+    internal void Run() {
         _emulatorBreakpointsManager.OnMachineStart();
         try {
             StartRunLoop(_functionHandler);
@@ -135,13 +134,6 @@ public class EmulationLoop : ICyclesLimiter {
             _loggerService.Warning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
-        }
-    }
-
-    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
-        _cpuState.IpSegmentedAddress = startAddress;
-        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
-            RunOnce();
         }
     }
 

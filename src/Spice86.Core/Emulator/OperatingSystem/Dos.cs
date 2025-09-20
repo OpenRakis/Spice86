@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
@@ -137,7 +138,7 @@ public sealed class Dos {
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="clock"></param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public Dos(Configuration configuration, IMemory memory,
+    public Dos(Configuration configuration, IMemory memory, MemoryAsmWriter memoryAsmWriter,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
@@ -152,7 +153,7 @@ public sealed class Dos {
 
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
 
-        VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
+        VirtualFileBase[] dosDevices = AddDefaultDevices(state, memoryAsmWriter, keyboardInt16Handler);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
@@ -207,13 +208,14 @@ public sealed class Dos {
     private uint GetDefaultNewDeviceBaseAddress()
         => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
-    private VirtualFileBase[] AddDefaultDevices(State state, KeyboardInt16Handler keyboardInt16Handler) {
+    private VirtualFileBase[] AddDefaultDevices(State state, MemoryAsmWriter memoryAsmWriter,
+        KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
             _loggerService, state,
             _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
-            _biosKeyboardBuffer);
+            _biosKeyboardBuffer, memoryAsmWriter);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(printerDevice);

@@ -5,13 +5,15 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
-using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -26,12 +28,25 @@ public class ConsoleDevice : CharacterDevice {
     private byte _readCache = 0;
     public const int InputAvailable = 0x80D3;
     public const int NoInputAvailable = 0x8093;
+
     private readonly ILoggerService _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly State _state;
+    private readonly MemoryAsmWriter _memoryAsmWriter;
+
+    // Global memory bus (needed to emit code and patch the interrupt return frame).
+    private readonly IIndexable _memory;
+
+    // ASM thunk that blocks with INT 16h AH=00h, then IRET to original program return address.
+    private bool _thunkInitialized;
+    private SegmentedAddress _thunkEntry;
+    private ushort _savedIpVarOffset;
+    private ushort _savedCsVarOffset;
+    private ushort _savedFlagsVarOffset;
+
     private readonly Ansi _ansi = new Ansi();
     private class Ansi {
         public const int ANSI_DATA_LENGTH = 10;
@@ -49,18 +64,22 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
+    public ConsoleDevice(IMemory memory, uint baseAddress,
         ILoggerService loggerService, State state, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
-        BiosKeyboardBuffer biosKeyboardBuffer)
+        BiosKeyboardBuffer biosKeyboardBuffer, MemoryAsmWriter memoryAsmWriter)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
+
         _loggerService = loggerService;
         _biosKeybardBuffer = biosKeyboardBuffer;
         _keyboardInt16Handler = keyboardInt16Handler;
         _state = state;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
+        _memory = memory;
+        _memoryAsmWriter = memoryAsmWriter;
+
         vgaFunctionality.VideoModeChanged += OnVideModeChanged;
         _currentMode = vgaFunctionality.GetCurrentMode();
     }
@@ -108,98 +127,222 @@ public class ConsoleDevice : CharacterDevice {
         set => throw new NotSupportedException("Console device does not support setting position.");
     }
 
+    // inspired by the mouse driver - and a solution to remove emulationLoopRecall class:
+    // Call a function that we wait on - except it's our function.
+    // Layout:
+    //   [savedIP: dw 0][savedCS: dw 0][savedFLAGS: dw 0]
+    //   entry:
+    //     sti
+    //     push bx / push cx / push dx / push si / push di / push bp      ; save regs (AX intentionally not saved)
+    //     push cs
+    //     pop  ds                                                         ; DS = CS for local data
+    //     mov  ah,00
+    //     int  16h                                                        ; busy-wait handled by INT16h handler ASM
+    //     pop  bp / pop di / pop si / pop dx / pop cx / pop bx           ; restore regs (AX holds key, do not restore)
+    //     mov  ax,[savedFLAGS]  ; push flags, cs, ip for final IRET
+    //     push ax
+    //     mov  ax,[savedCS]
+    //     push ax
+    //     mov  ax,[savedIP]
+    //     push ax
+    //     iret
+    private void EnsureBlockingThunk() {
+        if (_thunkInitialized) {
+            return;
+        }
+
+        // Place thunk  high in DOS device drivers segment
+        var begin = new SegmentedAddress(MemoryMap.DeviceDriversSegment, 0xFF00);
+        MemoryAsmWriter asmWriter = _memoryAsmWriter;
+        SegmentedAddress savedAddress = asmWriter.CurrentAddress;
+        asmWriter.CurrentAddress = begin;
+
+        // Reserve variables first so their offsets are known.
+        _savedIpVarOffset = asmWriter.CurrentAddress.Offset; asmWriter.WriteUInt16(0);
+        _savedCsVarOffset = asmWriter.CurrentAddress.Offset; asmWriter.WriteUInt16(0);
+        _savedFlagsVarOffset = asmWriter.CurrentAddress.Offset; asmWriter.WriteUInt16(0);
+
+        _thunkEntry = asmWriter.CurrentAddress;
+
+        asmWriter.WriteSti();
+
+        // push bx, push cx, push dx, push si, push di, push bp
+        asmWriter.WriteUInt8(0x53); // push bx
+        asmWriter.WriteUInt8(0x51); // push cx
+        asmWriter.WriteUInt8(0x52); // push dx
+        asmWriter.WriteUInt8(0x56); // push si
+        asmWriter.WriteUInt8(0x57); // push di
+        asmWriter.WriteUInt8(0x55); // push bp
+
+        // DS := CS  (push cs; pop ds)
+        asmWriter.WriteUInt8(0x0E); // push cs
+        asmWriter.WriteUInt8(0x1F); // pop ds
+
+        // mov ah,00
+        asmWriter.WriteUInt8(0xB4); asmWriter.WriteUInt8(0x00);
+
+        // int 16h
+        asmWriter.WriteUInt8(0xCD); asmWriter.WriteUInt8(0x16);
+
+        // pop bp, pop di, pop si, pop dx, pop cx, pop bx
+        asmWriter.WriteUInt8(0x5D); // pop bp
+        asmWriter.WriteUInt8(0x5F); // pop di
+        asmWriter.WriteUInt8(0x5E); // pop si
+        asmWriter.WriteUInt8(0x5A); // pop dx
+        asmWriter.WriteUInt8(0x59); // pop cx
+        asmWriter.WriteUInt8(0x5B); // pop bx
+
+        // push saved FLAGS, CS, IP (via AX loads) then IRET
+        asmWriter.WriteMemoryAddressToAx(_savedFlagsVarOffset); asmWriter.WriteUInt8(0x50); // mov ax,[imm16]; push ax
+        asmWriter.WriteMemoryAddressToAx(_savedCsVarOffset);    asmWriter.WriteUInt8(0x50);
+        asmWriter.WriteMemoryAddressToAx(_savedIpVarOffset);    asmWriter.WriteUInt8(0x50);
+
+        asmWriter.WriteIret();
+
+        _thunkInitialized = true;
+        asmWriter.CurrentAddress = savedAddress;
+    }
+
     public override int Read(byte[] buffer, int offset, int count) {
-        if(count == 0 || offset > buffer.Length || buffer.Length == 0) {
+        if (count == 0 || offset > buffer.Length || buffer.Length == 0) {
             return 0;
         }
+
+        // Preserve caller AX while we interact with the BIOS buffer.
         ushort oldAx = _state.AX;
+
         int index = offset;
         int readCount = 0;
+
+        // Emit pending second byte of a previously returned extended key.
         if ((_readCache > 0) && (buffer.Length > 0)) {
             buffer[index++] = _readCache;
             if (Echo) {
                 OutputWithNoAttributes(_readCache);
             }
             _readCache = 0;
+            readCount++;
+            if (readCount >= count) {
+                _state.AX = oldAx;
+                return readCount;
+            }
         }
-        while(index < buffer.Length && readCount < count) {
-            _keyboardInt16Handler.GetKeystroke();
-            byte scanCode = _state.AL;
-            switch (scanCode) {
-                case (byte)AsciiControlCodes.CarriageReturn:
+
+        // Fast path: drain BIOS buffer now (non-blocking).
+        while (index < buffer.Length && readCount < count) {
+            ushort? keyCode = _biosKeybardBuffer.PeekKeyCode();
+            if (keyCode is null) {
+                break;
+            }
+
+            _state.AX = keyCode.Value;
+            _biosKeybardBuffer.DequeueKeyCode();
+
+            byte ascii = _state.AL;
+            byte scan = _state.AH;
+
+            switch (ascii) {
+                case (byte)AsciiControlCodes.CarriageReturn: {
                     buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
                     readCount++;
-
-                    //It's only expanded if there is room for it
-                    if (index > buffer.Length) {
+                    if (index < buffer.Length && readCount < count) {
                         buffer[index++] = (byte)AsciiControlCodes.LineFeed;
                         readCount++;
                     }
-                    _state.AX = oldAx;
                     if (Echo) {
-                        // Maybe don't do this (no need for it actually)
-                        // (but it's compatible)
                         OutputWithNoAttributes(AsciiControlCodes.LineFeed);
                         OutputWithNoAttributes(AsciiControlCodes.CarriageReturn);
                     }
                     break;
-                case (byte)AsciiControlCodes.Backspace:
+                }
+                case (byte)AsciiControlCodes.Backspace: {
                     if (buffer.Length == 1) {
-                        buffer[index++] = scanCode;
+                        buffer[index++] = ascii;
                         readCount++;
-                    } else if (index > 0) {
-                        buffer[index--] = 0;
+                    } else if (index > offset) {
+                        buffer[--index] = 0;
                         readCount--;
                         OutputWithNoAttributes(AsciiControlCodes.Backspace);
                         OutputWithNoAttributes(' ');
+                        OutputWithNoAttributes(AsciiControlCodes.Backspace);
                     } else {
-                        // No data yet, so restart the loop
                         continue;
                     }
                     break;
+                }
                 case (byte)AsciiControlCodes.Extended:
-                    // Extended keys in the INT 16H 0x10 function call case
-                    // This probably won't run until we implement different
-                    // variant of the IBM PC clone architecture and call function 0x10 instead of 0x0.
-                    // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
                     if (_state.AH != 0) {
-                        // Extended key if _state.AH is not 0x0
-                        buffer[index++] = scanCode;
+                        buffer[index++] = ascii;
                         readCount++;
                     } else {
                         buffer[index++] = 0;
                         readCount++;
-                        if (buffer.Length > index) {
-                            buffer[index++] = _state.AH;
+                        if (index < buffer.Length && readCount < count) {
+                            buffer[index++] = scan;
                             readCount++;
                         } else {
-                            _readCache = _state.AH;
+                            _readCache = scan;
                         }
                     }
                     break;
                 case (byte)AsciiControlCodes.Null:
-                    // Extended keys in the INT 16H 0x0 function call case
-                    buffer[index++] = scanCode;
+                    buffer[index++] = 0;
                     readCount++;
-                    if (buffer.Length > index) {
-                        buffer[index++] = _state.AH;
+                    if (index < buffer.Length && readCount < count) {
+                        buffer[index++] = scan;
                         readCount++;
                     } else {
-                        _readCache = _state.AH;
+                        _readCache = scan;
                     }
                     break;
                 default:
-                    buffer[index++] = scanCode;
+                    buffer[index++] = ascii;
                     readCount++;
                     break;
             }
+
             if (Echo) {
-                // What to do if buffer.Length == 1 and character is BackSpace ?
-                OutputWithNoAttributes(scanCode);
+                OutputWithNoAttributes(ascii);
             }
         }
-        _state.AX = oldAx; // Restore AX
-        return readCount;
+
+        // If we already read something, return it.
+        if (readCount > 0) {
+            _state.AX = oldAx;
+            return readCount;
+        }
+
+        // BIOS buffer empty: install one-shot trampoline to our blocking thunk.
+        // On IRET from INT 21h, control will go to the thunk, which does INT 16h AH=00h,
+        // restores registers, and IRETs to the original program return address with AL set.
+        EnsureBlockingThunk();
+
+        uint sp = _state.StackPhysicalAddress;
+
+        // Interrupt frame layout (at SS:SP):
+        // [0] = IP (word), [2] = CS (word), [4] = FLAGS (word)
+        ushort origIP = BitConverter.ToUInt16(_memory.GetData(sp + 0, 2), 0);
+        ushort origCS = BitConverter.ToUInt16(_memory.GetData(sp + 2, 2), 0);
+        ushort origFL = BitConverter.ToUInt16(_memory.GetData(sp + 4, 2), 0);
+
+        // Save original return triplet next to the thunk (in its own code segment).
+        uint savedIpPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedIpVarOffset);
+        uint savedCsPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedCsVarOffset);
+        uint savedFlPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedFlagsVarOffset);
+
+        _memory.LoadData(savedIpPhys, BitConverter.GetBytes(origIP));
+        _memory.LoadData(savedCsPhys, BitConverter.GetBytes(origCS));
+        _memory.LoadData(savedFlPhys, BitConverter.GetBytes(origFL));
+
+        // Hijack INT 21h IRET to go to the thunk.
+        _memory.LoadData(sp + 0, BitConverter.GetBytes(_thunkEntry.Offset));
+        _memory.LoadData(sp + 2, BitConverter.GetBytes(_thunkEntry.Segment));
+        // Keep FLAGS as-is; thunk does STI anyway.
+
+        // Do not block here; return 0 to the caller of Read.
+        // The thunk will produce AL for the program when INT 21h IRETs.
+        _state.AX = oldAx;
+        return 0;
     }
 
     public override void Write(byte[] buffer, int offset, int count) {
