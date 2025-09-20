@@ -388,12 +388,15 @@ public class Spice86DependencyInjection : IDisposable {
                     configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
             ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
+        
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
             7, 1, 5, SbType.SbPro2);
+        
         SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaController, dualPic,
-            configuration.FailOnUnhandledPort,
+            softwareMixer, state, emulationLoop.CpuPerformanceMeasurer,
+            dmaController, dualPic,configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
+        
         GravisUltraSound gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -473,7 +476,7 @@ public class Spice86DependencyInjection : IDisposable {
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            dmaController, soundBlaster.Opl2, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

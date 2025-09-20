@@ -5,7 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
+using Spice86.Core.Emulator.Devices.Sound.Ym7128b;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -152,14 +152,14 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     public SoundChannel PCMSoundChannel { get; }
 
     /// <summary>
-    /// The SoundBlaster's OPL3 FM sound channel.
+    /// The SoundBlaster's OPL2 FM sound channel.
     /// </summary>
     public SoundChannel FMSynthSoundChannel { get; }
     
     /// <summary>
     /// The internal FM synth chip for music.
     /// </summary>
-    public OPL3FM Opl3Fm { get; }
+    public OPL2 Opl2 { get; }
 
     /// <summary>
     /// The type of SoundBlaster card currently emulated.
@@ -177,15 +177,19 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="softwareMixer">The emulator's sound mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="performanceMeasurer">The CPU performance measurer, for precise audio render timings based on CPU cycles.</param>
     /// <param name="dmaController">The DMA controller used for PCM data transfers by the DSP.</param>
     /// <param name="dualPic">The two programmable interrupt controllers.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an IO port wasn't handled.</param>
     /// <param name="loggerService">The logging service used for logging events.</param>
     /// <param name="soundBlasterHardwareConfig">The IRQ, low DMA, and high DMA configuration.</param>
     /// <param name="pauseHandler">The handler for the emulation pause state.</param>
-    public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state, DmaController dmaController,
+    public SoundBlaster(IOPortDispatcher ioPortDispatcher, SoftwareMixer softwareMixer, State state, 
+        IPerformanceMeasureReader performanceMeasurer, DmaController dmaController,
         DualPic dualPic, bool failOnUnhandledPort, ILoggerService loggerService,
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) : base(state, failOnUnhandledPort, loggerService) {
+        SoundBlasterHardwareConfig soundBlasterHardwareConfig, IPauseHandler pauseHandler) 
+        : base(state, failOnUnhandledPort, loggerService) {
+        
         SbType = soundBlasterHardwareConfig.SbType;
         IRQ = soundBlasterHardwareConfig.Irq;
         DMA = soundBlasterHardwareConfig.LowDma;
@@ -197,8 +201,12 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         dmaController.SetupDmaDeviceChannel(this);
         _deviceThread = new DeviceThread(nameof(SoundBlaster), PlaybackLoopBody, pauseHandler, loggerService);
         PCMSoundChannel = softwareMixer.CreateChannel(nameof(SoundBlaster));
-        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL3FM));
-        Opl3Fm = new OPL3FM(FMSynthSoundChannel, state, ioPortDispatcher, failOnUnhandledPort, loggerService, pauseHandler);
+        FMSynthSoundChannel = softwareMixer.CreateChannel(nameof(OPL2));
+        
+        // Create OPL2 instead of OPL3FM
+        Opl2 = new OPL2(FMSynthSoundChannel, state, performanceMeasurer, ioPortDispatcher, 
+            failOnUnhandledPort, loggerService, pauseHandler);
+        
         _ctMixer = new HardwareMixer(soundBlasterHardwareConfig, PCMSoundChannel, FMSynthSoundChannel, loggerService);
         InitPortHandlers(ioPortDispatcher);
     }
@@ -398,6 +406,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
             if (disposing) {
                 _deviceThread.Dispose();
                 _dsp.Dispose();
+                Opl2.Dispose();
             }
 
             _disposed = true;
@@ -419,7 +428,7 @@ public class SoundBlaster : DefaultIOPortHandler, IDmaDevice8, IDmaDevice16, IRe
         ioPortDispatcher.AddIOPortHandler(IGNORE_PORT + SbBaseAddress, this);
         ioPortDispatcher.AddIOPortHandler(MPU401_DATA_PORT + SbBaseAddress, this);
         ioPortDispatcher.AddIOPortHandler(MPU401_STATUS_COMMAND_PORT + SbBaseAddress, this);
-        // Those are managed by OPL3FM class.
+        // Those are managed by OPL2 class.
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER_2, this);
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_STATUS_PORT_NUMBER, this);

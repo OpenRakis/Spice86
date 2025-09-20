@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -137,7 +138,8 @@ public class DosFileManagerTests {
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaController, dualPic,
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state,
+            new PerformanceMeasurer(), dmaController, dualPic,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
 
