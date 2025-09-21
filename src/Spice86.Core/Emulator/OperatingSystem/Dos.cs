@@ -153,7 +153,7 @@ public sealed class Dos {
 
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
 
-        VirtualFileBase[] dosDevices = AddDefaultDevices(state, memoryAsmWriter, keyboardInt16Handler);
+        VirtualFileBase[] dosDevices = AddDefaultDevices(state, memoryAsmWriter);
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
 
@@ -208,14 +208,12 @@ public sealed class Dos {
     private uint GetDefaultNewDeviceBaseAddress()
         => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
 
-    private VirtualFileBase[] AddDefaultDevices(State state, MemoryAsmWriter memoryAsmWriter,
-        KeyboardInt16Handler keyboardInt16Handler) {
+    private VirtualFileBase[] AddDefaultDevices(State state, MemoryAsmWriter memoryAsmWriter) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
-            _loggerService, state,
-            _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
-            _biosKeyboardBuffer, memoryAsmWriter);
+            state, _biosDataArea, _vgaFunctionality,
+            _biosKeyboardBuffer, memoryAsmWriter, _loggerService);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(printerDevice);

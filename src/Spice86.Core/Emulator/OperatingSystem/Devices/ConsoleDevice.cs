@@ -87,7 +87,6 @@ public class ConsoleDevice : CharacterDevice {
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeybardBuffer;
     private readonly IVgaFunctionality _vgaFunctionality;
-    private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly State _state;
     private readonly MemoryAsmWriter _memoryAsmWriter;
 
@@ -123,16 +122,14 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(IMemory memory, uint baseAddress,
-        ILoggerService loggerService, State state, BiosDataArea biosDataArea,
-        KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
-        BiosKeyboardBuffer biosKeyboardBuffer, MemoryAsmWriter memoryAsmWriter)
+    public ConsoleDevice(IMemory memory, uint baseAddress, State state, BiosDataArea biosDataArea,
+        IVgaFunctionality vgaFunctionality, BiosKeyboardBuffer biosKeyboardBuffer,
+        MemoryAsmWriter memoryAsmWriter, ILoggerService loggerService)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
 
         _loggerService = loggerService;
         _biosKeybardBuffer = biosKeyboardBuffer;
-        _keyboardInt16Handler = keyboardInt16Handler;
         _state = state;
         _biosDataArea = biosDataArea;
         _vgaFunctionality = vgaFunctionality;
