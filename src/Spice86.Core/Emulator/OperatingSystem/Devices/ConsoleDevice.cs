@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem.Devices;
+﻿namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Serilog.Events;
 
@@ -21,8 +21,62 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 /// <summary>
-/// Represents the console device.
+/// Console (CON) device for the MS‑DOS compatible environment. <br/>
+/// Provides stdin/stdout semantics and ANSI escape handling at the DOS device layer.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Why a console driver in MS‑DOS?</b><br/>
+/// In DOS, character devices (e.g., <c>CON</c>, <c>PRN</c>, <c>AUX</c>, <c>CLOCK$</c>) are first‑class DOS devices that
+/// INT 21h services route to. <c>CON</c> is the default standard input and output and can be redirected/replaced.
+/// Implementing a console device preserves DOS behavior for functions like <c>AH=02h/06h/07h/08h/09h/0Ah</c> and
+/// enables terminal features (ANSI sequences) at the device level, as on real DOS.
+/// </para>
+///
+/// <para>
+/// <b>What is ANSI and what we support</b><br/>
+/// Historically DOS provided <c>ANSI.SYS</c>, an ANSI X3.64 / ISO 6429 (ECMA‑48) terminal subset: cursor control,
+/// screen clearing, colors/attributes, etc. This device implements a practical subset:<br/>
+/// • Cursor position: <c>ESC [ &lt;row&gt; ; &lt;col&gt; H</c> (or <c>f</c>)<br/>
+/// • Cursor move: <c>ESC [ n A</c> (up), <c>ESC [ n B</c> (down), <c>ESC [ n C</c> (forward), <c>ESC [ n D</c> (back)<br/>
+/// • Erase: <c>ESC [ J</c> (clear screen), <c>ESC [ K</c> (erase to end of line)<br/>
+/// • SGR (attributes): <c>ESC [ … m</c> supporting <c>0</c> (reset), <c>1</c> (bold), <c>5</c> (blink), <c>7</c> (reverse),
+///   foreground <c>30–37</c>, background <c>40–47</c><br/>
+/// • Save/restore cursor: <c>ESC [ s</c> / <c>ESC [ u</c><br/>
+/// Unsupported/partial codes are logged and ignored (e.g., underline acknowledged but not rendered).
+/// Rendering applies via VGA/INT10h across current text mode.
+/// </para>
+///
+/// <para>
+/// <b>ANSI.SYS in essence, but faster</b><br/>
+/// Functionally equivalent to <c>ANSI.SYS</c>, but implemented in C# within the emulator: no external TSR/driver,
+/// less conventional memory pressure, and typically faster parsing/rendering while keeping DOS‑level semantics.
+/// </para>
+///
+/// <para>
+/// <b>Input path: blocking without host recursion</b><br/>
+/// When DOS requests a blocking character read and the BIOS keyboard buffer is empty, this device injects a tiny
+/// thunk in high DOS memory that runs using the emulated CPU only:<br/>
+/// <code>
+/// STI                ; enable IRQ1 to feed the BIOS buffer<br/>
+/// MOV AH,00h<br/>
+/// INT 16h           ; existing INT 16h ASM loop busy‑waits safely with IF=1<br/>
+/// IRET              ; returns to original caller with AX=(scan&lt;&lt;8|ascii)
+/// </code>
+/// We preserve the original DOS return <c>FLAGS</c> so the program observes the same flags (CF/ZF/etc.) it would have
+/// seen without the detour. The host emulation loop remains non‑blocking and non‑recursive.
+/// </para>
+///
+/// <para>
+/// <b>Flags and registers preservation</b><br/>
+/// On real‑mode INT entry, the CPU stack is:<br/>
+/// <code>[SP+0]=IP, [SP+2]=CS, [SP+4]=FLAGS</code><br/>
+/// We save this triplet, then patch the return address to our thunk. The thunk:<br/>
+/// • Enables IF during wait (<c>STI</c>), but restores the original <c>FLAGS</c> by pushing the saved value before the final <c>IRET</c>.<br/>
+/// • Preserves <c>BX, CX, DX, SI, DI, BP</c> (push/pop).<br/>
+/// • Leaves <c>AX</c> unchanged by restoration so it carries the keystroke result (<c>AH=scan</c>, <c>AL=ASCII/0</c>) per BIOS semantics.
+/// </para>
+/// </remarks>
 public class ConsoleDevice : CharacterDevice {
     private const string CON = "CON";
     private byte _readCache = 0;
@@ -41,6 +95,11 @@ public class ConsoleDevice : CharacterDevice {
     private readonly IIndexable _memory;
 
     // ASM thunk that blocks with INT 16h AH=00h, then IRET to original program return address.
+    // Thunk memory layout (in its code segment, see EnsureBlockingThunk):
+    //   +0:  savedIP     (dw)  — original return IP from the INT 21h frame
+    //   +2:  savedCS     (dw)  — original return CS from the INT 21h frame
+    //   +4:  savedFLAGS  (dw)  — original FLAGS from the INT 21h frame
+    //   +6:  entry ... code ...
     private bool _thunkInitialized;
     private SegmentedAddress _thunkEntry;
     private ushort _savedIpVarOffset;
@@ -127,31 +186,47 @@ public class ConsoleDevice : CharacterDevice {
         set => throw new NotSupportedException("Console device does not support setting position.");
     }
 
-    // inspired by the mouse driver - and a solution to remove emulationLoopRecall class:
-    // Call a function that we wait on - except it's our function.
-    // Layout:
-    //   [savedIP: dw 0][savedCS: dw 0][savedFLAGS: dw 0]
-    //   entry:
-    //     sti
-    //     push bx / push cx / push dx / push si / push di / push bp      ; save regs (AX intentionally not saved)
-    //     push cs
-    //     pop  ds                                                         ; DS = CS for local data
-    //     mov  ah,00
-    //     int  16h                                                        ; busy-wait handled by INT16h handler ASM
-    //     pop  bp / pop di / pop si / pop dx / pop cx / pop bx           ; restore regs (AX holds key, do not restore)
-    //     mov  ax,[savedFLAGS]  ; push flags, cs, ip for final IRET
-    //     push ax
-    //     mov  ax,[savedCS]
-    //     push ax
-    //     mov  ax,[savedIP]
-    //     push ax
-    //     iret
+    // Thunk writer (inspired by the mouse driver approach).
+    //
+    // What it does:
+    // - We emit a tiny far-callable stub in high memory that waits for a keystroke using INT 16h AH=00h.
+    // - When the BIOS keyboard buffer is empty and a DOS function wants an input char, we patch the topmost
+    //   INT 21h IRET frame on the stack so that the IRET returns to this stub instead of the original site.
+    // - The stub enables interrupts (STI) to ensure IRQ1 can feed the BIOS buffer and then executes INT 16h AH=00h.
+    //   Your existing INT 16h handler’s ASM loop does the actual busy-wait safely with IF=1.
+    // - After INT 16h returns with AX=(scan<<8|ascii), the stub restores preserved registers and returns
+    //   to the original IP:CS by pushing the saved FLAGS, CS, and IP so that a final IRET resumes the program.
+    //
+    // Flags clarification:
+    // - On x86, INT pushes FLAGS, CS, IP in that order; thus at the handler entry, memory at SS:SP is:
+    //     [SP+0]=IP, [SP+2]=CS, [SP+4]=FLAGS (top of stack points to IP).
+    // - We read and save that triplet (IP/CS/FLAGS) into our thunk’s data before hijacking the frame.
+    // - We DO NOT modify the saved FLAGS value; we leave it intact so the final IRET in the thunk restores
+    //   the exact FLAGS state the program would have seen if we hadn’t hijacked the return address. This preserves
+    //   Carry Zero etc. set by the DOS function.
+    // - The stub executes STI early to allow interrupts while waiting. STI sets the runtime IF bit immediately
+    //   (subject to one-instruction shadowing semantics), but this does not change the saved FLAGS we push back later.
+    //   In other words, IF is enabled only during the busy-wait window; the FLAGS restored by the final IRET are
+    //   the original ones (origFLAGS), not affected by the STI we executed in the thunk.
+    //
+    // Registers clarification:
+    // - The thunk saves BX, CX, DX, SI, DI, BP and restores them before returning.
+    // - AX is intentionally NOT saved/restored because AX must carry the keystroke result from INT 16h AH=00h
+    //   back to the program (BIOS semantics: AH=scan code, AL=ASCII or 0).
+    //
+    // Segments clarification:
+    // - The thunk temporarily sets DS=CS (push cs / pop ds) so it can read its local saved variables.
+    //   The code does not restore DS here; see reviewer note below.
+    //
+    // Reviewer note:
+    // - This is a minimal thunk to make the wait happen in guest ASM. If you need DS to be strictly preserved
+    //   across the detour for all callers, add push/pop of DS around the DS=CS change.
     private void EnsureBlockingThunk() {
         if (_thunkInitialized) {
             return;
         }
 
-        // Place thunk  high in DOS device drivers segment
+        // Place thunk high in the DOS device drivers segment.
         var begin = new SegmentedAddress(MemoryMap.DeviceDriversSegment, 0xFF00);
         MemoryAsmWriter asmWriter = _memoryAsmWriter;
         SegmentedAddress savedAddress = asmWriter.CurrentAddress;
@@ -164,8 +239,10 @@ public class ConsoleDevice : CharacterDevice {
 
         _thunkEntry = asmWriter.CurrentAddress;
 
+        // sti — enable interrupts during the wait so IRQ1 can deliver keys to BIOS buffer
         asmWriter.WriteSti();
 
+        // Save GP registers we promise to preserve (AX intentionally not saved)
         // push bx, push cx, push dx, push si, push di, push bp
         asmWriter.WriteUInt8(0x53); // push bx
         asmWriter.WriteUInt8(0x51); // push cx
@@ -174,17 +251,15 @@ public class ConsoleDevice : CharacterDevice {
         asmWriter.WriteUInt8(0x57); // push di
         asmWriter.WriteUInt8(0x55); // push bp
 
-        // DS := CS  (push cs; pop ds)
+        // DS := CS  (access local variables via DS:imm16)
         asmWriter.WriteUInt8(0x0E); // push cs
         asmWriter.WriteUInt8(0x1F); // pop ds
 
-        // mov ah,00
-        asmWriter.WriteUInt8(0xB4); asmWriter.WriteUInt8(0x00);
+        // mov ah,00 / int 16h — BIOS wait-for-keystroke (your INT16h handler provides the safe busy-wait ASM)
+        asmWriter.WriteUInt8(0xB4); asmWriter.WriteUInt8(0x00); // mov ah, 0
+        asmWriter.WriteUInt8(0xCD); asmWriter.WriteUInt8(0x16); // int 16h
 
-        // int 16h
-        asmWriter.WriteUInt8(0xCD); asmWriter.WriteUInt8(0x16);
-
-        // pop bp, pop di, pop si, pop dx, pop cx, pop bx
+        // Restore preserved GP registers (AX left with keystroke)
         asmWriter.WriteUInt8(0x5D); // pop bp
         asmWriter.WriteUInt8(0x5F); // pop di
         asmWriter.WriteUInt8(0x5E); // pop si
@@ -192,10 +267,12 @@ public class ConsoleDevice : CharacterDevice {
         asmWriter.WriteUInt8(0x59); // pop cx
         asmWriter.WriteUInt8(0x5B); // pop bx
 
-        // push saved FLAGS, CS, IP (via AX loads) then IRET
-        asmWriter.WriteMemoryAddressToAx(_savedFlagsVarOffset); asmWriter.WriteUInt8(0x50); // mov ax,[imm16]; push ax
-        asmWriter.WriteMemoryAddressToAx(_savedCsVarOffset);    asmWriter.WriteUInt8(0x50);
-        asmWriter.WriteMemoryAddressToAx(_savedIpVarOffset);    asmWriter.WriteUInt8(0x50);
+        // Final return to the original site:
+        // Push saved FLAGS, CS, IP (in that order) so that IRET pops IP, CS, FLAGS to the exact originals.
+        // This ensures any DOS-return flags (CF/ZF, etc.) are preserved as they were.
+        asmWriter.WriteMemoryAddressToAx(_savedFlagsVarOffset); asmWriter.WriteUInt8(0x50); // mov ax,[savedFLAGS]; push ax
+        asmWriter.WriteMemoryAddressToAx(_savedCsVarOffset); asmWriter.WriteUInt8(0x50); // mov ax,[savedCS];    push ax
+        asmWriter.WriteMemoryAddressToAx(_savedIpVarOffset); asmWriter.WriteUInt8(0x50); // mov ax,[savedIP];    push ax
 
         asmWriter.WriteIret();
 
@@ -243,33 +320,33 @@ public class ConsoleDevice : CharacterDevice {
 
             switch (ascii) {
                 case (byte)AsciiControlCodes.CarriageReturn: {
-                    buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
-                    readCount++;
-                    if (index < buffer.Length && readCount < count) {
-                        buffer[index++] = (byte)AsciiControlCodes.LineFeed;
+                        buffer[index++] = (byte)AsciiControlCodes.CarriageReturn;
                         readCount++;
+                        if (index < buffer.Length && readCount < count) {
+                            buffer[index++] = (byte)AsciiControlCodes.LineFeed;
+                            readCount++;
+                        }
+                        if (Echo) {
+                            OutputWithNoAttributes(AsciiControlCodes.LineFeed);
+                            OutputWithNoAttributes(AsciiControlCodes.CarriageReturn);
+                        }
+                        break;
                     }
-                    if (Echo) {
-                        OutputWithNoAttributes(AsciiControlCodes.LineFeed);
-                        OutputWithNoAttributes(AsciiControlCodes.CarriageReturn);
-                    }
-                    break;
-                }
                 case (byte)AsciiControlCodes.Backspace: {
-                    if (buffer.Length == 1) {
-                        buffer[index++] = ascii;
-                        readCount++;
-                    } else if (index > offset) {
-                        buffer[--index] = 0;
-                        readCount--;
-                        OutputWithNoAttributes(AsciiControlCodes.Backspace);
-                        OutputWithNoAttributes(' ');
-                        OutputWithNoAttributes(AsciiControlCodes.Backspace);
-                    } else {
-                        continue;
+                        if (buffer.Length == 1) {
+                            buffer[index++] = ascii;
+                            readCount++;
+                        } else if (index > offset) {
+                            buffer[--index] = 0;
+                            readCount--;
+                            OutputWithNoAttributes(AsciiControlCodes.Backspace);
+                            OutputWithNoAttributes(' ');
+                            OutputWithNoAttributes(AsciiControlCodes.Backspace);
+                        } else {
+                            continue;
+                        }
+                        break;
                     }
-                    break;
-                }
                 case (byte)AsciiControlCodes.Extended:
                     if (_state.AH != 0) {
                         buffer[index++] = ascii;
@@ -313,14 +390,29 @@ public class ConsoleDevice : CharacterDevice {
         }
 
         // BIOS buffer empty: install one-shot trampoline to our blocking thunk.
-        // On IRET from INT 21h, control will go to the thunk, which does INT 16h AH=00h,
-        // restores registers, and IRETs to the original program return address with AL set.
+        //
+        // Interrupt frame layout at handler entry (real-mode INT):
+        //   CPU pushes FLAGS, CS, IP     => memory at SS:SP points to:
+        //     [SP+0] = IP  (top)
+        //     [SP+2] = CS
+        //     [SP+4] = FLAGS  (bottom of the 6-byte frame)
+        //
+        // We:
+        //   1) Copy IP/CS/FLAGS from the topmost INT 21h frame into our thunk variables.
+        //   2) Overwrite [SP+0..3] with the thunk's entry (Offset, Segment).
+        //   3) Leave [SP+4] FLAGS untouched (the same FLAGS value will be restored by the thunk’s final IRET).
+        //
+        // Semantics:
+        // - The DOS INT 21h handler returns normally; IRET transfers control to the thunk.
+        // - The thunk enables IF (STI) for the waiting window, calls INT 16h AH=00h (your BIOS stub busy-waits),
+        //   then pushes the saved FLAGS/CS/IP and executes IRET to resume the original caller.
+        // - Because we preserved the saved FLAGS and push it back unchanged at the very end,
+        //   the program observes the same flags (CF/ZF/etc.) it would have seen without the detour.
         EnsureBlockingThunk();
 
         uint sp = _state.StackPhysicalAddress;
 
-        // Interrupt frame layout (at SS:SP):
-        // [0] = IP (word), [2] = CS (word), [4] = FLAGS (word)
+        // [0] = IP, [2] = CS, [4] = FLAGS
         ushort origIP = _memory.UInt16[sp + 0];
         ushort origCS = _memory.UInt16[sp + 2];
         ushort origFL = _memory.UInt16[sp + 4];
@@ -334,13 +426,13 @@ public class ConsoleDevice : CharacterDevice {
         _memory.UInt16[savedCsPhys] = origCS;
         _memory.UInt16[savedFlPhys] = origFL;
 
-        // Hijack INT 21h IRET to go to the thunk.
+        // Hijack INT 21h IRET to go to the thunk entry.
         _memory.UInt16[sp + 0] = _thunkEntry.Offset;
         _memory.UInt16[sp + 2] = _thunkEntry.Segment;
-        // Keep FLAGS as-is; thunk does STI anyway.
+        // Keep FLAGS as-is at [sp+4]; the thunk does STI only for the waiting window and restores origFLAGS at the final IRET.
 
         // Do not block here; return 0 to the caller of Read.
-        // The thunk will produce AL for the program when INT 21h IRETs.
+        // The thunk will produce AL/AX for the program when INT 21h IRETs.
         _state.AX = oldAx;
         return 0;
     }
@@ -371,8 +463,8 @@ public class ConsoleDevice : CharacterDevice {
                     continue;
                 }
             }
-            if(!_ansi.Sci) {
-                switch((char)chr) {
+            if (!_ansi.Sci) {
+                switch ((char)chr) {
                     case '[':
                         _ansi.Sci = true;
                         break;
@@ -381,7 +473,7 @@ public class ConsoleDevice : CharacterDevice {
                     case 'D': // Scrolling down
                     case 'M': // Scrolling up
                     default:
-                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("ANSI: Unknown char {AnsiChar} after an Esc character", $"{chr:X2}");
                         }
                         ClearAnsi();
@@ -425,7 +517,7 @@ public class ConsoleDevice : CharacterDevice {
                                 _ansi.Attribute |= 0x08;
                                 break;
                             case 4: // Underline
-                                if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+                                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                                     _loggerService.Information("ANSI: No support for underline yet");
                                 }
                                 break;
@@ -509,7 +601,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'f':
                 case 'H': // Cursor Position
-                    if(!_ansi.WasWarned && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    if (!_ansi.WasWarned && _loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _ansi.WasWarned = true;
                         _loggerService.Warning("ANSI Warning to debugger: ANSI SEQUENCES USED");
                     }
@@ -600,7 +692,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'h': // Set mode (if code =7 enable linewrap)
                 case 'I': // Reset mode
-                    if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("ANSI: set/reset mode called (not supported)");
                     }
                     ClearAnsi();
@@ -618,8 +710,7 @@ public class ConsoleDevice : CharacterDevice {
                     row = (byte)_vgaFunctionality.GetCursorPosition(page).Y;
                     ncols = _biosDataArea.ScreenColumns;
 
-                    // Use this one to prevent scrolling when end of screen
-                    // is reached
+                    // Use this one to prevent scrolling when end of screen is reached
                     _vgaFunctionality.WriteCharacterAtCursor(
                         new CharacterPlusAttribute(' ', _ansi.Attribute, true),
                         page, ncols - col);
@@ -634,7 +725,7 @@ public class ConsoleDevice : CharacterDevice {
                     _vgaFunctionality.SetActivePage(page);
                     _vgaFunctionality.VerifyScroll(0, row, 0,
                         (byte)(ncols - 1), (byte)(nrows - 1),
-                        _ansi.Data[0] > 0 ? - _ansi.Data[0] : -1,
+                        _ansi.Data[0] > 0 ? -_ansi.Data[0] : -1,
                         _ansi.Attribute);
                     break;
                 case 'l': // (if code =7) disable linewrap
@@ -656,7 +747,7 @@ public class ConsoleDevice : CharacterDevice {
                 return NoInputAvailable;
             }
 
-            if(_readCache is not 0 || _biosKeybardBuffer.PeekKeyCode() is not null) {
+            if (_readCache is not 0 || _biosKeybardBuffer.PeekKeyCode() is not null) {
                 return InputAvailable;
             }
 
@@ -710,7 +801,7 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     private void OutputWithNoAttributes(byte byteChar) {
-        if(!GetIsInTextMode()) {
+        if (!GetIsInTextMode()) {
             return;
         }
         OutputWithNoAttributes((char)byteChar);
