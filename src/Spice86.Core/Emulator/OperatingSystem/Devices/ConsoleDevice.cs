@@ -355,11 +355,16 @@ public class ConsoleDevice : CharacterDevice {
                             OutputWithNoAttributes(' ');
                             OutputWithNoAttributes(AsciiControlCodes.Backspace);
                         } else {
+                            // No data yet, so restart the loop
                             continue;
                         }
                         break;
                     }
                 case (byte)AsciiControlCodes.Extended:
+                    // Extended keys in the INT 16H 0x10 function call case
+                    // This probably won't run until we implement different
+                    // Extended keys in the INT 16H 0x10 function call case
+                    // See IS_EGAVGA_ARCH macro in DOSBox, and the MachineType enum (which carries values such as MCH_PCJR)
                     if (_state.AH != 0) {
                         buffer[index++] = ascii;
                         readCount++;
