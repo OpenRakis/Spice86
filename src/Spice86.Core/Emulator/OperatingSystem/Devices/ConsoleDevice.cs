@@ -93,6 +93,9 @@ public class ConsoleDevice : CharacterDevice {
     // Global memory bus (needed to emit code and patch the interrupt return frame).
     private readonly IIndexable _memory;
 
+    // Base address for the private thunk code, allocated by DOS to guarantee no overlap with headers or other drivers.
+    private readonly SegmentedAddress _thunkBase;
+
     // ASM thunk that blocks with INT 16h AH=00h, then IRET to original program return address.
     // Thunk memory layout (in its code segment, see EnsureBlockingThunk):
     //   +0:  savedIP     (dw)  — original return IP from the INT 21h frame
@@ -120,11 +123,23 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     /// <summary>
-    /// Create a new console device.
+    /// Create a new DOS console device.
     /// </summary>
+    /// <param name="memory">The emulated memory, used to write our ASM thunk.</param>
+    /// <param name="baseAddress">The base address for this device header.</param>
+    /// <param name="state">CPU flags and registers.</param>
+    /// <param name="biosDataArea">BIOS data area, used to get the current video page.</param>
+    /// <param name="vgaFunctionality">VGA abstraction, used for text output.</param>
+    /// <param name="biosKeyboardBuffer">BIOS keyboard buffer, used to get the keyboard input.</param>
+    /// <param name="memoryAsmWriter">ASM writer used to emit callbacks/instructions.</param>
+    /// <param name="loggerService">the logger service implementation.</param>
+    /// <param name="thunkBase">
+    /// Base address where this device can emit a private ASM thunk. <br/>
+    /// Must be within the DOS device segment and below 1MB (offset ≤ 0x7FFF) to avoid HMA/A20 issues.
+    /// </param>
     public ConsoleDevice(IMemory memory, uint baseAddress, State state, BiosDataArea biosDataArea,
         IVgaFunctionality vgaFunctionality, BiosKeyboardBuffer biosKeyboardBuffer,
-        MemoryAsmWriter memoryAsmWriter, ILoggerService loggerService)
+        MemoryAsmWriter memoryAsmWriter, ILoggerService loggerService, SegmentedAddress thunkBase)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
 
@@ -135,6 +150,7 @@ public class ConsoleDevice : CharacterDevice {
         _vgaFunctionality = vgaFunctionality;
         _memory = memory;
         _memoryAsmWriter = memoryAsmWriter;
+        _thunkBase = thunkBase;
 
         vgaFunctionality.VideoModeChanged += OnVideModeChanged;
         _currentMode = vgaFunctionality.GetCurrentMode();
@@ -223,11 +239,10 @@ public class ConsoleDevice : CharacterDevice {
             return;
         }
 
-        // Place thunk high in the DOS device drivers segment.
-        var begin = new SegmentedAddress(MemoryMap.DeviceDriversSegment, 0xFF00);
+        // Write into the DOS-provided safe code slot (below 1MB, away from headers).
         MemoryAsmWriter asmWriter = _memoryAsmWriter;
         SegmentedAddress savedAddress = asmWriter.CurrentAddress;
-        asmWriter.CurrentAddress = begin;
+        asmWriter.CurrentAddress = _thunkBase;
 
         // Reserve variables first so their offsets are known.
         _savedIpVarOffset = asmWriter.CurrentAddress.Offset; asmWriter.WriteUInt16(0);

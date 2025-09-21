@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem;
+﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
@@ -32,6 +32,13 @@ public sealed class Dos {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+
+    // Reserve a safe high area in the DOS device segment for device-private code blobs (stubs/thunks).
+    // Keep offsets <= 0x7FFF so physical address stays <= 0xFFFFF (no HMA/A20 dependency) and far from headers.
+    // Headers are packed from offset 0 by 18-byte steps (DosDeviceHeader.HeaderLength).
+    private const ushort DeviceCodePoolStartOffset = 0x7000;
+    private const ushort DeviceCodePoolEndOffset = 0x7FFF;
+    private ushort _deviceCodePoolNext = DeviceCodePoolStartOffset;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -211,10 +218,16 @@ public sealed class Dos {
     private VirtualFileBase[] AddDefaultDevices(State state, MemoryAsmWriter memoryAsmWriter) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(nulDevice);
+
+        // Allocate a safe code slot for the console device’s private thunk (keystroke wait).
+        // Keep it below 1MB and away from the header list.
+        SegmentedAddress consoleThunkBase = AllocateDeviceCode(0x0100);
+
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
             state, _biosDataArea, _vgaFunctionality,
-            _biosKeyboardBuffer, memoryAsmWriter, _loggerService);
+            _biosKeyboardBuffer, memoryAsmWriter, _loggerService, consoleThunkBase);
         AddDevice(consoleDevice);
+
         var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(printerDevice);
         var auxDevice = new AuxDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
@@ -224,6 +237,30 @@ public sealed class Dos {
                 DeviceAttributes.FatDevice, 1));
         }
         return [nulDevice, consoleDevice, printerDevice];
+    }
+
+    /// <summary>
+    /// Allocates a small code area in the DOS device segment for device-private ASM stubs. <br/>
+    /// Ensures returned address stays below 1MB (segment:offset → phys ≤ 0xFFFFF) to avoid A20/HMA issues,
+    /// and does not overlap the device header linked list which grows from offset 0 upward.
+    /// </summary>
+    /// <param name="bytes">How many bytes to reserve (rounded up to 16-byte alignment).</param>
+    /// <returns>A <see cref="SegmentedAddress"/> at <c>MemoryMap.DeviceDriversSegment:offset</c> suitable for code.</returns>
+    private SegmentedAddress AllocateDeviceCode(ushort bytes) {
+        // 16-byte align
+        ushort aligned = (ushort)((bytes + 0x0F) & ~0x0F);
+        if (_deviceCodePoolNext > DeviceCodePoolEndOffset || (ushort)(DeviceCodePoolEndOffset - _deviceCodePoolNext + 1) < aligned) {
+            // If ever exhausted, fall back lower but still above any plausible header usage.
+            // This should not happen at startup with our tiny stubs.
+            ushort fallback = 0x6800;
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("Device code pool exhausted at F800:{Offset:X4}. Falling back to F800:{Fallback:X4}.", _deviceCodePoolNext, fallback);
+            }
+            _deviceCodePoolNext = fallback;
+        }
+        SegmentedAddress res = new(MemoryMap.DeviceDriversSegment, _deviceCodePoolNext);
+        _deviceCodePoolNext = (ushort)(_deviceCodePoolNext + aligned);
+        return res;
     }
 
     /// <summary>
