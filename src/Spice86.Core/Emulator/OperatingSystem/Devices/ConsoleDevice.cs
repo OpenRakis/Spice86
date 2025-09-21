@@ -321,22 +321,22 @@ public class ConsoleDevice : CharacterDevice {
 
         // Interrupt frame layout (at SS:SP):
         // [0] = IP (word), [2] = CS (word), [4] = FLAGS (word)
-        ushort origIP = BitConverter.ToUInt16(_memory.GetData(sp + 0, 2), 0);
-        ushort origCS = BitConverter.ToUInt16(_memory.GetData(sp + 2, 2), 0);
-        ushort origFL = BitConverter.ToUInt16(_memory.GetData(sp + 4, 2), 0);
+        ushort origIP = _memory.UInt16[sp + 0];
+        ushort origCS = _memory.UInt16[sp + 2];
+        ushort origFL = _memory.UInt16[sp + 4];
 
         // Save original return triplet next to the thunk (in its own code segment).
         uint savedIpPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedIpVarOffset);
         uint savedCsPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedCsVarOffset);
         uint savedFlPhys = MemoryUtils.ToPhysicalAddress(_thunkEntry.Segment, _savedFlagsVarOffset);
 
-        _memory.LoadData(savedIpPhys, BitConverter.GetBytes(origIP));
-        _memory.LoadData(savedCsPhys, BitConverter.GetBytes(origCS));
-        _memory.LoadData(savedFlPhys, BitConverter.GetBytes(origFL));
+        _memory.UInt16[savedIpPhys] = origIP;
+        _memory.UInt16[savedCsPhys] = origCS;
+        _memory.UInt16[savedFlPhys] = origFL;
 
         // Hijack INT 21h IRET to go to the thunk.
-        _memory.LoadData(sp + 0, BitConverter.GetBytes(_thunkEntry.Offset));
-        _memory.LoadData(sp + 2, BitConverter.GetBytes(_thunkEntry.Segment));
+        _memory.UInt16[sp + 0] = _thunkEntry.Offset;
+        _memory.UInt16[sp + 2] = _thunkEntry.Segment;
         // Keep FLAGS as-is; thunk does STI anyway.
 
         // Do not block here; return 0 to the caller of Read.
