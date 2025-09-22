@@ -190,7 +190,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
         
         // Pass only the Avalonia Key - no scancode conversion here
-        KeyDown?.Invoke(this, new KeyboardEventArgs((PhysicalKey)e.Key, IsPressed: true));
+        KeyDown?.Invoke(this, new KeyboardEventArgs((PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
     [ObservableProperty]
