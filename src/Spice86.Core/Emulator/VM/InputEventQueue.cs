@@ -10,16 +10,11 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Represents a queue for handling and processing keyboard and mouse events. <br/>
-/// Used by the emulation loop thread to avoid the UI thread modifying keyboard state via events,
-/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
-/// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
+/// Implements a queue for handling and processing keyboard and mouse events. <br/>
+/// Used by the emulation thread to avoid the UI thread modifying keyboard state via events,
+/// while the emulator thread is reading the <see cref="Intel8042Controller"/> at the same time. <br/>
+/// Same deal for the Mouse events. If Joystick support is implemented, joystick UI events will also pass through here.
 /// </summary>
-/// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 
-/// around implementations of <see cref="IGuiKeyboardEvents"/> and <see cref="IGuiMouseEvents"/> to capture  and queue
-/// their events. The queued events can then be processed one at a time using the  <see cref="ProcessAllPendingInputEvents"/> method.
-/// The <see cref="InputEventQueue"/> also exposes properties and methods for interacting with mouse  coordinates and
-/// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
 public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents {
     private readonly Queue<Action> _eventQueue = new();
     private readonly IGuiMouseEvents? _mouseEvents;
