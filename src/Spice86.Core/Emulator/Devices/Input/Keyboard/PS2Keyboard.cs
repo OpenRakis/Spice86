@@ -50,13 +50,13 @@ public sealed class PS2Keyboard {
     // If false, keyboard does not push keycodes to the controller
     private bool _isScanning = true;
 
-    private byte _codeSet = 1; // CodeSet1
+    private byte _codeSet = 1;
 
     // Command currently being executed, waiting for parameter
     private KeyboardCommand _currentCommand = KeyboardCommand.None;
 
     // CPU cycles conversion constants (approximate)
-    private const long CyclesPerMs = 1000; // Approximate cycles per millisecond for timing conversion
+    private const long CyclesPerMs = 10;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
@@ -71,12 +71,6 @@ public sealed class PS2Keyboard {
         _cpuState = cpuState;
         _loggerService = loggerService;
 
-        // Initialize buffer array
-        for (int i = 0; i < BufferSize; i++) {
-            _buffer[i] = [];
-        }
-
-        // Initialize keyboard state with startup flag
         KeyboardReset(isStartup: true);
 
         if (guiKeyboardEvents is not null) {
@@ -246,7 +240,7 @@ public sealed class PS2Keyboard {
     }
 
     private bool SetCodeSet(byte requestedSet) {
-        if (requestedSet < 1 || requestedSet > 3) {
+        if (requestedSet is < 1 or > 3) {
             WarnUnknownScancodeSet();
             return false;
         }
@@ -284,7 +278,7 @@ public sealed class PS2Keyboard {
         _repeat.Rate = 33 * CyclesPerMs;
         _repeat.Wait = 0;
 
-        foreach (var entry in _set3CodeInfo.Values) {
+        foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
             entry.IsEnabledMake = true;
             entry.IsEnabledBreak = true;
             entry.IsEnabledTypematic = true;
@@ -370,7 +364,7 @@ public sealed class PS2Keyboard {
                 // relevant for scancode set 3 only
                 _controller.AddKbdByte(0xfa); // acknowledge
                 ClearBuffer();
-                foreach (var entry in _set3CodeInfo.Values) {
+                foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = true;
                     entry.IsEnabledMake = false;
                     entry.IsEnabledBreak = false;
@@ -381,7 +375,7 @@ public sealed class PS2Keyboard {
                 // relevant for scancode set 3 only
                 _controller.AddKbdByte(0xfa); // acknowledge
                 ClearBuffer();
-                foreach (var entry in _set3CodeInfo.Values) {
+                foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = false;
                     entry.IsEnabledMake = true;
                     entry.IsEnabledBreak = true;
@@ -392,7 +386,7 @@ public sealed class PS2Keyboard {
                 // relevant for scancode set 3 only
                 _controller.AddKbdByte(0xfa); // acknowledge
                 ClearBuffer();
-                foreach (var entry in _set3CodeInfo.Values) {
+                foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = false;
                     entry.IsEnabledMake = true;
                     entry.IsEnabledBreak = false;
@@ -403,7 +397,7 @@ public sealed class PS2Keyboard {
                 // relevant for scancode set 3 only
                 _controller.AddKbdByte(0xfa); // acknowledge
                 ClearBuffer();
-                foreach (var entry in _set3CodeInfo.Values) {
+                foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = true;
                     entry.IsEnabledMake = true;
                     entry.IsEnabledBreak = true;

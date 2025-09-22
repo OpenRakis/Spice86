@@ -15,15 +15,15 @@ using System.Collections.Generic;
 /// C# port of intel8042.cpp - The PS/2 keyboard and mouse controller.
 /// </summary>
 public sealed class Intel8042Controller : DefaultIOPortHandler {
-    private const uint IrqNumKbdIbmPc = 1;
-    private const uint IrqNumMouse = 12;
+    private const byte IrqNumKbdIbmPc = 1;
+    private const byte IrqNumMouse = 12;
 
     private const byte FirmwareRevision = 0x00;
     private const string FirmwareCopyright = nameof(Spice86);
 
     private const int BufferSize = 64; // in bytes
     // delay appropriate for 20-30 kHz serial clock and 11 bits/byte
-    private const long PortDelayCycles = 300; // Converted from 0.3ms to cycles
+    private const long PortDelayCycles = 3; // Converted from 0.3ms to cycles
 
     // Controller internal buffer
     private struct BufferEntry {
@@ -59,7 +59,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     // Byte returned from port 0x64
     private byte _statusByte = 0b0001_1100;
 
-    // If enabled, all keyboard events are dropped until secure mode is enabled
+    // If enabled, all keyboard events are dropped until dump is done
     private bool _isDiagnosticDump = false;
 
     private readonly A20Gate _a20Gate;
@@ -100,7 +100,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     // ***************************************************************************
 
     private void WarnBufferFull() {
-        const long thresholdCycles = 15000000; // 15 seconds worth of cycles
+        const long thresholdCycles = 15;
 
         // Static-like behavior using class fields
         if (!_bufferFullWarned || (_cpuState.Cycles - _lastBufferFullCycles > thresholdCycles)) {
@@ -226,27 +226,15 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
         return translationTable[value];
     }
 
-    // ***************************************************************************
-    // Controller buffer support
-    // ***************************************************************************
-
-    private uint GetIrqMouse() {
-        return IrqNumMouse;
-    }
-
-    private uint GetIrqKeyboard() {
-        return IrqNumKbdIbmPc;
-    }
-
     private void ActivateIrqsIfNeeded() {
         bool isDataFromAux = (_statusByte & (1 << 5)) != 0;
         bool isDataFromKbd = !isDataFromAux && (_statusByte & (1 << 0)) != 0;
 
         if (isDataFromAux && (_configByte & (1 << 1)) != 0) {
-            _dualPic.ProcessInterruptRequest((byte)GetIrqMouse());
+            _dualPic.ProcessInterruptRequest(IrqNumMouse);
         }
         if (isDataFromKbd && (_configByte & (1 << 0)) != 0) {
-            _dualPic.ProcessInterruptRequest((byte)GetIrqKeyboard());
+            _dualPic.ProcessInterruptRequest(IrqNumKbdIbmPc);
         }
     }
 
@@ -265,7 +253,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
         _waitingBytesFromKbd = 0;
 
         if (shouldNotifyAux && IsReadyForAuxFrame()) {
-            // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+            // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse frame support...
         }
 
         if (shouldNotifyKbd && IsReadyForKbdFrame()) {
@@ -378,10 +366,6 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
 
         BufferAdd(value, isFromAux, isFromKbd);
     }
-
-    // ***************************************************************************
-    // Command handlers
-    // ***************************************************************************
 
     private byte GetInputPort() { // aka port P1
         byte port = 0b1010_0000;
@@ -662,10 +646,6 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                 BufferAddAux(param);
                 break;
             case KeyboardCommand.WriteAux: // 0xd4
-                // Sends a byte to the mouse.
-                // To prevent excessive inter-module communication,
-                // aux (mouse) part is implemented completely within
-                // the mouse module
                 StartDelay(PortDelayCycles * 2); // 'round trip' delay
                 _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
                 // TODO: Mouse support
