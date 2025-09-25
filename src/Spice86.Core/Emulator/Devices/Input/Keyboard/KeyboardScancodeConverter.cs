@@ -100,9 +100,9 @@ public class KeyboardScancodeConverter {
     }
 
     public List<byte> GetScanCode1(KbdKey keyType, bool isPressed) {
-        byte code = 0x00;
         bool extend = false;
 
+        byte code;
         // This table directly matches the DOSBox scancode table in keyboard_scancodes.cpp
         switch (keyType) {
             case KbdKey.Escape: code = 0x01; break;
@@ -116,12 +116,12 @@ public class KeyboardScancodeConverter {
             case KbdKey.D8: code = 0x09; break;
             case KbdKey.D9: code = 0x0A; break;
             case KbdKey.D0: code = 0x0B; break;
-            
+
             case KbdKey.Minus: code = 0x0C; break;
             case KbdKey.Equals: code = 0x0D; break;
             case KbdKey.Backspace: code = 0x0E; break;
             case KbdKey.Tab: code = 0x0F; break;
-            
+
             case KbdKey.Q: code = 0x10; break;
             case KbdKey.W: code = 0x11; break;
             case KbdKey.E: code = 0x12; break;
@@ -132,12 +132,12 @@ public class KeyboardScancodeConverter {
             case KbdKey.I: code = 0x17; break;
             case KbdKey.O: code = 0x18; break;
             case KbdKey.P: code = 0x19; break;
-            
+
             case KbdKey.LeftBracket: code = 0x1A; break;
             case KbdKey.RightBracket: code = 0x1B; break;
             case KbdKey.Enter: code = 0x1C; break;
             case KbdKey.LeftCtrl: code = 0x1D; break;
-            
+
             case KbdKey.A: code = 0x1E; break;
             case KbdKey.S: code = 0x1F; break;
             case KbdKey.D: code = 0x20; break;
@@ -147,13 +147,13 @@ public class KeyboardScancodeConverter {
             case KbdKey.J: code = 0x24; break;
             case KbdKey.K: code = 0x25; break;
             case KbdKey.L: code = 0x26; break;
-            
+
             case KbdKey.Semicolon: code = 0x27; break;
             case KbdKey.Quote: code = 0x28; break;
             case KbdKey.Grave: code = 0x29; break;
             case KbdKey.LeftShift: code = 0x2A; break;
             case KbdKey.Backslash: code = 0x2B; break;
-            
+
             case KbdKey.Z: code = 0x2C; break;
             case KbdKey.X: code = 0x2D; break;
             case KbdKey.C: code = 0x2E; break;
@@ -161,7 +161,7 @@ public class KeyboardScancodeConverter {
             case KbdKey.B: code = 0x30; break;
             case KbdKey.N: code = 0x31; break;
             case KbdKey.M: code = 0x32; break;
-            
+
             case KbdKey.Comma: code = 0x33; break;
             case KbdKey.Period: code = 0x34; break;
             case KbdKey.Slash: code = 0x35; break;
@@ -170,7 +170,7 @@ public class KeyboardScancodeConverter {
             case KbdKey.LeftAlt: code = 0x38; break;
             case KbdKey.Space: code = 0x39; break;
             case KbdKey.CapsLock: code = 0x3A; break;
-            
+
             case KbdKey.F1: code = 0x3B; break;
             case KbdKey.F2: code = 0x3C; break;
             case KbdKey.F3: code = 0x3D; break;
@@ -181,10 +181,10 @@ public class KeyboardScancodeConverter {
             case KbdKey.F8: code = 0x42; break;
             case KbdKey.F9: code = 0x43; break;
             case KbdKey.F10: code = 0x44; break;
-            
+
             case KbdKey.NumLock: code = 0x45; break;
             case KbdKey.ScrollLock: code = 0x46; break;
-            
+
             case KbdKey.Kp7: code = 0x47; break;
             case KbdKey.Kp8: code = 0x48; break;
             case KbdKey.Kp9: code = 0x49; break;
@@ -198,13 +198,13 @@ public class KeyboardScancodeConverter {
             case KbdKey.Kp3: code = 0x51; break;
             case KbdKey.Kp0: code = 0x52; break;
             case KbdKey.KpPeriod: code = 0x53; break;
-            
+
             case KbdKey.Oem102: code = 0x56; break;
             case KbdKey.F11: code = 0x57; break;
             case KbdKey.F12: code = 0x58; break;
-            
+
             case KbdKey.Abnt1: code = 0x73; break;
-            
+
             // Extended keys
             case KbdKey.KpEnter: extend = true; code = 0x1C; break;
             case KbdKey.RightCtrl: extend = true; code = 0x1D; break;
@@ -222,18 +222,18 @@ public class KeyboardScancodeConverter {
             case KbdKey.Delete: extend = true; code = 0x53; break;
             case KbdKey.LeftGui: extend = true; code = 0x5B; break;
             case KbdKey.RightGui: extend = true; code = 0x5C; break;
-            
+
             // Special cases
             case KbdKey.Pause:
                 if (isPressed) {
                     // Pause key gets released as soon as it is pressed
-                    return [ 
-                        0xE1, 0x1D, 0x45, 0xE1, 
-                        (byte)(0x1D | 0x80), (byte)(0x45 | 0x80) 
+                    return [
+                        0xE1, 0x1D, 0x45, 0xE1,
+                        (byte)(0x1D | 0x80), (byte)(0x45 | 0x80)
                     ];
                 }
                 return [];
-                
+
             case KbdKey.PrintScreen:
                 return [
                     0xE0,
@@ -241,11 +241,11 @@ public class KeyboardScancodeConverter {
                     0xE0,
                     (byte)(0x37 | (isPressed ? 0 : 0x80))
                 ];
-                
+
             default:
                 return [];
         }
-        
+
         List<byte> result = [];
         
         if (extend) {

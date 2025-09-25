@@ -11,7 +11,7 @@ using System.Collections.Generic;
 /// <summary>
 /// PS/2 keyboard emulation. C# port of DOSBox's keyboard.cpp
 /// </summary>
-public sealed class PS2Keyboard {
+public class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
@@ -149,7 +149,7 @@ public sealed class PS2Keyboard {
     // ***************************************************************************
 
     private void TypematicUpdate(KbdKey keyType, bool isPressed) {
-        if (keyType == KbdKey.Pause || keyType == KbdKey.PrintScreen) {
+        if (keyType is KbdKey.Pause or KbdKey.PrintScreen) {
             // Key is excluded from being repeated
         } else if (isPressed) {
             if (_repeat.Key == keyType) {
@@ -172,7 +172,7 @@ public sealed class PS2Keyboard {
         }
 
         // Ignore keys for which typematic behavior was disabled
-        byte code = scanCode[scanCode.Count - 1]; // last byte
+        byte code = scanCode[^1]; // last byte
         if (!GetSet3CodeInfo(code).IsEnabledTypematic) {
             return;
         }
@@ -304,7 +304,9 @@ public sealed class PS2Keyboard {
     }
 
     private void ExecuteCommand(KeyboardCommand command) {
-        // LOG_INFO("KEYBOARD: Command 0x%02x", static_cast<int>(command));
+        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}", (byte)command);
+        }
 
         switch (command) {
             //
@@ -430,8 +432,9 @@ public sealed class PS2Keyboard {
     }
 
     private void ExecuteCommand(KeyboardCommand command, byte param) {
-        // LOG_INFO("KEYBOARD: Command 0x%02x, parameter 0x%02x",
-        //          static_cast<int>(command), param);
+        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}, parameter 0x{Param:X2}", (byte)command, param);
+        }
 
         switch (command) {
             case KeyboardCommand.SetLeds: // 0xed

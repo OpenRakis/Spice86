@@ -14,7 +14,7 @@ using System.Collections.Generic;
 /// <summary>
 /// C# port of intel8042.cpp - The PS/2 keyboard and mouse controller.
 /// </summary>
-public sealed class Intel8042Controller : DefaultIOPortHandler {
+public class Intel8042Controller : DefaultIOPortHandler {
     private const byte IrqNumKbdIbmPc = 1;
     private const byte IrqNumMouse = 12;
 
@@ -23,7 +23,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
 
     private const int BufferSize = 64; // in bytes
     // delay appropriate for 20-30 kHz serial clock and 11 bits/byte
-    private const long PortDelayCycles = 3; // Converted from 0.3ms to cycles
+    private const double PortDelayMs = 0.300; // 0.3ms
 
     // Controller internal buffer
     private struct BufferEntry {
@@ -100,19 +100,19 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     // ***************************************************************************
 
     private void WarnBufferFull() {
-        const long thresholdCycles = 15;
+        const uint thresoldCycles = 150;
 
         // Static-like behavior using class fields
-        if (!_bufferFullWarned || (_cpuState.Cycles - _lastBufferFullCycles > thresholdCycles)) {
+        if (!_bufferFullWarned || (_cpuState.Cycles - _lastTimeStamp > thresoldCycles)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("I8042: Internal buffer overflow");
             }
-            _lastBufferFullCycles = _cpuState.Cycles;
+            _lastTimeStamp = _cpuState.Cycles;
             _bufferFullWarned = true;
         }
     }
     private bool _bufferFullWarned = false;
-    private long _lastBufferFullCycles = 0;
+    private long _lastTimeStamp = 0;
 
     private void WarnControllerMode() {
         if (!_controllerModeWarned) {
@@ -272,8 +272,8 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
         }
     }
 
-    private void StartDelay(long delayCycles = PortDelayCycles) {
-        _delayExpiryCycles = _cpuState.Cycles + delayCycles;
+    private void RestartDelayTimer(double timeMs = PortDelayMs) {
+        _delayExpiryCycles = (long)(_cpuState.Cycles + timeMs);
         _delayActive = true;
     }
 
@@ -315,7 +315,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
             _statusByte &= unchecked((byte)~(1 << 5)); // is_data_from_aux = false
         }
         _statusByte |= (1 << 0); // is_data_new = true
-        StartDelay();
+        RestartDelayTimer();
         ActivateIrqsIfNeeded();
     }
 
@@ -414,12 +414,12 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
 
     private static bool IsCmdMemRead(KeyboardCommand command) {
         byte code = (byte)command;
-        return (code >= 0x20) && (code <= 0x3f);
+        return code is >= 0x20 and <= 0x3f;
     }
 
     private static bool IsCmdMemWrite(KeyboardCommand command) {
         byte code = (byte)command;
-        return (code >= 0x60) && (code <= 0x7f);
+        return code is >= 0x60 and <= 0x7f;
     }
 
     private static bool IsCmdPulseLine(KeyboardCommand command) {
@@ -429,7 +429,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
 
     private static bool IsCmdVendorLines(KeyboardCommand command) {
         byte code = (byte)command;
-        return (code >= 0xb0) && (code <= 0xbd);
+        return code is >= 0xb0 and <= 0xbd;
     }
 
     private void ExecuteCommand(KeyboardCommand command) {
@@ -646,7 +646,8 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                 BufferAddAux(param);
                 break;
             case KeyboardCommand.WriteAux: // 0xd4
-                StartDelay(PortDelayCycles * 2); // 'round trip' delay
+                // Sends a byte to the mouse.
+                RestartDelayTimer(PortDelayMs * 2); // 'round trip' delay
                 _statusByte &= unchecked((byte)~(1 << 6)); // clear timeout flag
                 // TODO: Mouse support
                 // _statusByte |= (1 << 6) * (!MOUSEPS2_PortWrite(param));
@@ -665,11 +666,14 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                         WarnLinePulse();
                     }
                     if (code == 0xf0 && (lines & 0b0001) == 0) {
-                        // System reset is not supprted.
+                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("System Reset is not implemented");
+                        }
                     }
                 } else {
                     // If we are here, than either this function
                     // was wrongly called or it is incomplete
+                    throw new NotImplementedException("Keyhboard controller: unexpected command!");
                 }
                 break;
         }
@@ -682,12 +686,10 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
         int nibbleHi = (value & 0b1111_0000) >> 4;
         int nibbleLo = (value & 0b0000_1111);
 
-        // clang-format off
         byte[] translationTable = {
             0x0b, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
             0x09, 0x0a, 0x1e, 0x30, 0x2e, 0x20, 0x12, 0x21
         };
-        // clang-format on
 
         // Diagnostic dumps send 3 bytes for each byte from memory:
         // - high nibble in hex ASCII, translated using codeset 1 table
@@ -750,7 +752,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                 // Enforce the simulated data transfer delay, as some software
                 // (Tyrian 2000 setup) reads the port without waiting for the
                 // interrupt.
-                StartDelay(PortDelayCycles);
+                RestartDelayTimer(PortDelayMs);
 
                 return retVal;
 
@@ -792,7 +794,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                     _configByte &= unchecked((byte)~(1 << 4)); // auto-enable keyboard port
 
                     FlushBuffer();
-                    StartDelay(PortDelayCycles * 2); // 'round trip' delay
+                    RestartDelayTimer(PortDelayMs * 2); // 'round trip' delay
                     KeyboardDevice.PortWrite(value);
                 }
                 break;
@@ -811,7 +813,7 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
                 _statusByte |= (1 << 3); // was_last_write_cmd = true
 
                 _currentCommand = KeyboardCommand.None;
-                if ((value <= 0x1f) || (value >= 0x40 && value <= 0x5f)) {
+                if (value is <= 0x1f or >= 0x40 and <= 0x5f) {
                     // AMI BIOS systems command aliases
                     ExecuteCommand((KeyboardCommand)(value + 0x20));
                 } else {
@@ -922,16 +924,5 @@ public sealed class Intel8042Controller : DefaultIOPortHandler {
     /// <returns>True if ready for keyboard frames.</returns>
     internal bool IsReadyForKbdFrame() {
         return _waitingBytesFromKbd == 0 && (_configByte & (1 << 4)) == 0 && !_isDiagnosticDump;
-    }
-
-    /// <summary>
-    /// Initializes the controller.
-    /// </summary>
-    public void Initialize() {
-        // Initialize the keyboard device
-        KeyboardDevice.Initialize();
-        // Keyboard reset is handled by KeyboardDevice.Initialize()
-        // We just need to flush our buffer
-        FlushBuffer();
     }
 }
