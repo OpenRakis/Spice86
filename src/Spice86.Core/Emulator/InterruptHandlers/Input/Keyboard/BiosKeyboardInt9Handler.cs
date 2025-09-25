@@ -74,6 +74,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
         // PIC EOI
         _dualPic.AcknowledgeInterrupt(1);
+
+        // flush buffer if overflowed
+        _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.ReadByteConfig);
     }
 
     private void ProcessScancode(byte scanCode, ref byte flags1, ref byte flags2, ref byte flags3, ref byte leds) {
