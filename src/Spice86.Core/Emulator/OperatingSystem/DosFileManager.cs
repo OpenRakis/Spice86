@@ -160,20 +160,30 @@ public class DosFileManager {
             return OpenDevice(device);
         }
         
-        string prefixedPath = _dosPathResolver.PrefixWithHostDirectory(fileName);
+        string newHostFilePath = _dosPathResolver.PrefixWithHostDirectory(fileName);
 
         FileStream? testFileStream = null;
         try {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Creating file using handle: {PrefixedPath} with {Attributes}",
-                    prefixedPath, fileAttribute);
-            }
-            if (File.Exists(prefixedPath)) {
-                File.Delete(prefixedPath);
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Creating file using handle: {PrefixedPath} with {Attributes}",
+                    newHostFilePath, fileAttribute);
             }
 
-            testFileStream = File.Create(prefixedPath);
-            File.SetAttributes(prefixedPath, (FileAttributes)fileAttribute);
+            // PYRO2 opens a file and re-creates it again.
+            // Ensure we close it if it was opened first,
+            // in order to avoid an exception
+            for (ushort i = 0; i < OpenFiles.Length; i++) {
+                VirtualFileBase? virtualFile = OpenFiles[i];
+                if(virtualFile is DosFile dosFile) {
+                    string? openHostFilePath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile.Name);
+                    if (string.Equals(openHostFilePath, newHostFilePath, StringComparison.OrdinalIgnoreCase)) {
+                        CloseFileOrDevice(i);
+                    }
+                }
+            }
+
+            testFileStream = File.Create(newHostFilePath);
+            File.SetAttributes(newHostFilePath, (FileAttributes)fileAttribute);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning(e, "Error while creating a file using a handle with {FileName} and {FileAttribute}",
@@ -184,7 +194,7 @@ public class DosFileManager {
             testFileStream?.Dispose();
         }
 
-        return OpenFileInternal(fileName, prefixedPath, FileAccessMode.ReadWrite);
+        return OpenFileInternal(fileName, newHostFilePath, FileAccessMode.ReadWrite);
     }
 
     /// <summary>
