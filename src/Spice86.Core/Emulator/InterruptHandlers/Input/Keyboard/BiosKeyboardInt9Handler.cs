@@ -53,8 +53,18 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
+        
         byte scancode = _keyboard.ReadByte(KeyboardPorts.Data);
+        
+        State.AL = scancode;
         _systemBiosInt15Handler.KeyboardIntercept(calledFromVm: true);
+
+        if(!State.CarryFlag) {
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
+        }
+
+        scancode = State.AL;
 
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 9 processing scan code: 0x{ScanCode:X2}", scancode);
