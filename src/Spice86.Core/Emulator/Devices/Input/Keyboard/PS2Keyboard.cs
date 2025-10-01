@@ -27,11 +27,11 @@ public class PS2Keyboard {
     // Key repetition mechanism data - mirrors DOSBox struct
     private struct RepeatData {
         public KbdKey Key;      // key which went typematic
-        public long Wait;       // countdown timer in CPU cycles
-        public long Pause;      // initial delay in CPU cycles
-        public long Rate;       // repeat rate in CPU cycles
+        public long Wait;       // countdown timer
+        public long Pause;      // initial delay
+        public long Rate;       // repeat rat
     }
-    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 500000, Rate = 33000 }; // Default values in cycles
+    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 50, Rate = 33 }; // Default values in ms
 
     // Set3-specific code info - mirrors DOSBox Set3CodeInfoEntry
     private class Set3CodeInfoEntry {
@@ -45,8 +45,8 @@ public class PS2Keyboard {
     private byte _ledState = 0;
     // If true, all LEDs are on due to keyboard reset
     private bool _ledsAllOn = false;
-    // LED timeout tracking in CPU cycles
-    private long _ledTimeoutCycles = 0;
+    // LED timeout tracking
+    private long _ledTimeoutMs = 0;
     // If false, keyboard does not push keycodes to the controller
     private bool _isScanning = true;
 
@@ -219,14 +219,14 @@ public class PS2Keyboard {
     }
 
     private void ProcessLedTimeout() {
-        if (_ledsAllOn && _ledTimeoutCycles > 0 && _cpuState.Cycles >= _ledTimeoutCycles) {
+        if (_ledsAllOn && _ledTimeoutMs > 0 && _cpuState.Cycles >= _ledTimeoutMs) {
             LedsAllOnExpire();
         }
     }
 
     private void LedsAllOnExpire() {
         _ledsAllOn = false;
-        _ledTimeoutCycles = 0;
+        _ledTimeoutMs = 0;
         MaybeNotifyLedState();
     }
 
@@ -294,11 +294,11 @@ public class PS2Keyboard {
         _isScanning = true;
 
         // Flash all the LEDs
-        _ledTimeoutCycles = 0;
+        _ledTimeoutMs = 0;
         _ledState = 0;
         _ledsAllOn = !isStartup;
         if (_ledsAllOn) {
-            _ledTimeoutCycles = _cpuState.Cycles + (666 * CyclesPerMs);
+            _ledTimeoutMs = _cpuState.Cycles + (666 * CyclesPerMs);
         }
         MaybeNotifyLedState();
     }
@@ -563,12 +563,6 @@ public class PS2Keyboard {
     /// <param name="keyType">The key type.</param>
     /// <param name="isPressed">Whether the key is pressed or released.</param>
     public void AddKey(KbdKey keyType, bool isPressed) {
-        // NOTE: Skipping secure mode check as requested
-        // if (_shouldWaitForSecureMode && !control->SecureMode()) {
-        //     WarnWaitingForSecureMode();
-        //     return;
-        // }
-
         if (!_isScanning) {
             return;
         }
