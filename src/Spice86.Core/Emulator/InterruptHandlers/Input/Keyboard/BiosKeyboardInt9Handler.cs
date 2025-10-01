@@ -52,6 +52,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
+        //TODO: fix arrow keys not arriving here... (see intel 8042 controller)
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
         
         byte scancode = _keyboard.ReadByte(KeyboardPorts.Data);
