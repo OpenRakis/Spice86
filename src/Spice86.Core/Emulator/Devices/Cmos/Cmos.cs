@@ -1,18 +1,25 @@
 namespace Spice86.Core.Emulator.Devices.Cmos;
 
 using System;
+using System.Diagnostics;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 using Serilog.Events;
-using Spice86.Core.Emulator.Devices.ExternalInput;
-using System.Diagnostics;
 
 /// <summary>
+/// TODO: unit tests of events times
+/// TODO: integrate into INT21H
+/// TODO: integrate into BIOS / BIOS_DISK
+/// TODO: integrate into DI (along with shared instance of CmosRegisters)
+/// TODO: double-check with online sources and integrate online documentation into XML summaries.
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM (64 bytes) similar to DOSBox's implementation,
 /// focusing on register semantics, BCD handling, and periodic/status register behavior.
+/// Periodic events are processed lazily on port access; paused time (via IPauseHandler) does not advance RTC timing.
 /// </summary>
-public class Cmos : DefaultIOPortHandler {
+public class Cmos : DefaultIOPortHandler, IDisposable {
     private const ushort AddressPort = 0x70;
     private const ushort DataPort = 0x71;
     private const byte RegisterA = 0x0A;
@@ -24,18 +31,32 @@ public class Cmos : DefaultIOPortHandler {
 
     private readonly DualPic _dualPic;
     private readonly CmosRegisters _cmosRegisters = new();
+    private readonly IPauseHandler _pauseHandler;
 
-    // High resolution baseline timestamp for periodic event scheduling
+    // High resolution baseline timestamp (Stopwatch ticks)
     private readonly long _startTimestamp = Stopwatch.GetTimestamp();
+
+    // Pause accounting (Stopwatch ticks excluded from elapsed time)
+    private long _pausedAccumulatedTicks;
+    private long _pauseStartedTicks;
+    private bool _isPaused; // reflects current pause state (set on Paused, cleared on Resumed)
+    private bool _disposed;
+
     private double _nextPeriodicTriggerMs;
 
     public Cmos(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        bool failOnUnhandledPort, ILoggerService loggerService)
+        IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
+        _pauseHandler = pauseHandler;
+
+        // Subscribe to pause lifecycle events to keep timing exact.
+        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Paused += OnPaused;
+        _pauseHandler.Resumed += OnResumed;
 
         _cmosRegisters[RegisterA] = 0x26; // default rate/divider
-        _cmosRegisters[RegisterB] = 0x02; // 24h
+        _cmosRegisters[RegisterB] = 0x02; // 24h mode
         _cmosRegisters[RegisterD] = 0x80; // power good
 
         _cmosRegisters[0x15] = 0x80; // 640KB low
@@ -151,7 +172,7 @@ public class Cmos : DefaultIOPortHandler {
             return 0xFF;
         }
 
-        DateTime now = DateTime.Now; // Use host wall-clock
+        DateTime now = DateTime.Now;
         switch (reg) {
             case 0x00: return EncodeTimeComponent(now.Second);
             case 0x02: return EncodeTimeComponent(now.Minute);
@@ -238,12 +259,16 @@ public class Cmos : DefaultIOPortHandler {
     }
 
     private void ProcessPendingPeriodicEvents() {
+        // Pause-aware: events do not fire while paused.
+        if (_isPaused) {
+            return;
+        }
         if (!_cmosRegisters.Timer.Enabled || _cmosRegisters.Timer.Delay <= 0) {
             return;
         }
         double nowMs = GetElapsedMilliseconds();
         if (nowMs >= _nextPeriodicTriggerMs) {
-            _cmosRegisters[RegisterC] |= 0xC0;
+            _cmosRegisters[RegisterC] |= 0xC0; // Contraption Zack (music)
             _cmosRegisters.Timer.Acknowledged = false;
             _cmosRegisters.Last.Timer = nowMs;
             while (nowMs >= _nextPeriodicTriggerMs) {
@@ -269,12 +294,61 @@ public class Cmos : DefaultIOPortHandler {
 
     private double GetElapsedMilliseconds() {
         long now = Stopwatch.GetTimestamp();
-        return (now - _startTimestamp) * (1000.0 / Stopwatch.Frequency);
+        long effectiveTicks = now - _startTimestamp - _pausedAccumulatedTicks;
+        if (_isPaused) {
+            // Exclude time elapsed since pause started
+            effectiveTicks -= (now - _pauseStartedTicks);
+        }
+        if (effectiveTicks < 0) {
+            effectiveTicks = 0;
+        }
+        return effectiveTicks * (1000.0 / Stopwatch.Frequency);
     }
 
     private void ValidateDivider(byte written) {
         if ((written & 0x70) != 0x20 && _loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("CMOS: Illegal 22-stage divider value in Register A: {Val:X2}", written);
         }
+    }
+
+    // Pause event handlers
+    private void OnPausing() {
+        if (_isPaused) {
+            return; // already paused
+        }
+        _pauseStartedTicks = Stopwatch.GetTimestamp();
+    }
+
+    private void OnPaused() {
+        // mark state paused (elapsed time will exclude ticks from now on)
+        _isPaused = true;
+    }
+
+    private void OnResumed() {
+        if (!_isPaused) {
+            return;
+        }
+        long now = Stopwatch.GetTimestamp();
+        _pausedAccumulatedTicks += (now - _pauseStartedTicks);
+        _isPaused = false;
+        // Re-align next periodic trigger so it doesn't instantly fire after a long pause
+        if (_cmosRegisters.Timer.Enabled && _cmosRegisters.Timer.Delay > 0) {
+            double nowMs = GetElapsedMilliseconds();
+            double period = _cmosRegisters.Timer.Delay;
+            double rem = nowMs % period;
+            _nextPeriodicTriggerMs = nowMs + (period - rem);
+        }
+    }
+
+    public void Dispose() {
+        if (_disposed) {
+            return;
+        }
+        _disposed = true;
+        // Unsubscribe to avoid leaks
+        _pauseHandler.Pausing -= OnPausing;
+        _pauseHandler.Paused -= OnPaused;
+        _pauseHandler.Resumed -= OnResumed;
+        GC.SuppressFinalize(this);
     }
 }
