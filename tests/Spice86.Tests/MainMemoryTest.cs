@@ -1,6 +1,7 @@
 namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 
 using System;
 
@@ -446,5 +447,83 @@ public class MainMemoryTest {
         Assert.Equal(0x56, _memory.UInt8[0x1236]);
         Assert.Equal(0x34, _memory.UInt8[0x1237]);
         Assert.Equal(0x12, _memory.UInt8[0x1238]);
+    }
+
+    [Fact]
+    public void TestSetUint16_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x0102 at 0x0000:0xFFFF
+        _memory.UInt16[0x0000, 0xFFFF] = 0x0102;
+
+        // Assert - Low byte (02) at 0xFFFF, high byte (01) wraps to 0x0000
+        Assert.Equal(0x02, _memory.UInt8[0xFFFF]);
+        Assert.Equal(0x01, _memory.UInt8[0x0000]);
+    }
+
+    [Fact]
+    public void TestGetUint16_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange - Set up wrapped data
+        _memory.UInt8[0xFFFF] = 0x01;
+        _memory.UInt8[0x0000] = 0x02;
+
+        // Act
+        ushort value = _memory.UInt16[0x0000, 0xFFFF];
+
+        // Assert
+        Assert.Equal(0x0201, value);
+    }
+
+    [Fact]
+    public void TestSetUint32_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x01020304 at 0x0000:0xFFFE
+        _memory.UInt32[0x0000, 0xFFFE] = 0x01020304;
+
+        // Assert - Bytes at FFFE, FFFF, 0000, 0001
+        Assert.Equal(0x04, _memory.UInt8[0xFFFE]);
+        Assert.Equal(0x03, _memory.UInt8[0xFFFF]);
+        Assert.Equal(0x02, _memory.UInt8[0x0000]); // Wrapped
+        Assert.Equal(0x01, _memory.UInt8[0x0001]); // Wrapped
+    }
+
+    [Fact]
+    public void TestGetUint32_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange
+        _memory.UInt8[0xFFFE] = 0x04;
+        _memory.UInt8[0xFFFF] = 0x03;
+        _memory.UInt8[0x0000] = 0x02;
+        _memory.UInt8[0x0001] = 0x01;
+
+        // Act
+        uint value = _memory.UInt32[0x0000, 0xFFFE];
+
+        // Assert
+        Assert.Equal(0x01020304u, value);
+    }
+
+    [Fact]
+    public void TestSetSegmentedAddress_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x0102:0x0304 at 0x0000:0xFFFE
+        _memory.SegmentedAddress16[0x0000, 0xFFFE] = new SegmentedAddress(0x0102, 0x0304);
+
+        // Assert - Format is offset(low, high), segment(low, high)
+        Assert.Equal(0x04, _memory.UInt8[0xFFFE]); // Offset low
+        Assert.Equal(0x03, _memory.UInt8[0xFFFF]); // Offset high
+        Assert.Equal(0x02, _memory.UInt8[0x0000]); // Segment low (wrapped)
+        Assert.Equal(0x01, _memory.UInt8[0x0001]); // Segment high (wrapped)
+    }
+
+    [Fact]
+    public void TestGetSegmentedAddress_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange
+        _memory.UInt8[0xFFFE] = 0x04;
+        _memory.UInt8[0xFFFF] = 0x03;
+        _memory.UInt8[0x0000] = 0x02;
+        _memory.UInt8[0x0001] = 0x01;
+
+        // Act
+        SegmentedAddress addr = _memory.SegmentedAddress16[0x0000, 0xFFFE];
+
+        // Assert
+        Assert.Equal(0x0102, addr.Segment);
+        Assert.Equal(0x0304, addr.Offset);
     }
 }
