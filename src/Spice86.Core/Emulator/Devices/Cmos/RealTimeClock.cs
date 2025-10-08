@@ -19,7 +19,7 @@ using Serilog.Events;
 /// Handles register semantics, BCD handling, and periodic/status register behavior.
 /// Periodic events are processed lazily on port access; paused time (via IPauseHandler) does not advance RTC timing.
 /// </summary>
-public class RealTimeClock : DefaultIOPortHandler, IDisposable {
+public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private const ushort AddressPort = 0x70;
     private const ushort DataPort = 0x71;
     private const byte RegisterA = 0x0A;
