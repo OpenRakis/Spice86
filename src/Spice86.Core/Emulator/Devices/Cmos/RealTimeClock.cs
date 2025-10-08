@@ -15,11 +15,11 @@ using Serilog.Events;
 /// TODO: integrate into BIOS / BIOS_DISK
 /// TODO: integrate into DI (along with shared instance of CmosRegisters)
 /// TODO: double-check with online sources and integrate online documentation into XML summaries.
-/// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM (64 bytes) similar to DOSBox's implementation,
-/// focusing on register semantics, BCD handling, and periodic/status register behavior.
+/// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
+/// Handles register semantics, BCD handling, and periodic/status register behavior.
 /// Periodic events are processed lazily on port access; paused time (via IPauseHandler) does not advance RTC timing.
 /// </summary>
-public class Cmos : DefaultIOPortHandler, IDisposable {
+public class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private const ushort AddressPort = 0x70;
     private const ushort DataPort = 0x71;
     private const byte RegisterA = 0x0A;
@@ -44,7 +44,7 @@ public class Cmos : DefaultIOPortHandler, IDisposable {
 
     private double _nextPeriodicTriggerMs;
 
-    public Cmos(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
+    public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
         IPauseHandler pauseHandler, bool failOnUnhandledPort, ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
