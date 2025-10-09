@@ -159,7 +159,7 @@ public class DosFileManagerTests {
             new NullCycleLimiter(), inputEventQueue, loggerService);
 
         Intel8042Controller keyboard = new(state, ioPortDispatcher, a20Gate,
-            dualPic, configuration.FailOnUnhandledPort, pauseHandler, loggerService);
+            dualPic, configuration.FailOnUnhandledPort, pauseHandler, loggerService, timer);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 

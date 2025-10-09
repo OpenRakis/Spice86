@@ -1,12 +1,14 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Spice86.Core.Emulator.CPU;
-
-using System.Diagnostics;
-
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Emulates a PIT8254 Programmable Interval Timer.<br/>
@@ -27,13 +29,45 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private readonly Pit8254Counter[] _counters = new Pit8254Counter[3];
     private readonly DualPic _dualPic;
 
+    // Periodic device-callback facility (PIC-like)
+    private sealed class PeriodicCallbackEntry {
+        public required CounterActivator Activator { get; init; }
+        public required Action Callback { get; init; }
+        public required string Name { get; init; }
+    }
+
+    private readonly List<PeriodicCallbackEntry> _deviceCallbacks = new();
+    private readonly CounterConfiguratorFactory _counterConfiguratorFactory;
+    private double _timeMultiplier = 1.0;
+
+    // -------------------------------------------------------------------------
+    // Sub-ms event queue (PIC-like) - similar intent to DOSBox PIC_AddEvent & queue.
+    // -------------------------------------------------------------------------
+    private sealed class ScheduledEvent {
+        public required Guid Id;
+        public required string Name;
+        public required Action<uint> Handler;
+        public required uint Value;
+        public required long DueTicks;
+        public bool Canceled;
+    }
+
+    private readonly object _eventLock = new();
+    private readonly PriorityQueue<ScheduledEvent, long> _eventQueue = new();
+    private bool _inEventService = false;
+    private long _serviceNowTicks = 0;
+
+    // -------------------------------------------------------------------------
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
     /// </summary>
     public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
-        CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
+        CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic)
+        : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        
+        _counterConfiguratorFactory = counterConfiguratorFactory;
+
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Pit8254Counter(_loggerService, i, counterConfiguratorFactory.InstantiateCounterActivator());
         }
@@ -45,9 +79,153 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }
+        _timeMultiplier = multiplier;
+
         foreach (Pit8254Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
         }
+        foreach (PeriodicCallbackEntry entry in _deviceCallbacks) {
+            entry.Activator.Multiplier = multiplier;
+        }
+    }
+
+    /// <summary>
+    /// Registers a periodic callback driven by a CounterActivator at the given frequency (Hz).
+    /// </summary>
+    public void RegisterPeriodicCallback(string name, double frequencyHz, Action callback) {
+        CounterActivator activator = _counterConfiguratorFactory.InstantiateCounterActivator();
+        activator.Multiplier = _timeMultiplier;
+        activator.Frequency = (long)Math.Max(1, Math.Round(frequencyHz));
+        _deviceCallbacks.Add(new PeriodicCallbackEntry {
+            Activator = activator,
+            Callback = callback,
+            Name = name
+        });
+    }
+
+    /// <summary>
+    /// Unregisters a previously registered periodic callback.
+    /// </summary>
+    public void UnregisterPeriodicCallback(Action callback) {
+        _deviceCallbacks.RemoveAll(x => x.Callback == callback);
+    }
+
+    /// <summary>
+    /// Drives registered device callbacks; call this once per emulation iteration after Tick().
+    /// </summary>
+    public void DeviceTick() {
+        // Pausing is handled by CounterActivator.IsFrozen via IPauseHandler.
+        foreach (PeriodicCallbackEntry entry in _deviceCallbacks) {
+            if (entry.Activator.IsActivated) {
+                entry.Callback();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Schedule a single-shot event to run after delayMs (sub-ms supported).
+    /// Time multiplier > 1 speeds up events, < 1 slows down.
+    /// </summary>
+    public Guid ScheduleEvent(string name, double delayMs, Action action) {
+        // Wrap Action as Action<uint> with dummy value
+        return ScheduleEvent(name, delayMs, _ => action(), 0);
+    }
+
+    /// <summary>
+    /// Schedule a single-shot event (value-carrying) to run after delayMs (sub-ms supported).
+    /// Time multiplier > 1 speeds up events, < 1 slows down.
+    /// </summary>
+    public Guid ScheduleEvent(string name, double delayMs, Action<uint> handler, uint value) {
+        var id = Guid.NewGuid();
+        long baseTicks = _inEventService ? _serviceNowTicks : Stopwatch.GetTimestamp();
+        long dueTicks = baseTicks + MsToTicks(delayMs / _timeMultiplier);
+
+        var ev = new ScheduledEvent {
+            Id = id,
+            Name = name,
+            Handler = handler,
+            Value = value,
+            DueTicks = dueTicks,
+            Canceled = false
+        };
+
+        lock (_eventLock) {
+            _eventQueue.Enqueue(ev, ev.DueTicks);
+        }
+        return id;
+    }
+
+    /// <summary>
+    /// Remove all events for a particular handler.
+    /// </summary>
+    public int RemoveEvents(Action<uint> handler) {
+        int count = 0;
+        lock (_eventLock) {
+            foreach ((ScheduledEvent Element, long Priority) item in _eventQueue.UnorderedItems) {
+                if (!item.Element.Canceled && item.Element.Handler == handler) {
+                    item.Element.Canceled = true;
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Remove specific events that match a handler and value.
+    /// </summary>
+    public int RemoveSpecificEvents(Action<uint> handler, uint value) {
+        int count = 0;
+        lock (_eventLock) {
+            foreach ((ScheduledEvent Element, long Priority) item in _eventQueue.UnorderedItems) {
+                if (!item.Element.Canceled && item.Element.Handler == handler && item.Element.Value == value) {
+                    item.Element.Canceled = true;
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Run the sub-ms event queue. Should be called frequently from the emulation loop.
+    /// </summary>
+    public void RunEventQueue() {
+        long now = Stopwatch.GetTimestamp();
+        _inEventService = true;
+        _serviceNowTicks = now;
+
+        while (true) {
+            ScheduledEvent? ev;
+            lock (_eventLock) {
+                if (!_eventQueue.TryPeek(out ev!, out long due)) {
+                    break;
+                }
+                if (due > now) {
+                    break;
+                }
+                _eventQueue.Dequeue();
+                if (ev.Canceled) {
+                    continue;
+                }
+            }
+            // Execute outside lock
+            try {
+                ev.Handler(ev.Value);
+            } catch (Exception ex) {
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    _loggerService.Warning("Timer event '{Name}' failed: {Error}", ev.Name, ex.Message);
+                }
+            }
+        }
+
+        _inEventService = false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long MsToTicks(double ms) {
+        // ms can be fractional; ticks are Stopwatch ticks
+        return (long)Math.Round(ms * Stopwatch.Frequency / 1000.0);
     }
 
     /// <summary>
@@ -109,7 +287,6 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         }
         base.WriteByte(port, value);
     }
-
 
     /// <summary>
     /// If the counter is activated, triggers the interrupt request

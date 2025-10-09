@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -11,12 +12,8 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 
-/// <summary>
-/// C# port of intel8042.cpp - The PS/2 keyboard and mouse controller.
-/// </summary>
 public class Intel8042Controller : DefaultIOPortHandler {
     private const byte IrqNumKbdIbmPc = 1;
     private const byte IrqNumMouse = 12;
@@ -43,13 +40,9 @@ public class Intel8042Controller : DefaultIOPortHandler {
     private int _waitingBytesFromAux = 0;
     private int _waitingBytesFromKbd = 0;
 
-    // Real-time delay tracking (Stopwatch + pause-aware)
-    private readonly Stopwatch _rt = Stopwatch.StartNew();
-    private readonly IPauseHandler? _pauseHandler;
-    private long _pauseStartedAtTicks = 0;
-    private long _pausedAccumTicks = 0;
-    private long _delayExpiryTicks = 0;
+    // Sub-ms delay state driven by Timer one-shots
     private bool _delayActive = false;
+    private int _delayToken = 0; // invalidates prior scheduled delay expiry callbacks
 
     // Executing command, do not notify devices about readiness for accepting frame
     private bool _shouldSkipDeviceNotify = false;
@@ -73,9 +66,14 @@ public class Intel8042Controller : DefaultIOPortHandler {
     private long _lastTimeStamp = 0;
     private bool _controllerModeWarned = false;
     private bool _internalRamWarned = false;
+    private bool _linePulseWarned = false;
+    private bool _readTestInputsWarned = false;
+    private bool _vendorLinesWarned = false;
+
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
     private readonly State _cpuState;
+    private readonly Timer _timer;
 
     public PS2Keyboard KeyboardDevice { get; }
 
@@ -85,19 +83,15 @@ public class Intel8042Controller : DefaultIOPortHandler {
     public Intel8042Controller(State state, IOPortDispatcher ioPortDispatcher,
         A20Gate a20Gate, DualPic dualPic, bool failOnUnhandledPort,
         IPauseHandler pauseHandler, ILoggerService loggerService,
-        IGuiKeyboardEvents? gui = null)
+        Timer timer, IGuiKeyboardEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
         _cpuState = state;
-        _pauseHandler = pauseHandler;
+        _timer = timer;
 
-        if (_pauseHandler is not null) {
-            _pauseHandler.Pausing += OnPausing;
-            _pauseHandler.Resumed += OnResumed;
-        }
-
-        KeyboardDevice = new PS2Keyboard(this, state, pauseHandler, loggerService, gui);
+        // Sub-ms one-shot scheduling replaces old 1ms periodic tick for delays
+        KeyboardDevice = new PS2Keyboard(this, state, loggerService, timer, gui);
 
         InitPortHandlers(ioPortDispatcher);
 
@@ -110,35 +104,9 @@ public class Intel8042Controller : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.Command, this);
     }
 
-    private long NowTicks {
-        get {
-            var now = _rt.ElapsedTicks;
-            if (_pauseHandler is null || !_pauseHandler.IsPaused) {
-                return now - _pausedAccumTicks;
-            }
-            // while paused, freeze time at pause start
-            return _pauseStartedAtTicks - _pausedAccumTicks;
-        }
-    }
-    private static long MsToTicks(double ms) => (long)(ms * Stopwatch.Frequency / 1000.0);
-
-    private void OnPausing() {
-        if (_pauseStartedAtTicks == 0) {
-            _pauseStartedAtTicks = _rt.ElapsedTicks;
-        }
-    }
-    private void OnResumed() {
-        if (_pauseStartedAtTicks != 0) {
-            var delta = _rt.ElapsedTicks - _pauseStartedAtTicks;
-            _pausedAccumTicks += delta;
-            _pauseStartedAtTicks = 0;
-        }
-    }
-
     private void WarnBufferFull() {
         const uint thresoldCycles = 150;
 
-        // Static-like behavior using class fields
         if (!_bufferFullWarned || (_cpuState.Cycles - _lastTimeStamp > thresoldCycles)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("I8042: Internal buffer overflow");
@@ -174,7 +142,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
             _linePulseWarned = true;
         }
     }
-    private bool _linePulseWarned = false;
 
     private void WarnReadTestInputs() {
         if (!_readTestInputsWarned) {
@@ -184,7 +151,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
             _readTestInputsWarned = true;
         }
     }
-    private bool _readTestInputsWarned = false;
 
     private void WarnVendorLines() {
         if (!_vendorLinesWarned) {
@@ -194,7 +160,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
             _vendorLinesWarned = true;
         }
     }
-    private bool _vendorLinesWarned = false;
 
     private void WarnUnknownCommand(KeyboardCommand command) {
         byte code = (byte)command;
@@ -253,7 +218,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
             0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
             0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
         };
-
         return translationTable[value];
     }
 
@@ -271,8 +235,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
 
     private void FlushBuffer() {
         _status.IsDataNew = false;
-        _status.IsDataFromAux = false; 
-        // is_data_from_kbd tracked separately by buffer contents
+        _status.IsDataFromAux = false;
 
         _bufferStartIdx = 0;
         _bufferNumUsed = 0;
@@ -284,7 +247,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
         _waitingBytesFromKbd = 0;
 
         if (shouldNotifyAux && IsReadyForAuxFrame()) {
-            // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse frame support...
+            // TODO: Mouse notify-ready when implemented
         }
 
         if (shouldNotifyKbd && IsReadyForKbdFrame()) {
@@ -304,20 +267,20 @@ public class Intel8042Controller : DefaultIOPortHandler {
     }
 
     private void RestartDelayTimer(double timeMs = PortDelayMs) {
-        _delayExpiryTicks = NowTicks + MsToTicks(timeMs);
+        // Arm a sub-ms one-shot to clear the delay and attempt transfer
         _delayActive = true;
+        int token = ++_delayToken;
+        _timer.ScheduleEvent("i8042-delay-expire", timeMs, () => {
+            // Only the most recent timer clears the delay
+            if (token != _delayToken) {
+                return;
+            }
+            _delayActive = false;
+            MaybeTransferBuffer();
+        });
     }
 
-    private bool IsDelayExpired() {
-        if (!_delayActive) {
-            return true;
-        }
-        if (NowTicks >= _delayExpiryTicks) {
-            _delayActive = false;
-            return true;
-        }
-        return false;
-    }
+    private bool IsDelayExpired() => !_delayActive;
 
     private void MaybeTransferBuffer() {
         if (_status.IsDataNew || _bufferNumUsed == 0) {
@@ -382,37 +345,11 @@ public class Intel8042Controller : DefaultIOPortHandler {
         MaybeTransferBuffer();
     }
 
-    private void BufferAddAux(byte value, bool skipDelay = false) {
-        const bool isFromAux = true;
-        const bool isFromKbd = false;
-
-        BufferAdd(value, isFromAux, isFromKbd, skipDelay);
-    }
-
-    private void BufferAddKbd(byte value) {
-        const bool isFromAux = false;
-        const bool isFromKbd = true;
-
-        BufferAdd(value, isFromAux, isFromKbd);
-    }
+    private void BufferAddAux(byte value, bool skipDelay = false) => BufferAdd(value, true, false, skipDelay);
+    private void BufferAddKbd(byte value) => BufferAdd(value, false, true);
 
     private byte GetInputPort() { // aka port P1
         byte port = 0b1010_0000;
-
-        // bit 0: keyboard data in, ISA - unused
-        // bit 1: mouse data in, ISA - unused
-        // bit 2: ISA, EISA, PS/2 - unused
-        //        MCA - 0 = keyboard has power, 1 = no power
-        //        might be configured for clock switching
-        // bit 3: ISA, EISA, PS/2 - unused
-        //        might be configured for clock switching
-
-        // bit 4: 0 = 512 KB, 1 = 256 KB
-        // bit 5: 0 = manufacturer jumper, infinite diagnostics loop
-        // bit 6: 0 = CGA, 1 = MDA
-        // bit 7: 0 = keyboard locked, 1 = not locked
-
-        // Simplified: assume CGA and not locked
         return port;
     }
 
@@ -674,19 +611,14 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 BufferAddAux(param);
                 break;
             case KeyboardCommand.WriteAux: // 0xd4
-                // Sends a byte to the mouse.
-                RestartDelayTimer(PortDelayMs * 2); // 'round trip' delay
-                _status.Timeout = false; // clear timeout flag
-                // TODO: Mouse support
-                // _statusByte |= (1 << 6) * (!MOUSEPS2_PortWrite(param));
+                RestartDelayTimer(PortDelayMs * 2);
+                _status.Timeout = false;
+                // TODO: mouse port write and timeout flag when integrated
                 break;
             default:
-                if (IsCmdMemWrite(command)) { // 0x60-0x7f
-                    // Internal controller memory write,
-                    // not implemented for most bytes
-                } else if (IsCmdPulseLine(command)) { // 0xf0-0xff
-                    // Pulse controller lines for 6ms,
-                    // bits 0-3 counts, 0 = pulse relevant line
+                if (IsCmdMemWrite(command)) {
+                    // ignored
+                } else if (IsCmdPulseLine(command)) {
                     byte lines = (byte)(param & 0b0000_1111);
                     byte code = (byte)command;
                     if ((code == 0xf0 && param != 0b1111 && param != 0b1110) ||
@@ -744,7 +676,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                     // Diagnostic dump finished
                     _isDiagnosticDump = false;
                     if (IsReadyForAuxFrame()) {
-                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                        // TODO: mouse notify-ready
                     }
                     if (IsReadyForKbdFrame()) {
                         KeyboardDevice.NotifyReadyForFrame();
@@ -759,7 +691,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                         --_waitingBytesFromAux;
                     }
                     if (IsReadyForAuxFrame()) {
-                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                        // TODO: mouse notify-ready
                     }
                 }
 
@@ -811,7 +743,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                     _shouldSkipDeviceNotify = false;
 
                     if (shouldNotifyAux && IsReadyForAuxFrame()) {
-                        // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                        // TODO: mouse notify-ready
                     }
                     if (shouldNotifyKbd && IsReadyForKbdFrame()) {
                         KeyboardDevice.NotifyReadyForFrame();
@@ -851,7 +783,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 _shouldSkipDeviceNotify = false;
 
                 if (shouldNotifyAux2 && IsReadyForAuxFrame()) {
-                    // MOUSEPS2_NotifyReadyForFrame(); // TODO: Mouse support
+                    // TODO: mouse notify-ready
                 }
                 if (shouldNotifyKbd2 && IsReadyForKbdFrame()) {
                     KeyboardDevice.NotifyReadyForFrame();

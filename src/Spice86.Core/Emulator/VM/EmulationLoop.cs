@@ -120,9 +120,15 @@ public class EmulationLoop {
     private void RunOnce() {
         _emulatorBreakpointsManager.CheckExecutionBreakPoints();
         _pauseHandler.WaitIfPaused();
+
+        // Sub-ms event queue run (like DOSBox PIC_RunQueue before CPU executes)
+        _timer.RunEventQueue();
+
         _cpu.ExecuteNext();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
-        _timer.Tick();
+
+        _timer.Tick();        // PIT counter 0 (IRQ0 if due)
+        _timer.DeviceTick();  // periodic device callbacks (1 kHz or otherwise)
         _dmaController.PerformDmaTransfers();
         _inputEventQueue.ProcessAllPendingInputEvents();
         _cyclesLimiter.RegulateCycles(_cpuState);

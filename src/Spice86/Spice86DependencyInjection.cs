@@ -366,7 +366,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Intel8042Controller ps2Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, timer, inputEventQueue);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
