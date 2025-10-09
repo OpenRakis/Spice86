@@ -36,7 +36,7 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     /// </summary>
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
-    public new SegmentedAddress this[ushort segment, ushort offset] {
+    public override SegmentedAddress this[ushort segment, ushort offset] {
         get {
             // Read using the physical addressing to get proper little-endian ordering
             uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -60,7 +60,7 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     /// Gets or sets the data at the specified segmented address and offset in the memory.
     /// </summary>
     /// <param name="address">Segmented address at which to access the data</param>
-    public new SegmentedAddress this[SegmentedAddress address] {
+    public override SegmentedAddress this[SegmentedAddress address] {
         get => this[address.Segment, address.Offset];
         set => this[address.Segment, address.Offset] = value;
     }

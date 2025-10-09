@@ -27,7 +27,7 @@ public class UInt8Indexer : MemoryIndexer<byte> {
     /// </summary>
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
-    public new byte this[ushort segment, ushort offset] {
+    public override byte this[ushort segment, ushort offset] {
         get => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)];
         set => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
     }
@@ -36,7 +36,7 @@ public class UInt8Indexer : MemoryIndexer<byte> {
     /// Gets or sets the data at the specified segmented address and offset in the memory.
     /// </summary>
     /// <param name="address">Segmented address at which to access the data</param>
-    public new byte this[SegmentedAddress address] {
+    public override byte this[SegmentedAddress address] {
         get => this[address.Segment, address.Offset];
         set => this[address.Segment, address.Offset] = value;
     }
