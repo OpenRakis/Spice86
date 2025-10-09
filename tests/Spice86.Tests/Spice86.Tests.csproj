@@ -27,6 +27,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="SingleStepTests.Intel8086.00-FF" />
+    <PackageReference Include="SingleStepTests.Intel80286.00-3F" />
+    <PackageReference Include="SingleStepTests.Intel80286.40-7F" />
+    <PackageReference Include="SingleStepTests.Intel80286.80-BF" />
+    <PackageReference Include="SingleStepTests.Intel80286.C0-FF" />
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
@@ -47,5 +52,40 @@
     <None Update="Resources\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SingleStepTests.Intel8086.00-FF" Version="2025.6.8" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel8086.00-ff/2025.6.8/content/tests/8086.00-FF.zip">
+      <Link>8086.00-FF.zip</Link>
+      <LogicalName>8086.00-FF.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SingleStepTests.Intel80286.00-3F" Version="2025.10.8" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.00-3f/2025.10.8/content/tests/80286.00-3F.zip">
+      <Link>80286.00-3F.zip</Link>
+      <LogicalName>80286.00-3F.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SingleStepTests.Intel80286.40-7F" Version="2025.10.8" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.40-7f/2025.10.8/content/tests/80286.40-7F.zip">
+      <Link>80286.40-7F.zip</Link>
+      <LogicalName>80286.40-7F.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.80-bf/2025.10.8/content/tests/80286.80-BF.zip">
+      <Link>80286.80-BF.zip</Link>
+      <LogicalName>80286.80-BF.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.c0-ff/2025.10.8/content/tests/80286.C0-FF.zip">
+      <Link>80286.C0-FF.zip</Link>
+      <LogicalName>80286.C0-FF.zip</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

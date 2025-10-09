@@ -1,5 +1,7 @@
 namespace Spice86.Tests.CpuTests.SingleStepTests;
 
+using Microsoft.Msagl.Core.DataStructures;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Memory;
@@ -7,6 +9,7 @@ using Spice86.Shared.Utils;
 
 using System.ComponentModel;
 using System.IO.Compression;
+using System.Reflection;
 using System.Text.Json;
 
 using Xunit;
@@ -16,26 +19,28 @@ using Xunit;
 /// </summary>
 public class SingleStepTest {
     private SingleStepTestMinimalMachine _singleStepTestMinimalMachine = new(CpuModel.INTEL_8086);
-    [Theory (Skip = "Not ready yet to be run in CI")]
-    [InlineData(CpuModel.INTEL_8086, "0E", 1)]
-    [InlineData(CpuModel.INTEL_80286, "00", 2)]
-    public void TestCpu(CpuModel cpuModel, string from, int maxCycles) {
+    private readonly ISet<string> _revocationList = new HashSet<string>([
+        "7df1d2a948c416f5a4416e2f747d2d357d497570",
+        "ab0cea0f2b89ae469a98eaf20dedc9ff2ca08c91",
+        "ba5bb16b5a4306333a359c3abd2169b871ffa42c",
+        "eaaf835a6600a351ee70375c7f6996931411bca5",
+        "1b586a46891182a22b3f55f71e4db4c601ac26e4"]);
+    [Theory(Skip = "Not ready yet to be run in CI")]
+    [InlineData(CpuModel.INTEL_8086, "00-FF", 1)]
+    [InlineData(CpuModel.INTEL_80286, "00-3F", 2)]
+    [InlineData(CpuModel.INTEL_80286, "40-7F", 2)]
+    [InlineData(CpuModel.INTEL_80286, "80-BF", 2)]
+    [InlineData(CpuModel.INTEL_80286, "C0-FF", 2)]
+    public void TestCpu(CpuModel cpuModel, string range, int maxCycles) {
         _singleStepTestMinimalMachine = new(cpuModel);
         string cpuModelString = FromCpuModel(cpuModel);
-        string zipFilePath = $"Resources/SingleStepTests/{cpuModelString}.zip";
-        using FileStream fileStream = new FileStream(zipFilePath, FileMode.Open, FileAccess.Read);
-        using ZipArchive archive = new ZipArchive(fileStream, ZipArchiveMode.Read);
-        bool startFound = false;
-        string startName = $"{from}.json";
+        string resource = $"{cpuModelString}.{range}.zip";
+        using Stream? stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource);
+        if (stream == null) {
+            Assert.Fail($"Couldn't find test resource {resource} for {cpuModel} for range {range}");
+        }
+        using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read);
         foreach (ZipArchiveEntry entry in archive.Entries) {
-            string jsonName = entry.Name;
-            if (jsonName == startName) {
-                startFound = true;
-            }
-
-            if (!startFound) {
-                continue;
-            }
             List<CpuTest>? cpuTests = ReadCpuTests(entry);
             if (cpuTests is null) {
                 continue;
@@ -43,6 +48,9 @@ public class SingleStepTest {
 
             int index = 0;
             foreach (CpuTest cpuTest in cpuTests) {
+                if (_revocationList.Contains(cpuTest.Hash)) {
+                    continue;
+                }
                 RunCpuTest(cpuTest, index++, entry.Name, cpuModel, maxCycles);
             }
         }
@@ -57,6 +65,9 @@ public class SingleStepTest {
     }
 
     private List<CpuTest>? ReadCpuTests(ZipArchiveEntry entry) {
+        if (!entry.Name.EndsWith(".json")) {
+            return null;
+        }
         using Stream entryStream = entry.Open();
         using StreamReader reader = new StreamReader(entryStream);
         string jsonContent = reader.ReadToEnd();
@@ -205,7 +216,13 @@ public class SingleStepTest {
             CompareMemoryWithExpected(cpuTest.Final, _singleStepTestMinimalMachine.Memory);
             _singleStepTestMinimalMachine.RestoreMemoryAfterTest();
         } catch (Exception e) {
-            throw new Exception($"An error occurred while running test {name} in {fileName} (index {index}) for {cpuModel}: {e.Message}", e);
+            string instructionBytes = FormatBytesAsHex(cpuTest.Bytes);
+            throw new Exception($"An error occurred while running test {name} in {fileName} (index {index}) for {cpuModel} (Instruction bytes are {instructionBytes}): {e.Message}", e);
         }
+    }
+    
+    private static string FormatBytesAsHex(uint[] byteValues) {
+        byte[] bytes = byteValues.Select(i => (byte)i).ToArray();
+        return Convert.ToHexString(bytes);
     }
 }
