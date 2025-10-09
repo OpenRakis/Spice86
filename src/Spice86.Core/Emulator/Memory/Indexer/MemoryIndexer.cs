@@ -12,18 +12,18 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     /// </summary>
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
-    public virtual T this[ushort segment, ushort offset] {
-        get => this[MemoryUtils.ToPhysicalAddress(segment, offset)];
-        set => this[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
+    public abstract T this[ushort segment, ushort offset] {
+        get;
+        set;
     }
 
     /// <summary>
     /// Gets or sets the data at the specified segmented address and offset in the memory.
     /// </summary>
     /// <param name="address">Segmented address at which to access the data</param>
-    public virtual T this[SegmentedAddress address] {
-        get => this[address.Segment, address.Offset];
-        set => this[address.Segment, address.Offset] = value;
+    public abstract T this[SegmentedAddress address] {
+        get;
+        set;
     }
 
     /// <inheritdoc />
