@@ -3,10 +3,12 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
+using System.Diagnostics;
 
 /// <summary>
 /// PS/2 keyboard emulation. C# port of DOSBox's keyboard.cpp
@@ -16,6 +18,22 @@ public class PS2Keyboard {
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly State _cpuState;
+
+    // Real-time timer and pause-awareness
+    private readonly Stopwatch _rt = Stopwatch.StartNew();
+    private readonly IPauseHandler? _pauseHandler;
+    private long _pauseStartedAtTicks = 0;
+    private long _pausedAccumTicks = 0;
+    private long NowTicks {
+        get {
+            var now = _rt.ElapsedTicks;
+            if (_pauseHandler is null || !_pauseHandler.IsPaused) {
+                return now - _pausedAccumTicks;
+            }
+            return _pauseStartedAtTicks - _pausedAccumTicks;
+        }
+    }
+    private static long MsToTicks(double ms) => (long)(ms * Stopwatch.Frequency / 1000.0);
 
     // Internal keyboard scancode buffer - mirrors DOSBox implementation
     private const int BufferSize = 8; // in scancodes
@@ -27,11 +45,11 @@ public class PS2Keyboard {
     // Key repetition mechanism data - mirrors DOSBox struct
     private struct RepeatData {
         public KbdKey Key;      // key which went typematic
-        public long Wait;       // countdown timer
-        public long Pause;      // initial delay
-        public long Rate;       // repeat rat
+        public long WaitTicks;  // absolute timestamp when to generate next repeat
+        public long PauseTicks; // initial delay
+        public long RateTicks;  // repeat rate
     }
-    private RepeatData _repeat = new() { Key = KbdKey.None, Wait = 0, Pause = 50, Rate = 33 }; // Default values in ms
+    private RepeatData _repeat = new() { Key = KbdKey.None, WaitTicks = 0, PauseTicks = MsToTicks(500), RateTicks = MsToTicks(33) };
 
     // Set3-specific code info - mirrors DOSBox Set3CodeInfoEntry
     private class Set3CodeInfoEntry {
@@ -46,7 +64,7 @@ public class PS2Keyboard {
     // If true, all LEDs are on due to keyboard reset
     private bool _ledsAllOn = false;
     // LED timeout tracking
-    private long _ledTimeoutMs = 0;
+    private long _ledTimeoutTicks = 0;
     // If false, keyboard does not push keycodes to the controller
     private bool _isScanning = true;
 
@@ -55,27 +73,43 @@ public class PS2Keyboard {
     // Command currently being executed, waiting for parameter
     private KeyboardCommand _currentCommand = KeyboardCommand.None;
 
-    // CPU cycles conversion constants (approximate)
-    private const long CyclesPerMs = 10;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
     /// </summary>
     /// <param name="controller">The keyboard controller.</param>
     /// <param name="cpuState">The CPU state for cycle-based timing.</param>
+    /// <param name="pauseHandler">The emulation pause/continue notification system.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="guiKeyboardEvents">Optional GUI keyboard events interface.</param>
     public PS2Keyboard(Intel8042Controller controller, State cpuState,
-        ILoggerService loggerService, IGuiKeyboardEvents? guiKeyboardEvents = null) {
+        IPauseHandler pauseHandler, ILoggerService loggerService,
+        IGuiKeyboardEvents? guiKeyboardEvents = null) {
         _controller = controller;
         _cpuState = cpuState;
         _loggerService = loggerService;
+        _pauseHandler = pauseHandler;
+
+        _pauseHandler.Pausing += OnPausing;
+        _pauseHandler.Resumed += OnResumed;
 
         KeyboardReset(isStartup: true);
 
         if (guiKeyboardEvents is not null) {
             guiKeyboardEvents.KeyDown += OnKeyEvent;
             guiKeyboardEvents.KeyUp += OnKeyEvent;
+        }
+    }
+
+    private void OnPausing() {
+        if (_pauseStartedAtTicks == 0) {
+            _pauseStartedAtTicks = _rt.ElapsedTicks;
+        }
+    }
+    private void OnResumed() {
+        if (_pauseStartedAtTicks != 0) {
+            var delta = _rt.ElapsedTicks - _pauseStartedAtTicks;
+            _pausedAccumTicks += delta;
+            _pauseStartedAtTicks = 0;
         }
     }
 
@@ -153,15 +187,15 @@ public class PS2Keyboard {
             // Key is excluded from being repeated
         } else if (isPressed) {
             if (_repeat.Key == keyType) {
-                _repeat.Wait = _cpuState.Cycles + _repeat.Rate;
+                _repeat.WaitTicks = NowTicks + _repeat.RateTicks;
             } else {
-                _repeat.Wait = _cpuState.Cycles + _repeat.Pause;
+                _repeat.WaitTicks = NowTicks + _repeat.PauseTicks;
             }
             _repeat.Key = keyType;
         } else if (_repeat.Key == keyType) {
             // Currently repeated key being released
             _repeat.Key = KbdKey.None;
-            _repeat.Wait = 0;
+            _repeat.WaitTicks = 0;
         }
     }
 
@@ -188,17 +222,17 @@ public class PS2Keyboard {
         }
 
         // Check if we should try to add key press
-        if (_repeat.Wait > 0 && _cpuState.Cycles >= _repeat.Wait) {
+        if (_repeat.WaitTicks > 0 && NowTicks >= _repeat.WaitTicks) {
             // Check if buffers are free
             if (_bufferNumUsed > 0 || !_controller.IsReadyForKbdFrame()) {
-                _repeat.Wait = _cpuState.Cycles + CyclesPerMs; // Try again in ~1ms worth of cycles
+                _repeat.WaitTicks = NowTicks + MsToTicks(1); // Try again in ~1ms
                 return;
             }
 
             // Simulate key press
             const bool isPressed = true;
             AddKey(_repeat.Key, isPressed);
-            _repeat.Wait = _cpuState.Cycles + _repeat.Rate; // Set for next repeat
+            _repeat.WaitTicks = NowTicks + _repeat.RateTicks; // Set for next repeat
         }
     }
 
@@ -208,25 +242,20 @@ public class PS2Keyboard {
 
     private void MaybeNotifyLedState() {
         // TODO: add LED support to BIOS, currently it does not set them
-        // consider displaying LEDs on screen
-
-        byte currentState = GetLedState();
-        // Here you could add UI notification about LED state changes
-        // or log it for debug purposes
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", currentState);
+            _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", GetLedState());
         }
     }
 
     private void ProcessLedTimeout() {
-        if (_ledsAllOn && _ledTimeoutMs > 0 && _cpuState.Cycles >= _ledTimeoutMs) {
+        if (_ledsAllOn && _ledTimeoutTicks > 0 && NowTicks >= _ledTimeoutTicks) {
             LedsAllOnExpire();
         }
     }
 
     private void LedsAllOnExpire() {
         _ledsAllOn = false;
-        _ledTimeoutMs = 0;
+        _ledTimeoutTicks = 0;
         MaybeNotifyLedState();
     }
 
@@ -236,7 +265,7 @@ public class PS2Keyboard {
         _bufferOverflowed = false;
 
         _repeat.Key = KbdKey.None;
-        _repeat.Wait = 0;
+        _repeat.WaitTicks = 0;
     }
 
     private bool SetCodeSet(byte requestedSet) {
@@ -257,26 +286,29 @@ public class PS2Keyboard {
     }
 
     private void SetTypeRate(byte value) {
-        long[] pauseTable = { 250 * CyclesPerMs, 500 * CyclesPerMs, 750 * CyclesPerMs, 1000 * CyclesPerMs };
+        // DOSBox tables in ms; convert to Stopwatch ticks
+        long[] pauseTable = {
+            MsToTicks(250), MsToTicks(500), MsToTicks(750), MsToTicks(1000)
+        };
         long[] rateTable = {
-             33 * CyclesPerMs,  37 * CyclesPerMs,  42 * CyclesPerMs,  46 * CyclesPerMs,  50 * CyclesPerMs,  54 * CyclesPerMs,  58 * CyclesPerMs,  63 * CyclesPerMs,
-             67 * CyclesPerMs,  75 * CyclesPerMs,  83 * CyclesPerMs,  92 * CyclesPerMs, 100 * CyclesPerMs, 109 * CyclesPerMs, 118 * CyclesPerMs, 125 * CyclesPerMs,
-            133 * CyclesPerMs, 149 * CyclesPerMs, 167 * CyclesPerMs, 182 * CyclesPerMs, 200 * CyclesPerMs, 217 * CyclesPerMs, 233 * CyclesPerMs, 250 * CyclesPerMs,
-            270 * CyclesPerMs, 303 * CyclesPerMs, 333 * CyclesPerMs, 370 * CyclesPerMs, 400 * CyclesPerMs, 435 * CyclesPerMs, 476 * CyclesPerMs, 500 * CyclesPerMs
+             MsToTicks(33),  MsToTicks(37),  MsToTicks(42),  MsToTicks(46),  MsToTicks(50),  MsToTicks(54),  MsToTicks(58),  MsToTicks(63),
+             MsToTicks(67),  MsToTicks(75),  MsToTicks(83),  MsToTicks(92),  MsToTicks(100), MsToTicks(109), MsToTicks(118), MsToTicks(125),
+             MsToTicks(133), MsToTicks(149), MsToTicks(167), MsToTicks(182), MsToTicks(200), MsToTicks(217), MsToTicks(233), MsToTicks(250),
+             MsToTicks(270), MsToTicks(303), MsToTicks(333), MsToTicks(370), MsToTicks(400), MsToTicks(435), MsToTicks(476), MsToTicks(500)
         };
 
         int pauseIdx = (value & 0b0110_0000) >> 5;
         int rateIdx = (value & 0b0001_1111);
 
-        _repeat.Pause = pauseTable[pauseIdx];
-        _repeat.Rate = rateTable[rateIdx];
+        _repeat.PauseTicks = pauseTable[pauseIdx];
+        _repeat.RateTicks = rateTable[rateIdx];
     }
 
     private void SetDefaults() {
         _repeat.Key = KbdKey.None;
-        _repeat.Pause = 500 * CyclesPerMs;
-        _repeat.Rate = 33 * CyclesPerMs;
-        _repeat.Wait = 0;
+        _repeat.PauseTicks = MsToTicks(500);
+        _repeat.RateTicks = MsToTicks(33);
+        _repeat.WaitTicks = 0;
 
         foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
             entry.IsEnabledMake = true;
@@ -284,7 +316,7 @@ public class PS2Keyboard {
             entry.IsEnabledTypematic = true;
         }
 
-        SetCodeSet(1); // Default to codeset 1
+        SetCodeSet(1);
     }
 
     private void KeyboardReset(bool isStartup = false) {
@@ -294,11 +326,11 @@ public class PS2Keyboard {
         _isScanning = true;
 
         // Flash all the LEDs
-        _ledTimeoutMs = 0;
+        _ledTimeoutTicks = 0;
         _ledState = 0;
         _ledsAllOn = !isStartup;
         if (_ledsAllOn) {
-            _ledTimeoutMs = _cpuState.Cycles + (666 * CyclesPerMs);
+            _ledTimeoutTicks = NowTicks + MsToTicks(666);
         }
         MaybeNotifyLedState();
     }
@@ -553,7 +585,6 @@ public class PS2Keyboard {
         // Since the guest software seems to be reacting on keys again,
         // clear the buffer overflow flag, do not ignore keys any more
         _bufferOverflowed = false;
-
         MaybeTransferBuffer();
     }
 

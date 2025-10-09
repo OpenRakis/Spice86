@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -42,8 +43,12 @@ public class Intel8042Controller : DefaultIOPortHandler {
     private int _waitingBytesFromAux = 0;
     private int _waitingBytesFromKbd = 0;
 
-    // CPU cycle-based delay tracking
-    private long _delayExpiryCycles = 0;
+    // Real-time delay tracking (Stopwatch + pause-aware)
+    private readonly Stopwatch _rt = Stopwatch.StartNew();
+    private readonly IPauseHandler? _pauseHandler;
+    private long _pauseStartedAtTicks = 0;
+    private long _pausedAccumTicks = 0;
+    private long _delayExpiryTicks = 0;
     private bool _delayActive = false;
 
     // Executing command, do not notify devices about readiness for accepting frame
@@ -78,16 +83,21 @@ public class Intel8042Controller : DefaultIOPortHandler {
     /// Initializes a new instance of the <see cref="Intel8042Controller"/> class.
     /// </summary>
     public Intel8042Controller(State state, IOPortDispatcher ioPortDispatcher,
-        A20Gate a20Gate, DualPic dualPic,
-        ILoggerService loggerService, bool failOnUnhandledPort,
+        A20Gate a20Gate, DualPic dualPic, bool failOnUnhandledPort,
+        IPauseHandler pauseHandler, ILoggerService loggerService,
         IGuiKeyboardEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
         _cpuState = state;
+        _pauseHandler = pauseHandler;
 
-        // Create the keyboard implementation
-        KeyboardDevice = new PS2Keyboard(this, state, loggerService, gui);
+        if (_pauseHandler is not null) {
+            _pauseHandler.Pausing += OnPausing;
+            _pauseHandler.Resumed += OnResumed;
+        }
+
+        KeyboardDevice = new PS2Keyboard(this, state, pauseHandler, loggerService, gui);
 
         InitPortHandlers(ioPortDispatcher);
 
@@ -100,9 +110,30 @@ public class Intel8042Controller : DefaultIOPortHandler {
         ioPortDispatcher.AddIOPortHandler(KeyboardPorts.Command, this);
     }
 
-    // ***************************************************************************
-    // Helper routines to log various warnings
-    // ***************************************************************************
+    private long NowTicks {
+        get {
+            var now = _rt.ElapsedTicks;
+            if (_pauseHandler is null || !_pauseHandler.IsPaused) {
+                return now - _pausedAccumTicks;
+            }
+            // while paused, freeze time at pause start
+            return _pauseStartedAtTicks - _pausedAccumTicks;
+        }
+    }
+    private static long MsToTicks(double ms) => (long)(ms * Stopwatch.Frequency / 1000.0);
+
+    private void OnPausing() {
+        if (_pauseStartedAtTicks == 0) {
+            _pauseStartedAtTicks = _rt.ElapsedTicks;
+        }
+    }
+    private void OnResumed() {
+        if (_pauseStartedAtTicks != 0) {
+            var delta = _rt.ElapsedTicks - _pauseStartedAtTicks;
+            _pausedAccumTicks += delta;
+            _pauseStartedAtTicks = 0;
+        }
+    }
 
     private void WarnBufferFull() {
         const uint thresoldCycles = 150;
@@ -273,7 +304,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
     }
 
     private void RestartDelayTimer(double timeMs = PortDelayMs) {
-        _delayExpiryCycles = (long)(_cpuState.Cycles + timeMs);
+        _delayExpiryTicks = NowTicks + MsToTicks(timeMs);
         _delayActive = true;
     }
 
@@ -281,12 +312,10 @@ public class Intel8042Controller : DefaultIOPortHandler {
         if (!_delayActive) {
             return true;
         }
-
-        if (_cpuState.Cycles >= _delayExpiryCycles) {
+        if (NowTicks >= _delayExpiryTicks) {
             _delayActive = false;
             return true;
         }
-
         return false;
     }
 
@@ -631,7 +660,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("I8042: Clearing P2 bit 0 locks a real PC");
                     }
-                    // System restart is not suported.
+                    // System restart is not supported.
                 }
                 break;
             case KeyboardCommand.SimulateInputKbd: // 0xd2
