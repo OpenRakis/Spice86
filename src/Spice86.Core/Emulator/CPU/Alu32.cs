@@ -86,6 +86,8 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented 8086
+        _state.AuxiliaryFlag = false;
         return res;
     }
 

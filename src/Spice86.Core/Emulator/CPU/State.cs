@@ -33,6 +33,10 @@ using System.Text;
 /// Each of these registers can be accessed as a whole (32 bits), or in parts as AX/BX/CX/DX (lower 16 bits), AH/BH/CH/DH (high 8 bits of the 16-bit register), and AL/BL/CL/DL (low 8 bits of the 16-bit register).
 /// </summary>
 public class State {
+    public State(CpuModel cpuModel) {
+        Flags = new(cpuModel);
+    }
+
     /// <summary>
     /// Gets or sets the second byte (high byte) in the general purpose EAX register
     /// <para>
@@ -221,7 +225,7 @@ public class State {
     /// <summary>
     /// Contains the flags of the CPU. This is the flags register.
     /// </summary>
-    public Flags Flags { get; } = new();
+    public Flags Flags { get; }
 
     /// <summary>
     /// Gets or sets the value of the Overflow Flag. Set if result is too large a positive number or too small a negative number (excluding sign-bit) to fit in destination operand; cleared otherwise.

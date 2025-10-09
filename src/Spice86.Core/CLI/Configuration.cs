@@ -2,6 +2,7 @@ namespace Spice86.Core.CLI;
 
 using CommandLine;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -14,6 +15,12 @@ public sealed class Configuration {
     /// </summary>
     [Option(nameof(Cycles), Default = null, Required = false, HelpText = "Precise control of the number of emulated CPU cycles per ms. For the rare speed-sensitive game. Default is undefined. Overrides instructions per second option if used.")]
     public int? Cycles { get; init; }
+    
+    /// <summary>
+    /// Cpu Model to emulate
+    /// </summary>
+    [Option(nameof(CpuModel), Default = CpuModel.INTEL_80286, Required = false, HelpText = "Cpu Model to emulate")]
+    public CpuModel CpuModel { get; init; }
 
     /// <summary>
     /// Gets if the A20 gate is silenced. If <c>true</c> memory addresses will rollover above 1 MB.

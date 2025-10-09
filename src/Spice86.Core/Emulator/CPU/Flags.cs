@@ -1,9 +1,37 @@
 ﻿namespace Spice86.Core.Emulator.CPU;
 
+using Spice86.Shared.Utils;
+
+using System.Collections.Frozen;
 using System.Text;
 
 /// <summary> Handles the CPU flag register. </summary>
 public class Flags {
+    private static readonly IDictionary<CpuModel, BitsOnOff> BitOnOffPerModel = new Dictionary<CpuModel, BitsOnOff> {
+        // This is for the zet project tests
+        [CpuModel.ZET_86] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 15]),
+        // Real CPUs
+        [CpuModel.INTEL_8086] = new(bitsAlwaysOn: [1, 12, 13, 14, 15], bitsAlwaysOff: [3, 5]),
+        // Since we dont handle IO privilege (12 / 13) and nested task (14), let's put them as always off
+        [CpuModel.INTEL_80286] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15]),
+        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
+    }.ToFrozenDictionary();
+    
+    private record BitsOnOff {
+        public BitsOnOff(List<int> bitsAlwaysOn, List<int> bitsAlwaysOff) {
+            BitsAlwaysOn = BitMaskUtils.BitMaskFromBitList(bitsAlwaysOn);
+            BitsAlwaysOff = ~BitMaskUtils.BitMaskFromBitList(bitsAlwaysOff);
+        }
+        /// <summary>
+        /// Or that into the register
+        /// </summary>
+        public uint BitsAlwaysOn { get; }
+        
+        /// <summary>
+        /// And that into the register
+        /// </summary>
+        public uint BitsAlwaysOff { get; }
+    }
     /// <summary>
     /// The carry flag bitmask
     /// </summary>
@@ -52,16 +80,28 @@ public class Flags {
     /// <summary>
     /// rflag mask to OR with flags, useful to compare with values emulated by DOSBox.
     /// </summary>
-    private ushort _additionalFlagMask;
+    private uint _orFlagMask;
+    private uint _andFlagMask;
 
     private uint _flagRegister;
 
+    private CpuModel _cpuModel;
     /// <summary>
     /// Initialises a new instance.
     /// </summary>
-    public Flags() {
+    public Flags(CpuModel cpuModel) {
+        CpuModel = cpuModel;
         FlagRegister = 0;
-        IsDOSBoxCompatible = true;
+    }
+
+    public CpuModel CpuModel {
+        get => _cpuModel;
+        set {
+            _cpuModel = value;
+            BitsOnOff bitsOnOff = BitOnOffPerModel[_cpuModel];
+            _orFlagMask = bitsOnOff.BitsAlwaysOn;
+            _andFlagMask = bitsOnOff.BitsAlwaysOff;
+        }
     }
 
     /// <summary>
@@ -80,23 +120,9 @@ public class Flags {
     /// <param name="value">The boolean value of the flag.</param>
     public void SetFlag(ushort mask, bool value) {
         if (value) {
-            FlagRegister |= mask;
+            _flagRegister |= mask;
         } else {
-            FlagRegister &= (ushort)~mask;
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the _additionalFlagMask is set to <c>0b111000000000000</c> or <c>0</c>. <br/>
-    /// Useful when comparing with values emulated by DOSBox.
-    /// <remarks>
-    /// Set to <c>true</c> by default.
-    /// </remarks>
-    /// </summary>
-    public bool IsDOSBoxCompatible {
-        get => _additionalFlagMask == 0b111000000000000;
-        set {
-            if (value) { _additionalFlagMask = 0b111000000000000; } else { _additionalFlagMask = 0; }
+            _flagRegister &= (ushort)~mask;
         }
     }
 
@@ -110,14 +136,7 @@ public class Flags {
     /// </summary>
     public uint FlagRegister {
         get => _flagRegister;
-        set {
-            // Some flags are always 1 or 0 no matter what (8086)
-            uint modifedValue = ((value | 0b10) & 0b0111111111010111);
-
-            // dosbox
-            modifedValue |= _additionalFlagMask;
-            _flagRegister = modifedValue;
-        }
+        set => _flagRegister = (value | _orFlagMask) & _andFlagMask;
     }
 
     /// <inheritdoc />

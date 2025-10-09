@@ -90,6 +90,8 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         UpdateFlags(res);
         _state.CarryFlag = false;
         _state.OverflowFlag = false;
+        // Undocumented 8086
+        _state.AuxiliaryFlag = false;
         return res;
     }
 

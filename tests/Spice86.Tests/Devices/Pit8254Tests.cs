@@ -18,7 +18,7 @@ public class Pit8254Tests {
 
     public Pit8254Tests() {
         ILoggerService loggerMock = Substitute.For<ILoggerService>();
-        State state = new();
+        State state = new(CpuModel.INTEL_80286);
         IOPortDispatcher ioPortDispatcher = new(Substitute.For<AddressReadWriteBreakpoints>(), state, loggerMock, true);
         IPauseHandler pauseHandlerMock = Substitute.For<IPauseHandler>();
         Configuration configuration = new();

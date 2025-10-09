@@ -3,6 +3,8 @@ namespace Spice86.Tests.Dos;
 using FluentAssertions;
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
+
 using Configuration = Spice86.Core.CLI.Configuration;
 using State = Spice86.Core.Emulator.CPU.State;
 using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
@@ -44,7 +46,7 @@ public class DosMemoryManagerTests {
         // memory to use for these tests.
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         PauseHandler pauseHandler = new(_loggerService);
-        State cpuState = new();
+        State cpuState = new(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
         A20Gate a20Gate = new(enabled: false);
         _memory = new Memory(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,

@@ -58,19 +58,36 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         }
     }
 
+    /// <summary>
+    /// Read a byte from memory without triggering breakpoints
+    /// </summary>
+    /// <param name="address"></param>
+    /// <returns></returns>
+    public byte SneakilyRead(uint address) {
+        return _memoryDevices[address].Read(address);
+    }
+
+    /// <summary>
+    /// Write a byte to memory without triggering breakpoints
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="value"></param>
+    public void SneakilyWrite(uint address, byte value) {
+        _memoryDevices[address].Write(address, value);
+    }
+
     /// <inheritdoc/>
     public byte this[uint address] {
         get {
             address = A20Gate.TransformAddress(address);
             _memoryBreakpoints.MonitorReadAccess(address);
-            return _memoryDevices[address].Read(address);
+            return SneakilyRead(address);
         }
         set {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
             _memoryBreakpoints.MonitorWriteAccess(address);
-            _memoryDevices[address].Write(address, value);
-        }
+            SneakilyWrite(address, value);        }
     }
 
     /// <summary>

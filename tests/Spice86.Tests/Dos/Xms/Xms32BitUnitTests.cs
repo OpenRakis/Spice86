@@ -30,7 +30,7 @@ public class Xms32BitFunctionsTests {
 
     public Xms32BitFunctionsTests() {
         // Setup memory and state
-        _state = new State();
+        _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
         _loggerService = Substitute.For<ILoggerService>();

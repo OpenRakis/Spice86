@@ -19,7 +19,7 @@ public class PitModeTests {
 
     public PitModeTests() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
-        State state = new();
+        State state = new(CpuModel.INTEL_80286);
         IOPortDispatcher ioPortDispatcher = new(
             new(), state, loggerService, true);
         Configuration configuration = new();
