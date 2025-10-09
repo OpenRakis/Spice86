@@ -34,12 +34,12 @@ public class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
     public override ushort this[ushort segment, ushort offset] {
         get {
             uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1)); // Wrap offset within 64KB
+            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
             return (ushort)(_byteReaderWriter[address2] | _byteReaderWriter[address1] << 8);
         }
         set {
             uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1)); // Wrap offset within 64KB
+            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
             _byteReaderWriter[address1] = (byte)(value >> 8);
             _byteReaderWriter[address2] = (byte)value;
         }

@@ -39,7 +39,7 @@ public class UInt16Indexer : MemoryIndexer<ushort> {
         }
         set {
             uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1)); // Wrap offset within 64KB
+            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
             _byteReaderWriter[address1] = (byte)value;          // Low byte at first address
             _byteReaderWriter[address2] = (byte)(value >> 8);   // High byte at second address
         }

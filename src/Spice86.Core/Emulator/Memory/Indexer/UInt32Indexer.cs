@@ -36,17 +36,17 @@ public class UInt32Indexer : MemoryIndexer<uint> {
     public override uint this[ushort segment, ushort offset] {
         get {
             uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1)); // Wrap offset within 64KB
-            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2)); // Wrap offset within 64KB
-            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3)); // Wrap offset within 64KB
+            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
+            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
+            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3));
             return (uint)(_byteReaderWriter[address1] | _byteReaderWriter[address2] << 8 |
                           _byteReaderWriter[address3] << 16 | _byteReaderWriter[address4] << 24);
         }
         set {
             uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1)); // Wrap offset within 64KB
-            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2)); // Wrap offset within 64KB
-            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3)); // Wrap offset within 64KB
+            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
+            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
+            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3));
             _byteReaderWriter[address1] = (byte)value;          // Low byte at first address
             _byteReaderWriter[address2] = (byte)(value >> 8);
             _byteReaderWriter[address3] = (byte)(value >> 16);
