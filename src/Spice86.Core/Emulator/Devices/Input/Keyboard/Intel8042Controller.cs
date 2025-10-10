@@ -25,6 +25,163 @@ public class Intel8042Controller : DefaultIOPortHandler {
     // delay appropriate for 20-30 kHz serial clock and 11 bits/byte
     private const double PortDelayMs = 0.300; // 0.3ms
 
+    /// <summary>
+    /// Common controller byte values used across 8042 operations.
+    /// </summary>
+    public enum Response : byte {
+        /// <summary>
+        /// Generic OK/zero value, used by port tests and various default reads.
+        /// Also used as NUL terminator for the firmware copyright string.
+        /// </summary>
+        Ok = 0x00,
+        /// <summary>
+        /// Controller self-test passed value (result of command 0xAA).
+        /// </summary>
+        SelfTestPassed = 0x55,
+        /// <summary>
+        /// Password not installed or unsupported (command 0xA4 result).
+        /// </summary>
+        PasswordNotInstalled = 0xF1,
+        /// <summary>
+        /// Space key make code in Set 1 (used by diagnostic dump formatting).
+        /// </summary>
+        SpaceScanCodeSet1 = 0x39,
+    }
+
+    /// <summary>
+    /// Output port (P2) bit definitions.
+    /// </summary>
+    [Flags]
+    public enum OutputPortBits : byte {
+        /// <summary>
+        /// Bit 0: 1 = normal, 0 = CPU reset asserted.
+        /// </summary>
+        ResetNotAsserted = 1 << 0,
+        /// <summary>
+        /// Bit 1: A20 line enabled.
+        /// </summary>
+        A20Enabled = 1 << 1,
+        /// <summary>
+        /// Bit 4: Keyboard IRQ1 active.
+        /// </summary>
+        KeyboardIrqActive = 1 << 4,
+        /// <summary>
+        /// Bit 5: Mouse IRQ12 active.
+        /// </summary>
+        MouseIrqActive = 1 << 5,
+    }
+
+    /// <summary>
+    /// Status register bit definitions.
+    /// </summary>
+    [Flags]
+    public enum StatusBits : byte {
+        /// <summary>
+        /// Bit 0: Output buffer status (1 = data available).
+        /// </summary>
+        OutputBufferFull = 0x01,
+        /// <summary>
+        /// Bit 1: Input buffer status.
+        /// </summary>
+        InputBufferFull = 0x02,
+        /// <summary>
+        /// Bit 2: System flag.
+        /// </summary>
+        SystemFlag = 0x04,
+        /// <summary>
+        /// Bit 3: Last write was a command.
+        /// </summary>
+        LastWriteWasCommand = 0x08,
+        /// <summary>
+        /// Bit 4: Reserved/unused.
+        /// </summary>
+        Reserved4 = 0x10,
+        /// <summary>
+        /// Bit 5: Data came from auxiliary device (mouse).
+        /// </summary>
+        DataFromAux = 0x20,
+        /// <summary>
+        /// Bit 6: Timeout.
+        /// </summary>
+        Timeout = 0x40,
+        /// <summary>
+        /// Bit 7: Parity error.
+        /// </summary>
+        ParityError = 0x80,
+    }
+
+    /// <summary>
+    /// Controller mode values.
+    /// </summary>
+    public enum ControllerModeValue : byte {
+        /// <summary>
+        /// ISA (AT) mode.
+        /// </summary>
+        IsaAt = 0x00,
+        /// <summary>
+        /// PS/2 (MCA) mode.
+        /// </summary>
+        Ps2Mca = 0x01,
+    }
+
+    /// <summary>
+    /// Line parameter masks used by pulse-lines commands (0xF0-0xFF).
+    /// </summary>
+    [Flags]
+    public enum LineParam : byte {
+        /// <summary>
+        /// Reset line mask (bit 0).
+        /// </summary>
+        Reset = 0b0001,
+        /// <summary>
+        /// All lines mask (bits 0..3 set).
+        /// </summary>
+        AllLines = 0b1111,
+        /// <summary>
+        /// All lines except Reset (bits 1..3 set).
+        /// </summary>
+        AllLinesExceptReset = 0b1110,
+    }
+
+    /// <summary>
+    /// Configuration byte bit definitions.
+    /// </summary>
+    [Flags]
+    public enum ConfigBits : byte {
+        /// <summary>
+        /// Bit 0: Keyboard IRQ enabled (IRQ1).
+        /// </summary>
+        KbdIrqEnabled = 1 << 0,
+        /// <summary>
+        /// Bit 1: Mouse IRQ enabled (IRQ12).
+        /// </summary>
+        MouseIrqEnabled = 1 << 1,
+        /// <summary>
+        /// Bit 2: Self-test passed.
+        /// </summary>
+        SelfTestPassed = 1 << 2,
+        /// <summary>
+        /// Bit 3: Reserved.
+        /// </summary>
+        Reserved3 = 1 << 3,
+        /// <summary>
+        /// Bit 4: Keyboard port disabled.
+        /// </summary>
+        DisableKbdPort = 1 << 4,
+        /// <summary>
+        /// Bit 5: Auxiliary (mouse) port disabled.
+        /// </summary>
+        DisableAuxPort = 1 << 5,
+        /// <summary>
+        /// Bit 6: Translation enabled (AT -&gt; XT).
+        /// </summary>
+        TranslationEnabled = 1 << 6,
+        /// <summary>
+        /// Bit 7: Reserved.
+        /// </summary>
+        Reserved7 = 1 << 7,
+    }
+
     // Controller internal buffer
     private struct BufferEntry {
         public byte Data;
@@ -51,7 +208,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
     private KeyboardCommand _currentCommand = KeyboardCommand.None;
 
     // Byte 0x00 of the controller memory - configuration byte (wrapped for debugability)
-    private readonly Config _config = new(0b00000111);
+    private readonly ConfigByte _config = new(0b00000111);
 
     // Byte returned from port 0x60
     private byte _dataByte = 0;
@@ -354,23 +511,23 @@ public class Intel8042Controller : DefaultIOPortHandler {
     }
 
     private byte GetOutputPort() { // aka port P2
-        byte port = 0b0000_0001;
+        byte port = (byte)OutputPortBits.ResetNotAsserted;
 
         // bit 0: 0 = CPU reset, 1 = normal
         // bit 1: 0 = A20 disabled, 1 = enabled
         if (_a20Gate.IsEnabled) {
-            port |= (1 << 1);
+            port |= (byte)OutputPortBits.A20Enabled;
         }
         // bit 2: mouse data out, ISA - unused
         // bit 3: mouse clock, ISA - unused
 
         // bit 4: 0 = IRQ1 (keyboard) not active, 1 = active
         if (_config.KbdIrqEnabled) {
-            port |= (1 << 4);
+            port |= (byte)OutputPortBits.KeyboardIrqActive;
         }
         // bit 5: 0 = IRQ12 (mouse) not active, 1 = active
         if (_config.MouseIrqEnabled) {
-            port |= (1 << 5);
+            port |= (byte)OutputPortBits.MouseIrqActive;
         }
         // bit 6: keyboard clock
         // bit 7: keyboard data out
@@ -430,7 +587,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 foreach (char c in FirmwareCopyright) {
                     BufferAdd((byte)c);
                 }
-                BufferAdd(0);
+                BufferAdd((byte)Response.Ok);
                 break;
             case (KeyboardCommand)0xa1: // ReadFwRevision
                 // Reads the keyboard controller firmware
@@ -443,7 +600,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // 0xf1: not installed, or no hardware support
                 // 0xfa: password installed
                 FlushBuffer();
-                BufferAdd(0xf1);
+                BufferAdd((byte)Response.PasswordNotInstalled);
                 break;
             case KeyboardCommand.DisablePortAux: // 0xa7
                 // Disable aux (mouse) port
@@ -462,7 +619,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // Disables the aux (mouse) port
                 _config.DisableAuxPort = true; // disable aux
                 FlushBuffer();
-                BufferAdd(0x00);
+                BufferAdd((byte)Response.Ok);
                 break;
             case KeyboardCommand.TestController: // 0xaa
                 // Controller test. Possible results:
@@ -475,7 +632,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 _config.TranslationEnabled = true; // enable translation
                 _config.SelfTestPassed = true;  // mark self-test passed
                 FlushBuffer();
-                BufferAdd(0x55);
+                BufferAdd((byte)Response.SelfTestPassed);
                 break;
             case KeyboardCommand.TestPortKbd: // 0xab
                 // Port test. Possible results:
@@ -483,7 +640,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // Disables the keyboard port
                 _config.DisableKbdPort = true; // disable kbd
                 FlushBuffer();
-                BufferAdd(0x00); // as with TestPortAux
+                BufferAdd((byte)Response.Ok); // as with TestPortAux
                 break;
             case KeyboardCommand.DiagnosticDump: // 0xac
                 // Dump the whole controller internal RAM (16 bytes),
@@ -514,7 +671,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // TODO: not found any meaningful description,
                 // so the code follows 86Box behaviour
                 FlushBuffer();
-                BufferAdd(0);
+                BufferAdd((byte)Response.Ok);
                 break;
             case KeyboardCommand.ReadInputPort: // 0xc0
                 // Reads the controller input port (P1)
@@ -526,7 +683,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // 0x00: ISA (AT)
                 // 0x01: PS/2 (MCA)
                 FlushBuffer();
-                BufferAdd(0x01);
+                BufferAdd((byte)ControllerModeValue.Ps2Mca);
                 break;
             case KeyboardCommand.ReadOutputPort: // 0xd0
                 // Reads the controller output port (P2)
@@ -548,7 +705,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 // Not fully implemented
                 WarnReadTestInputs();
                 FlushBuffer();
-                BufferAdd(0x00);
+                BufferAdd((byte)Response.Ok);
                 break;
             //
             // Unknown or mostly unsupported commands
@@ -557,7 +714,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 if (IsCmdMemRead(command)) { // 0x20-0x3f
                     // Read internal RAM - dummy, unimplemented
                     WarnInternalRamAccess();
-                    BufferAdd(0x00);
+                    BufferAdd((byte)Response.Ok);
                 } else if (IsCmdMemWrite(command)) { // 0x60-0x7f
                     // Write internal RAM - dummy, unimplemented
                     WarnInternalRamAccess();
@@ -592,8 +749,8 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 break;
             case KeyboardCommand.WriteOutputPort: // 0xd1
                 // Writes the controller output port (P2)
-                _a20Gate.IsEnabled = (param & (1 << 1)) != 0;
-                if ((param & (1 << 0)) == 0) {
+                _a20Gate.IsEnabled = (param & (byte)OutputPortBits.A20Enabled) != 0;
+                if ((param & (byte)OutputPortBits.ResetNotAsserted) == 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("I8042: Clearing P2 bit 0 locks a real PC");
                     }
@@ -619,13 +776,13 @@ public class Intel8042Controller : DefaultIOPortHandler {
                 if (IsCmdMemWrite(command)) {
                     // ignored
                 } else if (IsCmdPulseLine(command)) {
-                    byte lines = (byte)(param & 0b0000_1111);
+                    byte lines = (byte)(param & (byte)LineParam.AllLines);
                     byte code = (byte)command;
-                    if ((code == 0xf0 && param != 0b1111 && param != 0b1110) ||
-                        (code != 0xf0 && param != 0b1111)) {
+                    if ((code == 0xf0 && param != (byte)LineParam.AllLines && param != (byte)LineParam.AllLinesExceptReset) ||
+                        (code != 0xf0 && param != (byte)LineParam.AllLines)) {
                         WarnLinePulse();
                     }
-                    if (code == 0xf0 && (lines & 0b0001) == 0) {
+                    if (code == 0xf0 && (lines & (byte)LineParam.Reset) == 0) {
                         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("System Reset is not implemented");
                         }
@@ -657,7 +814,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
         // - 0x39 (space in codeset 1)
         BufferAdd(translationTable[nibbleHi]);
         BufferAdd(translationTable[nibbleLo]);
-        BufferAdd(0x39);
+        BufferAdd((byte)Response.SpaceScanCodeSet1);
     }
 
     // ***************************************************************************
@@ -796,10 +953,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
         }
     }
 
-    // ***************************************************************************
-    // External entry points
-    // ***************************************************************************
-
     /// <summary>
     /// Adds a single byte from auxiliary device (mouse).
     /// </summary>
@@ -915,40 +1068,42 @@ public class Intel8042Controller : DefaultIOPortHandler {
         // bit7: parity (not used here)
         public bool ParityError { get; set; }
 
-        // Fast pack into a byte. We still route through ByteConverter as requested.
+        // Fast pack into a byte.
         public byte ToByte() {
             byte v = 0;
-            if (IsDataNew) v |= 0x01;
-            if (InputBufferFull) v |= 0x02;
-            if (SystemFlag) v |= 0x04;
-            if (WasLastWriteCmd) v |= 0x08;
-            if (Reserved4) v |= 0x10;
-            if (IsDataFromAux) v |= 0x20;
-            if (Timeout) v |= 0x40;
-            if (ParityError) v |= 0x80;
+            if (IsDataNew) v |= (byte)StatusBits.OutputBufferFull;
+            if (InputBufferFull) v |= (byte)StatusBits.InputBufferFull;
+            if (SystemFlag) v |= (byte)StatusBits.SystemFlag;
+            if (WasLastWriteCmd) v |= (byte)StatusBits.LastWriteWasCommand;
+            if (Reserved4) v |= (byte)StatusBits.Reserved4;
+            if (IsDataFromAux) v |= (byte)StatusBits.DataFromAux;
+            if (Timeout) v |= (byte)StatusBits.Timeout;
+            if (ParityError) v |= (byte)StatusBits.ParityError;
             return v;
         }
 
-        // Fast unpack from a byte. Conversion via ByteConverter as requested.
+        // Fast unpack from a byte.
         public void FromByte(byte value) {
-            IsDataNew = (value & 0x01) != 0;
-            InputBufferFull = (value & 0x02) != 0;
-            SystemFlag = (value & 0x04) != 0;
-            WasLastWriteCmd = (value & 0x08) != 0;
-            Reserved4 = (value & 0x10) != 0;
-            IsDataFromAux = (value & 0x20) != 0;
-            Timeout = (value & 0x40) != 0;
-            ParityError = (value & 0x80) != 0;
+            IsDataNew = (value & (byte)StatusBits.OutputBufferFull) != 0;
+            InputBufferFull = (value & (byte)StatusBits.InputBufferFull) != 0;
+            SystemFlag = (value & (byte)StatusBits.SystemFlag) != 0;
+            WasLastWriteCmd = (value & (byte)StatusBits.LastWriteWasCommand) != 0;
+            Reserved4 = (value & (byte)StatusBits.Reserved4) != 0;
+            IsDataFromAux = (value & (byte)StatusBits.DataFromAux) != 0;
+            Timeout = (value & (byte)StatusBits.Timeout) != 0;
+            ParityError = (value & (byte)StatusBits.ParityError) != 0;
         }
 
         private string DebuggerDisplay =>
             $"0x{ToByte():X2} (New={IsDataNew}, Aux={IsDataFromAux}, Cmd={WasLastWriteCmd}, TO={Timeout})";
     }
 
-    // Encapsulates the 8042 configuration byte for easier debugging.
+    /// <summary>
+    /// Byte 0x00 of the controller memory - configuration byte
+    /// </summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    private sealed class Config {
-        public Config(byte initial = 0) => FromByte(initial);
+    public sealed class ConfigByte {
+        public ConfigByte(byte initial = 0) => FromByte(initial);
 
         // bit0: keyboard IRQ enabled (IRQ1)
         public bool KbdIrqEnabled { get; set; }
@@ -969,26 +1124,26 @@ public class Intel8042Controller : DefaultIOPortHandler {
 
         public byte ToByte() {
             byte v = 0;
-            if (KbdIrqEnabled) v |= 1 << 0;
-            if (MouseIrqEnabled) v |= 1 << 1;
-            if (SelfTestPassed) v |= 1 << 2;
-            if (Reserved3) v |= 1 << 3;
-            if (DisableKbdPort) v |= 1 << 4;
-            if (DisableAuxPort) v |= 1 << 5;
-            if (TranslationEnabled) v |= 1 << 6;
-            if (Reserved7) v |= 1 << 7;
+            if (KbdIrqEnabled) v |= (byte)ConfigBits.KbdIrqEnabled;
+            if (MouseIrqEnabled) v |= (byte)ConfigBits.MouseIrqEnabled;
+            if (SelfTestPassed) v |= (byte)ConfigBits.SelfTestPassed;
+            if (Reserved3) v |= (byte)ConfigBits.Reserved3;
+            if (DisableKbdPort) v |= (byte)ConfigBits.DisableKbdPort;
+            if (DisableAuxPort) v |= (byte)ConfigBits.DisableAuxPort;
+            if (TranslationEnabled) v |= (byte)ConfigBits.TranslationEnabled;
+            if (Reserved7) v |= (byte)ConfigBits.Reserved7;
             return v;
         }
 
         public void FromByte(byte value) {
-            KbdIrqEnabled = (value & (1 << 0)) != 0;
-            MouseIrqEnabled = (value & (1 << 1)) != 0;
-            SelfTestPassed = (value & (1 << 2)) != 0;
-            Reserved3 = (value & (1 << 3)) != 0;
-            DisableKbdPort = (value & (1 << 4)) != 0;
-            DisableAuxPort = (value & (1 << 5)) != 0;
-            TranslationEnabled = (value & (1 << 6)) != 0;
-            Reserved7 = (value & (1 << 7)) != 0;
+            KbdIrqEnabled = (value & (byte)ConfigBits.KbdIrqEnabled) != 0;
+            MouseIrqEnabled = (value & (byte)ConfigBits.MouseIrqEnabled) != 0;
+            SelfTestPassed = (value & (byte)ConfigBits.SelfTestPassed) != 0;
+            Reserved3 = (value & (byte)ConfigBits.Reserved3) != 0;
+            DisableKbdPort = (value & (byte)ConfigBits.DisableKbdPort) != 0;
+            DisableAuxPort = (value & (byte)ConfigBits.DisableAuxPort) != 0;
+            TranslationEnabled = (value & (byte)ConfigBits.TranslationEnabled) != 0;
+            Reserved7 = (value & (byte)ConfigBits.Reserved7) != 0;
         }
 
         private string DebuggerDisplay =>
