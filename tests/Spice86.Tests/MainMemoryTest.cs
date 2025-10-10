@@ -1,6 +1,7 @@
-namespace Spice86.Tests;
+﻿namespace Spice86.Tests;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 
 using System;
 
@@ -446,5 +447,200 @@ public class MainMemoryTest {
         Assert.Equal(0x56, _memory.UInt8[0x1236]);
         Assert.Equal(0x34, _memory.UInt8[0x1237]);
         Assert.Equal(0x12, _memory.UInt8[0x1238]);
+    }
+
+    /// <summary>
+    /// Tests that writing a UInt16 value at the segment boundary correctly wraps the offset.
+    /// <para>
+    /// Memory Layout (Little-Endian):
+    /// <code>
+    /// Writing value 0x0102 at segment:offset 0x0000:0xFFFF
+    /// 
+    /// ┌──────────┬──────────┐
+    /// │ 0xFFFF   │ 0x0000   │  ← Addresses
+    /// │ 0x02     │ 0x01     │  ← Byte Values
+    /// │ (Low)    │ (High)   │  ← Byte Roles
+    /// └──────────┴──────────┘
+    ///            ↑ WRAP POINT (64KB boundary)
+    /// 
+    /// Result: Low byte (0x02) at 0xFFFF, high byte (0x01) wraps to 0x0000
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestSetUint16_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x0102 at 0x0000:0xFFFF
+        _memory.UInt16[0x0000, 0xFFFF] = 0x0102;
+
+        // Assert - Low byte (02) at 0xFFFF, high byte (01) wraps to 0x0000
+        Assert.Equal(0x02, _memory.UInt8[0xFFFF]);
+        Assert.Equal(0x01, _memory.UInt8[0x0000]);
+    }
+
+    /// <summary>
+    /// Tests that reading a UInt16 value from the segment boundary correctly reads wrapped bytes.
+    /// <para>
+    /// Memory Layout (Little-Endian):
+    /// <code>
+    /// Reading UInt16 from segment:offset 0x0000:0xFFFF
+    /// 
+    /// ┌──────────┬──────────┐
+    /// │ 0xFFFF   │ 0x0000   │  ← Addresses
+    /// │ 0x01     │ 0x02     │  ← Stored Bytes
+    /// │ (Low)    │ (High)   │  ← Read Order
+    /// └──────────┴──────────┘
+    ///            ↑ WRAP POINT
+    /// 
+    /// Reconstruction: (0x02 &lt;&lt; 8) | 0x01 = 0x0201
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestGetUint16_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange - Set up wrapped data
+        _memory.UInt8[0xFFFF] = 0x01;
+        _memory.UInt8[0x0000] = 0x02;
+
+        // Act
+        ushort value = _memory.UInt16[0x0000, 0xFFFF];
+
+        // Assert
+        Assert.Equal(0x0201, value);
+    }
+
+    /// <summary>
+    /// Tests that writing a UInt32 value at the segment boundary correctly wraps 2 bytes to segment start.
+    /// <para>
+    /// Memory Layout (Little-Endian, 4 bytes):
+    /// <code>
+    /// Writing value 0x01020304 at segment:offset 0x0000:0xFFFE
+    /// 
+    /// ┌──────────┬──────────┬──────────┬──────────┐
+    /// │ 0xFFFE   │ 0xFFFF   │ 0x0000   │ 0x0001   │  ← Addresses
+    /// │ 0x04     │ 0x03     │ 0x02     │ 0x01     │  ← Byte Values
+    /// │ (Byte 0) │ (Byte 1) │ (Byte 2) │ (Byte 3) │  ← Positions
+    /// └──────────┴──────────┴──────────┴──────────┘
+    ///                        ↑ WRAP POINT (64KB boundary)
+    /// 
+    /// Bytes 0-1 before boundary: 0x04, 0x03
+    /// Bytes 2-3 wrap to start:   0x02, 0x01
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestSetUint32_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x01020304 at 0x0000:0xFFFE
+        _memory.UInt32[0x0000, 0xFFFE] = 0x01020304;
+
+        // Assert - Bytes at FFFE, FFFF, 0000, 0001
+        Assert.Equal(0x04, _memory.UInt8[0xFFFE]);
+        Assert.Equal(0x03, _memory.UInt8[0xFFFF]);
+        Assert.Equal(0x02, _memory.UInt8[0x0000]); // Wrapped
+        Assert.Equal(0x01, _memory.UInt8[0x0001]); // Wrapped
+    }
+
+    /// <summary>
+    /// Tests that reading a UInt32 value from the segment boundary correctly reads 4 wrapped bytes.
+    /// <para>
+    /// Memory Layout (Little-Endian, 4 bytes):
+    /// <code>
+    /// Reading UInt32 from segment:offset 0x0000:0xFFFE
+    /// 
+    /// ┌──────────┬──────────┬──────────┬──────────┐
+    /// │ 0xFFFE   │ 0xFFFF   │ 0x0000   │ 0x0001   │  ← Addresses
+    /// │ 0x04     │ 0x03     │ 0x02     │ 0x01     │  ← Stored Bytes
+    /// │ (Byte 0) │ (Byte 1) │ (Byte 2) │ (Byte 3) │  ← Read Order
+    /// └──────────┴──────────┴──────────┴──────────┘
+    ///                        ↑ WRAP POINT
+    /// 
+    /// Reconstruction:
+    /// (0x01 &lt;&lt; 24) | (0x02 &lt;&lt; 16) | (0x03 &lt;&lt; 8) | 0x04 = 0x01020304
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestGetUint32_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange
+        _memory.UInt8[0xFFFE] = 0x04;
+        _memory.UInt8[0xFFFF] = 0x03;
+        _memory.UInt8[0x0000] = 0x02;
+        _memory.UInt8[0x0001] = 0x01;
+
+        // Act
+        uint value = _memory.UInt32[0x0000, 0xFFFE];
+
+        // Assert
+        Assert.Equal(0x01020304u, value);
+    }
+
+    /// <summary>
+    /// Tests that writing a SegmentedAddress (Segment:Offset pair) at boundary wraps correctly.
+    /// <para>
+    /// Memory Layout (4-byte structure: Offset then Segment, both little-endian):
+    /// <code>
+    /// Writing SegmentedAddress(0x0102:0x0304) at 0x0000:0xFFFE
+    /// 
+    /// ┌─────────────────────┬─────────────────────┐
+    /// │ Offset (0x0304)     │ Segment (0x0102)    │  ← Structure Fields
+    /// ├──────────┬──────────┼──────────┬──────────┤
+    /// │ 0xFFFE   │ 0xFFFF   │ 0x0000   │ 0x0001   │  ← Addresses
+    /// │ 0x04     │ 0x03     │ 0x02     │ 0x01     │  ← Byte Values
+    /// │ Off.Low  │ Off.High │ Seg.Low  │ Seg.High │  ← Field Parts
+    /// └──────────┴──────────┴──────────┴──────────┘
+    ///                        ↑ WRAP POINT (64KB boundary)
+    /// 
+    /// Layout: [Offset.Low][Offset.High][Segment.Low][Segment.High]
+    /// Offset bytes before wrap, Segment bytes after wrap
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestSetSegmentedAddress_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange & Act - Write 0x0102:0x0304 at 0x0000:0xFFFE
+        _memory.SegmentedAddress16[0x0000, 0xFFFE] = new SegmentedAddress(0x0102, 0x0304);
+
+        // Assert - Format is offset(low, high), segment(low, high)
+        Assert.Equal(0x04, _memory.UInt8[0xFFFE]); // Offset low
+        Assert.Equal(0x03, _memory.UInt8[0xFFFF]); // Offset high
+        Assert.Equal(0x02, _memory.UInt8[0x0000]); // Segment low (wrapped)
+        Assert.Equal(0x01, _memory.UInt8[0x0001]); // Segment high (wrapped)
+    }
+
+    /// <summary>
+    /// Tests that reading a SegmentedAddress (Segment:Offset pair) from boundary reads wrapped bytes.
+    /// <para>
+    /// Memory Layout (4-byte structure: Offset then Segment, both little-endian):
+    /// <code>
+    /// Reading SegmentedAddress from 0x0000:0xFFFE
+    /// 
+    /// ┌─────────────────────┬─────────────────────┐
+    /// │ Offset Field        │ Segment Field       │  ← Structure Fields
+    /// ├──────────┬──────────┼──────────┬──────────┤
+    /// │ 0xFFFE   │ 0xFFFF   │ 0x0000   │ 0x0001   │  ← Addresses
+    /// │ 0x04     │ 0x03     │ 0x02     │ 0x01     │  ← Stored Bytes
+    /// │ Off.Low  │ Off.High │ Seg.Low  │ Seg.High │  ← Read Parts
+    /// └──────────┴──────────┴──────────┴──────────┘
+    ///                        ↑ WRAP POINT
+    /// 
+    /// Offset  = (0x03 &lt;&lt; 8) | 0x04 = 0x0304
+    /// Segment = (0x01 &lt;&lt; 8) | 0x02 = 0x0102
+    /// Result: SegmentedAddress(Segment: 0x0102, Offset: 0x0304)
+    /// </code>
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TestGetSegmentedAddress_SegmentBoundary_ShouldWrapOffset() {
+        // Arrange
+        _memory.UInt8[0xFFFE] = 0x04;
+        _memory.UInt8[0xFFFF] = 0x03;
+        _memory.UInt8[0x0000] = 0x02;
+        _memory.UInt8[0x0001] = 0x01;
+
+        // Act
+        SegmentedAddress addr = _memory.SegmentedAddress16[0x0000, 0xFFFE];
+
+        // Assert
+        Assert.Equal(0x0102, addr.Segment);
+        Assert.Equal(0x0304, addr.Offset);
     }
 }

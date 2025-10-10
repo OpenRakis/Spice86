@@ -12,9 +12,9 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     /// </summary>
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
-    public T this[ushort segment, ushort offset] {
-        get => this[MemoryUtils.ToPhysicalAddress(segment, offset)];
-        set => this[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
+    public abstract T this[ushort segment, ushort offset] {
+        get;
+        set;
     }
 
     /// <summary>

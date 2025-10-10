@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// <para>Retrieves Segment / Offset pairs stored in Memory.</para>
@@ -27,6 +28,31 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
         set {
             _uInt16Indexer[address] = value.Offset;
             _uInt16Indexer[address + 2] = value.Segment;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the data at the specified segment and offset in the memory.
+    /// </summary>
+    /// <param name="segment">The segment of the element to get or set.</param>
+    /// <param name="offset">The offset of the element to get or set.</param>
+    public override SegmentedAddress this[ushort segment, ushort offset] {
+        get {
+            // Read using the physical addressing to get proper little-endian ordering
+            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
+            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
+            
+            ushort offsetValue = _uInt16Indexer[offsetAddr];
+            ushort segmentValue = _uInt16Indexer[segmentAddr];
+            return new(segmentValue, offsetValue);
+        }
+        set {
+            // Write using the physical addressing to get proper little-endian ordering
+            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
+            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
+            
+            _uInt16Indexer[offsetAddr] = value.Offset;
+            _uInt16Indexer[segmentAddr] = value.Segment;
         }
     }
 

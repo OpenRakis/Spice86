@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Memory.Indexer;
+namespace Spice86.Core.Emulator.Memory.Indexer;
+
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Provides indexed signed int access over memory.
@@ -16,6 +18,16 @@ public class Int32Indexer : MemoryIndexer<int> {
     public override int this[uint address] {
         get => (int)_uInt32Indexer[address];
         set => _uInt32Indexer[address] = (uint)value;
+    }
+
+    /// <summary>
+    /// Gets or sets the data at the specified segment and offset in the memory.
+    /// </summary>
+    /// <param name="segment">The segment of the element to get or set.</param>
+    /// <param name="offset">The offset of the element to get or set.</param>
+    public override int this[ushort segment, ushort offset] {
+        get => (int)_uInt32Indexer[segment, offset];
+        set => _uInt32Indexer[segment, offset] = (uint)value;
     }
     
     /// <inheritdoc/>
