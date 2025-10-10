@@ -29,15 +29,6 @@ public class Int16Indexer : MemoryIndexer<short> {
         get => (short)_uInt16Indexer[segment, offset];
         set => _uInt16Indexer[segment, offset] = (ushort)value;
     }
-
-    /// <summary>
-    /// Gets or sets the data at the specified segmented address and offset in the memory.
-    /// </summary>
-    /// <param name="address">Segmented address at which to access the data</param>
-    public override short this[SegmentedAddress address] {
-        get => this[address.Segment, address.Offset];
-        set => this[address.Segment, address.Offset] = value;
-    }
     
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count;

@@ -44,15 +44,6 @@ public class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address2] = (byte)value;
         }
     }
-
-    /// <summary>
-    /// Gets or sets the data at the specified segmented address and offset in the memory.
-    /// </summary>
-    /// <param name="address">Segmented address at which to access the data</param>
-    public override ushort this[SegmentedAddress address] {
-        get => this[address.Segment, address.Offset];
-        set => this[address.Segment, address.Offset] = value;
-    }
     
     /// <inheritdoc/>
     public override int Count => _byteReaderWriter.Length / 2;

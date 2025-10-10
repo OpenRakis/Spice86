@@ -52,15 +52,6 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress> {
             _uInt16Indexer[segmentAddr] = value.Segment;
         }
     }
-
-    /// <summary>
-    /// Gets or sets the data at the specified segmented address and offset in the memory.
-    /// </summary>
-    /// <param name="address">Segmented address at which to access the data</param>
-    public override SegmentedAddress this[SegmentedAddress address] {
-        get => this[address.Segment, address.Offset];
-        set => this[address.Segment, address.Offset] = value;
-    }
     
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count / 3;
