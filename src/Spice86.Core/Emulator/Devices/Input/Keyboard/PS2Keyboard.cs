@@ -59,6 +59,55 @@ public class PS2Keyboard {
     private KeyboardCommand _currentCommand = KeyboardCommand.None;
 
     /// <summary>
+    /// Defines well-known PS/2 keyboard response/data bytes sent to the controller (port 0x60).
+    /// </summary>
+    /// <remarks>
+    /// Reference:
+    /// - https://www.win.tue.nl/~aeb/linux/kbd/scancodes-11.html
+    /// </remarks>
+    public enum DataByte : byte {
+        /// <summary>
+        /// Acknowledge byte sent after most valid commands.
+        /// </summary>
+        Ack = 0xFA,
+
+        /// <summary>
+        /// Request to resend the last command/byte (typically after an error).
+        /// </summary>
+        Resend = 0xFE,
+
+        /// <summary>
+        /// Response to the ECHO command. Note: this is sent without a preceding ACK.
+        /// </summary>
+        Echo = 0xEE,
+
+        /// <summary>
+        /// Basic Assurance Test (BAT) passed.
+        /// </summary>
+        BatOk = 0xAA,
+
+        /// <summary>
+        /// First byte (prefix) of the two-byte keyboard identification sequence returned by the Identify command.
+        /// </summary>
+        IdentifyPrefix = 0xAB,
+
+        /// <summary>
+        /// Second byte of the Identify response for the common MF2 101/102-key keyboard (sequence: 0xAB, 0x83).
+        /// </summary>
+        IdentifyMf2 = 0x83,
+
+        /// <summary>
+        /// Second byte of the Identify response for many space saver keyboards (sequence: 0xAB, 0x84).
+        /// </summary>
+        IdentifySpaceSaver = 0x84,
+
+        /// <summary>
+        /// Second byte of the Identify response for many 122-key keyboards (sequence: 0xAB, 0x86).
+        /// </summary>
+        Identify122Key = 0x86
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
     /// </summary>
     /// <param name="controller">The keyboard controller.</param>
@@ -315,14 +364,14 @@ public class PS2Keyboard {
             //
             case KeyboardCommand.SetLeds:          // 0xed
             case KeyboardCommand.SetTypeRate:      // 0xf3
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 _currentCommand = command;
                 break;
             case KeyboardCommand.CodeSet:          // 0xf0
             case KeyboardCommand.Set3KeyTypematic: // 0xfb
             case KeyboardCommand.Set3KeyMakeBreak: // 0xfc
             case KeyboardCommand.Set3KeyMakeOnly:  // 0xfd
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 _currentCommand = command;
                 break;
@@ -331,33 +380,33 @@ public class PS2Keyboard {
             //
             case KeyboardCommand.Echo: // 0xee
                 // Diagnostic echo, responds without acknowledge
-                _controller.AddKbdByte(0xee);
+                _controller.AddKbdByte((byte)DataByte.Echo);
                 break;
             case KeyboardCommand.Identify: // 0xf2
                 // Returns keyboard ID
                 // - 0xab, 0x83: typical for multifunction PS/2 keyboards
                 // - 0xab, 0x84: many short, space saver keyboards
                 // - 0xab, 0x86: many 122-key keyboards
-                _controller.AddKbdByte(0xfa); // acknowledge
-                _controller.AddKbdByte(0xab);
-                _controller.AddKbdByte(0x83);
+                _controller.AddKbdByte((byte)DataByte.Ack);
+                _controller.AddKbdByte((byte)DataByte.IdentifyPrefix);
+                _controller.AddKbdByte((byte)DataByte.IdentifyMf2);
                 break;
             case KeyboardCommand.ClearEnable: // 0xf4
                 // Clear internal buffer, enable scanning
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 _isScanning = true;
                 break;
             case KeyboardCommand.DefaultDisable: // 0xf5
                 // Restore defaults, disable scanning
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 SetDefaults();
                 _isScanning = false;
                 break;
             case KeyboardCommand.ResetEnable: // 0xf6
                 // Restore defaults, enable scanning
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 SetDefaults();
                 _isScanning = true;
@@ -365,7 +414,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3AllTypematic: // 0xf7
                 // Set scanning type for all the keys,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = true;
@@ -376,7 +425,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3AllMakeBreak: // 0xf8
                 // Set scanning type for all the keys,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = false;
@@ -387,7 +436,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3AllMakeOnly: // 0xf9
                 // Set scanning type for all the keys,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = false;
@@ -398,7 +447,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3AllTypeMakeBreak: // 0xfa
                 // Set scanning type for all the keys,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 foreach (Set3CodeInfoEntry entry in _set3CodeInfo.Values) {
                     entry.IsEnabledTypematic = true;
@@ -413,21 +462,21 @@ public class PS2Keyboard {
                 WarnResend();
                 // We have to respond, or else the 'In Extremis' game intro
                 // (sends 0xfe and 0xaa commands) hangs with a black screen
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 break;
             case KeyboardCommand.Reset: // 0xff
                 // Full keyboard reset and self test
                 // 0xaa: passed; 0xfc/0xfd: failed
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 KeyboardReset();
-                _controller.AddKbdByte(0xaa);
+                _controller.AddKbdByte((byte)DataByte.BatOk);
                 break;
             //
             // Unknown commands
             //
             default:
                 WarnUnknownCommand(command);
-                _controller.AddKbdByte(0xfe); // resend
+                _controller.AddKbdByte((byte)DataByte.Resend);
                 break;
         }
     }
@@ -440,7 +489,7 @@ public class PS2Keyboard {
         switch (command) {
             case KeyboardCommand.SetLeds: // 0xed
                 // Set keyboard LEDs according to bitfield
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 _ledState = param;
                 MaybeNotifyLedState();
                 break;
@@ -449,26 +498,26 @@ public class PS2Keyboard {
                 if (param != 0) {
                     // Change scancode set
                     if (SetCodeSet(param)) {
-                        _controller.AddKbdByte(0xfa); // acknowledge
+                        _controller.AddKbdByte((byte)DataByte.Ack);
                     } else {
                         _currentCommand = command;
-                        _controller.AddKbdByte(0xfe); // resend
+                        _controller.AddKbdByte((byte)DataByte.Resend);
                     }
                 } else {
                     // Query current scancode set
-                    _controller.AddKbdByte(0xfa); // acknowledge
+                    _controller.AddKbdByte((byte)DataByte.Ack);
                     _controller.AddKbdByte(_codeSet);
                 }
                 break;
             case KeyboardCommand.SetTypeRate: // 0xf3
                 // Sets typematic rate/delay
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 SetTypeRate(param);
                 break;
             case KeyboardCommand.Set3KeyTypematic: // 0xfb
                 // Set scanning type for the given key,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 GetSet3CodeInfo(param).IsEnabledTypematic = true;
                 GetSet3CodeInfo(param).IsEnabledMake = false;
@@ -477,7 +526,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3KeyMakeBreak: // 0xfc
                 // Set scanning type for the given key,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 GetSet3CodeInfo(param).IsEnabledTypematic = false;
                 GetSet3CodeInfo(param).IsEnabledMake = true;
@@ -486,7 +535,7 @@ public class PS2Keyboard {
             case KeyboardCommand.Set3KeyMakeOnly: // 0xfd
                 // Set scanning type for the given key,
                 // relevant for scancode set 3 only
-                _controller.AddKbdByte(0xfa); // acknowledge
+                _controller.AddKbdByte((byte)DataByte.Ack);
                 ClearBuffer();
                 GetSet3CodeInfo(param).IsEnabledTypematic = false;
                 GetSet3CodeInfo(param).IsEnabledMake = true;
