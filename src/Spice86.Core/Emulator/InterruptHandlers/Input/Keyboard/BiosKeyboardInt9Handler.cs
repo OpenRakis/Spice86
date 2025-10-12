@@ -1,7 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
 using Serilog.Events;
-using System.Collections.Frozen;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -11,9 +10,13 @@ using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.Collections.Frozen;
+using System.Diagnostics;
+
 /// <summary>
 /// Implementation of BIOS keyboard buffer handler (hardware interrupt 0x9, IRQ1)
 /// </summary>
+[DebuggerDisplay("INT09 BufEmpty={BiosKeyboardBuffer.IsEmpty}")]
 public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly Intel8042Controller _keyboard;
     private readonly SystemBiosInt15Handler _systemBiosInt15Handler;
@@ -52,44 +55,64 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        //TODO: fix arrow keys not arriving here... (see intel 8042 controller)
+        // Disable keyboard port only around the single read
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
-        
+
+        // Optional: log entry status for debugging
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            byte st = _keyboard.ReadByte(KeyboardPorts.StatusRegister);
+            LoggerService.Debug("INT09: entry ST=0x{St:X2}", st);
+        }
+
+        // Read scancode
         byte scancode = _keyboard.ReadByte(KeyboardPorts.Data);
-        
+
+        // Re-enable keyboard port immediately (like DOSBox CB_IRQ1 does)
+        _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnablePortKbd);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            byte stAfter = _keyboard.ReadByte(KeyboardPorts.StatusRegister);
+            LoggerService.Debug("INT09: read scan=0x{Scan:X2} ST(after)=0x{St:X2}", scancode, stAfter);
+        }
+
+        bool savedCf = State.CarryFlag;
+        byte savedAl = State.AL;
+
+        // INT 15h keyboard intercept: CF set => process, CF clear => ignore
         State.AL = scancode;
         _systemBiosInt15Handler.KeyboardIntercept(calledFromVm: true);
 
-        if(!State.CarryFlag) {
+        if (!State.CarryFlag) {
             _dualPic.AcknowledgeInterrupt(1);
             return;
         }
 
         scancode = State.AL;
 
+        State.AL = savedAl;
+        State.CarryFlag = savedCf;
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 9 processing scan code: 0x{ScanCode:X2}", scancode);
+            LoggerService.Verbose("INT09: process scan=0x{Scan:X2}", scancode);
         }
 
         byte flags1 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag;
         byte flags2 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag2;
         byte flags3 = BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag3;
-        byte leds = BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus;
+        byte leds   = BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus;
 
         ProcessScancode(scancode, ref flags1, ref flags2, ref flags3, ref leds);
 
-        BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag = flags1;
+        BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag  = flags1;
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag2 = flags2;
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag3 = flags3;
-        BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus = leds;
+        BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus   = leds;
+
 
         // flush buffer if overflowed
         _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.ReadByteConfig);
 
-        // enable keyboard again
-        _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnablePortKbd);
-
-        // PIC EOI
+        //PIC EOI
         _dualPic.AcknowledgeInterrupt(1);
     }
 
