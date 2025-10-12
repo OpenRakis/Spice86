@@ -29,35 +29,45 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private readonly Pit8254Counter[] _counters = new Pit8254Counter[3];
     private readonly DualPic _dualPic;
 
-    // Periodic device-callback facility (PIC-like)
-    private sealed class PeriodicCallbackEntry {
+    /// <summary>
+    /// Represents an entry that associates a periodic callback with its activator and name.
+    /// </summary>
+    [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
+    private readonly record struct PeriodicCallbackEntry {
         public required CounterActivator Activator { get; init; }
         public required Action Callback { get; init; }
         public required string Name { get; init; }
+
+        private string GetDebuggerDisplay() {
+            return $"{Name} (Frequency: {Activator.Frequency} Hz, Multiplier: {Activator.Multiplier}, IsActivated: {Activator.IsActivated})";
+        }
     }
 
     private readonly List<PeriodicCallbackEntry> _deviceCallbacks = new();
     private readonly CounterConfiguratorFactory _counterConfiguratorFactory;
     private double _timeMultiplier = 1.0;
 
-    // -------------------------------------------------------------------------
-    // Sub-ms event queue (PIC-like) - similar intent to DOSBox PIC_AddEvent & queue.
-    // -------------------------------------------------------------------------
-    private sealed class ScheduledEvent {
-        public required Guid Id;
-        public required string Name;
-        public required Action<uint> Handler;
-        public required uint Value;
-        public required long DueTicks;
-        public bool Canceled;
+    /// <summary>
+    /// Sub-ms event queue item
+    /// </summary>
+    [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
+    private record class ScheduledEvent {
+        public required Guid Id { get; init; }
+        public required string Name { get; init; }
+        public required Action<uint> Handler { get; init; }
+        public required uint Value { get; init; }
+        public required long DueTicks { get; init; }
+        public bool Canceled { get; set; }
+
+        private string GetDebuggerDisplay() {
+            return $"{Name} (Id: {Id}, Due in {(DueTicks - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency:F2} ms, Canceled: {Canceled})";
+        }
     }
 
     private readonly object _eventLock = new();
     private readonly PriorityQueue<ScheduledEvent, long> _eventQueue = new();
     private bool _inEventService = false;
     private long _serviceNowTicks = 0;
-
-    // -------------------------------------------------------------------------
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Timer"/> class.
@@ -177,9 +187,9 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     public int RemoveSpecificEvents(Action<uint> handler, uint value) {
         int count = 0;
         lock (_eventLock) {
-            foreach ((ScheduledEvent Element, long Priority) item in _eventQueue.UnorderedItems) {
-                if (!item.Element.Canceled && item.Element.Handler == handler && item.Element.Value == value) {
-                    item.Element.Canceled = true;
+            foreach ((ScheduledEvent Element, long Priority) in _eventQueue.UnorderedItems) {
+                if (!Element.Canceled && Element.Handler == handler && Element.Value == value) {
+                    Element.Canceled = true;
                     count++;
                 }
             }
@@ -195,26 +205,22 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         _inEventService = true;
         _serviceNowTicks = now;
 
-        while (true) {
-            ScheduledEvent? ev;
+        while (_eventQueue.TryPeek(out ScheduledEvent? ev, out long due)) {
+            if (due > now) {
+                break;
+            }
             lock (_eventLock) {
-                if (!_eventQueue.TryPeek(out ev!, out long due)) {
-                    break;
-                }
-                if (due > now) {
-                    break;
-                }
                 _eventQueue.Dequeue();
-                if (ev.Canceled) {
+                if (ev?.Canceled is true) {
                     continue;
                 }
             }
             // Execute outside lock
             try {
-                ev.Handler(ev.Value);
+                ev?.Handler(ev.Value);
             } catch (Exception ex) {
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    _loggerService.Warning("Timer event '{Name}' failed: {Error}", ev.Name, ex.Message);
+                    _loggerService.Warning("Timer event '{Name}' failed: {Error}", ev?.Name, ex.Message);
                 }
             }
         }
