@@ -108,10 +108,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         BiosKeyboardBuffer.BiosDataArea.KeyboardStatusFlag3 = flags3;
         BiosKeyboardBuffer.BiosDataArea.KeyboardLedStatus   = leds;
 
-
-        // flush buffer if overflowed
-        _keyboard.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.ReadByteConfig);
-
         //PIC EOI
         _dualPic.AcknowledgeInterrupt(1);
     }
