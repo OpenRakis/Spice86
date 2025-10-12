@@ -4,15 +4,16 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
-using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
+using System.Diagnostics;
 
 /// <summary>
 /// PS/2 keyboard emulation. C# port of DOSBox's keyboard.cpp
 /// </summary>
+[DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_bufferNumUsed}/{BufferSize} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;

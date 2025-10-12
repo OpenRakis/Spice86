@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+[DebuggerDisplay("I8042 New={_status.IsDataNew} Aux={_status.IsDataFromAux} Cmd={_status.WasLastWriteCmd} Buf={_bufferNumUsed}/{BufferSize} WaitK={_waitingBytesFromKbd} WaitM={_waitingBytesFromAux} DisKbd={_config.DisableKbdPort} CmdPending={_currentCommand}")]
 public class Intel8042Controller : DefaultIOPortHandler {
     private const byte IrqNumKbdIbmPc = 1;
     private const byte IrqNumMouse = 12;
@@ -247,7 +248,6 @@ public class Intel8042Controller : DefaultIOPortHandler {
         _cpuState = state;
         _timer = timer;
 
-        // Sub-ms one-shot scheduling replaces old 1ms periodic tick for delays
         KeyboardDevice = new PS2Keyboard(this, state, loggerService, timer, gui);
 
         InitPortHandlers(ioPortDispatcher);
@@ -413,9 +413,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
     }
 
     private void EnforceBufferSpace(int numBytes = 1) {
-        if (numBytes > BufferSize) {
-            throw new ArgumentOutOfRangeException(nameof(numBytes));
-        }
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(numBytes, BufferSize);
 
         if (BufferSize < _bufferNumUsed + numBytes) {
             WarnBufferFull();
@@ -927,7 +925,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
                     FlushBuffer();
                 }
 
-                _status.WasLastWriteCmd = true; // was_last_write_cmd = true
+                _status.WasLastWriteCmd = true;
 
                 _currentCommand = KeyboardCommand.None;
                 if (value is <= 0x1f or >= 0x40 and <= 0x5f) {
