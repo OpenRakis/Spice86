@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -134,8 +135,12 @@ public class DosFileManagerTests {
         IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         // IO devices
+
+        CounterConfiguratorFactory counterConfiguratorFactory =
+            new(configuration, state, pauseHandler, loggerService);
+
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+            counterConfiguratorFactory, loggerService, dualPic);
 
         DmaController dmaController =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
@@ -153,13 +158,15 @@ public class DosFileManagerTests {
 
         InputEventQueue inputEventQueue = new InputEventQueue();
 
+        DeviceScheduler deviceScheduler = new(counterConfiguratorFactory, loggerService);
+
         EmulationLoop emulationLoop = new EmulationLoop(new(),
             functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler,
+            deviceScheduler, emulatorBreakpointsManager, dmaController, pauseHandler,
             new NullCycleLimiter(), inputEventQueue, loggerService);
 
         Intel8042Controller keyboard = new(state, ioPortDispatcher, a20Gate,
-            dualPic, configuration.FailOnUnhandledPort, pauseHandler, loggerService, timer);
+            dualPic, configuration.FailOnUnhandledPort, pauseHandler, loggerService, deviceScheduler);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
 

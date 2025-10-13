@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -228,6 +229,7 @@ public sealed class Machine : IDisposable {
     /// The pause handler for the emulation thread
     /// </summary>
     public IPauseHandler PauseHandler { get; }
+    public DeviceScheduler DeviceScheduler { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
@@ -268,7 +270,8 @@ public sealed class Machine : IDisposable {
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
-        IPauseHandler pauseHandler) {
+        IPauseHandler pauseHandler,
+        DeviceScheduler deviceScheduler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -307,6 +310,7 @@ public sealed class Machine : IDisposable {
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
         PauseHandler = pauseHandler;
+        DeviceScheduler = deviceScheduler;
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
-using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -14,17 +14,13 @@ using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
-/// <summary>
-/// This class orchestrates the execution of the emulated CPU, <br/>
-/// throttles CPU speed for the rare speed sensitive games, <br/>
-/// checks breakpoints each cycle, triggers PIT ticks, and ensures DMA transfers are performed
-///.</summary>
 public class EmulationLoop {
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
     private readonly Timer _timer;
+    private readonly DeviceScheduler _scheduler;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
     private readonly PerformanceMeasurer _performanceMeasurer;
@@ -46,6 +42,7 @@ public class EmulationLoop {
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="timer">The timer device, so the emulation loop can call Tick()</param>
+    /// <param name="scheduler">The device scheduler, to handle event queue and device ticks.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="dmaController">Used to perform DMA Channel data transfers regularly.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
@@ -54,7 +51,7 @@ public class EmulationLoop {
     /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(PerformanceMeasurer perfMeasurer,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
-        Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        Timer timer, DeviceScheduler scheduler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         DmaController dmaController, IPauseHandler pauseHandler,
         CycleLimiterBase cyclesLimiter, InputEventQueue inputEventQueue,
         ILoggerService loggerService) {
@@ -64,6 +61,7 @@ public class EmulationLoop {
         _functionHandler = functionHandler;
         _cpuState = cpuState;
         _timer = timer;
+        _scheduler = scheduler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _cyclesLimiter = cyclesLimiter;
@@ -121,14 +119,14 @@ public class EmulationLoop {
         _emulatorBreakpointsManager.CheckExecutionBreakPoints();
         _pauseHandler.WaitIfPaused();
 
-        // Sub-ms event queue run (like DOSBox PIC_RunQueue before CPU executes)
-        _timer.RunEventQueue();
+        // sub-ms queue before CPU executes
+        _scheduler.RunEventQueue();
 
         _cpu.ExecuteNext();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
 
-        _timer.Tick();        // PIT counter 0 (IRQ0 if due)
-        _timer.DeviceTick();  // periodic device callbacks (1 kHz or otherwise)
+        _timer.Tick();        // PIT IRQ0 if due
+        _scheduler.DeviceTick(); // device periodic callbacks
         _dmaController.PerformDmaTransfers();
         _inputEventQueue.ProcessAllPendingInputEvents();
         _cyclesLimiter.RegulateCycles(_cpuState);

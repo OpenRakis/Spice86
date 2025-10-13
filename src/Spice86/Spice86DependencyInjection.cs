@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -228,9 +229,12 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         // IO devices
+
+        CounterConfiguratorFactory counterConfiguratorFactory = new
+            CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService);
+
         Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration,
-            state, pauseHandler, loggerService), loggerService, dualPic);
+            counterConfiguratorFactory, loggerService, dualPic);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Timer created...");
@@ -359,14 +363,16 @@ public class Spice86DependencyInjection : IDisposable {
         InputEventQueue inputEventQueue = new InputEventQueue(
             _gui as IGuiKeyboardEvents, _gui as IGuiMouseEvents);
 
+        DeviceScheduler deviceScheduler = new(counterConfiguratorFactory, loggerService);
+
         EmulationLoop emulationLoop = new(perfMeasurer, functionHandler,
             cpuForEmulationLoop, state, timer,
-            emulatorBreakpointsManager, dmaController,
+            deviceScheduler, emulatorBreakpointsManager, dmaController,
             pauseHandler, cyclesLimiter, inputEventQueue, loggerService);
 
         Intel8042Controller ps2Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, timer, inputEventQueue);
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, deviceScheduler, inputEventQueue);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
@@ -490,7 +496,7 @@ public class Spice86DependencyInjection : IDisposable {
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
             dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
-            vgaFunctionality, pauseHandler);
+            vgaFunctionality, pauseHandler, deviceScheduler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Machine created...");

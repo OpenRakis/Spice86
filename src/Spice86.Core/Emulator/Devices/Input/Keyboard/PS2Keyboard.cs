@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Shared.Emulator.Keyboard;
@@ -10,16 +9,13 @@ using Spice86.Shared.Interfaces;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-/// <summary>
-/// PS/2 keyboard emulation. C# port of DOSBox's keyboard.cpp
-/// </summary>
 [DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_bufferNumUsed}/{BufferSize} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly State _cpuState;
-    private readonly Timer _timer;
+    private readonly DeviceScheduler _scheduler;
 
     // Internal keyboard scancode buffer - mirrors DOSBox implementation
     private const int BufferSize = 8; // in scancodes
@@ -114,18 +110,18 @@ public class PS2Keyboard {
     /// <param name="controller">The keyboard controller.</param>
     /// <param name="cpuState">The CPU state for cycle-based timing.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="timer">The PIT timer to register periodic callbacks.</param>
+    /// <param name="scheduler">The device scheduler to register periodic callbacks.</param>
     /// <param name="guiKeyboardEvents">Optional GUI keyboard events interface.</param>
     public PS2Keyboard(Intel8042Controller controller, State cpuState,
-        ILoggerService loggerService, Timer timer,
+        ILoggerService loggerService, DeviceScheduler scheduler,
         IGuiKeyboardEvents? guiKeyboardEvents = null) {
         _controller = controller;
         _cpuState = cpuState;
         _loggerService = loggerService;
-        _timer = timer;
+        _scheduler = scheduler;
 
         // 1ms periodic service (typematic + LED timeout)
-        _timer.RegisterPeriodicCallback("kbd-typematic-led", 1000.0, Service1ms);
+        _scheduler.RegisterPeriodicCallback("kbd-typematic-led", 1000.0, Service1ms);
 
         KeyboardReset(isStartup: true);
 
