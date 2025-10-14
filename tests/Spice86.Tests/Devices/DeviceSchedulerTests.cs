@@ -33,7 +33,7 @@ public class DeviceSchedulerIntegrationTests {
 
         //Assert
         Assert.Equal(1, fired);
-        Assert.Equal(TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds), TimeSpan.FromMilliseconds(OneShotDelayMs));
+        Assert.Equal(TimeSpan.FromMilliseconds(OneShotDelayMs), TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds));
     }
 
     [Fact]
