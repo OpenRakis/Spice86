@@ -23,7 +23,6 @@ public sealed class DeviceScheduler {
 
     private readonly List<PeriodicCallbackEntry> _deviceCallbacks = new();
 
-    private readonly object _eventLock = new();
     private readonly PriorityQueue<ScheduledEvent, long> _eventQueue = new();
     private bool _inEventService = false;
     private long _serviceNowTicks = 0;
@@ -31,16 +30,16 @@ public sealed class DeviceScheduler {
     public record ScheduledEvent {
         public required string Name { get; init; }
         public required Action<uint> Handler { get; init; }
-        public required uint Value { get; init; }
+        public required uint Parameter { get; init; }
         public required long DueTicks { get; init; }
         public bool Canceled { get; set; }
         public override string ToString() => $"{Name} (DueTicks: {DueTicks}, Canceled: {Canceled})";
     }
 
     public DeviceScheduler(CounterConfiguratorFactory counterConfiguratorFactory,
-                           ILoggerService loggerService,
-                           Func<long>? nowTicks = null,
-                           long ticksPerSecond = 0) {
+        ILoggerService loggerService,
+        Func<long>? nowTicks = null,
+        long ticksPerSecond = 0) {
         _counterConfiguratorFactory = counterConfiguratorFactory;
         _loggerService = loggerService;
         _nowTicks = nowTicks ?? Stopwatch.GetTimestamp;
@@ -85,25 +84,21 @@ public sealed class DeviceScheduler {
         var ev = new ScheduledEvent {
             Name = name,
             Handler = handler,
-            Value = value,
+            Parameter = value,
             DueTicks = dueTicks,
             Canceled = false
         };
 
-        lock (_eventLock) {
-            _eventQueue.Enqueue(ev, ev.DueTicks);
-        }
+        _eventQueue.Enqueue(ev, ev.DueTicks);
         return ev;
     }
 
     public int RemoveEvents(Action<uint> handler) {
         int count = 0;
-        lock (_eventLock) {
-            foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
-                if (!Element.Canceled && Element.Handler == handler) {
-                    Element.Canceled = true;
-                    count++;
-                }
+        foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
+            if (!Element.Canceled && Element.Handler == handler) {
+                Element.Canceled = true;
+                count++;
             }
         }
         return count;
@@ -111,12 +106,10 @@ public sealed class DeviceScheduler {
 
     public int RemoveSpecificEvents(Action<uint> handler, uint value) {
         int count = 0;
-        lock (_eventLock) {
-            foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
-                if (!Element.Canceled && Element.Handler == handler && Element.Value == value) {
-                    Element.Canceled = true;
-                    count++;
-                }
+        foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
+            if (!Element.Canceled && Element.Handler == handler && Element.Parameter == value) {
+                Element.Canceled = true;
+                count++;
             }
         }
         return count;
@@ -131,14 +124,12 @@ public sealed class DeviceScheduler {
             if (due > now) {
                 break;
             }
-            lock (_eventLock) {
-                _eventQueue.Dequeue();
-                if (ev?.Canceled == true) {
-                    continue;
-                }
+            _eventQueue.Dequeue();
+            if (ev?.Canceled == true) {
+                continue;
             }
             try {
-                ev?.Handler(ev.Value);
+                ev?.Handler(ev.Parameter);
             } catch (Exception ex) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("Timer event '{Name}' failed: {Error}", ev?.Name, ex.Message);
