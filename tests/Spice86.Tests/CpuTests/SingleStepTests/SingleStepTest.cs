@@ -1,7 +1,5 @@
 namespace Spice86.Tests.CpuTests.SingleStepTests;
 
-using Microsoft.Msagl.Core.DataStructures;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Memory;
