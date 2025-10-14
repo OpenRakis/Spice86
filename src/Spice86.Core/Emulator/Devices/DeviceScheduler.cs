@@ -37,13 +37,11 @@ public sealed class DeviceScheduler {
     }
 
     public DeviceScheduler(CounterConfiguratorFactory counterConfiguratorFactory,
-        ILoggerService loggerService,
-        Func<long>? nowTicks = null,
-        long ticksPerSecond = 0) {
+        ILoggerService loggerService) {
         _counterConfiguratorFactory = counterConfiguratorFactory;
         _loggerService = loggerService;
-        _nowTicks = nowTicks ?? Stopwatch.GetTimestamp;
-        _ticksPerSecond = ticksPerSecond != 0 ? ticksPerSecond : Stopwatch.Frequency;
+        _nowTicks = Stopwatch.GetTimestamp;
+        _ticksPerSecond = Stopwatch.Frequency;
     }
 
     public void SetTimeMultiplier(double multiplier) {
