@@ -25,9 +25,7 @@ public class FunctionHandler {
     private readonly IMemory _memory;
 
     private readonly ExecutionFlowRecorder? _executionFlowRecorder;
-
-    private uint StackPhysicalAddress => _state.StackPhysicalAddress;
-
+    
     private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
@@ -131,8 +129,7 @@ public class FunctionHandler {
     /// <param name="returnCallType">The type of the return call.</param>
     /// <returns>The return address of the specified call type from the machine stack without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
-        uint stackPhysicalAddress = StackPhysicalAddress;
-        return PeekReturnAddressOnMachineStack(returnCallType, stackPhysicalAddress);
+        return PeekReturnAddressOnMachineStack(returnCallType, _state.StackPhysicalAddress);
     }
 
     /// <summary>

@@ -22,12 +22,12 @@ public partial class StackMemoryViewModel : MemoryViewModel {
                 uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
                 canCloseTab, startAddress, endAddress) {
         Title = "CPU Stack Memory";
-        pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateStackMemoryViewModel(this, stack),
+        pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateStackMemoryViewModel(this, state),
             DispatcherPriority.Background);
     }
-    private static void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, Stack stack) {
+    private static void UpdateStackMemoryViewModel(MemoryViewModel stackMemoryViewModel, State state) {
         //stack.PhysicalAddress is MemoryUtils.ToPhysicalAddress(state.SS, state.SP)
-        stackMemoryViewModel.StartAddress = ConvertUtils.ToHex32(stack.PhysicalAddress);
+        stackMemoryViewModel.StartAddress = ConvertUtils.ToHex32(state.StackPhysicalAddress);
         stackMemoryViewModel.EndAddress = ConvertUtils.ToHex32(A20Gate.EndOfHighMemoryArea);
     }
 }

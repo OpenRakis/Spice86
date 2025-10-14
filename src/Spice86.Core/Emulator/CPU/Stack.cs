@@ -34,11 +34,6 @@ public class Stack {
     private readonly State _state;
 
     /// <summary>
-    /// The physical address of the stack in memory
-    /// </summary>
-    public uint PhysicalAddress => _state.StackPhysicalAddress;
-
-    /// <summary>
     /// Creates a new instance of the <see cref="Stack"/> class
     /// </summary>
     /// <param name="memory">The memory bus.</param>
@@ -51,28 +46,28 @@ public class Stack {
     /// <summary>
     /// Peeks a 8 bit value from the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <returns>The value in memory.</returns>
     public byte Peek8(int index) {
-        return _memory.UInt8[(uint)(PhysicalAddress + index)];
+        return _memory.UInt8[_state.SS, (ushort)(_state.SP + index)];
     }
 
     /// <summary>
     /// Peeks a 16 bit value from the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <returns>The value in memory.</returns>
     public ushort Peek16(int index) {
-        return _memory.UInt16[(uint)(PhysicalAddress + index)];
+        return _memory.UInt16[_state.SS, (ushort)(_state.SP + index)];
     }
 
     /// <summary>
     /// Pokes a 16 bit value on the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <param name="value">The value to store in memory.</param>
     public void Poke16(int index, ushort value) {
-        _memory.UInt16[(uint)(PhysicalAddress + index)] = value;
+        _memory.UInt16[_state.SS, (ushort)(_state.SP + index)] = value;
     }
 
     /// <summary>
@@ -80,7 +75,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public ushort Pop16() {
-        ushort res = _memory.UInt16[PhysicalAddress];
+        ushort res = _memory.UInt16[_state.SS, _state.SP];
         _state.SP = (ushort)(_state.SP + 2);
         return res;
     }
@@ -91,24 +86,24 @@ public class Stack {
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void Push16(ushort value) {
         _state.SP = (ushort)(_state.SP - 2);
-        _memory.UInt16[PhysicalAddress] = value;
+        _memory.UInt16[_state.SS, _state.SP] = value;
     }
 
     /// <summary>
     /// Peeks a 32 bit value from the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     public uint Peek32(int index) {
-        return _memory.UInt32[(uint)(PhysicalAddress + index)];
+        return _memory.UInt32[_state.SS, (ushort)(_state.SP + index)];
     }
 
     /// <summary>
     /// Pokes a 32 bit value on the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <param name="value">The value to store in memory.</param>
     public void Poke32(int index, uint value) {
-        _memory.UInt32[(uint)(PhysicalAddress + index)] = value;
+        _memory.UInt32[_state.SS, (ushort)(_state.SP + index)] = value;
     }
 
     /// <summary>
@@ -116,7 +111,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value popped from the stack.</returns>
     public uint Pop32() {
-        uint res = _memory.UInt32[PhysicalAddress];
+        uint res = _memory.UInt32[_state.SS, _state.SP];
         _state.SP = (ushort)(_state.SP + 4);
         return res;
     }
@@ -127,25 +122,25 @@ public class Stack {
     /// <param name="value">The value to store onto the stack.</param>
     public void Push32(uint value) {
         _state.SP = (ushort)(_state.SP - 4);
-        _memory.UInt32[PhysicalAddress] = value;
+        _memory.UInt32[_state.SS, _state.SP] = value;
     }
     
     /// <summary>
     /// Peeks a SegmentedAddress value from the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <returns>The value in memory.</returns>
     public SegmentedAddress PeekSegmentedAddress(int index) {
-        return _memory.SegmentedAddress16[(uint)(PhysicalAddress + index)];
+        return _memory.SegmentedAddress16[_state.SS, (ushort)(_state.SP + index)];
     }
 
     /// <summary>
     /// Pokes a SegmentedAddress value on the stack
     /// </summary>
-    /// <param name="index">The offset from the <see cref="PhysicalAddress"/></param>
+    /// <param name="index">The offset from the stack top</param>
     /// <param name="value">The value to store in memory.</param>
     public void PokeSegmentedAddress(int index, SegmentedAddress value) {
-        _memory.SegmentedAddress16[(uint)(PhysicalAddress + index)] = value;
+        _memory.SegmentedAddress16[_state.SS, (ushort)(_state.SP + index)] = value;
     }
 
     /// <summary>
@@ -153,7 +148,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public SegmentedAddress PopSegmentedAddress() {
-        SegmentedAddress res = _memory.SegmentedAddress16[PhysicalAddress];
+        SegmentedAddress res = _memory.SegmentedAddress16[_state.SS, _state.SP];
         _state.SP = (ushort)(_state.SP + 4);
         return res;
     }
@@ -163,7 +158,7 @@ public class Stack {
     /// </summary>
     /// <returns>The value retrieved from the stack, therefore read from memory</returns>
     public SegmentedAddress PopSegmentedAddress32() {
-        SegmentedAddress res = _memory.SegmentedAddress32[PhysicalAddress];
+        SegmentedAddress res = _memory.SegmentedAddress32[_state.SS, _state.SP];
         _state.SP = (ushort)(_state.SP + 6);
         return res;
     }
@@ -174,7 +169,7 @@ public class Stack {
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void PushSegmentedAddress(SegmentedAddress value) {
         _state.SP = (ushort)(_state.SP - 4);
-        _memory.SegmentedAddress16[PhysicalAddress] = value;
+        _memory.SegmentedAddress16[_state.SS, _state.SP] = value;
     }
     
     /// <summary>
@@ -183,7 +178,7 @@ public class Stack {
     /// <param name="value">The value pushed onto the stack, therefore stored in memory.</param>
     public void PushSegmentedAddress32(SegmentedAddress value) {
         _state.SP = (ushort)(_state.SP - 6);
-        _memory.SegmentedAddress32[PhysicalAddress] = value;
+        _memory.SegmentedAddress32[_state.SS, _state.SP] = value;
     }
 
     /// <summary>
@@ -202,15 +197,15 @@ public class Stack {
     /// <param name="flagMask">The flag mask used to modify the uint value in memory</param>
     /// <param name="flagValue">A boolean that determines whether the bits specified by the flagMask should be set (if true) or cleared (if false).</param>
     public void SetFlagOnInterruptStack(int flagMask, bool flagValue) {
-        uint flagsAddress = MemoryUtils.ToPhysicalAddress(_state.SS, (ushort)(_state.SP + 4));
-        int value = _memory.UInt16[flagsAddress];
+        int value = Peek16(4);
+        
         if (flagValue) {
             value |= flagMask;
         } else {
             value &= ~flagMask;
         }
 
-        _memory.UInt16[flagsAddress] = (ushort)value;
+        Poke16(4, (ushort)value);
     }
 
     /// <summary>
@@ -221,8 +216,9 @@ public class Stack {
     public string PeekWindow(int range = 8) {
         var sb = new StringBuilder();
         ushort range16 = (ushort)(range << 1);
-        for (uint i = PhysicalAddress - range16; i < PhysicalAddress + range16; i += 2) {
-            if (i == PhysicalAddress) {
+        uint physicalAddress = _state.StackPhysicalAddress;
+        for (uint i = physicalAddress - range16; i < physicalAddress + range16; i += 2) {
+            if (i == physicalAddress) {
                 sb.Append('*');
             }
             sb.AppendLine($"[0x{i:X6}] 0x{_memory.UInt16[i]:X4}");
