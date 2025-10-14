@@ -2,6 +2,7 @@ using Spice86.Tests;
 using Xunit;
 using System.Diagnostics;
 using System.Threading;
+using Spice86.Core.Emulator.Devices;
 
 namespace Spice86.Tests.Devices;
 
@@ -12,7 +13,7 @@ public class DeviceSchedulerIntegrationTests {
         using Spice86DependencyInjection di = new Spice86Creator("add", enableCfgCpu: false, enablePit: false).Create();
 
         // You must expose DeviceScheduler via Machine (e.g., di.Machine.DeviceScheduler)
-        var scheduler = di.Machine.DeviceScheduler;
+        DeviceScheduler scheduler = di.Machine.DeviceScheduler;
 
         int fired = 0;
         scheduler.ScheduleEvent("oneshot-3ms", 3.0, () => Interlocked.Increment(ref fired));
@@ -33,7 +34,7 @@ public class DeviceSchedulerIntegrationTests {
     public void PeriodicCallback_FiresWithoutFakes() {
         using Spice86DependencyInjection di = new Spice86Creator("add", enableCfgCpu: false, enablePit: false).Create();
 
-        var scheduler = di.Machine.DeviceScheduler;
+        DeviceScheduler scheduler = di.Machine.DeviceScheduler;
 
         int hits = 0;
         scheduler.RegisterPeriodicCallback("tick-1k", 1000.0, () => Interlocked.Increment(ref hits));

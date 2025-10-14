@@ -11,10 +11,6 @@ namespace Spice86.Core.Emulator.Devices;
 /// Provides scheduling and periodic callback services for device emulation, allowing timed events and periodic actions
 /// to be registered and executed with adjustable timing.
 /// </summary>
-/// <remarks>DeviceScheduler enables precise scheduling of one-time or recurring actions, supporting both periodic
-/// device callbacks and delayed event execution. The time progression can be scaled using a multiplier, which affects
-/// all scheduled and periodic operations. This class is thread-safe for event scheduling and removal. It is intended
-/// for use in device simulation or emulation scenarios where accurate and flexible timing is required.</remarks>
 public sealed class DeviceScheduler {
     private readonly ILoggerService _loggerService;
     private readonly CounterConfiguratorFactory _counterConfiguratorFactory;
@@ -33,13 +29,12 @@ public sealed class DeviceScheduler {
     private long _serviceNowTicks = 0;
 
     public record ScheduledEvent {
-        public required Guid Id { get; init; }
         public required string Name { get; init; }
         public required Action<uint> Handler { get; init; }
         public required uint Value { get; init; }
         public required long DueTicks { get; init; }
         public bool Canceled { get; set; }
-        public override string ToString() => $"{Name} (Id: {Id}, DueTicks: {DueTicks}, Canceled: {Canceled})";
+        public override string ToString() => $"{Name} (DueTicks: {DueTicks}, Canceled: {Canceled})";
     }
 
     public DeviceScheduler(CounterConfiguratorFactory counterConfiguratorFactory,
@@ -56,13 +51,13 @@ public sealed class DeviceScheduler {
         if (multiplier <= 0) throw new DivideByZeroException(nameof(multiplier));
         _timeMultiplier = multiplier;
         // Update already registered periodic activators
-        foreach (var entry in _deviceCallbacks) {
+        foreach (PeriodicCallbackEntry entry in _deviceCallbacks) {
             entry.Activator.Multiplier = multiplier;
         }
     }
 
     public void RegisterPeriodicCallback(string name, double frequencyHz, Action callback) {
-        var activator = _counterConfiguratorFactory.InstantiateCounterActivator();
+        CounterActivator activator = _counterConfiguratorFactory.InstantiateCounterActivator();
         activator.Multiplier = _timeMultiplier;
         activator.Frequency = (long)Math.Max(1, Math.Round(frequencyHz));
         _deviceCallbacks.Add(new PeriodicCallbackEntry(name, activator, callback));
@@ -73,23 +68,21 @@ public sealed class DeviceScheduler {
     }
 
     public void DeviceTick() {
-        foreach (var entry in _deviceCallbacks) {
+        foreach (PeriodicCallbackEntry entry in _deviceCallbacks) {
             if (entry.Activator.IsActivated) {
                 entry.Callback();
             }
         }
     }
 
-    public Guid ScheduleEvent(string name, double delayMs, Action action) =>
+    public ScheduledEvent ScheduleEvent(string name, double delayMs, Action action) =>
         ScheduleEvent(name, delayMs, _ => action(), 0);
 
-    public Guid ScheduleEvent(string name, double delayMs, Action<uint> handler, uint value) {
-        var id = Guid.NewGuid();
+    public ScheduledEvent ScheduleEvent(string name, double delayMs, Action<uint> handler, uint value) {
         long baseTicks = _inEventService ? _serviceNowTicks : _nowTicks();
         long dueTicks = baseTicks + MsToTicks(delayMs / _timeMultiplier);
 
         var ev = new ScheduledEvent {
-            Id = id,
             Name = name,
             Handler = handler,
             Value = value,
@@ -100,13 +93,13 @@ public sealed class DeviceScheduler {
         lock (_eventLock) {
             _eventQueue.Enqueue(ev, ev.DueTicks);
         }
-        return id;
+        return ev;
     }
 
     public int RemoveEvents(Action<uint> handler) {
         int count = 0;
         lock (_eventLock) {
-            foreach ((var Element, _) in _eventQueue.UnorderedItems) {
+            foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
                 if (!Element.Canceled && Element.Handler == handler) {
                     Element.Canceled = true;
                     count++;
@@ -119,7 +112,7 @@ public sealed class DeviceScheduler {
     public int RemoveSpecificEvents(Action<uint> handler, uint value) {
         int count = 0;
         lock (_eventLock) {
-            foreach ((var Element, _) in _eventQueue.UnorderedItems) {
+            foreach ((ScheduledEvent? Element, _) in _eventQueue.UnorderedItems) {
                 if (!Element.Canceled && Element.Handler == handler && Element.Value == value) {
                     Element.Canceled = true;
                     count++;
@@ -134,7 +127,7 @@ public sealed class DeviceScheduler {
         _inEventService = true;
         _serviceNowTicks = now;
 
-        while (_eventQueue.TryPeek(out var ev, out long due)) {
+        while (_eventQueue.TryPeek(out ScheduledEvent? ev, out long due)) {
             if (due > now) {
                 break;
             }
@@ -150,6 +143,7 @@ public sealed class DeviceScheduler {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("Timer event '{Name}' failed: {Error}", ev?.Name, ex.Message);
                 }
+                throw;
             }
         }
 
