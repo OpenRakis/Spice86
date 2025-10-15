@@ -57,4 +57,8 @@ public class BaseInstructionParser {
     protected bool BitIsTrue(uint value, int bitIndex) {
         return ((value >> bitIndex) & 1) == 1;
     }
+
+    protected static InvalidOperationException CreateUnsupportedBitWidthException(BitWidth bitWidth) {
+        return new InvalidOperationException($"Unsupported bit width {bitWidth}");
+    }
 }

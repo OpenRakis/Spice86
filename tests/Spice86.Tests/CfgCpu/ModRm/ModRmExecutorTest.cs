@@ -213,7 +213,7 @@ public class ModRmExecutorTest {
         // Act
         try {
             executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
-        } catch (CpuGeneralProtectionFaultException e) {
+        } catch (CpuGeneralProtectionFaultException) {
             // Success!
             return;
         }
@@ -279,7 +279,7 @@ public class ModRmExecutorTest {
         // Act
         try {
             executor.RefreshWithNewModRmContext(parser.ParseNext(new TestModRmParsingContext(BitWidth.DWORD_32)));
-        } catch (CpuGeneralProtectionFaultException e) {
+        } catch (CpuGeneralProtectionFaultException) {
             // Success!
             return;
         }

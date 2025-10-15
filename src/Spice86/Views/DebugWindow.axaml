@@ -73,11 +73,14 @@
 				<TabControl ItemsSource="{Binding DisassemblyViewModels}">
 					<TabControl.ItemTemplate>
 						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-							<TabItem Header="{Binding Header}">
-								<ContentPresenter Content="{Binding}"/>
-							</TabItem>
+							<TextBlock Text="{Binding Header}" />
 						</DataTemplate>
 					</TabControl.ItemTemplate>
+					<TabControl.ContentTemplate>
+						<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+							<ContentPresenter Content="{Binding}" />
+						</DataTemplate>
+					</TabControl.ContentTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem
@@ -115,11 +118,14 @@
 				<TabControl ItemsSource="{Binding MemoryViewModels}">
 					<TabControl.ItemTemplate>
 						<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-							<TabItem Header="{Binding Header}">
-								<ContentPresenter Content="{Binding}"/>
-							</TabItem>
+							<TextBlock Text="{Binding Header}" />
 						</DataTemplate>
 					</TabControl.ItemTemplate>
+					<TabControl.ContentTemplate>
+						<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+							<ContentPresenter Content="{Binding}" />
+						</DataTemplate>
+					</TabControl.ContentTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F5">

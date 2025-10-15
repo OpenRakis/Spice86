@@ -18,7 +18,8 @@ public partial class {{ moxy.Class.Name }} : AluOperationParser {
         return bitWidth switch {
             BitWidth.BYTE_8 => new {{Operation}}AccImm8(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt8.NextField(false)),
             BitWidth.WORD_16 => new {{Operation}}AccImm16(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt16.NextField(false)),
-            BitWidth.DWORD_32 => new {{Operation}}AccImm32(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt32.NextField(false))
+            BitWidth.DWORD_32 => new {{Operation}}AccImm32(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt32.NextField(false)),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 
@@ -26,7 +27,8 @@ public partial class {{ moxy.Class.Name }} : AluOperationParser {
         return bitWidth switch {
             BitWidth.BYTE_8 => new {{Operation}}RegRm8(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
             BitWidth.WORD_16 => new {{Operation}}RegRm16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
-            BitWidth.DWORD_32 => new {{Operation}}RegRm32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
+            BitWidth.DWORD_32 => new {{Operation}}RegRm32(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 
@@ -34,7 +36,8 @@ public partial class {{ moxy.Class.Name }} : AluOperationParser {
         return bitWidth switch {
             BitWidth.BYTE_8 => new {{Operation}}RmReg8(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
             BitWidth.WORD_16 => new {{Operation}}RmReg16(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
-            BitWidth.DWORD_32 => new {{Operation}}RmReg32(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
+            BitWidth.DWORD_32 => new {{Operation}}RmReg32(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 }

@@ -48,6 +48,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             BitWidth.BYTE_8 => $"0x{value:X2}",
             BitWidth.WORD_16 => $"0x{value:X4}",
             BitWidth.DWORD_32 => $"0x{value:X8}",
+            _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
         };
     }
 
@@ -66,6 +67,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             BitWidth.BYTE_8 => (sbyte)value,
             BitWidth.WORD_16 => (short)value,
             BitWidth.DWORD_32 => (int)value,
+            _ => throw new InvalidOperationException($"Unsupported bit width {size}")
         };
     }
 
@@ -110,7 +112,8 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     private string OperationToString(Operation operation) {
         return operation switch {
             Operation.PLUS => "+",
-            Operation.MULTIPLY => "*"
+            Operation.MULTIPLY => "*",
+            _ => throw new InvalidOperationException($"Unsupported AST operation {operation}")
         };
     }
 
@@ -118,7 +121,8 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         return dataType.BitWidth switch {
             BitWidth.BYTE_8 => "byte ptr",
             BitWidth.WORD_16 => "word ptr",
-            BitWidth.DWORD_32 => "dword ptr"
+            BitWidth.DWORD_32 => "dword ptr",
+            _ => throw new InvalidOperationException($"Unsupported bit width {dataType.BitWidth}")
         };
     }
 }

@@ -21,7 +21,8 @@ public class JccParser : BaseInstructionParser {
         return addressWidth switch {
             BitWidth.BYTE_8 => _jcc8SpecificParser.Parse(context, condition),
             BitWidth.WORD_16 => _jcc16SpecificParser.Parse(context, condition),
-            BitWidth.DWORD_32 => _jcc32SpecificParser.Parse(context, condition)
+            BitWidth.DWORD_32 => _jcc32SpecificParser.Parse(context, condition),
+            _ => throw CreateUnsupportedBitWidthException(addressWidth)
         };
     }
 }

@@ -16,20 +16,23 @@ public class LoopParser : BaseInstructionParser {
             // Loop with no condition
             return addressWidth switch {
                 BitWidth.WORD_16 => new Loop16(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-                BitWidth.DWORD_32 => new Loop32(context.Address, context.OpcodeField, context.Prefixes, offsetField)
+                BitWidth.DWORD_32 => new Loop32(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+                _ => throw CreateUnsupportedBitWidthException(addressWidth)
             };
         }
         if (BitIsTrue(opcode, 0)) {
             // Loopz (loop if zf == 1)
             return addressWidth switch {
                 BitWidth.WORD_16 => new Loopz16(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-                BitWidth.DWORD_32 => new Loopz32(context.Address, context.OpcodeField, context.Prefixes, offsetField)
+                BitWidth.DWORD_32 => new Loopz32(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+                _ => throw CreateUnsupportedBitWidthException(addressWidth)
             };
         }
         // Loopnz (loop if zf == 0)
         return addressWidth switch {
             BitWidth.WORD_16 => new Loopnz16(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            BitWidth.DWORD_32 => new Loopnz32(context.Address, context.OpcodeField, context.Prefixes, offsetField)
+            BitWidth.DWORD_32 => new Loopnz32(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            _ => throw CreateUnsupportedBitWidthException(addressWidth)
         };
     }
 

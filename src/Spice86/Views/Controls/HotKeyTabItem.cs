@@ -1,5 +1,6 @@
 namespace Spice86.Views.Controls;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 
@@ -28,6 +29,7 @@ public class HotKeyTabItem : TabItem, ICommandSource {
 
         public TabItemSelectCommand(TabItem tabItem) {
             _tabItem = tabItem;
+            _tabItem.PropertyChanged += OnTabItemPropertyChanged;
         }
 
         public bool CanExecute(object? parameter) {
@@ -39,5 +41,11 @@ public class HotKeyTabItem : TabItem, ICommandSource {
         }
 
         public event EventHandler? CanExecuteChanged;
+
+        private void OnTabItemPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs changeArgs) {
+            if (changeArgs.Property == IsEffectivelyEnabledProperty) {
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
     }
 }

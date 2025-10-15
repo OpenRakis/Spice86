@@ -23,6 +23,7 @@ public static class IListExtension {
     }
 
     /// <summary>Attempts to copy the current <see cref="T:IList" /> to a destination <see cref="T:IList" /> and returns a value that indicates whether the copy operation succeeded.</summary>
+    /// <param name="source">The list containing the elements to copy.</param>
     /// <param name="destination">The target of the copy operation.</param>
     /// <returns>
     /// <see langword="true" /> if the copy operation succeeded; otherwise, <see langword="false" />.</returns>

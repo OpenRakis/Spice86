@@ -1,15 +1,10 @@
 namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
-
-using Configuration = Spice86.Core.CLI.Configuration;
-using State = Spice86.Core.Emulator.CPU.State;
-using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
-using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
-
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -20,6 +15,11 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Xunit;
+
+using Configuration = Spice86.Core.CLI.Configuration;
+using State = Spice86.Core.Emulator.CPU.State;
+using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
+using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 
 /// <summary>
 /// Verifies that MCBs are allocated, released, modified, and freed correctly by DOS.
@@ -88,7 +88,7 @@ public class DosMemoryManagerTests {
     /// </remarks>
     /// <param name="block">The memory block to fill with data.</param>
     /// <param name="fillByte">The data to fill the block with.</param>
-    public void FillMemoryBlock(DosMemoryControlBlock? block, byte fillByte = 0xFF) {
+    private void FillMemoryBlock(DosMemoryControlBlock? block, byte fillByte = 0xFF) {
         // Since this is just a test method, and many of the allocator functions return nullable
         // blocks, check for that first. Technically we could make the tests validate the validity
         // of the block before calling this function, but that would be less convenient. We'll catch

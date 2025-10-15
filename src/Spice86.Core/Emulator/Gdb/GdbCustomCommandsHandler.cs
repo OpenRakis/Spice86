@@ -67,8 +67,6 @@ public class GdbCustomCommandsHandler {
     /// <summary>
     /// Handles a custom command passed from GDB.
     /// </summary>
-    /// <param name="executionFlowRecorder">The class that records code execution flow.</param>
-    /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="command">The command string passed from GDB.</param>
     /// <returns>A response string to be sent back to GDB.</returns>
     public string HandleCustomCommands(string command) {

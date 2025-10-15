@@ -172,7 +172,8 @@ public static class MiscOutputRegister {
                 0 => "25Mhz",
                 1 => "28Mhz",
                 2 => "Reserved",
-                3 => "Reserved"
+                3 => "Reserved",
+                _ => "Unknown"
             },
             (value & 0x20) == 0x20 ? "High" : "Low",
             (value & 0x40) == 0x40 ? "1" : "0",

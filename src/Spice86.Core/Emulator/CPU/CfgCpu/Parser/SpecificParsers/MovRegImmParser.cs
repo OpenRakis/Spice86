@@ -15,7 +15,9 @@ public class MovRegImmParser : BaseInstructionParser {
         return bitWidth switch {
             BitWidth.BYTE_8 => new MovRegImm8(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt8.NextField(false), regIndex),
             BitWidth.WORD_16 => new MovRegImm16(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt16.NextField(false), regIndex),
-            BitWidth.DWORD_32 => new MovRegImm32(context.Address, context.OpcodeField, context.Prefixes, _instructionReader.UInt32.NextField(false), regIndex)
+            BitWidth.DWORD_32 => new MovRegImm32(context.Address, context.OpcodeField, context.Prefixes,
+                _instructionReader.UInt32.NextField(false), regIndex),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 }

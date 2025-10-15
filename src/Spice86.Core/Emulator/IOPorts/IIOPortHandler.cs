@@ -47,13 +47,13 @@ public interface IIOPortHandler {
     void WriteDWord(ushort port, uint value);
 
     /// <summary>
-    /// Updates the <see cref="LastPortRead"/> for the internal UI debugger.
+    /// Updates the cached port read information for the internal UI debugger.
     /// </summary>
     /// <param name="port">The port number</param>
     void UpdateLastPortRead(ushort port);
 
     /// <summary>
-    /// Updates the <see cref="LastPortWritten"/> and value for the internal UI debugger.
+    /// Updates the cached port write information for the internal UI debugger.
     /// </summary>
     /// <param name="port">The port number</param>
     /// <param name="value">The value written to the port.</param>

@@ -27,7 +27,8 @@ public  class SetRmccParser : BaseInstructionParser {
             0xC => new SetRml(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
             0xD => new SetRmge(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
             0xE => new SetRmle(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
-            0xF => new SetRmg(context.Address, context.OpcodeField, context.Prefixes, modRmContext)
+            0xF => new SetRmg(context.Address, context.OpcodeField, context.Prefixes, modRmContext),
+            _ => throw new InvalidOperationException($"Unsupported SETcc condition code {condition}")
         };
     }
 }
