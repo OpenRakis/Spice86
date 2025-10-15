@@ -5,9 +5,9 @@ using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Logging;
 
-using ClockSelect = Spice86.Core.Emulator.Devices.Video.Registers.General.MiscellaneousOutput.ClockSelectValue;
-
 using System.Diagnostics;
+
+using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
 /// <inheritdoc cref="IVgaRenderer" />
 public class Renderer : IVgaRenderer {
@@ -206,7 +206,8 @@ public class Renderer : IVgaRenderer {
             MemoryWidth.Byte => (ushort)memoryAddressCounter,
             MemoryWidth.Word13 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 13 & 1),
             MemoryWidth.Word15 => (ushort)(memoryAddressCounter << 1 | memoryAddressCounter >> 15 & 1),
-            MemoryWidth.DoubleWord => (ushort)(memoryAddressCounter << 2 | memoryAddressCounter >> 14 & 3)
+            MemoryWidth.DoubleWord => (ushort)((memoryAddressCounter << 2) | ((memoryAddressCounter >> 14) & 3)),
+            _ => throw new InvalidOperationException($"Unsupported memory width: {memoryWidthMode}")
         };
         if (scanLineBit0ForAddressBit13) {
             // Use the scan line counter rather than the memory address counter for bit 13.

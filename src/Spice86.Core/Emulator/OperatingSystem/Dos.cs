@@ -135,8 +135,9 @@ public sealed class Dos {
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
-    /// <param name="clock"></param>
+    /// <param name="clock">Monotonic clock used by DOS timers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,

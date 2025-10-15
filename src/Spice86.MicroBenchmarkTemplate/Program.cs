@@ -8,7 +8,7 @@ using Xunit;
 /// for guidelines on writing good and efficient microbenchmarks
 /// </summary>
 public class BenchmarkTest {
-    private StateLikeClass _instance;
+    private StateLikeClass _instance = null!;
 
     [GlobalSetup]
     public void Setup() {

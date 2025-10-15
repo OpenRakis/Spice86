@@ -1,9 +1,8 @@
 ﻿namespace Spice86.ViewModels.DataModels;
+
 using AvaloniaHex.Document;
 
 using Spice86.Core.Emulator.Memory;
-
-using System;
 
 /// <inheritdoc cref="IBinaryDocument" />
 public sealed class DataMemoryDocument : IBinaryDocument {
@@ -29,7 +28,9 @@ public sealed class DataMemoryDocument : IBinaryDocument {
     public bool CanRemove { get; }
     public IReadOnlyBitRangeUnion ValidRanges { get; }
 
+#pragma warning disable CS0067 // Binary document is write-through; UI listens to memory polling instead
     public event EventHandler<BinaryDocumentChange>? Changed;
+#pragma warning restore CS0067
 
     public void InsertBytes(ulong offset, ReadOnlySpan<byte> buffer) {
         throw new NotSupportedException();

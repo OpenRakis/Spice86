@@ -5,7 +5,6 @@ using AvaloniaHex.Document;
 using JetBrains.Annotations;
 
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 
 /// <inheritdoc/>
@@ -30,7 +29,9 @@ internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
 
     public bool IsFragmented => false;
 
+#pragma warning disable CS0067 // Event intentionally unused - read-only union never raises changes
     public event NotifyCollectionChangedEventHandler? CollectionChanged;
+#pragma warning restore CS0067
 
     public bool Contains(BitLocation location) {
         return location.CompareTo(EnclosingRange.Start) >= 0 && location.CompareTo(EnclosingRange.End) < 0;

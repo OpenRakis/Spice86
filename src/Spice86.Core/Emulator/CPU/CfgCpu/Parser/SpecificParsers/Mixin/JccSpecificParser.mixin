@@ -31,7 +31,8 @@ public partial class {{ moxy.Class.Name }} : BaseInstructionParser {
             0xC => new Jl{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xD => new Jge{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
             0xE => new Jle{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
-            0xF => new Jg{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField)
+            0xF => new Jg{{Size}}(context.Address, context.OpcodeField, context.Prefixes, offsetField),
+            _ => throw new InvalidOperationException($"Unsupported Jcc condition code {condition}")
         };
     }
 }

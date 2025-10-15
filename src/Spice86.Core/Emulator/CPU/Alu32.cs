@@ -97,12 +97,12 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
             return value;
         }
 
-        uint carry = value >> 32 - count & 0x1;
+        uint carry = (value >> (32 - count)) & 0x1;
         uint res = value << count;
-        int mask = (1 << count - 1) - 1;
-        res = (uint)(res | (value >> 33 - count & mask));
+        uint mask = (1u << (count - 1)) - 1u;
+        res |= (value >> (33 - count)) & mask;
         if (_state.CarryFlag) {
-            res = (uint)(res | 1 << count - 1);
+            res |= 1u << (count - 1);
         }
 
         _state.CarryFlag = carry != 0;
@@ -117,12 +117,12 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
             return value;
         }
 
-        uint carry = value >> count - 1 & 0x1;
-        int mask = (1 << 32 - count) - 1;
-        uint res = (uint) (value >> count & mask);
-        res |= value << 33 - count;
+        uint carry = (value >> (count - 1)) & 0x1;
+        uint mask = (1u << (32 - count)) - 1u;
+        uint res = (value >> count) & mask;
+        res |= value << (33 - count);
         if (_state.CarryFlag) {
-            res = (ushort)(res | 1 << 32 - count);
+            res |= 1u << (32 - count);
         }
 
         _state.CarryFlag = carry != 0;

@@ -18,7 +18,8 @@ public partial class {{ moxy.Class.Name }} : OperationOverridableSegmentRegister
         return bitWidth switch {
             BitWidth.BYTE_8 => new {{Operation}}8(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
             BitWidth.WORD_16 => new {{Operation}}16(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
-            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex)
+            BitWidth.DWORD_32 => new {{Operation}}32(context.Address, context.OpcodeField, context.Prefixes, segmentRegisterIndex),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 }

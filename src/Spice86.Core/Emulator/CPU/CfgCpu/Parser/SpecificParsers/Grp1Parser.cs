@@ -27,6 +27,7 @@ public class Grp1Parser : BaseGrpOperationParser {
             5 => new Grp1SubOperationParser(this),
             6 => new Grp1XorOperationParser(this),
             7 => new Grp1CmpOperationParser(this),
+            _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
     }
 }
@@ -52,6 +53,7 @@ public abstract class Grp1OperationParser : BaseInstructionParser {
                     _instructionReader.Int8.NextField(false))
                 : BuildOperandSizeUnsigned32(context, modRmContext,
                     _instructionReader.UInt32.NextField(false)),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 

@@ -32,6 +32,7 @@ public class Grp2Parser : BaseGrpOperationParser {
             4 => new Grp2ShlOneRmOperationFactory(this),
             5 => new Grp2ShrOneRmOperationFactory(this),
             7 => new Grp2SarOneRmOperationFactory(this),
+            _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
     }
     protected BaseOperationModRmFactory GetOperationClFactory(int groupIndex) {
@@ -43,6 +44,7 @@ public class Grp2Parser : BaseGrpOperationParser {
             4 => new Grp2ShlClRmOperationFactory(this),
             5 => new Grp2ShrClRmOperationFactory(this),
             7 => new Grp2SarClRmOperationFactory(this),
+            _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
     }
 
@@ -54,7 +56,8 @@ public class Grp2Parser : BaseGrpOperationParser {
             3 => new Grp2RcrRmImmOperationFactory(this),
             4 => new Grp2ShlRmImmOperationFactory(this),
             5 => new Grp2ShrRmImmOperationFactory(this),
-            7 => new Grp2SarRmImmOperationFactory(this)
+            7 => new Grp2SarRmImmOperationFactory(this),
+            _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
     }
 }

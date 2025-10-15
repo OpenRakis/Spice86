@@ -13,6 +13,7 @@ public abstract class BaseOperationModRmFactory : BaseInstructionParser, IInstru
             BitWidth.BYTE_8 => BuildOperandSize8(context, modRmContext),
             BitWidth.WORD_16 => BuildOperandSize16(context, modRmContext),
             BitWidth.DWORD_32 => BuildOperandSize32(context, modRmContext),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 

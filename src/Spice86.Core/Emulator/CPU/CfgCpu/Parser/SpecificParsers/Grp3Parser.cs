@@ -41,6 +41,7 @@ public class Grp3TestInstructionWithModRmFactory : BaseInstructionParser, IInstr
                 _instructionReader.UInt16.NextField(false)),
             BitWidth.DWORD_32 => new Grp3TestRmImm32(context.Address, context.OpcodeField, context.Prefixes, modRmContext,
                 _instructionReader.UInt32.NextField(false)),
+            _ => throw CreateUnsupportedBitWidthException(bitWidth)
         };
     }
 }

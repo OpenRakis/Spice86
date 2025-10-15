@@ -98,6 +98,7 @@ public class ModRmParser {
             DisplacementType.INT8 => _instructionReader.Int8.NextField(false),
             DisplacementType.INT16 => _instructionReader.Int16.NextField(false),
             DisplacementType.INT32 => _instructionReader.Int32.NextField(false),
+            _ => throw new InvalidOperationException($"Unsupported displacement type {displacementType}")
         };
     }
 
