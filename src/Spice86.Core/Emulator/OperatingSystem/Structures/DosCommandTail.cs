@@ -2,11 +2,12 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 using System.ComponentModel.DataAnnotations;
 
 public class DosCommandTail : MemoryBasedDataStructure {
-    public DosCommandTail(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosCommandTail(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
     public byte Length {

@@ -38,21 +38,13 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     /// <param name="offset">The offset of the element to get or set.</param>
     public override SegmentedAddress this[ushort segment, ushort offset] {
         get {
-            // Read using the physical addressing to get proper little-endian ordering
-            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
-            ushort offsetValue = _uInt16Indexer[offsetAddr];
-            ushort segmentValue = _uInt16Indexer[segmentAddr];
+            ushort offsetValue = _uInt16Indexer[segment, offset];
+            ushort segmentValue = _uInt16Indexer[segment, (ushort)(offset + 2)];
             return new(segmentValue, offsetValue);
         }
         set {
-            // Write using the physical addressing to get proper little-endian ordering
-            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
-            _uInt16Indexer[offsetAddr] = value.Offset;
-            _uInt16Indexer[segmentAddr] = value.Segment;
+            _uInt16Indexer[segment, offset] = value.Offset;
+            _uInt16Indexer[segment, (ushort)(offset + 2)] = value.Segment;
         }
     }
 

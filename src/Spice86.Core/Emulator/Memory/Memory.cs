@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
@@ -8,6 +9,10 @@ using Spice86.Shared.Utils;
 /// Represents the memory bus of the IBM PC.
 /// </summary>
 public sealed class Memory : Indexable.Indexable, IMemory {
+    
+    /// <inheritdoc/>
+    public IReaderWriter<byte> AbsoluteReaderWriter => this;
+
     /// <inheritdoc/>
     public IMemoryDevice Ram { get; }
 

@@ -17,7 +17,7 @@ public class DosExeFile : MemoryBasedDataStructure {
     /// Creates a new instance of the ExeFile class.
     /// </summary>
     /// <param name="byteReaderWriter">The class that allows writing and reading at specific addresses in memory.</param>
-    public DosExeFile(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, 0) {
+    public DosExeFile(IByteReaderWriter byteReaderWriter) : base(byteReaderWriter, SegmentedAddress.ZERO) {
     }
 
     /// <summary>

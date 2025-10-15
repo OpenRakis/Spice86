@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 using System.ComponentModel.DataAnnotations;
 
@@ -14,7 +15,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus used for accessing the DTA.</param>
     /// <param name="baseAddress">The base address of the DTA within memory.</param>
-    public DosDiskTransferArea(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosDiskTransferArea(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
     /// <summary>
     /// The offset in bytes where the SearchId is located.

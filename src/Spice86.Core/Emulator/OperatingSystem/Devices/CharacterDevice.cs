@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Character devices are things like the console, the printer, the clock, etc.
@@ -10,7 +11,7 @@ public abstract class CharacterDevice : VirtualDeviceBase {
     /// <summary>
     /// Create a new character device.
     /// </summary>
-    protected CharacterDevice(IByteReaderWriter memory, uint baseAddress,
+    protected CharacterDevice(IByteReaderWriter memory, SegmentedAddress baseAddress,
         string name, DeviceAttributes attributes = DeviceAttributes.Character)
         : base(new(memory, baseAddress) {
             Attributes = attributes | DeviceAttributes.Character,

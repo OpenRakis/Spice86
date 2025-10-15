@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
-using Spice86.Shared.Emulator.Memory;
-
 /// <summary>
 /// Provides indexed signed byte access over memory.
 /// </summary>

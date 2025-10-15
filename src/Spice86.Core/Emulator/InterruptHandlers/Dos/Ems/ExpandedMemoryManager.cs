@@ -120,7 +120,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <param name="loggerService">The logger service implementation.</param>
     public ExpandedMemoryManager(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        Header = new DosDeviceHeader(memory, new SegmentedAddress(DosDeviceSegment, 0x0).Linear) {
+        Header = new DosDeviceHeader(memory, new SegmentedAddress(DosDeviceSegment, 0x0)) {
             Name = EmsIdentifier,
             Attributes = DeviceAttributes.Ioctl | DeviceAttributes.Character,
             StrategyEntryPoint = 0,
@@ -147,7 +147,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         private readonly ExpandedMemoryManager _ems;
 
         public EMMCharacterDevice(IMemory memory, ushort segment, DosDeviceHeader header, ExpandedMemoryManager ems)
-            : base(memory, new SegmentedAddress(segment, 0).Linear, EmsIdentifier,
+            : base(memory, new SegmentedAddress(segment, 0), EmsIdentifier,
                    DeviceAttributes.Ioctl | DeviceAttributes.Character) {
             _ems = ems;
             Header = header;
@@ -778,8 +778,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
 
             case EmmSubFunctionsCodes.HandleNameSet:
                 SetHandleName(handleId,
-                    Memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(State.SI, State.DI),
-                        8));
+                    Memory.GetZeroTerminatedString(new SegmentedAddress(State.SI, State.DI), 8));
                 break;
 
             default:
@@ -878,7 +877,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Gets the name of a handle.
     /// </summary>
     public string GetHandleName(ushort handle) {
-        EmmHandles[handle].Name = Memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(State.ES, State.DI), 8);
+        EmmHandles[handle].Name = Memory.GetZeroTerminatedString(new SegmentedAddress(State.ES, State.DI), 8);
         return EmmHandles[handle].Name;
     }
 

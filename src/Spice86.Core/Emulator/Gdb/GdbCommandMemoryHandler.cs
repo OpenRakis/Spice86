@@ -109,7 +109,7 @@ public class GdbCommandMemoryHandler {
                 return _gdbIo.GenerateResponse("E02");
             }
 
-            _memory.LoadData(address, data);
+            _memory.LoadData(address, data, data.Length);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {

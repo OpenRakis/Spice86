@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -71,9 +72,9 @@ public class DosProgramSegmentPrefixTrackerTests {
         DosProgramSegmentPrefix psp3 = _pspTracker.PushPspSegment(0x7060);
 
         // Assert
-        psp1.BaseAddress.Should().Be(0x20000);
-        psp2.BaseAddress.Should().Be(0x34000);
-        psp3.BaseAddress.Should().Be(0x70600);
+        psp1.BaseAddress.Should().Be(new(0x2000,0));
+        psp2.BaseAddress.Should().Be(new(0x3400,0));
+        psp3.BaseAddress.Should().Be(new(0x7060,0));
         _pspTracker.InitialPspSegment.Should().Be(0xFF0);
         _pspTracker.PspCount.Should().Be(3);
         _pspTracker.GetCurrentPsp().Should().Be(psp3);
@@ -98,10 +99,10 @@ public class DosProgramSegmentPrefixTrackerTests {
         // Assert
         removedInvalidPsp.Should().BeFalse();
         removedPsp2.Should().BeTrue();
-        psp1.BaseAddress.Should().Be(0x20000);
-        psp2.BaseAddress.Should().Be(0x30000);
-        psp3.BaseAddress.Should().Be(0x40000);
-        psp4.BaseAddress.Should().Be(0x54000);
+        psp1.BaseAddress.Should().Be(new(0x2000,0));
+        psp2.BaseAddress.Should().Be(new(0x3000,0));
+        psp3.BaseAddress.Should().Be(new(0x4000,0));
+        psp4.BaseAddress.Should().Be(new(0x5400,0));
         _pspTracker.InitialPspSegment.Should().Be(0xFF0);
         _pspTracker.PspCount.Should().Be(2);
         _pspTracker.GetCurrentPsp().Should().Be(psp3);

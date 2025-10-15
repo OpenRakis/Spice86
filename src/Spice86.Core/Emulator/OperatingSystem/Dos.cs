@@ -154,13 +154,11 @@ public sealed class Dos {
         DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
-        DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
-            MemoryUtils.ToPhysicalAddress(DosSysVarSegment, 0x0));
+        DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory, new(DosSysVarSegment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
-        DosSwappableDataArea = new(_memory,
-            MemoryUtils.ToPhysicalAddress(0xb2, 0));
+        DosSwappableDataArea = new(_memory, new(0xb2, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
 
@@ -205,8 +203,8 @@ public sealed class Dos {
         }
     }
 
-    private uint GetDefaultNewDeviceBaseAddress()
-        => new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength)).Linear;
+    private SegmentedAddress GetDefaultNewDeviceBaseAddress()
+        => new(MemoryMap.DeviceDriversSegment, (ushort)(Devices.Count * DosDeviceHeader.HeaderLength));
 
     private VirtualFileBase[] AddDefaultDevices(State state, KeyboardInt16Handler keyboardInt16Handler) {
         var nulDevice = new NullDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
@@ -241,12 +239,12 @@ public sealed class Dos {
         // Write the DOS device driver header to memory
         ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
+            _memory.LoadData(new(segment.Value, index),
                 Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
         } else if(device is BlockDevice blockDevice) {
             _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
             index++;
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
+            _memory.LoadData(new(segment.Value, index),
                 Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
         }
 

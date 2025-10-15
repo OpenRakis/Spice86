@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Represents a DOS SDA (Swappable Data Area) in emulated memory.
@@ -15,7 +16,7 @@ public sealed class DosSwappableDataArea : MemoryBasedDataStructure {
     /// </summary>
     public const int InDosFlagOffset = 0x01;
 
-    public DosSwappableDataArea(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosSwappableDataArea(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>

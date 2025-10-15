@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -29,10 +30,6 @@ public class DosFileManager {
     private readonly DosDriveManager _dosDriveManager;
 
     private readonly ILoggerService _loggerService;
-
-    private ushort _diskTransferAreaAddressOffset;
-
-    private ushort _diskTransferAreaAddressSegment;
 
     private readonly IMemory _memory;
 
@@ -431,14 +428,9 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// The offset part of the segmented address to the DTA.
+    /// Segmented address to the DTA.
     /// </summary>
-    public ushort DiskTransferAreaAddressOffset => _diskTransferAreaAddressOffset;
-
-    /// <summary>
-    /// The segment part of the segmented address to the DTA.
-    /// </summary>
-    public ushort DiskTransferAreaAddressSegment => _diskTransferAreaAddressSegment;
+    public SegmentedAddress DiskTransferAreaAddress { get; set; }
 
     /// <summary>
     /// Seeks to specified location in file.
@@ -547,12 +539,10 @@ public class DosFileManager {
             return DosFileOperationResult.Value16(0);
         }
 
-        if (actualReadLength > 0) {
-            _memory.LoadData(targetAddress, buffer, actualReadLength);
-            if (file is DosFile actualFile) {
-                actualFile.AddMemoryRange(new MemoryRange(targetAddress,
-                    (uint)(targetAddress + actualReadLength - 1), file.Name));
-            }
+        _memory.LoadData(targetAddress, buffer, actualReadLength);
+        if (file is DosFile actualFile) {
+            actualFile.AddMemoryRange(new MemoryRange(targetAddress,
+                (uint)(targetAddress + actualReadLength - 1), file.Name));
         }
 
         return DosFileOperationResult.Value16((ushort)actualReadLength);
@@ -571,8 +561,7 @@ public class DosFileManager {
     /// <param name="diskTransferAreaAddressSegment">The segment part of the segmented address to the DTA.</param>
     /// <param name="diskTransferAreaAddressOffset">The offset part of the segmented address to the DTA.</param>
     public void SetDiskTransferAreaAddress(ushort diskTransferAreaAddressSegment, ushort diskTransferAreaAddressOffset) {
-        _diskTransferAreaAddressSegment = diskTransferAreaAddressSegment;
-        _diskTransferAreaAddressOffset = diskTransferAreaAddressOffset;
+        DiskTransferAreaAddress = new SegmentedAddress(diskTransferAreaAddressSegment, diskTransferAreaAddressOffset);
     }
 
     /// <summary>
@@ -668,9 +657,6 @@ public class DosFileManager {
 
         return null;
     }
-
-    private uint GetDiskTransferAreaPhysicalAddress() => MemoryUtils.ToPhysicalAddress(
-        _diskTransferAreaAddressSegment, _diskTransferAreaAddressOffset);
 
     private VirtualFileBase? GetOpenFile(ushort fileHandle) {
         if (!IsHandleInRange(fileHandle)) {
@@ -786,8 +772,7 @@ public class DosFileManager {
     }
 
     private DosDiskTransferArea GetDosDiskTransferArea() {
-        uint diskTransferAreaPhysicalAddress = GetDiskTransferAreaPhysicalAddress();
-        DosDiskTransferArea dosDiskTransferArea = new(_memory, diskTransferAreaPhysicalAddress);
+        DosDiskTransferArea dosDiskTransferArea = new(_memory, DiskTransferAreaAddress);
         return dosDiskTransferArea;
     }
 
@@ -1095,15 +1080,16 @@ public class DosFileManager {
                     return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 }
 
-                uint dosStringBuffer = MemoryUtils.ToPhysicalAddress(state.DS, state.DX);
+                SegmentedAddress parameterBlock = new(state.DS, state.DX);
 
                 switch (state.CL) {
                     case 0x60:  // Get Device Parameters
-                        _memory.UInt8[dosStringBuffer + 1] = (byte)(drive >= 2 ? 0x05 : 0x07);  // type
-                        _memory.UInt16[dosStringBuffer + 2] = (ushort)(drive >= 2 ? 0x01 : 0x00); // attributes
-                        _memory.UInt16[dosStringBuffer + 4] = 0x0000;                            // cylinders
-                        _memory.UInt8[dosStringBuffer + 6] = 0x00;                              // media type
-                        _memory.UInt16[dosStringBuffer + 7] = 0x0200; // bytes per sector (Win3 File Mgr. uses it)
+                        DosDeviceParameterBlock dosDeviceParameterBlock = new(_memory, parameterBlock);
+                        dosDeviceParameterBlock.DeviceType = (byte)(drive >= 2 ? 0x05 : 0x07);
+                        dosDeviceParameterBlock.DeviceAttributes = (ushort)(drive >= 2 ? 0x01 : 0x00);
+                        dosDeviceParameterBlock.Cylinders = 0;
+                        dosDeviceParameterBlock.MediaType = 0;
+                        dosDeviceParameterBlock.BiosParameterBlock.BytesPerSector = 0x0200; // (Win3 File Mgr. uses it)
                         break;
 
                     case 0x46:  // Set Volume Serial Number (not yet implemented)
@@ -1115,22 +1101,11 @@ public class DosFileManager {
 
                     case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
                         {
-                            // 1) Build the 11-byte volume label (padded with spaces)
-                            // 1) pull the raw label (or default), split name/ext
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
-                            string driveLabel = vDrive.Label.ToUpperInvariant();
-                            
-
-                            // 3) build the 8-byte FS ID (FAT16 or FAT12 for floppies)
-                            var sbFs = new StringBuilder(8);
-                            sbFs.Append(drive < 2 ? "FAT12" : "FAT16");
-                            if (sbFs.Length < 8)
-                                sbFs.Append(' ', 8 - sbFs.Length);
-
-                            // 4) write serial, label, fs-id into emulated memory
-                            _memory.UInt32[dosStringBuffer + 2] = 0x1234; // serial
-                            _memory.SetZeroTerminatedString(dosStringBuffer + 6, driveLabel, driveLabel.Length + 1);
-                            _memory.SetZeroTerminatedString(dosStringBuffer + 0x11, sbFs.ToString(), sbFs.Length + 1);
+                            DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock);
+                            dosVolumeInfo.SerialNumber = 0x1234;
+                            dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
+                            dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";
                             break;
                         }
 

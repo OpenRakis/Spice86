@@ -14,4 +14,10 @@ public interface IReaderWriter<T> {
     /// Length of the address space
     /// </summary>
     public int Length { get; }
+
+    /// <summary>
+    /// In case there is an indirection (base address shift), gives the underlying reader writer.
+    /// This is to ensure that segmented addresses that are absolutes are still properly processed.
+    /// </summary>
+    public IReaderWriter<T> AbsoluteReaderWriter { get; }
 }

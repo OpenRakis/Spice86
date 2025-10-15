@@ -13,7 +13,7 @@ public class SegmentedAddressArray : MemoryBasedArray<SegmentedAddress> {
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the array.</param>
     /// <param name="length">The length of the array.</param>
-    public SegmentedAddressArray(IByteReaderWriter byteReaderWriter, uint baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
+    public SegmentedAddressArray(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
     }
 
     /// <summary>

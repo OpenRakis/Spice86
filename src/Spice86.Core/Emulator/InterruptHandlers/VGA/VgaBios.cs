@@ -61,8 +61,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         bool includeAttributes = (State.AL & 0x02) != 0;
         bool updateCursorPosition = (State.AL & 0x01) != 0;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-            string str = Memory.GetZeroTerminatedString(address, State.CX);
+            string str = Memory.GetZeroTerminatedString(new SegmentedAddress(segment, offset), State.CX);
             _logger.Debug("{ClassName} INT 10 13 {MethodName}: {String} at {X},{Y} attribute: 0x{Attribute:X2}",
                 nameof(VgaBios), nameof(WriteString), str, cursorPosition.X, cursorPosition.Y, includeAttributes ? "included" : attribute);
         }
@@ -640,8 +639,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
         }
 
-        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        var info = new VideoFunctionalityInfo(Memory, address) {
+        var info = new VideoFunctionalityInfo(Memory, new(segment, offset)) {
             SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
             VideoMode = _biosDataArea.VideoMode,
             ScreenColumns = _biosDataArea.ScreenColumns,

@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -338,7 +339,7 @@ public class XmsUnitTests
         _memory.UInt8[(int)0xF000 + 1] = 0x43;
 
         // Create move structure in conventional memory
-        uint moveStructAddr = 0x1000;
+        SegmentedAddress moveStructAddr = new(0x100, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.SourceHandle = 0;
         memoryMoveStructure.SourceOffset = 0xF000;
@@ -603,7 +604,7 @@ public class XmsUnitTests
         _memory.UInt8[0x1001] = 0xAA;
 
         // Create move structure
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 2;
         memoryMoveStructure.SourceHandle = 0;  // Conventional memory
@@ -644,7 +645,7 @@ public class XmsUnitTests
         _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea + 1, 0x88);
 
         // Create move structure
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 2;
         memoryMoveStructure.SourceHandle = srcHandle;  // XMS memory
@@ -690,7 +691,7 @@ public class XmsUnitTests
         _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea + 1, 0x34);
 
         // Create move structure
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 2;
         memoryMoveStructure.SourceHandle = srcHandle;
@@ -729,7 +730,7 @@ public class XmsUnitTests
         ushort destHandle = _state.DX;
 
         // Create move structure with invalid source handle
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 2;
         memoryMoveStructure.SourceHandle = 0xFFFF;  // Invalid handle
@@ -759,7 +760,7 @@ public class XmsUnitTests
         ushort srcHandle = _state.DX;
 
         // Create move structure with invalid destination handle
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 2;
         memoryMoveStructure.SourceHandle = srcHandle;
@@ -783,7 +784,7 @@ public class XmsUnitTests
     [Fact]
     public void MoveExtendedMemoryBlock_WithOddLength_ShouldFail() {
         // Create move structure with odd length
-        uint moveStructAddr = 0x2000;
+        SegmentedAddress moveStructAddr = new(0x200, 0);
         ExtendedMemoryMoveStructure memoryMoveStructure = new(_memory, moveStructAddr);
         memoryMoveStructure.Length = 3;  // Odd length
         memoryMoveStructure.SourceHandle = 0;

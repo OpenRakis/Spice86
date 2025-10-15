@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -49,13 +50,13 @@ public class BreakpointTests {
 
         // Memset
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_WRITE, 5, 1, true, () => {
-            memory.Memset8(0, 0, 6);
+            memory.Memset8(SegmentedAddress.ZERO, 0, 6);
             // Should not trigger for this
-            memory.Memset8(0, 0, 5);
-            memory.Memset8(6, 0, 5);
+            memory.Memset8(SegmentedAddress.ZERO, 0, 5);
+            memory.Memset8(new(0, 6), 0, 5);
         });
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_WRITE, 5, 1, true, () => {
-            memory.Memset8(5, 0, 5);
+            memory.Memset8(new(0, 5), 0, 5);
         });
 
         // GetData
@@ -74,13 +75,13 @@ public class BreakpointTests {
         // LoadData
         byte[] data = new byte[] { 1, 2, 3 };
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_WRITE, 5, 1, true, () => {
-            memory.LoadData(5, data);
+            memory.LoadData(new(0, 5), data);
             // Should not trigger for this
-            memory.LoadData(2, data);
-            memory.LoadData(6, data);
+            memory.LoadData(new(0, 2), data);
+            memory.LoadData(new(0, 6), data);
         });
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_WRITE, 5, 1, true, () => {
-            memory.LoadData(3, data);
+            memory.LoadData(new(0, 3), data);
         });
         // Bonus test for search
         uint? address = memory.SearchValue(0, 10, data);
@@ -89,14 +90,14 @@ public class BreakpointTests {
 
         //MemCopy
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_WRITE, 10, 1, true, () => {
-            memory.MemCopy(0, 10, 10);
+            memory.MemCopy(SegmentedAddress.ZERO, new(0, 10), 10);
             // Should not trigger for this
-            memory.MemCopy(0, 20, 10);
+            memory.MemCopy(SegmentedAddress.ZERO, new(0, 20), 10);
         });
         AssertAddressMemoryBreakPoint(emulatorBreakpointsManager, BreakPointType.MEMORY_READ, 0, 1, true, () => {
-            memory.MemCopy(0, 10, 10);
+            memory.MemCopy(SegmentedAddress.ZERO, new(0, 10), 10);
             // Should not trigger for this
-            memory.MemCopy(1, 10, 10);
+            memory.MemCopy(new(0, 1), new(0, 10), 10);
         });
 
         // Long reads

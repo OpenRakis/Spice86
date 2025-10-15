@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -102,7 +103,6 @@ public class ArgumentFetcher {
     }
 
     private string GetStringFromDsPointer(ushort offset) {
-        uint address = MemoryUtils.ToPhysicalAddress(_state.DS, offset);
-        return _memory.GetZeroTerminatedString(address, int.MaxValue);
+        return _memory.GetZeroTerminatedString(new SegmentedAddress(_state.DS, offset), 0x10000);
     }
 }

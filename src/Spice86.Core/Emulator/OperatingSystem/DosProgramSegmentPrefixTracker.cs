@@ -94,7 +94,7 @@ public class DosProgramSegmentPrefixTracker {
     /// <returns>Returns the PSP segment for the current program.</returns>
     public ushort GetCurrentPspSegment() {
         DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        return currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
+        return currentPsp == null ? InitialPspSegment : currentPsp.BaseAddress.Segment;
     }
 
     /// <summary>
@@ -130,8 +130,7 @@ public class DosProgramSegmentPrefixTracker {
     /// <param name="pspSegment">Address of the PSP segment for a new program.</param>
     /// <returns>Returns the prefix structure of the segment that was just added.</returns>
     public DosProgramSegmentPrefix PushPspSegment(ushort pspSegment) {
-        uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
-        DosProgramSegmentPrefix psp = new(_memory, pspAddress);
+        DosProgramSegmentPrefix psp = new(_memory, new(pspSegment, 0));
         _loadedPsps.Add(psp);
         return psp;
     }
@@ -142,7 +141,7 @@ public class DosProgramSegmentPrefixTracker {
     /// <param name="pspSegment">Address of the PSP segment for the program that is exiting.</param>
     /// <returns>Returns true if the given segment was found and could be removed.</returns>
     public bool PopPspSegment(ushort pspSegment) {
-        return _loadedPsps.RemoveAll(psp => MemoryUtils.ToSegment(psp.BaseAddress) == pspSegment) > 0;
+        return _loadedPsps.RemoveAll(psp => psp.BaseAddress.Segment == pspSegment) > 0;
     }
 
     /// <summary>

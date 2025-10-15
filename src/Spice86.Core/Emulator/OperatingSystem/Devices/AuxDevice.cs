@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -8,7 +9,7 @@ using System.IO;
 public class AuxDevice : CharacterDevice {
     private readonly ILoggerService _loggerService;
     public AuxDevice(ILoggerService loggerService,
-        IByteReaderWriter memory, uint baseAddress)
+        IByteReaderWriter memory, SegmentedAddress baseAddress)
         : base(memory, baseAddress, "AUX") {
         _loggerService = loggerService;
     }

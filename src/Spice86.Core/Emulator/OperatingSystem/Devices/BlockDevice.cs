@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 
 using System.ComponentModel.DataAnnotations;
 using System.IO;
@@ -49,7 +50,7 @@ public class BlockDevice : VirtualDeviceBase {
     /// <param name="attributes">The block device attributes. Not all block devices are FAT devices.</param>
     /// <param name="unitCount">The amount of disks this device has.</param>
     /// <param name="signature">An optional 7-byte field with the signature of the block device</param>
-    public BlockDevice(IMemory memory, uint baseAddress, DeviceAttributes attributes,
+    public BlockDevice(IMemory memory, SegmentedAddress baseAddress, DeviceAttributes attributes,
         byte unitCount, string signature = "")
         : base(new DosDeviceHeader(memory, baseAddress) {
             Attributes = attributes

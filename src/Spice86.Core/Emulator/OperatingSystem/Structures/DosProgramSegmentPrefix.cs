@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Diagnostics;
 
@@ -13,7 +14,7 @@ using System.Diagnostics;
 public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;
 
-    public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>
@@ -92,5 +93,5 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
 
     public UInt8Array Unused3 => GetUInt8Array(0x7C, 4);
 
-    public DosCommandTail DosCommandTail => new (ByteReaderWriter, BaseAddress + 0x80);
+    public DosCommandTail DosCommandTail => new (ByteReaderWriter, BaseAddress.PlusOffset(0x80));
 }

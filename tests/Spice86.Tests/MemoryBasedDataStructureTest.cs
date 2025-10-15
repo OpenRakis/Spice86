@@ -24,15 +24,15 @@ public class MemoryBasedDataStructureTest {
     private static readonly SegmentedAddress[] ExpectedSegmentedAddressArray = { new (0x01, 0x02), new (0x03, 0x04) };
 
     // Offset in struct for read test
-    private const uint ReadOffset = 10;
+    private const ushort ReadOffset = 10;
     // Offset in struct for write test
-    private const uint WriteOffset = 30;
+    private const ushort WriteOffset = 30;
     // Address of struct in memory
-    private const uint StructAddress = 10;
+    private static SegmentedAddress StructAddress = new(0, 10);
     // Physical address in memory for read test
-    private const uint ReadAddress = StructAddress + ReadOffset;
+    private static SegmentedAddress ReadAddress = StructAddress.PlusOffset(ReadOffset);
     // Physical address in memory for write test
-    private const uint WriteAddress = StructAddress + WriteOffset;
+    private static SegmentedAddress WriteAddress = StructAddress.PlusOffset(WriteOffset);
 
     [Fact]
     public void CanMapUInt8() {
@@ -94,7 +94,7 @@ public class MemoryBasedDataStructureTest {
     public void CanMapString() {
         // Arrange
         (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
-        data.SetZeroTerminatedString(ReadAddress, ExpectedString, ExpectedStringLength);
+        data.SetZeroTerminatedString(StructAddress.PlusOffset(ReadOffset), ExpectedString, ExpectedStringLength);
 
         // Act & Assert
         // Read
@@ -162,9 +162,9 @@ public class MemoryBasedDataStructureTest {
         WriteIndex0AndAssertIndex1Untouched<SegmentedAddress>(ExpectedSegmentedAddressArray, segmentedAddressArray, data.SegmentedAddress16, 4, SegmentedAddress.ZERO);
     }
 
-    private void CopyArrayToIndexer<T>(IReadOnlyList<T> array, Indexer<T> data, uint baseAddress, int elementSize) {
+    private void CopyArrayToIndexer<T>(IReadOnlyList<T> array, Indexer<T> data, SegmentedAddress baseAddress, int elementSize) {
         for (int i = 0; i < array.Count; i++) {
-            data[(uint)(baseAddress + i * elementSize)] = array[i];
+            data[baseAddress.PlusOffset((ushort)(i * elementSize)).Linear] = array[i];
         }
     }
 
@@ -182,15 +182,15 @@ public class MemoryBasedDataStructureTest {
         }
     }
 
-    private void WriteIndex0AndAssertIndex1Untouched<T>(IReadOnlyList<T> expectedArray, IList<T> inMemoryArray, Indexer<T> memoryData, int elementSize, T writeValue) {
+    private void WriteIndex0AndAssertIndex1Untouched<T>(IReadOnlyList<T> expectedArray, IList<T> inMemoryArray, Indexer<T> memoryData, byte elementSize, T writeValue) {
         inMemoryArray[0] = writeValue;
-        Assert.Equal(writeValue, memoryData[ReadAddress]);
-        Assert.Equal(expectedArray[1], memoryData[(uint)(ReadAddress + elementSize)]);
+        Assert.Equal(writeValue, memoryData[ReadAddress.Linear]);
+        Assert.Equal(expectedArray[1], memoryData[ReadAddress.PlusOffset(elementSize).Linear]);
     }
 
-    private (ByteArrayBasedIndexable Data, MemoryBasedDataStructure MemoryBasedDataStructure) Init(uint offset) {
+    private (ByteArrayBasedIndexable Data, MemoryBasedDataStructure MemoryBasedDataStructure) Init(SegmentedAddress baseAddress) {
         ByteArrayBasedIndexable data = new ByteArrayBasedIndexable(new byte[100]);
-        MemoryBasedDataStructure memoryBasedDataStructure = new MemoryBasedDataStructure(data.ReaderWriter, offset);
+        MemoryBasedDataStructure memoryBasedDataStructure = new MemoryBasedDataStructure(data.ReaderWriter, baseAddress);
         return (data, memoryBasedDataStructure);
     }
 }

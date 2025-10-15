@@ -165,8 +165,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
             return;
         }
 
-        uint gdtPhysicalAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.SI);
-        var gdt = new GlobalDescriptorTable(Memory, gdtPhysicalAddress);
+        var gdt = new GlobalDescriptorTable(Memory,  new(State.ES, State.SI));
 
         uint sourceAddress = gdt.LinearSourceAddress;
         uint destinationAddress = gdt.LinearDestAddress;

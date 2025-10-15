@@ -28,8 +28,9 @@ public class UInt8Indexer : MemoryIndexer<byte> {
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
     public override byte this[ushort segment, ushort offset] {
-        get => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)];
-        set => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
+        // Access is done via the absolute reader writer. Segmented addresses are never relative.
+        get => _byteReaderWriter.AbsoluteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)];
+        set => _byteReaderWriter.AbsoluteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
     }
 
     /// <inheritdoc/>

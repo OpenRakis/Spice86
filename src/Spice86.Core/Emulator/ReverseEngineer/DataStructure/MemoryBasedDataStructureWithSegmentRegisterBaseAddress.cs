@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Provides a base class for memory-based data structures that have a segmented base address. <br/>
@@ -25,5 +26,5 @@ public class MemoryBasedDataStructureWithSegmentRegisterBaseAddress : AbstractMe
     }
 
     /// <inheritdoc />
-    public override uint BaseAddress => (uint)(_segmentRegisters.UInt16[_segmentRegisterIndex] * 0x10);
+    public override SegmentedAddress BaseAddress => new(_segmentRegisters.UInt16[_segmentRegisterIndex], 0);
 }

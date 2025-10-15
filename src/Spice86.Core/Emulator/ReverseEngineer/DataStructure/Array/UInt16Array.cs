@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Represents an array of 16-bit unsigned integers stored in memory.
@@ -12,7 +13,7 @@ public class UInt16Array : MemoryBasedArray<ushort> {
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the array.</param>
     /// <param name="length">The length of the array.</param>
-    public UInt16Array(IByteReaderWriter byteReaderWriter, uint baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
+    public UInt16Array(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress, int length) : base(byteReaderWriter, baseAddress, length) {
     }
 
     /// <summary>

@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 
 /// <inheritdoc cref="IVgaFunctionality" />
 public class VgaFunctionality : IVgaFunctionality {
@@ -371,7 +370,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public void LoadUserFont(ushort segment, ushort offset, ushort length, ushort start, byte fontBlock, byte height) {
-        byte[] bytes = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), length);
+        byte[] bytes = _memory.GetData(new(segment, offset), length);
         LoadFont(bytes, length, start, fontBlock, height);
     }
 
@@ -397,7 +396,7 @@ public class VgaFunctionality : IVgaFunctionality {
         ushort blockAddress = (ushort)(((fontBlock & 0x03) << 14) + ((fontBlock & 0x04) << 11));
         ushort destination = (ushort)(blockAddress + start * 32);
         for (ushort i = 0; i < length; i++) {
-            uint address = MemoryUtils.ToPhysicalAddress(VgaConstants.GraphicsSegment, (ushort)(destination + i * 32));
+            SegmentedAddress address = new(VgaConstants.GraphicsSegment, (ushort)(destination + i * 32));
             var value = new Span<byte>(fontBytes, i * height, height);
             _memory.LoadData(address, value.ToArray(), height);
         }
@@ -456,7 +455,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public void WriteToDac(ushort segment, ushort offset, byte startIndex, ushort count) {
-        byte[] rgb = _memory.GetData(MemoryUtils.ToPhysicalAddress(segment, offset), (uint)(3 * count));
+        byte[] rgb = _memory.GetData(new(segment, offset), 3 * count);
         WriteToDac(rgb, startIndex, count);
     }
 
@@ -1069,15 +1068,15 @@ public class VgaFunctionality : IVgaFunctionality {
             stride = -stride;
         }
         for (; lines > 0; lines--, destination += (ushort)stride, source += (ushort)stride) {
-            uint sourceAddress = MemoryUtils.ToPhysicalAddress(segment, source);
-            uint destinationAddress = MemoryUtils.ToPhysicalAddress(segment, destination);
-            _memory.MemCopy(sourceAddress, destinationAddress, (uint)length);
+            SegmentedAddress sourceAddress = new(segment, source);
+            SegmentedAddress destinationAddress = new(segment, destination);
+            _memory.MemCopy(sourceAddress, destinationAddress, length);
         }
     }
 
     private void MemSetStride(ushort segment, ushort destination, byte value, int length, int stride, int lines) {
         for (; lines > 0; lines--, destination += (ushort)stride) {
-            _memory.Memset8(MemoryUtils.ToPhysicalAddress(segment, destination), value, (uint)length);
+            _memory.Memset8(new(segment, destination), value, length);
         }
     }
 
@@ -1172,10 +1171,10 @@ public class VgaFunctionality : IVgaFunctionality {
         switch (operation.MemoryAction) {
             default:
             case MemoryAction.ReadByte:
-                operation.Pixels = _memory.GetData(MemoryUtils.ToPhysicalAddress(VgaConstants.GraphicsSegment, destination), 8);
+                operation.Pixels = _memory.GetData(new(VgaConstants.GraphicsSegment, destination), 8);
                 break;
             case MemoryAction.WriteByte:
-                _memory.LoadData(MemoryUtils.ToPhysicalAddress(VgaConstants.GraphicsSegment, destination), operation.Pixels, 8);
+                _memory.LoadData(new SegmentedAddress(VgaConstants.GraphicsSegment, destination), operation.Pixels, 8);
                 break;
             case MemoryAction.MemSet:
                 MemSetStride(VgaConstants.GraphicsSegment, destination, operation.Pixels[0], operation.Width, operation.LineLength, operation.Height);
@@ -1391,8 +1390,7 @@ public class VgaFunctionality : IVgaFunctionality {
 
     private void MemSet16(ushort segment, ushort offset, ushort value, int amount) {
         amount /= 2;
-        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
-        _memory.Memset16(address, value, (uint)amount);
+        _memory.Memset16(new(segment, offset), value, amount);
     }
 
     private void WriteMaskedToMiscellaneousRegister(byte offBits, byte onBits) {

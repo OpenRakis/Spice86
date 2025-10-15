@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.ComponentModel.DataAnnotations;
@@ -27,7 +28,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">the address of the structure in memory.</param>
-    public DosMemoryControlBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosMemoryControlBlock(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>
@@ -76,7 +77,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// Allocation starts here and extends for <see cref="Size"/> paragraphs.
     /// You can also use <see cref="AllocationSizeInBytes"/> to retrieve the size of this block in bytes.
     /// </remarks>
-    public ushort DataBlockSegment => (ushort)(MemoryUtils.ToSegment(BaseAddress) + 1);
+    public ushort DataBlockSegment => (ushort)(BaseAddress.Segment + 1);
 
     /// <summary>
     /// Gets a value indicating whether the MCB is free.
@@ -106,8 +107,8 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// </summary>
     /// <returns>The next MCB if found, <see langword="null" /> otherwise.</returns>
     public DosMemoryControlBlock? GetNextOrDefault() {
-        uint baseAddress = BaseAddress + MemoryUtils.ToPhysicalAddress((ushort)(Size + 1), 0);
-        if (baseAddress >= ByteReaderWriter.Length) {
+        SegmentedAddress baseAddress = BaseAddress.PlusSegment((ushort)(Size + 1));
+        if (baseAddress.Linear >= ByteReaderWriter.Length) {
             return null;
         }
         DosMemoryControlBlock next = new(ByteReaderWriter, baseAddress);
@@ -119,7 +120,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     /// or <see langword="null"/> if <see cref="PspSegment"/> is not set.
     /// </summary>
     public DosProgramSegmentPrefix? ProgramSegmentPrefix => PspSegment == 0 ? null :
-        new DosProgramSegmentPrefix(ByteReaderWriter, MemoryUtils.ToPhysicalAddress(PspSegment, 0));
+        new DosProgramSegmentPrefix(ByteReaderWriter, new(PspSegment, 0));
 
     /// <summary>
     /// Releases the MCB.
@@ -149,7 +150,7 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
             .Append(" IsFree: ").Append(IsFree)
             .Append(" IsLast: ").Append(IsLast)
             .Append(" IsNonLast: ").Append(IsNonLast)
-            .Append(" BaseAddress: ").Append(ConvertUtils.ToHex32(BaseAddress))
+            .Append(" BaseAddress: ").Append(BaseAddress)
             .Append(" UsableSpaceSegment: ").Append(ConvertUtils.ToHex16(DataBlockSegment))
             .Append(" TypeField: ").Append(TypeField)
             .Append(" PspSegment: ").Append(ConvertUtils.ToHex16(PspSegment))

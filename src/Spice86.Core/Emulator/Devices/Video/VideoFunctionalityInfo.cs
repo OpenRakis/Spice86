@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 using System.ComponentModel.DataAnnotations;
 
@@ -15,7 +16,7 @@ public class VideoFunctionalityInfo : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the memory structure</param>
-    public VideoFunctionalityInfo(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public VideoFunctionalityInfo(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress) : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Memory.Indexable;
 
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Base class for objects that allow access to their data by index.
@@ -82,6 +83,14 @@ public interface IIndexable {
     /// <param name="address">The address in memory from where to read</param>
     /// <param name="maxLength">The maximum string length</param>
     /// <returns>A zero terminated string retrieved from memory.</returns>
+    string GetZeroTerminatedString(SegmentedAddress address, int maxLength);
+    
+    /// <summary>
+    /// Read a string from memory.
+    /// </summary>
+    /// <param name="address">The address in memory from where to read</param>
+    /// <param name="maxLength">The maximum string length</param>
+    /// <returns>A zero terminated string retrieved from memory.</returns>
     string GetZeroTerminatedString(uint address, int maxLength);
 
     /// <summary>
@@ -91,14 +100,31 @@ public interface IIndexable {
     /// <param name="value">The string to write</param>
     /// <param name="maxLength">The maximum length to write</param>
     /// <exception cref="UnrecoverableException">When the string length is beyond <paramref name="maxLength"/></exception>
+    void SetZeroTerminatedString(SegmentedAddress address, string value, int maxLength);
+    
+    /// <summary>
+    /// Writes a string directly to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The string to write</param>
+    /// <param name="maxLength">The maximum length to write</param>
+    /// <exception cref="UnrecoverableException">When the string length is beyond <paramref name="maxLength"/></exception>
     void SetZeroTerminatedString(uint address, string value, int maxLength);
+    
+    /// <summary>
+    ///     Load data from a byte array into memory. This does not respect segment boundaries.
+    /// </summary>
+    /// <param name="linearAddress">The memory address to start writing</param>
+    /// <param name="data">The array of bytes to write</param>
+    /// <param name="length">How many bytes to read from the byte array</param>
+    void LoadData(uint linearAddress, byte[] data, int length);
 
     /// <summary>
     ///     Load data from a byte array into memory.
     /// </summary>
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of bytes to write</param>
-    void LoadData(uint address, byte[] data);
+    void LoadData(SegmentedAddress address, byte[] data);
 
     /// <summary>
     ///     Load data from a byte array into memory.
@@ -106,14 +132,14 @@ public interface IIndexable {
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of bytes to write</param>
     /// <param name="length">How many bytes to read from the byte array</param>
-    void LoadData(uint address, byte[] data, int length);
+    void LoadData(SegmentedAddress address, byte[] data, int length);
 
     /// <summary>
     ///     Load data from a words array into memory.
     /// </summary>
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of words to write</param>
-    void LoadData(uint address, ushort[] data);
+    void LoadData(SegmentedAddress address, ushort[] data);
 
     /// <summary>
     ///     Load data from a word array into memory.
@@ -121,7 +147,7 @@ public interface IIndexable {
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of words to write</param>
     /// <param name="length">How many words to read from the byte array</param>
-    void LoadData(uint address, ushort[] data, int length);
+    void LoadData(SegmentedAddress address, ushort[] data, int length);
 
     /// <summary>
     ///     Copy bytes from one memory address to another.
@@ -129,7 +155,7 @@ public interface IIndexable {
     /// <param name="sourceAddress">The address in memory to start reading from</param>
     /// <param name="destinationAddress">The address in memory to start writing to</param>
     /// <param name="length">How many bytes to copy</param>
-    void MemCopy(uint sourceAddress, uint destinationAddress, uint length);
+    void MemCopy(SegmentedAddress sourceAddress, SegmentedAddress destinationAddress, int length);
 
     /// <summary>
     ///     Fill a range of memory with a value.
@@ -137,7 +163,7 @@ public interface IIndexable {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The byte value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    void Memset8(uint address, byte value, uint amount);
+    void Memset8(SegmentedAddress address, byte value, int amount);
 
     /// <summary>
     ///     Fill a range of memory with a value.
@@ -145,7 +171,7 @@ public interface IIndexable {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The ushort value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    void Memset16(uint address, ushort value, uint amount);
+    void Memset16(SegmentedAddress address, ushort value, int amount);
 
     /// <summary>
     /// Returns an array of bytes read from RAM.
@@ -153,5 +179,5 @@ public interface IIndexable {
     /// <param name="address">The start address.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of bytes, read from RAM.</returns>
-    byte[] GetData(uint address, uint length);
+    byte[] GetData(SegmentedAddress address, int length);
 }

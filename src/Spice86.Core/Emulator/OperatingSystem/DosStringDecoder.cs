@@ -62,6 +62,7 @@ public class DosStringDecoder {
     /// <param name="end">The end character. Usually zero.</param>
     /// <returns>The string from memory.</returns>
     public string GetDosString(ushort segment, ushort offset, char end) {
+        // Dos strings are read without wrapping at segment boundaries
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
         byte endByte = (byte)end;
         Span<byte> data = stackalloc byte[MaxDosStringLength];

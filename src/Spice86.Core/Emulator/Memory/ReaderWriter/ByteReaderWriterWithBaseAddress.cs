@@ -8,7 +8,6 @@ public class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
     private readonly IByteReaderWriter _byteReaderWriter;
     private readonly IBaseAddressProvider _baseAddressProvider;
 
-
     /// <summary>
     /// Builds a new ByteReaderWriterWithBaseAddress from the given byteReaderWriter providing a data source / store and baseAddressProvider providing an address modifier.
     /// </summary>
@@ -24,7 +23,11 @@ public class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
 
     /// <inheritdoc/>
     public byte this[uint address] {
-        get => _byteReaderWriter[address + _baseAddressProvider.BaseAddress];
-        set => _byteReaderWriter[address + _baseAddressProvider.BaseAddress] = value;
+        get => _byteReaderWriter[_baseAddressProvider.BaseAddress.PlusOffset((ushort)address).Linear];
+        set => _byteReaderWriter[_baseAddressProvider.BaseAddress.PlusOffset((ushort)address).Linear] = value;
     }
+
+    /// <inheritdoc/>
+    public IReaderWriter<byte> AbsoluteReaderWriter => _byteReaderWriter;
+
 }

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Represents the DOS core memory table (SYSVARS), containing pointers and configuration
@@ -25,7 +26,7 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <param name="byteReaderWriter">The main memory bus.</param>
     /// <param name="baseAddress">The base address of the structure in memory.</param>
     public DosSysVars(Configuration configuration, NullDevice nullDevice,
-        IByteReaderWriter byteReaderWriter, uint baseAddress)
+        IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress)
         : base(byteReaderWriter, baseAddress) {
         _nullDeviceHeader = nullDevice.Header;
         CopyArray(_nullDeviceHeader, 0x22);
@@ -163,9 +164,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to the CON device header.
     /// </summary>
-    public uint ConsoleDeviceHeaderPointer {
-        get => UInt32[0x0C];
-        set => UInt32[0x0C] = value;
+    public SegmentedAddress ConsoleDeviceHeaderPointer {
+        get => SegmentedAddress16[0x0C];
+        set => SegmentedAddress16[0x0C] = value;
     }
 
     /// <summary>
@@ -233,7 +234,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         UInt8Array array = nullHeader.GetUInt8Array(0, DosDeviceHeader.HeaderLength);
         for (int i = 0; i < array.Count; i++) {
             byte b = array[i];
-            UInt8[this.BaseAddress + offset + i] = b;
+            UInt8[BaseAddress.PlusOffset((ushort)(offset + i))] = b;
         }
     }
 

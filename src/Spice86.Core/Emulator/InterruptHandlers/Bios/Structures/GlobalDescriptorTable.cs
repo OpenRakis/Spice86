@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics;
@@ -37,7 +38,7 @@ public sealed class GlobalDescriptorTable : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
     /// <param name="baseAddress">The physical memory address where the GDT is located.</param>
-    public GlobalDescriptorTable(IByteReaderWriter byteReaderWriter, uint baseAddress)
+    public GlobalDescriptorTable(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress)
         : base(byteReaderWriter, baseAddress) {
     }
 

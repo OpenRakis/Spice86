@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Utils;
 
@@ -89,13 +90,13 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
         Registers.Update();
         
         EsDiString = _memory.GetZeroTerminatedString(
-            MemoryUtils.ToPhysicalAddress(State.ES, State.DI),
+            new SegmentedAddress(state.ES, State.DI),
             32);
         DsSiString = _memory.GetZeroTerminatedString(
-            MemoryUtils.ToPhysicalAddress(State.DS, State.SI),
+            new SegmentedAddress(State.DS, State.SI),
             32);
         DsDxString = _memory.GetZeroTerminatedString(
-            MemoryUtils.ToPhysicalAddress(State.DS, State.DX),
+            new SegmentedAddress(State.DS, State.DX),
             32);
     }
 }

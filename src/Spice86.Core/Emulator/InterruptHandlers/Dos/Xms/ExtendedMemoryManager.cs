@@ -233,7 +233,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
         ILoggerService loggerService) {
-        uint headerAddress = MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0);
+        SegmentedAddress headerAddress = new(DosDeviceSegment, 0);
         Header = new DosDeviceHeader(memory,
             headerAddress) {
             Name = XmsIdentifier,
@@ -1122,7 +1122,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void MoveExtendedMemoryBlock() {
         // DS:SI points to the move structure
-        uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
+        SegmentedAddress moveStructAddress = new(_state.DS, _state.SI);
         var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
 
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {

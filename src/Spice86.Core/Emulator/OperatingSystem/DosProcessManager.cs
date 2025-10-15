@@ -86,7 +86,7 @@ public class DosProcessManager : DosFileLoader {
         // first program to be loaded and that we have enough space for it like we do right now.
         // This will need to be fixed for DOS program load/exec support.
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(_pspTracker.InitialPspSegment);
-        ushort pspSegment = MemoryUtils.ToSegment(psp.BaseAddress);
+        ushort pspSegment = psp.BaseAddress.Segment;
 
         // Set the PSP's first 2 bytes to INT 20h.
         psp.Exit[0] = 0xCD;
@@ -108,8 +108,7 @@ public class DosProcessManager : DosFileLoader {
         SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
 
         // Copy the environment block to memory in a separated segment.
-        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
-            envBlockSegmentAddress.Offset), environmentBlock);
+        _memory.LoadData(envBlockSegmentAddress, environmentBlock);
 
         // Point the PSP's environment segment to the environment block.
         psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
@@ -158,8 +157,7 @@ public class DosProcessManager : DosFileLoader {
 
     private void LoadComFile(byte[] com) {
         ushort programEntryPointSegment = _pspTracker.GetProgramEntryPointSegment();
-        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(programEntryPointSegment, ComOffset);
-        _memory.LoadData(physicalStartAddress, com);
+        _memory.LoadData(new(programEntryPointSegment, ComOffset), com);
 
         // Make DS and ES point to the PSP
         _state.DS = programEntryPointSegment;

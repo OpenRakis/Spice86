@@ -54,7 +54,7 @@ public abstract class InstructionFieldReader<T> {
     }
 
     private ImmutableList<byte?> PeekData(int size) {
-        byte[] data = Memory.GetData(CurrentAddress.Linear, (uint)size);
+        byte[] data = Memory.GetData(CurrentAddress, size);
         return data.
             Select(b => (byte?)b).
             ToImmutableList();

@@ -37,6 +37,14 @@ public readonly record struct SegmentedAddress : IComparable<SegmentedAddress> {
     /// </summary>
     public uint Linear { get; }
 
+    public SegmentedAddress PlusOffset(ushort delta) {
+        return new SegmentedAddress(Segment, (ushort)(Offset + delta));
+    }
+    
+    public SegmentedAddress PlusSegment(ushort delta) {
+        return new SegmentedAddress((ushort)(Segment + delta), Offset);
+    }
+    
     /// <summary>
     /// Compares the current SegmentedAddress object with another SegmentedAddress object.
     /// </summary>

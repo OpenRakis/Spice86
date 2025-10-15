@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -103,7 +104,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x34, GetInDosFlagAddress);
         AddAction(0x35, GetInterruptVector);
         AddAction(0x36, GetFreeDiskSpace);
-        AddAction(0x38, () => SetCountryCode(true));
+        AddAction(0x38, () => GetSetCountryCode(true));
         AddAction(0x39, () => CreateDirectory(true));
         AddAction(0x3A, () => RemoveDirectory(true));
         AddAction(0x3B, () => ChangeCurrentDirectory(true));
@@ -315,17 +316,17 @@ public class DosInt21Handler : InterruptHandler {
     /// Either gets (AL: 0) or sets (AL: not zero) the country code. <br/>
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
-    public void SetCountryCode(bool calledFromVm) {
+    public void GetSetCountryCode(bool calledFromVm) {
         switch (State.AL) {
             case 0: //Get country specific information
-                uint dest = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
-                Memory.LoadData(dest, BitConverter.GetBytes((ushort)_countryInfo.Country));
+                uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+                Memory.LoadData(address, BitConverter.GetBytes((ushort)_countryInfo.Country), 2);
                 State.AX = (ushort)(State.BX + 1);
                 SetCarryFlag(false, calledFromVm);
                 break;
             default: //Set country code
                 if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("{MethodName}: subFunction is unsupported", nameof(SetCountryCode));
+                    LoggerService.Warning("{MethodName}: subFunction is unsupported", nameof(GetSetCountryCode));
                 }
                 State.AX = 0;
                 SetCarryFlag(false, calledFromVm);
@@ -435,7 +436,7 @@ public class DosInt21Handler : InterruptHandler {
     /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
     /// </remarks>
     public void BufferedInput() {
-        uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        SegmentedAddress address = new(State.DS, State.DX);
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
         int readCount = 0;
         if (!_dosFileManager.TryGetStandardInput(out CharacterDevice? standardInput) ||
@@ -726,11 +727,11 @@ public class DosInt21Handler : InterruptHandler {
     /// Gets the address of the DTA.
     /// </summary>
     public void GetDiskTransferAddress() {
-        State.ES = _dosFileManager.DiskTransferAreaAddressSegment;
-        State.BX = _dosFileManager.DiskTransferAreaAddressOffset;
+        State.ES = _dosFileManager.DiskTransferAreaAddress.Segment;
+        State.BX = _dosFileManager.DiskTransferAreaAddress.Offset;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DTA (DISK TRANSFER ADDRESS) DS:DX {DsDx}",
-                ConvertUtils.ToSegmentedAddressRepresentation(State.ES, State.BX));
+                _dosFileManager.DiskTransferAreaAddress);
         }
     }
 
@@ -1000,14 +1001,14 @@ public class DosInt21Handler : InterruptHandler {
     public void ReadFileOrDevice(bool calledFromVm) {
         ushort fileHandle = State.BX;
         ushort readLength = State.CX;
+        SegmentedAddress targetBuffer = new(State.DS, State.DX);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ FROM FILE handle {FileHandle} length {ReadLength} to {DsDx}",
-                fileHandle, readLength,
-                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+                fileHandle, readLength, targetBuffer);
         }
-        uint targetMemory = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+
         DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFileOrDevice(
-            fileHandle, readLength, targetMemory);
+            fileHandle, readLength, targetBuffer.Linear);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -1119,14 +1120,14 @@ public class DosInt21Handler : InterruptHandler {
     /// </returns>
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void GetCurrentDirectory(bool calledFromVm) {
-        uint responseAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
+        SegmentedAddress responseAddress = new(State.DS, State.SI);
         DosFileOperationResult result = _dosFileManager.GetCurrentDir(State.DL, out string currentDir);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET CURRENT DIRECTORY {ResponseAddress}: {CurrentDpsDirectory}",
                 ConvertUtils.ToSegmentedAddressRepresentation(
                     State.DS, State.SI), currentDir);
         }
-        Memory.SetZeroTerminatedString(responseAddress, currentDir, currentDir.Length);
+        Memory.SetZeroTerminatedString(responseAddress.Linear, currentDir, currentDir.Length);
         // According to Ralf's Interrupt List, many Microsoft Windows products rely on AX being 0x0100 on success
         if (!result.IsError) {
             State.AX = 0x0100;

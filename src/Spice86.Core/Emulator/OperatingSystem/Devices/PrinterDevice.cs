@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -12,7 +13,7 @@ public class PrinterDevice : CharacterDevice {
     private readonly ILoggerService _loggerService;
 
     public PrinterDevice(ILoggerService loggerService, IByteReaderWriter memory,
-        uint baseAddress)
+        SegmentedAddress baseAddress)
         : base(memory, baseAddress, LPT1) {
         _loggerService = loggerService;
     }

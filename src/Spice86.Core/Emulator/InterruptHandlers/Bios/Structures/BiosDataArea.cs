@@ -18,7 +18,7 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
     /// <param name="conventionalMemorySizeKb">The size of conventional memory for DOS applications, in kilobytes.</param>
-    public BiosDataArea(IByteReaderWriter byteReaderWriter, ushort conventionalMemorySizeKb) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0)) {
+    public BiosDataArea(IByteReaderWriter byteReaderWriter, ushort conventionalMemorySizeKb) : base(byteReaderWriter, new(MemoryMap.BiosDataSegment, 0)) {
         ConventionalMemorySizeKb = conventionalMemorySizeKb;
     }
 

@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -49,7 +50,7 @@ public class ConsoleDevice : CharacterDevice {
     /// <summary>
     /// Create a new console device.
     /// </summary>
-    public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
+    public ConsoleDevice(IByteReaderWriter memory, SegmentedAddress baseAddress,
         ILoggerService loggerService, State state, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)

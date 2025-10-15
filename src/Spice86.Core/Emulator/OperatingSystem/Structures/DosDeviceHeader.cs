@@ -18,7 +18,7 @@ public class DosDeviceHeader : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
     /// <param name="baseAddress">The base address of the structure in memory.</param>
-    public DosDeviceHeader(IByteReaderWriter byteReaderWriter, uint baseAddress)
+    public DosDeviceHeader(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress)
         : base(byteReaderWriter, baseAddress) {
     }
 

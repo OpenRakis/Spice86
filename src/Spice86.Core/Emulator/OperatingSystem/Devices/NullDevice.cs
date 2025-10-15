@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics.CodeAnalysis;
@@ -12,7 +13,7 @@ using System.IO;
 public class NullDevice : VirtualDeviceBase {
     private const string NUL = "NUL";
     private readonly ILoggerService _loggerService;
-    public NullDevice(ILoggerService loggerService, IByteReaderWriter memory, uint baseAddress)
+    public NullDevice(ILoggerService loggerService, IByteReaderWriter memory, SegmentedAddress baseAddress)
         : base(new DosDeviceHeader(memory, baseAddress) {
             Attributes = Enums.DeviceAttributes.CurrentNull,
             Name = NUL

@@ -7,6 +7,9 @@ namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 public abstract class ArrayReaderWriter<T>: IReaderWriter<T> {
     public T[] Array { get; }
 
+    /// <inheritdoc/>
+    public IReaderWriter<T> AbsoluteReaderWriter => this;
+
     public ArrayReaderWriter(T[] array) {
         Array = array;
     }

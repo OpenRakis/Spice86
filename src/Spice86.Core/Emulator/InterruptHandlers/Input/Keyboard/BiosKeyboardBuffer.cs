@@ -20,7 +20,7 @@ public class BiosKeyboardBuffer {
         _memory = memory;
         _biosDataArea = biosDataArea;
         // absolute base address is uint but BDA is low in memory so it fits in ushort
-        StartAddress = (ushort)_biosDataArea.KbdBuf.BaseAddress;
+        StartAddress = (ushort)_biosDataArea.KbdBuf.BaseAddress.Linear;
         EndAddress = (ushort)(StartAddress + _biosDataArea.KbdBuf.Count);
         HeadAddress = StartAddress;
         TailAddress = StartAddress;

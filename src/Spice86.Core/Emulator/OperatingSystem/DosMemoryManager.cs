@@ -464,7 +464,7 @@ public class DosMemoryManager {
     }
 
     private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(ushort blockSegment) {
-        return new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
+        return new DosMemoryControlBlock(_memory, new(blockSegment, 0));
     }
 
     private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {

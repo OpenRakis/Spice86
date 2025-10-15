@@ -8,23 +8,23 @@ using Spice86.Shared.Utils;
 /// Provides indexed unsigned 32-bit access over memory.
 /// </summary>
 public class UInt32Indexer : MemoryIndexer<uint> {
-    private readonly IByteReaderWriter _byteReaderWriter;
+    private readonly UInt8Indexer _uint8Indexer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt32Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
-    /// <param name="byteReaderWriter">Where data is read and written.</param>
-    public UInt32Indexer(IByteReaderWriter byteReaderWriter) => _byteReaderWriter = byteReaderWriter;
+    /// <param name="uint8Indexer">Where data is read and written.</param>
+    public UInt32Indexer(UInt8Indexer uint8Indexer) => _uint8Indexer = uint8Indexer;
 
     /// <inheritdoc/>
     public override uint this[uint address] {
-        get => (uint)(_byteReaderWriter[address] | _byteReaderWriter[address + 1] << 8 |
-                      _byteReaderWriter[address + 2] << 16 | _byteReaderWriter[address + 3] << 24);
+        get => (uint)(_uint8Indexer[address] | _uint8Indexer[address + 1] << 8 |
+                      _uint8Indexer[address + 2] << 16 | _uint8Indexer[address + 3] << 24);
         set {
-            _byteReaderWriter[address] = (byte)value;
-            _byteReaderWriter[address + 1] = (byte)(value >> 8);
-            _byteReaderWriter[address + 2] = (byte)(value >> 16);
-            _byteReaderWriter[address + 3] = (byte)(value >> 24);
+            _uint8Indexer[address] = (byte)value;
+            _uint8Indexer[address + 1] = (byte)(value >> 8);
+            _uint8Indexer[address + 2] = (byte)(value >> 16);
+            _uint8Indexer[address + 3] = (byte)(value >> 24);
         }
     }
 
@@ -34,26 +34,19 @@ public class UInt32Indexer : MemoryIndexer<uint> {
     /// <param name="segment">The segment of the element to get or set.</param>
     /// <param name="offset">The offset of the element to get or set.</param>
     public override uint this[ushort segment, ushort offset] {
-        get {
-            uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
-            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3));
-            return (uint)(_byteReaderWriter[address1] | _byteReaderWriter[address2] << 8 |
-                          _byteReaderWriter[address3] << 16 | _byteReaderWriter[address4] << 24);
-        }
+        get =>
+            (uint)(_uint8Indexer[segment, offset] |
+                   _uint8Indexer[segment, (ushort)(offset + 1)] << 8 |
+                   _uint8Indexer[segment, (ushort)(offset + 2)] << 16 |
+                   _uint8Indexer[segment, (ushort)(offset + 3)] << 24);
         set {
-            uint address1 = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint address2 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 1));
-            uint address3 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            uint address4 = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 3));
-            _byteReaderWriter[address1] = (byte)value;          // Low byte at first address
-            _byteReaderWriter[address2] = (byte)(value >> 8);
-            _byteReaderWriter[address3] = (byte)(value >> 16);
-            _byteReaderWriter[address4] = (byte)(value >> 24);  // High byte at last address
+            _uint8Indexer[segment, offset] = (byte)value;          // Low byte at first address
+            _uint8Indexer[segment, (ushort)(offset + 1)] = (byte)(value >> 8);
+            _uint8Indexer[segment, (ushort)(offset + 2)] = (byte)(value >> 16);
+            _uint8Indexer[segment, (ushort)(offset + 3)] = (byte)(value >> 24);  // High byte at last address
         }
     }
     
     /// <inheritdoc/>
-    public override int Count => _byteReaderWriter.Length / 4;
+    public override int Count => _uint8Indexer.Count / 4;
 }

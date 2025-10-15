@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Collections;
 
@@ -17,7 +18,7 @@ public abstract class MemoryBasedArray<T> : MemoryBasedDataStructure, IList<T> {
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     /// <param name="baseAddress">The base address of the array.</param>
     /// <param name="length">The length of the array.</param>
-    protected MemoryBasedArray(IByteReaderWriter byteReaderWriter, uint baseAddress, int length) : base(byteReaderWriter, baseAddress) {
+    protected MemoryBasedArray(IByteReaderWriter byteReaderWriter, SegmentedAddress baseAddress, int length) : base(byteReaderWriter, baseAddress) {
         _length = length;
     }
 
