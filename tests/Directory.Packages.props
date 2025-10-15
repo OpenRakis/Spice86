@@ -18,7 +18,7 @@
     <PackageVersion Include="SingleStepTests.Intel80286.40-7F" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.10" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
