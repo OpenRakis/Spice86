@@ -312,7 +312,7 @@ public class MachineTest
             // Inside INT8 handler exact layout:
             // [0] callback at IVT[8] (3 bytes)
             // [3] INT 1C (2 bytes)
-            // [5] EOI callback (3 bytes)
+            // [5] EOI callback (4 bytes)
             // [8] IRET (1 byte)
 
             SegmentedAddress addrInt1C = int8HandlerEntry.Address + 4;
