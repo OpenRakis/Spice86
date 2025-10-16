@@ -7,7 +7,7 @@ Spice86 is a .NET 8 cross-platform emulator for reverse engineering real mode DO
 
 ### Project Structure
 - **`Spice86.Core`**: Core emulation engine (CPU, memory, devices, DOS/BIOS handlers)
-- **`Spice86`**: Main application with Avalonia UI (ViewModels, Views, DI container)
+- **`Spice86`**: Main application with Avalonia UI (ViewModels, Views, manual composition root)
 - **`Bufdio.Spice86`**: Audio subsystem (PortAudio bindings)
 - **`Spice86.Logging`**: Serilog-based logging infrastructure
 - **`Spice86.Shared`**: Shared interfaces and utilities
