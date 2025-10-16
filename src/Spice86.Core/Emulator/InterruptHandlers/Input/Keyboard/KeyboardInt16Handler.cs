@@ -19,7 +19,6 @@ using System.Diagnostics.CodeAnalysis;
 public class KeyboardInt16Handler : InterruptHandler {
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly BiosDataArea _biosDataArea;
-    private readonly EmulationLoopRecall _emulationLoopRecall;
 
     /// <summary>
     /// Initializes a new instance.
@@ -31,13 +30,10 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
-    /// <param name="emulationLoopRecall">Class used to wait for keyboard input from hardware interrupt 0x9 (IRQ1)</param>
     public KeyboardInt16Handler(IMemory memory, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer,
-        EmulationLoopRecall emulationLoopRecall)
+        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        _emulationLoopRecall = emulationLoopRecall;
         _biosDataArea = biosDataArea;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         AddAction(0x01, () => GetKeystrokeStatus(true));
@@ -145,6 +141,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Returns in the AX register the pending key code.
     /// </summary>
     /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
+    /// <remarks>Returns <c>0</c> if no key is available. Should not happen for emulated programs, see ASM above.</remarks>
     public void GetKeystroke() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("READ KEY STROKE");
@@ -153,10 +150,7 @@ public class KeyboardInt16Handler : InterruptHandler {
             _biosKeyboardBuffer.DequeueKeyCode();
             State.AX = keyCode.Value;
         } else {
-            while (_biosKeyboardBuffer.IsEmpty) {
-                //Wait for hardware interrupt 0x9 (IRQ1) to be processed
-                _emulationLoopRecall.RunInterrupt(0x9);
-            }
+            State.AX = 0; // No key available
         }
     }
 
