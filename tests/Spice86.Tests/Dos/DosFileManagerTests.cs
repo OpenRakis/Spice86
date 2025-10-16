@@ -16,7 +16,6 @@ using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Timer;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -157,12 +156,9 @@ public class DosFileManagerTests {
             functionHandler, instructionExecutor, state, timer,
             emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
 
-        EmulationLoopRecall emulationLoopRecall = new EmulationLoopRecall(
-            interruptVectorTable, state, stack, emulationLoop);
-
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-        biosKeyboardInt9Handler.BiosKeyboardBuffer, emulationLoopRecall);
+        biosKeyboardInt9Handler.BiosKeyboardBuffer);
 
         var clock = new Clock(loggerService);
 
