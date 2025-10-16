@@ -103,7 +103,7 @@ public class GlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress {
     public void SetDialogueCount47A8(int value) => UInt16[0x47A8] = (ushort)value;
 }
 ```
-Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `WithSsBaseAddress`, etc.
+Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructureWithSsBaseAddress`, etc.
 
 ## Project-Specific Conventions
 
