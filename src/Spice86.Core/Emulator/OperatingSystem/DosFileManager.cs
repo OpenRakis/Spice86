@@ -451,7 +451,7 @@ public class DosFileManager {
     /// <param name="fileHandle">The handle to the file.</param>
     /// <param name="offset">Number of bytes to move.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult MoveFilePointerUsingHandle(SeekOrigin originOfMove, ushort fileHandle, uint offset) {
+    public DosFileOperationResult MoveFilePointerUsingHandle(SeekOrigin originOfMove, ushort fileHandle, int offset) {
         if (GetOpenFile(fileHandle) is not VirtualFileBase file) {
             return FileNotOpenedError(fileHandle);
         }
