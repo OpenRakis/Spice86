@@ -21,17 +21,16 @@ using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
-using Key = Spice86.Shared.Emulator.Keyboard.Key;
+using PhysicalKey = Spice86.Shared.Emulator.Keyboard.PhysicalKey;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
-    IScreenPresenter, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
+    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -91,7 +90,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -140,12 +138,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
-        KeyUp?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
+        
+        // Pass only the Avalonia Key - no scancode conversion here
+        KeyUp?.Invoke(this, new KeyboardEventArgs((PhysicalKey)e.Key, IsPressed: false));
     }
 
     [RelayCommand]
@@ -189,17 +184,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     internal event Action? InvalidateBitmap;
 
-
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
             return;
         }
-        KeyDown?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+        
+        // Pass only the Avalonia Key - no scancode conversion here
+        KeyDown?.Invoke(this, new KeyboardEventArgs((PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
     [ObservableProperty]
@@ -301,6 +292,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double? TimeMultiplier {
         get => _timeMultiplier;
         set {
+            if(IsPaused) {
+                return;
+            }
             ValidateRequiredPropertyIsNotNull(value);
             SetProperty(ref _timeMultiplier, value);
             if (value is not null) {

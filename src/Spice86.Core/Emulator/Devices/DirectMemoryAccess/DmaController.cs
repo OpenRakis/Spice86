@@ -53,6 +53,9 @@ public class DmaController : DefaultIOPortHandler {
         InitPortHandlers(ioPortDispatcher);
     }
 
+    /// <summary>
+    /// Performs Direct Memory Access (DMA) transfers for all configured DMA channels.
+    /// </summary>
     internal void PerformDmaTransfers() {
         foreach (DmaChannel channel in _dmaDeviceChannels) {
             channel.Transfer();

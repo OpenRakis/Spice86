@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -97,7 +98,7 @@ public sealed class Machine : IDisposable {
     /// <summary>
     /// An IBM PC Keyboard
     /// </summary>
-    public Keyboard Keyboard { get; }
+    public Intel8042Controller Keyboard { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -228,6 +229,7 @@ public sealed class Machine : IDisposable {
     /// The pause handler for the emulation thread
     /// </summary>
     public IPauseHandler PauseHandler { get; }
+    public DeviceScheduler DeviceScheduler { get; internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
@@ -243,7 +245,7 @@ public sealed class Machine : IDisposable {
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
-        Keyboard keyboard,
+        Intel8042Controller keyboard,
         KeyboardInt16Handler keyboardInt16Handler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory,
@@ -268,7 +270,8 @@ public sealed class Machine : IDisposable {
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
-        IPauseHandler pauseHandler) {
+        IPauseHandler pauseHandler,
+        DeviceScheduler deviceScheduler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -307,6 +310,7 @@ public sealed class Machine : IDisposable {
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
         PauseHandler = pauseHandler;
+        DeviceScheduler = deviceScheduler;
     }
 
     /// <summary>

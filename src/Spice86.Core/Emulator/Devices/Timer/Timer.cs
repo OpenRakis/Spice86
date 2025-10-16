@@ -1,61 +1,51 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Timer;
 
 using Spice86.Core.Emulator.CPU;
-
-using System.Diagnostics;
-
 using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 
-/// <summary>
-/// Emulates a PIT8254 Programmable Interval Timer.<br/>
-/// Triggers interrupt 8 on the CPU via the PIC.<br/>
-/// https://k.lse.epita.fr/internals/8254_controller.html
-/// </summary>
+using System;
+using System.Diagnostics;
+
 public class Timer : DefaultIOPortHandler, ITimeMultiplier {
     private const int CounterRegisterZero = 0x40;
     private const int CounterRegisterOne = 0x41;
     private const int CounterRegisterTwo = 0x42;
     private const int ModeCommandeRegister = 0x43;
 
-    /// <summary>
-    /// The number of <see cref="Stopwatch"/> timer ticks per millisecond.
-    /// </summary>
     public static readonly long StopwatchTicksPerMillisecond = Stopwatch.Frequency / 1000;
 
     private readonly Pit8254Counter[] _counters = new Pit8254Counter[3];
     private readonly DualPic _dualPic;
+    private readonly CounterConfiguratorFactory _counterConfiguratorFactory;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Timer"/> class.
-    /// </summary>
+    private double _timeMultiplier = 1.0;
+
     public Timer(Configuration configuration, State state, IOPortDispatcher ioPortDispatcher,
-        CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic) : base(state, configuration.FailOnUnhandledPort, loggerService) {
+        CounterConfiguratorFactory counterConfiguratorFactory, ILoggerService loggerService, DualPic dualPic)
+        : base(state, configuration.FailOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
-        
+        _counterConfiguratorFactory = counterConfiguratorFactory;
+
         for (int i = 0; i < _counters.Length; i++) {
             _counters[i] = new Pit8254Counter(_loggerService, i, counterConfiguratorFactory.InstantiateCounterActivator());
         }
+
         InitPortHandlers(ioPortDispatcher);
     }
 
-    /// <inheritdoc cref="ITimeMultiplier.SetTimeMultiplier(double)" />
     public void SetTimeMultiplier(double multiplier) {
         if (multiplier <= 0) {
             throw new DivideByZeroException(nameof(multiplier));
         }
+        _timeMultiplier = multiplier;
+
         foreach (Pit8254Counter counter in _counters) {
             counter.Activator.Multiplier = multiplier;
         }
     }
 
-    /// <summary>
-    /// Gets the counter at the specified index.
-    /// </summary>
-    /// <param name="counterIndex">The index of the counter to retrieve</param>
-    /// <returns>A reference to the counter</returns>
-    /// <exception cref="InvalidCounterIndexException">The index was out of range.</exception>
     public Pit8254Counter GetCounter(int counterIndex) {
         if (counterIndex > _counters.Length || counterIndex < 0) {
             throw new InvalidCounterIndexException(_state, counterIndex);
@@ -63,12 +53,8 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         return _counters[counterIndex];
     }
 
-    /// <summary>
-    /// Gets the number of ticks in the first counter.
-    /// </summary>
     public long NumberOfTicks => _counters[0].CurrentCount;
 
-    /// <inheritdoc />
     public override byte ReadByte(ushort port) {
         if (IsCounterRegisterPort(port)) {
             Pit8254Counter pit8254Counter = GetCounterIndexFromPortNumber(port);
@@ -88,7 +74,6 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         ioPortDispatcher.AddIOPortHandler(CounterRegisterTwo, this);
     }
 
-    /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
         if (IsCounterRegisterPort(port)) {
             Pit8254Counter pit8254Counter = GetCounterIndexFromPortNumber(port);
@@ -110,13 +95,7 @@ public class Timer : DefaultIOPortHandler, ITimeMultiplier {
         base.WriteByte(port, value);
     }
 
-
-    /// <summary>
-    /// If the counter is activated, triggers the interrupt request
-    /// </summary>
     public void Tick() {
-        // Only do counter 0.
-        // Counter 1 is unused and counter 2 is PC speaker which is handled separately.
         if (_counters[0].ProcessActivation()) {
             _dualPic.ProcessInterruptRequest(0);
         }
