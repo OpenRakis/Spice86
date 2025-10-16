@@ -54,31 +54,31 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel8086.00-ff/2025.6.8/content/tests/8086.00-FF.zip">
+    <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel8086.00-ff/2025.6.8/content/tests/8086.00-FF.zip">
       <Link>8086.00-FF.zip</Link>
       <LogicalName>8086.00-FF.zip</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.00-3f/2025.10.8/content/tests/80286.00-3F.zip">
+    <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80286.00-3f/2025.10.8/content/tests/80286.00-3F.zip">
       <Link>80286.00-3F.zip</Link>
       <LogicalName>80286.00-3F.zip</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.40-7f/2025.10.8/content/tests/80286.40-7F.zip">
+    <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80286.40-7f/2025.10.8/content/tests/80286.40-7F.zip">
       <Link>80286.40-7F.zip</Link>
       <LogicalName>80286.40-7F.zip</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.80-bf/2025.10.8/content/tests/80286.80-BF.zip">
+    <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80286.80-bf/2025.10.8/content/tests/80286.80-BF.zip">
       <Link>80286.80-BF.zip</Link>
       <LogicalName>80286.80-BF.zip</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="$(NuGetPackageRoot)singlesteptests.intel80286.c0-ff/2025.10.8/content/tests/80286.C0-FF.zip">
+    <EmbeddedResource Include="$([MSBuild]::EnsureTrailingSlash($(NuGetPackageRoot)))singlesteptests.intel80286.c0-ff/2025.10.8/content/tests/80286.C0-FF.zip">
       <Link>80286.C0-FF.zip</Link>
       <LogicalName>80286.C0-FF.zip</LogicalName>
     </EmbeddedResource>
