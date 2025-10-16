@@ -1,7 +1,7 @@
 # Copilot Instructions for Spice86
 
 ## Project Overview
-Spice86 is a .NET 8 cross-platform emulator for reverse engineering real mode DOS programs. It enables running, analyzing, and incrementally rewriting DOS binaries in C# without source code.
+Spice86 is a .NET 8 cross-platform emulator for reverse engineering real-mode DOS programs. It enables running, analyzing, and incrementally rewriting DOS binaries in C# without source code.
 
 ## Architecture & Module Boundaries
 
