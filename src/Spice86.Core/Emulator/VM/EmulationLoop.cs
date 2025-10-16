@@ -48,7 +48,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
+    /// <param name="perfMeasurer">The shared performance measurer to measure CPU performance.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
@@ -59,7 +59,6 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="cyclesLimiter">The class shared with the UI to control CPU speed.</param>
     /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
-    /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(PerformanceMeasurer perfMeasurer,
         FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         Timer timer, EmulatorBreakpointsManager emulatorBreakpointsManager,
