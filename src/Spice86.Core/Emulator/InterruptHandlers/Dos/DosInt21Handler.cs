@@ -5,7 +5,6 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -15,8 +14,6 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -927,7 +924,7 @@ public class DosInt21Handler : InterruptHandler {
     public void MoveFilePointerUsingHandle(bool calledFromVm) {
         SeekOrigin originOfMove = (SeekOrigin)State.AL;
         ushort fileHandle = State.BX;
-        uint offset = (uint)(State.CX << 16 | State.DX);
+        int offset = (State.CX << 16) | State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
                 originOfMove, fileHandle, offset);
