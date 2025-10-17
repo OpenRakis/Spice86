@@ -98,8 +98,8 @@ public sealed class Keyboard : DefaultIOPortHandler {
             case KeyboardPorts.Data:
                 _a20Gate.IsEnabled = Command switch {
                     KeyboardCommand.WriteOutputPort => (value & 2) > 0,
-                    KeyboardCommand.EnableA20Gate => false,
-                    KeyboardCommand.DisableA20Gate => true,
+                    KeyboardCommand.EnableA20Gate => true,
+                    KeyboardCommand.DisableA20Gate => false,
                     _ => _a20Gate.IsEnabled
                 };
                 Command = KeyboardCommand.None;
