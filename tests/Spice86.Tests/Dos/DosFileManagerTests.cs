@@ -153,13 +153,6 @@ public class DosFileManagerTests {
             new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
-        InputEventQueue inputEventQueue = new InputEventQueue();
-
-        EmulationLoop emulationLoop = new EmulationLoop(new(),
-            functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler,
-            new NullCycleLimiter(), inputEventQueue, loggerService);
-
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
         biosKeyboardInt9Handler.BiosKeyboardBuffer);
