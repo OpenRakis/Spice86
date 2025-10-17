@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
@@ -10,10 +11,13 @@ using System.Diagnostics;
 /// Represents the Program Segment Prefix (PSP)
 /// </summary>
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
-public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
+public class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;
 
-    public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {
+    public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress)
+        : base(byteReaderWriter, baseAddress) {
+        Exit[0] = 0xCD; // INT instruction
+        Exit[1] = 0x20; // DOS INT 20h
     }
 
     /// <summary>
