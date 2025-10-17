@@ -1,55 +1,61 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-  </PropertyGroup>
-  <!-- Properties geared towards NuGet -->
-  <PropertyGroup>
-    <PackageId>Spice86</PackageId>
-  </PropertyGroup>
-  <ItemGroup>
-    <Content Include="libportaudio.dll">
-      <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Pack>True</Pack>
-    </Content>
-  </ItemGroup>
-  <!-- Package references -->
-  <ItemGroup>
-    <PackageReference Include="Avalonia" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" />
-    <PackageReference Include="Avalonia.Controls.TreeDataGrid" />
-    <PackageReference Include="Avalonia.Desktop" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
-    <PackageReference Include="Avalonia.Fonts.Inter" />
-    <PackageReference Include="Avalonia.Headless"/>
-    <PackageReference Include="PanAndZoom" />
-    <PackageReference Include="AvaloniaGraphControl" />
-    <PackageReference Include="AvaloniaHex" />
-    <PackageReference Include="bodong.Avalonia.PropertyGrid" />
-    <PackageReference Include="bodong.PropertyModels" />
-    <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Deadpikle.AvaloniaProgressRing" />
-    <PackageReference Include="DialogHost.Avalonia" />
-    <PackageReference Include="FluentIcons.Avalonia.Fluent" />
-    <PackageReference Include="Iced" />
-    <PackageReference Include="JvE.Structurizer" />
-    <PackageReference Include="Semi.Avalonia" />
-    <PackageReference Include="Semi.Avalonia.DataGrid" />
-    <PackageReference Include="Semi.Avalonia.TreeDataGrid" />
-    <PackageReference Include="System.Text.Json" />
-    <PackageReference Include="Xaml.Behaviors.Avalonia" />
-  </ItemGroup>
-  <ItemGroup>
-    <AvaloniaResource Include="Views\Assets\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
-    <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-    <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-  </ItemGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86</PackageId>
+    </PropertyGroup>
+    <PropertyGroup>
+        <EnvironmentVariables>
+            AVALONIA_TELEMETRY_OPTOUT=1
+        </EnvironmentVariables>
+    </PropertyGroup>
+    <ItemGroup>
+        <Content Include="libportaudio.dll">
+            <PackagePath>lib\net8.0\libportaudio.dll</PackagePath>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <Pack>True</Pack>
+        </Content>
+    </ItemGroup>
+    <!-- Package references -->
+    <ItemGroup>
+        <PackageReference Include="Avalonia"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid"/>
+        <PackageReference Include="Avalonia.Controls.TreeDataGrid"/>
+        <PackageReference Include="Avalonia.Desktop"/>
+        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics"/>
+        <PackageReference Include="Avalonia.Fonts.Inter"/>
+        <PackageReference Include="Avalonia.Headless"/>
+        <PackageReference Include="PanAndZoom"/>
+        <PackageReference Include="AvaloniaGraphControl"/>
+        <PackageReference Include="AvaloniaHex"/>
+        <PackageReference Include="bodong.Avalonia.PropertyGrid"/>
+        <PackageReference Include="bodong.PropertyModels"/>
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="Deadpikle.AvaloniaProgressRing"/>
+        <PackageReference Include="DialogHost.Avalonia"/>
+        <PackageReference Include="FluentIcons.Avalonia.Fluent"/>
+        <PackageReference Include="Iced"/>
+        <PackageReference Include="JvE.Structurizer"/>
+        <PackageReference Include="Semi.Avalonia"/>
+        <PackageReference Include="Semi.Avalonia.DataGrid"/>
+        <PackageReference Include="Semi.Avalonia.TreeDataGrid"/>
+        <PackageReference Include="System.Text.Json"/>
+        <PackageReference Include="Xaml.Behaviors.Avalonia"/>
+    </ItemGroup>
+    <ItemGroup>
+        <AvaloniaResource Include="Views\Assets\**"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj"/>
+        <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj"/>
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+    </ItemGroup>
 </Project>

@@ -1,15 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Properties geared towards NuGet -->
-  <PropertyGroup>
-	  <PackageId>Spice86.Logging</PackageId>
-  </PropertyGroup>
-  <ItemGroup>
-	<PackageReference Include="Serilog" />
-	<PackageReference Include="Serilog.Sinks.Console" />
-	<PackageReference Include="Serilog.Sinks.Debug" />
-	<PackageReference Include="Serilog.Sinks.File" />
-  </ItemGroup>
-  <ItemGroup>
-	<ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-  </ItemGroup>
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86.Logging</PackageId>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Serilog.Sinks.Console"/>
+        <PackageReference Include="Serilog.Sinks.Debug"/>
+        <PackageReference Include="Serilog.Sinks.File"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+    </ItemGroup>
 </Project>

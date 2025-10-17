@@ -1,12 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Properties geared towards NuGet -->
-  <PropertyGroup>
-	  <PackageId>Spice86.Shared</PackageId>
-  </PropertyGroup>
-  <ItemGroup>
-	<PackageReference Include="Avalonia" />
-	<PackageReference Include="Serilog" />
-	<PackageReference Include="Serilog.Sinks.Console" />
-	<PackageReference Include="Serilog.Sinks.Debug" />
-  </ItemGroup>
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86.Shared</PackageId>
+    </PropertyGroup>
+    <PropertyGroup>
+        <EnvironmentVariables>
+            AVALONIA_TELEMETRY_OPTOUT=1
+        </EnvironmentVariables>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia"/>
+        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Serilog.Sinks.Console"/>
+        <PackageReference Include="Serilog.Sinks.Debug"/>
+    </ItemGroup>
 </Project>
