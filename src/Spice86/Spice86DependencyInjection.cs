@@ -41,6 +41,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -56,7 +57,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
-    private readonly IGui _gui;
+    private readonly IGuiVideoPresentation? _gui;
     private bool _disposed;
 
     public Spice86DependencyInjection(Configuration configuration)
@@ -316,9 +317,11 @@ public class Spice86DependencyInjection : IDisposable {
 
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
+        InputEventQueue inputEventQueue = new();
+
+        EmulationLoop emulationLoop = new(new(), functionHandler,
             cpuForEmulationLoop, state, timer, emulatorBreakpointsManager,
-            dmaController, pauseHandler, loggerService);
+            dmaController, pauseHandler, CycleLimiterFactory.Create(configuration), inputEventQueue, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -352,32 +355,34 @@ public class Spice86DependencyInjection : IDisposable {
         } else {
             _gui = new HeadlessGui();
         }
+        
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+
+        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
+           _gui as IGuiKeyboardEvents, configuration.FailOnUnhandledPort);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
+            functionHandlerProvider, stack, state, dualPic, keyboard,
+            biosKeyboardBuffer, loggerService);
+        Mouse mouse = new(state, dualPic, MouseType.Ps2,
+                    loggerService, configuration.FailOnUnhandledPort, _gui as IGuiMouseEvents);
+        MouseDriver mouseDriver = new(state, memory, mouse, vgaFunctionality,
+            loggerService, _gui as IGuiMouseEvents);
+
+        KeyboardInt16Handler keyboardInt16Handler = new(
+            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
+            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+
+        Joystick joystick = new(state, ioPortDispatcher,
+    configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Input devices created...");
+        }
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("VGA card created...");
-        }
-
-        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            _gui, configuration.FailOnUnhandledPort);
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
-            functionHandlerProvider, stack, state, dualPic, keyboard,
-            biosKeyboardBuffer, loggerService);
-        Mouse mouse = new(state, dualPic, _gui,
-                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, memory, mouse, _gui,
-            vgaFunctionality, loggerService);
-
-        KeyboardInt16Handler keyboardInt16Handler = new(
-            memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
-        Joystick joystick = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Input devices created...");
         }
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
