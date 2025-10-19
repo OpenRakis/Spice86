@@ -36,14 +36,15 @@ public sealed class HeadlessGui : IGui, IDisposable {
     public void HideMouseCursor() {
     }
 
-#pragma warning disable CS0067 // Headless GUI never raises input events
+#pragma warning disable CS0067 // Headless GUI never raises these events
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
-#pragma warning restore CS0067
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
+    public event Action? UserInterfaceInitialized;
+#pragma warning restore CS0067
 
     public int Width { get; private set; }
 
