@@ -138,7 +138,7 @@ public sealed class CrtControllerRegisters {
     ///     Gets or sets the Text Cursor Location Low register.
     /// </summary>
     public byte TextCursorLocationLow {
-        get => (byte)(_screenStartAddress & 0xFF);
+        get => (byte)(_textCursorLocation & 0xFF);
         set => _textCursorLocation = _textCursorLocation & 0xFF00 | value;
     }
 
