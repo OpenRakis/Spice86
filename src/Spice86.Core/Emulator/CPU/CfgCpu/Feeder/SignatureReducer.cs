@@ -32,7 +32,7 @@ public class SignatureReducer {
         IDictionary<Type, List<CfgInstruction>> groupByType =
             GroupByType(instructions);
         List<CfgInstruction> res = new();
-        foreach (var entry in groupByType) {
+        foreach (KeyValuePair<Type, List<CfgInstruction>> entry in groupByType) {
             res.AddRange(ReduceAllWithSameType(entry.Value));
         }
 
@@ -45,7 +45,7 @@ public class SignatureReducer {
         IDictionary<Signature, List<CfgInstruction>> groupedBySignatureFinal =
             GroupBySignatureWithOnlyFinal(instructions);
         List<CfgInstruction> res = new();
-        foreach (var entry in groupedBySignatureFinal) {
+        foreach (KeyValuePair<Signature, List<CfgInstruction>> entry in groupedBySignatureFinal) {
             res.Add(ReduceAllWithSameSignatureFinal(entry.Value));
         }
         return res;
