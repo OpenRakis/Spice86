@@ -5,6 +5,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
+using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
@@ -130,27 +131,81 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         AddBreakpointsToCollection(serializableBreakpoints, _executionBreakPoints.SerializableBreakpoints);
         AddBreakpointsToCollection(serializableBreakpoints, InterruptBreakPoints.SerializableBreakpoints);
         AddBreakpointsToCollection(serializableBreakpoints, _cycleBreakPoints.SerializableBreakpoints);
-        AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints.SerializableBreakpoints);
+        AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints);
         AddBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.SerializableBreakpoints);
         return serializableBreakpoints;
+    }
+
+    private void AddBreakpointsToCollection(SerializableUserBreakpointCollection serializableBreakpoints,
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints) {
+        if (!memoryReadWriteBreakpoints.SerializableBreakpoints.Any()) {
+            return;
+        }
+
+        foreach (SerializableUserBreakpoint breakpoint in GroupConsecutiveBreakpoints(
+            memoryReadWriteBreakpoints.SerializableBreakpoints).Distinct()) {
+            serializableBreakpoints.Breakpoints.Add(breakpoint);
+        }
+    }
+
+    private static IEnumerable<SerializableUserBreakpoint> GroupConsecutiveBreakpoints(
+        IEnumerable<AddressBreakPoint> memoryBreakpoints) {
+
+        if (!memoryBreakpoints.Any()) {
+            yield break;
+        }
+
+        foreach (var group in memoryBreakpoints
+            .Select((bp, index) => new {
+                Breakpoint = bp,
+                Index = index,
+                GroupKey = bp.Address - index
+            })
+            .GroupBy(x => new { x.GroupKey, x.Breakpoint.BreakPointType })) {
+            IOrderedEnumerable<AddressBreakPoint> breakpoints = group.
+                Select(x => x.Breakpoint).OrderBy(x => x.Address);
+            long rangeStart = breakpoints.First().Address;
+            long rangeEnd = breakpoints.Last().Address;
+            BreakPointType type = group.Key.BreakPointType;
+
+            yield return CreateSerializableMemoryBreakpoint(rangeStart, rangeEnd, type);
+        }
+    }
+
+    private static SerializableUserBreakpoint CreateSerializableMemoryBreakpoint(
+        long start, long end, BreakPointType type) {
+        if (start == end) {
+            return new SerializableUserBreakpoint {
+                Trigger = start,
+                Type = type,
+                IsEnabled = true
+            };
+        }
+
+        return new SerializableUserBreakpointRange {
+            Trigger = start,
+            EndTrigger = end,
+            Type = type,
+            IsEnabled = true
+        };
     }
 
     private static void AddBreakpointsToCollection(SerializableUserBreakpointCollection collection,
         IEnumerable<AddressBreakPoint> serializableBreakpoints) {
         foreach (AddressBreakPoint bp in serializableBreakpoints) {
-            SerializableUserBreakpoint? serializableUserBreakpoint = ToSerializable(bp, true);
-            if(serializableUserBreakpoint is not null &&
+            SerializableUserBreakpoint? serializableUserBreakpoint = ToSerializable(bp);
+            if (serializableUserBreakpoint is not null &&
                 !collection.Breakpoints.Any(x => x == serializableUserBreakpoint)) {
                 collection.Breakpoints.Add(serializableUserBreakpoint);
             }
         }
     }
 
-    private static SerializableUserBreakpoint? ToSerializable(AddressBreakPoint breakpoint, bool isEnabled) {
+    private static SerializableUserBreakpoint? ToSerializable(AddressBreakPoint breakpoint) {
         return new SerializableUserBreakpoint {
             Trigger = breakpoint.Address,
             Type = breakpoint.BreakPointType,
-            IsEnabled = isEnabled
+            IsEnabled = true
         };
     }
 
