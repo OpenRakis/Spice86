@@ -506,11 +506,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
 
         foreach (SerializableUserBreakpoint breakpointData in breakpointsData.Breakpoints) {
-            if (breakpointData is SerializableUserBreakpointRange rangeData) {
-                RestoreRangeBreakpoint(rangeData);
-            } else {
-                RestoreBreakpoint(breakpointData);
-            }
+            RestoreBreakpoint(breakpointData);
         }
     }
 
@@ -547,25 +543,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
             ExecutionBreakpoint);
 
         if (!breakpointData.IsEnabled) {
-            breakpointVm.Disable();
-        }
-    }
-
-    private void RestoreRangeBreakpoint(SerializableUserBreakpointRange rangeData) {
-        string startAddressHex = $"0x{rangeData.Trigger:X}";
-        string endAddressHex = $"0x{rangeData.EndTrigger:X}";
-
-        void onReached() => PauseAndReportAddressRange(startAddressHex, endAddressHex);
-
-        BreakpointRangeViewModel breakpointVm = AddAddressRangeBreakpoint(
-            rangeData.Trigger,
-            rangeData.EndTrigger,
-            rangeData.Type,
-            false,
-            onReached,
-            MemoryRangeBreakpoint);
-
-        if (!rangeData.IsEnabled) {
             breakpointVm.Disable();
         }
     }

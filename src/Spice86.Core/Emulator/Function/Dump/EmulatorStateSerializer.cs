@@ -19,7 +19,7 @@ public class EmulatorStateSerializer {
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
 
-    private const string BreakpointsFileNameFormat = "Breakpoints_{0}.json";
+    private const string BreakpointsFileName = "Breakpoints.json";
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly string _programHash;
 
@@ -68,8 +68,21 @@ public class EmulatorStateSerializer {
     }
 
     private void SaveBreakpoints(string dirPath) {
-        string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
-        SerializeBreakpoints(Path.Join(dirPath, fileName));
+        string fileName = ComputeFileName(dirPath);
+        CreateDirIfNotExist(fileName);
+        SerializeBreakpoints(fileName);
+    }
+
+    private static void CreateDirIfNotExist(string fileName) {
+        string? dir = Path.GetDirectoryName(fileName);
+        if (!string.IsNullOrWhiteSpace(dir) &&
+            !Directory.Exists(dir)) {
+            Directory.CreateDirectory(dir);
+        }
+    }
+
+    private string ComputeFileName(string dirPath) {
+        return Path.Join(dirPath, _programHash.ToString(), BreakpointsFileName);
     }
 
     private void SerializeBreakpoints(string filePath) {
@@ -99,8 +112,8 @@ public class EmulatorStateSerializer {
     }
 
     public SerializableUserBreakpointCollection LoadBreakpoints(string dirPath) {
-        string fileName = string.Format(BreakpointsFileNameFormat, _programHash);
-        return DeserializeBreakpoints(Path.Join(dirPath, fileName));
+        string fileName = ComputeFileName(dirPath);
+        return DeserializeBreakpoints(fileName);
     }
 
     private SerializableUserBreakpointCollection DeserializeBreakpoints(string filePath) {
