@@ -81,7 +81,9 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     protected AddressBreakPoint CreateBreakpointWithAddress(long address) {
-        return new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger);
+        AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger);
+        bp.CanBeSerialized = true;
+        return bp;
     }
 
     [RelayCommand]
