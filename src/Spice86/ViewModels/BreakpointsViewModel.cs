@@ -461,9 +461,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
 
     [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
     private void RemoveAllBreakpoints() {
-        for (int i = 0; i < Breakpoints.Count; i++) {
-            BreakpointViewModel breakpoint = Breakpoints[i];
-            DeleteBreakpoint(breakpoint);
+        while (Breakpoints.Count > 0) {
+            DeleteBreakpoint(Breakpoints[0]);
         }
     }
 
