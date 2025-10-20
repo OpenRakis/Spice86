@@ -187,7 +187,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                     serializableBreakpoint.Trigger, onReached, removeOnTrigger),
             BreakPointType.MACHINE_START => throw new NotSupportedException("Emulator start/stop breakpoints don't need to be serialized"),
             BreakPointType.MACHINE_STOP => throw new NotSupportedException("Machine breakpoint are not serialized"),
-            _ => throw new NotImplementedException("Cannot deserialize unrecognized BreakpointType"),
+            _ => throw new InvalidOperationException("Cannot deserialize unrecognized BreakpointType"),
         };
     }
 }
