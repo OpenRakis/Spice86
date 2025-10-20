@@ -76,13 +76,13 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     private BreakPoint GetOrCreateBreakpoint() {
         _breakPoint ??= CreateBreakpointWithAddress(Address);
-        _breakPoint.CanBeSerialized = true;
+        _breakPoint.IsUserBreakpoint = true;
         return _breakPoint;
     }
 
     protected AddressBreakPoint CreateBreakpointWithAddress(long address) {
         AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger);
-        bp.CanBeSerialized = true;
+        bp.IsUserBreakpoint = true;
         return bp;
     }
 

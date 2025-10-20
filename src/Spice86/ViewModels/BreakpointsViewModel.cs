@@ -400,7 +400,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             new UnconditionalBreakPoint(
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                 (_) => onReached(),
-                removedOnTrigger) { CanBeSerialized = true },
+                removedOnTrigger) { IsUserBreakpoint = true },
             on: true);
     }
 
