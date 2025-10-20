@@ -21,17 +21,19 @@ public partial class BreakpointRangeViewModel : BreakpointViewModel {
         if(!IsEnabled) {
             return;
         }
-        for(long i = Address; i < EndTrigger; i++) {
+        for(long i = Address; i <= EndTrigger; i++) {
             DisableInternal(CreateBreakpointWithAddress(i));
         }
+        OnPropertyChanged(nameof(IsEnabled));
     }
 
     public override void Enable() {
         if(IsEnabled) {
             return;
         }
-        for (long i = Address; i < EndTrigger; i++) {
+        for (long i = Address; i <= EndTrigger; i++) {
             EnableInternal(CreateBreakpointWithAddress(i));
         }
+        OnPropertyChanged(nameof(IsEnabled));
     }
 }
