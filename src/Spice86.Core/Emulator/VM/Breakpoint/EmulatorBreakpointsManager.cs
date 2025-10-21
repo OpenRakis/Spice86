@@ -225,7 +225,9 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE or
             BreakPointType.IO_ACCESS or BreakPointType.IO_READ or BreakPointType.IO_WRITE
                 => new AddressBreakPoint(serializableBreakpoint.Type,
-                    serializableBreakpoint.Trigger, onReached, removeOnTrigger),
+                    serializableBreakpoint.Trigger, onReached, removeOnTrigger) {
+                    IsEnabled = serializableBreakpoint.IsEnabled,
+                },
             BreakPointType.MACHINE_START => throw new NotSupportedException("Emulator start/stop breakpoints don't need to be serialized"),
             BreakPointType.MACHINE_STOP => throw new NotSupportedException("Machine breakpoint are not serialized"),
             _ => throw new InvalidOperationException("Cannot deserialize unrecognized BreakpointType"),
