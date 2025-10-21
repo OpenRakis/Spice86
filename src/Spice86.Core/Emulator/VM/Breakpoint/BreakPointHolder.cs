@@ -15,13 +15,12 @@ public class BreakPointHolder {
     /// </summary>
     public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
 
-    /// <summary>
-    /// Gets all the breakpoints in the holder.
-    /// </summary>
-    public IEnumerable<BreakPoint> Breakpoints => _addressBreakPoints.Values
+    private IEnumerable<BreakPoint> GetAllBreakpoints() {
+        return _addressBreakPoints.Values
         .SelectMany(list => list).Concat(_unconditionalBreakPoints);
+    }
 
-    internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => Breakpoints.Where
+    internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => GetAllBreakpoints().Where
         (x => x.IsUserBreakpoint).OfType<AddressBreakPoint>();
 
     /// <summary>
