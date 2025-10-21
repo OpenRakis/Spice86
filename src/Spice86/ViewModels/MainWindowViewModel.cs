@@ -38,13 +38,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
 
-    private int _targetCyclesPerMs;
+    private int? _targetCyclesPerMs;
 
-    public int TargetCyclesPerMs {
+    public int? TargetCyclesPerMs {
         get => _cyclesLimiter.TargetCpuCyclesPerMs;
         set {
-            if(SetProperty(ref _targetCyclesPerMs, value)) {
-                _cyclesLimiter.TargetCpuCyclesPerMs = value;
+            if (SetProperty(ref _targetCyclesPerMs, value)) {
+                _cyclesLimiter.TargetCpuCyclesPerMs = value ?? 100;
             }
         }
     }
@@ -101,6 +101,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Paused += OnPaused;
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
+        _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
@@ -188,7 +189,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private WriteableBitmap? _bitmap;
 
     internal event Action? InvalidateBitmap;
-
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
