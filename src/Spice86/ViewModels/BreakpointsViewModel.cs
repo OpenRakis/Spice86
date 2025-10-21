@@ -488,7 +488,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         if (breakpoint is null) {
             return;
         }
-        breakpoint.Disable();
+        breakpoint.Delete();
         Breakpoints.Remove(breakpoint);
         BreakpointDeleted?.Invoke(breakpoint);
     }

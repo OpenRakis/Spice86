@@ -237,4 +237,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             _ => throw new InvalidOperationException("Cannot deserialize unrecognized BreakpointType"),
         };
     }
+
+    public void RemoveUserBreakpoint(BreakPoint breakPoint) {
+        ToggleBreakPoint(breakPoint, false);
+    }
 }

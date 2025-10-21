@@ -8,9 +8,9 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class BreakpointViewModel : ViewModelBase {
+    private readonly BreakPoint _breakpoint;
     protected readonly Action _onReached;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    protected readonly BreakPoint _breakPoint;
+    protected readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -34,8 +34,10 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
         Comment = comment;
         Parameter = $"0x{trigger:X2}";
-        _breakPoint = GetOrCreateBreakpoint();
-        _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, _breakPoint.IsEnabled);
+        _breakpoint = GetOrCreateBreakpoint();
+        _breakpoint.IsEnabled = true;
+        _isEnabled = true;
+        _emulatorBreakpointsManager.ToggleBreakPoint(_breakpoint, _breakpoint.IsEnabled);
     }
 
     [ObservableProperty]
@@ -93,12 +95,12 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (IsEnabled) {
             return;
         }
-        EnableInternal(_breakPoint);
+        EnableInternal(_breakpoint);
         OnPropertyChanged(nameof(IsEnabled));
     }
 
     protected void EnableInternal(BreakPoint breakpoint) {
-        breakpoint.IsEnabled = false;
+        breakpoint.IsEnabled = true;
         _isEnabled = true;
     }
 
@@ -112,7 +114,11 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (!IsEnabled) {
             return;
         }
-        DisableInternal(_breakPoint);
+        DisableInternal(_breakpoint);
         OnPropertyChanged(nameof(IsEnabled));
+    }
+
+    internal void Delete() {
+        _emulatorBreakpointsManager.RemoveUserBreakpoint(_breakpoint);
     }
 }
