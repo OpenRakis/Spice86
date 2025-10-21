@@ -146,6 +146,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             serializableBreakpoints.Breakpoints.Add(breakpoint);
         }
     }
+
     private static List<SerializableUserBreakpoint> MergeConsecutiveMemoryBreakpoints(
         IEnumerable<AddressBreakPoint> memoryBreakpoints) {
         List<AddressBreakPoint> sorted = memoryBreakpoints
@@ -159,15 +160,18 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         for (int i = 0; i < sorted.Count; i++) {
             long start = sorted[i].Address;
             long end = start;
+            BreakPointType type = sorted[i].BreakPointType;
 
-            while (i + 1 < sorted.Count && sorted[i + 1].Address == end + 1) {
+            while (i + 1 < sorted.Count && 
+                   sorted[i + 1].Address == end + 1 && 
+                   sorted[i + 1].BreakPointType == type) {
                 end = sorted[++i].Address;
             }
 
             SerializableUserBreakpoint item = new SerializableUserBreakpoint {
                 Trigger = start,
                 EndTrigger = end,
-                Type = sorted[i].BreakPointType,
+                Type = type,
                 IsEnabled = sorted[i].IsEnabled
             };
             result.Add(item);
