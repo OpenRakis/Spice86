@@ -20,6 +20,11 @@ public abstract class BreakPoint {
     }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this breakpoint can be matched and triggered.
+    /// </summary>
+    internal bool IsEnabled { get; set; } = true;
+
+    /// <summary>
     /// The action to take when the breakpoint is reached.
     /// </summary>
     public Action<BreakPoint> OnReached { get; private set; }

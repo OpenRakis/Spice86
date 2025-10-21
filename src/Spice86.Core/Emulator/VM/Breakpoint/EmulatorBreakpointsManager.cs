@@ -164,21 +164,22 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             .GroupBy(x => new { x.GroupKey, x.Breakpoint.BreakPointType })) {
             IOrderedEnumerable<AddressBreakPoint> breakpoints = group.
                 Select(x => x.Breakpoint).OrderBy(x => x.Address);
+            bool isEnabled = breakpoints.All(x => x.IsEnabled);
             long rangeStart = breakpoints.First().Address;
             long rangeEnd = breakpoints.Last().Address;
             BreakPointType type = group.Key.BreakPointType;
 
-            yield return CreateSerializableMemoryBreakpoint(rangeStart, rangeEnd, type);
+            yield return CreateSerializableMemoryBreakpoint(rangeStart, rangeEnd, type, isEnabled);
         }
     }
 
     private static SerializableUserBreakpoint CreateSerializableMemoryBreakpoint(
-        long start, long end, BreakPointType type) {
+        long start, long end, BreakPointType type, bool isEnabled) {
         if (start == end) {
             return new SerializableUserBreakpoint {
                 Trigger = start,
                 Type = type,
-                IsEnabled = true
+                IsEnabled = isEnabled
             };
         }
 
@@ -186,7 +187,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             Trigger = start,
             EndTrigger = end,
             Type = type,
-            IsEnabled = true
+            IsEnabled = isEnabled
         };
     }
 
@@ -205,7 +206,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         return new SerializableUserBreakpoint {
             Trigger = breakpoint.Address,
             Type = breakpoint.BreakPointType,
-            IsEnabled = true
+            IsEnabled = breakpoint.IsEnabled
         };
     }
 
@@ -213,7 +214,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         foreach (SerializableUserBreakpoint serializableBreakpoint in serializableUserBreakpointCollection.Breakpoints) {
             IEnumerable<AddressBreakPoint> breakpoints = FromSerializedBreakpoints(serializableBreakpoint);
             foreach (AddressBreakPoint breakpoint in breakpoints) {
-                ToggleBreakPoint(breakpoint, true);
+                ToggleBreakPoint(breakpoint, serializableBreakpoint.IsEnabled);
             }
         }
     }
