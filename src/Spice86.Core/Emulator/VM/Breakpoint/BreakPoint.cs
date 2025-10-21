@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using Spice86.Shared.Emulator.VM.Breakpoint;
+
 
 /// <summary>
 /// Base class for all breakpoints.
@@ -18,9 +20,19 @@ public abstract class BreakPoint {
     }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this breakpoint can be matched and triggered.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
     /// The action to take when the breakpoint is reached.
     /// </summary>
     public Action<BreakPoint> OnReached { get; private set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this breakpoint must be saved/restored to/from a file.
+    /// </summary>
+    public bool IsUserBreakpoint { get; set; }
 
     /// <summary>
     /// The type of the breakpoint.

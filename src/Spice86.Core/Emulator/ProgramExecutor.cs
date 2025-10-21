@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -102,7 +103,7 @@ public sealed class ProgramExecutor : IDisposable {
     }
 
     private void ToggleStartOrStopBreakpoint(BreakPointType type, string reason) {
-        BreakPoint breakPoint = new UnconditionalBreakPoint(type, (breakpoint) => { _pauseHandler.RequestPause(reason); }, false);
+        BreakPoint breakPoint = new UnconditionalBreakPoint(type, (breakpoint) => { _pauseHandler.RequestPause(reason); }, removeOnTrigger: false);
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 

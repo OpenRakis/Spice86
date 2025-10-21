@@ -5,11 +5,12 @@ using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class BreakpointViewModel : ViewModelBase {
-    private readonly Action _onReached;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private BreakPoint? _breakPoint;
+    private readonly BreakPoint _breakpoint;
+    protected readonly Action _onReached;
+    protected readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -32,8 +33,11 @@ public partial class BreakpointViewModel : ViewModelBase {
             _onReached = onReached;
         }
         Comment = comment;
-        Enable();
         Parameter = $"0x{trigger:X2}";
+        _breakpoint = GetOrCreateBreakpoint();
+        _breakpoint.IsEnabled = true;
+        _isEnabled = true;
+        _emulatorBreakpointsManager.ToggleBreakPoint(_breakpoint, _breakpoint.IsEnabled);
     }
 
     [ObservableProperty]
@@ -75,31 +79,46 @@ public partial class BreakpointViewModel : ViewModelBase {
     private string? _comment;
 
     private BreakPoint GetOrCreateBreakpoint() {
-        _breakPoint ??= new AddressBreakPoint(Type,
-            Address, (_) => _onReached(),
-            IsRemovedOnTrigger);
-        return _breakPoint;
+        AddressBreakPoint breakPoint = CreateBreakpointWithAddress(Address);
+        breakPoint.IsUserBreakpoint = true;
+        return breakPoint;
+    }
+
+    protected AddressBreakPoint CreateBreakpointWithAddress(long address) {
+        AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger);
+        bp.IsUserBreakpoint = true;
+        return bp;
     }
 
     [RelayCommand]
-    public void Enable() {
+    public virtual void Enable() {
         if (IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
-            on: true);
-        _isEnabled = true;
+        EnableInternal(_breakpoint);
         OnPropertyChanged(nameof(IsEnabled));
     }
 
+    protected void EnableInternal(BreakPoint breakpoint) {
+        breakpoint.IsEnabled = true;
+        _isEnabled = true;
+    }
+
+    protected void DisableInternal(BreakPoint breakpoint) {
+        breakpoint.IsEnabled = false;
+        _isEnabled = false;
+    }
+
     [RelayCommand]
-    public void Disable() {
+    public virtual void Disable() {
         if (!IsEnabled) {
             return;
         }
-        _emulatorBreakpointsManager.ToggleBreakPoint(GetOrCreateBreakpoint(),
-            on: false);
-        _isEnabled = false;
+        DisableInternal(_breakpoint);
         OnPropertyChanged(nameof(IsEnabled));
+    }
+
+    internal void Delete() {
+        _emulatorBreakpointsManager.RemoveUserBreakpoint(_breakpoint);
     }
 }

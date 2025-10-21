@@ -5,8 +5,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Iced.Intel;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.ViewModels.TextPresentation;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 

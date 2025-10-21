@@ -9,13 +9,17 @@ using CommunityToolkit.Mvvm.Messaging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.ViewModels.Messages;
+using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
 public partial class BreakpointsViewModel : ViewModelBase {
+    private const string ExecutionBreakpoint = "Execution breakpoint";
+    private const string MemoryRangeBreakpoint = "Memory range breakpoint";
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -232,8 +236,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 false,
                 () => {
                     PauseAndReportAddress(
-               ExecutionAddressValue);
-                }, "Execution breakpoint");
+                    ExecutionAddressValue);
+                }, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
             if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
@@ -292,7 +296,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             false,
             () => {
                 PauseAndReportAddress(MemoryBreakpointStartAddress);
-            }, "Memory breakpoint");
+            }, MemoryRangeBreakpoint);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -304,7 +308,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
             false,
             () => {
                 PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
-            }, "Memory breakpoint");
+            }, MemoryRangeBreakpoint);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -396,12 +400,14 @@ public partial class BreakpointsViewModel : ViewModelBase {
             new UnconditionalBreakPoint(
                 BreakPointType.CPU_EXECUTION_ADDRESS,
                 (_) => onReached(),
-                removedOnTrigger), on: true);
+                removedOnTrigger) { IsUserBreakpoint = true },
+            on: true);
     }
 
     private void AddBreakpointInternal<T>(T breakpointViewModel) where T : BreakpointViewModel {
         Breakpoints.Add(breakpointViewModel);
         SelectedBreakpoint = breakpointViewModel;
+        breakpointViewModel.Enable();
         BreakpointCreated?.Invoke(breakpointViewModel);
     }
 
@@ -451,6 +457,29 @@ public partial class BreakpointsViewModel : ViewModelBase {
         DeleteBreakpoint(SelectedBreakpoint);
     }
 
+    private bool AllBreakpointsCommandCanExecute() => Breakpoints.Any();
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void RemoveAllBreakpoints() {
+        while (Breakpoints.Count > 0) {
+            DeleteBreakpoint(Breakpoints[0]);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void DisableAllBreakpoints() {
+        foreach (BreakpointViewModel breakpoint in Breakpoints) {
+            breakpoint.Disable();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(AllBreakpointsCommandCanExecute))]
+    private void EnableAllBreakpoints() {
+        foreach (BreakpointViewModel breakpoint in Breakpoints) {
+            breakpoint.Enable();
+        }
+    }
+
     public void RemoveBreakpointInternal(BreakpointViewModel vm) {
         DeleteBreakpoint(vm);
     }
@@ -459,7 +488,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         if (breakpoint is null) {
             return;
         }
-        breakpoint.Disable();
+        breakpoint.Delete();
         Breakpoints.Remove(breakpoint);
         BreakpointDeleted?.Invoke(breakpoint);
     }
@@ -469,5 +498,52 @@ public partial class BreakpointsViewModel : ViewModelBase {
     /// <returns>An enumerable collection of breakpoints that are of type CPU_EXECUTION_ADDRESS and match the specified address.</returns>
     public IEnumerable<BreakpointViewModel> GetExecutionBreakPointsAtAddress(uint addressLinear) {
         return Breakpoints.Where(bp => bp.Address == addressLinear && bp.Type == BreakPointType.CPU_EXECUTION_ADDRESS);
+    }
+
+    public void RestoreBreakpoints(SerializableUserBreakpointCollection breakpointsData) {
+        if (breakpointsData?.Breakpoints == null || breakpointsData.Breakpoints.Count == 0) {
+            return;
+        }
+
+        foreach (SerializableUserBreakpoint breakpointData in breakpointsData.Breakpoints) {
+            RestoreBreakpoint(breakpointData);
+        }
+    }
+
+    private void RestoreBreakpoint(SerializableUserBreakpoint breakpointData) {
+        Action onReached = () => { };
+
+        switch (breakpointData.Type) {
+            case BreakPointType.CPU_EXECUTION_ADDRESS:
+                onReached = () => PauseAndReportAddress($"0x{breakpointData.Trigger:X}");
+                break;
+            case BreakPointType.CPU_CYCLES:
+                onReached = () => PauseAndReportCycles(breakpointData.Trigger);
+                break;
+            case BreakPointType.CPU_INTERRUPT:
+                onReached = () => PauseAndReportInterrupt((uint)breakpointData.Trigger);
+                break;
+            case BreakPointType.IO_ACCESS:
+            case BreakPointType.IO_READ:
+            case BreakPointType.IO_WRITE:
+                onReached = () => PauseAndReportIoPort((ushort)breakpointData.Trigger);
+                break;
+            case BreakPointType.MEMORY_ACCESS:
+            case BreakPointType.MEMORY_READ:
+            case BreakPointType.MEMORY_WRITE:
+                onReached = () => PauseAndReportAddress($"0x{breakpointData.Trigger:X}");
+                break;
+        }
+
+        BreakpointViewModel breakpointVm = AddAddressBreakpoint(
+            breakpointData.Trigger,
+            breakpointData.Type,
+            false,
+            onReached,
+            ExecutionBreakpoint);
+
+        if (!breakpointData.IsEnabled) {
+            breakpointVm.Disable();
+        }
     }
 }

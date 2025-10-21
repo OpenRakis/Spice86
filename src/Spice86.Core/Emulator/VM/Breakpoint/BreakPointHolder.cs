@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
+using System.Linq;
+
 /// <summary>
 /// Holds breakpoints and triggers them when certain conditions are met.
 /// </summary>
@@ -12,6 +14,14 @@ public class BreakPointHolder {
     /// Gets a value indicating whether this BreakPointHolder is empty.
     /// </summary>
     public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
+
+    private IEnumerable<BreakPoint> GetAllBreakpoints() {
+        return _addressBreakPoints.Values
+        .SelectMany(list => list).Concat(_unconditionalBreakPoints);
+    }
+
+    internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => GetAllBreakpoints().Where
+        (x => x.IsUserBreakpoint).OfType<AddressBreakPoint>();
 
     /// <summary>
     /// Toggles the specified breakpoint on or off.
@@ -92,16 +102,5 @@ public class BreakPointHolder {
         }
 
         return triggered;
-    }
-
-    /// <summary>
-    /// Triggers all breakpoints that match the specified address range.
-    /// </summary>
-    /// <param name="startAddress">The start address of the range.</param>
-    /// <param name="endAddress">The end address of the range. Not included in range.</param>
-    public void TriggerBreakPointsWithAddressRange(long startAddress, long endAddress) {
-        for (long address = startAddress; address < endAddress; address++) {
-            TriggerMatchingBreakPoints(address);
-        }
     }
 }
