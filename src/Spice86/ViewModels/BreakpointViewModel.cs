@@ -10,7 +10,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 public partial class BreakpointViewModel : ViewModelBase {
     protected readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    protected BreakPoint? _breakPoint;
+    protected readonly BreakPoint _breakPoint;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -34,6 +34,8 @@ public partial class BreakpointViewModel : ViewModelBase {
         }
         Comment = comment;
         Parameter = $"0x{trigger:X2}";
+        _breakPoint = GetOrCreateBreakpoint();
+        _emulatorBreakpointsManager.ToggleBreakPoint(_breakPoint, _breakPoint.IsEnabled);
     }
 
     [ObservableProperty]
@@ -75,9 +77,9 @@ public partial class BreakpointViewModel : ViewModelBase {
     private string? _comment;
 
     private BreakPoint GetOrCreateBreakpoint() {
-        _breakPoint ??= CreateBreakpointWithAddress(Address);
-        _breakPoint.IsUserBreakpoint = true;
-        return _breakPoint;
+        AddressBreakPoint breakPoint = CreateBreakpointWithAddress(Address);
+        breakPoint.IsUserBreakpoint = true;
+        return breakPoint;
     }
 
     protected AddressBreakPoint CreateBreakpointWithAddress(long address) {
@@ -91,17 +93,17 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (IsEnabled) {
             return;
         }
-        EnableInternal(GetOrCreateBreakpoint());
+        EnableInternal(_breakPoint);
         OnPropertyChanged(nameof(IsEnabled));
     }
 
     protected void EnableInternal(BreakPoint breakpoint) {
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: true);
+        breakpoint.IsEnabled = false;
         _isEnabled = true;
     }
 
     protected void DisableInternal(BreakPoint breakpoint) {
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakpoint, on: false);
+        breakpoint.IsEnabled = false;
         _isEnabled = false;
     }
 
@@ -110,7 +112,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         if (!IsEnabled) {
             return;
         }
-        DisableInternal(GetOrCreateBreakpoint());
+        DisableInternal(_breakPoint);
         OnPropertyChanged(nameof(IsEnabled));
     }
 }
