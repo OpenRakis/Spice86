@@ -125,7 +125,6 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-
     public SerializableUserBreakpointCollection CreateSerializableBreakpoints() {
         var serializableBreakpoints = new SerializableUserBreakpointCollection();
         AddBreakpointsToCollection(serializableBreakpoints, _executionBreakPoints.SerializableBreakpoints);
@@ -142,53 +141,38 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             return;
         }
 
-        foreach (SerializableUserBreakpoint breakpoint in GroupConsecutiveBreakpoints(
-            memoryReadWriteBreakpoints.SerializableBreakpoints).Distinct()) {
+        foreach (SerializableUserBreakpoint breakpoint in MergeConsecutiveMemoryBreakpoints(
+            memoryReadWriteBreakpoints.SerializableBreakpoints)) {
             serializableBreakpoints.Breakpoints.Add(breakpoint);
         }
     }
-
-    private static IEnumerable<SerializableUserBreakpoint> GroupConsecutiveBreakpoints(
+    private static List<SerializableUserBreakpoint> MergeConsecutiveMemoryBreakpoints(
         IEnumerable<AddressBreakPoint> memoryBreakpoints) {
+        List<AddressBreakPoint> sorted = memoryBreakpoints
+            .GroupBy(bp => bp.Address)
+            .Select(g => g.First())
+            .OrderBy(bp => bp.Address)
+            .ToList();
 
-        if (!memoryBreakpoints.Any()) {
-            yield break;
-        }
+        List<SerializableUserBreakpoint> result = [];
 
-        foreach (var group in memoryBreakpoints
-            .Select((bp, index) => new {
-                Breakpoint = bp,
-                Index = index,
-                GroupKey = bp.Address - index
-            })
-            .GroupBy(x => new { x.GroupKey, x.Breakpoint.BreakPointType })) {
-            IOrderedEnumerable<AddressBreakPoint> breakpoints = group.
-                Select(x => x.Breakpoint).OrderBy(x => x.Address);
-            bool isEnabled = breakpoints.All(x => x.IsEnabled);
-            long rangeStart = breakpoints.First().Address;
-            long rangeEnd = breakpoints.Last().Address;
-            BreakPointType type = group.Key.BreakPointType;
+        for (int i = 0; i < sorted.Count; i++) {
+            long start = sorted[i].Address;
+            long end = start;
 
-            yield return CreateSerializableMemoryBreakpoint(rangeStart, rangeEnd, type, isEnabled);
-        }
-    }
+            while (i + 1 < sorted.Count && sorted[i + 1].Address == end + 1) {
+                end = sorted[++i].Address;
+            }
 
-    private static SerializableUserBreakpoint CreateSerializableMemoryBreakpoint(
-        long start, long end, BreakPointType type, bool isEnabled) {
-        if (start == end) {
-            return new SerializableUserBreakpoint {
+            SerializableUserBreakpoint item = new SerializableUserBreakpoint {
                 Trigger = start,
-                Type = type,
-                IsEnabled = isEnabled
+                EndTrigger = end,
+                Type = sorted[i].BreakPointType,
+                IsEnabled = sorted[i].IsEnabled
             };
+            result.Add(item);
         }
-
-        return new SerializableUserBreakpointRange {
-            Trigger = start,
-            EndTrigger = end,
-            Type = type,
-            IsEnabled = isEnabled
-        };
+        return result;
     }
 
     private static void AddBreakpointsToCollection(SerializableUserBreakpointCollection collection,
@@ -209,7 +193,6 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             IsEnabled = breakpoint.IsEnabled
         };
     }
-
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
         foreach (SerializableUserBreakpoint serializableBreakpoint in serializableUserBreakpointCollection.Breakpoints) {
             IEnumerable<AddressBreakPoint> breakpoints = FromSerializedBreakpoints(serializableBreakpoint);
@@ -223,13 +206,15 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         Action<BreakPoint> onReached = b => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
         bool removeOnTrigger = false;
 
-        if (serializableBreakpoint is SerializableUserBreakpointRange rangeBreakpoint) {
-            for (long i = rangeBreakpoint.Trigger; i < rangeBreakpoint.EndTrigger; i++) {
-                yield return FromSerializable(serializableBreakpoint, onReached, removeOnTrigger);
+        // If it's a range (end != start), expand inclusively; otherwise single
+        if (serializableBreakpoint.EndTrigger != serializableBreakpoint.Trigger) {
+            for (long i = serializableBreakpoint.Trigger; i <= serializableBreakpoint.EndTrigger; i++) {
+                SerializableUserBreakpoint single = serializableBreakpoint with { Trigger = i, EndTrigger = i };
+                yield return FromSerializable(single, onReached, removeOnTrigger);
             }
+        } else {
+            yield return FromSerializable(serializableBreakpoint, onReached, removeOnTrigger);
         }
-
-        yield return FromSerializable(serializableBreakpoint, onReached, removeOnTrigger);
     }
 
     private static AddressBreakPoint FromSerializable(
