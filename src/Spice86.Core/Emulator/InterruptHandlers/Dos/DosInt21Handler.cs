@@ -910,7 +910,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        //TODO: wire this up: _dosProcessManager.LoadAndOrExec...
     }
 
     /// <summary>

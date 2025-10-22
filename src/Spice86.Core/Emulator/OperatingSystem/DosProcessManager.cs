@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -233,6 +234,11 @@ public class DosProcessManager : DosFileLoader {
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
         SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+    }
+
+    internal void LoadAndOrExecute(string programName,
+        DosExecParameterBlock dosExecParameterBlock, DosExecFunction dosExecFunction) {
+        throw new NotImplementedException("INT21H load and/or exec not implemented");
     }
 
     internal void SetupInitialProgram() {
