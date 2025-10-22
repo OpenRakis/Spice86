@@ -31,6 +31,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
+    private readonly ExecutableFileLoader _executableFileLoader;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -68,10 +69,10 @@ public sealed class ProgramExecutor : IDisposable {
             state, functionCatalogue,
             executionDumpFactory,
             emulatorBreakpointsManager, pauseHandler, _loggerService);
-        ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
+        _executableFileLoader = CreateExecutableFileLoader(configuration,
             memory, state, dos);
         if (configuration.InitializeDOS is null) {
-            configuration.InitializeDOS = loader.DosInitializationNeeded;
+            configuration.InitializeDOS = _executableFileLoader.DosInitializationNeeded;
             if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
             }
@@ -80,7 +81,7 @@ public sealed class ProgramExecutor : IDisposable {
         if (screenPresenter is not null) {
             screenPresenter.UserInterfaceInitialized += Run;
         }
-        LoadFileToRun(configuration, loader);
+        LoadFileToRun(configuration, _executableFileLoader);
     }
 
     /// <summary>
@@ -93,6 +94,9 @@ public sealed class ProgramExecutor : IDisposable {
         if (_configuration.Debug) {
             ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START, "Starting the emulated program in paused state.");
             ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP, "Stopping the emulated program in paused state.");
+        }
+        if(_executableFileLoader is DosProcessManager dosProcessManager) {
+            dosProcessManager.SetupInitialProgram();
         }
         _gdbServer?.StartServer();
         _emulationLoop.Run();

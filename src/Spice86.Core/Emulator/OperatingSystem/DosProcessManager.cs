@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -13,6 +14,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System;
 using System.Text;
 
 /// <summary>
@@ -24,6 +26,9 @@ public class DosProcessManager : DosFileLoader {
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
     private readonly DosDriveManager _driveManager;
+    private InitialHostFileAndArgs? _initialHostFileAndArgs = null;
+
+    private record InitialHostFileAndArgs(string HostFilePath, string? Args);
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -81,44 +86,8 @@ public class DosProcessManager : DosFileLoader {
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
-        // TODO: We should be asking DosMemoryManager for a new block for the PSP, program, its
-        // stack, and its requested extra space first. We shouldn't always assume that this is the
-        // first program to be loaded and that we have enough space for it like we do right now.
-        // This will need to be fixed for DOS program load/exec support.
-        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(_pspTracker.InitialPspSegment);
-        ushort pspSegment = MemoryUtils.ToSegment(psp.BaseAddress);
-
-        // Set the PSP's first 2 bytes to INT 20h.
-        psp.Exit[0] = 0xCD;
-        psp.Exit[1] = 0x20;
-
-        psp.NextSegment = DosMemoryManager.LastFreeSegment;
-
-        // Load the command-line arguments into the PSP's command tail.
-        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
-        byte length = commandLineBytes[0];
-        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
-        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
-        psp.DosCommandTail.Command = asciiCommandLine;
-
-        byte[] environmentBlock = CreateEnvironmentBlock(file);
-
-        // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
-        ushort envBlockPointer = (ushort)(pspSegment + 1);
-        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
-
-        // Copy the environment block to memory in a separated segment.
-        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
-            envBlockSegmentAddress.Offset), environmentBlock);
-
-        // Point the PSP's environment segment to the environment block.
-        psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
-
-        // Set the disk transfer area address to the command-line offset in the PSP.
-        _fileManager.SetDiskTransferAreaAddress(
-            pspSegment, DosCommandTail.OffsetInPspSegment);
-
-        return LoadExeOrComFile(file, pspSegment);
+        _initialHostFileAndArgs = new(file, arguments);
+        return File.ReadAllBytes(file);
     }
 
     /// <summary>
@@ -194,7 +163,7 @@ public class DosProcessManager : DosFileLoader {
         SetupCpuForExe(exeFile, programEntryPointSegment, pspSegment);
     }
 
-    private byte[] LoadExeOrComFile(string file, ushort pspSegment) {
+    private void LoadExeOrComFile(string file, ushort pspSegment) {
         byte[] fileBytes = ReadFile(file);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Executable file size: {Size}", fileBytes.Length);
@@ -223,8 +192,6 @@ public class DosProcessManager : DosFileLoader {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Initial CPU State: {CpuState}", _state);
         }
-
-        return fileBytes;
     }
 
     /// <summary>
@@ -266,5 +233,51 @@ public class DosProcessManager : DosFileLoader {
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
         SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
+    }
+
+    internal void SetupInitialProgram() {
+        if(_initialHostFileAndArgs is null) {
+            throw new InvalidOperationException("DOS File loader wasn't initialized. Did you call LoadFile ?");
+        }
+        string? arguments = _initialHostFileAndArgs.Args;
+        string file = _initialHostFileAndArgs.HostFilePath;
+        // TODO: We should be asking DosMemoryManager for a new block for the PSP, program, its
+        // stack, and its requested extra space first. We shouldn't always assume that this is the
+        // first program to be loaded and that we have enough space for it like we do right now.
+        // This will need to be fixed for DOS program load/exec support.
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(_pspTracker.InitialPspSegment);
+        ushort pspSegment = MemoryUtils.ToSegment(psp.BaseAddress);
+
+        // Set the PSP's first 2 bytes to INT 20h.
+        psp.Exit[0] = 0xCD;
+        psp.Exit[1] = 0x20;
+
+        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+
+        // Load the command-line arguments into the PSP's command tail.
+        byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
+        byte length = commandLineBytes[0];
+        string asciiCommandLine = Encoding.ASCII.GetString(commandLineBytes, 1, length);
+        psp.DosCommandTail.Length = (byte)(asciiCommandLine.Length + 1);
+        psp.DosCommandTail.Command = asciiCommandLine;
+
+        byte[] environmentBlock = CreateEnvironmentBlock(file);
+
+        // In the PSP, the Environment Block Segment field (defined at offset 0x2C) is a word, and is a pointer.
+        ushort envBlockPointer = (ushort)(pspSegment + 1);
+        SegmentedAddress envBlockSegmentAddress = new SegmentedAddress(envBlockPointer, 0);
+
+        // Copy the environment block to memory in a separated segment.
+        _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlockSegmentAddress.Segment,
+            envBlockSegmentAddress.Offset), environmentBlock);
+
+        // Point the PSP's environment segment to the environment block.
+        psp.EnvironmentTableSegment = envBlockSegmentAddress.Segment;
+
+        // Set the disk transfer area address to the command-line offset in the PSP.
+        _fileManager.SetDiskTransferAreaAddress(
+            pspSegment, DosCommandTail.OffsetInPspSegment);
+
+        LoadExeOrComFile(file, pspSegment);
     }
 }
