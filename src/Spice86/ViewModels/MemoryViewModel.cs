@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels.Messages;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
@@ -50,12 +51,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (TryParseAddressString(startAddress, _state, out uint? startAddressValue)) {
             StartAddress = ConvertUtils.ToHex32(startAddressValue.Value);
         } else {
-            StartAddress = "0x0";
+            StartAddress = SegmentedAddress.ZERO.ToString();
         }
         if (TryParseAddressString(endAddress, _state, out uint? endAddressValue)) {
-            EndAddress = ConvertUtils.ToHex32(endAddressValue.Value);
+            EndAddress = endAddress;
         } else {
-            EndAddress = ConvertUtils.ToHex32((uint)_memory.Length);
+            EndAddress = new SegmentedAddress(0xFFFF, 0xFFFF).ToString();
         }
         CanCloseTab = canCloseTab;
         TryUpdateHeaderAndMemoryDocument();
@@ -470,8 +471,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             error = "This field is required";
         } else if (!value.StartsWith("0x")) {
             error = "Hex must start with 0x";
-        } else if (value.Length > 2 &&
-            !ConvertUtils.TryParseHexToByteArray(value[2..], out byte[]? _)) {
+        } else if (!IsValidHex(value)) {
             error = "Hex number could not be parsed";
         }
         if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
@@ -502,6 +502,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             if (TryParseAddressString(MemoryEditAddress, _state,
                 out uint? address)) {
                 uint range = (uint)Math.Min(SelectionRange?.ByteLength ?? 0, sizeof(ulong));
+                if (range == 0) {
+                    CancelMemoryEdit();
+                    return;
+                }
                 MemoryEditValue = $"0x{Convert.ToHexString(_memory.ReadRam(range, address.Value))}";
             }
         } catch (Exception e) {
