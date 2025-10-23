@@ -273,7 +273,7 @@
 							<Grid Grid.Column="0"
 								Grid.ColumnSpan="2"
 								Grid.Row="0"
-								RowDefinitions="Auto,Auto"
+								RowDefinitions="Auto,Auto,Auto"
 								ColumnDefinitions="Auto,*">
 								<Label
 									Grid.Row="0"
@@ -283,6 +283,10 @@
 									Grid.Row="1"
 									Grid.Column="0"
 									Content="Breakpoint Range End:" />
+								<Label
+									Grid.Row="2"
+									Grid.Column="0"
+									Content="Breakpoint Value condition:" />
 								<TextBox
 								    Grid.Row="0"
 									Grid.Column="1"
@@ -299,6 +303,17 @@
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
 									Text="{Binding MemoryBreakpointEndAddress 
+										}">
+									<Interaction.Behaviors>
+										<behaviors:UpdateBindingOnEnterBehavior />
+									</Interaction.Behaviors>
+								</TextBox>
+								<TextBox
+									Grid.Row="2"
+									Grid.Column="1"
+									FontFamily="RobotoMonoFont"
+									Watermark="optional"
+									Text="{Binding MemoryBreakpointValueCondition 
 										}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />

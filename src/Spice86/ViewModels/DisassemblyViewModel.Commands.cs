@@ -47,7 +47,7 @@ public partial class DisassemblyViewModel {
             if (_logger.IsEnabled(LogEventLevel.Debug)) {
                 _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
             }
-        }, "Step over breakpoint");
+        }, null, "Step over breakpoint");
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Resuming execution for step over");
