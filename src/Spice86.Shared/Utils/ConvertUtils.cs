@@ -116,6 +116,10 @@ public static partial class ConvertUtils {
     /// <param name="bytes">The byte array representation of the hexadecimal string.</param>
     /// <returns><c>False</c> if the conversion fails, <c>True</c> otherwise</returns>
     public static bool TryParseHexToByteArray(string valueString, [NotNullWhen(true)] out byte[]? bytes) {
+        if (valueString.Length == 1) {
+            // Pad with a 0 to make it 2 bytes
+            valueString = "0" + valueString;
+        }
         byte[] result = new byte[valueString.Length / 2];
         for (int i = 0; i < valueString.Length; i += HexadecimalByteDigitLength) {
             if(i + HexadecimalByteDigitLength > valueString.Length) {

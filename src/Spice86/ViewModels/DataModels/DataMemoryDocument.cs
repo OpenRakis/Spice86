@@ -37,6 +37,9 @@ public sealed class DataMemoryDocument : IBinaryDocument {
     }
 
     public void ReadBytes(ulong offset, Span<byte> buffer) {
+        if (buffer.Length == 0) {
+            return;
+        }
         try {
             Span<byte> memRange = _memory.ReadRam((uint)buffer.Length, (uint)(_startAddress + offset));
             memRange.CopyTo(buffer);
@@ -49,8 +52,8 @@ public sealed class DataMemoryDocument : IBinaryDocument {
         throw new NotSupportedException();
     }
 
-    public void WriteBytes(ulong offset, ReadOnlySpan<byte> buffer) {
-        _memory.WriteRam(buffer.ToArray(), (uint)(_startAddress + offset));
+    public void WriteBytes(ulong address, ReadOnlySpan<byte> buffer) {
+        _memory.WriteRam(buffer.ToArray(), (uint)address);
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System.Collections;
@@ -119,38 +120,51 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         OnErrorsChanged(textBoxBindedPropertyName);
     }
 
-    private static bool TryParseSegmentOrRegister(string value, State state,
-            [NotNullWhen(true)] out ushort? @ushort) {
+    protected static ushort? GetUshortStateProperty(string value, State state) {
         PropertyInfo? property = state.GetType().GetProperty(value.ToUpperInvariant());
         if (property != null &&
             property.PropertyType == typeof(ushort) &&
             property.GetValue(state) is ushort propertyValue) {
-            @ushort = propertyValue;
-            return true;
-        } else if (value.Length == 4 &&
-            ushort.TryParse(value, NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out ushort result)) {
-            @ushort = result;
-            return true;
+            return propertyValue;
         }
 
-        @ushort = null;
-        return false;
+        return null;
     }
 
-    [GeneratedRegex(@"^([0-9A-Fa-f]{4}|[a-zA-Z]{2}):([0-9A-Fa-f]{4}|[a-zA-Z]{2})$")]
+    private static ushort? TryParseSegmentOrRegister(string value, State state) {
+        // Try a property of the CPU state first (there is no collision with hex values)
+        ushort? res = GetUshortStateProperty(value, state);
+        if (res != null) {
+            return res;
+        }
+        // Try to parse hex value
+        if (ushort.TryParse(value, NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out ushort result)) {
+            return result;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A000:0000 is valid
+    /// DS:SI is valid
+    /// </summary>
+    /// <returns></returns>
+    [GeneratedRegex(@"^([0-9A-Fa-f]{1,4}|[a-zA-Z]{2}):([0-9A-Fa-f]{1,4}|[a-zA-Z]{2})$")]
     private static partial Regex SegmentedAddressRegex();
 
-    [GeneratedRegex(@"^0x[0-9A-Fa-f]{1,8}$")]
-    protected static partial Regex HexAddressRegex();
+    [GeneratedRegex(@"^0x[0-9A-Fa-f]+$")]
+    protected static partial Regex HexUintRegex();
 
     protected static bool TryValidateAddress(string? value, State state, out string message) {
         if (string.IsNullOrWhiteSpace(value)) {
             message = "Address is required";
             return false;
         }
-        if (!HexAddressRegex().IsMatch(value) &&
-            !SegmentedAddressRegex().IsMatch(value)) {
+        if (!IsValidHex(value) &&
+            !SegmentedAddressRegex().IsMatch(value) && 
+            GetUshortStateProperty(value, state) == null) {
             message = "Invalid address format";
             return false;
         }
@@ -197,34 +211,52 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             address = null;
             return false;
         }
-        Match segmentedMatch = SegmentedAddressRegex()
-            .Match(value);
-        if (HexAddressRegex().Match(value) is Match hexMatch) {
-            string hexValue = hexMatch.Value;
-            if (hexValue.StartsWith("0x") && hexValue.Length > 2) {
-                hexValue = hexValue[2..];
-            }
-            if (uint.TryParse(hexValue, NumberStyles.HexNumber,
-                CultureInfo.InvariantCulture, out uint hexAddress)) {
-                address = hexAddress;
-                return true;
-            }
-        }
-        if (segmentedMatch.Success &&
-            TryParseSegmentOrRegister(
-                segmentedMatch.Groups[1].Value,
-                state,
-                out ushort? segment)
-            &&
-            TryParseSegmentOrRegister(
-                segmentedMatch.Groups[2].Value,
-                state,
-                out ushort? offset)) {
-            address = MemoryUtils.ToPhysicalAddress(segment.Value,
-                offset.Value);
+
+        address = ParseSegmentedAddress(value, state)?.Linear;
+        if (address != null) {
             return true;
         }
-        address = null;
-        return false;
+        
+        address = ParseHex(value);
+        return address != null;
+    }
+
+    protected static SegmentedAddress? ParseSegmentedAddress(string value, State state) {
+        Match segmentedMatch = SegmentedAddressRegex()
+            .Match(value);
+        if (segmentedMatch.Success) {
+            ushort? segment = TryParseSegmentOrRegister(
+                segmentedMatch.Groups[1].Value,
+                state);
+            ushort? offset = TryParseSegmentOrRegister(
+                segmentedMatch.Groups[2].Value,
+                state);
+            if (segment != null && offset != null) {
+                return new(segment.Value, offset.Value);
+            }
+        }
+
+        return null;
+    }
+
+    protected static bool IsValidHex(string value) {
+       return HexUintRegex().Match(value).Success;
+    }
+
+    protected static uint? ParseHex(string value) {
+        if (!IsValidHex(value)) {
+            return null;
+        }
+
+        string hexValue = value;
+        if (hexValue.StartsWith("0x") && hexValue.Length is > 2 and <= 10) {
+            hexValue = hexValue[2..];
+        }
+        if (uint.TryParse(hexValue, NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture, out uint res)) {
+            return res;
+        }
+
+        return null;
     }
 }
