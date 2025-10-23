@@ -97,7 +97,7 @@
 		<StackPanel IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
 			<Label Focusable="False" VerticalAlignment="Center" Content="Cycles/ms:" />
 			<Button Margin="10,0,5,0" HotKey="Ctrl+F11" Focusable="False" IsEnabled="{Binding !IsPaused}" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
-			<NumericUpDown Focusable="False" FormatString="0" Minimum="100" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs}" Maximum="60000" />
+			<NumericUpDown Focusable="False" FormatString="0" IsReadOnly="True" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs, FallbackValue=1}" Minimum="100" Maximum="60000" />
 			<Button Margin="5,0,10,0" HotKey="Ctrl+F12" Focusable="False" IsEnabled="{Binding !IsPaused}" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
 			<Button Focusable="False" Command="{Binding PauseCommand}" Margin="5,0,5,0" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
 				<fluent:SymbolIcon Symbol="Pause" />
