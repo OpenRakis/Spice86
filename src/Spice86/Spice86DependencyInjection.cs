@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
+using Spice86.ViewModels.Messages;
 
 using Serilog.Events;
 
@@ -539,6 +540,11 @@ public class Spice86DependencyInjection : IDisposable {
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
+
+            messenger.Register<CreateMemoryBitmapViewModelMessage>(this, (_, m) => {
+                var vm = new MemoryBitmapViewModel(videoState, hostStorageProvider);
+                m.SetInstance(vm);
+            });
 
             MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,

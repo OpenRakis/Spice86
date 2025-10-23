@@ -614,4 +614,107 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             IsEditingMemory = false;
         }
     }
+
+    [ObservableProperty]
+    private bool _isViewingAsBitmap;
+
+    [ObservableProperty]
+    private string? _bitmapViewStartAddress;
+
+    [ObservableProperty]
+    private string? _bitmapViewEndAddress;
+
+    [ObservableProperty]
+    private int _bitmapViewWidth = 320;
+
+    [ObservableProperty]
+    private int _bitmapViewHeight = 200;
+
+    [ObservableProperty]
+    private bool _isMemoryBitmapViewerOpen;
+
+    [ObservableProperty]
+    private MemoryBitmapViewModel? _memoryBitmap;
+
+    [RelayCommand]
+    private void OpenViewAsBitmapDialog() {
+        BitmapViewWidth = 320;
+        BitmapViewHeight = 200;
+
+        // Use selection if available; otherwise use the current range
+        BitmapViewStartAddress = SelectionRangeStartAddress ?? StartAddress;
+        BitmapViewEndAddress = SelectionRangeEndAddress ?? EndAddress;
+        IsViewingAsBitmap = true;
+    }
+
+    [RelayCommand]
+    private void CancelViewAsBitmap() {
+        IsViewingAsBitmap = false;
+    }
+
+    private Action? _memBitmapUpdateOnPause = null;
+
+    [RelayCommand]
+    private void ConfirmViewAsBitmap() {
+        if (BitmapViewWidth <= 0 || BitmapViewHeight <= 0) {
+            ShowError(new ArgumentOutOfRangeException($"Invalid bitmap size: {BitmapViewWidth}x{BitmapViewHeight}"));
+            return;
+        }
+        if (!TryParseAddressString(BitmapViewStartAddress, _state, out uint? startAddress)) {
+            ShowError(new ArgumentOutOfRangeException($"Invalid start address: {BitmapViewStartAddress}"));
+            return;
+        }
+
+        uint bytesToRead = (uint)(BitmapViewWidth * BitmapViewHeight);
+        uint endAddress;
+        if (TryParseAddressString(BitmapViewEndAddress, _state, out uint? endAddressParsed)) {
+            // Respect the provided end address and clamp the read length accordingly
+            if (!GetIsMemoryRangeValid(startAddress, endAddressParsed, 0)) {
+                ShowError(new ArgumentOutOfRangeException($"Invalid address range: {BitmapViewStartAddress} - {BitmapViewEndAddress}"));
+                return;
+            }
+            uint available = endAddressParsed.Value - startAddress.Value + 1;
+            bytesToRead = Math.Min(bytesToRead, available);
+            endAddress = endAddressParsed.Value;
+        } else {
+            // Else, compute end from length
+            endAddress = startAddress.Value + bytesToRead - 1;
+            if (!GetIsMemoryRangeValid(startAddress, endAddress, 0)) {
+                ShowError(new ArgumentOutOfRangeException($"Computed address range out of bounds:" +
+                    $" {ConvertUtils.ToHex32(startAddress.Value)} - {ConvertUtils.ToHex32(endAddress)}"));
+                return;
+            }
+        }
+
+        byte[] bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
+
+        MemoryBitmapViewModel? vm = null;
+        _messenger.Send(new CreateMemoryBitmapViewModelMessage(m => vm = m));
+        if (vm is null) {
+            ShowError(new InvalidOperationException("No MemoryBitmapViewModel provider is registered."));
+            return;
+        }
+
+        vm.WidthPixels = BitmapViewWidth;
+        vm.Data = bytes;
+        MemoryBitmap = vm;
+        _memBitmapUpdateOnPause = () => {
+            bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
+            vm.Data = bytes;
+        };
+        _pauseHandler.Paused += _memBitmapUpdateOnPause;
+
+        // Close param dialog, open viewer
+        IsViewingAsBitmap = false;
+        IsMemoryBitmapViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseMemoryBitmapViewer() {
+        IsMemoryBitmapViewerOpen = false;
+        if (_memBitmapUpdateOnPause != null) {
+            _pauseHandler.Paused -= _memBitmapUpdateOnPause;
+        }
+        MemoryBitmap = null;
+    }
 }
