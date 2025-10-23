@@ -1,16 +1,16 @@
-﻿F000:0000 mov BX,0xF100
+F000:0000 mov BX,0xF100
 F000:0003 mov ES,BX
-F000:0005 mov SI,word ptr ES:[0]
+F000:0005 mov BX,word ptr ES:[0]
 F000:000A mov AX,word ptr ES:[2]
 F000:000E mov word ptr DS:[2],AX
 F000:0011 mov SP,2
 F000:0014 push BX
-F000:0016 les SI,word ptr ES:[0]
-F000:001B mov word ptr DS:[4],SI
+F000:0016 les DX,word ptr ES:[0]
+F000:001B mov word ptr DS:[4],DX
 F000:001F mov DX,ES
-F000:0021 mov word ptr DS:[6],SI
+F000:0021 mov word ptr DS:[6],DX
 F000:0025 mov DI,5
-F000:0028 lea BX,BP+DI+0x17
+F000:0028 lea SI,BP+DI+0x17
 F000:002C mov word ptr DS:[8],SI
 F000:0030 mov BX,5
 F000:0033 mov AX,5
@@ -31,12 +31,12 @@ F000:0068 mov word ptr DS:[0x0014],0x1200
 F000:006E mov BX,5
 F000:0071 mov SI,3
 F000:0074 call near word ptr SS:[BX+SI-4]
-F000:1100 mov SI,SI
-F000:1102 mov SP,word ptr SS:[SI]
+F000:1100 mov SI,SP
+F000:1102 mov SI,word ptr SS:[SI]
 F000:1105 mov word ptr DS:[0x000E],SI
 F000:1109 add SI,6
-F000:110C mov DI,DI
-F000:110E mov word ptr SS:[DI],BP
+F000:110C mov DI,SP
+F000:110E mov word ptr SS:[DI],SI
 F000:1111 iret
 F000:1200 mov CX,0xF120
 F000:1203 mov ES,CX
