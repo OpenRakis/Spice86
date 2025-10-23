@@ -32,6 +32,21 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     /// <param name="offset">Where to start in the memory. Default is <c>0</c>.</param>
     public void WriteRam(byte[] array, uint offset = 0);
 
+
+    /// <summary>
+    /// Read a byte from memory without triggering breakpoints
+    /// </summary>
+    /// <param name="address"></param>
+    /// <returns></returns>
+    public byte SneakilyRead(uint address);
+
+    /// <summary>
+    /// Write a byte to memory without triggering breakpoints
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="value"></param>
+    public void SneakilyWrite(uint address, byte value);
+
     /// <summary>
     /// Returns a <see cref="IList{T}"/> that represents the specified range of memory.
     /// The list is backed by memory so no data copy happens and memory breakpoints are triggered as if operations were done on memory.

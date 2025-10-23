@@ -198,6 +198,35 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         }
         OnErrorsChanged(propertyName);
     }
+    
+    protected void ValidateHexProperty(object? value, int length, [CallerMemberName] string? propertyName = null) {
+        if (string.IsNullOrWhiteSpace(propertyName)) {
+            return;
+        }
+
+        string? valueAsString = value as string;
+        if (string.IsNullOrWhiteSpace(valueAsString)) {
+            return;
+        }
+        _validationErrors.Remove(propertyName);
+        if (!IsValidHex(valueAsString)) {
+            _validationErrors[propertyName] = ["Invalid hex value"];
+        } else {
+            string actualHex = valueAsString[2..];
+            int expectedLength;
+            if (actualHex.Length == 1 && length == 1) {
+                // Handles 0x1 instead of forcing user to write 0x01
+                expectedLength = 1;
+            } else {
+                expectedLength = length * 2;
+            }
+
+            if (expectedLength != actualHex.Length) {
+                _validationErrors[propertyName] = ["Invalid length"];
+            }
+        }
+        OnErrorsChanged(propertyName);
+    }
 
     /// <summary>
     /// Tries to parse the address string into a uint address.
@@ -258,5 +287,21 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         }
 
         return null;
+    }
+    
+    protected byte[]? ParseHexAsArray(string? value) {
+        if (value == null) {
+            return null;
+        }
+        if (!IsValidHex(value)) {
+            return null;
+        }
+
+        string stringValue = value;
+        if (stringValue.StartsWith("0x")) {
+            stringValue = stringValue[2..];
+        }
+
+        return ConvertUtils.HexToByteArray(stringValue);
     }
 }
