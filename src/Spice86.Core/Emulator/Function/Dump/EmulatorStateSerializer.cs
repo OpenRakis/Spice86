@@ -43,7 +43,7 @@ public class EmulatorStateSerializer {
     /// Dumps the emulator state to the specified directory.
     /// </summary>
     public void SerializeEmulatorStateToDirectory(string dirPath) {
-        if(!Directory.Exists(dirPath)) {
+        if (!Directory.Exists(dirPath)) {
             Directory.CreateDirectory(dirPath);
         }
         new RecordedDataWriter(
