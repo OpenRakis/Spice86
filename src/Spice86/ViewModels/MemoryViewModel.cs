@@ -287,9 +287,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public async Task CopySelection() {
         if (SelectionRange is not null &&
             TryParseAddressString(StartAddress, _state, out uint? address)) {
-            byte[] memoryBytes = _memory.ReadRam(
-                (uint)(address.Value + SelectionRange.Value.Start.ByteIndex),
-                (uint)SelectionRange.Value.ByteLength);
+            ulong startAddress = address.Value + SelectionRange.Value.Start.ByteIndex;
+            ulong length = SelectionRange.Value.ByteLength;
+            byte[] memoryBytes = _memory.ReadRam((uint)length,(uint)startAddress);
             string hexRepresentation = ConvertUtils.ByteArrayToHexString(memoryBytes);
             await _textClipboard.SetTextAsync($"{hexRepresentation}");
         }

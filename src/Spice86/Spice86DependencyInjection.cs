@@ -319,7 +319,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
               emulatorStateSerializer.LoadBreakpoints(configuration.RecordedDataDirectory);
-        emulatorBreakpointsManager.RestoreBreakpoints(deserializedUserBreakpoints);
       
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
