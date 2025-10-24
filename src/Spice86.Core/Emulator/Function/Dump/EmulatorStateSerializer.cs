@@ -3,9 +3,7 @@ namespace Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -18,11 +16,10 @@ public class EmulatorStateSerializer {
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
+    private readonly Configuration _configuration;
+    private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
 
     private const string BreakpointsFileName = "Breakpoints.json";
-    private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
-    private readonly string _programHash;
-
 
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
@@ -33,20 +30,22 @@ public class EmulatorStateSerializer {
         FunctionCatalogue functionCatalogue,
         ISerializableBreakpointsSource serializableBreakpointsSource,
         ILoggerService loggerService) {
-        
+        _configuration = configuration;
         _state = state;
         _memoryDataExporter = memoryDataExporter;
         _executionDumpFactory = executionDumpFactory;
         _functionCatalogue = functionCatalogue;
         _loggerService = loggerService;
         _serializableBreakpointsSource = serializableBreakpointsSource;
-        _programHash = GetProgramHash(configuration);
     }
 
     /// <summary>
     /// Dumps the emulator state to the specified directory.
     /// </summary>
     public void SerializeEmulatorStateToDirectory(string dirPath) {
+        if(!Directory.Exists(dirPath)) {
+            Directory.CreateDirectory(dirPath);
+        }
         new RecordedDataWriter(
                 _state,
                 _executionDumpFactory,
@@ -58,31 +57,13 @@ public class EmulatorStateSerializer {
         SaveBreakpoints(dirPath);
     }
 
-
-    private string GetProgramHash(Configuration configuration) {
-        ArgumentException.ThrowIfNullOrWhiteSpace(configuration.Exe);
-        if (!File.Exists(configuration.Exe)) {
-            throw new FileNotFoundException(configuration.Exe);
-        }
-        return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(configuration.Exe)));
-    }
-
     private void SaveBreakpoints(string dirPath) {
         string fileName = ComputeFileName(dirPath);
-        CreateDirIfNotExist(fileName);
         SerializeBreakpoints(fileName);
     }
 
-    private static void CreateDirIfNotExist(string fileName) {
-        string? dir = Path.GetDirectoryName(fileName);
-        if (!string.IsNullOrWhiteSpace(dir) &&
-            !Directory.Exists(dir)) {
-            Directory.CreateDirectory(dir);
-        }
-    }
-
     private string ComputeFileName(string dirPath) {
-        return Path.Join(dirPath, _programHash.ToString(), BreakpointsFileName);
+        return Path.Join(dirPath, BreakpointsFileName);
     }
 
     private void SerializeBreakpoints(string filePath) {
@@ -92,7 +73,7 @@ public class EmulatorStateSerializer {
                     _serializableBreakpointsSource.CreateSerializableBreakpoints();
 
                 ProgramSerializableBreakpoints programSerializedBreakpoints = new() {
-                    ProgramHash = _programHash,
+                    ProgramHash = _configuration.ProgramHash,
                     SerializedBreakpoints = serializedBreakpoints
                 };
 
@@ -103,7 +84,7 @@ public class EmulatorStateSerializer {
 
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _loggerService.Information("Saved {Count} breakpoints for program {ProgramHash} to {FilePath}",
-                        serializedBreakpoints.Breakpoints.Count, _programHash, filePath);
+                        serializedBreakpoints.Breakpoints.Count, _configuration.ProgramHash, filePath);
                 }
             }
         } catch (Exception ex) {
@@ -134,17 +115,17 @@ public class EmulatorStateSerializer {
                 return new();
             }
 
-            if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_programHash)) {
+            if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_configuration.ProgramHash)) {
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _loggerService.Error("Breakpoints on disk were for program {LoadedHash} but current program is {CurrentHash}",
-                        programSerializedBreakpoints.ProgramHash, _programHash);
+                        programSerializedBreakpoints.ProgramHash, _configuration.ProgramHash);
                 }
                 return new();
             }
 
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("Loaded {Count} breakpoints for program {ProgramHash}",
-                    programSerializedBreakpoints.SerializedBreakpoints.Breakpoints.Count, _programHash);
+                    programSerializedBreakpoints.SerializedBreakpoints.Breakpoints.Count, _configuration.ProgramHash);
             }
 
             return programSerializedBreakpoints.SerializedBreakpoints;
