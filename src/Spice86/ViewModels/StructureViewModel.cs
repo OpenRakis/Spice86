@@ -142,7 +142,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     partial void OnSelectedStructureChanged(StructType? value) {
         if (value is null) {
             StructureMemory = _originalMemory;
-            if (TryParseAddressString(MemoryAddress, _state, out uint? address)) {
+            if (AddressAndValueParser.TryParseAddressString(MemoryAddress, _state, out uint? address)) {
                 RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
             }
         }
@@ -150,7 +150,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     }
 
     private void OnMemoryAddressChanged(string? value) {
-        if (TryParseAddressString(value, _state, out uint? address)) {
+        if (AddressAndValueParser.TryParseAddressString(value, _state, out uint? address)) {
             RequestScrollToAddress?.Invoke(this, new AddressChangedMessage(address.Value));
         }
         Update();
@@ -175,7 +175,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
         }
 
         // Calculate the offset into the viewed memory.
-        uint offset = IsAddressableMemory && TryParseAddressString(MemoryAddress, _state,
+        uint offset = IsAddressableMemory && AddressAndValueParser.TryParseAddressString(MemoryAddress, _state,
             out uint? address)
             ? address.Value
             : 0;
