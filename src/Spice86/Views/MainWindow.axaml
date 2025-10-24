@@ -31,88 +31,88 @@
 		<vm:MainWindowViewModel />
 	</Design.DataContext>
 	<Grid RowDefinitions="Auto,*,Auto">
-		<Menu Name="Menu" Focusable="False" Grid.Row="0" IsVisible="{Binding !IsDialogVisible}">
-			<MenuItem Header="Debug">
-				<MenuItem HotKey="Ctrl+Alt+F2" ToolTip.Tip="Ctrl+Alt+F2" IsEnabled="{Binding IsEmulatorRunning}">
-					<MenuItem.Header>
-						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="Glance" />
-							<Label Content="Internal Debugger" />
-						</StackPanel>
-					</MenuItem.Header>
-					<Interaction.Behaviors>
-						<b:ShowInternalDebuggerBehavior />
-					</Interaction.Behaviors>
+		<Grid IsTabStop="False" Focusable="False" Grid.ColumnDefinitions="Auto,Auto" Grid.Row="0">
+			<Menu Grid.Column="0" Name="Menu" Focusable="False" IsTabStop="False" IsVisible="{Binding !IsDialogVisible}">
+				<MenuItem Header="Debug">
+					<MenuItem HotKey="Ctrl+Alt+F2" ToolTip.Tip="Ctrl+Alt+F2" IsEnabled="{Binding IsEmulatorRunning}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Glance" />
+								<Label Content="Internal Debugger" />
+							</StackPanel>
+						</MenuItem.Header>
+						<Interaction.Behaviors>
+							<b:ShowInternalDebuggerBehavior />
+						</Interaction.Behaviors>
+					</MenuItem>
+					<MenuItem>
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Info" />
+								<Label Content="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}" />
+							</StackPanel>
+						</MenuItem.Header>
+						<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
+						<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
+						<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
+						<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
+						<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
+						<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
+						<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
+					</MenuItem>
+					<MenuItem
+						HotKey="Ctrl+Alt+D" ToolTip.Tip="Ctrl+Alt+D"
+						IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Document" />
+								<Label Content="Dump emulator state to directory..." />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+					</MenuItem>
+				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
+					<MenuItem>
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<Label Content="Scale" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
+								<NumericUpDown Text="{Binding Scale}" FormatString="0" Minimum="0" Margin="5,0,0,0" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+					<MenuItem>
+						<MenuItem.Header>
+							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+						</MenuItem.Header>
+					</MenuItem>
+					<MenuItem Command="{Binding SaveBitmapCommand}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Image" />
+								<Label Content="Save Bitmap" />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
 				</MenuItem>
-				<MenuItem>
-					<MenuItem.Header>
-						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="Info" />
-							<Label Content="{Binding CurrentLogLevel, StringFormat='Log Level ({0})'}" />
-						</StackPanel>
-					</MenuItem.Header>
-					<MenuItem Header="Silent" Command="{Binding SetLogLevelToSilent}" />
-					<MenuItem Header="Verbose" Command="{Binding SetLogLevelToVerbose}" />
-					<MenuItem Header="Debug" Command="{Binding SetLogLevelToDebug}" />
-					<MenuItem Header="Information" Command="{Binding SetLogLevelToInformation}" />
-					<MenuItem Header="Warning" Command="{Binding SetLogLevelToWarning}" />
-					<MenuItem Header="Error" Command="{Binding SetLogLevelToError}" />
-					<MenuItem Header="Fatal" Command="{Binding SetLogLevelToFatal}" />
-				</MenuItem>
-				<MenuItem
-					HotKey="Ctrl+Alt+D" ToolTip.Tip="Ctrl+Alt+D"
-					IsEnabled="{Binding IsEmulatorRunning}" Command="{Binding DumpEmulatorStateToFileCommand}">
-					<MenuItem.Header>
-						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="Document" />
-							<Label Content="Dump emulator state to directory..." />
-						</StackPanel>
-					</MenuItem.Header>
-				</MenuItem>
-				</MenuItem>
-			<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
-				<MenuItem>
-					<MenuItem.Header>
-						<StackPanel Orientation="Horizontal">
-							<Label Content="Scale" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-							<NumericUpDown Text="{Binding Scale}" FormatString="0" Minimum="0" Margin="5,0,0,0" />
-						</StackPanel>
-					</MenuItem.Header>
-				</MenuItem>
-				<MenuItem>
-					<MenuItem.Header>
-						<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
-					</MenuItem.Header>
-				</MenuItem>
-				<MenuItem Command="{Binding SaveBitmapCommand}">
-					<MenuItem.Header>
-						<StackPanel Orientation="Horizontal">
-							<fluent:SymbolIcon Symbol="Image" />
-							<Label Content="Save Bitmap" />
-						</StackPanel>
-					</MenuItem.Header>
-				</MenuItem>
-			</MenuItem>
-		</Menu>
-		<StackPanel IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
-			<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" VerticalAlignment="Center" Content="Cycles/ms:" />
-			<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="10,0,5,0" HotKey="Ctrl+F11" Focusable="False" IsEnabled="{Binding !IsPaused}" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
-			<NumericUpDown IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" FormatString="0" IsReadOnly="True" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs, FallbackValue=1}" Minimum="100" Maximum="60000" />
-			<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="5,0,10,0" HotKey="Ctrl+F12" Focusable="False" IsEnabled="{Binding !IsPaused}" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
-			<Button Focusable="False" Command="{Binding PauseCommand}" Margin="5,0,5,0" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
-				<fluent:SymbolIcon Symbol="Pause" />
-			</Button>
-			<Button Focusable="False" Command="{Binding PlayCommand}" Margin="5,0,5,0" ToolTip.Tip="Continue (F5)" HotKey="F5" IsVisible="{Binding IsPaused}">
-				<fluent:SymbolIcon Symbol="Play" />
-			</Button>
-			<Label Focusable="False" VerticalAlignment="Center" Content="Time Modifier:" />
-			<NumericUpDown FormatString="0" Focusable="False" Margin="5,0,5,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
-			<Button Focusable="False" Margin="2,0,5,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
-				<fluent:SymbolIcon Symbol="ArrowReset" />
-			</Button>
-		</StackPanel>
-		<ContentPresenter Grid.Row="0" Focusable="False" HorizontalAlignment="Right" VerticalAlignment="Top"
-			Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
+			</Menu>
+			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+				<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Cycles/ms:" />
+				<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="10,0,5,0" HotKey="Ctrl+F11" Focusable="False" IsTabStop="False" IsEnabled="{Binding !IsPaused}" Command="{Binding DecreaseTargetCyclesCommand}" Content="-" />
+				<NumericUpDown IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" FormatString="0" IsReadOnly="True" IsEnabled="{Binding !IsPaused}" Text="{Binding TargetCyclesPerMs, FallbackValue=1}" Minimum="100" Maximum="60000" />
+				<Button IsVisible="{Binding ShowCyclesLimitingUI}" Margin="5,0,10,0" HotKey="Ctrl+F12" Focusable="False" IsTabStop="False" IsEnabled="{Binding !IsPaused}" Command="{Binding IncreaseTargetCyclesCommand}" Content="+" />
+				<Button Focusable="False" IsTabStop="False" Command="{Binding PauseCommand}" Margin="5,0,5,0" ToolTip.Tip="Pause (Ctrl+Shift+F5)" HotKey="Ctrl+Shift+F5" IsVisible="{Binding !IsPaused}">
+					<fluent:SymbolIcon Symbol="Pause" />
+				</Button>
+				<Button Focusable="False" IsTabStop="False" Command="{Binding PlayCommand}" Margin="5,0,5,0" ToolTip.Tip="Continue (F5)" HotKey="F5" IsVisible="{Binding IsPaused}">
+					<fluent:SymbolIcon Symbol="Play" />
+				</Button>
+				<Label Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Time Modifier:" />
+				<NumericUpDown FormatString="0" Focusable="False" IsTabStop="False" Margin="5,0,5,0" Value="{Binding TimeMultiplier, FallbackValue=1}" Minimum="1" />
+				<Button Focusable="False" IsTabStop="False" Margin="2,0,5,0" HotKey="F4" Command="{Binding ResetTimeMultiplierCommand}">
+					<fluent:SymbolIcon Symbol="ArrowReset" />
+				</Button>
+			</StackPanel>
+		</Grid>
 		<Viewbox Grid.Row="1">
 			<LayoutTransformControl>
 				<LayoutTransformControl.RenderTransform>
@@ -129,7 +129,7 @@
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>
-		<controls:StatusBar VerticalAlignment="Bottom" Grid.Row="2">
+		<controls:StatusBar IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding StatusMessage}" />
 			</controls:StatusBarItem>
@@ -145,6 +145,11 @@
 			<Separator />
 			<controls:StatusBarItem>
 				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
+			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">
+				<ContentPresenter
+					Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
 			</controls:StatusBarItem>
 		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
