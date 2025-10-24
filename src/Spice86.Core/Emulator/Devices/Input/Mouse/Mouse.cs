@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
+using System.Diagnostics;
+
 /// <summary>
 ///     Basic implementation of a mouse
 /// </summary>
@@ -48,6 +50,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         _logger = loggerService;
         _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
         Initialize();
+        _dualPic.SetIrqMask(IrqNumber, false);
     }
 
     /// <inheritdoc />
@@ -141,8 +144,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        long timestamp = System.Diagnostics.Stopwatch.GetTimestamp();
-        // Check sample rate to see if we need to send an update yet.
+        long timestamp = Stopwatch.GetTimestamp();
+        // Check the sample rate to see if we need to send an update yet.
         long ticksElapsed = timestamp - _lastUpdateTimestamp;
         if (ticksElapsed < _sampleRateTicks) {
             return;

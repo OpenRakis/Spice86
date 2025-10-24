@@ -104,15 +104,19 @@ public class DosFileManagerTests {
         RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
+        PicPitCpuState picPitCpuState = new(state) {
+            CyclesMax = 1,
+            CyclesLeft = 1
+        };
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
         IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
+        IoSystem ioSystem = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort,
-            configuration.InitializeDOS is false, loggerService);
+        var dualPic = new DualPic(ioSystem, picPitCpuState, loggerService);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -122,22 +126,23 @@ public class DosFileManagerTests {
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
+            dualPic, picPitCpuState, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
         IFunctionHandlerProvider functionHandlerProvider =  cpu;
 
-        // IO devices
-        Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration, state, pauseHandler, loggerService), loggerService, dualPic);
+        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
+        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,
+            configuration.FailOnUnhandledPort);
+        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService);
+        pcSpeaker.AttachPitControl(pitTimer);
 
-        DmaController dmaController =
+        DmaSystem dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaController, dualPic,
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
 
@@ -154,8 +159,8 @@ public class DosFileManagerTests {
             state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
 
         EmulationLoop emulationLoop = new EmulationLoop(configuration,
-            functionHandler, instructionExecutor, state, timer,
-            emulatorBreakpointsManager, dmaController, pauseHandler, loggerService);
+            functionHandler, instructionExecutor, state, picPitCpuState, dualPic,
+            emulatorBreakpointsManager, pauseHandler, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
