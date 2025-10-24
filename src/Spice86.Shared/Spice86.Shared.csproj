@@ -17,4 +17,9 @@
         <PackageReference Include="Serilog.Sinks.Console"/>
         <PackageReference Include="Serilog.Sinks.Debug"/>
     </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>Spice86.Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>
