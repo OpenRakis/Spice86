@@ -15,14 +15,14 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     public ValueNode RmToNode(DataType targetDataType, ModRmContext modRmContext) {
         if (modRmContext.MemoryAddressType == MemoryAddressType.NONE) {
             // then it's a register
-            return RToNode(targetDataType, modRmContext);
+            return new RegisterNode(targetDataType, modRmContext.RegisterMemoryIndex);
         }
 
         return ToMemoryAddressNode(targetDataType, modRmContext);
     }
 
     public ValueNode RToNode(DataType dataType, ModRmContext modRmContext) {
-        return new RegisterNode(dataType, modRmContext.RegisterMemoryIndex);
+        return new RegisterNode(dataType, modRmContext.RegisterIndex);
     }
 
     public ValueNode ToMemoryAddressNode(DataType targetDataType, ModRmContext modRmContext) {

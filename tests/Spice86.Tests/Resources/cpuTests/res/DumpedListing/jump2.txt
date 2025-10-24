@@ -1,4 +1,4 @@
-﻿F000:0000 mov BX,0xF000
+F000:0000 mov BX,0xF000
 F000:0003 mov DS,BX
 F000:0005 mov AX,0x1290
 F000:0008 mov CX,5
@@ -35,5 +35,5 @@ F000:FFF0 mov SP,0x1000
 F000:FFF3 mov SS,SP
 F000:FFF5 call near 0
 F000:FFF8 mov DS,CX
-F000:FFFA mov word ptr DS:[0],SI
+F000:FFFA mov word ptr DS:[0],BX
 F000:FFFE hlt

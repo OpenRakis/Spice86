@@ -1,4 +1,4 @@
-﻿F000:0000 mov CX,0xF000
+F000:0000 mov CX,0xF000
 F000:0003 mov DS,CX
 F000:0005 mov ES,CX
 F000:0007 mov SI,0x1000
@@ -24,7 +24,7 @@ F000:0886 lods AL,byte ptr DS:[SI]
 F000:0887 jmp near AX
 F000:10C2 lods AX,word ptr DS:[SI]
 F000:10C3 jmp near AX
-F000:1300 mov word ptr DS:[DI],BP
+F000:1300 mov word ptr DS:[DI],AX
 F000:1302 mov ES,DX
 F000:1304 scas AX,word ptr ES:[DI]
 F000:1305 je short 0x1350

@@ -1,4 +1,4 @@
-﻿F000:0000 mov AX,0x1000
+F000:0000 mov AX,0x1000
 F000:0003 mov SS,AX
 F000:0005 mov SP,0x1000
 F000:0008 mov CX,0xFEFF
@@ -22,6 +22,6 @@ F000:001D pop BX
 F000:001E mov CX,0
 F000:0021 mov DS,CX
 F000:0023 mov word ptr DS:[0],AX
-F000:0026 mov word ptr DS:[2],SI
+F000:0026 mov word ptr DS:[2],BX
 F000:002A hlt
 F000:FFF0 jmp near 0
