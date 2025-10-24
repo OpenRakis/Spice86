@@ -215,11 +215,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     [ObservableProperty]
-    private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_ACCESS;
+    private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_WRITE;
 
-    public BreakPointType[] MemoryBreakpointTypes => new[] {
-        BreakPointType.MEMORY_ACCESS, BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ
-    };
+    public BreakPointType[] MemoryBreakpointTypes => [
+        BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ, BreakPointType.MEMORY_ACCESS
+    ];
 
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
@@ -240,12 +240,13 @@ public partial class BreakpointsViewModel : ViewModelBase {
             if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
                 AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
                 CreateMemoryBreakpointAtAddress(memorystartAddress.Value,
-                    memoryEndAddress.Value, null);
+                    memoryEndAddress.Value, SelectedMemoryBreakpointType, null);
             } else if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state,
                 out uint? memoryStartAddressAlone)) {
                 CreateMemoryBreakpointAtAddress(
                     memoryStartAddressAlone.Value,
                     memoryStartAddressAlone.Value,
+                    SelectedMemoryBreakpointType,
                     null);
             }
         } else if (IsCyclesBreakpointSelected) {
@@ -289,11 +290,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
         CreatingBreakpoint = false;
     }
 
-    internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, Func<long, bool>? additionalTriggerCondition) {
+    internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, BreakPointType type, Func<long, bool>? additionalTriggerCondition) {
         BreakpointViewModel breakpointVm = AddAddressRangeBreakpoint(
             startAddress,
             endAddress,
-            SelectedMemoryBreakpointType,
+            type,
             false,
             () => {
                 PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
