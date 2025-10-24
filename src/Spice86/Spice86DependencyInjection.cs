@@ -282,6 +282,8 @@ public class Spice86DependencyInjection : IDisposable {
 
         DosTables dosTables = new();
 
+        SharedMouseData sharedMouseData = new();
+
         if (configuration.Xms is not false) {
             xms = new(memory, state, a20Gate, memoryAsmWriter, dosTables, loggerService);
         }
@@ -351,7 +353,7 @@ public class Spice86DependencyInjection : IDisposable {
                 _ => new HeadlessModeExceptionHandler(uiDispatcher)
             };
 
-            mainWindowViewModel = new MainWindowViewModel(
+            mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel, exceptionHandler, emulationLoop);
             _gui = mainWindowViewModel;
@@ -371,9 +373,9 @@ public class Spice86DependencyInjection : IDisposable {
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
             functionHandlerProvider, stack, state, dualPic, keyboard,
             biosKeyboardBuffer, loggerService);
-        Mouse mouse = new(state, dualPic, _gui,
+        Mouse mouse = new(state, sharedMouseData, dualPic, _gui,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, memory, mouse, _gui,
+        MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse, _gui,
             vgaFunctionality, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new(

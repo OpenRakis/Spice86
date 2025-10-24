@@ -25,7 +25,9 @@ public class MouseInt33Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger</param>
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
-    public MouseInt33Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService, IMouseDriver mouseDriver)
+    public MouseInt33Handler(IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        ILoggerService loggerService, IMouseDriver mouseDriver)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
@@ -130,7 +132,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
     public void GetMousePositionAndStatus() {
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetMousePositionAndStatus), status);
@@ -164,7 +166,7 @@ public class MouseInt33Handler : InterruptHandler {
             ReturnNothingInCpuRegisters();
             return;
         }
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonsReleaseCount(button);
         State.CX = (ushort)_mouseDriver.GetLastReleasedX(button);
@@ -209,7 +211,7 @@ public class MouseInt33Handler : InterruptHandler {
             return;
         }
 
-        MouseStatus status = _mouseDriver.GetCurrentMouseStatus();
+        MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         State.AX = (ushort)status.ButtonFlags;
         State.BX = (ushort)_mouseDriver.GetButtonPressCount(button);
         State.CX = (ushort)_mouseDriver.GetLastPressedX(button);

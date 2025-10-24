@@ -40,6 +40,7 @@ public class MouseDriver : IMouseDriver {
     private readonly ILoggerService _logger;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
+    private readonly SharedMouseData _sharedMouseData;
 
     private readonly IVgaFunctionality _vgaFunctions;
     private readonly InMemoryAddressSwitcher _userHandlerAddressSwitcher;
@@ -54,13 +55,17 @@ public class MouseDriver : IMouseDriver {
     ///     Create a new instance of the mouse driver.
     /// </summary>
     /// <param name="state">CPU registers. Used to save/restore registers</param>
+    /// <param name="sharedMouseData">Shared properties with the UI for display.</param>
     /// <param name="memory">Memory instance to look into the interrupt vector table</param>
     /// <param name="mouseDevice">The mouse device / hardware</param>
     /// <param name="gui">The gui to show, hide and position mouse cursor</param>
     /// <param name="vgaFunctions">Access to the current resolution</param>
     /// <param name="loggerService">The service used to log messages, such as runtime warnings.</param>
-    public MouseDriver(State state, IIndexable memory, IMouseDevice mouseDevice, IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
+    public MouseDriver(State state, SharedMouseData sharedMouseData,
+        IIndexable memory, IMouseDevice mouseDevice,
+        IGui? gui, IVgaFunctionality vgaFunctions, ILoggerService loggerService) {
         _state = state;
+        _sharedMouseData = sharedMouseData;
         _logger = loggerService;
         _mouseDevice = mouseDevice;
         _gui = gui;
@@ -98,16 +103,16 @@ public class MouseDriver : IMouseDriver {
     }
 
     /// <inheritdoc />
-    public int CurrentMinX { get; set; }
+    public int CurrentMinX { get => _sharedMouseData.CurrentMinX; set => _sharedMouseData.CurrentMinX = value; }
 
     /// <inheritdoc />
-    public int CurrentMaxX { get; set; }
+    public int CurrentMaxX { get => _sharedMouseData.CurrentMaxX; set => _sharedMouseData.CurrentMaxX = value; }
 
     /// <inheritdoc />
-    public int CurrentMaxY { get; set; }
+    public int CurrentMaxY { get => _sharedMouseData.CurrentMaxY; set => _sharedMouseData.CurrentMaxY = value; }
 
     /// <inheritdoc />
-    public int CurrentMinY { get; set; }
+    public int CurrentMinY { get => _sharedMouseData.CurrentMinY; set => _sharedMouseData.CurrentMinY = value; }
 
     /// <inheritdoc />
     public void BeforeUserHandlerExecution() {
@@ -219,11 +224,10 @@ public class MouseDriver : IMouseDriver {
     public MouseType MouseType => _mouseDevice.MouseType;
 
     /// <inheritdoc />
-    public MouseStatus GetCurrentMouseStatus() {
-        int x = LinearInterpolate(_mouseDevice.MouseXRelative, CurrentMinX, CurrentMaxX);
-        int y = LinearInterpolate(_mouseDevice.MouseYRelative, CurrentMinY, CurrentMaxY);
-        ushort buttonFlags = (ushort)((_mouseDevice.IsLeftButtonDown ? 1 : 0) | (_mouseDevice.IsRightButtonDown ? 2 : 0) | (_mouseDevice.IsMiddleButtonDown ? 4 : 0));
-        return new MouseStatus(x, y, buttonFlags);
+    public MouseStatusRecord CurrentMouseStatus {
+        get {
+            return _sharedMouseData.CurrentMouseStatus;
+        }
     }
 
     /// <inheritdoc />
@@ -232,7 +236,6 @@ public class MouseDriver : IMouseDriver {
             out MouseButtonPressCount? position) ? position.LastPressedX : 0;
     }
 
-
     /// <inheritdoc />
     public double GetLastReleasedY(MouseButton button) {
         return _buttonsReleaseCounts.TryGetValue(button,
@@ -240,7 +243,6 @@ public class MouseDriver : IMouseDriver {
             ? position.LastPressedY
             : 0;
     }
-
 
     /// <inheritdoc />
     public int GetButtonsReleaseCount(MouseButton button) {
@@ -348,14 +350,9 @@ public class MouseDriver : IMouseDriver {
         Reset();
     }
 
-    private static int LinearInterpolate(double index, int min, int max) {
-        double clamped = Math.Clamp(index, 0.0, 1.0);
-        return (int)(min + ((max - min) * clamped));
-    }
-
     private void SetRegistersToMouseState() {
         // Set mouse info
-        MouseStatus status = GetCurrentMouseStatus();
+        MouseStatusRecord status = CurrentMouseStatus;
         _state.AX = (ushort)_mouseDevice.LastTrigger;
         _state.BX = (ushort)status.ButtonFlags;
         _state.CX = (ushort)status.X;
@@ -365,7 +362,9 @@ public class MouseDriver : IMouseDriver {
     }
 
     private void SaveRegisters() {
-        _savedRegisters = new MouseRegisters(_state.ES, _state.DS, _state.DI, _state.SI, _state.BP, _state.SP, _state.BX, _state.DX, _state.CX, _state.AX);
+        _savedRegisters = new MouseRegisters(_state.ES, _state.DS, _state.DI,
+        _state.SI, _state.BP, _state.SP, _state.BX, _state.DX,
+        _state.CX, _state.AX);
     }
 
     private void RestoreRegisters() {
