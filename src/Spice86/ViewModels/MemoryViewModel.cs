@@ -48,12 +48,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
-        if (TryParseAddressString(startAddress, _state, out uint? startAddressValue)) {
+        if (AddressAndValueParser.TryParseAddressString(startAddress, _state, out uint? startAddressValue)) {
             StartAddress = ConvertUtils.ToHex32(startAddressValue.Value);
         } else {
             StartAddress = SegmentedAddress.ZERO.ToString();
         }
-        if (TryParseAddressString(endAddress, _state, out uint? endAddressValue)) {
+        if (AddressAndValueParser.TryParseAddressString(endAddress, _state, out uint? endAddressValue)) {
             EndAddress = endAddress;
         } else {
             EndAddress = new SegmentedAddress(0xFFFF, 0xFFFF).ToString();
@@ -148,7 +148,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
     private void BeginCreateMemoryBreakpoint() {
         CreatingMemoryBreakpoint = true;
-        if (TryParseAddressString(StartAddress, _state,
+        if (AddressAndValueParser.TryParseAddressString(StartAddress, _state,
             out uint? startAddress) && SelectionRange is not null) {
             uint rangeStart = (uint)(startAddress.Value + SelectionRange.Value.Start.ByteIndex);
             // -1 because when one element is selected, end points to the next element
@@ -203,14 +203,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         ValidateAddressRange(_state, memoryBreakpointStartAddress, memoryBreakpointEndAddress, 0,
             nameof(MemoryBreakpointStartAddress));
         ValidateMemoryAddressIsWithinLimit(_state, memoryBreakpointStartAddress);
-        TryParseAddressString(memoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress);
+        AddressAndValueParser.TryParseAddressString(memoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress);
 
         // Validate end
         ValidateAddressProperty(memoryBreakpointEndAddress, _state, nameof(MemoryBreakpointEndAddress));
         ValidateAddressRange(_state, memoryBreakpointStartAddress, memoryBreakpointEndAddress, 0,
             nameof(MemoryBreakpointEndAddress));
         ValidateMemoryAddressIsWithinLimit(_state, memoryBreakpointEndAddress);
-        TryParseAddressString(memoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress);
+        AddressAndValueParser.TryParseAddressString(memoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress);
 
         // Validate value
         int length = 1;
@@ -260,14 +260,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
     [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {
-        if (!TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress)) {
+        if (!AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress)) {
             CreatingMemoryBreakpoint = false;
             return;
         }
-        byte[]? triggerValueCondition = ParseHexAsArray(MemoryBreakpointValueCondition);
+        byte[]? triggerValueCondition = AddressAndValueParser.ParseHexAsArray(MemoryBreakpointValueCondition);
         Func<long, bool>? condition =
             CreateCheckForBreakpointMemoryValue(triggerValueCondition, breakpointRangeStartAddress.Value);
-        if (TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress) &&
+        if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress) &&
             GetIsMemoryRangeValid(breakpointRangeStartAddress, breakpointRangeEndAddress, 0)) {
             _breakpointsViewModel.CreateMemoryBreakpointAtAddress(
                 breakpointRangeStartAddress.Value, breakpointRangeEndAddress.Value, condition);
@@ -286,7 +286,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand(CanExecute = nameof(IsSelectionRangeValid))]
     public async Task CopySelection() {
         if (SelectionRange is not null &&
-            TryParseAddressString(StartAddress, _state, out uint? address)) {
+            AddressAndValueParser.TryParseAddressString(StartAddress, _state, out uint? address)) {
             ulong startAddress = address.Value + SelectionRange.Value.Start.ByteIndex;
             ulong length = SelectionRange.Value.ByteLength;
             byte[] memoryBytes = _memory.ReadRam((uint)length,(uint)startAddress);
@@ -425,8 +425,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     public void OnSelectionRangeChanged(object? sender, EventArgs e) {
         Selection? selection = (sender as Selection);
         if (selection != null &&
-            TryParseAddressString(StartAddress, _state, out uint? startAddress) &&
-            TryParseAddressString(EndAddress, _state, out uint? endAddress)) {
+            AddressAndValueParser.TryParseAddressString(StartAddress, _state, out uint? startAddress) &&
+            AddressAndValueParser.TryParseAddressString(EndAddress, _state, out uint? endAddress)) {
             SelectionRange = selection.Range;
             SelectionRangeStartAddress = ConvertUtils.ToHex32(
                 (uint)(startAddress.Value + selection.Range.Start.ByteIndex));
@@ -486,8 +486,8 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
     [RelayCommand(CanExecute = nameof(UpdateBinaryDocumentCanExecute))]
     private void UpdateBinaryDocument() {
-        if (!TryParseAddressString(StartAddress, _state, out uint? startAddress) ||
-            !TryParseAddressString(EndAddress, _state, out uint? endAddress) ||
+        if (!AddressAndValueParser.TryParseAddressString(StartAddress, _state, out uint? startAddress) ||
+            !AddressAndValueParser.TryParseAddressString(EndAddress, _state, out uint? endAddress) ||
             !GetIsMemoryRangeValid(startAddress, endAddress, 0)) {
             return;
         }
@@ -537,7 +537,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             error = "This field is required";
         } else if (!value.StartsWith("0x")) {
             error = "Hex must start with 0x";
-        } else if (!IsValidHex(value)) {
+        } else if (!AddressAndValueParser.IsValidHex(value)) {
             error = "Hex number could not be parsed";
         }
         if (!_validationErrors.TryGetValue(nameof(MemoryEditValue), out List<string>? values)) {
@@ -557,15 +557,15 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private void EditMemory() {
         IsEditingMemory = true;
         try {
-            if (TryParseAddressString(StartAddress, _state,
+            if (AddressAndValueParser.TryParseAddressString(StartAddress, _state,
                 out uint? startAddress)) {
-                if (TryParseAddressString(SelectionRangeStartAddress, _state,
+                if (AddressAndValueParser.TryParseAddressString(SelectionRangeStartAddress, _state,
                     out uint? selectionRangeStartAddress)) {
                     startAddress = Math.Max(startAddress.Value, selectionRangeStartAddress.Value);
                 }
                 MemoryEditAddress = ConvertUtils.ToHex32(startAddress.Value);
             }
-            if (TryParseAddressString(MemoryEditAddress, _state,
+            if (AddressAndValueParser.TryParseAddressString(MemoryEditAddress, _state,
                 out uint? address)) {
                 uint range = (uint)Math.Min(SelectionRange?.ByteLength ?? 0, sizeof(ulong));
                 if (range == 0) {
@@ -597,7 +597,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (MemoryEditValue.Length > 2 && MemoryEditValue.StartsWith("0x")) {
             memoryEditValue = MemoryEditValue[2..];
         }
-        if (!TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
+        if (!AddressAndValueParser.TryParseAddressString(MemoryEditAddress, _state, out uint? address) ||
             !GetIsMemoryRangeValid(address, A20Gate.EndOfHighMemoryArea, 0) ||
             !ConvertUtils.TryParseHexToByteArray(memoryEditValue, out byte[]? bytes)) {
             return;

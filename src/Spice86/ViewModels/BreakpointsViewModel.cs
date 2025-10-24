@@ -224,7 +224,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
         if (IsExecutionBreakpointSelected) {
-            if (!TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
+            if (!AddressAndValueParser.TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
             BreakpointViewModel executionVm = AddAddressBreakpoint(
@@ -237,11 +237,11 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            if (TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
-                TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
+            if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) &&
+                AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
                 CreateMemoryBreakpointAtAddress(memorystartAddress.Value,
                     memoryEndAddress.Value, null);
-            } else if (TryParseAddressString(MemoryBreakpointStartAddress, _state,
+            } else if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state,
                 out uint? memoryStartAddressAlone)) {
                 CreateMemoryBreakpointAtAddress(
                     memoryStartAddressAlone.Value,
@@ -262,7 +262,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, "Cycles breakpoint");
             BreakpointCreated?.Invoke(cyclesVm);
         } else if (IsInterruptBreakpointSelected) {
-            if (!TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
+            if (!AddressAndValueParser.TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
                 return;
             }
             BreakpointViewModel interruptVm = AddAddressBreakpoint(
@@ -274,7 +274,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, "Interrupt breakpoint");
             BreakpointCreated?.Invoke(interruptVm);
         } else if (IsIoPortBreakpointSelected) {
-            if (!TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
+            if (!AddressAndValueParser.TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
                 return;
             }
             BreakpointViewModel ioPortVm = AddAddressBreakpoint(

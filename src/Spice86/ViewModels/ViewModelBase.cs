@@ -39,7 +39,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         [CallerMemberName] string? bindedPropertyName = null) {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(
             bindedPropertyName);
-        if (TryParseAddressString(value, state, out uint? address) &&
+        if (AddressAndValueParser.TryParseAddressString(value, state, out uint? address) &&
             !GetIsMemoryRangeValid(address, limit, 0)) {
             if (!_validationErrors.TryGetValue(bindedPropertyName,
                 out List<string>? values)) {
@@ -95,11 +95,11 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         const string StartError = "Invalid start address.";
         const string EndError = "Invalid end address.";
         bool rangeStatus = false;
-        bool statusStart = TryValidateAddress(startAddress, state, out _);
-        bool statusEnd = TryValidateAddress(endAddress, state, out _);
+        bool statusStart = AddressAndValueParser.TryValidateAddress(startAddress, state, out _);
+        bool statusEnd = AddressAndValueParser.TryValidateAddress(endAddress, state, out _);
         if (statusStart && statusEnd) {
-            if (TryParseAddressString(startAddress, state, out uint? start) &&
-                TryParseAddressString(endAddress, state, out uint? end)) {
+            if (AddressAndValueParser.TryParseAddressString(startAddress, state, out uint? start) &&
+                AddressAndValueParser.TryParseAddressString(endAddress, state, out uint? end)) {
                 rangeStatus = GetIsMemoryRangeValid(start, end, minRangeWidth);
             }
         }
@@ -120,63 +120,6 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         OnErrorsChanged(textBoxBindedPropertyName);
     }
 
-    protected static ushort? GetUshortStateProperty(string value, State state) {
-        PropertyInfo? property = state.GetType().GetProperty(value.ToUpperInvariant());
-        if (property != null &&
-            property.PropertyType == typeof(ushort) &&
-            property.GetValue(state) is ushort propertyValue) {
-            return propertyValue;
-        }
-
-        return null;
-    }
-
-    private static ushort? TryParseSegmentOrRegister(string value, State state) {
-        // Try a property of the CPU state first (there is no collision with hex values)
-        ushort? res = GetUshortStateProperty(value, state);
-        if (res != null) {
-            return res;
-        }
-        // Try to parse hex value
-        if (ushort.TryParse(value, NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture, out ushort result)) {
-            return result;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// A000:0000 is valid
-    /// DS:SI is valid
-    /// </summary>
-    /// <returns></returns>
-    [GeneratedRegex(@"^([0-9A-Fa-f]{1,4}|[a-zA-Z]{2}):([0-9A-Fa-f]{1,4}|[a-zA-Z]{2})$")]
-    private static partial Regex SegmentedAddressRegex();
-
-    [GeneratedRegex(@"^0x[0-9A-Fa-f]+$")]
-    protected static partial Regex HexUintRegex();
-
-    protected static bool TryValidateAddress(string? value, State state, out string message) {
-        if (string.IsNullOrWhiteSpace(value)) {
-            message = "Address is required";
-            return false;
-        }
-        if (!IsValidHex(value) &&
-            !SegmentedAddressRegex().IsMatch(value) && 
-            GetUshortStateProperty(value, state) == null) {
-            message = "Invalid address format";
-            return false;
-        }
-
-        if (!TryParseAddressString(value, state, out uint? _)) {
-            message = "Invalid address";
-            return false;
-        }
-
-        message = string.Empty;
-        return true;
-    }
 
     protected void ValidateAddressProperty(object? value, State state, [CallerMemberName]
         string? propertyName = null) {
@@ -184,7 +127,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             return;
         }
 
-        bool status = TryValidateAddress(value as string, state, out string? error);
+        bool status = AddressAndValueParser.TryValidateAddress(value as string, state, out string? error);
         if (!status) {
             if (!_validationErrors.TryGetValue(propertyName,
                 out List<string>? values)) {
@@ -209,7 +152,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             return;
         }
         _validationErrors.Remove(propertyName);
-        if (!IsValidHex(valueAsString)) {
+        if (!AddressAndValueParser.IsValidHex(valueAsString)) {
             _validationErrors[propertyName] = ["Invalid hex value"];
         } else {
             string actualHex = valueAsString[2..];
@@ -226,82 +169,5 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             }
         }
         OnErrorsChanged(propertyName);
-    }
-
-    /// <summary>
-    /// Tries to parse the address string into a uint address.
-    /// </summary>
-    /// <param name="value">The user input.</param>
-    /// <param name="state">The emulated CPU registers and flags.</param>
-    /// <param name="address">The parsed address. <c>null</c> if we return <c>false</c></param>
-    /// <returns>A boolean value indicating success or error, along with the address out variable.</returns>
-    protected static bool TryParseAddressString(string? value, State state, [NotNullWhen(true)] out uint? address) {
-        if (string.IsNullOrWhiteSpace(value)) {
-            address = null;
-            return false;
-        }
-
-        address = ParseSegmentedAddress(value, state)?.Linear;
-        if (address != null) {
-            return true;
-        }
-        
-        address = ParseHex(value);
-        return address != null;
-    }
-
-    protected static SegmentedAddress? ParseSegmentedAddress(string value, State state) {
-        Match segmentedMatch = SegmentedAddressRegex()
-            .Match(value);
-        if (segmentedMatch.Success) {
-            ushort? segment = TryParseSegmentOrRegister(
-                segmentedMatch.Groups[1].Value,
-                state);
-            ushort? offset = TryParseSegmentOrRegister(
-                segmentedMatch.Groups[2].Value,
-                state);
-            if (segment != null && offset != null) {
-                return new(segment.Value, offset.Value);
-            }
-        }
-
-        return null;
-    }
-
-    protected static bool IsValidHex(string value) {
-       return HexUintRegex().Match(value).Success;
-    }
-
-    protected static uint? ParseHex(string value) {
-        if (!IsValidHex(value)) {
-            return null;
-        }
-
-        string hexValue = value;
-        if (hexValue.StartsWith("0x") && hexValue.Length is > 2 and <= 10) {
-            hexValue = hexValue[2..];
-        }
-        if (uint.TryParse(hexValue, NumberStyles.HexNumber,
-                CultureInfo.InvariantCulture, out uint res)) {
-            return res;
-        }
-
-        return null;
-    }
-    
-    protected byte[]? ParseHexAsArray(string? value) {
-        if (value == null) {
-            return null;
-        }
-        if (!IsValidHex(value)) {
-            return null;
-        }
-
-        string stringValue = value;
-        if (stringValue.StartsWith("0x")) {
-            stringValue = stringValue[2..];
-        }
-
-        return ConvertUtils.HexToByteArray(stringValue);
     }
 }
