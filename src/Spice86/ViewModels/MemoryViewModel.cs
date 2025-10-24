@@ -222,9 +222,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     [ObservableProperty]
-    private BreakPointType _selectedBreakpointType = BreakPointType.MEMORY_ACCESS;
+    private BreakPointType _selectedBreakpointType = BreakPointType.MEMORY_WRITE;
 
-    public BreakPointType[] BreakpointTypes => [BreakPointType.MEMORY_ACCESS, BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ];
+    public BreakPointType[] BreakpointTypes => [
+        BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ, BreakPointType.MEMORY_ACCESS
+    ];
 
     private bool ConfirmCreateMemoryBreakpointCanExecute() {
         return
@@ -270,11 +272,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress) &&
             GetIsMemoryRangeValid(breakpointRangeStartAddress, breakpointRangeEndAddress, 0)) {
             _breakpointsViewModel.CreateMemoryBreakpointAtAddress(
-                breakpointRangeStartAddress.Value, breakpointRangeEndAddress.Value, condition);
+                breakpointRangeStartAddress.Value, breakpointRangeEndAddress.Value, SelectedBreakpointType, condition);
         } else {
             _breakpointsViewModel.CreateMemoryBreakpointAtAddress(
                 breakpointRangeStartAddress.Value,
                 breakpointRangeStartAddress.Value,
+                SelectedBreakpointType,
                 condition);
         }
         CreatingMemoryBreakpoint = false;
