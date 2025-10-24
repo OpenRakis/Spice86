@@ -49,10 +49,10 @@ public class LoggerService : ILoggerService {
         LoggerConfiguration configuration = new LoggerConfiguration()
             .Enrich.FromLogContext()
             .Enrich.With(new LoggerPropertyBagEnricher(LoggerPropertyBag))
-            .WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat)
-                .WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat))
-                .WriteTo.Async(conf3 =>
-                    conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day)));
+            .WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat))
+            .WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat))
+            .WriteTo.Async(conf3 =>
+                conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
         return configuration;
     }
 
