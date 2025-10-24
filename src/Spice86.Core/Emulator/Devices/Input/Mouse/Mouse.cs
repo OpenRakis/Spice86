@@ -25,18 +25,24 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private int _sampleRate = 100;
     private long _sampleRateTicks;
     private readonly DualPic _dualPic;
+    private readonly SharedMouseData _sharedMouseData;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="Mouse" /> class.
     /// </summary>
     /// <param name="state">The CPU state.</param>
+    /// <param name="sharedMouseData">The mouse data shared with the UI for display.</param>
     /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
     /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
-    public Mouse(State state, DualPic dualPic, IGui? gui, MouseType mouseType, ILoggerService loggerService, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+    public Mouse(State state, SharedMouseData sharedMouseData,
+        DualPic dualPic, IGui? gui, MouseType mouseType,
+        ILoggerService loggerService, bool failOnUnhandledPort)
+        : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
+        _sharedMouseData = sharedMouseData;
         _dualPic = dualPic;
         MouseType = mouseType;
         _logger = loggerService;
@@ -54,10 +60,10 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public int ButtonCount => 3;
 
     /// <inheritdoc />
-    public double MouseXRelative { get; set; }
+    public double MouseXRelative { get => _sharedMouseData.MouseXRelative; set => _sharedMouseData.MouseXRelative = value; }
 
     /// <inheritdoc />
-    public double MouseYRelative { get; set; }
+    public double MouseYRelative { get => _sharedMouseData.MouseYRelative; set => _sharedMouseData.MouseYRelative = value; }
 
     /// <inheritdoc />
     public MouseEventMask LastTrigger { get; private set; }
@@ -75,13 +81,13 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public MouseType MouseType { get; }
 
     /// <inheritdoc />
-    public bool IsLeftButtonDown { get; private set; }
+    public bool IsLeftButtonDown { get => _sharedMouseData.IsLeftButtonDown; private set => _sharedMouseData.IsLeftButtonDown = value; }
 
     /// <inheritdoc />
-    public bool IsRightButtonDown { get; private set; }
+    public bool IsRightButtonDown { get => _sharedMouseData.IsRightButtonDown; private set => _sharedMouseData.IsRightButtonDown = value; }
 
     /// <inheritdoc />
-    public bool IsMiddleButtonDown { get; private set; }
+    public bool IsMiddleButtonDown { get => _sharedMouseData.IsMiddleButtonDown; private set => _sharedMouseData.IsMiddleButtonDown = value; }
 
     /// <inheritdoc />
     public int DoubleSpeedThreshold { get; set; }

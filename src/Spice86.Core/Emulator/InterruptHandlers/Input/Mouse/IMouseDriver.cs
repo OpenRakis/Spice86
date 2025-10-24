@@ -57,7 +57,7 @@ public interface IMouseDriver : IAssemblyRoutineWriter {
     /// <summary>
     ///     Get the x, y position of the mouse as well as the button flags.
     /// </summary>
-    MouseStatus GetCurrentMouseStatus();
+    MouseStatusRecord CurrentMouseStatus { get; }
 
     /// <summary>
     ///     Process the mouse input.

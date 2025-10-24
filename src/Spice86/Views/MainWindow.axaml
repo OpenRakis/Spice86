@@ -142,6 +142,10 @@
 				<TextBlock Text="{Binding Configuration.GdbPort, StringFormat='GDB port: {0}'}"
 				           IsVisible="{Binding Configuration.GdbPort, Converter={StaticResource NullableToBooleanConverter}}" />
 			</controls:StatusBarItem>
+			<Separator />
+			<controls:StatusBarItem>
+				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />	
+			</controls:StatusBarItem>
 		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"
 		        IsVisible="{Binding IsDialogVisible, FallbackValue=False}">

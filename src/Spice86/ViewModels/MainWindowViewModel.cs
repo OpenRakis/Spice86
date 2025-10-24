@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Keyboard;
@@ -21,6 +22,7 @@ using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
+using IMouseDevice = Core.Emulator.InterruptHandlers.Input.Mouse.IMouseDevice;
 using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
@@ -28,6 +30,7 @@ using Timer = System.Timers.Timer;
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
     IScreenPresenter, IDisposable {
+    private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
@@ -81,13 +84,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
 
-    public MainWindowViewModel(
+    public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
         IHostStorageProvider hostStorageProvider, ITextClipboard textClipboard,
         Configuration configuration, ILoggerService loggerService,
         IPauseHandler pauseHandler, PerformanceViewModel performanceViewModel,
         IExceptionHandler exceptionHandler, ICyclesLimiter cyclesLimiter)
         : base(uiDispatcher, textClipboard) {
+        _sharedMouseData = sharedMouseData;
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
@@ -209,6 +213,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private string _asmOverrideStatus = "ASM Overrides: not used.";
 
     [ObservableProperty]
+    private string _emulatorMouseCursorInfo = "?";
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(PlayCommand))]
     private bool _isPaused;
@@ -244,8 +251,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         MouseX = @event.GetPosition(image).X / image.Source.Size.Width;
         MouseY = @event.GetPosition(image).Y / image.Source.Size.Height;
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
+        UpdateShownEmulatorMouseCursorPosition();
     }
-    
+
     public void SetResolution(int width, int height) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
@@ -267,6 +275,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
                 }
             }
             _isSettingResolution = false;
+            UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
         }, DispatcherPriority.Background);
     }
@@ -457,5 +466,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             _uiDispatcher.Post(() => StatusMessage = "Emulator: stopped.");
             _uiDispatcher.Post(() => AsmOverrideStatus = "");
         }
+    }
+
+    private void UpdateShownEmulatorMouseCursorPosition() {
+        MouseStatusRecord mouseDeviceStatus = _sharedMouseData.CurrentMouseStatus;
+        EmulatorMouseCursorInfo = $"X: {mouseDeviceStatus.X} Y: {mouseDeviceStatus.Y}";
     }
 }
