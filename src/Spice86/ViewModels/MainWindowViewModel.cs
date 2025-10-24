@@ -52,6 +52,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
     }
 
+    [ObservableProperty]
+    private bool _showCyclesLimitingUI;
+
     [RelayCommand]
     private void IncreaseTargetCycles() {
         _cyclesLimiter.IncreaseCycles();
@@ -106,6 +109,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pauseHandler.Resumed += OnResumed;
         TimeMultiplier = Configuration.TimeMultiplier;
         _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
+        ShowCyclesLimitingUI = _cyclesLimiter.TargetCpuCyclesPerMs is not 0;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromSeconds(1.0 / 30.0),
             DispatcherPriority.Background,
             (_, _) => RefreshMainTitleWithInstructionsPerMs());
