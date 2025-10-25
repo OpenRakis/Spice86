@@ -82,6 +82,9 @@ public sealed class ProgramExecutor : IDisposable {
             screenPresenter.UserInterfaceInitialized += Run;
         }
         LoadFileToRun(configuration, _executableFileLoader);
+        if (_executableFileLoader is DosProcessManager dosProcessManager) {
+            dosProcessManager.SetupInitialProgram();
+        }
     }
 
     /// <summary>
@@ -94,9 +97,6 @@ public sealed class ProgramExecutor : IDisposable {
         if (_configuration.Debug) {
             ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START, "Starting the emulated program in paused state.");
             ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP, "Stopping the emulated program in paused state.");
-        }
-        if(_executableFileLoader is DosProcessManager dosProcessManager) {
-            dosProcessManager.SetupInitialProgram();
         }
         _gdbServer?.StartServer();
         _emulationLoop.Run();
