@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Tests.Dos;
+
 using FluentAssertions;
 
 using NSubstitute;
@@ -29,7 +30,7 @@ using Spice86.Shared.Interfaces;
 using Xunit;
 
 public class DosFileManagerTests {
-    private static readonly string MountPoint = Path.GetFullPath(@"Resources\MountPoint");
+    private static readonly string MountPoint = Path.GetFullPath(Path.Combine("Resources", "MountPoint"));
 
     [Theory]
     [InlineData(@"\FoO", "FOO")]
@@ -168,5 +169,38 @@ public class DosFileManagerTests {
             clock, loggerService);
 
         return dos.FileManager;
+    }
+
+    [Fact]
+    public void OpenFile_ComputesDeviceInfoAndSupportsRelativeSeek() {
+        DosFileManager dosFileManager = ArrangeDosFileManager(MountPoint);
+        ushort? handle = null;
+
+        const string fileName = "seektest.bin";
+
+        try {
+            DosFileOperationResult openResult = dosFileManager.OpenFileOrDevice(fileName, FileAccessMode.ReadOnly);
+            openResult.IsError.Should().BeFalse();
+            openResult.Value.Should().NotBeNull();
+            handle = (ushort)openResult.Value!.Value;
+
+            dosFileManager.OpenFiles[handle.Value].Should().BeOfType<DosFile>();
+            var dosFile = (DosFile)dosFileManager.OpenFiles[handle.Value]!;
+            dosFile.DeviceInformation.Should().Be(0x0802);
+            dosFile.CanSeek.Should().BeTrue();
+
+            dosFile.Seek(0x200, SeekOrigin.Begin);
+            dosFile.Position.Should().Be(0x200);
+
+            DosFileOperationResult seekResult =
+                dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Current, handle.Value, -0x1BA);
+            seekResult.IsError.Should().BeFalse();
+            seekResult.Value.Should().Be(0x46);
+            dosFile.Position.Should().Be(0x46);
+        } finally {
+            if (handle is not null) {
+                dosFileManager.CloseFileOrDevice(handle.Value);
+            }
+        }
     }
 }
