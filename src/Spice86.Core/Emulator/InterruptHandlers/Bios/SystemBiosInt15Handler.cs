@@ -53,6 +53,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
+        AddAction(0x83, () => WaitFunction(true));
     }
 
     /// <inheritdoc />
@@ -62,6 +63,28 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = State.AH;
         Run(operation);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=83h - SYSTEM - WAIT (WAIT FUNCTION)
+    /// <para>
+    /// This function allows programs to request a timed delay with optional user callback.
+    /// </para><br/>
+    /// <b>Inputs:</b><br/>
+    /// AH = 83h<br/>
+    /// AL = 00h to set alarm, 01h to cancel alarm<br/>
+    /// CX:DX = microseconds to wait<br/>
+    /// ES:BX = address of user interrupt routine (0000:0000 means no callback)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF clear if successful<br/>
+    /// CF set on error<br/>
+    /// </summary>
+    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
+    public void WaitFunction(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION");
+        }
+
     }
 
     /// <summary>
