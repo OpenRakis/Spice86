@@ -460,7 +460,13 @@ public class DosFileManager {
             _loggerService.Verbose("Moving in file {FileMove}", file.Name);
         }
         try {
+            long currentPosition = file.Position;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("DOS Seek handle {Handle} {Origin} offset=0x{Offset:X8} before=0x{Before:X8}",
+                    fileHandle, originOfMove, offset, currentPosition);
+            }
             long newOffset = file.Seek(offset, originOfMove);
+            _loggerService.Debug("DOS Seek handle {Handle} after=0x{After:X8}", fileHandle, newOffset);
             return DosFileOperationResult.Value32((uint)newOffset);
         } catch (IOException e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -705,6 +711,28 @@ public class DosFileManager {
         return (ushort)((dosSeconds & 0b11111) | (minutes & 0b111111) << 5 | (hours & 0b11111) << 11);
     }
 
+    private ushort ComputeDefaultDeviceInformation(DosFile dosFile) {
+        byte driveIndex = dosFile.Drive == 0xff ? _dosDriveManager.CurrentDriveIndex : dosFile.Drive;
+        bool isRemovable = driveIndex <= 1;
+        bool isRemote = false;
+        if (_dosDriveManager.ElementAtOrDefault(driveIndex).Value is { } drive) {
+            isRemovable = drive.IsRemovable;
+            isRemote = drive.IsRemote;
+        }
+
+        ushort info = (ushort)(driveIndex & 0x3F);
+        if (!isRemovable) {
+            info |= 0x0800;
+        }
+
+        if (isRemote) {
+            info |= 0x1000;
+            info |= 0x8000;
+        }
+
+        return info;
+    }
+
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
@@ -746,9 +774,12 @@ public class DosFileManager {
             }
 
             if (randomAccessFile != null) {
-                SetOpenFile(dosIndex, new DosFile(dosFileName, dosIndex, randomAccessFile) {
-                    Drive = _dosDriveManager.CurrentDriveIndex
-                });
+                byte driveIndex = _dosDriveManager.CurrentDriveIndex;
+                DosFile dosFile = new(dosFileName, dosIndex, randomAccessFile) {
+                    Drive = driveIndex
+                };
+                dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+                SetOpenFile(dosIndex, dosFile);
             }
         } catch (FileNotFoundException) {
             return FileNotFoundError(dosFileName);
@@ -937,16 +968,18 @@ public class DosFileManager {
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
                     state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
                 } else if (fileOrDevice is DosFile dosFile) {
-                    byte sourceDrive = dosFile.Drive;
-                    if (sourceDrive == 0xff) {
-                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                            _loggerService.Warning("IOCTL: No drive set for file handle {FileHandle}, defaulting to C:", handle);
-                        }
-                        sourceDrive = 0x2; // defaulting to C:
+                    if (dosFile.Drive == 0xff) {
+                        _loggerService.Warning("IOCTL: No drive set for file handle {FileHandle}, defaulting to C:",
+                            handle);
+                        dosFile.Drive = 0x2;
                     }
-                    ushort dosFileInfo = (ushort)(0xffe0 | sourceDrive);
-                    state.DX = dosFileInfo;
-                    return DosFileOperationResult.Value16(dosFileInfo);
+
+                    if (dosFile.DeviceInformation == 0) {
+                        dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+                    }
+
+                    state.DX = dosFile.DeviceInformation;
+                    return DosFileOperationResult.Value16(dosFile.DeviceInformation);
                 }
                 return DosFileOperationResult.Value16(state.DX);
 

@@ -70,12 +70,17 @@ public class DosFile : VirtualFileBase {
     public byte Flags { get; set; }
 
     public byte Drive { get; set; } = 0xff; //unset
+    public ushort DeviceInformation { get; set; }
     public override string Name { get; set; }
-    public override bool CanRead { get; }
-    public override bool CanSeek { get; }
-    public override bool CanWrite { get; }
-    public override long Length { get; }
-    public override long Position { get; set; }
+    public override bool CanRead => _randomAccessStream.CanRead;
+    public override bool CanSeek => _randomAccessStream.CanSeek;
+    public override bool CanWrite => _randomAccessStream.CanWrite;
+    public override long Length => _randomAccessStream.Length;
+
+    public override long Position {
+        get => _randomAccessStream.Position;
+        set => _randomAccessStream.Position = value;
+    }
     /// <summary>
     /// Closes the file.
     /// </summary>
