@@ -7,9 +7,9 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 
 /// <summary>
 /// Parses the command line options to create a <see cref="Configuration"/>.
@@ -20,7 +20,7 @@ public class CommandLineParser {
     /// </summary>
     /// <param name="args">The application command line arguments</param>
     /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
-    /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
+    /// <exception cref="UnrecoverableException">When the command line arguments are unrecognized.</exception>
     public Configuration? ParseCommandLine(string[] args) {
         string[] reducedArgs = ProcessArgs(args, out string exeArgs);
 
@@ -30,15 +30,32 @@ public class CommandLineParser {
                 return null;
             }
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
+            string programHash = GetProgramHash(initialConfig.Exe);
+            
+            string? dumpsFolder = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
+            if (string.IsNullOrWhiteSpace(dumpsFolder) || !Directory.Exists(dumpsFolder)) {
+                dumpsFolder = programHash;
+            }
+
+            initialConfig.ProgramHash = programHash;
+            initialConfig.RecordedDataDirectory = dumpsFolder;
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
+            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
             initialConfig.ExeArgs = exeArgs;
             if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
             }
             return initialConfig;
         }, error => null);
+    }
+
+    private string GetProgramHash(string? exe) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(exe);
+        if (!File.Exists(exe)) {
+            throw new FileNotFoundException(exe);
+        }
+        return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(exe)));
     }
 
     private static string[] ProcessArgs(string[] args, out string exeArgs) {
@@ -77,8 +94,7 @@ public class CommandLineParser {
         return File.Exists(exePath) ? new FileInfo(exePath).FullName : unixPathValue;
     }
 
-    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
-        string? supplierClassName = configuration.OverrideSupplierClassName;
+    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
         if (supplierClassName == null) {
             return null;
         }
