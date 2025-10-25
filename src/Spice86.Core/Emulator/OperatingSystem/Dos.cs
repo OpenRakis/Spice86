@@ -171,9 +171,21 @@ public sealed class Dos {
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
-        DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, clock, _loggerService);
+        DosInt21Handler = new DosInt21Handler(
+            _memory,
+            pspTracker,
+            functionHandlerProvider,
+            stack,
+            state,
+            keyboardInt16Handler,
+            CountryInfo,
+            dosStringDecoder,
+            MemoryManager,
+            FileManager,
+            DosDriveManager,
+            ProcessManager,
+            clock,
+            _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager, functionHandlerProvider, stack, state, _loggerService);

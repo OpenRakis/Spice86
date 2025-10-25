@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog.Events;
+using Spice86.Shared.Emulator.Memory;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
@@ -30,6 +31,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly DosProcessManager _dosProcessManager;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -49,13 +51,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
+    /// <param name="dosProcessManager">The DOS class responsible for loading and executing programs.</param>
     /// <param name="clock">The class responsible for the clock exposed to DOS programs.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, Clock clock, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, DosProcessManager dosProcessManager, Clock clock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -64,6 +67,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _dosProcessManager = dosProcessManager;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _clock = clock;
         FillDispatchTable();
@@ -910,7 +914,19 @@ public class DosInt21Handler : InterruptHandler {
     /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        //TODO: wire this up: _dosProcessManager.LoadAndOrExec...
+        DosExecFunction execFunction = (DosExecFunction)State.AL;
+        if (!Enum.IsDefined(typeof(DosExecFunction), State.AL)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("DOS INT21H LoadAndOrExecute unsupported function {Function}", State.AL);
+            }
+            State.AX = (ushort)DosErrorCode.FunctionNumberInvalid;
+            SetCarryFlag(true, calledFromVm);
+            return;
+        }
+        uint parameterBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+        DosExecParameterBlock execParameterBlock = new(Memory, parameterBlockAddress);
+        _dosProcessManager.LoadAndOrExecute(programName, execParameterBlock, execFunction);
+        SetCarryFlag(false, calledFromVm);
     }
 
     /// <summary>

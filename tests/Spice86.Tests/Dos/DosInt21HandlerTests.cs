@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -19,6 +20,7 @@ public class DosInt21HandlerTests {
     [Fact]
     public void MoveFilePointerUsingHandle_ShouldTreatCxDxOffsetAsSignedValue() {
         // Arrange
+        var configuration = new Configuration();
         IMemory memory = Substitute.For<IMemory>();
         var state = new State(CpuModel.INTEL_80286);
         var stack = new Stack(memory, state);
@@ -30,22 +32,27 @@ public class DosInt21HandlerTests {
         IList<IVirtualDevice> virtualDevices = new List<IVirtualDevice>();
         var dosFileManager = new DosFileManager(memory, stringDecoder, driveManager, logger, virtualDevices);
         var recordingFile = new RecordingVirtualFile();
+        var dosPspTracker = new DosProgramSegmentPrefixTracker(configuration, memory, logger);
+        var dosMemoryManager = new DosMemoryManager(memory, dosPspTracker, logger);
+        var dosProcessManager = new DosProcessManager(memory, state, dosPspTracker, dosMemoryManager, dosFileManager,
+            driveManager, new Dictionary<string,string>(), logger);
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
         var clock = new Clock(logger);
 
         var handler = new DosInt21Handler(
             memory,
-            null!,
+            dosPspTracker,
             functionHandlerProvider,
             stack,
             state,
             null!,
-            null!,
+            new CountryInfo(),
             stringDecoder,
-            null!,
+            dosMemoryManager,
             dosFileManager,
             driveManager,
+            dosProcessManager,
             clock,
             logger);
 
