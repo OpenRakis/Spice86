@@ -2,7 +2,7 @@
 /// <summary>
 /// Represents a host folder used as a drive by DOS.
 /// </summary>
-public class VirtualDrive : DosDriveBase {
+public class HostFolderDrive : DosDriveBase {
     /// <summary>
     /// The full host path to the mounted folder. This path serves as the root of the DOS drive.
     /// </summary>

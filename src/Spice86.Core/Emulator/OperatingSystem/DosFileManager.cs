@@ -1150,7 +1150,7 @@ public class DosFileManager {
 
                     case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
                         {
-                            VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
+                            HostFolderDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
                             DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
