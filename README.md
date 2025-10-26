@@ -187,6 +187,7 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 |  | HMA is implemented |
 |  | No paging support |
 | **Graphics** | Text modes, VGA, EGA, and CGA implemented |
+|  | EGA and CGA modes are best effort (you may find bugs) |
 |  | No VESA support |
 | **DOS** | Partial int 21h implementation (DOS 5.0) |
 | **Input** | Keyboard and mouse supported |
