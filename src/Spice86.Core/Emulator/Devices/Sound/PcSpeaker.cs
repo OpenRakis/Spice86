@@ -367,11 +367,9 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
                     _pit.Amplitude = PositiveAmplitude;
                     break;
             }
-        } else if (!newPortB.Timer2Gating) {
-            if (_pit.Mode is PitMode.SquareWave or PitMode.SquareWaveAlias) {
-                _pit.Amplitude = PositiveAmplitude;
-                _pit.Mode3Counting = false;
-            }
+        } else if (!newPortB.Timer2Gating && _pit.Mode is PitMode.SquareWave or PitMode.SquareWaveAlias) {
+            _pit.Amplitude = PositiveAmplitude;
+            _pit.Mode3Counting = false;
         }
 
         AddImpulse(newIndex, newPortB.SpeakerOutput ? _pit.Amplitude : NegativeAmplitude);
@@ -631,7 +629,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private static float CalculateImpulse(double t) {
-        if (!(t > 0.0) || !(t * SampleRateHz < SincFilterQuality)) {
+        if (t <= 0.0 || t * SampleRateHz >= SincFilterQuality) {
             return 0.0f;
         }
 
