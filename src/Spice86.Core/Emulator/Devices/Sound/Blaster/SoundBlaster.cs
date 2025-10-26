@@ -74,14 +74,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
     private bool _disposed;
     private bool _dmaTransferEventScheduled;
-    private double _dmaTransferIntervalMs = 1.0;
     private int _pauseDuration;
     private bool _pendingIrq;
     private bool _pendingIrqAllowMasked;
     private bool _pendingIrqEventScheduled;
     private bool _pendingIrqIs16Bit;
     private int _resetCount;
-    private uint _scheduledDmaBytes;
     private bool _suppressDmaEventScheduled;
 
     /// <summary>
@@ -250,7 +248,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         switch (dmaEvent) {
             case DmaChannel.DmaEvent.ReachedTerminalCount:
                 if (isCurrent) {
-                    HandleDmaSingleCycleComplete();
+                    HandleDmaTerminalCount();
                 }
 
                 break;
@@ -436,9 +434,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         //ioPortDispatcher.AddIOPortHandler(FM_MUSIC_DATA_PORT_NUMBER, this);
     }
 
-    private void HandleDmaSingleCycleComplete() {
-        if (_dmaState.Mode != DmaPlaybackMode.None && !_dmaState.IrqRaisedForCurrentBlock) {
+    private void HandleDmaTerminalCount() {
+        if (_dmaState.Mode == DmaPlaybackMode.None) {
+            return;
+        }
+
+        if (_dmaState.AutoInit) {
+            // DmaTransferEvent finalizes the block once the current pump returns.
+            return;
+        }
+
+        if (!_dmaState.IrqRaisedForCurrentBlock) {
             RaiseInterruptRequest(Is16BitMode(_dmaState.Mode), true);
+            _dmaState.IrqRaisedForCurrentBlock = true;
         }
 
         _dsp.IsDmaTransferActive = false;
@@ -509,21 +517,58 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         return LinearUpsampler.Resample8Mono(_dsp.SampleRate, sampleRate, sourceBuffer, destinationBuffer);
     }
 
-    private void StartDmaScheduler() {
-        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None) {
-            return;
+    private uint GetAvailableDmaBytes() {
+        uint available = _dmaState.RemainingBytes;
+        if (available == 0 && _dmaState.AutoInit) {
+            available = _dmaState.AutoSizeBytes;
         }
 
-        if (_dmaState.DmaMasked) {
+        return available;
+    }
+
+    private uint AlignToDmaGranularity(uint requestedBytes, uint availableBytes) {
+        uint capped = Math.Min(requestedBytes, availableBytes);
+        if (capped == 0) {
+            return 0;
+        }
+
+        DmaChannel? channel = _dsp.CurrentChannel;
+        if (channel is null) {
+            return capped;
+        }
+
+        uint alignment = 1u << channel.ShiftCount;
+        if (alignment <= 1) {
+            return capped;
+        }
+
+        uint aligned = capped - (capped % alignment);
+        return aligned != 0 ? aligned : capped;
+    }
+
+    private uint NormalizeDmaRequest(uint desiredBytes, uint availableBytes) {
+        if (availableBytes == 0) {
+            return 0;
+        }
+
+        uint aligned = AlignToDmaGranularity(desiredBytes, availableBytes);
+        if (aligned != 0) {
+            return aligned;
+        }
+
+        return AlignToDmaGranularity(availableBytes, availableBytes);
+    }
+
+    private void StartDmaScheduler() {
+        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None || _dmaState.DmaMasked) {
             return;
         }
 
         if (_dmaTransferEventScheduled) {
-            _dualPic.RemoveEvents(_dmaTransferEventHandler);
-            _dmaTransferEventScheduled = false;
+            return;
         }
 
-        ScheduleNextDmaEvent();
+        ScheduleDmaPump();
     }
 
     private void StopDmaScheduler() {
@@ -533,58 +578,42 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
         _dualPic.RemoveEvents(_dmaTransferEventHandler);
         _dmaTransferEventScheduled = false;
-        _scheduledDmaBytes = 0;
     }
 
-    private void DmaTransferEvent(uint _) {
+    private void DmaTransferEvent(uint chunkHint) {
         _dmaTransferEventScheduled = false;
 
-        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None) {
+        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None || _dmaState.DmaMasked) {
             return;
         }
 
-        if (_dmaState.DmaMasked) {
-            return;
+        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+
+        uint available = GetAvailableDmaBytes();
+        uint chunk = chunkHint != 0 ? NormalizeDmaRequest(Math.Min(chunkHint, available), available) : 0;
+        if (chunk == 0) {
+            chunk = ComputeDmaChunk(out _);
         }
 
-        if (_dsp.IsWriteBufferAtCapacity()) {
-            double retryDelay = Math.Min(_dmaTransferIntervalMs, 0.25);
-            _dualPic.AddEvent(_dmaTransferEventHandler, retryDelay);
-            _dmaTransferEventScheduled = true;
-            return;
-        }
-
-        uint requestedBytes = _scheduledDmaBytes;
-        _scheduledDmaBytes = 0;
-
-        if (requestedBytes == 0) {
-            requestedBytes = Math.Max(_dmaState.MinChunkBytes, 1u);
-        }
-
-        uint lowerBound = _dmaState.AutoInit ? requestedBytes : Math.Max(_dmaState.MinChunkBytes, 1u);
-        uint bytesToTransfer = _dmaState.RemainingBytes <= lowerBound ? _dmaState.RemainingBytes : requestedBytes;
-
-        if (bytesToTransfer == 0) {
+        if (chunk == 0) {
             if (!HandleDmaBlockCompletion()) {
                 return;
             }
 
-            ScheduleNextDmaEvent();
+            ScheduleDmaPump();
             return;
         }
 
-        int bytesTransferred = _dsp.PumpDma((int)bytesToTransfer);
+        int bytesTransferred = _dsp.PumpDma((int)chunk);
         if (bytesTransferred <= 0) {
-            _loggerService.Verbose("Sound Blaster DMA pump transferred 0 of {RequestedBytes} bytes; scheduling retry.",
-                bytesToTransfer);
-            double retryDelay = Math.Min(_dmaTransferIntervalMs, 0.25);
+            double retryDelay = Math.Min(chunk * 1000.0 / Math.Max(_dmaState.RateBytesPerSecond, 1.0), 0.25);
             _dualPic.AddEvent(_dmaTransferEventHandler, retryDelay);
             _dmaTransferEventScheduled = true;
             return;
         }
 
-        if ((uint)bytesTransferred > bytesToTransfer) {
-            bytesTransferred = (int)bytesToTransfer;
+        if ((uint)bytesTransferred > chunk) {
+            bytesTransferred = (int)chunk;
         }
 
         if (_dmaState.RemainingBytes > 0) {
@@ -598,29 +627,51 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             }
         }
 
-        ScheduleNextDmaEvent();
+        ScheduleDmaPump();
     }
 
-    private void ScheduleNextDmaEvent() {
-        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None) {
+    private void ScheduleDmaPump() {
+        if (_dmaTransferEventScheduled) {
             return;
         }
 
-        if (_dmaState.DmaMasked) {
+        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None || _dmaState.DmaMasked) {
             return;
         }
 
         CancelSuppressEvent();
 
-        double interval = CalculateDmaInterval(out uint bytesRequested);
-        if (bytesRequested == 0) {
+        uint chunk = ComputeDmaChunk(out double delayMs);
+        if (chunk == 0) {
             return;
         }
 
-        _dmaTransferIntervalMs = interval;
-        _scheduledDmaBytes = bytesRequested;
-        _dualPic.AddEvent(_dmaTransferEventHandler, interval);
+        _dualPic.AddEvent(_dmaTransferEventHandler, delayMs, chunk);
         _dmaTransferEventScheduled = true;
+    }
+
+    private uint ComputeDmaChunk(out double delayMs) {
+        delayMs = 0.0;
+
+        uint available = GetAvailableDmaBytes();
+        if (available == 0) {
+            return 0;
+        }
+
+        uint chunk = available > _dmaState.MinChunkBytes ? _dmaState.MinChunkBytes : available;
+        chunk = NormalizeDmaRequest(chunk, available);
+        if (chunk == 0) {
+            chunk = available;
+        }
+
+        delayMs = chunk * 1000.0 / Math.Max(_dmaState.RateBytesPerSecond, 1.0);
+        if (delayMs < 0.001) {
+            delayMs = 0.001;
+        } else if (delayMs > 20.0) {
+            delayMs = 20.0;
+        }
+
+        return chunk;
     }
 
     private void OnDmaMaskChanged(DmaChannel channel, bool masked) {
@@ -655,29 +706,62 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     }
 
     private void ScheduleSuppressDma(uint bytes) {
-        if (bytes == 0 || !_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None) {
+        if (!_dsp.IsDmaTransferActive || _dmaState.Mode == DmaPlaybackMode.None) {
+            return;
+        }
+
+        uint availableBytes = GetAvailableDmaBytes();
+        uint normalizedBytes = NormalizeDmaRequest(bytes, availableBytes);
+        if (normalizedBytes == 0) {
             return;
         }
 
         CancelSuppressEvent();
         StopDmaScheduler();
 
-        double delay = ComputeDelayForBytes(bytes);
-        _dualPic.AddEvent(_suppressDmaEventHandler, delay, bytes);
+        double delay = _dmaState.RateBytesPerSecond <= 0
+            ? 0.001
+            : normalizedBytes * 1000.0 / _dmaState.RateBytesPerSecond;
+
+        delay = delay switch {
+            < 0.001 => 0.001,
+            > 20.0 => 20.0,
+            _ => delay
+        };
+
+        _dualPic.AddEvent(_suppressDmaEventHandler, delay, normalizedBytes);
         _suppressDmaEventScheduled = true;
     }
 
     private void CatchUpWhileMasked() {
-        if (_dmaState.RemainingBytes == 0) {
+        uint remainingBytes = _dmaState.RemainingBytes;
+        if (remainingBytes == 0 || _dmaState.RateBytesPerSecond <= 0) {
+            return;
+        }
+
+        double nowMs = _dualPic.GetFullIndex();
+        double elapsedMs = nowMs - _dmaState.LastPumpTimeMs;
+        if (elapsedMs <= 0.0) {
             return;
         }
 
         uint minimumTailBytes = GetMinimumTailBytes();
-        if (_dmaState.RemainingBytes <= minimumTailBytes) {
+        if (remainingBytes <= minimumTailBytes) {
             return;
         }
 
-        uint catchUp = Math.Min(_dmaState.MinChunkBytes, _dmaState.RemainingBytes - minimumTailBytes);
+        double catchUpFloat = _dmaState.RateBytesPerSecond * elapsedMs / 1000.0;
+        uint catchUpFromElapsed = catchUpFloat > uint.MaxValue
+            ? uint.MaxValue
+            : (uint)Math.Floor(catchUpFloat);
+        if (catchUpFromElapsed == 0) {
+            return;
+        }
+
+        uint catchUpLimit = Math.Min(_dmaState.MinChunkBytes, catchUpFromElapsed);
+        uint maxCatchUp = remainingBytes - minimumTailBytes;
+        uint catchUpCandidate = Math.Min(catchUpLimit, maxCatchUp);
+        uint catchUp = NormalizeDmaRequest(catchUpCandidate, remainingBytes);
         if (catchUp == 0) {
             return;
         }
@@ -687,12 +771,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        if (_dmaState.RemainingBytes <= 0) {
-            return;
+        if (_dmaState.RemainingBytes > 0) {
+            int remaining = (int)_dmaState.RemainingBytes - pumped;
+            _dmaState.RemainingBytes = remaining > 0 ? (uint)remaining : 0u;
         }
 
-        int remaining = (int)_dmaState.RemainingBytes - pumped;
-        _dmaState.RemainingBytes = remaining > 0 ? (uint)remaining : 0u;
+        _dmaState.LastPumpTimeMs = nowMs;
     }
 
     private void SuppressDmaEvent(uint requestedBytes) {
@@ -702,9 +786,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        if (requestedBytes == 0 || requestedBytes > _dmaState.RemainingBytes) {
-            requestedBytes = _dmaState.RemainingBytes;
+        uint remainingBytes = _dmaState.RemainingBytes;
+        if (requestedBytes == 0 || requestedBytes > remainingBytes) {
+            requestedBytes = remainingBytes;
         }
+
+        requestedBytes = NormalizeDmaRequest(requestedBytes, remainingBytes);
 
         if (requestedBytes == 0) {
             if (!HandleDmaBlockCompletion()) {
@@ -712,7 +799,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             }
 
             if (_dmaState.SpeakerEnabled || HasSpeaker) {
-                ScheduleNextDmaEvent();
+                ScheduleDmaPump();
             }
 
             return;
@@ -723,7 +810,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             _loggerService.Verbose(
                 "Sound Blaster DMA pump transferred 0 of {RequestedBytes} bytes during suppression; scheduling retry.",
                 requestedBytes);
-            double retryDelay = Math.Min(_dmaTransferIntervalMs, 0.25);
+            double retryDelay = Math.Min(requestedBytes * 1000.0 / Math.Max(_dmaState.RateBytesPerSecond, 1.0), 0.25);
             _dualPic.AddEvent(_suppressDmaEventHandler, retryDelay, requestedBytes);
             _suppressDmaEventScheduled = true;
             return;
@@ -751,7 +838,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 ScheduleSuppressDma(nextBytes);
             }
         } else {
-            ScheduleNextDmaEvent();
+            ScheduleDmaPump();
         }
     }
 
@@ -762,7 +849,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         uint minimum = (uint)Math.Max(1, Math.Round(bytesPerSample));
-        return minimum * 2;
+        uint tailBytes = minimum * 2;
+        return AlignToDmaGranularity(tailBytes, tailBytes);
     }
 
     private void SetSpeakerEnabled(bool enabled) {
@@ -786,47 +874,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         FlushRemainingDmaTransfer();
-    }
-
-    private double CalculateDmaInterval(out uint bytesRequested) {
-        bytesRequested = 0;
-
-        if (_dmaState.Mode == DmaPlaybackMode.None || _dmaState.RateBytesPerSecond <= 0) {
-            return 1.0;
-        }
-
-        uint minChunk = Math.Max(_dmaState.MinChunkBytes, 1u);
-        uint available = _dmaState.RemainingBytes;
-
-        if (available == 0 && _dmaState.AutoInit) {
-            available = _dmaState.AutoSizeBytes;
-        }
-
-        if (available == 0) {
-            return 1.0;
-        }
-
-        bytesRequested = _dmaState.AutoInit ? minChunk : Math.Min(available, minChunk);
-
-        double interval = bytesRequested * 1000.0 / _dmaState.RateBytesPerSecond;
-        return interval switch {
-            < 0.05 => 0.05,
-            > 20.0 => 20.0,
-            _ => interval
-        };
-    }
-
-    private double ComputeDelayForBytes(uint bytes) {
-        if (bytes == 0 || _dmaState.RateBytesPerSecond <= 0) {
-            return 0.05;
-        }
-
-        double delay = bytes * 1000.0 / _dmaState.RateBytesPerSecond;
-        return delay switch {
-            < 0.05 => 0.05,
-            > 20.0 => 20.0,
-            _ => delay
-        };
     }
 
     private void FlushRemainingDmaTransfer() {
@@ -856,7 +903,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         StopDmaScheduler();
-        ScheduleNextDmaEvent();
+        ScheduleDmaPump();
     }
 
     private bool HandleDmaBlockCompletion() {
@@ -899,7 +946,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dmaState.AutoSizeBytes = 0;
         _dmaState.IrqRaisedForCurrentBlock = false;
         _dmaState.DmaMasked = false;
-        _scheduledDmaBytes = 0;
+        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
     }
 
     private void ConfigureDmaTransfer(DmaPlaybackMode mode, bool autoInit, bool stereo) {
@@ -931,6 +978,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         UpdateActiveDmaRate();
+        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
     }
 
     private void UpdateActiveDmaRate() {
@@ -1320,5 +1368,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         public int WarmupRemainingFrames { get; set; }
         public int ColdWarmupFrames { get; set; }
         public int HotWarmupFrames { get; set; }
+        public double LastPumpTimeMs { get; set; }
     }
 }
