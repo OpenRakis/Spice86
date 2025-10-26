@@ -96,7 +96,7 @@ public sealed class Dsp : IDisposable {
     /// <summary>
     ///     Gets a value indicating whether the internal waveform buffer reached capacity.
     /// </summary>
-    public bool IsAtCapacity => _waveBuffer.IsAtCapacity;
+    private bool IsAtCapacity => _waveBuffer.IsAtCapacity;
 
     /// <summary>
     /// Starts a new DMA transfer.
@@ -120,7 +120,7 @@ public sealed class Dsp : IDisposable {
             CompressionLevel.ADPCM2 => _adpcm2,
             CompressionLevel.ADPCM3 => _adpcm3,
             CompressionLevel.ADPCM4 => _adpcm4,
-            _ => null,
+            _ => null
         };
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
@@ -293,7 +293,7 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="source">Pointer to data in memory.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int DmaWrite(IList<byte> source) {
+    private int DmaWrite(ArraySegment<byte> source) {
         int bytesWritten = _waveBuffer.Write(source);
         if (bytesWritten < source.Count) {
             _logger.Warning(
