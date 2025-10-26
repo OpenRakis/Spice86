@@ -196,11 +196,12 @@ internal sealed class PicEventQueue {
         }
 
         double indexNd = _cpuState.TickIndexNd;
+        double cyclesMax = _cpuState.CyclesMax;
 
         _inEventService = true;
         int processedCount = 0;
         while (_nextEntry != null &&
-               _nextEntry.Index * _cpuState.CyclesMax <= indexNd) {
+               _nextEntry.Index * cyclesMax <= indexNd) {
             PicEntry? entry = _nextEntry;
             _nextEntry = entry.Next;
 
@@ -214,30 +215,33 @@ internal sealed class PicEventQueue {
 
         _inEventService = false;
 
-        if (_nextEntry != null) {
-            int cycles = (int)((_nextEntry.Index * _cpuState.CyclesMax) - indexNd);
-            if (cycles == 0) {
-                cycles = 1;
+        int scheduledCycles = 0;
+        if (_nextEntry != null && _cpuState.CyclesLeft > 0) {
+            double targetIndexNd = _nextEntry.Index * cyclesMax;
+            int cyclesToNext = (int)(targetIndexNd - indexNd);
+            if (cyclesToNext <= 0) {
+                cyclesToNext = 1;
             }
 
-            _cpuState.Cycles = cycles < _cpuState.CyclesLeft ? cycles : _cpuState.CyclesLeft;
-        } else {
-            _cpuState.Cycles = _cpuState.CyclesLeft;
+            scheduledCycles = cyclesToNext <= _cpuState.CyclesLeft ? cyclesToNext : _cpuState.CyclesLeft;
+        } else if (_cpuState.CyclesLeft > 0 && _nextEntry == null) {
+            scheduledCycles = _cpuState.CyclesLeft;
         }
 
-        _cpuState.CyclesLeft -= _cpuState.Cycles;
+        _cpuState.Cycles = scheduledCycles;
+        _cpuState.CyclesLeft -= scheduledCycles;
 
         if (processedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
             double? nextIndex = _nextEntry?.Index;
             _logger.Debug(
                 "Processed {ProcessedCount} PIC events; scheduled {ScheduledCycles} cycles; remaining cycles {RemainingCycles}; next index {NextIndex}",
                 processedCount,
-                _cpuState.Cycles,
+                scheduledCycles,
                 _cpuState.CyclesLeft,
                 nextIndex);
         }
 
-        return true;
+        return _cpuState.Cycles > 0 || _cpuState.CyclesLeft > 0;
     }
 
     /// <summary>

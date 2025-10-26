@@ -327,7 +327,7 @@ public sealed class Dsp : IDisposable {
 
             if (amt == 0) {
                 if (IsDmaTransferActive && CurrentChannel is not null) {
-                    PumpDma();
+                    PumpDma(dest.Length);
                     amt = _waveBuffer.Read(dest);
                     if (amt > 0) {
                         _readIdleCycles = 0;
