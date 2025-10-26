@@ -328,20 +328,16 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                         _blasterState = BlasterState.ReadingCommand;
                         _commandData.Clear();
                         CommandLengths.TryGetValue(value, out _commandDataLength);
-                        if (_commandDataLength == 0) {
-                            if (!ProcessCommand()) {
-                                base.WriteByte(port, value);
-                            }
+                        if (_commandDataLength == 0 && !ProcessCommand()) {
+                            base.WriteByte(port, value);
                         }
 
                         break;
                     }
                     case BlasterState.ReadingCommand: {
                         _commandData.Add(value);
-                        if (_commandData.Count >= _commandDataLength) {
-                            if (!ProcessCommand()) {
-                                base.WriteByte(port, value);
-                            }
+                        if (_commandData.Count >= _commandDataLength && !ProcessCommand()) {
+                            base.WriteByte(port, value);
                         }
 
                         break;
@@ -618,10 +614,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             _dmaState.RemainingBytes = remaining > 0 ? (uint)remaining : 0u;
         }
 
-        if (_dmaState.RemainingBytes == 0) {
-            if (!HandleDmaBlockCompletion()) {
-                return;
-            }
+        if (_dmaState.RemainingBytes == 0 && !HandleDmaBlockCompletion()) {
+            return;
         }
 
         ScheduleDmaPump();
