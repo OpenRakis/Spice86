@@ -26,7 +26,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private const int IgnorePortOffset = 0x07;
     private const int Mpu401DataPortOffset = 0xE0;
     private const int Mpu401StatusCommandPortOffset = 0xE1;
-    private const double PendingIrqRetryIntervalMs = 0.05;
 
     private static readonly FrozenDictionary<byte, byte> CommandLengths = new Dictionary<byte, byte> {
         { Commands.SetTimeConstant, 1 },
@@ -60,7 +59,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly DualPic _dualPic;
     private readonly Queue<byte> _outputData = new();
     private readonly int _outputSampleRate;
-    private readonly PicEventHandler _pendingIrqEventHandler;
 
     private readonly DmaChannel _primaryDmaChannel;
     private readonly byte[] _readFromDspBuffer = new byte[512];
@@ -77,7 +75,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private int _pauseDuration;
     private bool _pendingIrq;
     private bool _pendingIrqAllowMasked;
-    private bool _pendingIrqEventScheduled;
     private bool _pendingIrqIs16Bit;
     private int _resetCount;
     private bool _suppressDmaEventScheduled;
@@ -106,7 +103,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dualPic = dualPic;
         _dmaTransferEventHandler = DmaTransferEvent;
         _suppressDmaEventHandler = SuppressDmaEvent;
-        _pendingIrqEventHandler = PendingIrqEvent;
         _primaryDmaChannel = dmaSystem.GetChannel(_config.LowDma)
                              ?? throw new InvalidOperationException(
                                  $"DMA channel {_config.LowDma} unavailable for Sound Blaster.");
@@ -231,7 +227,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         StopDmaScheduler();
         ResetDmaState();
         _dsp.IsDmaTransferActive = false;
-        CancelPendingIrqCheck();
         _pendingIrq = false;
         _pendingIrqIs16Bit = false;
         _pendingIrqAllowMasked = false;
@@ -657,9 +652,9 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         if (available == 0) {
             return 0;
         }
-
         uint chunk = available > _dmaState.MinChunkBytes ? _dmaState.MinChunkBytes : available;
         chunk = NormalizeDmaRequest(chunk, available);
+        
         if (chunk == 0) {
             chunk = available;
         }
@@ -794,6 +789,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         requestedBytes = NormalizeDmaRequest(requestedBytes, remainingBytes);
 
         if (requestedBytes == 0) {
+            _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
             if (!HandleDmaBlockCompletion()) {
                 return;
             }
@@ -820,6 +816,8 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             int remaining = (int)_dmaState.RemainingBytes - bytesTransferred;
             _dmaState.RemainingBytes = remaining > 0 ? (uint)remaining : 0u;
         }
+
+        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
 
         if (_dmaState.RemainingBytes == 0) {
             bool continuePlayback = HandleDmaBlockCompletion();
@@ -935,7 +933,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
     private void ResetDmaState() {
         CancelSuppressEvent();
-        CancelPendingIrqCheck();
         _pendingIrq = false;
         _dmaState.Mode = DmaPlaybackMode.None;
         _dmaState.AutoInit = false;
@@ -947,6 +944,19 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dmaState.IrqRaisedForCurrentBlock = false;
         _dmaState.DmaMasked = false;
         _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+    }
+
+    private uint GetBlockTransferSizeBytes(DmaPlaybackMode mode) {
+        int size = _dsp.BlockTransferSize;
+        if (size <= 0) {
+            return 0;
+        }
+
+        if (mode == DmaPlaybackMode.Pcm16BitAliased && _dsp.IsUsing16BitAliasedDma) {
+            size = Math.Min(size * 2, int.MaxValue);
+        }
+
+        return (uint)size;
     }
 
     private void ConfigureDmaTransfer(DmaPlaybackMode mode, bool autoInit, bool stereo) {
@@ -963,7 +973,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         if (transferBytes == 0 && _dsp.BlockTransferSize > 0) {
-            transferBytes = (uint)_dsp.BlockTransferSize;
+            transferBytes = GetBlockTransferSizeBytes(mode);
         }
 
         if (autoInit) {
@@ -1021,7 +1031,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private void BeginDmaPlayback(DmaPlaybackMode mode, bool is16Bit, bool stereo, bool autoInit,
         CompressionLevel compression = CompressionLevel.None, bool referenceByte = false) {
         _dsp.Begin(is16Bit, stereo, compression, referenceByte);
-        ConfigureDmaTransfer(mode, autoInit, stereo);
+        DmaPlaybackMode effectiveMode = mode;
+        if (mode == DmaPlaybackMode.Pcm16Bit && _dsp.IsUsing16BitAliasedDma) {
+            effectiveMode = DmaPlaybackMode.Pcm16BitAliased;
+        }
+
+        ConfigureDmaTransfer(effectiveMode, autoInit, stereo);
     }
 
     /// <summary>
@@ -1055,9 +1070,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 _dsp.BlockTransferSize = (_commandData[0] | (_commandData[1] << 8)) + 1;
                 _blockTransferSizeSet = true;
                 if (_dmaState.Mode != DmaPlaybackMode.None && _dmaState.AutoInit) {
-                    _dmaState.AutoSizeBytes = (uint)_dsp.BlockTransferSize;
-                    if (_dmaState.RemainingBytes == 0) {
-                        _dmaState.RemainingBytes = _dmaState.AutoSizeBytes;
+                    uint size = GetBlockTransferSizeBytes(_dmaState.Mode);
+                    if (size != 0) {
+                        _dmaState.AutoSizeBytes = size;
+                        if (_dmaState.RemainingBytes == 0) {
+                            _dmaState.RemainingBytes = _dmaState.AutoSizeBytes;
+                        }
                     }
                 }
 
@@ -1215,8 +1233,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             _loggerService.Verbose("Deferred Sound Blaster interrupt; DMA masked: {DmaMasked}, IRQ masked: {IrqMasked}",
                 dmaMasked, irqMasked);
         }
-
-        SchedulePendingIrqCheck();
     }
 
     /// <summary>
@@ -1231,7 +1247,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         ResetDmaState();
         _dsp.Reset();
         _resetCount++;
-        CancelPendingIrqCheck();
         _pendingIrq = false;
 
         _dmaState.SpeakerEnabled = HasSpeaker;
@@ -1249,7 +1264,6 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     }
 
     private void DeliverInterrupt(bool is16Bit) {
-        CancelPendingIrqCheck();
         _pendingIrq = false;
         _pendingIrqIs16Bit = false;
         _pendingIrqAllowMasked = false;
@@ -1259,38 +1273,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
 
     private void TryDeliverPendingInterrupt() {
         if (!_pendingIrq) {
-            CancelPendingIrqCheck();
             return;
         }
 
         if (TryDeliverInterrupt(_pendingIrqIs16Bit, _pendingIrqAllowMasked)) {
             return;
         }
-
-        SchedulePendingIrqCheck();
-    }
-
-    private void SchedulePendingIrqCheck() {
-        if (_pendingIrqEventScheduled || !_pendingIrq) {
-            return;
-        }
-
-        _dualPic.AddEvent(_pendingIrqEventHandler, PendingIrqRetryIntervalMs);
-        _pendingIrqEventScheduled = true;
-    }
-
-    private void CancelPendingIrqCheck() {
-        if (!_pendingIrqEventScheduled) {
-            return;
-        }
-
-        _dualPic.RemoveEvents(_pendingIrqEventHandler);
-        _pendingIrqEventScheduled = false;
-    }
-
-    private void PendingIrqEvent(uint _) {
-        _pendingIrqEventScheduled = false;
-        TryDeliverPendingInterrupt();
     }
 
     private void OnPicIrqMaskChanged(byte irq, bool masked) {

@@ -74,6 +74,11 @@ public sealed class Dsp : IDisposable {
     public bool Is16Bit { get; private set; }
 
     /// <summary>
+    ///     Gets a value indicating whether the DSP fell back to 8-bit DMA for a 16-bit transfer.
+    /// </summary>
+    public bool IsUsing16BitAliasedDma { get; private set; }
+
+    /// <summary>
     /// Gets a value indicating whether the waveform data is stereo.
     /// </summary>
     public bool IsStereo { get; private set; }
@@ -104,6 +109,7 @@ public sealed class Dsp : IDisposable {
         bool referenceByte = false) {
         Is16Bit = is16Bit;
         IsStereo = isStereo;
+        IsUsing16BitAliasedDma = false;
         _referenceByteExpected = referenceByte;
         _compression = compressionLevel;
         IsDmaTransferActive = true;
@@ -127,13 +133,16 @@ public sealed class Dsp : IDisposable {
         }
 
         if (Is16Bit) {
-            if (!_highDmaChannelNumber.HasValue) {
-                throw new InvalidOperationException("16-bit DMA requested but no high DMA channel configured.");
+            if (_highDmaChannelNumber.HasValue) {
+                CurrentChannel = _dmaSystem.GetChannel((byte)_highDmaChannelNumber.Value);
             }
 
-            CurrentChannel = _dmaSystem.GetChannel((byte)_highDmaChannelNumber.Value)
-                             ?? throw new InvalidOperationException(
-                                 $"DMA channel {_highDmaChannelNumber.Value} unavailable.");
+            if (CurrentChannel is null) {
+                IsUsing16BitAliasedDma = true;
+                CurrentChannel = _dmaSystem.GetChannel((byte)_lowDmaChannelNumber)
+                                 ?? throw new InvalidOperationException(
+                                     $"DMA channel {_lowDmaChannelNumber} unavailable for aliased 16-bit transfer.");
+            }
         } else {
             CurrentChannel = _dmaSystem.GetChannel((byte)_lowDmaChannelNumber)
                              ?? throw new InvalidOperationException($"DMA channel {_lowDmaChannelNumber} unavailable.");
@@ -141,9 +150,10 @@ public sealed class Dsp : IDisposable {
 
         if (_logger.IsEnabled(LogEventLevel.Debug) && CurrentChannel is not null) {
             _logger.Debug(
-                "DSP bound to DMA channel {ChannelNumber} ({ChannelWidth}-bit)",
+                "DSP bound to DMA channel {ChannelNumber} ({ChannelWidth}-bit){AliasInfo}",
                 CurrentChannel.ChannelNumber,
-                CurrentChannel.Is16Bit ? 16 : 8);
+                CurrentChannel.Is16Bit ? 16 : 8,
+                IsUsing16BitAliasedDma ? " using aliased 16-bit mode" : string.Empty);
         }
 
         _resetTimer.Elapsed -= OnResetTimerElapsed;
@@ -303,6 +313,7 @@ public sealed class Dsp : IDisposable {
         BlockTransferSize = 65536;
         Is16Bit = false;
         IsStereo = false;
+        IsUsing16BitAliasedDma = false;
         _readIdleCycles = 0;
         CurrentChannel = null;
         IsDmaTransferActive = false;
