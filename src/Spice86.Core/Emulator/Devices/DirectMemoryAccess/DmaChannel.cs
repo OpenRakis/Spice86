@@ -356,8 +356,12 @@ public sealed class DmaChannel {
             while (want > 0) {
                 uint left = (uint)(CurrentCount + 1);
                 if (want < left) {
-                    PerformIo(direction, PageBase, CurrentAddress, bufferOffsetBytes, want, readBuffer, writeBuffer,
-                        IsIncremented);
+                    if (direction == DmaDirection.Read) {
+                        PerformRead(PageBase, CurrentAddress, want, readBuffer, IsIncremented, bufferOffsetBytes);
+                    } else {
+                        PerformWrite(PageBase, CurrentAddress, want, writeBuffer, IsIncremented, bufferOffsetBytes);
+                    }
+                    
                     done += want;
                     CurrentAddress = IsIncremented
                         ? unchecked(CurrentAddress + want)
@@ -365,8 +369,12 @@ public sealed class DmaChannel {
                     CurrentCount -= want;
                     want = 0;
                 } else {
-                    PerformIo(direction, PageBase, CurrentAddress, bufferOffsetBytes, left, readBuffer, writeBuffer,
-                        IsIncremented);
+                    if (direction == DmaDirection.Read) {
+                        PerformRead(PageBase, CurrentAddress, left, readBuffer, IsIncremented, bufferOffsetBytes);
+                    } else {
+                        PerformWrite(PageBase, CurrentAddress, left, writeBuffer, IsIncremented, bufferOffsetBytes);
+                    }
+
                     bufferOffsetBytes += (int)(left << ShiftCount);
                     want -= (ushort)left;
                     done += (ushort)left;
@@ -391,26 +399,11 @@ public sealed class DmaChannel {
         }
     }
 
-    /// <summary>
-    ///     Performs the actual memory access for the specified number of words in the requested direction.
-    /// </summary>
-    private void PerformIo(
-        DmaDirection direction,
-        uint pageBase,
-        uint dmaAddress,
-        int bufferOffsetBytes,
-        uint words,
-        Span<byte> readBuffer,
-        ReadOnlySpan<byte> writeBuffer,
-        bool isIncremented) {
-        uint bytesPerWord = 1u << ShiftCount;
-        if (direction == DmaDirection.Read) {
-            Debug.Assert(readBuffer.Length >= bufferOffsetBytes + (int)(words << ShiftCount));
-        } else {
-            Debug.Assert(writeBuffer.Length >= bufferOffsetBytes + (int)(words << ShiftCount));
-        }
+    private uint BytesPerWord => 1u << ShiftCount;
 
-        int bufferIndex = bufferOffsetBytes;
+    private void PerformRead(uint pageBase, uint dmaAddress, uint words, Span<byte> readBuffer, bool isIncremented,
+        int bufferIndex) {
+        uint bytesPerWord = BytesPerWord;
         for (uint wordIndex = 0; wordIndex < words; wordIndex++) {
             uint dmaWordAddress = isIncremented
                 ? unchecked(dmaAddress + wordIndex)
@@ -420,15 +413,25 @@ public sealed class DmaChannel {
 
             for (uint byteIndex = 0; byteIndex < bytesPerWord; byteIndex++) {
                 uint address = unchecked(baseAddress + byteIndex);
-                switch (direction) {
-                    case DmaDirection.Read:
-                        readBuffer[bufferIndex] = _memory[address];
-                        break;
-                    case DmaDirection.Write:
-                        _memory[address] = writeBuffer[bufferIndex];
-                        break;
-                }
+                readBuffer[bufferIndex] = _memory[address];
+                bufferIndex++;
+            }
+        }
+    }
 
+    private void PerformWrite(uint pageBase, uint dmaAddress, uint words, ReadOnlySpan<byte> writeBuffer,
+        bool isIncremented, int bufferIndex) {
+        uint bytesPerWord = BytesPerWord;
+        for (uint wordIndex = 0; wordIndex < words; wordIndex++) {
+            uint dmaWordAddress = isIncremented
+                ? unchecked(dmaAddress + wordIndex)
+                : unchecked(dmaAddress - wordIndex);
+            uint maskedDmaAddress = dmaWordAddress & _wrappingMask;
+            uint baseAddress = unchecked(pageBase + (maskedDmaAddress << ShiftCount));
+
+            for (uint byteIndex = 0; byteIndex < bytesPerWord; byteIndex++) {
+                uint address = unchecked(baseAddress + byteIndex);
+                _memory[address] = writeBuffer[bufferIndex];
                 bufferIndex++;
             }
         }
