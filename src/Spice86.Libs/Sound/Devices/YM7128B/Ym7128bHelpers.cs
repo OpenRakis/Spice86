@@ -3,11 +3,14 @@
 
 namespace Spice86.Libs.Sound.Devices.YM7128B;
 
+using System.Runtime.CompilerServices;
+
 internal static class Ym7128BHelpers {
     /*
     YM7128B_INLINE
     YM7128B_Tap YM7128B_RegisterToTap(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ushort RegisterToTap(byte data) {
         byte index = (byte)(data & Ym7128BDatasheetSpecs.TapValueMask);
         return Ym7128BTables.Tap[index];
@@ -20,6 +23,7 @@ internal static class Ym7128BHelpers {
         YM7128B_TapIdeal sample_rate
     )
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static nuint RegisterToTapIdeal(byte data, nuint sampleRate) {
         byte index = (byte)(data & Ym7128BDatasheetSpecs.TapValueMask);
         return index * (sampleRate / 10) / (Ym7128BDatasheetSpecs.TapValueCount - 1);
@@ -29,6 +33,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_RegisterToGainFixed(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short RegisterToGainFixed(byte data) {
         byte index = (byte)(data & Ym7128BDatasheetSpecs.GainDataMask);
         return Ym7128BTables.GainFixed[index];
@@ -38,6 +43,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_RegisterToGainFloat(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float RegisterToGainFloat(byte data) {
         byte index = (byte)(data & Ym7128BDatasheetSpecs.GainDataMask);
         return Ym7128BTables.GainFloat[index];
@@ -47,6 +53,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_RegisterToGainShort(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short RegisterToGainShort(byte data) {
         byte index = (byte)(data & Ym7128BDatasheetSpecs.GainDataMask);
         return Ym7128BTables.GainShort[index];
@@ -56,6 +63,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_RegisterToCoeffFixed(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short RegisterToCoeffFixed(byte data) {
         byte raw = (byte)(data & Ym7128BDatasheetSpecs.CoeffValueMask);
         const int shift = Ym7128BImplementationSpecs.FixedBits - Ym7128BDatasheetSpecs.CoeffValueBits;
@@ -66,6 +74,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_RegisterToCoeffFloat(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float RegisterToCoeffFloat(byte data) {
         short coeffFixed = RegisterToCoeffFixed(data);
         return coeffFixed * (1.0f / Ym7128BImplementationSpecs.GainMax);
@@ -75,6 +84,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_RegisterToCoeffShort(YM7128B_Register data)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short RegisterToCoeffShort(byte data) {
         byte raw = (byte)(data & Ym7128BDatasheetSpecs.CoeffValueMask);
         const int shift = Ym7128BImplementationSpecs.FixedBits - Ym7128BDatasheetSpecs.CoeffValueBits;
@@ -85,6 +95,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_ClampFixed(YM7128B_Accumulator signal)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short ClampFixed(int signal) {
         if (signal < Ym7128BImplementationSpecs.FixedMin) {
             signal = Ym7128BImplementationSpecs.FixedMin;
@@ -101,6 +112,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_ClampFloat(YM7128B_Float signal)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float ClampFloat(float signal) {
         return signal switch {
             < -1.0f => -1.0f,
@@ -113,6 +125,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_ClampShort(YM7128B_Accumulator signal)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short ClampShort(int signal) {
         return signal switch {
             < Ym7128BImplementationSpecs.FixedMin => Ym7128BImplementationSpecs.FixedMin,
@@ -125,6 +138,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_ClampAddFixed(YM7128B_Fixed a, YM7128B_Fixed b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short ClampAddFixed(short a, short b) {
         int aa = a & Ym7128BImplementationSpecs.OperandMask;
         int bb = b & Ym7128BImplementationSpecs.OperandMask;
@@ -136,6 +150,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_ClampAddFloat(YM7128B_Float a, YM7128B_Float b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float ClampAddFloat(float a, float b) {
         return ClampFloat(a + b);
     }
@@ -144,6 +159,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_ClampAddShort(YM7128B_Fixed a, YM7128B_Fixed b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short ClampAddShort(short a, short b) {
         int sum = a + b;
         return ClampShort(sum);
@@ -153,6 +169,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_AddFloat(YM7128B_Float a, YM7128B_Float b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float AddFloat(float a, float b) {
         return a + b;
     }
@@ -161,6 +178,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_MulFixed(YM7128B_Fixed a, YM7128B_Fixed b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short MulFixed(short a, short b) {
         int aa = a & Ym7128BImplementationSpecs.OperandMask;
         int bb = b & Ym7128BImplementationSpecs.OperandMask;
@@ -173,6 +191,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Float YM7128B_MulFloat(YM7128B_Float a, YM7128B_Float b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float MulFloat(float a, float b) {
         return a * b;
     }
@@ -181,6 +200,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     YM7128B_Fixed YM7128B_MulShort(YM7128B_Fixed a, YM7128B_Fixed b)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short MulShort(short a, short b) {
         int product = a * b;
         return (short)(product >> Ym7128BImplementationSpecs.FixedDecimals);
@@ -193,6 +213,7 @@ internal static class Ym7128BHelpers {
         YM7128B_Fixed input
     )
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short OversamplerFixedProcess(Ym7128BOversamplerFixed self, short input) {
         ArgumentNullException.ThrowIfNull(self);
 
@@ -217,6 +238,7 @@ internal static class Ym7128BHelpers {
         YM7128B_Float input
     )
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float OversamplerFloatProcess(Ym7128BOversamplerFloat self, float input) {
         ArgumentNullException.ThrowIfNull(self);
 
@@ -240,6 +262,7 @@ internal static class Ym7128BHelpers {
         YM7128B_Fixed input
     )
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void OversamplerFixedClear(Ym7128BOversamplerFixed oversampler, short input) {
         ArgumentNullException.ThrowIfNull(oversampler);
         oversampler.Buffer.AsSpan().Fill(input);
@@ -249,6 +272,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     void YM7128B_OversamplerFixed_Reset(YM7128B_OversamplerFixed* self)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void OversamplerFixedReset(Ym7128BOversamplerFixed oversampler) {
         OversamplerFixedClear(oversampler, 0);
     }
@@ -260,6 +284,7 @@ internal static class Ym7128BHelpers {
         YM7128B_Float input
     )
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void OversamplerFloatClear(Ym7128BOversamplerFloat oversampler, float input) {
         ArgumentNullException.ThrowIfNull(oversampler);
         oversampler.Buffer.AsSpan().Fill(input);
@@ -269,6 +294,7 @@ internal static class Ym7128BHelpers {
     YM7128B_INLINE
     void YM7128B_OversamplerFloat_Reset(YM7128B_OversamplerFloat* self)
     */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void OversamplerFloatReset(Ym7128BOversamplerFloat oversampler) {
         OversamplerFloatClear(oversampler, 0);
     }

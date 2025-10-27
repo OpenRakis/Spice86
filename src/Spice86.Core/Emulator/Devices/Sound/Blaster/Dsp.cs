@@ -17,6 +17,7 @@ public sealed class Dsp : IDisposable {
     private readonly ADPCM3 _adpcm3;
     private readonly ADPCM4 _adpcm4;
     private readonly DmaSystem _dmaSystem;
+    private readonly object _pumpLock = new();
     private readonly ILoggerService _logger;
     private readonly int _lowDmaChannelNumber;
     private readonly int? _highDmaChannelNumber;
@@ -99,6 +100,11 @@ public sealed class Dsp : IDisposable {
     private bool IsAtCapacity => _waveBuffer.IsAtCapacity;
 
     /// <summary>
+    ///     Raised after bytes have been transferred from the DMA channel into the DSP buffer.
+    /// </summary>
+    public event Action<int>? DmaBytesTransferred;
+
+    /// <summary>
     /// Starts a new DMA transfer.
     /// </summary>
     /// <param name="is16Bit">Value indicating whether this is a 16-bit transfer.</param>
@@ -173,11 +179,13 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="requestedBytes">Optional number of bytes requested from the DMA channel.</param>
     public int PumpDma(int? requestedBytes = null) {
-        if (CurrentChannel is null || !IsDmaTransferActive) {
-            return 0;
-        }
+        lock (_pumpLock) {
+            if (CurrentChannel is null || !IsDmaTransferActive) {
+                return 0;
+            }
 
-        return PumpDmaFromChannel(CurrentChannel, requestedBytes);
+            return PumpDmaFromChannel(CurrentChannel, requestedBytes);
+        }
     }
 
     /// <summary>
@@ -225,6 +233,10 @@ public sealed class Dsp : IDisposable {
 
             var segment = new ArraySegment<byte>(rented, 0, bytesTransferred);
             int bytesWritten = DmaWrite(segment);
+            if (bytesTransferred > 0) {
+                DmaBytesTransferred?.Invoke(bytesTransferred);
+            }
+
             return Math.Min(bytesTransferred, bytesWritten);
         } finally {
             ArrayPool<byte>.Shared.Return(rented);
