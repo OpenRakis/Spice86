@@ -250,9 +250,8 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Deallocate
-        _state.AH = 0x45;
         _state.DX = handle;
-        _ems.Run();
+        _ems.DeallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "DeallocatePages should return no error");
@@ -291,9 +290,8 @@ public class EmsUnitTests {
         _ems.Run();
 
         // Act - Try to deallocate with saved page map
-        _state.AH = 0x45;
         _state.DX = handle;
-        _ems.Run();
+        _ems.DeallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmSaveMapError, "Should return save map error");
@@ -338,14 +336,12 @@ public class EmsUnitTests {
     [Fact]
     public void SavePageMap_WhenAlreadySaved_ShouldFail() {
         // Arrange - Save page map first
-        _state.AH = 0x47;
         _state.DX = 0;
-        _ems.Run();
+        _ems.SavePageMap();
 
         // Act - Try to save again
-        _state.AH = 0x47;
         _state.DX = 0;
-        _ems.Run();
+        _ems.SavePageMap();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmPageMapSaved, "Should return page map saved error");
@@ -357,14 +353,12 @@ public class EmsUnitTests {
     [Fact]
     public void RestorePageMap_ShouldSucceed() {
         // Arrange - Save page map first
-        _state.AH = 0x47;
         _state.DX = 0;
-        _ems.Run();
+        _ems.SavePageMap();
 
         // Act - Restore page map
-        _state.AH = 0x48;
         _state.DX = 0;
-        _ems.Run();
+        _ems.RestorePageMap();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "RestorePageMap should return no error");
@@ -400,9 +394,8 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act
-        _state.AH = 0x4C;
         _state.DX = handle;
-        _ems.Run();
+        _ems.GetHandlePages();
 
         // Assert
         _state.BX.Should().Be(8, "Should return 8 pages for the handle");
@@ -431,8 +424,7 @@ public class EmsUnitTests {
         _state.DI = (ushort)bufferAddress;
 
         // Act
-        _state.AH = 0x4D;
-        _ems.Run();
+        _ems.GetAllHandlePages();
 
         // Assert
         _state.AX.Should().Be(EmmStatus.EmmNoError, "GetAllHandlePages should return no error");
@@ -464,7 +456,7 @@ public class EmsUnitTests {
         _memory.UInt16[mapAddress + 6] = 1; // Physical page 1
 
         // Act
-        _state.AH = 0x50;
+        // MapUnmapMultipleHandlePages setup
         _state.AL = EmmSubFunctionsCodes.UsePhysicalPageNumbers;
         _state.DX = handle;
         _state.CX = 2; // Map 2 pages
@@ -493,7 +485,7 @@ public class EmsUnitTests {
         _memory.UInt16[mapAddress + 2] = ExpandedMemoryManager.EmmPageFrameSegment; // Segment 0xE000
 
         // Act
-        _state.AH = 0x50;
+        // MapUnmapMultipleHandlePages setup
         _state.AL = EmmSubFunctionsCodes.UseSegmentedAddress;
         _state.DX = handle;
         _state.CX = 1; // Map 1 page
@@ -517,7 +509,7 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Use invalid subfunction
-        _state.AH = 0x50;
+        // MapUnmapMultipleHandlePages setup
         _state.AL = 0xFF; // Invalid subfunction
         _state.DX = handle;
         _state.CX = 1;
@@ -541,10 +533,9 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Reallocate to 8 pages
-        _state.AH = 0x51;
         _state.BX = 8;
         _state.DX = handle;
-        _ems.Run();
+        _ems.ReallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "ReallocatePages should return no error");
@@ -563,10 +554,9 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Reallocate to 4 pages
-        _state.AH = 0x51;
         _state.BX = 4;
         _state.DX = handle;
-        _ems.Run();
+        _ems.ReallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "ReallocatePages should return no error");
@@ -585,10 +575,9 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Reallocate to same size (4 pages)
-        _state.AH = 0x51;
         _state.BX = 4;
         _state.DX = handle;
-        _ems.Run();
+        _ems.ReallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "ReallocatePages with same size should return no error");
@@ -607,10 +596,9 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Reallocate to 0 pages
-        _state.AH = 0x51;
         _state.BX = 0;
         _state.DX = handle;
-        _ems.Run();
+        _ems.ReallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "ReallocatePages to zero should return no error");
@@ -654,7 +642,7 @@ public class EmsUnitTests {
         _memory.UInt8[nameAddress + (uint)testName.Length] = 0; // Null terminator
 
         // Act - Set name
-        _state.AH = 0x53;
+        // GetSetHandleName setup
         _state.AL = EmmSubFunctionsCodes.HandleNameSet;
         _state.DX = handle;
         _state.SI = 0;
@@ -682,7 +670,7 @@ public class EmsUnitTests {
 
         // Act - Get name
         uint nameBufferAddress = 0x3000;
-        _state.AH = 0x53;
+        // GetSetHandleName setup
         _state.AL = EmmSubFunctionsCodes.HandleNameGet;
         _state.DX = handle;
         _state.ES = 0;
@@ -700,7 +688,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetSetHandleName_WithInvalidHandle_ShouldFail() {
         // Arrange
-        _state.AH = 0x53;
+        // GetSetHandleName setup
         _state.AL = EmmSubFunctionsCodes.HandleNameGet;
         _state.DX = 0xFFFF; // Invalid handle
         _state.ES = 0;
@@ -725,7 +713,7 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Use invalid subfunction
-        _state.AH = 0x53;
+        // GetSetHandleName setup
         _state.AL = 0xFF; // Invalid subfunction
         _state.DX = handle;
         _ems.Run();
@@ -741,7 +729,7 @@ public class EmsUnitTests {
     public void GetMappablePhysicalAddressArray_ShouldReturnCorrectArray() {
         // Arrange
         uint bufferAddress = 0x4000;
-        _state.AH = 0x58;
+        // GetMappablePhysicalAddressArray setup
         _state.ES = 0;
         _state.DI = (ushort)bufferAddress;
 
@@ -772,7 +760,7 @@ public class EmsUnitTests {
     public void GetExpandedMemoryHardwareInformation_GetHardwareConfig_ShouldReturnData() {
         // Arrange
         uint bufferAddress = 0x5000;
-        _state.AH = 0x59;
+        // GetExpandedMemoryHardwareInformation setup
         _state.AL = EmmSubFunctionsCodes.GetHardwareConfigurationArray;
         _state.ES = 0;
         _state.DI = (ushort)bufferAddress;
@@ -804,7 +792,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetExpandedMemoryHardwareInformation_GetUnallocatedRawPages_ShouldReturnCounts() {
         // Arrange
-        _state.AH = 0x59;
+        // GetExpandedMemoryHardwareInformation setup
         _state.AL = EmmSubFunctionsCodes.GetUnallocatedRawPages;
 
         // Act
@@ -993,9 +981,8 @@ public class EmsUnitTests {
         _ems.Run();
 
         // Save the page map for handle 0
-        _state.AH = 0x47;
         _state.DX = 0;
-        _ems.Run();
+        _ems.SavePageMap();
 
         // Change mapping
         _state.AH = 0x44;
@@ -1005,9 +992,8 @@ public class EmsUnitTests {
         _ems.Run();
 
         // Act - Restore the page map
-        _state.AH = 0x48;
         _state.DX = 0;
-        _ems.Run();
+        _ems.RestorePageMap();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "Restore should succeed");
