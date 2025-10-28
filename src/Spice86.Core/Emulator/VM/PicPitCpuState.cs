@@ -40,9 +40,14 @@ public sealed class PicPitCpuState(State state) {
     }
 
     /// <summary>
+    ///     Gets a value indicating whether the CPU currently suppresses external interrupts due to shadowing.
+    /// </summary>
+    public bool InterruptShadowing => state.InterruptShadowing;
+
+    /// <summary>
     ///     Last hardware interrupt vector raised by the controller.
     /// </summary>
-    public nuint? LastHardwareInterrupt { get; private set; }
+    public byte? LastHardwareInterrupt { get; private set; }
 
     /// <summary>
     ///     Number of cycles consumed inside the active slice.
@@ -76,7 +81,7 @@ public sealed class PicPitCpuState(State state) {
     ///     Records the most recent hardware interrupt vector observed by the controller.
     /// </summary>
     /// <param name="num">Interrupt vector number.</param>
-    public void CpuHwInterrupt(nuint num) {
+    public void CpuHwInterrupt(byte num) {
         LastHardwareInterrupt = num;
     }
 

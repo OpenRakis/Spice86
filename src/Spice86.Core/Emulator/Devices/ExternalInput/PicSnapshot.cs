@@ -1,10 +1,10 @@
 ﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 /// <summary>
-///     Represents a read-only view of a PIC channel's register state at a specific instant.
+///     Represents a read-only view of a PIC controller's register state at a specific instant.
 /// </summary>
 /// <remarks>
-///     Instances are produced by <see cref="DualPic.GetChannelSnapshot" /> and mirror the register layout maintained by
+///     Instances are produced by <see cref="DualPic.GetPicSnapshot" /> and mirror the register layout maintained by
 ///     the controller.
 /// </remarks>
 /// <param name="InterruptRequestRegister">Latched, unserviced IRQ requests.</param>
@@ -18,7 +18,7 @@
 /// <param name="ShouldRotateOnAutoEoi">Indicates whether rotate-on-auto-EOI is requested.</param>
 /// <param name="IsSingleModeConfigured">Indicates whether the controller operates in single mode.</param>
 /// <param name="InterruptVectorBase">Base interrupt vector applied to IRQ numbers.</param>
-public readonly record struct PicChannelSnapshot(
+public readonly record struct PicSnapshot(
     byte InterruptRequestRegister,
     byte InterruptMaskRegister,
     byte InterruptMaskRegisterInverted,

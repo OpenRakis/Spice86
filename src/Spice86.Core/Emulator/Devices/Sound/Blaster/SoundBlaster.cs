@@ -1308,10 +1308,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _pendingIrqAllowMasked = ignoreDmaMask;
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             bool dmaMasked = !ignoreDmaMask && IsCurrentDmaMasked();
-            bool irqMasked = IsIrqMasked();
+            bool irqMasked = IsSbInterruptMasked();
             _loggerService.Verbose("Deferred Sound Blaster interrupt; DMA masked: {DmaMasked}, IRQ masked: {IrqMasked}",
                 dmaMasked, irqMasked);
         }
+    }
+
+    private bool IsSbInterruptMasked() {
+        return _dualPic.IsInterruptMasked(_config.Irq);
     }
 
     /// <summary>
@@ -1373,19 +1377,12 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return false;
         }
 
-        return !IsIrqMasked();
+        return !IsSbInterruptMasked();
     }
 
     private bool IsCurrentDmaMasked() {
         DmaChannel? channel = _dsp.CurrentChannel;
         return channel is not null && channel.IsMasked;
-    }
-
-    private bool IsIrqMasked() {
-        DualPic.PicChannel channel = _config.Irq < 8 ? DualPic.PicChannel.Primary : DualPic.PicChannel.Secondary;
-        PicChannelSnapshot snapshot = _dualPic.GetChannelSnapshot(channel);
-        int bit = _config.Irq < 8 ? _config.Irq : _config.Irq - 8;
-        return (snapshot.InterruptMaskRegister & (1 << bit)) != 0;
     }
 
     private struct BufferStatus() {
