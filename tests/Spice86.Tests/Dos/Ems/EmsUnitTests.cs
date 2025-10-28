@@ -1101,9 +1101,13 @@ public class EmsUnitTests {
     /// </summary>
     [Fact(Skip = "Handle exhaustion test - requires understanding exact allocation limits")]
     public void AllocatePages_WhenHandlesExhausted_ShouldFail() {
-        // Arrange - Allocate handles until we reach the limit
+        // Arrange - Get initial handle count
+        _ems.GetEmmHandleCount();
+        ushort initialHandleCount = _state.BX;
+        
+        // Allocate handles until we reach the limit
         // Each handle needs at least 1 page, and we have TotalPages available
-        for (int i = 0; i < EmmMemory.TotalPages - _ems.EmmHandles.Count; i++) {
+        for (int i = 0; i < EmmMemory.TotalPages - initialHandleCount; i++) {
             _state.BX = 1;
             _ems.AllocatePages();
             if (_state.AH != EmmStatus.EmmNoError) {
