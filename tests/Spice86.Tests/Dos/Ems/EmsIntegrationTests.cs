@@ -26,23 +26,22 @@ public class EmsIntegrationTests {
 
     /// <summary>
     /// Tests EMS detection via INT 67h vector check (first detection method).
-    /// A valid EMS driver should have INT 67h pointing to a valid handler.
+    /// A valid EMS driver should respond to INT 67h calls.
     /// </summary>
     [Fact]
     public void EmsDetection_ViaInterruptVector_ShouldBePresent() {
-        // This test verifies the first detection method: checking if INT 67h vector is non-zero
+        // This test verifies the first detection method: calling INT 67h GetStatus
+        // If EMS is present, it should return status 00h in AH
         byte[] program = new byte[] {
-            // Get INT 67h vector
-            0xB8, 0x35, 0x67,       // mov ax, 3567h - Get interrupt vector
-            0xCD, 0x21,             // int 21h (DOS get vector)
-            // Check if ES:BX is non-zero
-            0x8C, 0xC0,             // mov ax, es
-            0x0B, 0xC3,             // or ax, bx - combine ES and BX
-            0x74, 0x04,             // jz notInstalled
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-            // notInstalled:
+            // Call INT 67h GetStatus
+            0xB4, 0x40,             // mov ah, 40h - Get Status
+            0xCD, 0x67,             // int 67h
+            0x80, 0xFC, 0x00,       // cmp ah, 0 - Check if status is 00h
+            0x74, 0x04,             // je success
             0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xEB, 0x02,             // jmp writeResult
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
             // writeResult:
             0xBA, 0x99, 0x09,       // mov dx, ResultPort
             0xEE,                   // out dx, al
@@ -51,7 +50,7 @@ public class EmsIntegrationTests {
 
         EmsTestHandler testHandler = RunEmsTest(program, enableEms: true);
 
-        testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 67h vector should be installed");
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 67h should be functional");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
 

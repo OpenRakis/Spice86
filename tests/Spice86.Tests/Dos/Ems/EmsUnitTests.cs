@@ -612,6 +612,7 @@ public class EmsUnitTests {
         _state.DX = handle;
         _state.SI = 0;
         _state.DI = (ushort)nameAddress;
+        _ems.GetSetHandleName();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "SetHandleName should return no error");
@@ -692,7 +693,7 @@ public class EmsUnitTests {
         _state.DI = (ushort)bufferAddress;
 
         // Act
-        _ems.GetSetHandleName();
+        _ems.GetMappablePhysicalAddressArray();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "GetMappablePhysicalAddressArray should return no error");
