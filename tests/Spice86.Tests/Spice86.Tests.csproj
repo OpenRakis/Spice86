@@ -11,10 +11,10 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="FluentAssertions"/>
-        <PackageReference Include="JetBrains.Annotations"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-        <PackageReference Include="NSubstitute"/>
+        <PackageReference Include="FluentAssertions" />
+        <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NSubstitute" />
         <PackageReference Include="NSubstitute.Analyzers.CSharp">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,13 +27,13 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="SingleStepTests.Intel8086.00-FF"/>
-        <PackageReference Include="SingleStepTests.Intel80286.00-3F"/>
-        <PackageReference Include="SingleStepTests.Intel80286.40-7F"/>
-        <PackageReference Include="SingleStepTests.Intel80286.80-BF"/>
-        <PackageReference Include="SingleStepTests.Intel80286.C0-FF"/>
-        <PackageReference Include="System.Text.Json"/>
-        <PackageReference Include="xunit"/>
+        <PackageReference Include="SingleStepTests.Intel8086.00-FF" />
+        <PackageReference Include="SingleStepTests.Intel80286.00-3F" />
+        <PackageReference Include="SingleStepTests.Intel80286.40-7F" />
+        <PackageReference Include="SingleStepTests.Intel80286.80-BF" />
+        <PackageReference Include="SingleStepTests.Intel80286.C0-FF" />
+        <PackageReference Include="System.Text.Json" />
+        <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -44,9 +44,9 @@
         </PackageReference>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj"/>
-        <ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj"/>
-        <ProjectReference Include="..\..\src\Spice86\Spice86.csproj"/>
+        <ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj" />
+        <ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj" />
+        <ProjectReference Include="..\..\src\Spice86\Spice86.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Update="Resources\**">
