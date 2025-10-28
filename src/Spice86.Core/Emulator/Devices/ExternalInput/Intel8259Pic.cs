@@ -375,6 +375,33 @@ internal abstract class Intel8259Pic(ILoggerService logger) {
         _lowestPriorityIrq = 7; // default lowest priority points to IRQ7
         Logger.Debug("PIC: Controller state reset to defaults.");
     }
+
+    /// <summary>
+    ///     Updates the interrupt mask register for the specified IRQ line.
+    /// </summary>
+    /// <param name="irq">Zero-based IRQ line whose mask state should change.</param>
+    /// <param name="masked">Set to <c>true</c> to mask the IRQ, or <c>false</c> to unmask it.</param>
+    /// <returns>
+    ///     <c>true</c> if the line is now masked, <c>false</c> if it is now unmasked, or <c>null</c> when no change occurred.
+    /// </returns>
+    public bool? SetIrqMask(byte irq, bool masked) {
+        // clear bit
+        byte bit = (byte)(1 << irq);
+        byte newMask = InterruptMaskRegister;
+        newMask &= (byte)~bit;
+        if (masked) {
+            newMask |= bit;
+        }
+
+        byte previousMask = InterruptMaskRegister;
+        SetInterruptMaskRegister(newMask);
+
+        if (((previousMask ^ newMask) & bit) != 0) {
+            return (newMask & bit) != 0;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>

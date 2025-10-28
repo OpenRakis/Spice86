@@ -60,6 +60,7 @@ public sealed class DualPic : IDisposable {
         Secondary
     }
 
+    private const byte MaxIrq = 15;
     private const byte NoPendingIrq = 8;
 
     private const ushort PrimaryPicCommandPort = 0x20;
@@ -200,7 +201,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number to acknowledge.</param>
     public void AcknowledgeInterrupt(byte irq) {
         switch (irq) {
-            case > 15:
+            case > MaxIrq:
                 _logger.Error("PIC: Acknowledge requested for out-of-range IRQ {Irq}", irq);
                 return;
             case < 8:
@@ -569,7 +570,7 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void ActivateIrq(byte irq) {
-        if (irq > 15) {
+        if (irq > MaxIrq) {
             _logger.Error("PIC: Activation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
@@ -602,7 +603,7 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <param name="irq">IRQ number in the range 0–15.</param>
     public void DeactivateIrq(byte irq) {
-        if (irq > 15) {
+        if (irq > MaxIrq) {
             _logger.Error("PIC: Deactivation requested for out-of-range IRQ {Irq}", irq);
             return;
         }
@@ -676,30 +677,19 @@ public sealed class DualPic : IDisposable {
     /// <param name="irq">IRQ number in the range 0–15.</param>
     /// <param name="masked"><see langword="true" /> to suppress the IRQ; otherwise <see langword="false" />.</param>
     public void SetIrqMask(uint irq, bool masked) {
-        if (irq > 15) {
+        if (irq > MaxIrq) {
             _logger.Error("PIC: Mask update requested for out-of-range IRQ {Irq}", irq);
             return;
         }
 
         byte controllerIrq = GetEffectiveControllerIrq((byte)irq);
         Intel8259Pic pic = GetPicByIrq(irq);
-        // clear bit
-        byte bit = (byte)(1 << controllerIrq);
-        byte newMask = pic.InterruptMaskRegister;
-        newMask &= (byte)~bit;
-        if (masked) {
-            newMask |= bit;
+        if (pic.SetIrqMask(controllerIrq, masked) is not { } newMask) {
+            return;
         }
 
-        byte previousMask = pic.InterruptMaskRegister;
-        pic.SetInterruptMaskRegister(newMask);
-
-        if (((previousMask ^ newMask) & bit) != 0) {
-            bool isMasked = (newMask & bit) != 0;
-            _logger.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, isMasked);
-
-            IrqMaskChanged?.Invoke((byte)irq, isMasked);
-        }
+        _logger.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
+        IrqMaskChanged?.Invoke((byte)irq, newMask);
     }
 
     /// <summary>
