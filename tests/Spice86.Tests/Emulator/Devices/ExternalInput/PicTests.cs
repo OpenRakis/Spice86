@@ -308,7 +308,7 @@ public class PicTests {
     }
 
     private bool HasPendingRequest() {
-        PicChannelSnapshot snapshot = _pic.GetChannelSnapshot(DualPic.PicChannel.Primary);
+        PicSnapshot snapshot = _pic.GetPicSnapshot(DualPic.PicController.Primary);
         byte pending = (byte)(snapshot.InterruptRequestRegister &
                               snapshot.InterruptMaskRegisterInverted &
                               snapshot.InServiceRegisterInverted);

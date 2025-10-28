@@ -55,7 +55,7 @@ public sealed class DualPicTests : IDisposable {
 
         // Acknowledge the IRQ and ensure the in-service bit clears on the secondary channel.
         _fixture.DualPic.AcknowledgeInterrupt(10);
-        PicChannelSnapshot snapshot = _fixture.DualPic.GetChannelSnapshot(DualPic.PicChannel.Secondary);
+        PicSnapshot snapshot = _fixture.DualPic.GetPicSnapshot(DualPic.PicController.Secondary);
         snapshot.InServiceRegister.Should().Be(0);
     }
 

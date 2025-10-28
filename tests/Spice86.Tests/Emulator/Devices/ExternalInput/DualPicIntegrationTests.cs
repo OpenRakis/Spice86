@@ -29,7 +29,7 @@ public sealed class DualPicIntegrationTests {
         Machine machine = spice86.Machine;
         machine.CpuState.DX.Should().Be(1);
         machine.DualPic.Ticks.Should().BeGreaterThan(0u);
-        machine.DualPic.GetChannelSnapshot(DualPic.PicChannel.Primary).InterruptMaskRegister.Should().Be(0x00);
+        machine.DualPic.GetPicSnapshot(DualPic.PicController.Primary).InterruptMaskRegister.Should().Be(0x00);
 
         PitChannelSnapshot snapshot = machine.Timer.GetChannelSnapshot(0);
         snapshot.Count.Should().Be(0x2251);
