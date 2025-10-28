@@ -755,7 +755,7 @@ public class EmsUnitTests {
         _state.AL = EmmSubFunctionsCodes.GetUnallocatedRawPages;
 
         // Act
-        _ems.GetSetHandleName();
+        _ems.GetExpandedMemoryHardwareInformation();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "Should return no error");
