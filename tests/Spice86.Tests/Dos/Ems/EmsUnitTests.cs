@@ -162,10 +162,10 @@ public class EmsUnitTests {
         _ems.MapUnmapHandlePage();
 
         // Act - Unmap by setting logical page to 0xFFFF
-        _state.AH = 0x44;
         _state.AL = 0; // Physical page 0
         _state.BX = ExpandedMemoryManager.EmmNullPage; // Unmap indicator
         _state.DX = handle;
+        _ems.MapUnmapHandlePage();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "Unmap should return no error");
@@ -177,7 +177,6 @@ public class EmsUnitTests {
     [Fact]
     public void MapUnmapHandlePage_WithInvalidHandle_ShouldFail() {
         // Arrange
-        _state.AH = 0x44;
         _state.AL = 0; // Physical page 0
         _state.BX = 0; // Logical page 0
         _state.DX = 0xFFFF; // Invalid handle
@@ -200,10 +199,10 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Try to map to invalid physical page
-        _state.AH = 0x44;
         _state.AL = 99; // Invalid physical page (only 0-3 are valid)
         _state.BX = 0; // Logical page 0
         _state.DX = handle;
+        _ems.MapUnmapHandlePage();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmIllegalPhysicalPage, "Should return illegal physical page error");
@@ -220,10 +219,10 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Try to map logical page 5 (only 0-1 are allocated)
-        _state.AH = 0x44;
         _state.AL = 0; // Physical page 0
         _state.BX = 5; // Logical page 5 (out of range)
         _state.DX = handle;
+        _ems.MapUnmapHandlePage();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmLogicalPageOutOfRange, "Should return logical page out of range error");
@@ -254,7 +253,6 @@ public class EmsUnitTests {
     [Fact]
     public void DeallocatePages_WithInvalidHandle_ShouldFail() {
         // Arrange
-        _state.AH = 0x45;
         _state.DX = 0xFFFF; // Invalid handle
 
         // Act
@@ -294,6 +292,7 @@ public class EmsUnitTests {
         _state.AH = 0x46;
 
         // Act
+        _ems.GetEmmVersion();
 
         // Assert
         _state.AL.Should().Be(0x32, "EMS version should be 3.2 (0x32)");
@@ -306,7 +305,6 @@ public class EmsUnitTests {
     [Fact]
     public void SavePageMap_ShouldSucceed() {
         // Arrange - Use handle 0 (system handle)
-        _state.AH = 0x47;
         _state.DX = 0;
 
         // Act
@@ -359,9 +357,9 @@ public class EmsUnitTests {
     public void GetEmmHandleCount_ShouldReturnCorrectCount() {
         // Arrange
         int initialCount = _ems.EmmHandles.Count;
-        _state.AH = 0x4B;
 
         // Act
+        _ems.GetEmmHandleCount();
 
         // Assert
         _state.BX.Should().Be((ushort)initialCount, "Handle count should match actual count");
@@ -581,12 +579,11 @@ public class EmsUnitTests {
     [Fact]
     public void ReallocatePages_WithInvalidHandle_ShouldFail() {
         // Arrange
-        _state.AH = 0x51;
         _state.BX = 8;
         _state.DX = 0xFFFF; // Invalid handle
 
         // Act
-        _ems.MapUnmapMultipleHandlePages();
+        _ems.ReallocatePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmInvalidHandle, "Should return invalid handle error");
@@ -774,7 +771,7 @@ public class EmsUnitTests {
         _state.AH = 0x60; // Not implemented function
 
         // Act
-        _ems.GetMappablePhysicalAddressArray();
+        _ems.Run();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmFunctionNotSupported, "Should return function not supported error");
