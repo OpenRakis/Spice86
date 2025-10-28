@@ -673,9 +673,9 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Act - Use invalid subfunction
-        // GetSetHandleName setup
         _state.AL = 0xFF; // Invalid subfunction
         _state.DX = handle;
+        _ems.GetSetHandleName();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmInvalidSubFunction, "Should return invalid subfunction error");
