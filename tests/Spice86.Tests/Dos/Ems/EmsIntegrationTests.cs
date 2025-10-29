@@ -63,9 +63,12 @@ public class EmsIntegrationTests {
         // This test verifies the second detection method:
         // Opening the "EMMXXXX0" device and checking its presence
         byte[] program = new byte[] {
+            // Set DS to CS so we can access the device name
+            0x0E,                   // push cs
+            0x1F,                   // pop ds
             // Try to open EMMXXXX0 device
             0xB8, 0x00, 0x3D,       // mov ax, 3D00h - Open file for reading
-            0xBA, 0x20, 0x00,       // mov dx, 0x0020 - Offset to device name
+            0xBA, 0x1E, 0x01,       // mov dx, 0x011E - Offset to device name (0x100 + 0x1E)
             0xCD, 0x21,             // int 21h
             0x72, 0x06,             // jc openFailed - Jump if carry (error)
             // Success - close the handle
@@ -80,7 +83,7 @@ public class EmsIntegrationTests {
             0xBA, 0x99, 0x09,       // mov dx, ResultPort
             0xEE,                   // out dx, al
             0xF4,                   // hlt
-            // Device name at offset 0x20:
+            // Device name at offset 0x1E from start (0x100 + 0x1E = 0x11E absolute):
             0x45, 0x4D, 0x4D, 0x58, 0x58, 0x58, 0x58, 0x30, 0x00  // "EMMXXXX0\0"
         };
 
@@ -257,7 +260,7 @@ public class EmsIntegrationTests {
             0xB4, 0x43,             // mov ah, 43h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x25,             // jne failed
+            0x75, 0x26,             // jne failed (was 0x25, +1 for extra byte in write)
             0x89, 0xD1,             // mov cx, dx - Save handle
             // Map logical page 0 to physical page 0
             0xB0, 0x00,             // mov al, 0
@@ -266,11 +269,11 @@ public class EmsIntegrationTests {
             0xB4, 0x44,             // mov ah, 44h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x16,             // jne failed
+            0x75, 0x17,             // jne failed (was 0x16, +1 for extra byte in write)
             // Write test value to EMS page at E000:0000
             0xB8, 0x00, 0xE0,       // mov ax, 0xE000
             0x8E, 0xC0,             // mov es, ax
-            0xC6, 0x06, 0x00, 0x00, 0x42, // mov byte [es:0], 42h
+            0x26, 0xC6, 0x06, 0x00, 0x00, 0x42, // mov byte [es:0], 42h
             // Read back and verify
             0x26, 0xA0, 0x00, 0x00, // mov al, [es:0]
             0x3C, 0x42,             // cmp al, 42h
@@ -548,7 +551,7 @@ public class EmsIntegrationTests {
             0xB4, 0x43,             // mov ah, 43h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x4C,             // jne failed
+            0x75, 0x4E,             // jne failed (was 0x4C, +2 for two extra bytes in writes)
             0x89, 0xD1,             // mov cx, dx - Save handle
             // Map logical page 0 to physical page 0
             0xB0, 0x00,             // mov al, 0
@@ -557,11 +560,11 @@ public class EmsIntegrationTests {
             0xB4, 0x44,             // mov ah, 44h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x3D,             // jne failed
+            0x75, 0x3F,             // jne failed (was 0x3D, +2 for two extra bytes in writes)
             // Write 11h to first byte of logical page 0
             0xB8, 0x00, 0xE0,       // mov ax, 0xE000
             0x8E, 0xC0,             // mov es, ax
-            0xC6, 0x06, 0x00, 0x00, 0x11, // mov byte [es:0], 11h
+            0x26, 0xC6, 0x06, 0x00, 0x00, 0x11, // mov byte [es:0], 11h
             // Map logical page 1 to physical page 0
             0xB0, 0x00,             // mov al, 0
             0xBB, 0x01, 0x00,       // mov bx, 1
@@ -569,9 +572,9 @@ public class EmsIntegrationTests {
             0xB4, 0x44,             // mov ah, 44h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x26,             // jne failed
+            0x75, 0x28,             // jne failed (was 0x26, +2 for two extra bytes in writes)
             // Write 22h to first byte of logical page 1
-            0xC6, 0x06, 0x00, 0x00, 0x22, // mov byte [es:0], 22h
+            0x26, 0xC6, 0x06, 0x00, 0x00, 0x22, // mov byte [es:0], 22h
             // Map logical page 0 back to physical page 0
             0xB0, 0x00,             // mov al, 0
             0xBB, 0x00, 0x00,       // mov bx, 0
@@ -579,7 +582,7 @@ public class EmsIntegrationTests {
             0xB4, 0x44,             // mov ah, 44h
             0xCD, 0x67,             // int 67h
             0x80, 0xFC, 0x00,       // cmp ah, 0
-            0x75, 0x0F,             // jne failed
+            0x75, 0x0F,             // jne failed (unchanged, no extra bytes after this point)
             // Verify logical page 0 still has 11h
             0x26, 0xA0, 0x00, 0x00, // mov al, [es:0]
             0x3C, 0x11,             // cmp al, 11h
