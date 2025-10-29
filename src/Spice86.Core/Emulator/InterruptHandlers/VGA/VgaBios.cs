@@ -21,6 +21,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
+    private readonly IVesaVbeHandler _vesaVbeHandler;
 
     /// <summary>
     ///     VGA BIOS constructor.
@@ -31,11 +32,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="state">The CPU state.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
+    /// <param name="vesaVbeHandler">Provides VESA VBE functionality</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, IVesaVbeHandler vesaVbeHandler, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
+        _vesaVbeHandler = vesaVbeHandler;
         _logger = loggerService;
         if(_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
@@ -611,12 +614,45 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         AddAction(0x4F, VesaFunctions);
     }
 
+    /// <summary>
+    /// Handles VESA VBE function calls (INT 10h, AH=4Fh).
+    /// </summary>
     public void VesaFunctions() {
-        if(_logger.IsEnabled(LogEventLevel.Warning)) {
-            // This can be valid, video cards came to the scene before VESA was a standard.
-            // It seems some games can expect that (eg. Rules of Engagement 2)
-            //TODO: Implement at least VESA 1.2
-            _logger.Warning("Emulated program tried to call VESA functions. Not implemented, moving on!");
+        VbeFunction function = (VbeFunction)State.AL;
+        
+        if(_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("VESA VBE Function 0x{Function:X2} called", State.AL);
+        }
+
+        switch (function) {
+            case VbeFunction.ReturnControllerInfo:
+                _vesaVbeHandler.ReturnControllerInfo();
+                break;
+
+            case VbeFunction.ReturnModeInfo:
+                _vesaVbeHandler.ReturnModeInfo();
+                break;
+
+            case VbeFunction.SetVbeMode:
+                _vesaVbeHandler.SetVbeMode();
+                break;
+
+            case VbeFunction.ReturnCurrentVbeMode:
+                _vesaVbeHandler.ReturnCurrentVbeMode();
+                break;
+
+            case VbeFunction.SaveRestoreState:
+                _vesaVbeHandler.SaveRestoreState();
+                break;
+
+            default:
+                if(_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("VESA VBE function 0x{Function:X2} is not implemented", State.AL);
+                }
+                // Return failure for unsupported functions
+                State.AL = 0x4F; // VBE supported
+                State.AH = (byte)VbeReturnStatus.Failed;
+                break;
         }
     }
 

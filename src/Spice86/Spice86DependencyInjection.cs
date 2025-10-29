@@ -258,8 +258,9 @@ public class Spice86DependencyInjection : IDisposable {
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is not false);
+        VesaVbeHandler vesaVbeHandler = new VesaVbeHandler(state, memory, loggerService, vgaFunctionality);
         VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
-            state, vgaFunctionality, biosDataArea, loggerService);
+            state, vgaFunctionality, biosDataArea, vesaVbeHandler, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Video card support classes created...");
