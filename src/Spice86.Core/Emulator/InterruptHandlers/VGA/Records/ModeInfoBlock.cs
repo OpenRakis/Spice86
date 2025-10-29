@@ -1,17 +1,15 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
-using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
 /// <summary>
 /// VBE Mode Information Block (256 bytes).
 /// This structure contains detailed information about a specific VBE video mode.
 /// Returned by Function 01h (ReturnModeInfo).
 /// </summary>
-public class ModeInfoBlock {
-    private readonly IIndexable _memory;
-    private readonly uint _address;
-
+public class ModeInfoBlock : MemoryBasedDataStructure {
     /// <summary>
     /// Size of the ModeInfoBlock structure in bytes.
     /// </summary>
@@ -20,11 +18,10 @@ public class ModeInfoBlock {
     /// <summary>
     /// Initializes a new instance of the ModeInfoBlock class.
     /// </summary>
-    /// <param name="memory">The memory interface to read/write the structure.</param>
-    /// <param name="address">The physical address where the structure is located.</param>
-    public ModeInfoBlock(IIndexable memory, uint address) {
-        _memory = memory;
-        _address = address;
+    /// <param name="byteReaderWriter">The memory interface to read/write the structure.</param>
+    /// <param name="baseAddress">The physical address where the structure is located.</param>
+    public ModeInfoBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) 
+        : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>
@@ -32,8 +29,8 @@ public class ModeInfoBlock {
     /// Offset: 00h, Size: 2 bytes.
     /// </summary>
     public VbeModeAttribute ModeAttributes {
-        get => (VbeModeAttribute)_memory.UInt16[_address];
-        set => _memory.UInt16[_address] = (ushort)value;
+        get => (VbeModeAttribute)UInt16[0x00];
+        set => UInt16[0x00] = (ushort)value;
     }
 
     /// <summary>
@@ -41,8 +38,8 @@ public class ModeInfoBlock {
     /// Offset: 02h, Size: 1 byte.
     /// </summary>
     public VbeWindowAttribute WindowAAttributes {
-        get => (VbeWindowAttribute)_memory.UInt8[_address + 0x02];
-        set => _memory.UInt8[_address + 0x02] = (byte)value;
+        get => (VbeWindowAttribute)UInt8[0x02];
+        set => UInt8[0x02] = (byte)value;
     }
 
     /// <summary>
@@ -50,8 +47,8 @@ public class ModeInfoBlock {
     /// Offset: 03h, Size: 1 byte.
     /// </summary>
     public VbeWindowAttribute WindowBAttributes {
-        get => (VbeWindowAttribute)_memory.UInt8[_address + 0x03];
-        set => _memory.UInt8[_address + 0x03] = (byte)value;
+        get => (VbeWindowAttribute)UInt8[0x03];
+        set => UInt8[0x03] = (byte)value;
     }
 
     /// <summary>
@@ -59,8 +56,8 @@ public class ModeInfoBlock {
     /// Offset: 04h, Size: 2 bytes.
     /// </summary>
     public ushort WindowGranularity {
-        get => _memory.UInt16[_address + 0x04];
-        set => _memory.UInt16[_address + 0x04] = value;
+        get => UInt16[0x04];
+        set => UInt16[0x04] = value;
     }
 
     /// <summary>
@@ -68,8 +65,8 @@ public class ModeInfoBlock {
     /// Offset: 06h, Size: 2 bytes.
     /// </summary>
     public ushort WindowSize {
-        get => _memory.UInt16[_address + 0x06];
-        set => _memory.UInt16[_address + 0x06] = value;
+        get => UInt16[0x06];
+        set => UInt16[0x06] = value;
     }
 
     /// <summary>
@@ -77,8 +74,8 @@ public class ModeInfoBlock {
     /// Offset: 08h, Size: 2 bytes.
     /// </summary>
     public ushort WindowASegment {
-        get => _memory.UInt16[_address + 0x08];
-        set => _memory.UInt16[_address + 0x08] = value;
+        get => UInt16[0x08];
+        set => UInt16[0x08] = value;
     }
 
     /// <summary>
@@ -86,8 +83,8 @@ public class ModeInfoBlock {
     /// Offset: 0Ah, Size: 2 bytes.
     /// </summary>
     public ushort WindowBSegment {
-        get => _memory.UInt16[_address + 0x0A];
-        set => _memory.UInt16[_address + 0x0A] = value;
+        get => UInt16[0x0A];
+        set => UInt16[0x0A] = value;
     }
 
     /// <summary>
@@ -95,8 +92,8 @@ public class ModeInfoBlock {
     /// Offset: 0Ch, Size: 4 bytes.
     /// </summary>
     public uint WindowFunctionPtr {
-        get => _memory.UInt32[_address + 0x0C];
-        set => _memory.UInt32[_address + 0x0C] = value;
+        get => UInt32[0x0C];
+        set => UInt32[0x0C] = value;
     }
 
     /// <summary>
@@ -104,8 +101,8 @@ public class ModeInfoBlock {
     /// Offset: 10h, Size: 2 bytes.
     /// </summary>
     public ushort BytesPerScanLine {
-        get => _memory.UInt16[_address + 0x10];
-        set => _memory.UInt16[_address + 0x10] = value;
+        get => UInt16[0x10];
+        set => UInt16[0x10] = value;
     }
 
     /// <summary>
@@ -113,8 +110,8 @@ public class ModeInfoBlock {
     /// Offset: 12h, Size: 2 bytes.
     /// </summary>
     public ushort Width {
-        get => _memory.UInt16[_address + 0x12];
-        set => _memory.UInt16[_address + 0x12] = value;
+        get => UInt16[0x12];
+        set => UInt16[0x12] = value;
     }
 
     /// <summary>
@@ -122,8 +119,8 @@ public class ModeInfoBlock {
     /// Offset: 14h, Size: 2 bytes.
     /// </summary>
     public ushort Height {
-        get => _memory.UInt16[_address + 0x14];
-        set => _memory.UInt16[_address + 0x14] = value;
+        get => UInt16[0x14];
+        set => UInt16[0x14] = value;
     }
 
     /// <summary>
@@ -131,8 +128,8 @@ public class ModeInfoBlock {
     /// Offset: 16h, Size: 1 byte.
     /// </summary>
     public byte CharacterWidth {
-        get => _memory.UInt8[_address + 0x16];
-        set => _memory.UInt8[_address + 0x16] = value;
+        get => UInt8[0x16];
+        set => UInt8[0x16] = value;
     }
 
     /// <summary>
@@ -140,8 +137,8 @@ public class ModeInfoBlock {
     /// Offset: 17h, Size: 1 byte.
     /// </summary>
     public byte CharacterHeight {
-        get => _memory.UInt8[_address + 0x17];
-        set => _memory.UInt8[_address + 0x17] = value;
+        get => UInt8[0x17];
+        set => UInt8[0x17] = value;
     }
 
     /// <summary>
@@ -149,8 +146,8 @@ public class ModeInfoBlock {
     /// Offset: 18h, Size: 1 byte.
     /// </summary>
     public byte NumberOfPlanes {
-        get => _memory.UInt8[_address + 0x18];
-        set => _memory.UInt8[_address + 0x18] = value;
+        get => UInt8[0x18];
+        set => UInt8[0x18] = value;
     }
 
     /// <summary>
@@ -158,8 +155,8 @@ public class ModeInfoBlock {
     /// Offset: 19h, Size: 1 byte.
     /// </summary>
     public byte BitsPerPixel {
-        get => _memory.UInt8[_address + 0x19];
-        set => _memory.UInt8[_address + 0x19] = value;
+        get => UInt8[0x19];
+        set => UInt8[0x19] = value;
     }
 
     /// <summary>
@@ -167,8 +164,8 @@ public class ModeInfoBlock {
     /// Offset: 1Ah, Size: 1 byte.
     /// </summary>
     public byte NumberOfBanks {
-        get => _memory.UInt8[_address + 0x1A];
-        set => _memory.UInt8[_address + 0x1A] = value;
+        get => UInt8[0x1A];
+        set => UInt8[0x1A] = value;
     }
 
     /// <summary>
@@ -176,8 +173,8 @@ public class ModeInfoBlock {
     /// Offset: 1Bh, Size: 1 byte.
     /// </summary>
     public VbeMemoryModel MemoryModel {
-        get => (VbeMemoryModel)_memory.UInt8[_address + 0x1B];
-        set => _memory.UInt8[_address + 0x1B] = (byte)value;
+        get => (VbeMemoryModel)UInt8[0x1B];
+        set => UInt8[0x1B] = (byte)value;
     }
 
     /// <summary>
@@ -185,8 +182,8 @@ public class ModeInfoBlock {
     /// Offset: 1Ch, Size: 1 byte.
     /// </summary>
     public byte BankSize {
-        get => _memory.UInt8[_address + 0x1C];
-        set => _memory.UInt8[_address + 0x1C] = value;
+        get => UInt8[0x1C];
+        set => UInt8[0x1C] = value;
     }
 
     /// <summary>
@@ -194,8 +191,8 @@ public class ModeInfoBlock {
     /// Offset: 1Dh, Size: 1 byte.
     /// </summary>
     public byte NumberOfImagePages {
-        get => _memory.UInt8[_address + 0x1D];
-        set => _memory.UInt8[_address + 0x1D] = value;
+        get => UInt8[0x1D];
+        set => UInt8[0x1D] = value;
     }
 
     /// <summary>
@@ -203,8 +200,8 @@ public class ModeInfoBlock {
     /// Offset: 1Eh, Size: 1 byte.
     /// </summary>
     public byte Reserved1 {
-        get => _memory.UInt8[_address + 0x1E];
-        set => _memory.UInt8[_address + 0x1E] = value;
+        get => UInt8[0x1E];
+        set => UInt8[0x1E] = value;
     }
 
     /// <summary>
@@ -212,8 +209,8 @@ public class ModeInfoBlock {
     /// Offset: 1Fh, Size: 1 byte.
     /// </summary>
     public byte RedMaskSize {
-        get => _memory.UInt8[_address + 0x1F];
-        set => _memory.UInt8[_address + 0x1F] = value;
+        get => UInt8[0x1F];
+        set => UInt8[0x1F] = value;
     }
 
     /// <summary>
@@ -221,8 +218,8 @@ public class ModeInfoBlock {
     /// Offset: 20h, Size: 1 byte.
     /// </summary>
     public byte RedFieldPosition {
-        get => _memory.UInt8[_address + 0x20];
-        set => _memory.UInt8[_address + 0x20] = value;
+        get => UInt8[0x20];
+        set => UInt8[0x20] = value;
     }
 
     /// <summary>
@@ -230,8 +227,8 @@ public class ModeInfoBlock {
     /// Offset: 21h, Size: 1 byte.
     /// </summary>
     public byte GreenMaskSize {
-        get => _memory.UInt8[_address + 0x21];
-        set => _memory.UInt8[_address + 0x21] = value;
+        get => UInt8[0x21];
+        set => UInt8[0x21] = value;
     }
 
     /// <summary>
@@ -239,8 +236,8 @@ public class ModeInfoBlock {
     /// Offset: 22h, Size: 1 byte.
     /// </summary>
     public byte GreenFieldPosition {
-        get => _memory.UInt8[_address + 0x22];
-        set => _memory.UInt8[_address + 0x22] = value;
+        get => UInt8[0x22];
+        set => UInt8[0x22] = value;
     }
 
     /// <summary>
@@ -248,8 +245,8 @@ public class ModeInfoBlock {
     /// Offset: 23h, Size: 1 byte.
     /// </summary>
     public byte BlueMaskSize {
-        get => _memory.UInt8[_address + 0x23];
-        set => _memory.UInt8[_address + 0x23] = value;
+        get => UInt8[0x23];
+        set => UInt8[0x23] = value;
     }
 
     /// <summary>
@@ -257,8 +254,8 @@ public class ModeInfoBlock {
     /// Offset: 24h, Size: 1 byte.
     /// </summary>
     public byte BlueFieldPosition {
-        get => _memory.UInt8[_address + 0x24];
-        set => _memory.UInt8[_address + 0x24] = value;
+        get => UInt8[0x24];
+        set => UInt8[0x24] = value;
     }
 
     /// <summary>
@@ -266,8 +263,8 @@ public class ModeInfoBlock {
     /// Offset: 25h, Size: 1 byte.
     /// </summary>
     public byte ReservedMaskSize {
-        get => _memory.UInt8[_address + 0x25];
-        set => _memory.UInt8[_address + 0x25] = value;
+        get => UInt8[0x25];
+        set => UInt8[0x25] = value;
     }
 
     /// <summary>
@@ -275,8 +272,8 @@ public class ModeInfoBlock {
     /// Offset: 26h, Size: 1 byte.
     /// </summary>
     public byte ReservedFieldPosition {
-        get => _memory.UInt8[_address + 0x26];
-        set => _memory.UInt8[_address + 0x26] = value;
+        get => UInt8[0x26];
+        set => UInt8[0x26] = value;
     }
 
     /// <summary>
@@ -284,7 +281,7 @@ public class ModeInfoBlock {
     /// Offset: 27h, Size: 1 byte.
     /// </summary>
     public VbeDirectColorModeInfo DirectColorModeInfo {
-        get => (VbeDirectColorModeInfo)_memory.UInt8[_address + 0x27];
-        set => _memory.UInt8[_address + 0x27] = (byte)value;
+        get => (VbeDirectColorModeInfo)UInt8[0x27];
+        set => UInt8[0x27] = (byte)value;
     }
 }

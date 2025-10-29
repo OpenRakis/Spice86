@@ -21,7 +21,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
-    private readonly IVesaVbeHandler _vesaVbeHandler;
+    private readonly VesaVbeImplementation _vesaVbe;
 
     /// <summary>
     ///     VGA BIOS constructor.
@@ -32,14 +32,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="state">The CPU state.</param>
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
-    /// <param name="vesaVbeHandler">Provides VESA VBE functionality</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, IVesaVbeHandler vesaVbeHandler, ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
-        _vesaVbeHandler = vesaVbeHandler;
         _logger = loggerService;
+        _vesaVbe = new VesaVbeImplementation(state, memory, loggerService, vgaFunctions);
         if(_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
@@ -618,42 +617,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// Handles VESA VBE function calls (INT 10h, AH=4Fh).
     /// </summary>
     public void VesaFunctions() {
-        VbeFunction function = (VbeFunction)State.AL;
-        
-        if(_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("VESA VBE Function 0x{Function:X2} called", State.AL);
-        }
-
-        switch (function) {
-            case VbeFunction.ReturnControllerInfo:
-                _vesaVbeHandler.ReturnControllerInfo();
-                break;
-
-            case VbeFunction.ReturnModeInfo:
-                _vesaVbeHandler.ReturnModeInfo();
-                break;
-
-            case VbeFunction.SetVbeMode:
-                _vesaVbeHandler.SetVbeMode();
-                break;
-
-            case VbeFunction.ReturnCurrentVbeMode:
-                _vesaVbeHandler.ReturnCurrentVbeMode();
-                break;
-
-            case VbeFunction.SaveRestoreState:
-                _vesaVbeHandler.SaveRestoreState();
-                break;
-
-            default:
-                if(_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("VESA VBE function 0x{Function:X2} is not implemented", State.AL);
-                }
-                // Return failure for unsupported functions
-                State.AL = 0x4F; // VBE supported
-                State.AH = (byte)VbeReturnStatus.Failed;
-                break;
-        }
+        _vesaVbe.HandleVbeFunction();
     }
 
     /// <inheritdoc />
@@ -721,5 +685,251 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private void InitializeStaticFunctionalityTable() {
         Memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
         Memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
+    }
+
+    /// <summary>
+    /// Internal implementation of VESA VBE (VESA BIOS Extensions) 1.0 functionality.
+    /// VBE 1.0 minimum requirements: supports 640x400x256 and 640x480x256 modes.
+    /// </summary>
+    private class VesaVbeImplementation : IVesaVbeHandler {
+        private const uint VbeSignature = 0x41534556; // "VESA" in little-endian
+        private const ushort VbeVersion10 = 0x0100; // VBE 1.0 in BCD format
+        private const string OemString = "Spice86 VBE 1.0";
+        
+        private readonly State _state;
+        private readonly IMemory _memory;
+        private readonly ILoggerService _loggerService;
+        private readonly IVgaFunctionality _vgaFunctionality;
+        
+        private ushort _currentVbeMode;
+        
+        /// <summary>
+        /// Supported VBE modes for VBE 1.0 minimum requirements.
+        /// VBE 1.0 requires at least 640x400x256 and 640x480x256.
+        /// </summary>
+        private static readonly ushort[] SupportedVbeModes = new ushort[] {
+            0x100, // 640x400 256-color (VBE 1.0 minimum)
+            0x101  // 640x480 256-color (VBE 1.0 minimum)
+        };
+
+        public VesaVbeImplementation(State state, IMemory memory, ILoggerService loggerService, IVgaFunctionality vgaFunctionality) {
+            _state = state;
+            _memory = memory;
+            _loggerService = loggerService;
+            _vgaFunctionality = vgaFunctionality;
+            _currentVbeMode = 0xFFFF;
+        }
+
+        public void HandleVbeFunction() {
+            VbeFunction function = (VbeFunction)_state.AL;
+            
+            if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VESA VBE Function 0x{Function:X2} called", _state.AL);
+            }
+
+            switch (function) {
+                case VbeFunction.ReturnControllerInfo:
+                    ReturnControllerInfo();
+                    break;
+
+                case VbeFunction.ReturnModeInfo:
+                    ReturnModeInfo();
+                    break;
+
+                case VbeFunction.SetVbeMode:
+                    SetVbeMode();
+                    break;
+
+                case VbeFunction.ReturnCurrentVbeMode:
+                    ReturnCurrentVbeMode();
+                    break;
+
+                case VbeFunction.SaveRestoreState:
+                    SaveRestoreState();
+                    break;
+
+                default:
+                    if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("VESA VBE function 0x{Function:X2} is not implemented", _state.AL);
+                    }
+                    _state.AL = 0x4F;
+                    _state.AH = (byte)VbeReturnStatus.Failed;
+                    break;
+            }
+        }
+
+        public void ReturnControllerInfo() {
+            uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 00h: ReturnControllerInfo at {Segment:X4}:{Offset:X4}",
+                    _state.ES, _state.DI);
+            }
+
+            VbeInfoBlock infoBlock = new VbeInfoBlock(_memory, bufferAddress);
+            infoBlock.VbeSignature = VbeSignature;
+            infoBlock.VbeVersion = VbeVersion10;
+            infoBlock.Capabilities = VbeCapabilities.Dac8BitCapable;
+            infoBlock.TotalMemory = 4; // 4 * 64KB = 256KB
+            
+            infoBlock.SetOemString(OemString, MemoryMap.VbeOemStringAddress);
+            infoBlock.SetVideoModeList(SupportedVbeModes, MemoryMap.VbeModeListAddress);
+
+            SetVbeReturnValue(VbeReturnStatus.Success);
+        }
+
+        public void ReturnModeInfo() {
+            ushort modeNumber = _state.CX;
+            uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.DI);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 01h: ReturnModeInfo for mode 0x{Mode:X4} at {Segment:X4}:{Offset:X4}",
+                    modeNumber, _state.ES, _state.DI);
+            }
+
+            if (!IsModeSupported(modeNumber)) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("VBE mode 0x{Mode:X4} is not supported", modeNumber);
+                }
+                SetVbeReturnValue(VbeReturnStatus.Failed);
+                return;
+            }
+
+            ModeInfoBlock modeInfo = new ModeInfoBlock(_memory, bufferAddress);
+            PopulateModeInfo(modeInfo, modeNumber);
+
+            SetVbeReturnValue(VbeReturnStatus.Success);
+        }
+
+        public void SetVbeMode() {
+            ushort modeNumber = (ushort)(_state.BX & 0x7FFF);
+            bool dontClearMemory = (_state.BX & 0x8000) != 0;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 02h: SetVbeMode to 0x{Mode:X4}, clear memory: {ClearMemory}",
+                    modeNumber, !dontClearMemory);
+            }
+
+            if (!IsModeSupported(modeNumber)) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("VBE mode 0x{Mode:X4} is not supported", modeNumber);
+                }
+                SetVbeReturnValue(VbeReturnStatus.Failed);
+                return;
+            }
+
+            _currentVbeMode = modeNumber;
+            
+            // VBE 1.0 modes map to VGA mode 13h (320x200x256) as a simplified implementation
+            // Full VBE would require proper 640x400 and 640x480 mode switching support
+            int vgaModeId = 0x13;
+            ModeFlags flags = dontClearMemory ? ModeFlags.NoClearMem : ModeFlags.Legacy;
+            _vgaFunctionality.VgaSetMode(vgaModeId, flags);
+
+            SetVbeReturnValue(VbeReturnStatus.Success);
+        }
+
+        public void ReturnCurrentVbeMode() {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 03h: ReturnCurrentVbeMode");
+            }
+
+            _state.BX = _currentVbeMode;
+            SetVbeReturnValue(VbeReturnStatus.Success);
+        }
+
+        public void SaveRestoreState() {
+            byte subFunction = _state.DL;
+            ushort requestedStates = _state.CX;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 04h: SaveRestoreState subfunction {SubFunc:X2}, states {States:X4}",
+                    subFunction, requestedStates);
+            }
+
+            switch (subFunction) {
+                case 0x00: // Return save/restore state buffer size
+                    _state.BX = 64; // 64 bytes for minimal state
+                    SetVbeReturnValue(VbeReturnStatus.Success);
+                    break;
+
+                case 0x01: // Save state
+                    uint saveAddress = MemoryUtils.ToPhysicalAddress(_state.ES, (ushort)_state.BX);
+                    _memory.UInt16[saveAddress] = _currentVbeMode;
+                    _memory.UInt16[saveAddress + 2] = requestedStates;
+                    SetVbeReturnValue(VbeReturnStatus.Success);
+                    break;
+
+                case 0x02: // Restore state
+                    uint restoreAddress = MemoryUtils.ToPhysicalAddress(_state.ES, (ushort)_state.BX);
+                    _currentVbeMode = _memory.UInt16[restoreAddress];
+                    SetVbeReturnValue(VbeReturnStatus.Success);
+                    break;
+
+                default:
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("VBE Function 04h subfunction {SubFunc:X2} is not supported", subFunction);
+                    }
+                    SetVbeReturnValue(VbeReturnStatus.Failed);
+                    break;
+            }
+        }
+
+        private void SetVbeReturnValue(VbeReturnStatus status) {
+            _state.AL = 0x4F; // VBE function supported
+            _state.AH = (byte)status;
+        }
+
+        private bool IsModeSupported(ushort modeNumber) {
+            foreach (ushort mode in SupportedVbeModes) {
+                if (mode == modeNumber) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void PopulateModeInfo(ModeInfoBlock modeInfo, ushort modeNumber) {
+            modeInfo.ModeAttributes = VbeModeAttribute.ModeSupported | 
+                                      VbeModeAttribute.ColorMode | 
+                                      VbeModeAttribute.GraphicsMode;
+            
+            modeInfo.WindowAAttributes = VbeWindowAttribute.WindowExists | 
+                                        VbeWindowAttribute.WindowReadable | 
+                                        VbeWindowAttribute.WindowWritable;
+            modeInfo.WindowBAttributes = (VbeWindowAttribute)0;
+            
+            modeInfo.WindowGranularity = 64;
+            modeInfo.WindowSize = 64;
+            modeInfo.WindowASegment = 0xA000;
+            modeInfo.WindowBSegment = 0x0000;
+            modeInfo.WindowFunctionPtr = 0;
+            
+            modeInfo.NumberOfPlanes = 1;
+            modeInfo.BitsPerPixel = 8;
+            modeInfo.NumberOfBanks = 1;
+            modeInfo.MemoryModel = VbeMemoryModel.PackedPixel;
+            modeInfo.BankSize = 0;
+            modeInfo.Reserved1 = 1;
+            
+            switch (modeNumber) {
+                case 0x100: // 640x400x256
+                    modeInfo.Width = 640;
+                    modeInfo.Height = 400;
+                    modeInfo.BytesPerScanLine = 640;
+                    modeInfo.NumberOfImagePages = 0;
+                    break;
+                    
+                case 0x101: // 640x480x256
+                    modeInfo.Width = 640;
+                    modeInfo.Height = 480;
+                    modeInfo.BytesPerScanLine = 640;
+                    modeInfo.NumberOfImagePages = 0;
+                    break;
+            }
+            
+            modeInfo.CharacterWidth = 8;
+            modeInfo.CharacterHeight = 16;
+        }
     }
 }

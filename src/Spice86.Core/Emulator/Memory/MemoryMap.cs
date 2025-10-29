@@ -79,4 +79,14 @@ public static class MemoryMap {
     /// <see cref="VirtualDeviceBase"/>
     /// </summary>
     public const ushort DeviceDriversSegment = 0xF800;
+
+    /// <summary>
+    /// Address where VBE OEM string is stored in video BIOS area.
+    /// </summary>
+    public const uint VbeOemStringAddress = 0xC0000;
+
+    /// <summary>
+    /// Address where VBE mode list is stored in video BIOS area.
+    /// </summary>
+    public const uint VbeModeListAddress = 0xC0020;
 }

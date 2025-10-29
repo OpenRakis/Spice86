@@ -1,8 +1,9 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
-using Spice86.Core.Emulator.Memory.Indexable;
-using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -10,10 +11,7 @@ using Spice86.Shared.Utils;
 /// This structure contains information about the VBE controller and available video modes.
 /// Programs typically call Function 00h (ReturnControllerInfo) first to detect VBE presence.
 /// </summary>
-public class VbeInfoBlock {
-    private readonly IIndexable _memory;
-    private readonly uint _address;
-
+public class VbeInfoBlock : MemoryBasedDataStructure {
     /// <summary>
     /// Size of the VbeInfoBlock structure in bytes.
     /// </summary>
@@ -22,11 +20,10 @@ public class VbeInfoBlock {
     /// <summary>
     /// Initializes a new instance of the VbeInfoBlock class.
     /// </summary>
-    /// <param name="memory">The memory interface to read/write the structure.</param>
-    /// <param name="address">The physical address where the structure is located.</param>
-    public VbeInfoBlock(IIndexable memory, uint address) {
-        _memory = memory;
-        _address = address;
+    /// <param name="byteReaderWriter">The memory interface to read/write the structure.</param>
+    /// <param name="baseAddress">The physical address where the structure is located.</param>
+    public VbeInfoBlock(IByteReaderWriter byteReaderWriter, uint baseAddress) 
+        : base(byteReaderWriter, baseAddress) {
     }
 
     /// <summary>
@@ -34,8 +31,8 @@ public class VbeInfoBlock {
     /// Offset: 00h, Size: 4 bytes.
     /// </summary>
     public uint VbeSignature {
-        get => _memory.UInt32[_address];
-        set => _memory.UInt32[_address] = value;
+        get => UInt32[0x00];
+        set => UInt32[0x00] = value;
     }
 
     /// <summary>
@@ -43,8 +40,8 @@ public class VbeInfoBlock {
     /// Offset: 04h, Size: 2 bytes.
     /// </summary>
     public ushort VbeVersion {
-        get => _memory.UInt16[_address + 0x04];
-        set => _memory.UInt16[_address + 0x04] = value;
+        get => UInt16[0x04];
+        set => UInt16[0x04] = value;
     }
 
     /// <summary>
@@ -52,8 +49,8 @@ public class VbeInfoBlock {
     /// Offset: 06h, Size: 4 bytes.
     /// </summary>
     public uint OemStringPtr {
-        get => _memory.UInt32[_address + 0x06];
-        set => _memory.UInt32[_address + 0x06] = value;
+        get => UInt32[0x06];
+        set => UInt32[0x06] = value;
     }
 
     /// <summary>
@@ -61,8 +58,8 @@ public class VbeInfoBlock {
     /// Offset: 0Ah, Size: 4 bytes.
     /// </summary>
     public VbeCapabilities Capabilities {
-        get => (VbeCapabilities)_memory.UInt32[_address + 0x0A];
-        set => _memory.UInt32[_address + 0x0A] = (uint)value;
+        get => (VbeCapabilities)UInt32[0x0A];
+        set => UInt32[0x0A] = (uint)value;
     }
 
     /// <summary>
@@ -71,8 +68,8 @@ public class VbeInfoBlock {
     /// Offset: 0Eh, Size: 4 bytes.
     /// </summary>
     public uint VideoModePtr {
-        get => _memory.UInt32[_address + 0x0E];
-        set => _memory.UInt32[_address + 0x0E] = value;
+        get => UInt32[0x0E];
+        set => UInt32[0x0E] = value;
     }
 
     /// <summary>
@@ -80,8 +77,8 @@ public class VbeInfoBlock {
     /// Offset: 12h, Size: 2 bytes.
     /// </summary>
     public ushort TotalMemory {
-        get => _memory.UInt16[_address + 0x12];
-        set => _memory.UInt16[_address + 0x12] = value;
+        get => UInt16[0x12];
+        set => UInt16[0x12] = value;
     }
 
     /// <summary>
@@ -90,8 +87,7 @@ public class VbeInfoBlock {
     /// <param name="oemString">The OEM string to set.</param>
     /// <param name="stringAddress">The physical address where to write the string.</param>
     public void SetOemString(string oemString, uint stringAddress) {
-        _memory.SetZeroTerminatedString(stringAddress, oemString, oemString.Length + 1);
-        // Convert physical address to segment:offset format (far pointer)
+        this.SetZeroTerminatedString(stringAddress, oemString, oemString.Length + 1);
         ushort segment = MemoryUtils.ToSegment(stringAddress);
         ushort offset = (ushort)(stringAddress & 0xFFFF);
         OemStringPtr = (uint)((segment << 16) | offset);
@@ -104,11 +100,9 @@ public class VbeInfoBlock {
     /// <param name="modeListAddress">The physical address where to write the mode list.</param>
     public void SetVideoModeList(ushort[] modes, uint modeListAddress) {
         for (int i = 0; i < modes.Length; i++) {
-            _memory.UInt16[modeListAddress + (uint)(i * 2)] = modes[i];
+            UInt16[modeListAddress + (uint)(i * 2)] = modes[i];
         }
-        // Terminate list with 0xFFFF
-        _memory.UInt16[modeListAddress + (uint)(modes.Length * 2)] = 0xFFFF;
-        // Convert physical address to segment:offset format (far pointer)
+        UInt16[modeListAddress + (uint)(modes.Length * 2)] = 0xFFFF;
         ushort segment = MemoryUtils.ToSegment(modeListAddress);
         ushort offset = (ushort)(modeListAddress & 0xFFFF);
         VideoModePtr = (uint)((segment << 16) | offset);
