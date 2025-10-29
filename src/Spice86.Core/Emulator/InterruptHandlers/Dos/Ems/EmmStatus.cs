@@ -45,6 +45,12 @@ public static class EmmStatus {
     /// </summary>
     public const byte EmmPageMapSaved = 0x8d;
     /// <summary>
+    /// There is no page mapping register state in the save area
+    /// for the specified EMM handle. Your program didn't call Save Page Map first,
+    /// so Restore Page Map can't restore it
+    /// </summary>
+    public const byte EmmPageNotSavedFirst = 0x0e;
+    /// <summary>
     /// The subfunction was not recognized or is not implemented.
     /// </summary>
     public const byte EmmInvalidSubFunction = 0x8f;
