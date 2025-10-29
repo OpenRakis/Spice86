@@ -139,11 +139,17 @@ public class VesaVbeHandler : IVesaVbeHandler {
         // Act - Set the mode
         _currentVbeMode = modeNumber;
         
-        // Map VBE mode to VGA mode if possible
+        // Map VBE mode to VGA mode if possible and call VGA mode switch
         int vgaModeId = MapVbeModeToVgaMode(modeNumber);
         if (vgaModeId >= 0) {
             ModeFlags flags = dontClearMemory ? ModeFlags.NoClearMem : ModeFlags.Legacy;
             _vgaFunctionality.VgaSetMode(vgaModeId, flags);
+        } else {
+            // For modes that don't map to VGA, we just record the mode number
+            // but don't actually switch the video mode (this is a simplified implementation)
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning("VBE mode 0x{Mode:X4} has no VGA mapping, mode set in name only", modeNumber);
+            }
         }
 
         // Assert - Return success
