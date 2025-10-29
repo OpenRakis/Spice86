@@ -1,7 +1,5 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using System.Reflection.Metadata;
-
 /// <summary>
 /// All the possible status returned in _state.AH by the Expanded Memory Manager.
 /// </summary>
