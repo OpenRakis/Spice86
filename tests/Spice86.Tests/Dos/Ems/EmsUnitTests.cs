@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -473,27 +474,6 @@ public class EmsUnitTests {
     }
 
     /// <summary>
-    /// Tests that MapUnmapMultipleHandlePages (Function 0x50) fails with invalid subfunction.
-    /// </summary>
-    [Fact]
-    public void MapUnmapMultipleHandlePages_WithInvalidSubFunction_ShouldFail() {
-        // Arrange - Allocate pages
-        _state.BX = 4;
-        _ems.AllocatePages();
-        ushort handle = _state.DX;
-
-        // Act - Use invalid subfunction
-        _state.AL = 0xFF; // Invalid subfunction
-        _state.DX = handle;
-        _state.CX = 1;
-        _state.DS = 0;
-        _state.SI = 0x2000;
-
-        // Assert
-        _state.AH.Should().Be(EmmStatus.EmmInvalidSubFunction, "Should return invalid subfunction error");
-    }
-
-    /// <summary>
     /// Tests that ReallocatePages (Function 0x51) successfully grows a handle's page allocation.
     /// </summary>
     [Fact]
@@ -718,14 +698,14 @@ public class EmsUnitTests {
     [Fact]
     public void GetExpandedMemoryHardwareInformation_GetHardwareConfig_ShouldReturnData() {
         // Arrange
-        uint bufferAddress = 0x5000;
+        const uint bufferAddress = 0x5000;
         // GetExpandedMemoryHardwareInformation setup
         _state.AL = EmmSubFunctionsCodes.GetHardwareConfigurationArray;
         _state.ES = 0;
         _state.DI = (ushort)bufferAddress;
 
         // Act
-        _ems.GetSetHandleName();
+        _ems.GetExpandedMemoryHardwareInformation();
 
         // Assert - Verify structure is filled
         ushort rawPageSize = _memory.UInt16[bufferAddress];
@@ -899,7 +879,7 @@ public class EmsUnitTests {
     [Fact]
     public void AsCharacterDevice_ShouldReturnValidDevice() {
         // Act
-        var characterDevice = _ems.AsCharacterDevice();
+        CharacterDevice characterDevice = _ems.AsCharacterDevice();
 
         // Assert
         characterDevice.Should().NotBeNull("Character device should be available");

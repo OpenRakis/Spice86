@@ -572,8 +572,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             }
         }
 
-        if (EmmHandles[handleId].SavedPageMap) {
-            return EmmStatus.EmmPageMapSaved;
+        if (!EmmHandles[handleId].SavedPageMap) {
+            return EmmStatus.EmmPageNotSavedFirst;
         }
 
         EmmPageFrame.Clear();
