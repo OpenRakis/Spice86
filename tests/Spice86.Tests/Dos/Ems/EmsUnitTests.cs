@@ -401,7 +401,7 @@ public class EmsUnitTests {
         ushort handle2 = _state.DX;
 
         // Setup ES:DI to point to a buffer
-        uint bufferAddress = 0x1000;
+        const uint bufferAddress = 0x1000;
         _state.ES = 0;
         _state.DI = (ushort)bufferAddress;
 
@@ -430,7 +430,7 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Setup mapping structure in memory
-        uint mapAddress = 0x2000;
+        const uint mapAddress = 0x2000;
         _memory.UInt16[mapAddress] = 0; // Logical page 0
         _memory.UInt16[mapAddress + 2] = 0; // Physical page 0
         _memory.UInt16[mapAddress + 4] = 1; // Logical page 1
@@ -442,6 +442,7 @@ public class EmsUnitTests {
         _state.CX = 2; // Map 2 pages
         _state.DS = 0;
         _state.SI = (ushort)mapAddress;
+        _ems.MapUnmapMultipleHandlePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "MapUnmapMultipleHandlePages should return no error");
@@ -458,7 +459,7 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Setup mapping structure with segment addresses
-        uint mapAddress = 0x2000;
+        const uint mapAddress = 0x2000;
         _memory.UInt16[mapAddress] = 0; // Logical page 0
         _memory.UInt16[mapAddress + 2] = ExpandedMemoryManager.EmmPageFrameSegment; // Segment 0xE000
 
@@ -468,6 +469,7 @@ public class EmsUnitTests {
         _state.CX = 1; // Map 1 page
         _state.DS = 0;
         _state.SI = (ushort)mapAddress;
+        _ems.MapUnmapMultipleHandlePages();
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "MapUnmapMultipleHandlePages with segments should return no error");
@@ -580,8 +582,8 @@ public class EmsUnitTests {
         ushort handle = _state.DX;
 
         // Write name to memory
-        uint nameAddress = 0x3000;
-        string testName = "TESTNAME";
+        const uint nameAddress = 0x3000;
+        const string testName = "TESTNAME";
         for (int i = 0; i < testName.Length; i++) {
             _memory.UInt8[nameAddress + (uint)i] = (byte)testName[i];
         }
@@ -608,19 +610,31 @@ public class EmsUnitTests {
         _state.BX = 4;
         _ems.AllocatePages();
         ushort handle = _state.DX;
-
-        string testName = "MYHANDLE";
-        _ems.EmmHandles[handle].Name = testName;
+        const string testName = "MYHANDLE";
+        const uint nameBufferAddress = 0x3000;
+        _state.AL = EmmSubFunctionsCodes.HandleNameSet;
+        _state.DX = handle;
+        _state.ES = 0;
+        _state.DI = (ushort)nameBufferAddress;
+        _memory.SetZeroTerminatedString(nameBufferAddress, testName, 9);
+        _ems.GetSetHandleName();
 
         // Act - Get name
-        uint nameBufferAddress = 0x3000;
         _state.AL = EmmSubFunctionsCodes.HandleNameGet;
         _state.DX = handle;
         _state.ES = 0;
         _state.DI = (ushort)nameBufferAddress;
+        _ems.GetSetHandleName();
+
 
         // Assert
         _state.AH.Should().Be(EmmStatus.EmmNoError, "GetHandleName should return no error");
+
+        // Validate ES:DI buffer was populated by the call (8 chars max for EMS handle names)
+        string nameInBuffer = _memory.GetZeroTerminatedString(nameBufferAddress, 8);
+        nameInBuffer.Should().Be(testName, "GetHandleName should populate ES:DI with the handle name");
+
+        // Optional: still assert the internal property for completeness
         _ems.EmmHandles[handle].Name.Should().Be(testName, "Handle name should match what was set");
     }
 
@@ -667,7 +681,7 @@ public class EmsUnitTests {
     [Fact]
     public void GetMappablePhysicalAddressArray_ShouldReturnCorrectArray() {
         // Arrange
-        uint bufferAddress = 0x4000;
+        const uint bufferAddress = 0x4000;
         // GetMappablePhysicalAddressArray setup
         _state.ES = 0;
         _state.DI = (ushort)bufferAddress;
@@ -775,7 +789,7 @@ public class EmsUnitTests {
 
         // Act - Write to the mapped page
         uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
-        byte testValue = 0x42;
+        const byte testValue = 0x42;
         _memory.UInt8[pageFrameAddress] = testValue;
 
         // Assert - Read back the value
