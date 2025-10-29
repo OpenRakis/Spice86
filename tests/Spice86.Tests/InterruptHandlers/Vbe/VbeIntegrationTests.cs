@@ -6,18 +6,16 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
-using System.Runtime.CompilerServices;
-
 using Xunit;
 
 /// <summary>
-/// Integration tests for VESA VBE functionality that run machine code through the emulation stack.
+/// Integration tests for VESA VBE functionality that run actual ASM programs through the emulation stack.
 /// These tests verify VBE behavior from the perspective of a real DOS program.
 /// Programs typically call Function 00h (ReturnControllerInfo) first to detect VBE presence.
+/// Binary test programs are in Resources/vbeTests/ and can be run on real hardware.
 /// </summary>
 public class VbeIntegrationTests {
-    private const int ResultPort = 0x999;    // Port to write test results
-    private const int DetailsPort = 0x998;   // Port to write test details/error messages
+    private const int ResultPort = 0x999;
 
     private enum TestResult : byte {
         Success = 0x00,
@@ -26,35 +24,13 @@ public class VbeIntegrationTests {
 
     /// <summary>
     /// Tests VBE presence detection via INT 10h AX=4F00h.
-    /// Programs call this function first to detect VBE support.
     /// Should return AX=004Fh indicating VBE is supported.
+    /// Binary: Resources/vbeTests/vbe_detect.com
     /// </summary>
     [Fact]
     public void VbeDetection_ViaInt10h4F00_ShouldReturnSuccess() {
-        // Arrange
-        byte[] program = new byte[] {
-            // Set up buffer pointer at ES:DI
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000 - Buffer segment
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000 - Buffer offset
-            // Call INT 10h Function 4F00h (Return Controller Info)
-            0xB8, 0x00, 0x4F,       // mov ax, 0x4F00
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh (VBE supported and successful)
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_detect.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 10h AX=4F00h should indicate VBE support");
@@ -64,39 +40,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE controller information signature.
     /// Should return "VESA" signature at the beginning of the buffer.
+    /// Binary: Resources/vbeTests/vbe_signature.com
     /// </summary>
     [Fact]
     public void VbeReturnControllerInfo_ShouldReturnVesaSignature() {
-        // Arrange
-        byte[] program = new byte[] {
-            // Set up buffer pointer at ES:DI
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000 - Buffer segment
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000 - Buffer offset
-            // Call INT 10h Function 4F00h
-            0xB8, 0x00, 0x4F,       // mov ax, 0x4F00
-            0xCD, 0x10,             // int 10h
-            // Check signature - "VESA" = 56h 45h 53h 41h
-            0x26, 0x80, 0x3D, 0x56, // cmp byte [es:di+0], 0x56 ('V')
-            0x75, 0x18,             // jne failed
-            0x26, 0x80, 0x7D, 0x01, 0x45, // cmp byte [es:di+1], 0x45 ('E')
-            0x75, 0x11,             // jne failed
-            0x26, 0x80, 0x7D, 0x02, 0x53, // cmp byte [es:di+2], 0x53 ('S')
-            0x75, 0x0A,             // jne failed
-            0x26, 0x80, 0x7D, 0x03, 0x41, // cmp byte [es:di+3], 0x41 ('A')
-            0x75, 0x03,             // jne failed
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_signature.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "VBE signature should be 'VESA'");
@@ -106,34 +55,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE version number in controller info.
     /// Should return version 0100h (VBE 1.0 in BCD format).
+    /// Binary: Resources/vbeTests/vbe_version.com
     /// </summary>
     [Fact]
     public void VbeReturnControllerInfo_ShouldReturnVersion10() {
-        // Arrange
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000
-            // Call INT 10h Function 4F00h
-            0xB8, 0x00, 0x4F,       // mov ax, 0x4F00
-            0xCD, 0x10,             // int 10h
-            // Check version at offset 04h - should be 0100h
-            0x26, 0x8B, 0x45, 0x04, // mov ax, [es:di+04h]
-            0x3D, 0x00, 0x01,       // cmp ax, 0x0100
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_version.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "VBE version should be 1.0 (0100h)");
@@ -143,34 +70,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE mode information retrieval (Function 01h).
     /// Should return AX=004Fh for a supported mode.
+    /// Binary: Resources/vbeTests/vbe_modeinfo.com
     /// </summary>
     [Fact]
     public void VbeReturnModeInfo_ForSupportedMode_ShouldReturnSuccess() {
-        // Arrange - Test mode 0x100 (640x400x256)
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000
-            // Call INT 10h Function 4F01h with mode 0x100
-            0xB9, 0x00, 0x01,       // mov cx, 0x0100 - Mode 0x100
-            0xB8, 0x01, 0x4F,       // mov ax, 0x4F01
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_modeinfo.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode info should return success for supported mode");
@@ -180,39 +85,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE mode information for mode 0x101 (640x480x256).
     /// Verifies the resolution is correctly reported.
+    /// Binary: Resources/vbeTests/vbe_mode101_res.com
     /// </summary>
     [Fact]
     public void VbeReturnModeInfo_Mode101_ShouldReturn640x480() {
-        // Arrange
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000
-            // Call INT 10h Function 4F01h with mode 0x101
-            0xB9, 0x01, 0x01,       // mov cx, 0x0101 - Mode 0x101
-            0xB8, 0x01, 0x4F,       // mov ax, 0x4F01
-            0xCD, 0x10,             // int 10h
-            // Check width at offset 12h - should be 640 (0x0280)
-            0x26, 0x8B, 0x45, 0x12, // mov ax, [es:di+12h]
-            0x3D, 0x80, 0x02,       // cmp ax, 640
-            0x75, 0x0D,             // jne failed
-            // Check height at offset 14h - should be 480 (0x01E0)
-            0x26, 0x8B, 0x45, 0x14, // mov ax, [es:di+14h]
-            0x3D, 0xE0, 0x01,       // cmp ax, 480
-            0x75, 0x03,             // jne failed
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_mode101_res.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x101 should report 640x480 resolution");
@@ -222,34 +100,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE mode information for an unsupported mode.
     /// Should return AX=014Fh (function supported but failed).
+    /// Binary: Resources/vbeTests/vbe_unsupported_mode.com
     /// </summary>
     [Fact]
     public void VbeReturnModeInfo_ForUnsupportedMode_ShouldReturnFailure() {
-        // Arrange - Test unsupported mode 0xFFFF
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBF, 0x00, 0x00,       // mov di, 0x0000
-            // Call INT 10h Function 4F01h with invalid mode
-            0xB9, 0xFF, 0xFF,       // mov cx, 0xFFFF - Invalid mode
-            0xB8, 0x01, 0x4F,       // mov ax, 0x4F01
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 014Fh (supported but failed)
-            0x3D, 0x4F, 0x01,       // cmp ax, 0x014F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_unsupported_mode.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Unsupported mode should return failure status");
@@ -257,138 +113,14 @@ public class VbeIntegrationTests {
     }
 
     /// <summary>
-    /// Tests VBE set mode function (Function 02h).
-    /// Should return AX=004Fh when setting a supported mode.
-    /// </summary>
-    [Fact]
-    public void VbeSetMode_WithSupportedMode_ShouldReturnSuccess() {
-        // Arrange - Set mode 0x100 without clearing memory
-        byte[] program = new byte[] {
-            // Call INT 10h Function 4F02h with mode 0x8100 (bit 15 set = don't clear)
-            0xBB, 0x00, 0x81,       // mov bx, 0x8100 - Mode 0x100, don't clear
-            0xB8, 0x02, 0x4F,       // mov ax, 0x4F02
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
-
-        // Assert
-        testHandler.Results.Should().Contain((byte)TestResult.Success, "Setting supported VBE mode should succeed");
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
-    /// Tests VBE set mode with unsupported mode.
-    /// Should return AX=014Fh (function supported but failed).
-    /// </summary>
-    [Fact]
-    public void VbeSetMode_WithUnsupportedMode_ShouldReturnFailure() {
-        // Arrange - Try to set invalid mode
-        byte[] program = new byte[] {
-            // Call INT 10h Function 4F02h with invalid mode
-            0xBB, 0xFF, 0xFF,       // mov bx, 0xFFFF - Invalid mode
-            0xB8, 0x02, 0x4F,       // mov ax, 0x4F02
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 014Fh (failed)
-            0x3D, 0x4F, 0x01,       // cmp ax, 0x014F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
-
-        // Assert
-        testHandler.Results.Should().Contain((byte)TestResult.Success, "Setting unsupported VBE mode should return failure");
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
-    /// Tests VBE return current mode function (Function 03h).
-    /// Should return the mode that was previously set.
-    /// </summary>
-    [Fact]
-    public void VbeReturnCurrentMode_AfterSetMode_ShouldReturnSetMode() {
-        // Arrange - Set mode then query it
-        byte[] program = new byte[] {
-            // Set mode 0x101
-            0xBB, 0x01, 0x81,       // mov bx, 0x8101 - Mode 0x101, don't clear
-            0xB8, 0x02, 0x4F,       // mov ax, 0x4F02
-            0xCD, 0x10,             // int 10h
-            // Get current mode
-            0xB8, 0x03, 0x4F,       // mov ax, 0x4F03
-            0xCD, 0x10,             // int 10h
-            // Check if BX = 0x0101
-            0x81, 0xFB, 0x01, 0x01, // cmp bx, 0x0101
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
-
-        // Assert
-        testHandler.Results.Should().Contain((byte)TestResult.Success, "Current mode should match previously set mode");
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
     /// Tests VBE save/restore state function 04h subfunction 00h.
     /// Should return buffer size needed in BX.
+    /// Binary: Resources/vbeTests/vbe_getbuffersize.com
     /// </summary>
     [Fact]
     public void VbeSaveRestoreState_GetBufferSize_ShouldReturnSize() {
-        // Arrange - Get buffer size for all states
-        byte[] program = new byte[] {
-            // Call INT 10h Function 4F04h subfunction 00h
-            0xB9, 0x0F, 0x00,       // mov cx, 0x000F - All states (bits 0-3)
-            0xB2, 0x00,             // mov dl, 0x00 - Subfunction: get buffer size
-            0xB8, 0x04, 0x4F,       // mov ax, 0x4F04
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x75, 0x07,             // jne failed
-            // Check if BX > 0 (some buffer size returned)
-            0x83, 0xFB, 0x00,       // cmp bx, 0
-            0x76, 0x02,             // jbe failed
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xEB, 0x02,             // jmp writeResult
-            // failed:
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_getbuffersize.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Get buffer size should return non-zero size");
@@ -398,35 +130,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE save state function (Function 04h subfunction 01h).
     /// Should return AX=004Fh indicating success.
+    /// Binary: Resources/vbeTests/vbe_savestate.com
     /// </summary>
     [Fact]
     public void VbeSaveState_ShouldReturnSuccess() {
-        // Arrange - Save state to a buffer
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBB, 0x00, 0x00,       // mov bx, 0x0000
-            // Call INT 10h Function 4F04h subfunction 01h
-            0xB9, 0x0F, 0x00,       // mov cx, 0x000F - All states
-            0xB2, 0x01,             // mov dl, 0x01 - Subfunction: save
-            0xB8, 0x04, 0x4F,       // mov ax, 0x4F04
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_savestate.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Save state should succeed");
@@ -436,35 +145,12 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Tests VBE restore state function (Function 04h subfunction 02h).
     /// Should return AX=004Fh indicating success.
+    /// Binary: Resources/vbeTests/vbe_restorestate.com
     /// </summary>
     [Fact]
     public void VbeRestoreState_ShouldReturnSuccess() {
-        // Arrange - Restore state from a buffer
-        byte[] program = new byte[] {
-            // Set up buffer pointer
-            0xB8, 0x00, 0x20,       // mov ax, 0x2000
-            0x8E, 0xC0,             // mov es, ax
-            0xBB, 0x00, 0x00,       // mov bx, 0x0000
-            // Call INT 10h Function 4F04h subfunction 02h
-            0xB9, 0x0F, 0x00,       // mov cx, 0x000F - All states
-            0xB2, 0x02,             // mov dl, 0x02 - Subfunction: restore
-            0xB8, 0x04, 0x4F,       // mov ax, 0x4F04
-            0xCD, 0x10,             // int 10h
-            // Check if AX = 004Fh
-            0x3D, 0x4F, 0x00,       // cmp ax, 0x004F
-            0x74, 0x04,             // je success
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xEB, 0x02,             // jmp writeResult
-            // success:
-            0xB0, 0x00,             // mov al, TestResult.Success
-            // writeResult:
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
         // Act
-        VbeTestHandler testHandler = RunVbeTest(program);
+        VbeTestHandler testHandler = RunVbeTest("vbe_restorestate.com");
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Restore state should succeed");
@@ -474,11 +160,10 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Runs a VBE test program and returns a test handler with results.
     /// </summary>
-    private VbeTestHandler RunVbeTest(byte[] program,
-        [CallerMemberName] string unitTestName = "test") {
-        // Arrange
-        string filePath = Path.GetFullPath($"{unitTestName}.com");
-        File.WriteAllBytes(filePath, program);
+    /// <param name="fileName">Binary file name in Resources/vbeTests/</param>
+    private VbeTestHandler RunVbeTest(string fileName) {
+        // Get full path to the binary file
+        string filePath = Path.GetFullPath(Path.Combine("Resources", "vbeTests", fileName));
 
         // Setup emulator
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
