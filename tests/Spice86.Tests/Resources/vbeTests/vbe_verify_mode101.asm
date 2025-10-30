@@ -1,12 +1,14 @@
 ; Test that VBE mode 0x101 (640x480x256) is set successfully
-; Just verifies the VBE function returns success
+; Uses don't clear memory bit for faster execution
 org 0x100
+
+ResultPort equ 0x999
 
 section .text
 start:
-    ; Set VBE mode 0x101 (640x480x256)
+    ; Set VBE mode 0x101 (640x480x256) without clearing memory
     mov ax, 0x4F02
-    mov bx, 0x0101      ; Mode 0x101
+    mov bx, 0x8101      ; Mode 0x101 | 0x8000 (don't clear memory)
     int 0x10
     
     ; Check return value
@@ -14,19 +16,13 @@ start:
     jne failure
     
 success:
-    mov dx, 0x999       ; Test result port
-    mov al, 0x00        ; Success
-    out dx, al
-    
-    ; Exit
-    mov ax, 0x4C00
-    int 0x21
+    mov al, 0x00        ; TestResult.Success
+    jmp writeResult
     
 failure:
-    mov dx, 0x999       ; Test result port
-    mov al, 0xFF        ; Failure
-    out dx, al
+    mov al, 0xFF        ; TestResult.Failure
     
-    ; Exit
-    mov ax, 0x4C01
-    int 0x21
+writeResult:
+    mov dx, ResultPort
+    out dx, al
+    hlt
