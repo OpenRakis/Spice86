@@ -15,4 +15,8 @@ start:
     mov al, 0x00        ; TestResult.Success
     mov dx, ResultPort
     out dx, al
-    hlt
+    
+    ; Proper DOS exit
+    mov ah, 0x4C        ; DOS terminate
+    mov al, 0x00        ; Return code 0
+    int 0x21

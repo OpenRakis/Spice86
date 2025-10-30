@@ -195,19 +195,19 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Test INT 10h AX=4F02h returns with don't clear memory bit
     /// </summary>
-    [Fact(Skip = "Mode setting takes too many cycles - testing infrastructure issue")]
+    [Fact]
     public void VbeTest_SetMode_NoClear_ShouldReturn() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_noclear.com", maxCycles: 100000L);
+        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_noclear.com", maxCycles: 10_000_000L);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 10h AX=4F02h with don't clear should return quickly");
     }
 
-    [Fact(Skip = "Mode setting takes too many cycles - VBE implementation works but full mode switch is expensive")]
+    [Fact]
     public void VbeSetMode_Mode100_ShouldSet640x400x256() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com", maxCycles: 200000L);
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com", maxCycles: 10_000_000L);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x100 should be set to 640x400x256, not simplified mode");
@@ -229,10 +229,10 @@ public class VbeIntegrationTests {
     /// <summary>
     /// Test INT 10h AX=4F02h returns at all
     /// </summary>
-    [Fact(Skip = "Mode setting takes too many cycles even without clear memory")]
+    [Fact]
     public void VbeTest_SetMode_ShouldReturn() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_nocheck.com", maxCycles: 200000L);
+        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_nocheck.com", maxCycles: 10_000_000L);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 10h AX=4F02h should return control to program");
@@ -243,10 +243,10 @@ public class VbeIntegrationTests {
     /// Verifies the mode by checking BIOS data area settings (columns should be 80, character height 16).
     /// Binary: Resources/vbeTests/vbe_verify_mode101.com
     /// </summary>
-    [Fact(Skip = "Mode setting takes too many cycles - VBE implementation works but full mode switch is expensive")]
+    [Fact]
     public void VbeSetMode_Mode101_ShouldSet640x480x256() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com", maxCycles: 200000L);
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com", maxCycles: 10_000_000L);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x101 should be set to 640x480x256, not simplified mode");
