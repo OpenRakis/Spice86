@@ -88,8 +88,10 @@ public class VbeInfoBlock : MemoryBasedDataStructure {
     /// <param name="stringAddress">The physical address where to write the string.</param>
     public void SetOemString(string oemString, uint stringAddress) {
         this.SetZeroTerminatedString(stringAddress, oemString, oemString.Length + 1);
-        ushort segment = MemoryUtils.ToSegment(stringAddress);
-        ushort offset = (ushort)(stringAddress & 0xFFFF);
+        // Convert physical address to real-mode far pointer (segment:offset)
+        // Keep low 4 bits in offset to maintain correct physical address
+        ushort segment = (ushort)((stringAddress >> 4) & 0xFFFF);
+        ushort offset = (ushort)(stringAddress & 0x000F);
         OemStringPtr = (uint)((segment << 16) | offset);
     }
 
@@ -103,8 +105,10 @@ public class VbeInfoBlock : MemoryBasedDataStructure {
             UInt16[modeListAddress + (uint)(i * 2)] = modes[i];
         }
         UInt16[modeListAddress + (uint)(modes.Length * 2)] = 0xFFFF;
-        ushort segment = MemoryUtils.ToSegment(modeListAddress);
-        ushort offset = (ushort)(modeListAddress & 0xFFFF);
+        // Convert physical address to real-mode far pointer (segment:offset)
+        // Keep low 4 bits in offset to maintain correct physical address
+        ushort segment = (ushort)((modeListAddress >> 4) & 0xFFFF);
+        ushort offset = (ushort)(modeListAddress & 0x000F);
         VideoModePtr = (uint)((segment << 16) | offset);
     }
 }

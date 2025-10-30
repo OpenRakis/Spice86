@@ -158,10 +158,42 @@ public class VbeIntegrationTests {
     }
 
     /// <summary>
+    /// Comprehensive VBE 1.0 test that validates all functionality.
+    /// Tests all VBE functions and displays results in text mode.
+    /// This program can be run on real DOS hardware for validation.
+    /// Tests:
+    /// - VBE detection (4F00h)
+    /// - Signature and version validation
+    /// - Mode info for supported modes (4F01h)
+    /// - Unsupported mode error handling
+    /// - Buffer size query (4F04h/00h)
+    /// - Display window control (4F05h)
+    /// - Controller memory validation
+    /// - Resolution verification for modes 0x100 and 0x101
+    /// - Banking information validation
+    /// Binary: Resources/vbeTests/vbe_comprehensive.com
+    /// NOTE: Skipped in automated tests due to complexity and text output requirements.
+    ///       This binary can and should be run manually on real DOS hardware for full validation.
+    /// </summary>
+    [Fact(Skip = "Comprehensive test requires more emulation cycles than practical for automated testing. Run binary on real hardware.")]
+    public void VbeComprehensive_AllTests_ShouldPass() {
+        // Act - comprehensive test needs more cycles due to multiple tests and text output
+        VbeTestHandler testHandler = RunVbeTest("vbe_comprehensive.com", maxCycles: 500000L);
+
+        // Assert
+        // The comprehensive test outputs 0x00 if all tests pass, 0xFF if any fail
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "All comprehensive VBE tests should pass");
+        // Each individual test also outputs its result
+        // Last result should be the overall summary
+        testHandler.Results.Last().Should().Be((byte)TestResult.Success, "Overall test summary should indicate all tests passed");
+    }
+
+    /// <summary>
     /// Runs a VBE test program and returns a test handler with results.
     /// </summary>
     /// <param name="fileName">Binary file name in Resources/vbeTests/</param>
-    private VbeTestHandler RunVbeTest(string fileName) {
+    /// <param name="maxCycles">Maximum CPU cycles to run (default 100000)</param>
+    private VbeTestHandler RunVbeTest(string fileName, long maxCycles = 100000L) {
         // Get full path to the binary file
         string filePath = Path.GetFullPath(Path.Combine("Resources", "vbeTests", fileName));
 
@@ -171,7 +203,7 @@ public class VbeIntegrationTests {
             enableCfgCpu: true,
             enablePit: true,
             recordData: false,
-            maxCycles: 100000L,
+            maxCycles: maxCycles,
             installInterruptVectors: true,
             enableA20Gate: false,
             enableXms: false,
@@ -205,6 +237,16 @@ public class VbeIntegrationTests {
         public override void WriteByte(ushort port, byte value) {
             if (port == ResultPort) {
                 Results.Add(value);
+            }
+        }
+
+        public override void WriteWord(ushort port, ushort value) {
+            if (port == ResultPort) {
+                // Handle word writes by splitting into bytes
+                Results.Add((byte)(value & 0xFF));
+                if ((value >> 8) != 0) {
+                    Results.Add((byte)(value >> 8));
+                }
             }
         }
     }

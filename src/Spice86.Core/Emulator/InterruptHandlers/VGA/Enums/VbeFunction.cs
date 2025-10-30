@@ -38,5 +38,14 @@ public enum VbeFunction : byte {
     ///        CX=Requested states, ES:BX=Buffer pointer (for save/restore)
     /// Output: AX=004Fh if supported, BX=Number of 64-byte blocks (for subfunction 00h)
     /// </summary>
-    SaveRestoreState = 0x04
+    SaveRestoreState = 0x04,
+
+    /// <summary>
+    /// Display Window Control (CPU Video Memory Window Control).
+    /// Input: AX=4F05h, BH=00h (set memory window), BL=Window number (00h=Window A, 01h=Window B)
+    ///        DX=Window position in video memory in window granularity units
+    /// Input: AX=4F05h, BH=01h (get memory window), BL=Window number
+    /// Output: AX=004Fh if supported, DX=Window position in granularity units (for get)
+    /// </summary>
+    DisplayWindowControl = 0x05
 }

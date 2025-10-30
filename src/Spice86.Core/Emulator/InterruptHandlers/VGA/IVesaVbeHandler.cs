@@ -60,4 +60,16 @@ public interface IVesaVbeHandler {
     /// Output (subfunction 00h): BX contains number of 64-byte blocks required.
     /// </summary>
     void SaveRestoreState();
+
+    /// <summary>
+    /// Display Window Control (Function 05h).
+    /// Controls the CPU window into video memory for banked modes.
+    /// Input: BH specifies subfunction:
+    /// - 00h: Set memory window position
+    /// - 01h: Get memory window position
+    /// BL specifies window number (00h=Window A, 01h=Window B)
+    /// DX specifies window position in window granularity units (for set)
+    /// Output: DX contains window position in granularity units (for get).
+    /// </summary>
+    void DisplayWindowControl();
 }

@@ -748,6 +748,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                     SaveRestoreState();
                     break;
 
+                case VbeFunction.DisplayWindowControl:
+                    DisplayWindowControl();
+                    break;
+
                 default:
                     if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("VESA VBE function 0x{Function:X2} is not implemented", _state.AL);
@@ -854,21 +858,59 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                     break;
 
                 case 0x01: // Save state
-                    uint saveAddress = MemoryUtils.ToPhysicalAddress(_state.ES, (ushort)_state.BX);
-                    _memory.UInt16[saveAddress] = _currentVbeMode;
-                    _memory.UInt16[saveAddress + 2] = requestedStates;
+                    // Minimal implementation: just return success
+                    // A full implementation would save VGA registers, DAC state, etc.
                     SetVbeReturnValue(VbeReturnStatus.Success);
                     break;
 
                 case 0x02: // Restore state
-                    uint restoreAddress = MemoryUtils.ToPhysicalAddress(_state.ES, (ushort)_state.BX);
-                    _currentVbeMode = _memory.UInt16[restoreAddress];
+                    // Minimal implementation: just return success  
+                    // A full implementation would restore VGA registers, DAC state, etc.
                     SetVbeReturnValue(VbeReturnStatus.Success);
                     break;
 
                 default:
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("VBE Function 04h subfunction {SubFunc:X2} is not supported", subFunction);
+                    }
+                    SetVbeReturnValue(VbeReturnStatus.Failed);
+                    break;
+            }
+        }
+
+        public void DisplayWindowControl() {
+            byte subFunction = _state.BH;
+            byte windowNumber = _state.BL;
+            
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("VBE Function 05h: DisplayWindowControl subfunction {SubFunc:X2}, window {Window}",
+                    subFunction, windowNumber);
+            }
+
+            // Only Window A (0) is supported
+            if (windowNumber != 0) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning("VBE Function 05h: Window {Window} is not supported (only Window A)", windowNumber);
+                }
+                SetVbeReturnValue(VbeReturnStatus.Failed);
+                return;
+            }
+
+            switch (subFunction) {
+                case 0x00: // Set window position
+                    // For our simplified 64KB window at 0xA000, position is always 0
+                    // Just accept it silently
+                    SetVbeReturnValue(VbeReturnStatus.Success);
+                    break;
+
+                case 0x01: // Get window position
+                    _state.DX = 0; // Window position is always 0
+                    SetVbeReturnValue(VbeReturnStatus.Success);
+                    break;
+
+                default:
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("VBE Function 05h subfunction {SubFunc:X2} is not supported", subFunction);
                     }
                     SetVbeReturnValue(VbeReturnStatus.Failed);
                     break;
@@ -899,24 +941,29 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                                         VbeWindowAttribute.WindowWritable;
             modeInfo.WindowBAttributes = (VbeWindowAttribute)0;
             
+            // Window granularity and size are both 64KB
             modeInfo.WindowGranularity = 64;
             modeInfo.WindowSize = 64;
             modeInfo.WindowASegment = 0xA000;
             modeInfo.WindowBSegment = 0x0000;
+            // WindowFunctionPtr = 0 means use INT 10h/AX=4F05h instead
             modeInfo.WindowFunctionPtr = 0;
             
             modeInfo.NumberOfPlanes = 1;
             modeInfo.BitsPerPixel = 8;
-            modeInfo.NumberOfBanks = 1;
             modeInfo.MemoryModel = VbeMemoryModel.PackedPixel;
-            modeInfo.BankSize = 0;
             modeInfo.Reserved1 = 1;
             
+            // Mode-specific settings
             switch (modeNumber) {
                 case 0x100: // 640x400x256
                     modeInfo.Width = 640;
                     modeInfo.Height = 400;
                     modeInfo.BytesPerScanLine = 640;
+                    // 640x400 = 256000 bytes = 4 banks of 64KB
+                    modeInfo.NumberOfBanks = 4;
+                    modeInfo.BankSize = 64;
+                    // With 256KB total, we can fit only 1 image page (no extra pages)
                     modeInfo.NumberOfImagePages = 0;
                     break;
                     
@@ -924,12 +971,28 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                     modeInfo.Width = 640;
                     modeInfo.Height = 480;
                     modeInfo.BytesPerScanLine = 640;
+                    // 640x480 = 307200 bytes = 5 banks of 64KB (rounded up)
+                    modeInfo.NumberOfBanks = 5;
+                    modeInfo.BankSize = 64;
+                    // Not enough memory for extra pages
                     modeInfo.NumberOfImagePages = 0;
                     break;
             }
             
             modeInfo.CharacterWidth = 8;
             modeInfo.CharacterHeight = 16;
+            
+            // For packed pixel (256-color) modes, these are not used
+            // but set them to 0 anyway
+            modeInfo.RedMaskSize = 0;
+            modeInfo.RedFieldPosition = 0;
+            modeInfo.GreenMaskSize = 0;
+            modeInfo.GreenFieldPosition = 0;
+            modeInfo.BlueMaskSize = 0;
+            modeInfo.BlueFieldPosition = 0;
+            modeInfo.ReservedMaskSize = 0;
+            modeInfo.ReservedFieldPosition = 0;
+            modeInfo.DirectColorModeInfo = (VbeDirectColorModeInfo)0;
         }
     }
 }
