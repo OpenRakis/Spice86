@@ -188,6 +188,36 @@ public class VbeIntegrationTests {
     }
 
     /// <summary>
+    /// Tests that VBE mode 0x100 (640x400x256) is actually set correctly.
+    /// Verifies the mode by checking BIOS data area settings (columns should be 80).
+    /// Binary: Resources/vbeTests/vbe_verify_mode100.com
+    /// </summary>
+    [Fact]
+    public void VbeSetMode_Mode100_ShouldSet640x400x256() {
+        // Act
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com");
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x100 should be set to 640x400x256, not simplified mode");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that VBE mode 0x101 (640x480x256) is actually set correctly.
+    /// Verifies the mode by checking BIOS data area settings (columns should be 80, character height 16).
+    /// Binary: Resources/vbeTests/vbe_verify_mode101.com
+    /// </summary>
+    [Fact]
+    public void VbeSetMode_Mode101_ShouldSet640x480x256() {
+        // Act
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com");
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x101 should be set to 640x480x256, not simplified mode");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Comprehensive VBE 1.0 test that validates all functionality.
     /// Tests all VBE functions and displays results in text mode.
     /// This program can be run on real DOS hardware for validation.

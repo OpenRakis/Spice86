@@ -828,11 +828,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
             _currentVbeMode = modeNumber;
             
-            // VBE 1.0 modes map to VGA mode 13h (320x200x256) as a simplified implementation
-            // Full VBE would require proper 640x400 and 640x480 mode switching support
-            int vgaModeId = 0x13;
+            // VBE modes are now properly defined in RegisterValueSet.VgaModes
+            // Mode 0x100 = 640x400x256, Mode 0x101 = 640x480x256
             ModeFlags flags = dontClearMemory ? ModeFlags.NoClearMem : ModeFlags.Legacy;
-            _vgaFunctionality.VgaSetMode(vgaModeId, flags);
+            _vgaFunctionality.VgaSetMode(modeNumber, flags);
 
             SetVbeReturnValue(VbeReturnStatus.Success);
         }

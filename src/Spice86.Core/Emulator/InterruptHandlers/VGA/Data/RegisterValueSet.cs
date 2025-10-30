@@ -37,6 +37,12 @@ internal readonly struct RegisterValueSet {
     private static readonly byte[] GraphicsControllerRegisterValueSet4 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0a, 0x0f, 0xff};
     private static readonly byte[] GraphicsControllerRegisterValueSet5 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x0f, 0xff};
     private static readonly byte[] GraphicsControllerRegisterValueSet6 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0f, 0xff};
+    
+    // VBE 1.0 mode register sets
+    // 640x400x256 - Based on mode 0x13 sequencer/attribute, with 640x400 CRT timing similar to mode 0x10
+    private static readonly byte[] CrtControllerRegisterValueSet_VBE100 = {0x5f, 0x4f, 0x50, 0x82, 0x54, 0x80, 0xbf, 0x1f, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9c, 0x8e, 0x8f, 0x50, 0x40, 0x96, 0xb9, 0xa3, 0xff};
+    // 640x480x256 - Based on mode 0x13 sequencer/attribute, with 640x480 CRT timing from mode 0x12
+    private static readonly byte[] CrtControllerRegisterValueSet_VBE101 = {0x5f, 0x4f, 0x50, 0x82, 0x54, 0x80, 0x0b, 0x3e, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xea, 0x8c, 0xdf, 0x50, 0x40, 0xe7, 0x04, 0xa3, 0xff};
 
     public static readonly Dictionary<int, VideoMode> VgaModes = new() {
         [0x00] = new VideoMode(new VgaMode(MemoryModel.Text, 40, 25, 4, 9, 16, VgaConstants.ColorTextSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet1, 0x67, CrtControllerRegisterValueSet1, AttributeControllerRegisterValueSet1, GraphicsControllerRegisterValueSet1),
@@ -54,6 +60,9 @@ internal readonly struct RegisterValueSet {
         [0x11] = new VideoMode(new VgaMode(MemoryModel.Planar, 640, 480, 1, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet9, AttributeControllerRegisterValueSet8, GraphicsControllerRegisterValueSet5),
         [0x12] = new VideoMode(new VgaMode(MemoryModel.Planar, 640, 480, 4, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet9, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5),
         [0x13] = new VideoMode(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, VgaConstants.GraphicsSegment), 0xFF, Palettes.Vga, SequencerRegisterValueSet7, 0x63, CrtControllerRegisterValueSet10, AttributeControllerRegisterValueSet9, GraphicsControllerRegisterValueSet6),
-        [0x6A] = new VideoMode(new VgaMode(MemoryModel.Planar, 800, 600, 4, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet11, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5)
+        [0x6A] = new VideoMode(new VgaMode(MemoryModel.Planar, 800, 600, 4, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Ega, SequencerRegisterValueSet6, 0xe3, CrtControllerRegisterValueSet11, AttributeControllerRegisterValueSet7, GraphicsControllerRegisterValueSet5),
+        // VBE 1.0 modes
+        [0x100] = new VideoMode(new VgaMode(MemoryModel.Packed, 640, 400, 8, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Vga, SequencerRegisterValueSet7, 0xa3, CrtControllerRegisterValueSet_VBE100, AttributeControllerRegisterValueSet9, GraphicsControllerRegisterValueSet6),
+        [0x101] = new VideoMode(new VgaMode(MemoryModel.Packed, 640, 480, 8, 8, 16, VgaConstants.GraphicsSegment), 0xFF, Palettes.Vga, SequencerRegisterValueSet7, 0xe3, CrtControllerRegisterValueSet_VBE101, AttributeControllerRegisterValueSet9, GraphicsControllerRegisterValueSet6)
     };
 }

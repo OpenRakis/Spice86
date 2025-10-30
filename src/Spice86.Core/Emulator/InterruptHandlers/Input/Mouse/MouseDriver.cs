@@ -347,7 +347,20 @@ public class MouseDriver : IMouseDriver {
     }
 
     private void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
-        Reset();
+        _vgaMode = e.NewMode;
+        SetCursorPosition(VirtualScreenWidth / 2, _vgaMode.Height / 2);
+        _mouseCursorHidden = -1;
+        _gui?.HideMouseCursor();
+        CurrentMinX = 0;
+        CurrentMinY = 0;
+        CurrentMaxX = VirtualScreenWidth - 1;
+        CurrentMaxY = _vgaMode.Height - 1;
+        HorizontalMickeysPerPixel = 8;
+        VerticalMickeysPerPixel = 16;
+        DoubleSpeedThreshold = 64;
+
+        ResetCounters(_buttonsPressCounts);
+        ResetCounters(_buttonsReleaseCounts);
     }
 
     private void SetRegistersToMouseState() {
