@@ -158,6 +158,36 @@ public class VbeIntegrationTests {
     }
 
     /// <summary>
+    /// Tests VBE full save/restore state cycle (Function 04h all subfunctions).
+    /// Validates buffer size query, save, and restore operations.
+    /// Binary: Resources/vbeTests/vbe_savestate_full.com
+    /// </summary>
+    [Fact]
+    public void VbeSaveRestoreState_FullCycle_ShouldSucceed() {
+        // Act
+        VbeTestHandler testHandler = RunVbeTest("vbe_savestate_full.com");
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "Full save/restore cycle should succeed");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests VBE save/restore state with DAC palette preservation.
+    /// Sets a color, saves state, changes color, restores state, and verifies original color.
+    /// Binary: Resources/vbeTests/vbe_savestate_dac.com
+    /// </summary>
+    [Fact]
+    public void VbeSaveRestoreState_DacPalette_ShouldPreserveColors() {
+        // Act
+        VbeTestHandler testHandler = RunVbeTest("vbe_savestate_dac.com");
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "DAC palette should be preserved through save/restore");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Comprehensive VBE 1.0 test that validates all functionality.
     /// Tests all VBE functions and displays results in text mode.
     /// This program can be run on real DOS hardware for validation.

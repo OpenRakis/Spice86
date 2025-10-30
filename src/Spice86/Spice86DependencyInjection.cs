@@ -259,7 +259,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is not false);
         VgaBios vgaBios = new VgaBios(memory, functionHandlerProvider, stack,
-            state, vgaFunctionality, biosDataArea, loggerService);
+            state, vgaFunctionality, biosDataArea, loggerService, videoState);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Video card support classes created...");

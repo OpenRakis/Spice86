@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
@@ -33,12 +34,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+    /// <param name="videoState">The video card state (registers and DAC)</param>
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService, IVideoState videoState)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        _vesaVbe = new VesaVbeImplementation(state, memory, loggerService, vgaFunctions);
+        _vesaVbe = new VesaVbeImplementation(state, memory, loggerService, vgaFunctions, videoState);
         if(_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
@@ -700,6 +702,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         private readonly IMemory _memory;
         private readonly ILoggerService _loggerService;
         private readonly IVgaFunctionality _vgaFunctionality;
+        private readonly IVideoState _videoState;
         
         private ushort _currentVbeMode;
         
@@ -712,11 +715,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             0x101  // 640x480 256-color (VBE 1.0 minimum)
         };
 
-        public VesaVbeImplementation(State state, IMemory memory, ILoggerService loggerService, IVgaFunctionality vgaFunctionality) {
+        public VesaVbeImplementation(State state, IMemory memory, ILoggerService loggerService, IVgaFunctionality vgaFunctionality, IVideoState videoState) {
             _state = state;
             _memory = memory;
             _loggerService = loggerService;
             _vgaFunctionality = vgaFunctionality;
+            _videoState = videoState;
             _currentVbeMode = 0xFFFF;
         }
 
@@ -853,19 +857,17 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
             switch (subFunction) {
                 case 0x00: // Return save/restore state buffer size
-                    _state.BX = 64; // 64 bytes for minimal state
+                    _state.BX = CalculateStateBufferSize(requestedStates);
                     SetVbeReturnValue(VbeReturnStatus.Success);
                     break;
 
                 case 0x01: // Save state
-                    // Minimal implementation: just return success
-                    // A full implementation would save VGA registers, DAC state, etc.
+                    SaveVbeState(requestedStates);
                     SetVbeReturnValue(VbeReturnStatus.Success);
                     break;
 
                 case 0x02: // Restore state
-                    // Minimal implementation: just return success  
-                    // A full implementation would restore VGA registers, DAC state, etc.
+                    RestoreVbeState(requestedStates);
                     SetVbeReturnValue(VbeReturnStatus.Success);
                     break;
 
@@ -993,6 +995,248 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             modeInfo.ReservedMaskSize = 0;
             modeInfo.ReservedFieldPosition = 0;
             modeInfo.DirectColorModeInfo = (VbeDirectColorModeInfo)0;
+        }
+
+        /// <summary>
+        /// Calculates the buffer size needed to save the requested VBE state components.
+        /// </summary>
+        /// <param name="requestedStates">Bit mask of requested state components</param>
+        /// <returns>Buffer size in 64-byte blocks</returns>
+        private ushort CalculateStateBufferSize(ushort requestedStates) {
+            int totalBytes = 0;
+
+            // Bit 0: Video hardware state (CRT, Sequencer, Graphics, Attribute controller registers)
+            if ((requestedStates & 0x0001) != 0) {
+                totalBytes += 256; // ~60 bytes actual, rounded up for safety
+            }
+
+            // Bit 1: Video BIOS data state  
+            if ((requestedStates & 0x0002) != 0) {
+                totalBytes += 64; // Current mode, cursor position, etc.
+            }
+
+            // Bit 2: Video DAC state
+            if ((requestedStates & 0x0004) != 0) {
+                totalBytes += 768; // 256 colors * 3 bytes (RGB)
+            }
+
+            // Bit 3: Super VGA state (not used in VBE 1.0)
+            if ((requestedStates & 0x0008) != 0) {
+                totalBytes += 64;
+            }
+
+            // Convert to 64-byte blocks (round up)
+            ushort blocks = (ushort)((totalBytes + 63) / 64);
+            return blocks;
+        }
+
+        /// <summary>
+        /// Saves the requested VBE state components to memory.
+        /// </summary>
+        /// <param name="requestedStates">Bit mask of requested state components</param>
+        private void SaveVbeState(ushort requestedStates) {
+            uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
+            int offset = 0;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Saving VBE state 0x{States:X4} to {Segment:X4}:{Offset:X4}",
+                    requestedStates, _state.ES, _state.BX);
+            }
+
+            // Bit 0: Video hardware state
+            if ((requestedStates & 0x0001) != 0) {
+                offset = SaveVideoHardwareState(bufferAddress, offset);
+            }
+
+            // Bit 1: Video BIOS data state
+            if ((requestedStates & 0x0002) != 0) {
+                offset = SaveVideoBiosDataState(bufferAddress, offset);
+            }
+
+            // Bit 2: Video DAC state
+            if ((requestedStates & 0x0004) != 0) {
+                offset = SaveVideoDacState(bufferAddress, offset);
+            }
+
+            // Bit 3: Super VGA state (minimal for VBE 1.0)
+            if ((requestedStates & 0x0008) != 0) {
+                offset = SaveSuperVgaState(bufferAddress, offset);
+            }
+        }
+
+        /// <summary>
+        /// Restores the requested VBE state components from memory.
+        /// </summary>
+        /// <param name="requestedStates">Bit mask of requested state components</param>
+        private void RestoreVbeState(ushort requestedStates) {
+            uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
+            int offset = 0;
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("Restoring VBE state 0x{States:X4} from {Segment:X4}:{Offset:X4}",
+                    requestedStates, _state.ES, _state.BX);
+            }
+
+            // Bit 0: Video hardware state
+            if ((requestedStates & 0x0001) != 0) {
+                offset = RestoreVideoHardwareState(bufferAddress, offset);
+            }
+
+            // Bit 1: Video BIOS data state
+            if ((requestedStates & 0x0002) != 0) {
+                offset = RestoreVideoBiosDataState(bufferAddress, offset);
+            }
+
+            // Bit 2: Video DAC state
+            if ((requestedStates & 0x0004) != 0) {
+                offset = RestoreVideoDacState(bufferAddress, offset);
+            }
+
+            // Bit 3: Super VGA state
+            if ((requestedStates & 0x0008) != 0) {
+                offset = RestoreSuperVgaState(bufferAddress, offset);
+            }
+        }
+
+        /// <summary>
+        /// Saves VGA hardware registers (CRT, Sequencer, Graphics, Attribute controllers).
+        /// </summary>
+        private int SaveVideoHardwareState(uint bufferAddress, int offset) {
+            // Save Sequencer registers (5 registers)
+            for (byte i = 0; i < 5; i++) {
+                byte value = _videoState.SequencerRegisters.ReadRegister((SequencerRegister)i);
+                _memory.UInt8[bufferAddress + (uint)offset++] = value;
+            }
+
+            // Save CRT Controller registers (25 registers)
+            for (byte i = 0; i < 25; i++) {
+                byte value = _videoState.CrtControllerRegisters.ReadRegister((CrtControllerRegister)i);
+                _memory.UInt8[bufferAddress + (uint)offset++] = value;
+            }
+
+            // Save Graphics Controller registers (9 registers)
+            for (byte i = 0; i < 9; i++) {
+                byte value = _videoState.GraphicsControllerRegisters.ReadRegister((GraphicsControllerRegister)i);
+                _memory.UInt8[bufferAddress + (uint)offset++] = value;
+            }
+
+            // Save Attribute Controller registers (21 registers: 16 palette + 5 others)
+            for (byte i = 0; i < 21; i++) {
+                byte value = _videoState.AttributeControllerRegisters.ReadRegister((AttributeControllerRegister)i);
+                _memory.UInt8[bufferAddress + (uint)offset++] = value;
+            }
+
+            // Save General registers (Miscellaneous Output)
+            _memory.UInt8[bufferAddress + (uint)offset++] = _videoState.GeneralRegisters.MiscellaneousOutput.Value;
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Restores VGA hardware registers.
+        /// </summary>
+        private int RestoreVideoHardwareState(uint bufferAddress, int offset) {
+            // Restore Sequencer registers
+            for (byte i = 0; i < 5; i++) {
+                byte value = _memory.UInt8[bufferAddress + (uint)offset++];
+                _videoState.SequencerRegisters.WriteRegister((SequencerRegister)i, value);
+            }
+
+            // Restore CRT Controller registers
+            for (byte i = 0; i < 25; i++) {
+                byte value = _memory.UInt8[bufferAddress + (uint)offset++];
+                _videoState.CrtControllerRegisters.WriteRegister((CrtControllerRegister)i, value);
+            }
+
+            // Restore Graphics Controller registers
+            for (byte i = 0; i < 9; i++) {
+                byte value = _memory.UInt8[bufferAddress + (uint)offset++];
+                _videoState.GraphicsControllerRegisters.Write((GraphicsControllerRegister)i, value);
+            }
+
+            // Restore Attribute Controller registers
+            for (byte i = 0; i < 21; i++) {
+                byte value = _memory.UInt8[bufferAddress + (uint)offset++];
+                _videoState.AttributeControllerRegisters.WriteRegister((AttributeControllerRegister)i, value);
+            }
+
+            // Restore General registers (Miscellaneous Output)
+            _videoState.GeneralRegisters.MiscellaneousOutput.Value = _memory.UInt8[bufferAddress + (uint)offset++];
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Saves BIOS data state (current mode, etc.).
+        /// </summary>
+        private int SaveVideoBiosDataState(uint bufferAddress, int offset) {
+            // Save current VBE mode
+            _memory.UInt16[bufferAddress + (uint)offset] = _currentVbeMode;
+            offset += 2;
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Restores BIOS data state.
+        /// </summary>
+        private int RestoreVideoBiosDataState(uint bufferAddress, int offset) {
+            // Restore current VBE mode
+            _currentVbeMode = _memory.UInt16[bufferAddress + (uint)offset];
+            offset += 2;
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Saves DAC palette state (256 colors * 3 bytes).
+        /// </summary>
+        private int SaveVideoDacState(uint bufferAddress, int offset) {
+            // Save all 256 palette entries (R, G, B for each)
+            for (int colorIndex = 0; colorIndex < 256; colorIndex++) {
+                _memory.UInt8[bufferAddress + (uint)offset++] = _videoState.DacRegisters.Palette[colorIndex, 0]; // Red
+                _memory.UInt8[bufferAddress + (uint)offset++] = _videoState.DacRegisters.Palette[colorIndex, 1]; // Green
+                _memory.UInt8[bufferAddress + (uint)offset++] = _videoState.DacRegisters.Palette[colorIndex, 2]; // Blue
+            }
+
+            // Save DAC pixel mask
+            _memory.UInt8[bufferAddress + (uint)offset++] = _videoState.DacRegisters.PixelMask;
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Restores DAC palette state.
+        /// </summary>
+        private int RestoreVideoDacState(uint bufferAddress, int offset) {
+            // Restore all 256 palette entries
+            for (int colorIndex = 0; colorIndex < 256; colorIndex++) {
+                _videoState.DacRegisters.Palette[colorIndex, 0] = _memory.UInt8[bufferAddress + (uint)offset++]; // Red
+                _videoState.DacRegisters.Palette[colorIndex, 1] = _memory.UInt8[bufferAddress + (uint)offset++]; // Green
+                _videoState.DacRegisters.Palette[colorIndex, 2] = _memory.UInt8[bufferAddress + (uint)offset++]; // Blue
+            }
+
+            // Restore DAC pixel mask
+            _videoState.DacRegisters.PixelMask = _memory.UInt8[bufferAddress + (uint)offset++];
+
+            return offset;
+        }
+
+        /// <summary>
+        /// Saves Super VGA state (minimal for VBE 1.0).
+        /// </summary>
+        private int SaveSuperVgaState(uint bufferAddress, int offset) {
+            // VBE 1.0 has no additional SVGA state
+            // Just reserve some space for compatibility
+            return offset;
+        }
+
+        /// <summary>
+        /// Restores Super VGA state (minimal for VBE 1.0).
+        /// </summary>
+        private int RestoreSuperVgaState(uint bufferAddress, int offset) {
+            // VBE 1.0 has no additional SVGA state
+            return offset;
         }
     }
 }
