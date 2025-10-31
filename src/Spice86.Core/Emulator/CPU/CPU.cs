@@ -139,6 +139,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
         if (_picPitCpuState.Cycles > 0) {
             _picPitCpuState.Cycles--;
         }
+        EmulatorBreakpointsManager.CheckExecutionBreakPoints();
         HandleExternalInterrupt();
         State.IP = _internalIp;
     }

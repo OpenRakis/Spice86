@@ -24,6 +24,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly PicPitCpuState _picPitCpuState;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, PicPitCpuState picPitCpuState, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -33,6 +34,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         _state = state;
         _dualPic = dualPic;
         _picPitCpuState = picPitCpuState;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
@@ -75,6 +77,8 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         if (_picPitCpuState.Cycles > 0) {
             _picPitCpuState.Cycles--;
         }
+
+        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;
