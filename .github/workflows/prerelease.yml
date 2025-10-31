@@ -5,6 +5,10 @@ on:
     branches:
       - "master"
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   pre-release:
     name: "Pre Release"
@@ -12,6 +16,11 @@ jobs:
 
     steps:
        - uses: actions/checkout@v1
+
+       - name: Determine prerelease version
+         run: |
+              COMMIT_SHA=$(git rev-parse --short HEAD)
+              echo "PRERELEASE_VERSION=11.0.0-${COMMIT_SHA}" >> $GITHUB_ENV
 
        - name: Setup .NET
          uses: actions/setup-dotnet@v1
@@ -48,6 +57,27 @@ jobs:
        - name: Zip Release output
          run: zip -qq -r ReleaseBuild.zip Release
          working-directory: ./src/Spice86/bin
+
+       - name: Pack prerelease NuGet packages
+         working-directory: ./src
+         run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=NU5104
+
+       - name: Publish prerelease NuGet packages
+         env:
+           PACKAGE_VERSION: ${{ env.PRERELEASE_VERSION }}
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         run: |
+              set -euo pipefail
+              SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+              for project in Bufdio.Spice86 Spice86.Shared Spice86.Logging Spice86.Core Spice86; do
+                   PACKAGE_PATH="./src/${project}/bin/Release/${project}.${PACKAGE_VERSION}.nupkg"
+                   if [ -f "$PACKAGE_PATH" ]; then
+                        dotnet nuget push "$PACKAGE_PATH" --source "$SOURCE" --api-key "$GITHUB_TOKEN" --skip-duplicate
+                   else
+                        echo "::error::Package not found: $PACKAGE_PATH"
+                        exit 1
+                   fi
+              done
 
        - name: Publish GitHub Release
          uses: "marvinpinto/action-automatic-releases@latest"
