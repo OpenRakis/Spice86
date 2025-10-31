@@ -18,7 +18,7 @@ public class BreakpointTests {
         yield return new object[] { true };
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestMemoryBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add", enableCfgCpu: enableCfgCpu).Create();
@@ -129,7 +129,7 @@ public class BreakpointTests {
         Assert.Equal(expectedTriggers, count);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExecutionBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add", enableCfgCpu: enableCfgCpu).Create();
@@ -156,7 +156,7 @@ public class BreakpointTests {
         Assert.Equal(3, triggers);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestIoBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", enableCfgCpu: enableCfgCpu, maxCycles: 0xFFFFFFF, enablePit: true).Create();
@@ -175,7 +175,7 @@ public class BreakpointTests {
         Assert.Equal(1, triggers);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExternalInterruptBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", enableCfgCpu: enableCfgCpu, maxCycles: 0xFFFFFFF, enablePit: true).Create();
@@ -189,7 +189,7 @@ public class BreakpointTests {
         Assert.Equal(356, triggers);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestProgrammaticInterruptBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt", enableCfgCpu: enableCfgCpu).Create();
