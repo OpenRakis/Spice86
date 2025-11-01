@@ -7,17 +7,9 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
-using Spice86.Shared.Utils;
-
-using System.Security.Cryptography;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration {
-    /// <summary>
-    /// Gets the SHA 256 signature of the target <see cref="Exe"/>
-    /// </summary>
-    public string ProgramHash { get; internal set; } = "";
-
     /// <summary>
     /// CPU cycles per ms. Can be more precisely specified than instructions per second. Overrides instructions per second if used.
     /// </summary>
@@ -100,10 +92,10 @@ public sealed class Configuration {
     public int GdbPort { get; init; }
 
     /// <summary>
-    /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the <see cref="ProgramHash"/>.
+    /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature.
     /// </summary>
     [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature")]
-    public string RecordedDataDirectory { get; internal set; } = "";
+    public string? RecordedDataDirectory { get; init; }
 
     /// <summary>
     /// Install DOS interrupt vectors or not.

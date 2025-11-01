@@ -95,13 +95,14 @@ public class DosFileManagerTests {
         Configuration configuration = new Configuration() {
             AudioEngine = AudioEngine.Dummy,
             DumpDataOnExit = false,
-            CDrive = mountPoint
+            CDrive = mountPoint,
+            RecordedDataDirectory = Path.GetTempPath()
         };
         Ram ram = new Ram(A20Gate.EndOfHighMemoryArea);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
-        RecordedDataReader reader = new(configuration.RecordedDataDirectory, loggerService);
+        RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);

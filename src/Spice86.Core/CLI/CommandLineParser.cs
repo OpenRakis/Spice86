@@ -9,7 +9,6 @@ using Spice86.Shared.Utils;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Security.Cryptography;
 
 /// <summary>
 /// Parses the command line options to create a <see cref="Configuration"/>.
@@ -30,15 +29,6 @@ public class CommandLineParser {
                 return null;
             }
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
-            string programHash = GetProgramHash(initialConfig.Exe);
-            
-            string? dumpsFolder = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
-            if (string.IsNullOrWhiteSpace(dumpsFolder) || !Directory.Exists(dumpsFolder)) {
-                dumpsFolder = programHash;
-            }
-
-            initialConfig.ProgramHash = programHash;
-            initialConfig.RecordedDataDirectory = dumpsFolder;
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
             initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
@@ -48,14 +38,6 @@ public class CommandLineParser {
             }
             return initialConfig;
         }, error => null);
-    }
-
-    private string GetProgramHash(string? exe) {
-        ArgumentException.ThrowIfNullOrWhiteSpace(exe);
-        if (!File.Exists(exe)) {
-            throw new FileNotFoundException(exe);
-        }
-        return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(exe)));
     }
 
     private static string[] ProcessArgs(string[] args, out string exeArgs) {
