@@ -41,7 +41,7 @@ public class DumpContextTests {
     [Fact]
     public void Constructor_WithNonExistentFile_ThrowsFileNotFoundException() {
         // Arrange
-        string nonExistentFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        string nonExistentFile = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString());
 
         // Act & Assert
         Action act = () => new DumpContext(nonExistentFile, null);
