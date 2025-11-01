@@ -158,9 +158,6 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
-        if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-            _emulatorBreakpointsManager.TriggerBreakpoints();
-        }
         _pauseHandler.WaitIfPaused();
         InitializeSliceTimer();
         int targetCycles = _cyclesLimiter.TargetCpuCyclesPerMs;
@@ -177,6 +174,9 @@ public class EmulationLoop : ICyclesLimiter {
             }
 
             while (_cpuState.IsRunning && _picPitCpuState.Cycles > 0) {
+                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+                    _emulatorBreakpointsManager.TriggerBreakpoints();
+                }
                 _cpu.ExecuteNext();
             }
         }

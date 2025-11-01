@@ -10,9 +10,17 @@ public static class CycleLimiterFactory {
     /// <param name="configuration">The emulator configuration.</param>
     /// <returns>A cycle limiter instance.</returns>
     public static ICyclesLimiter Create(Configuration configuration) {
-        return configuration.Cycles switch {
-            null => new CpuCycleLimiter(ICyclesLimiter.RealModeCpuCyclesPerMs),
-            _ => new CpuCycleLimiter(configuration.Cycles.Value)
-        };
+        // Priority order: explicit Cycles setting, then InstructionsPerSecond, then default
+        if (configuration.Cycles != null) {
+            return new CpuCycleLimiter(configuration.Cycles.Value);
+        }
+        
+        if (configuration.InstructionsPerSecond != null) {
+            // Convert instructions per second to cycles per millisecond with proper rounding
+            int cyclesPerMs = (int)Math.Round(configuration.InstructionsPerSecond.Value / 1000.0);
+            return new CpuCycleLimiter(cyclesPerMs);
+        }
+        
+        return new CpuCycleLimiter(ICyclesLimiter.RealModeCpuCyclesPerMs);
     }
 }
