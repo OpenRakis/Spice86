@@ -10,15 +10,22 @@ using Spice86.Shared.Interfaces;
 using Serilog.Events;
 
 /// <summary>
-/// TODO: unit tests of events times
-/// TODO: integrate into INT21H
-/// TODO: integrate into BIOS / BIOS_DISK
-/// TODO: integrate into DI (along with shared instance of CmosRegisters)
-/// TODO: double-check with online sources and integrate online documentation into XML summaries.
+/// <summary>
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
 /// Handles register semantics, BCD handling, and periodic/status register behavior.
 /// Periodic events are processed lazily on port access; paused time (via IPauseHandler) does not advance RTC timing.
 /// </summary>
+/// <remarks>
+/// This implementation provides:
+/// <list type="bullet">
+/// <item>64 bytes of CMOS RAM accessible via ports 0x70 (address) and 0x71 (data)</item>
+/// <item>Real-time clock functions with BCD encoding support</item>
+/// <item>Periodic interrupt generation on IRQ 8 (configurable rate)</item>
+/// <item>Pause-aware timing that excludes paused periods from elapsed time calculations</item>
+/// <item>Integration with DOS INT 21h date/time functions and BIOS INT 1Ah RTC services</item>
+/// </list>
+/// Reference: MC146818/DS12885 Real Time Clock datasheet
+/// </remarks>
 public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private const ushort AddressPort = 0x70;
     private const ushort DataPort = 0x71;
