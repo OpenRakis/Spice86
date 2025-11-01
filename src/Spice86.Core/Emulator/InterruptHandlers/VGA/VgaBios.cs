@@ -830,8 +830,25 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             
             // VBE modes are now properly defined in RegisterValueSet.VgaModes
             // Mode 0x100 = 640x400x256, Mode 0x101 = 640x480x256
-            ModeFlags flags = dontClearMemory ? ModeFlags.NoClearMem : ModeFlags.Legacy;
-            _vgaFunctionality.VgaSetMode(modeNumber, flags);
+            // Save all registers before triggering mode switch through interrupt mechanism
+            ushort savedAX = _state.AX;
+            byte savedAH = _state.AH;
+            byte savedAL = _state.AL;
+            
+            // Set up mode number with appropriate flags
+            _state.AL = (byte)(modeNumber & 0xFF);
+            if (dontClearMemory) {
+                _state.AL |= 0x80; // Set bit 7 to indicate "don't clear memory"
+            }
+            
+            // Trigger standard VGA mode setting through INT 10h AH=00h mechanism
+            _state.AH = 0x00;
+            _vgaFunctionality.VgaSetMode(_state.AL, dontClearMemory ? ModeFlags.NoClearMem : ModeFlags.Legacy);
+            
+            // Restore all registers
+            _state.AX = savedAX;
+            _state.AH = savedAH;
+            _state.AL = savedAL;
 
             SetVbeReturnValue(VbeReturnStatus.Success);
         }
