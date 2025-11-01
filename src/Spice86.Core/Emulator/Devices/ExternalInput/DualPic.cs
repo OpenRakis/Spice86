@@ -797,6 +797,11 @@ public sealed class DualPic : IDisposable {
         _cpuState.Cycles = 0;
         Ticks++;
 
+        // TEMPORARY DEBUG: Log every 100th tick
+        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug) && Ticks % 100 == 0) {
+            _logger.Debug("AddTick called: Ticks={Ticks}, CyclesMax={CyclesMax}", Ticks, _cpuState.CyclesMax);
+        }
+
         // Decrement each scheduled entry by one tick (the queue stores offsets in 1.0 tick units).
         _eventQueue.DecrementIndicesForTick();
 

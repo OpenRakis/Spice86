@@ -320,6 +320,11 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     private void PitChannel0Event(uint value) {
         _pic.ActivateIrq(0);
 
+        // TEMPORARY DEBUG
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("PitChannel0Event fired at PIC tick {Ticks}", _pic.Ticks);
+        }
+
         if (Channel0.Mode == PitMode.InterruptOnTerminalCount) {
             return;
         }
