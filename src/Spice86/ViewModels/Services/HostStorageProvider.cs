@@ -80,21 +80,12 @@ public class HostStorageProvider : IHostStorageProvider {
     }
 
     public async Task SaveVideoCardInfoFile(string videoCardInfoJson) {
-        if (CanSave && CanPickFolder) {
-            FilePickerSaveOptions options = new() {
-                Title = "Save video card info...",
-                SuggestedFileName = "VideoCardInfo.json",
-                DefaultExtension = "json",
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_dumpContext.DumpDirectory)
-            };
-            if (!Directory.Exists(_dumpContext.DumpDirectory)) {
-                options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            }
-            string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(file)) {
-                await File.WriteAllTextAsync(file, videoCardInfoJson);
-            }
+        string dumpDir = _dumpContext.DumpDirectory;
+        if (!Directory.Exists(dumpDir)) {
+            Directory.CreateDirectory(dumpDir);
         }
+        string filePath = Path.Combine(dumpDir, "VideoCardInfo.json");
+        await File.WriteAllTextAsync(filePath, videoCardInfoJson);
     }
 
     public async Task DumpEmulatorStateToFile() {
