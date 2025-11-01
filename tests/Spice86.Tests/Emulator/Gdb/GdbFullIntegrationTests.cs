@@ -93,7 +93,7 @@ public class GdbFullIntegrationTests : IDisposable {
     public async Task GdbClient_WriteRegister_ShouldUpdateRegisterValue() {
         // Arrange
         int port = GetAvailablePort();
-        Spice86DependencyInjection injection = await StartGdbServerAsync(port);
+        await StartGdbServerAsync(port);
         GdbClientProcess client = new();
         await client.StartAsync("127.0.0.1", port);
         _clients.Add(client);
