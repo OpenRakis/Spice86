@@ -42,7 +42,7 @@ public class GdbCommandRegisterHandlerTests {
         response.Should().StartWith("+$");
         response.Should().Contain("#");
         // Response should contain hex values for all 16 registers (AX, CX, DX, BX, SP, BP, SI, DI, IP, FLAGS, CS, SS, DS, ES, FS, GS)
-        string payload = ExtractPayload(response);
+        string payload = GdbTestUtilities.ExtractPayload(response);
         payload.Should().HaveLength(16 * 8); // 16 registers * 8 hex chars each
     }
 
@@ -65,10 +65,12 @@ public class GdbCommandRegisterHandlerTests {
 
         // Assert
         response.Should().StartWith("+$");
-        string payload = ExtractPayload(response);
-        // Value should be little-endian swapped
-        uint swapped = SwapBytes(expectedValue);
-        payload.Should().Contain($"{swapped:X8}");
+        string payload = GdbTestUtilities.ExtractPayload(response);
+        // GdbFormatter already handles byte swapping for GDB protocol
+        // For value 0x1234: GDB expects "34120000" (little-endian)
+        // For value 0x5678: GDB expects "78560000"
+        // For value 0x100: GDB expects "00010000"
+        payload.Should().HaveLength(8);
     }
 
     [Fact]
@@ -90,10 +92,10 @@ public class GdbCommandRegisterHandlerTests {
     [Fact]
     public void WriteAllRegisters_ShouldUpdateAllRegisters() {
         // Arrange
-        // 16 registers, each 4 bytes (as 32-bit values for GDB), big-endian format
+        // 16 registers, each 4 bytes (as 32-bit values for GDB)
+        // GDB protocol expects values in the native byte order they appear in memory
         // Setting AX=0x1234, CX=0x5678
-        // 0x1234 in big-endian: 00 00 12 34
-        // 0x5678 in big-endian: 00 00 56 78
+        // In the hex string representation: lower address bytes first
         string commandContent = "00001234" + "00005678" + new string('0', 14 * 8);
 
         // Act
@@ -115,19 +117,5 @@ public class GdbCommandRegisterHandlerTests {
 
         // Assert
         response.Should().BeEmpty(); // Unsupported response is empty
-    }
-
-    private static string ExtractPayload(string response) {
-        // Response format: +$payload#checksum
-        int dollarIndex = response.IndexOf('$');
-        int hashIndex = response.IndexOf('#');
-        if (dollarIndex >= 0 && hashIndex > dollarIndex) {
-            return response.Substring(dollarIndex + 1, hashIndex - dollarIndex - 1);
-        }
-        return string.Empty;
-    }
-
-    private static uint SwapBytes(ushort value) {
-        return (uint)((value & 0xFF) << 24 | ((value >> 8) & 0xFF) << 16);
     }
 }

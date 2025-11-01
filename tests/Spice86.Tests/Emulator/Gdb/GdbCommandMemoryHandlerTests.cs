@@ -49,14 +49,4 @@ public class GdbCommandMemoryHandlerTests {
         // Assert
         response.Should().BeEmpty(); // Unsupported response is empty
     }
-
-    private static string ExtractPayload(string response) {
-        // Response format: +$payload#checksum
-        int dollarIndex = response.IndexOf('$');
-        int hashIndex = response.IndexOf('#');
-        if (dollarIndex >= 0 && hashIndex > dollarIndex) {
-            return response.Substring(dollarIndex + 1, hashIndex - dollarIndex - 1);
-        }
-        return string.Empty;
-    }
 }
