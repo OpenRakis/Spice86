@@ -236,9 +236,212 @@ public class DosProcessManager : DosFileLoader {
         SetEntryPoint((ushort)(exeFile.InitCS + startSegment), exeFile.InitIP);
     }
 
-    internal void LoadAndOrExecute(string programName,
+    /// <summary>
+    /// Implements DOS INT 21h AH=4Bh (EXEC - Load and/or Execute Program).
+    /// </summary>
+    /// <param name="programName">The path to the program to execute.</param>
+    /// <param name="dosExecParameterBlock">The EXEC parameter block containing environment and FCB pointers.</param>
+    /// <param name="dosExecFunction">The EXEC function to perform (Load and Execute, Load, or Load Overlay).</param>
+    /// <exception cref="UnrecoverableException">Thrown if the program cannot be loaded or memory allocation fails.</exception>
+    public void LoadAndOrExecute(string programName,
         DosExecParameterBlock dosExecParameterBlock, DosExecFunction dosExecFunction) {
-        throw new NotImplementedException("INT21H load and/or exec not implemented");
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("LoadAndOrExecute: Program={Program}, Function={Function}", 
+                programName, dosExecFunction);
+        }
+
+        switch (dosExecFunction) {
+            case DosExecFunction.LoadAndExecute:
+                LoadAndExecuteProgram(programName, dosExecParameterBlock);
+                break;
+            case DosExecFunction.Load:
+                LoadProgramWithoutExecuting(programName, dosExecParameterBlock);
+                break;
+            case DosExecFunction.LoadOverlay:
+                LoadOverlay(programName, dosExecParameterBlock);
+                break;
+            default:
+                throw new UnrecoverableException($"Unsupported EXEC function: {dosExecFunction}");
+        }
+    }
+
+    /// <summary>
+    /// Loads and executes a program (EXEC function 0x00).
+    /// Creates a new PSP, loads the program, and transfers control to it.
+    /// </summary>
+    private void LoadAndExecuteProgram(string programName, DosExecParameterBlock execBlock) {
+        // Resolve the program path
+        string? resolvedPath = _fileManager.TryGetFullHostPathFromDos(programName);
+        if (resolvedPath is null || !File.Exists(resolvedPath)) {
+            throw new UnrecoverableException($"Program not found: {programName}");
+        }
+
+        // Read the program file
+        byte[] fileBytes = File.ReadAllBytes(resolvedPath);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Loading program: {Program}, Size: {Size} bytes", programName, fileBytes.Length);
+        }
+
+        // Allocate memory for PSP and program
+        // Allocate maximum available memory for the program
+        DosMemoryControlBlock? block = _memoryManager.AllocateMemoryBlock(0xFFFF);
+        if (block is null) {
+            throw new UnrecoverableException($"Failed to allocate memory for program: {programName}");
+        }
+
+        // Create new PSP at the allocated block
+        ushort pspSegment = block.DataBlockSegment;
+        DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
+
+        // Initialize PSP
+        InitializePsp(psp, pspSegment, execBlock, programName, resolvedPath);
+
+        // Load the program (EXE or COM)
+        LoadExeOrComFile(resolvedPath, pspSegment);
+
+        // Copy FCBs from parent PSP to child PSP
+        CopyFcbsToChildPsp(psp, execBlock);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("Program loaded and ready to execute: CS:IP={CS:X4}:{IP:X4}, SS:SP={SS:X4}:{SP:X4}",
+                _state.CS, _state.IP, _state.SS, _state.SP);
+        }
+    }
+
+    /// <summary>
+    /// Loads a program without executing it (EXEC function 0x01).
+    /// Returns the entry point and initial stack in the parameter block.
+    /// </summary>
+    private void LoadProgramWithoutExecuting(string programName, DosExecParameterBlock execBlock) {
+        // Resolve the program path
+        string? resolvedPath = _fileManager.TryGetFullHostPathFromDos(programName);
+        if (resolvedPath is null || !File.Exists(resolvedPath)) {
+            throw new UnrecoverableException($"Program not found: {programName}");
+        }
+
+        byte[] fileBytes = File.ReadAllBytes(resolvedPath);
+        
+        // Allocate memory for the program
+        DosMemoryControlBlock? block = _memoryManager.AllocateMemoryBlock(0xFFFF);
+        if (block is null) {
+            throw new UnrecoverableException($"Failed to allocate memory for program: {programName}");
+        }
+
+        ushort loadSegment = block.DataBlockSegment;
+
+        // Try to parse as EXE
+        if (fileBytes.Length >= DosExeFile.MinExeSize) {
+            DosExeFile exeFile = new DosExeFile(new ByteArrayReaderWriter(fileBytes));
+            if (exeFile.IsValid) {
+                // Load EXE but don't set CPU state
+                ushort programEntryPointSegment = (ushort)(loadSegment + 0x10);
+                LoadExeFileInMemoryAndApplyRelocations(exeFile, programEntryPointSegment);
+                
+                // Return entry point and stack in the parameter block
+                execBlock.ReturnedEntryPoint = new SegmentedAddress(
+                    (ushort)(exeFile.InitCS + programEntryPointSegment),
+                    exeFile.InitIP);
+                execBlock.ReturnedInitialStack = new SegmentedAddress(
+                    (ushort)(exeFile.InitSS + programEntryPointSegment),
+                    exeFile.InitSP);
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("Loaded EXE without executing: Entry={EntryPoint}, Stack={Stack}",
+                        execBlock.ReturnedEntryPoint, execBlock.ReturnedInitialStack);
+                }
+                return;
+            }
+        }
+
+        // Load as COM
+        uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(loadSegment, ComOffset);
+        _memory.LoadData(physicalStartAddress, fileBytes);
+        
+        // COM files start at 0x100 with a simple stack
+        execBlock.ReturnedEntryPoint = new SegmentedAddress(loadSegment, ComOffset);
+        execBlock.ReturnedInitialStack = new SegmentedAddress(loadSegment, 0xFFFE);
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("Loaded COM without executing: Entry={EntryPoint}",
+                execBlock.ReturnedEntryPoint);
+        }
+    }
+
+    /// <summary>
+    /// Loads an overlay (EXEC function 0x03).
+    /// Loads program image at specified segment with relocation.
+    /// </summary>
+    private void LoadOverlay(string programName, DosExecParameterBlock execBlock) {
+        // For overlay loading, we need to use DosExecOverlayBlock instead
+        // This is a simplified implementation - overlays use a different parameter block structure
+        throw new NotImplementedException("Overlay loading (EXEC function 0x03) not yet implemented");
+    }
+
+    /// <summary>
+    /// Initializes a DOS Program Segment Prefix for a child process.
+    /// </summary>
+    private void InitializePsp(DosProgramSegmentPrefix psp, ushort pspSegment, 
+        DosExecParameterBlock execBlock, string programName, string resolvedPath) {
+        // Set INT 20h at offset 0
+        psp.Exit[0] = 0xCD;
+        psp.Exit[1] = 0x20;
+
+        // Set top of memory
+        psp.NextSegment = DosMemoryManager.LastFreeSegment;
+
+        // Handle environment block
+        if (execBlock.EnvironmentSegment == 0) {
+            // Inherit parent's environment or create new one
+            byte[] environmentBlock = CreateEnvironmentBlock(resolvedPath);
+            ushort envSegment = (ushort)(pspSegment + 1);
+            _memory.LoadData(MemoryUtils.ToPhysicalAddress(envSegment, 0), environmentBlock);
+            psp.EnvironmentTableSegment = envSegment;
+        } else {
+            // Use provided environment segment
+            psp.EnvironmentTableSegment = execBlock.EnvironmentSegment;
+        }
+
+        // Copy command tail from parent PSP to child PSP
+        SegmentedAddress cmdTailPtr = execBlock.CommandTailPointer;
+        if (cmdTailPtr.Segment != 0 || cmdTailPtr.Offset != 0) {
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(cmdTailPtr.Segment, cmdTailPtr.Offset);
+            byte length = _memory.UInt8[cmdTailAddress];
+            psp.DosCommandTail.Length = length;
+            
+            // Copy command tail characters
+            StringBuilder cmdLine = new StringBuilder();
+            for (int i = 0; i < length; i++) {
+                char c = (char)_memory.UInt8[cmdTailAddress + 1 + (uint)i];
+                cmdLine.Append(c);
+            }
+            psp.DosCommandTail.Command = cmdLine.ToString();
+        }
+
+        // Set DTA to command tail
+        _fileManager.SetDiskTransferAreaAddress(pspSegment, DosCommandTail.OffsetInPspSegment);
+    }
+
+    /// <summary>
+    /// Copies FCBs from the parent PSP to the child PSP.
+    /// </summary>
+    private void CopyFcbsToChildPsp(DosProgramSegmentPrefix childPsp, DosExecParameterBlock execBlock) {
+        // Copy first FCB (at 0x5C in PSP)
+        SegmentedAddress fcb1Ptr = execBlock.Fcb1Pointer;
+        if (fcb1Ptr.Segment != 0 || fcb1Ptr.Offset != 0) {
+            uint fcb1SourceAddr = MemoryUtils.ToPhysicalAddress(fcb1Ptr.Segment, fcb1Ptr.Offset);
+            for (int i = 0; i < 16; i++) {
+                childPsp.FirstFileControlBlock[i] = _memory.UInt8[fcb1SourceAddr + (uint)i];
+            }
+        }
+
+        // Copy second FCB (at 0x6C in PSP)
+        SegmentedAddress fcb2Ptr = execBlock.Fcb2Pointer;
+        if (fcb2Ptr.Segment != 0 || fcb2Ptr.Offset != 0) {
+            uint fcb2SourceAddr = MemoryUtils.ToPhysicalAddress(fcb2Ptr.Segment, fcb2Ptr.Offset);
+            for (int i = 0; i < 16; i++) {
+                childPsp.SecondFileControlBlock[i] = _memory.UInt8[fcb2SourceAddr + (uint)i];
+            }
+        }
     }
 
     internal void SetupInitialProgram() {
