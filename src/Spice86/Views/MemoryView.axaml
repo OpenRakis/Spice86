@@ -9,6 +9,7 @@
 	xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:rendering="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+    xmlns:views="clr-namespace:Spice86.Views"
 	xmlns:viewModels="clr-namespace:Spice86.ViewModels"
 	xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
 	xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
@@ -21,7 +22,7 @@
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
 	<ScrollViewer>
-		<Grid RowDefinitions="Auto,*,Auto">
+		<Grid RowDefinitions="Auto,*">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Top"
@@ -29,6 +30,7 @@
 				<Button VerticalAlignment="Top" HotKey="F3" ToolTip.Tip="F3" Command="{Binding StartMemorySearchCommand}" Content="Search..." />
 				<Button VerticalAlignment="Top" Command="{Binding EditMemoryCommand}" Content="Edit..." />
 				<Button VerticalAlignment="Top" Command="{Binding DumpMemoryCommand}" Content="Dump..." />
+				<Button VerticalAlignment="Top" Command="{Binding OpenViewAsBitmapDialogCommand}" Content="View as bitmap..." />
 				<StackPanel Orientation="Vertical">
 					<Button HotKey="F2" ToolTip.Tip="F2" Command="{Binding BeginCreateMemoryBreakpointCommand}" Content="Breakpoint..." />
 					<Button IsVisible="{Binding IsStructureInfoPresent}"
@@ -76,8 +78,7 @@
 					<Label  IsVisible="{Binding IsPaused}" Content="{Binding Title}" />
 				</StackPanel>
 			</StackPanel>
-			<Grid Grid.Row="1"
-				  RowDefinitions="*, Auto">
+			<Grid Grid.Row="1" RowDefinitions="*, Auto">
 				<TextBlock Grid.Row="0" IsVisible="{Binding !IsPaused}" Text="Memory is displayed only when the emulator is paused" />
 				<avaloniaHex:HexEditor
 					x:Name="HexViewer"
@@ -169,8 +170,7 @@
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence
-									}" />
+								Text="{Binding AddressOFoundOccurence}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
 							<Button Command="{Binding FirstOccurrenceCommand}"
@@ -219,8 +219,7 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay 
-									}">
+								Text="{Binding MemoryEditAddress, Mode=TwoWay}">
 								<Interaction.Behaviors>
 									<behaviors:UpdateBindingOnEnterBehavior />
 								</Interaction.Behaviors>
@@ -291,8 +290,7 @@
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding MemoryBreakpointStartAddress 
-										}">
+									Text="{Binding MemoryBreakpointStartAddress}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
@@ -302,8 +300,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding MemoryBreakpointEndAddress 
-										}">
+									Text="{Binding MemoryBreakpointEndAddress}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
@@ -313,8 +310,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding MemoryBreakpointValueCondition 
-										}">
+									Text="{Binding MemoryBreakpointValueCondition}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
@@ -345,6 +341,80 @@
 								Content="Cancel"
 								IsCancel="True" />
 						</StackPanel>
+					</Grid>
+				</dialogHost:DialogHost.DialogContent>
+			</dialogHost:DialogHost>
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+					   IsVisible="{Binding IsViewingAsBitmap}"/>
+			<dialogHost:DialogHost
+				Grid.Row="0" Grid.RowSpan="2"
+				Background="{Binding $parent[Window].Background}"
+				CloseOnClickAway="False"
+				IsOpen="{Binding IsViewingAsBitmap}">
+				<dialogHost:DialogHost.DialogContent>
+					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+						  ColumnDefinitions="Auto,*"
+						  Margin="8">
+						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+							   HorizontalAlignment="Center"
+							   Content="View memory as bitmap (VGA indexed)"
+							   FontWeight="Bold" />
+						<Label Grid.Row="1" Grid.Column="0" Content="Width (X):" />
+						<TextBox Grid.Row="1" Grid.Column="1" Width="120"
+								 Text="{Binding BitmapViewWidth, Mode=TwoWay}">
+							<Interaction.Behaviors>
+								<behaviors:UpdateBindingOnEnterBehavior />
+							</Interaction.Behaviors>
+						</TextBox>
+
+						<Label Grid.Row="2" Grid.Column="0" Content="Height (Y):" />
+						<TextBox Grid.Row="2" Grid.Column="1" Width="120"
+								 Text="{Binding BitmapViewHeight, Mode=TwoWay}">
+							<Interaction.Behaviors>
+								<behaviors:UpdateBindingOnEnterBehavior />
+							</Interaction.Behaviors>
+						</TextBox>
+
+						<Label Grid.Row="3" Grid.Column="0" Content="Start address:" />
+						<TextBox Grid.Row="3" Grid.Column="1" FontFamily="RobotoMonoFont"
+								 Text="{Binding BitmapViewStartAddress, Mode=TwoWay}">
+							<Interaction.Behaviors>
+								<behaviors:UpdateBindingOnEnterBehavior />
+							</Interaction.Behaviors>
+						</TextBox>
+
+						<Label Grid.Row="4" Grid.Column="0" Content="End address:" />
+						<TextBox Grid.Row="4" Grid.Column="1" FontFamily="RobotoMonoFont"
+								 Text="{Binding BitmapViewEndAddress, Mode=TwoWay}">
+							<Interaction.Behaviors>
+								<behaviors:UpdateBindingOnEnterBehavior />
+							</Interaction.Behaviors>
+						</TextBox>
+
+						<StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+									Margin="0,8,0,0"
+									HorizontalAlignment="Right"
+									Orientation="Horizontal">
+							<Button Command="{Binding ConfirmViewAsBitmapCommand}" Content="OK" IsDefault="True" />
+							<Button Command="{Binding CancelViewAsBitmapCommand}" Content="Cancel" IsCancel="True" />
+						</StackPanel>
+					</Grid>
+				</dialogHost:DialogHost.DialogContent>
+			</dialogHost:DialogHost>
+			<Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+				IsVisible="{Binding IsMemoryBitmapViewerOpen}"/>
+			<dialogHost:DialogHost
+				Grid.Row="0" Grid.RowSpan="2"
+				Background="{Binding $parent[Window].Background}"
+				CloseOnClickAway="True"
+				IsOpen="{Binding IsMemoryBitmapViewerOpen}">
+				<dialogHost:DialogHost.DialogContent>
+					<Grid RowDefinitions="Auto,*">
+						<Grid Grid.Row="0">
+							<TextBlock Text="Bitmap preview as VGA 8 BPP" FontWeight="Bold" HorizontalAlignment="Left"/>
+							<Button Content="Close" Command="{Binding CloseMemoryBitmapViewerCommand}" HorizontalAlignment="Right" />
+						</Grid>
+						<views:MemoryBitmapView Grid.Row="1" DataContext="{Binding MemoryBitmap}" />
 					</Grid>
 				</dialogHost:DialogHost.DialogContent>
 			</dialogHost:DialogHost>
