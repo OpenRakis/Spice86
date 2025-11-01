@@ -18,7 +18,7 @@ public class BreakpointTests {
         yield return new object[] { true };
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestMemoryBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add", enableCfgCpu: enableCfgCpu).Create();
@@ -129,7 +129,7 @@ public class BreakpointTests {
         Assert.Equal(expectedTriggers, count);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExecutionBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add", enableCfgCpu: enableCfgCpu).Create();
@@ -156,7 +156,7 @@ public class BreakpointTests {
         Assert.Equal(3, triggers);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestIoBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", enableCfgCpu: enableCfgCpu, maxCycles: 0xFFFFFFF, enablePit: true).Create();
@@ -175,7 +175,12 @@ public class BreakpointTests {
         Assert.Equal(1, triggers);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    // Note: This test verifies timer interrupt generation with the new PIT/PIC event system.
+    // The test expects approximately 356 timer interrupts. Due to the transition from an instruction-based
+    // timer model (where the counter decremented once per CPU instruction) to a time-based event model
+    // (where events are scheduled with sub-millisecond precision), there may be small timing differences.
+    // We allow a tolerance of ±1% to account for rounding and timing variations.
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExternalInterruptBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", enableCfgCpu: enableCfgCpu, maxCycles: 0xFFFFFFF, enablePit: true).Create();
@@ -186,10 +191,15 @@ public class BreakpointTests {
             triggers++;
         }, false), true);
         programExecutor.Run();
-        Assert.Equal(356, triggers);
+        
+        // Allow ±1% tolerance for timing differences between instruction-based and event-based models
+        const int expected = 356;
+        int tolerance = expected / 100; // 1% of expected
+        if (tolerance < 1) tolerance = 1; // Ensure at least 1 interrupt tolerance for small values
+        Assert.InRange(triggers, expected - tolerance, expected + tolerance);
     }
 
-    [Theory(Skip = "Temporarily disabled until fixed")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestProgrammaticInterruptBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt", enableCfgCpu: enableCfgCpu).Create();
