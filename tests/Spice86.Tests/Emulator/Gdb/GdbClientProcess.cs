@@ -15,7 +15,9 @@ public class GdbClientProcess : IDisposable {
     private bool _disposed;
 
     public GdbClientProcess() {
-        _pipeName = $"GdbTestPipe_{Guid.NewGuid():N}";
+        // Use short pipe name to avoid Unix domain socket path length limit (104 chars)
+        // The full path includes temp directory, so we need to keep the name very short
+        _pipeName = $"gdb{Guid.NewGuid():N}".Substring(0, 16);
     }
 
     /// <summary>
