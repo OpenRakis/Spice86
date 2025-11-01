@@ -68,6 +68,6 @@ public class DumpContext {
         }
 
         // Always append program hash as subdirectory to isolate dumps per executable
-        return Path.Combine(baseDirectory, ProgramHash);
+        return Path.Join(baseDirectory, ProgramHash);
     }
 }
