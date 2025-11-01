@@ -49,18 +49,21 @@ public class DumpContextTests {
     }
 
     [Fact]
-    public void DumpDirectory_WithExplicitDirectory_ReturnsExplicitDirectory() {
+    public void DumpDirectory_WithExplicitDirectory_ReturnsExplicitDirectoryWithProgramHash() {
         // Arrange
         string tempFile = Path.GetTempFileName();
         string explicitDir = Path.Combine(Path.GetTempPath(), "explicit-dump-dir");
         try {
-            File.WriteAllBytes(tempFile, "test"u8.ToArray());
+            byte[] testData = "test"u8.ToArray();
+            File.WriteAllBytes(tempFile, testData);
+            string expectedHash = Convert.ToHexString(SHA256.HashData(testData));
 
             // Act
             DumpContext context = new(tempFile, explicitDir);
 
             // Assert
-            context.DumpDirectory.Should().Be(explicitDir);
+            string expectedPath = Path.Combine(explicitDir, expectedHash);
+            context.DumpDirectory.Should().Be(expectedPath);
         } finally {
             if (File.Exists(tempFile)) {
                 File.Delete(tempFile);
@@ -69,14 +72,16 @@ public class DumpContextTests {
     }
 
     [Fact]
-    public void DumpDirectory_WithEnvironmentVariable_ReturnsEnvironmentDirectory() {
+    public void DumpDirectory_WithEnvironmentVariable_ReturnsEnvironmentDirectoryWithProgramHash() {
         // Arrange
         string tempFile = Path.GetTempFileName();
         string envDir = Path.Combine(Path.GetTempPath(), "env-dump-dir");
         string? oldEnvValue = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
         
         try {
-            File.WriteAllBytes(tempFile, "test"u8.ToArray());
+            byte[] testData = "test"u8.ToArray();
+            File.WriteAllBytes(tempFile, testData);
+            string expectedHash = Convert.ToHexString(SHA256.HashData(testData));
             Directory.CreateDirectory(envDir);
             Environment.SetEnvironmentVariable("SPICE86_DUMPS_FOLDER", envDir);
 
@@ -84,7 +89,8 @@ public class DumpContextTests {
             DumpContext context = new(tempFile, null);
 
             // Assert
-            context.DumpDirectory.Should().Be(envDir);
+            string expectedPath = Path.Combine(envDir, expectedHash);
+            context.DumpDirectory.Should().Be(expectedPath);
         } finally {
             if (File.Exists(tempFile)) {
                 File.Delete(tempFile);
@@ -97,7 +103,7 @@ public class DumpContextTests {
     }
 
     [Fact]
-    public void DumpDirectory_WithNeitherExplicitNorEnvironment_ReturnsProgramHashDirectory() {
+    public void DumpDirectory_WithNeitherExplicitNorEnvironment_ReturnsCurrentDirectoryWithProgramHash() {
         // Arrange
         string tempFile = Path.GetTempFileName();
         string? oldEnvValue = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
@@ -112,7 +118,8 @@ public class DumpContextTests {
             DumpContext context = new(tempFile, null);
 
             // Assert
-            context.DumpDirectory.Should().Be(expectedHash);
+            string expectedPath = Path.Combine(".", expectedHash);
+            context.DumpDirectory.Should().Be(expectedPath);
         } finally {
             if (File.Exists(tempFile)) {
                 File.Delete(tempFile);
@@ -122,7 +129,7 @@ public class DumpContextTests {
     }
 
     [Fact]
-    public void DumpDirectory_WithNonExistentEnvironmentDirectory_ReturnsProgramHashDirectory() {
+    public void DumpDirectory_WithNonExistentEnvironmentDirectory_ReturnsCurrentDirectoryWithProgramHash() {
         // Arrange
         string tempFile = Path.GetTempFileName();
         string nonExistentDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -138,7 +145,8 @@ public class DumpContextTests {
             DumpContext context = new(tempFile, null);
 
             // Assert
-            context.DumpDirectory.Should().Be(expectedHash);
+            string expectedPath = Path.Combine(".", expectedHash);
+            context.DumpDirectory.Should().Be(expectedPath);
         } finally {
             if (File.Exists(tempFile)) {
                 File.Delete(tempFile);

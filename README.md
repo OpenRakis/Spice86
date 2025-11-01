@@ -46,9 +46,11 @@ General process:
 
 | Setting | Description |
 |---------|-------------|
-| Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control where data is dumped |
-| Command Line | Use `--RecordedDataDirectory` to specify the dump location |
-| Default Location | A subdirectory named with the program's SHA-256 hash if neither of the above is specified |
+| Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control the base directory where data is dumped |
+| Command Line | Use `--RecordedDataDirectory` to specify the base dump location |
+| Default Location | Current directory if neither of the above is specified |
+
+**Note:** Regardless of the base directory setting, dumps are always placed in a subdirectory named with the program's SHA-256 hash. This ensures that multiple executables from the same game (e.g., SETUP.EXE, GAME.EXE) have isolated dump folders.
 
 The emulator dumps the following files:
 - **spice86dumpMemoryDump.bin**: Snapshot of the real mode address space
