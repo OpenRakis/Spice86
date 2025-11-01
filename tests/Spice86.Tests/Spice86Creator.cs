@@ -15,7 +15,12 @@ public class Spice86Creator {
 
     public Spice86Creator(string binName, bool enableCfgCpu, bool enablePit = false, bool recordData = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
-        bool enableXms = false, string? overrideSupplierClassName = null) {
+        bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
+        IOverrideSupplier? overrideSupplier = null;
+        if (overrideSupplierClassName != null) {
+            CommandLineParser parser = new();
+            overrideSupplier = parser.ParseCommandLine(["--OverrideSupplierClassName", overrideSupplierClassName])?.OverrideSupplier;
+        }
 
         _configuration = new Configuration {
             Exe = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin",
@@ -34,7 +39,9 @@ public class Spice86Creator {
             AudioEngine = AudioEngine.Dummy,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,
-            Xms = enableXms
+            OverrideSupplier = overrideSupplier,
+            Xms = enableXms,
+            Ems = enableEms
         };
 
         if (overrideSupplierClassName != null) {
