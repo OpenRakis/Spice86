@@ -175,14 +175,10 @@ public class BreakpointTests {
         Assert.Equal(1, triggers);
     }
 
-    // TODO: This test currently fails - expects 356 timer interrupt triggers but only gets 11
-    // The breakpoint mechanism is working correctly (it triggers on the 11 interrupts that ARE delivered)
-    // The issue is with PIT/PIC event delivery - timer events are not being fired frequently enough
-    // This appears to be a regression in the PIT/PIC system that needs further investigation
-    // TODO: This test expects 356 timer interrupt triggers but only gets 11 with the new PIC event system.
-    // The breakpoint mechanism works correctly - it triggers on all 11 interrupts that ARE delivered.
-    // The root cause is in PIT/PIC timer event generation frequency with the new device timing system.
-    // This needs investigation into DualPic.AddTick() and PicEventQueue timer event scheduling.
+    // TODO: This test currently fails: expects 356 timer interrupt triggers but only gets 11 with the new PIC event system.
+    // The breakpoint mechanism itself is working correctly (it triggers on all interrupts that ARE delivered).
+    // The root cause appears to be in PIT/PIC timer event generation frequency with the new device timing system.
+    // Needs investigation into DualPic.AddTick() and PicEventQueue timer event scheduling.
     [Theory(Skip = "PIT/PIC timer event generation issue - only 11 of 356 expected interrupts fire")]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExternalInterruptBreakpoints(bool enableCfgCpu) {
