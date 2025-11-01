@@ -3,10 +3,10 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -32,7 +32,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
-    private readonly RealTimeClock _realTimeClock;
+    private readonly IOPortDispatcher _ioPortDispatcher;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -51,14 +51,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
-    /// <param name="realTimeClock">The RTC/CMOS emulation for date/time operations.</param>
+    /// <param name="ioPortDispatcher">The IO port dispatcher for accessing RTC ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager, 
-        RealTimeClock realTimeClock, ILoggerService loggerService)
+        IOPortDispatcher ioPortDispatcher, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -67,7 +67,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
-        _realTimeClock = realTimeClock;
+        _ioPortDispatcher = ioPortDispatcher;
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
@@ -728,7 +728,7 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=2Ah - Get system date.
-    /// Returns date from the host's DateTime.Now.
+    /// Returns date from the RTC by reading ports 0x70 and 0x71.
     /// </summary>
     /// <returns>
     /// AL = day of the week (0=Sunday, 1=Monday, ..., 6=Saturday) <br/>
@@ -737,16 +737,33 @@ public class DosInt21Handler : InterruptHandler {
     /// DL = day (1-31) <br/>
     /// </returns>
     public void GetDate() {
-        DateTime currentDate = DateTime.Now;
+        bool isBcd = IsRtcInBcdMode();
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 21h, AH=2Ah - GET DATE: {Date}", currentDate.ToString("yyyy-MM-dd"));
+        byte dayOfWeek = ReadRtcRegister(0x06);
+        byte day = ReadRtcRegister(0x07);
+        byte month = ReadRtcRegister(0x08);
+        byte year = ReadRtcRegister(0x09);
+        byte century = ReadRtcRegister(0x32);
+
+        if (isBcd) {
+            day = BcdToBinary(day);
+            month = BcdToBinary(month);
+            year = BcdToBinary(year);
+            century = BcdToBinary(century);
+            // Day of week is 1-7 in RTC, adjust to 0-6 for DOS (0=Sunday)
+            dayOfWeek = (byte)((BcdToBinary(dayOfWeek) - 1) % 7);
         }
 
-        State.AL = (byte)currentDate.DayOfWeek;
-        State.CX = (ushort)currentDate.Year;
-        State.DH = (byte)currentDate.Month;
-        State.DL = (byte)currentDate.Day;
+        ushort fullYear = (ushort)(century * 100 + year);
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Ah - GET DATE: {Year}-{Month:D2}-{Day:D2}", fullYear, month, day);
+        }
+
+        State.AL = dayOfWeek;
+        State.CX = fullYear;
+        State.DH = month;
+        State.DL = day;
     }
 
     /// <summary>
@@ -886,7 +903,7 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=2Ch - Get system time.
-    /// Returns the current time from the host's DateTime.Now.
+    /// Returns the current time from the RTC by reading ports 0x70 and 0x71.
     /// </summary>
     /// <returns>
     /// CH = hours (0-23) <br/>
@@ -895,16 +912,27 @@ public class DosInt21Handler : InterruptHandler {
     /// DL = hundredths of a second (0-99) <br/>
     /// </returns>
     public void GetTime() {
-        DateTime currentTime = DateTime.Now;
+        bool isBcd = IsRtcInBcdMode();
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 21h, AH=2Ch - GET TIME: {Time}", currentTime.ToString("HH:mm:ss.ff"));
+        byte seconds = ReadRtcRegister(0x00);
+        byte minutes = ReadRtcRegister(0x02);
+        byte hours = ReadRtcRegister(0x04);
+
+        if (isBcd) {
+            seconds = BcdToBinary(seconds);
+            minutes = BcdToBinary(minutes);
+            hours = BcdToBinary(hours);
         }
 
-        State.CH = (byte)currentTime.Hour;
-        State.CL = (byte)currentTime.Minute;
-        State.DH = (byte)currentTime.Second;
-        State.DL = (byte)(currentTime.Millisecond / 10);
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Ch - GET TIME: {Hours:D2}:{Minutes:D2}:{Seconds:D2}", hours, minutes, seconds);
+        }
+
+        State.CH = hours;
+        State.CL = minutes;
+        State.DH = seconds;
+        // RTC doesn't provide hundredths, so we return 0
+        State.DL = 0;
     }
 
     /// <summary>
@@ -1269,5 +1297,34 @@ public class DosInt21Handler : InterruptHandler {
         if (dosFileOperationResult.IsValueIsUint32) {
             State.DX = (ushort)(value >> 16);
         }
+    }
+
+    /// <summary>
+    /// Reads a byte from the specified RTC register by accessing ports 0x70 and 0x71.
+    /// </summary>
+    /// <param name="register">The RTC register to read.</param>
+    /// <returns>The value read from the register.</returns>
+    private byte ReadRtcRegister(byte register) {
+        _ioPortDispatcher.WriteByte(0x70, register);
+        return _ioPortDispatcher.ReadByte(0x71);
+    }
+
+    /// <summary>
+    /// Checks if the RTC is in BCD mode by reading Register B.
+    /// </summary>
+    /// <returns>True if in BCD mode, false if in binary mode.</returns>
+    private bool IsRtcInBcdMode() {
+        byte registerB = ReadRtcRegister(0x0B);
+        // Bit 2 of Register B: 0 = BCD mode, 1 = binary mode
+        return (registerB & 0x04) == 0;
+    }
+
+    /// <summary>
+    /// Converts a BCD value to binary.
+    /// </summary>
+    /// <param name="bcd">The BCD value.</param>
+    /// <returns>The binary value.</returns>
+    private static byte BcdToBinary(byte bcd) {
+        return (byte)(((bcd >> 4) * 10) + (bcd & 0x0F));
     }
 }
