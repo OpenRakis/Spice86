@@ -657,11 +657,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void ConfirmViewAsBitmap() {
         if (BitmapViewWidth <= 0 || BitmapViewHeight <= 0) {
-            ShowError(new ArgumentOutOfRangeException($"Invalid bitmap size: {BitmapViewWidth}x{BitmapViewHeight}"));
+            ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewWidth), $"Invalid bitmap size: {BitmapViewWidth}x{BitmapViewHeight}"));
             return;
         }
         if (!TryParseAddressString(BitmapViewStartAddress, _state, out uint? startAddress)) {
-            ShowError(new ArgumentOutOfRangeException($"Invalid start address: {BitmapViewStartAddress}"));
+            ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Invalid start address: {BitmapViewStartAddress}"));
             return;
         }
 
@@ -670,7 +670,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (TryParseAddressString(BitmapViewEndAddress, _state, out uint? endAddressParsed)) {
             // Respect the provided end address and clamp the read length accordingly
             if (!GetIsMemoryRangeValid(startAddress, endAddressParsed, 0)) {
-                ShowError(new ArgumentOutOfRangeException($"Invalid address range: {BitmapViewStartAddress} - {BitmapViewEndAddress}"));
+                ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Invalid address range: {BitmapViewStartAddress} - {BitmapViewEndAddress}"));
                 return;
             }
             uint available = endAddressParsed.Value - startAddress.Value + 1;
@@ -680,7 +680,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             // Else, compute end from length
             endAddress = startAddress.Value + bytesToRead - 1;
             if (!GetIsMemoryRangeValid(startAddress, endAddress, 0)) {
-                ShowError(new ArgumentOutOfRangeException($"Computed address range out of bounds:" +
+                ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Computed address range out of bounds:" +
                     $" {ConvertUtils.ToHex32(startAddress.Value)} - {ConvertUtils.ToHex32(endAddress)}"));
                 return;
             }
