@@ -195,7 +195,7 @@ public class VbeIntegrationTests {
     [Fact]
     public void VbeTest_SetMode_NoClear_ShouldReturn() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_noclear.com", maxCycles: long.MaxValue);
+        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_noclear.com", maxCycles: long.MaxValue, verboseLogs: true);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 10h AX=4F02h with don't clear should return quickly");
@@ -207,7 +207,7 @@ public class VbeIntegrationTests {
     [Fact]
     public void VbeSetMode_Mode100_ShouldSet640x400x256() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com", maxCycles: long.MaxValue);
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com", maxCycles: long.MaxValue, verboseLogs: true);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x100 should be set to 640x400x256, not simplified mode");
@@ -232,7 +232,7 @@ public class VbeIntegrationTests {
     [Fact]
     public void VbeTest_SetMode_ShouldReturn() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_nocheck.com", maxCycles: long.MaxValue);
+        VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_nocheck.com", maxCycles: long.MaxValue, verboseLogs: true);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "INT 10h AX=4F02h should return control to program");
@@ -246,7 +246,7 @@ public class VbeIntegrationTests {
     [Fact]
     public void VbeSetMode_Mode101_ShouldSet640x480x256() {
         // Act
-        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com", maxCycles: long.MaxValue);
+        VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com", maxCycles: long.MaxValue, verboseLogs: true);
 
         // Assert
         testHandler.Results.Should().Contain((byte)TestResult.Success, "Mode 0x101 should be set to 640x480x256, not simplified mode");
@@ -289,7 +289,8 @@ public class VbeIntegrationTests {
     /// </summary>
     /// <param name="fileName">Binary file name in Resources/vbeTests/</param>
     /// <param name="maxCycles">Maximum CPU cycles to run (default 100000)</param>
-    private VbeTestHandler RunVbeTest(string fileName, long maxCycles = 100000L) {
+    /// <param name="verboseLogs">Enable verbose logging for debugging (default false)</param>
+    private VbeTestHandler RunVbeTest(string fileName, long maxCycles = 100000L, bool verboseLogs = false) {
         // Get full path to the binary file
         string filePath = Path.GetFullPath(Path.Join("Resources", "vbeTests", fileName));
 
@@ -303,7 +304,8 @@ public class VbeIntegrationTests {
             installInterruptVectors: true,
             enableA20Gate: false,
             enableXms: false,
-            enableEms: false
+            enableEms: false,
+            verboseLogs: verboseLogs
         ).Create();
 
         VbeTestHandler testHandler = new(
