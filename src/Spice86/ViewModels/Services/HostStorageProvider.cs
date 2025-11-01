@@ -84,7 +84,7 @@ public class HostStorageProvider : IHostStorageProvider {
         if (!Directory.Exists(dumpDir)) {
             Directory.CreateDirectory(dumpDir);
         }
-        string filePath = Path.Combine(dumpDir, "VideoCardInfo.json");
+        string filePath = Path.Join(dumpDir, "VideoCardInfo.json");
         await File.WriteAllTextAsync(filePath, videoCardInfoJson);
     }
 
