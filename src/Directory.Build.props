@@ -16,10 +16,10 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>10.0.0</Version>
+		<Version>11.0.0</Version>
 		<PackageReleaseNotes>
             <![CDATA[
-            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v10-release-notes
+            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v11-release-notes
             ]]>
 		</PackageReleaseNotes>
 		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Edu Garcia, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg</Authors>
