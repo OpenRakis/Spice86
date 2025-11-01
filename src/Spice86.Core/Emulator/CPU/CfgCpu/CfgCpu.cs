@@ -61,6 +61,9 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public void ExecuteNext() {
         ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
+        // Check execution address breakpoints before instruction execution to allow overrides
+        _emulatorBreakpointsManager.CheckExecutionAddressBreakPoints();
+
         // Execute the node
         try {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
@@ -78,7 +81,8 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
             _picPitCpuState.Cycles--;
         }
 
-        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+        // Check cycle breakpoints after instruction execution for accurate cycle counts
+        _emulatorBreakpointsManager.CheckCycleBreakPoints();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;
