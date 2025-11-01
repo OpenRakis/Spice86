@@ -27,6 +27,7 @@ public class GdbClient : IDisposable {
     /// <param name="cancellationToken">Cancellation token for the connection attempt</param>
     public async Task ConnectAsync(string host, int port, CancellationToken cancellationToken = default) {
         await _tcpClient.ConnectAsync(host, port, cancellationToken);
+        _tcpClient.NoDelay = true; // Disable Nagle algorithm for immediate sends
         _stream = _tcpClient.GetStream();
     }
 
