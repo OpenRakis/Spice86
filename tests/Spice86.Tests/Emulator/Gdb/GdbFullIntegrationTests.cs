@@ -23,20 +23,12 @@ public class GdbFullIntegrationTests : IDisposable {
 
     public void Dispose() {
         foreach (GdbClientProcess client in _clients) {
-            try {
-                client.Dispose();
-            } catch {
-                // Ignore cleanup errors
-            }
+            client.Dispose();
         }
 
         foreach (Spice86DependencyInjection injection in _injections) {
-            try {
-                injection.Machine.CpuState.IsRunning = false;
-                injection.Dispose();
-            } catch {
-                // Ignore cleanup errors
-            }
+            injection.Machine.CpuState.IsRunning = false;
+            injection.Dispose();
         }
 
         // Don't wait for execution tasks - they'll be terminated by IsRunning = false
@@ -235,11 +227,7 @@ public class GdbFullIntegrationTests : IDisposable {
 
         // Start execution in background
         Task executionTask = Task.Run(() => {
-            try {
-                injection.ProgramExecutor.Run();
-            } catch {
-                // Ignore errors from stopping execution
-            }
+            injection.ProgramExecutor.Run();
         });
         _executionTasks.Add(executionTask);
 
@@ -339,11 +327,7 @@ public class GdbFullIntegrationTests : IDisposable {
 
         // Start execution in background
         Task executionTask = Task.Run(() => {
-            try {
-                injection.ProgramExecutor.Run();
-            } catch {
-                // Ignore errors from stopping execution
-            }
+            injection.ProgramExecutor.Run();
         });
         _executionTasks.Add(executionTask);
 

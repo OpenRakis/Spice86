@@ -93,17 +93,13 @@ public class GdbClientProcess : IDisposable {
 
     public void Dispose() {
         if (!_disposed) {
-            try {
-                _pipeServer?.Dispose();
-                
-                if (_process != null && !_process.HasExited) {
-                    _process.Kill();
-                    _process.WaitForExit(1000);
-                }
-                _process?.Dispose();
-            } catch {
-                // Ignore cleanup errors
+            _pipeServer?.Dispose();
+            
+            if (_process != null && !_process.HasExited) {
+                _process.Kill();
+                _process.WaitForExit(1000);
             }
+            _process?.Dispose();
             _disposed = true;
         }
     }

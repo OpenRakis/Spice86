@@ -24,21 +24,13 @@ public class GdbBasicConnectivityTests : IDisposable {
 
     public void Dispose() {
         foreach (TcpClient client in _clients) {
-            try {
-                client.Close();
-                client.Dispose();
-            } catch {
-                // Ignore cleanup errors
-            }
+            client.Close();
+            client.Dispose();
         }
 
         foreach (Spice86DependencyInjection injection in _injections) {
-            try {
-                injection.Machine.CpuState.IsRunning = false;
-                injection.Dispose();
-            } catch {
-                // Ignore cleanup errors
-            }
+            injection.Machine.CpuState.IsRunning = false;
+            injection.Dispose();
         }
 
         // Don't wait for execution tasks - they'll be terminated by IsRunning = false
@@ -108,11 +100,7 @@ public class GdbBasicConnectivityTests : IDisposable {
 
         // Start execution in background
         Task executionTask = Task.Run(() => {
-            try {
-                injection.ProgramExecutor.Run();
-            } catch {
-                // Ignore errors from stopping execution
-            }
+            injection.ProgramExecutor.Run();
         });
         _executionTasks.Add(executionTask);
 
