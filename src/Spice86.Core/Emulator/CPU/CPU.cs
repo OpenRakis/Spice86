@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -71,6 +72,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly CircularBuffer<SegmentedAddress> _lastAddresses = new(20);
 
     private readonly IOPortDispatcher _ioPortDispatcher;
+    private readonly PicPitCpuState _picPitCpuState;
 
     public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
 
@@ -79,12 +81,14 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     public Cpu(InterruptVectorTable interruptVectorTable,
         Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
         IMemory memory, State state, DualPic dualPic,
+        PicPitCpuState picPitCpuState,
         IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder) {
         _loggerService = loggerService;
         _memory = memory;
         State = state;
         DualPic = dualPic;
+        _picPitCpuState = picPitCpuState;
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -132,6 +136,9 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
         AddressSize = 16;
         State.ClearPrefixes();
         State.IncCycles();
+        if (_picPitCpuState.Cycles > 0) {
+            _picPitCpuState.Cycles--;
+        }
         HandleExternalInterrupt();
         State.IP = _internalIp;
     }

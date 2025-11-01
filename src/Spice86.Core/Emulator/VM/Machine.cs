@@ -9,15 +9,11 @@ using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
-using Spice86.Core.Emulator.Devices.Sound.Ymf262Emu;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
-using Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
-using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -150,9 +146,9 @@ public sealed class Machine : IDisposable {
     public SystemClockInt1AHandler SystemClockInt1AHandler { get; }
 
     /// <summary>
-    /// The Programmable Interrupt Timer
+    /// The Programmable Interval Timer.
     /// </summary>
-    public Timer Timer { get; }
+    public PitTimer Timer { get; }
 
     /// <summary>
     /// INT8H handler.
@@ -190,14 +186,14 @@ public sealed class Machine : IDisposable {
     public VgaRom VgaRom { get; }
 
     /// <summary>
-    /// The DMA controller.
+    /// The DMA system (primary and secondary controllers).
     /// </summary>
-    public DmaController DmaController { get; }
+    public DmaSystem DmaSystem { get; }
 
     /// <summary>
     /// The OPL3 FM Synth chip.
     /// </summary>
-    public OPL3FM OPL3FM { get; }
+    public Opl3Fm OPL3FM { get; }
 
     /// <summary>
     /// The internal software mixer for all sound channels.
@@ -254,7 +250,7 @@ public sealed class Machine : IDisposable {
         SystemBiosInt12Handler systemBiosInt12Handler,
         SystemBiosInt15Handler systemBiosInt15Handler,
         SystemClockInt1AHandler systemClockInt1AHandler,
-        Timer timer,
+        PitTimer timer,
         TimerInt8Handler timerInt8Handler,
         VgaCard vgaCard,
         IVideoState vgaRegisters,
@@ -262,8 +258,8 @@ public sealed class Machine : IDisposable {
         IVgaRenderer vgaRenderer,
         IVideoInt10Handler videoInt10Handler,
         VgaRom vgaRom,
-        DmaController dmaController,
-        OPL3FM opl3FM,
+        DmaSystem dmaSystem,
+        Opl3Fm opl3Fm,
         SoftwareMixer softwareMixer,
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
@@ -300,8 +296,8 @@ public sealed class Machine : IDisposable {
         VgaRenderer = vgaRenderer;
         VideoInt10Handler = videoInt10Handler;
         VgaRom = vgaRom;
-        DmaController = dmaController;
-        OPL3FM = opl3FM;
+        DmaSystem = dmaSystem;
+        OPL3FM = opl3Fm;
         SoftwareMixer = softwareMixer;
         MouseDevice = mouseDevice;
         MouseDriver = mouseDriver;

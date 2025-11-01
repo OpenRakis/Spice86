@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.MicroBenchmarkTemplate", "Spice86.MicroBenchmarkTemplate\Spice86.MicroBenchmarkTemplate.csproj", "{D3D95139-4EC8-4736-8A9F-23DEFBDB1D05}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.Libs", "Spice86.Libs\Spice86.Libs.csproj", "{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{D3D95139-4EC8-4736-8A9F-23DEFBDB1D05}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3D95139-4EC8-4736-8A9F-23DEFBDB1D05}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D3D95139-4EC8-4736-8A9F-23DEFBDB1D05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E19FBA01-60CD-4BC6-B88B-EAFB657ED797}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

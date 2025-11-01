@@ -104,7 +104,7 @@ public sealed class Configuration {
     public bool? InitializeDOS { get; set; }
 
     /// <summary>
-    /// Only for <see cref="Timer"/>
+    /// Only for <see cref="PitTimer"/>
     /// </summary>
     [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.")]
     public long? InstructionsPerSecond { get; set; }

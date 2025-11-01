@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <!--
+    <PropertyGroup>
+        <DefineConstants>$(DefineConstants);OPL_ENABLE_STEREOEXT</DefineConstants>
+    </PropertyGroup>
+    -->
+    <ItemGroup>
+        <PackageReference Include="Serilog" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj"/>
+    </ItemGroup>
+</Project>

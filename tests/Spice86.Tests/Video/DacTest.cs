@@ -27,10 +27,11 @@ public class DacTest {
     [Fact]
     public void WhiteStaysWhite() {
         // Arrange
-        var dac = new DacRegisters();
+        var dac = new DacRegisters {
+            // Act
+            DataRegister = 0b111111
+        };
 
-        // Act
-        dac.DataRegister = 0b111111;
         dac.DataRegister = 0b111111;
         dac.DataRegister = 0b111111;
 

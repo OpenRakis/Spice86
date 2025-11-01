@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -20,15 +21,18 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
+    private readonly PicPitCpuState _picPitCpuState;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
-        DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager, FunctionCatalogue functionCatalogue, 
+        DualPic dualPic, PicPitCpuState picPitCpuState, EmulatorBreakpointsManager emulatorBreakpointsManager,
+        FunctionCatalogue functionCatalogue, 
         bool useCodeOverride, ILoggerService loggerService) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
+        _picPitCpuState = picPitCpuState;
         
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
@@ -68,6 +72,9 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         ICfgNode? nextToExecute = _instructionExecutionHelper.NextNode;
         
         _state.IncCycles();
+        if (_picPitCpuState.Cycles > 0) {
+            _picPitCpuState.Cycles--;
+        }
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;
