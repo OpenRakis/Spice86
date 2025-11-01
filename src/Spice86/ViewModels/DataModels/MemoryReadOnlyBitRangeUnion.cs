@@ -51,6 +51,30 @@ internal class MemoryReadOnlyBitRangeUnion : IReadOnlyBitRangeUnion {
     public bool IsSuperSetOf(BitRange range) {
         return EnclosingRange.Start <= range.Start && EnclosingRange.End >= range.End;
     }
+    public int GetOverlappingRanges(BitRange range, Span<BitRange> output) {
+        // For a non-fragmented union, if there's any overlap, return the entire range
+        if (IntersectsWith(range)) {
+            if (output.Length > 0) {
+                output[0] = EnclosingRange;
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+    public int GetIntersectingRanges(BitRange range, Span<BitRange> output) {
+        // Return the actual intersection, not the entire range
+        if (IntersectsWith(range)) {
+            if (output.Length > 0) {
+                // Calculate the actual intersection
+                BitLocation start = EnclosingRange.Start > range.Start ? EnclosingRange.Start : range.Start;
+                BitLocation end = EnclosingRange.End < range.End ? EnclosingRange.End : range.End;
+                output[0] = new BitRange(start, end);
+            }
+            return 1;
+        }
+        return 0;
+    }
 
     IEnumerator<BitRange> IEnumerable<BitRange>.GetEnumerator() {
         for (uint i = _startAddress; i < _endAddress; i++) {

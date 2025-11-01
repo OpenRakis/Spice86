@@ -266,35 +266,51 @@ public sealed class CrtControllerRegisters {
     public void WriteRegister(CrtControllerRegister register, byte value) {
         switch (register) {
             case CrtControllerRegister.HorizontalTotal:
-                HorizontalTotal = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalTotal = value;
+                }
                 break;
 
             case CrtControllerRegister.HorizontalDisplayEnd:
-                HorizontalDisplayEnd = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalDisplayEnd = value;
+                }
                 break;
 
             case CrtControllerRegister.HorizontalBlankingStart:
-                HorizontalBlankingStart = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalBlankingStart = value;
+                }
                 break;
 
             case CrtControllerRegister.HorizontalBlankingEnd:
-                HorizontalBlankingEndRegister.Value = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalBlankingEndRegister.Value = value;
+                }
                 break;
 
             case CrtControllerRegister.HorizontalRetraceStart:
-                HorizontalSyncStart = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalSyncStart = value;
+                }
                 break;
 
             case CrtControllerRegister.HorizontalRetraceEnd:
-                HorizontalSyncEndRegister.Value = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    HorizontalSyncEndRegister.Value = value;
+                }
                 break;
 
             case CrtControllerRegister.VerticalTotal:
-                VerticalTotal = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    VerticalTotal = value;
+                }
                 break;
 
             case CrtControllerRegister.Overflow:
-                OverflowRegister.Value = value;
+                if (!VerticalSyncEndRegister.WriteProtect) {
+                    OverflowRegister.Value = value;
+                }
                 break;
 
             case CrtControllerRegister.PresetRowScan:
