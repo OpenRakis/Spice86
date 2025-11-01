@@ -109,6 +109,15 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
     public void CheckExecutionBreakPoints() {
+        CheckExecutionAddressBreakPoints();
+        CheckCycleBreakPoints();
+    }
+
+    /// <summary>
+    /// Checks execution address breakpoints and triggers them if necessary.
+    /// This is called before instruction execution to allow for instruction overrides.
+    /// </summary>
+    public void CheckExecutionAddressBreakPoints() {
         if (!_executionBreakPoints.IsEmpty) {
             uint address;
             // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
@@ -118,7 +127,13 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                 triggered = _executionBreakPoints.TriggerMatchingBreakPoints(address);
             } while (triggered && address != _state.IpPhysicalAddress);
         }
+    }
 
+    /// <summary>
+    /// Checks cycle breakpoints and triggers them if necessary.
+    /// This is called after instruction execution to get accurate cycle counts.
+    /// </summary>
+    public void CheckCycleBreakPoints() {
         if (!_cycleBreakPoints.IsEmpty) {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
