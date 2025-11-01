@@ -298,7 +298,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         };
     }
 
-    private void UpdateChannelDelay(ref PitChannel channel) {
+    private static void UpdateChannelDelay(ref PitChannel channel) {
         // The divider cannot be zero, so a stored zero represents 65536 (or 10000 when programmed for BCD counts).
         int freqDivider = channel.Count != 0 ? channel.Count : GetMaxCount(channel) + 1;
 
