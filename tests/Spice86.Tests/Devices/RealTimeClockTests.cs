@@ -98,7 +98,6 @@ public class RealTimeClockTests : IDisposable {
     [Fact]
     public void ReadDataPort_TimeRegisters_ReturnCurrentTime() {
         // Arrange
-        var now = DateTime.Now;
 
         // Act - Read seconds
         _rtc.WriteByte(0x70, 0x00);
