@@ -63,6 +63,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
 
         _cmosRegisters[RegisterA] = 0x26; // default rate/divider
         _cmosRegisters[RegisterB] = 0x02; // 24h mode
+        _cmosRegisters.IsBcdMode = true; // BCD mode is default (bit 2 of Register B is clear)
         _cmosRegisters[RegisterD] = 0x80; // power good
 
         _cmosRegisters[0x15] = 0x80; // 640KB low
