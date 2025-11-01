@@ -541,24 +541,24 @@ public class Spice86DependencyInjection : IDisposable {
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
 
-            messenger.Register<CreateMemoryBitmapViewModelMessage>(this, (_, m) => {
-                var vm = new MemoryBitmapViewModel(videoState, hostStorageProvider);
-                m.SetInstance(vm);
-            });
+            MemoryBitmapViewModelFactory memoryBitmapViewModelFactory = new(videoState, hostStorageProvider);
 
             MemoryViewModel memoryViewModel = new(memory, memoryDataExporter, state,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
                 textClipboard, hostStorageProvider, structureViewModelFactory,
+                memoryBitmapViewModelFactory,
                 canCloseTab: false);
 
             StackMemoryViewModel stackMemoryViewModel = new(memory, memoryDataExporter, state, stack,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
                 textClipboard, hostStorageProvider, structureViewModelFactory,
+                memoryBitmapViewModelFactory,
                 canCloseTab: false);
 
             DataSegmentMemoryViewModel dataSegmentViewModel = new(memory, memoryDataExporter, state,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
                 textClipboard, hostStorageProvider, structureViewModelFactory,
+                memoryBitmapViewModelFactory,
                 canCloseTab: false);
 
             DebugWindowViewModel debugWindowViewModel = new(

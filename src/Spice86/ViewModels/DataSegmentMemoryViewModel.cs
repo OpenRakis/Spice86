@@ -16,11 +16,12 @@ public partial class DataSegmentMemoryViewModel : MemoryViewModel {
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler,
         IMessenger messenger, IUIDispatcher uiDispatcher, ITextClipboard textClipboard,
         IHostStorageProvider storageProvider, IStructureViewModelFactory structureViewModelFactory,
+        IMemoryBitmapViewModelFactory memoryBitmapViewModelFactory,
         bool canCloseTab = false, string? startAddress = null,
         string? endAddress = null) :
             base(memory, memoryDataExporter, state, breakpointsViewModel, pauseHandler, messenger,
                 uiDispatcher, textClipboard, storageProvider, structureViewModelFactory,
-                canCloseTab, startAddress, endAddress) {
+                memoryBitmapViewModelFactory, canCloseTab, startAddress, endAddress) {
         Title = "Data Segment";
         pauseHandler.Paused += () => uiDispatcher.Post(() => UpdateDataSegmentMemoryViewModel(this, state),
             DispatcherPriority.Background);

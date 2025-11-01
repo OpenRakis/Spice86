@@ -24,6 +24,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IMemory _memory;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
+    private readonly IMemoryBitmapViewModelFactory _memoryBitmapViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
@@ -35,6 +36,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory,
+        IMemoryBitmapViewModelFactory memoryBitmapViewModelFactory,
         bool canCloseTab = false, string? startAddress = null, string? endAddress = null)
         : base(uiDispatcher, textClipboard) {
         _state = state;
@@ -48,6 +50,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
+        _memoryBitmapViewModelFactory = memoryBitmapViewModelFactory;
         if (TryParseAddressString(startAddress, _state, out uint? startAddressValue)) {
             StartAddress = ConvertUtils.ToHex32(startAddressValue.Value);
         } else {
@@ -477,7 +480,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         MemoryViewModel memoryViewModel = new(_memory, _memoryDataExporter, _state,
             _breakpointsViewModel, _pauseHandler,
             _messenger, _uiDispatcher, _textClipboard,
-            _storageProvider, _structureViewModelFactory, canCloseTab: true);
+            _storageProvider, _structureViewModelFactory, _memoryBitmapViewModelFactory, canCloseTab: true);
         if (startAddress is not null) {
             memoryViewModel.StartAddress = ConvertUtils.ToHex32(startAddress.Value);
         }
@@ -688,13 +691,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
         byte[] bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
 
-        MemoryBitmapViewModel? vm = null;
-        _messenger.Send(new CreateMemoryBitmapViewModelMessage(m => vm = m));
-        if (vm is null) {
-            ShowError(new InvalidOperationException("No MemoryBitmapViewModel provider is registered."));
-            return;
-        }
-
+        MemoryBitmapViewModel vm = _memoryBitmapViewModelFactory.CreateNew();
         vm.WidthPixels = BitmapViewWidth;
         vm.Data = bytes;
         MemoryBitmap = vm;
