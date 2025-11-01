@@ -16,8 +16,8 @@ public static class CycleLimiterFactory {
         }
         
         if (configuration.InstructionsPerSecond != null) {
-            // Convert instructions per second to cycles per millisecond
-            int cyclesPerMs = (int)(configuration.InstructionsPerSecond.Value / 1000);
+            // Convert instructions per second to cycles per millisecond with proper rounding
+            int cyclesPerMs = (int)Math.Round(configuration.InstructionsPerSecond.Value / 1000.0);
             return new CpuCycleLimiter(cyclesPerMs);
         }
         
