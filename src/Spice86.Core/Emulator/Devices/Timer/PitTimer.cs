@@ -96,7 +96,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
     /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
-    /// <param name="configuration">Optional configuration for instruction-based timing.</param>
+    /// <param name="configuration">Optional configuration (reserved for future use).</param>
     /// <param name="timeProvider">Optional time provider used for deterministic timekeeping. Defaults to the system clock.</param>
     public PitTimer(IoSystem ioSystem, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger,
         Configuration? configuration = null, ITimeProvider? timeProvider = null) {

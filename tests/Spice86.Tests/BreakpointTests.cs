@@ -194,7 +194,8 @@ public class BreakpointTests {
         
         // Allow ±1% tolerance for timing differences between instruction-based and event-based models
         const int expected = 356;
-        const int tolerance = 4; // ~1% of 356
+        int tolerance = expected / 100; // 1% of expected
+        if (tolerance < 1) tolerance = 1; // Ensure at least 1 interrupt tolerance for small values
         Assert.InRange(triggers, expected - tolerance, expected + tolerance);
     }
 
