@@ -112,9 +112,6 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
 
         _loggerService.LoggerPropertyBag.CsIp = new(State.CS, State.IP);
 
-        // Check execution address breakpoints before instruction execution to allow overrides
-        EmulatorBreakpointsManager.CheckExecutionAddressBreakPoints();
-
         ExecutionFlowRecorder.RegisterExecutedInstruction(State.CS, _internalIp);
 #if DEBUG
         _lastAddresses.Add(new SegmentedAddress(State.CS, _internalIp));
@@ -142,8 +139,6 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
         if (_picPitCpuState.Cycles > 0) {
             _picPitCpuState.Cycles--;
         }
-        // Check cycle breakpoints after instruction execution for accurate cycle counts
-        EmulatorBreakpointsManager.CheckCycleBreakPoints();
         HandleExternalInterrupt();
         State.IP = _internalIp;
     }

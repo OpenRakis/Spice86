@@ -24,7 +24,6 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly PicPitCpuState _picPitCpuState;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly InstructionReplacerRegistry _replacerRegistry = new();
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, PicPitCpuState picPitCpuState, EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -34,7 +33,6 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         _state = state;
         _dualPic = dualPic;
         _picPitCpuState = picPitCpuState;
-        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
@@ -61,9 +59,6 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
     public void ExecuteNext() {
         ICfgNode toExecute = CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
 
-        // Check execution address breakpoints before instruction execution to allow overrides
-        _emulatorBreakpointsManager.CheckExecutionAddressBreakPoints();
-
         // Execute the node
         try {
             _loggerService.LoggerPropertyBag.CsIp = toExecute.Address;
@@ -80,9 +75,6 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         if (_picPitCpuState.Cycles > 0) {
             _picPitCpuState.Cycles--;
         }
-
-        // Check cycle breakpoints after instruction execution for accurate cycle counts
-        _emulatorBreakpointsManager.CheckCycleBreakPoints();
 
         // Register what was executed and what is next node according to the graph in the execution context for next pass
         CurrentExecutionContext.LastExecuted = toExecute;

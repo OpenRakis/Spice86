@@ -167,6 +167,7 @@ public class EmulationLoop : ICyclesLimiter {
             }
 
             while (_cpuState.IsRunning && _picPitCpuState.Cycles > 0) {
+                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
                 _cpu.ExecuteNext();
             }
         }
