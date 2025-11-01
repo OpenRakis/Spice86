@@ -60,7 +60,7 @@ jobs:
 
        - name: Pack prerelease NuGet packages
          working-directory: ./src
-         run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=NU5104
+         run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=1591%3BNU5104%3BNU1507
 
        - name: Publish prerelease NuGet packages
          env:
