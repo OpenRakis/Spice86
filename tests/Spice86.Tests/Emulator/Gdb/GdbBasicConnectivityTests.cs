@@ -74,7 +74,6 @@ public class GdbBasicConnectivityTests : IDisposable {
         await Task.Delay(100);
 
         // Try to read response
-        byte[] buffer = new byte[1024];
         bool hasData = stream.DataAvailable;
 
         // Assert
