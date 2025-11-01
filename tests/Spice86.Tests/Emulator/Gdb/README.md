@@ -10,21 +10,42 @@ The GDB server in Spice86 allows developers to debug emulated DOS programs using
 - InstructionsPerSecond mode compatibility
 - Prevention of regressions in GDB support
 
-## Full Integration Tests (In Development)
+## Full Integration Tests
+
+### Implementation Approach
+
+Full integration tests use a **separate .NET process** for the GDB client to avoid threading issues and accurately simulate how a real GDB client interacts with the server. The client process communicates with the test harness via named pipes.
+
+#### Architecture
+
+1. **GdbClientProcess.cs**: Manages a separate process that hosts the GDB client
+2. **GdbClientProcessMain.cs**: Entry point for the separate process, handles GDB protocol communication
+3. **GdbClient.cs**: GDB Remote Serial Protocol (RSP) implementation used by the separate process
+4. **Named Pipes**: Test harness sends commands via named pipe, client process forwards to GDB server, responses returned via pipe
+
+#### Sequential Execution
+
+Integration tests are marked with `[Collection("GDB Integration Tests")]` to ensure sequential execution. This prevents:
+- Port conflicts between multiple GDB servers
+- Race conditions in server startup/shutdown
+- Resource contention
+
+The `GdbIntegrationTestCollection` class defines the collection with `DisableParallelization = true`.
 
 ### GDB Client Implementation
 
-A complete GDB Remote Serial Protocol (RSP) client has been implemented in `GdbClient.cs`:
-- **Protocol Compliance**: Implements packet framing (`$data#checksum`), checksum calculation, ACK/NACK handling
+Complete GDB Remote Serial Protocol (RSP) client in `GdbClient.cs`:
+- **Protocol Compliance**: Packet framing (`$data#checksum`), checksum calculation, ACK/NACK handling
 - **Core Commands**: `qSupported`, `?` (halt reason), `g/G` (read/write all registers), `p/P` (read/write register)
 - **Memory Operations**: `m` (read memory), `M` (write memory)
 - **Breakpoints**: `Z/z` (set/remove breakpoints)
 - **Execution Control**: `c` (continue), `s` (step), `D` (detach)
 - **Custom Commands**: `qRcmd` for monitor commands (hex-encoded)
+- **Timeout Handling**: 5 second default timeout per command
 
 ### Test Coverage
 
-15 comprehensive integration tests have been implemented in `GdbFullIntegrationTests.cs` and `GdbBasicConnectivityTests.cs`:
+15 comprehensive integration tests in `GdbFullIntegrationTests.cs`:
 1. Query supported features
 2. Query halt reason  
 3. Read all registers
@@ -39,30 +60,34 @@ A complete GDB Remote Serial Protocol (RSP) client has been implemented in `GdbC
 12. Single-step execution
 13. Detach gracefully
 14. Multiple sequential commands
-15. TCP connectivity
+15. TCP connectivity (in `GdbBasicConnectivityTests.cs`)
 
-### Current Status
+### Running Integration Tests
 
-**Tests are currently skipped** due to a discovered issue in the GDB server:
+```bash
+# Run all GDB tests (unit + integration)
+dotnet test --filter "FullyQualifiedName~Gdb"
 
-**Issue**: The `GdbIo.SendResponse()` method in `src/Spice86.Core/Emulator/Gdb/GdbIo.cs` line 173 writes responses to the network stream but does not flush:
-```csharp
-_stream?.Write(Encoding.UTF8.GetBytes(data));  // No flush!
+# Run only integration tests
+dotnet test --filter "Collection=GDB Integration Tests"
+
+# Run only unit tests
+dotnet test --filter "FullyQualifiedName~Gdb&Collection!=GDB Integration Tests"
 ```
 
-**Impact**: Responses remain buffered and are not sent to the client immediately, causing client reads to timeout.
+Integration tests run sequentially and may take longer due to server startup time (1.5s per test for initialization).
 
-**Required Fix**: Add `_stream?.Flush()` after the `Write()` call in `SendResponse()`.
+### How It Works
 
-**Verification**: Once the server is fixed, remove the `Skip` attribute from tests in `GdbFullIntegrationTests.cs` and `GdbBasicConnectivityTests.cs`.
+1. Test harness creates `GdbClientProcess` instance
+2. `GdbClientProcess.StartAsync()` launches test assembly as separate process with `--gdb-client` argument
+3. Separate process connects to named pipe and GDB server
+4. Test sends commands via named pipe
+5. Client process forwards to GDB server, returns responses
+6. Test validates responses
+7. Cleanup disposes both client process and server
 
-The GDB client implementation is complete and ready. The tests successfully:
-- Start the GDB server
-- Establish TCP connections  
-- Send properly formatted GDB protocol commands
-- Server receives and parses commands correctly
-
-Only the response delivery mechanism needs the flush fix to complete full round-trip communication.
+This approach ensures the GDB server behaves identically to real-world usage where the client runs in a separate process.
 
 ## Test Structure (Updated)
 

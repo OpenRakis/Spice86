@@ -5,6 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <WarningsAsErrors>nullable</WarningsAsErrors>
         <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+        <GenerateProgramFile>false</GenerateProgramFile>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="ErrorProne.NET.CoreAnalyzers">

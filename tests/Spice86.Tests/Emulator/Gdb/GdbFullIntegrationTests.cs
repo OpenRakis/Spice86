@@ -12,16 +12,17 @@ using Xunit;
 using static Spice86.Core.Emulator.CPU.CpuModel;
 
 /// <summary>
-/// Full integration tests for GDB server using a real GDB protocol client.
+/// Full integration tests for GDB server using a real GDB protocol client in a separate process.
 /// Tests complete command/response cycles, breakpoints, stepping, memory access, and custom monitor commands.
 /// </summary>
+[Collection("GDB Integration Tests")]
 public class GdbFullIntegrationTests : IDisposable {
     private readonly List<Spice86DependencyInjection> _injections = new();
-    private readonly List<GdbClient> _clients = new();
+    private readonly List<GdbClientProcess> _clients = new();
     private readonly List<Task> _executionTasks = new();
 
     public void Dispose() {
-        foreach (GdbClient client in _clients) {
+        foreach (GdbClientProcess client in _clients) {
             try {
                 client.Dispose();
             } catch {
@@ -41,40 +42,40 @@ public class GdbFullIntegrationTests : IDisposable {
         // Don't wait for execution tasks - they'll be terminated by IsRunning = false
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_QuerySupported_ShouldReceiveResponse() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act
-        string response = await client.QuerySupportedAsync();
+        string response = await client.SendCommandAsync("qSupported");
 
         // Assert
         response.Should().NotBeEmpty("Server should respond to qSupported query");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_QueryHaltReason_ShouldReceiveResponse() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act
-        string response = await client.QueryHaltReasonAsync();
+        string response = await client.SendCommandAsync("?");
 
         // Assert
         response.Should().NotBeEmpty("Server should respond with halt reason");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_ReadAllRegisters_ShouldReturnRegisterValues() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act
-        string response = await client.ReadRegistersAsync();
+        string response = await client.SendCommandAsync("g");
 
         // Assert
         response.Should().NotBeEmpty();
@@ -82,41 +83,41 @@ public class GdbFullIntegrationTests : IDisposable {
         response.Length.Should().BeGreaterOrEqualTo(128, "Response should contain all register values");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_ReadSpecificRegister_ShouldReturnRegisterValue() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act - Read register 0 (AX)
-        string response = await client.ReadRegisterAsync(0);
+        string response = await client.SendCommandAsync("p0");
 
         // Assert
         response.Should().NotBeEmpty();
         response.Length.Should().Be(8, "Register value should be 8 hex characters (32-bit)");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_WriteRegister_ShouldUpdateRegisterValue() {
         // Arrange
         int port = GetAvailablePort();
         Spice86DependencyInjection injection = await StartGdbServerAsync(port);
-        using GdbClient client = new();
-        await client.ConnectAsync("127.0.0.1", port);
+        GdbClientProcess client = new();
+        await client.StartAsync("127.0.0.1", port);
         _clients.Add(client);
 
         // Act - Write to register 0 (AX)
-        string writeResponse = await client.WriteRegisterAsync(0, 0x12340000); // Little-endian format
+        string writeResponse = await client.SendCommandAsync("P0=12340000"); // Little-endian format
         
         // Read back the value
-        string readResponse = await client.ReadRegisterAsync(0);
+        string readResponse = await client.SendCommandAsync("p0");
 
         // Assert
         writeResponse.Should().Contain("OK", "Write operation should succeed");
         readResponse.Should().Contain("1234", "Register should contain the written value");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_ReadMemory_ShouldReturnMemoryContents() {
         // Arrange
         int port = GetAvailablePort();
@@ -127,31 +128,29 @@ public class GdbFullIntegrationTests : IDisposable {
         injection.Machine.Memory.UInt8[0x1001] = 0xCD;
         injection.Machine.Memory.UInt8[0x1002] = 0xEF;
         
-        using GdbClient client = new();
-        await client.ConnectAsync("127.0.0.1", port);
+        GdbClientProcess client = new();
+        await client.StartAsync("127.0.0.1", port);
         _clients.Add(client);
 
         // Act
-        string response = await client.ReadMemoryAsync(0x1000, 3);
+        string response = await client.SendCommandAsync("m1000,3");
 
         // Assert
         response.Should().NotBeEmpty();
         response.Should().Contain("ABCDEF", "Memory should contain the test data");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_WriteMemory_ShouldUpdateMemoryContents() {
         // Arrange
         int port = GetAvailablePort();
         Spice86DependencyInjection injection = await StartGdbServerAsync(port);
-        using GdbClient client = new();
-        await client.ConnectAsync("127.0.0.1", port);
+        GdbClientProcess client = new();
+        await client.StartAsync("127.0.0.1", port);
         _clients.Add(client);
 
-        byte[] testData = new byte[] { 0x12, 0x34, 0x56 };
-
         // Act
-        string writeResponse = await client.WriteMemoryAsync(0x2000, testData);
+        string writeResponse = await client.SendCommandAsync("M2000,3:123456");
         
         // Verify the write
         byte val1 = injection.Machine.Memory.UInt8[0x2000];
@@ -165,47 +164,46 @@ public class GdbFullIntegrationTests : IDisposable {
         val3.Should().Be(0x56);
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_SetAndRemoveBreakpoint_ShouldSucceed() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act - Set breakpoint
-        string setResponse = await client.SetBreakpointAsync(0xF000A1E8);
+        string setResponse = await client.SendCommandAsync("Z0,F000A1E8,1");
         
         // Remove breakpoint
-        string removeResponse = await client.RemoveBreakpointAsync(0xF000A1E8);
+        string removeResponse = await client.SendCommandAsync("z0,F000A1E8,1");
 
         // Assert
         setResponse.Should().Contain("OK", "Setting breakpoint should succeed");
         removeResponse.Should().Contain("OK", "Removing breakpoint should succeed");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_MonitorHelp_ShouldReturnCustomCommands() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
-        // Act
-        string response = await client.SendMonitorCommandAsync("help");
+        // Act - Send monitor help command (hex-encoded "help")
+        string response = await client.SendCommandAsync("qRcmd,68656c70");
 
         // Assert
         response.Should().NotBeEmpty("Monitor help should return available commands");
-        // Response is hex-encoded, so check for hex-encoded versions of command names
-        // "breakCycles" in hex contains these patterns
+        // Response is hex-encoded, so check for hex pattern
         response.Should().MatchRegex("[0-9A-Fa-f]+", "Response should be hex-encoded");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_MonitorBreakCycles_ShouldSetCycleBreakpoint() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
-        // Act
-        string response = await client.SendMonitorCommandAsync("breakCycles 1000");
+        // Act - "breakCycles 1000" in hex
+        string response = await client.SendCommandAsync("qRcmd,627265616b4379636c6573203130303");
 
         // Assert
         response.Should().NotBeEmpty();
@@ -213,7 +211,7 @@ public class GdbFullIntegrationTests : IDisposable {
         response.Should().MatchRegex("[0-9A-Fa-f]+", "Response should be hex-encoded confirmation");
     }
 
-    [Theory(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Theory]
     [InlineData(false)] // Traditional CPU
     [InlineData(true)]  // CfgCpu
     public async Task GdbClient_WithInstructionsPerSecond_ShouldWorkWithBothCpuModes(bool enableCfgCpu) {
@@ -246,33 +244,33 @@ public class GdbFullIntegrationTests : IDisposable {
         _executionTasks.Add(executionTask);
 
         // Wait for server to start
-        await Task.Delay(1000);
+        await Task.Delay(1500);
 
-        using GdbClient client = new();
+        GdbClientProcess client = new();
         _clients.Add(client);
 
         // Act
-        await client.ConnectAsync("127.0.0.1", port);
-        string response = await client.QuerySupportedAsync();
+        await client.StartAsync("127.0.0.1", port);
+        string response = await client.SendCommandAsync("qSupported");
 
         // Assert
         response.Should().NotBeEmpty($"GDB should work with CfgCpu={enableCfgCpu} and InstructionsPerSecond");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_Step_ShouldAdvanceOneInstruction() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Get initial IP
-        string initialRegs = await client.ReadRegistersAsync();
+        string initialRegs = await client.SendCommandAsync("g");
 
         // Act - Single step
-        string stepResponse = await client.StepAsync();
+        string stepResponse = await client.SendCommandAsync("s");
 
         // Get new IP
-        string newRegs = await client.ReadRegistersAsync();
+        string newRegs = await client.SendCommandAsync("g");
 
         // Assert
         stepResponse.Should().NotBeEmpty("Step command should return status");
@@ -280,30 +278,30 @@ public class GdbFullIntegrationTests : IDisposable {
         newRegs.Should().NotBe(initialRegs, "Registers should change after stepping an instruction");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_Detach_ShouldDisconnectGracefully() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act
-        string response = await client.DetachAsync();
+        string response = await client.SendCommandAsync("D");
 
         // Assert
         response.Should().Contain("OK", "Detach should succeed");
     }
 
-    [Fact(Skip = "Requires GDB server to flush network stream after sending responses")]
+    [Fact]
     public async Task GdbClient_MultipleCommands_ShouldWorkInSequence() {
         // Arrange
         int port = GetAvailablePort();
-        using GdbClient client = await StartGdbServerAndConnectAsync(port);
+        GdbClientProcess client = await StartGdbServerAndConnectAsync(port);
 
         // Act - Execute multiple commands
-        string supported = await client.QuerySupportedAsync();
-        string haltReason = await client.QueryHaltReasonAsync();
-        string registers = await client.ReadRegistersAsync();
-        string register0 = await client.ReadRegisterAsync(0);
+        string supported = await client.SendCommandAsync("qSupported");
+        string haltReason = await client.SendCommandAsync("?");
+        string registers = await client.SendCommandAsync("g");
+        string register0 = await client.SendCommandAsync("p0");
 
         // Assert
         supported.Should().NotBeEmpty();
@@ -312,11 +310,11 @@ public class GdbFullIntegrationTests : IDisposable {
         register0.Should().NotBeEmpty();
     }
 
-    private async Task<GdbClient> StartGdbServerAndConnectAsync(int port) {
+    private async Task<GdbClientProcess> StartGdbServerAndConnectAsync(int port) {
         await StartGdbServerAsync(port);
         
-        GdbClient client = new();
-        await client.ConnectAsync("127.0.0.1", port);
+        GdbClientProcess client = new();
+        await client.StartAsync("127.0.0.1", port);
         _clients.Add(client);
         
         return client;
@@ -350,7 +348,7 @@ public class GdbFullIntegrationTests : IDisposable {
         _executionTasks.Add(executionTask);
 
         // Wait for GDB server to start
-        await Task.Delay(1000);
+        await Task.Delay(1500);
 
         return injection;
     }

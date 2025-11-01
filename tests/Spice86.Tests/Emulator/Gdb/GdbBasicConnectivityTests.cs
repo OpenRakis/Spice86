@@ -16,6 +16,7 @@ using static Spice86.Core.Emulator.CPU.CpuModel;
 /// <summary>
 /// Simple integration test to verify GDB server basic connectivity and protocol.
 /// </summary>
+[Collection("GDB Integration Tests")]
 public class GdbBasicConnectivityTests : IDisposable {
     private readonly List<Spice86DependencyInjection> _injections = new();
     private readonly List<TcpClient> _clients = new();
@@ -43,7 +44,7 @@ public class GdbBasicConnectivityTests : IDisposable {
         // Don't wait for execution tasks - they'll be terminated by IsRunning = false
     }
 
-    [Fact(Skip = "Integration test requires GDB server response handling fixes - server doesn't flush network stream")]
+    [Fact]
     public async Task GdbServer_ShouldAcceptTcpConnection() {
         // Arrange
         int port = GetAvailablePort();
@@ -58,7 +59,7 @@ public class GdbBasicConnectivityTests : IDisposable {
         client.Connected.Should().BeTrue("GDB server should accept TCP connections");
     }
 
-    [Fact(Skip = "Integration test requires GDB server response handling fixes - server doesn't flush network stream")]
+    [Fact(Skip = "Test uses raw TCP - use GdbFullIntegrationTests with separate process instead")]
     public async Task GdbServer_ShouldReceiveRawCommand() {
         // Arrange
         int port = GetAvailablePort();
