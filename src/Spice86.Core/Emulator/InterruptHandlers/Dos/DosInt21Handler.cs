@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -14,6 +15,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -30,6 +32,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
+    private readonly RealTimeClock _realTimeClock;
 
     private byte _lastDisplayOutputCharacter = 0x0;
     private bool _isCtrlCFlag;
@@ -48,12 +51,14 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
+    /// <param name="realTimeClock">The RTC/CMOS emulation for date/time operations.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt21Handler(IMemory memory, DosProgramSegmentPrefixTracker dosPspTracker,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
-        DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService)
+        DosFileManager dosFileManager, DosDriveManager dosDriveManager, 
+        RealTimeClock realTimeClock, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
         _dosPspTracker = dosPspTracker;
@@ -62,6 +67,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _realTimeClock = realTimeClock;
         _interruptVectorTable = new InterruptVectorTable(memory);
         FillDispatchTable();
     }
@@ -128,12 +134,54 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x63, GetLeadByteTable);
     }
 
+    /// <summary>
+    /// INT 21h, AH=2Bh - Set system date.
+    /// Date is provided in CX=year, DH=month, DL=day.
+    /// AL is set to 00h on success, FFh if date is invalid.
+    /// Note: This is a stub implementation that validates the date but doesn't actually set it.
+    /// </summary>
     public void SetDate() {
-        
+        ushort year = State.CX;
+        byte month = State.DH;
+        byte day = State.DL;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Bh - SET DATE: {Year}-{Month:D2}-{Day:D2}", year, month, day);
+        }
+
+        // Validate the date
+        if (year < 1980 || year > 2099 || month < 1 || month > 12 || day < 1 || day > 31) {
+            State.AL = 0xFF; // Invalid date
+        } else {
+            // Stub: report success without actually changing the date
+            State.AL = 0x00;
+        }
     }
 
+    /// <summary>
+    /// INT 21h, AH=2Dh - Set system time.
+    /// Time is provided in CH=hours, CL=minutes, DH=seconds, DL=hundredths.
+    /// AL is set to 00h on success, FFh if time is invalid.
+    /// Note: This is a stub implementation that validates the time but doesn't actually set it.
+    /// </summary>
     public void SetTime() {
-        
+        byte hours = State.CH;
+        byte minutes = State.CL;
+        byte seconds = State.DH;
+        byte hundredths = State.DL;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Dh - SET TIME: {Hours:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}", 
+                hours, minutes, seconds, hundredths);
+        }
+
+        // Validate the time
+        if (hours > 23 || minutes > 59 || seconds > 59 || hundredths > 99) {
+            State.AL = 0xFF; // Invalid time
+        } else {
+            // Stub: report success without actually changing the time
+            State.AL = 0x00;
+        }
     }
 
     /// <summary>
@@ -679,16 +727,26 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets the current data from the host's DateTime.Now.
+    /// INT 21h, AH=2Ah - Get system date.
+    /// Returns date from the host's DateTime.Now.
     /// </summary>
     /// <returns>
-    /// AL = day of the week <br/>
-    /// CX = year <br/>
-    /// DH = month <br/>
-    /// DL = day <br/>
+    /// AL = day of the week (0=Sunday, 1=Monday, ..., 6=Saturday) <br/>
+    /// CX = year (1980-2099) <br/>
+    /// DH = month (1-12) <br/>
+    /// DL = day (1-31) <br/>
     /// </returns>
     public void GetDate() {
-        
+        DateTime currentDate = DateTime.Now;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Ah - GET DATE: {Date}", currentDate.ToString("yyyy-MM-dd"));
+        }
+
+        State.AL = (byte)currentDate.DayOfWeek;
+        State.CX = (ushort)currentDate.Year;
+        State.DH = (byte)currentDate.Month;
+        State.DL = (byte)currentDate.Day;
     }
 
     /// <summary>
@@ -827,10 +885,26 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
+    /// INT 21h, AH=2Ch - Get system time.
+    /// Returns the current time from the host's DateTime.Now.
     /// </summary>
+    /// <returns>
+    /// CH = hours (0-23) <br/>
+    /// CL = minutes (0-59) <br/>
+    /// DH = seconds (0-59) <br/>
+    /// DL = hundredths of a second (0-99) <br/>
+    /// </returns>
     public void GetTime() {
-        
+        DateTime currentTime = DateTime.Now;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 21h, AH=2Ch - GET TIME: {Time}", currentTime.ToString("HH:mm:ss.ff"));
+        }
+
+        State.CH = (byte)currentTime.Hour;
+        State.CL = (byte)currentTime.Minute;
+        State.DH = (byte)currentTime.Second;
+        State.DL = (byte)(currentTime.Millisecond / 10);
     }
 
     /// <summary>
