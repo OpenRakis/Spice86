@@ -6,9 +6,40 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="viewModels:MemoryBitmapViewModel"
              x:Class="Spice86.Views.MemoryBitmapView">
-  <Grid RowDefinitions="Auto,*">
-    <Button Grid.Row="0" Content="Save..." Command="{Binding SaveCommand}" Margin="5,0,0,0"/>
-	<Image Grid.Row="1"
+  <Grid RowDefinitions="Auto,Auto,*">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
+      <Label Content="Display Mode:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+      <ComboBox SelectedItem="{Binding DisplayMode}" MinWidth="150" VerticalAlignment="Center">
+        <ComboBoxItem Content="VGA 8BPP (256 colors)">
+          <ComboBoxItem.Tag>
+            <viewModels:MemoryBitmapDisplayMode>Vga8Bpp</viewModels:MemoryBitmapDisplayMode>
+          </ComboBoxItem.Tag>
+        </ComboBoxItem>
+        <ComboBoxItem Content="CGA 4 colors">
+          <ComboBoxItem.Tag>
+            <viewModels:MemoryBitmapDisplayMode>Cga4Color</viewModels:MemoryBitmapDisplayMode>
+          </ComboBoxItem.Tag>
+        </ComboBoxItem>
+        <ComboBoxItem Content="EGA 16 colors">
+          <ComboBoxItem.Tag>
+            <viewModels:MemoryBitmapDisplayMode>Ega16Color</viewModels:MemoryBitmapDisplayMode>
+          </ComboBoxItem.Tag>
+        </ComboBoxItem>
+        <ComboBoxItem Content="Text Mode (IBM fonts)">
+          <ComboBoxItem.Tag>
+            <viewModels:MemoryBitmapDisplayMode>TextMode</viewModels:MemoryBitmapDisplayMode>
+          </ComboBoxItem.Tag>
+        </ComboBoxItem>
+        <ComboBoxItem Content="Hercules Monochrome">
+          <ComboBoxItem.Tag>
+            <viewModels:MemoryBitmapDisplayMode>HerculesMonochrome</viewModels:MemoryBitmapDisplayMode>
+          </ComboBoxItem.Tag>
+        </ComboBoxItem>
+      </ComboBox>
+      <CheckBox Content="Show Overlay" IsChecked="{Binding ShowOverlay}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+    </StackPanel>
+    <Button Grid.Row="1" Content="Save..." Command="{Binding SaveCommand}" Margin="5,0,0,5" HorizontalAlignment="Left"/>
+	<Image Grid.Row="2"
 		RenderOptions.BitmapInterpolationMode="None"
 		Source="{Binding Bitmap}" />
   </Grid>

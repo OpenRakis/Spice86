@@ -693,6 +693,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
         MemoryBitmapViewModel vm = _memoryBitmapViewModelFactory.CreateNew();
         vm.WidthPixels = BitmapViewWidth;
+        vm.StartAddress = startAddress.Value;
         vm.Data = bytes;
         MemoryBitmap = vm;
         _memBitmapUpdateOnPause = () => {
