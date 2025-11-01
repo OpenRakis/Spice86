@@ -12,11 +12,13 @@ public class HostStorageProvider : IHostStorageProvider {
     private readonly IStorageProvider _storageProvider;
     private readonly Configuration _configuration;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
+    private readonly DumpContext _dumpContext;
 
-    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer) {
+    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer, DumpContext dumpContext) {
         _storageProvider = storageProvider;
         _configuration = configuration;
         _emulatorStateSerializer = emulatorStateSerializer;
+        _dumpContext = dumpContext;
     }
 
     /// <inheritdoc />
@@ -83,9 +85,9 @@ public class HostStorageProvider : IHostStorageProvider {
                 Title = "Save video card info...",
                 SuggestedFileName = "VideoCardInfo.json",
                 DefaultExtension = "json",
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(_dumpContext.DumpDirectory)
             };
-            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+            if (!Directory.Exists(_dumpContext.DumpDirectory)) {
                 options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
             string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
@@ -100,9 +102,9 @@ public class HostStorageProvider : IHostStorageProvider {
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(_dumpContext.DumpDirectory)
             };
-            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+            if (!Directory.Exists(_dumpContext.DumpDirectory)) {
                 options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
             IReadOnlyList<IStorageFolder> dirs = await OpenFolderPickerAsync(options);

@@ -16,7 +16,7 @@ public class EmulatorStateSerializer {
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
-    private readonly Configuration _configuration;
+    private readonly DumpContext _dumpContext;
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
 
     private const string BreakpointsFileName = "Breakpoints.json";
@@ -24,13 +24,13 @@ public class EmulatorStateSerializer {
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
-    public EmulatorStateSerializer(Configuration configuration,
+    public EmulatorStateSerializer(DumpContext dumpContext,
         MemoryDataExporter memoryDataExporter, 
         State state, IExecutionDumpFactory executionDumpFactory,
         FunctionCatalogue functionCatalogue,
         ISerializableBreakpointsSource serializableBreakpointsSource,
         ILoggerService loggerService) {
-        _configuration = configuration;
+        _dumpContext = dumpContext;
         _state = state;
         _memoryDataExporter = memoryDataExporter;
         _executionDumpFactory = executionDumpFactory;
@@ -73,7 +73,7 @@ public class EmulatorStateSerializer {
                     _serializableBreakpointsSource.CreateSerializableBreakpoints();
 
                 ProgramSerializableBreakpoints programSerializedBreakpoints = new() {
-                    ProgramHash = _configuration.ProgramHash,
+                    ProgramHash = _dumpContext.ProgramHash,
                     SerializedBreakpoints = serializedBreakpoints
                 };
 
@@ -84,7 +84,7 @@ public class EmulatorStateSerializer {
 
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                     _loggerService.Information("Saved {Count} breakpoints for program {ProgramHash} to {FilePath}",
-                        serializedBreakpoints.Breakpoints.Count, _configuration.ProgramHash, filePath);
+                        serializedBreakpoints.Breakpoints.Count, _dumpContext.ProgramHash, filePath);
                 }
             }
         } catch (Exception ex) {
@@ -115,17 +115,17 @@ public class EmulatorStateSerializer {
                 return new();
             }
 
-            if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_configuration.ProgramHash)) {
+            if (!programSerializedBreakpoints.ProgramHash.AsSpan().SequenceEqual(_dumpContext.ProgramHash)) {
                 if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
                     _loggerService.Error("Breakpoints on disk were for program {LoadedHash} but current program is {CurrentHash}",
-                        programSerializedBreakpoints.ProgramHash, _configuration.ProgramHash);
+                        programSerializedBreakpoints.ProgramHash, _dumpContext.ProgramHash);
                 }
                 return new();
             }
 
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("Loaded {Count} breakpoints for program {ProgramHash}",
-                    programSerializedBreakpoints.SerializedBreakpoints.Breakpoints.Count, _configuration.ProgramHash);
+                    programSerializedBreakpoints.SerializedBreakpoints.Breakpoints.Count, _dumpContext.ProgramHash);
             }
 
             return programSerializedBreakpoints.SerializedBreakpoints;
