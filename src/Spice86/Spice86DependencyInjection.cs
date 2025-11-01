@@ -314,7 +314,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
             pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService);
+        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService, configuration);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
