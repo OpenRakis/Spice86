@@ -18,8 +18,7 @@ public class Spice86Creator {
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null) {
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
-            CommandLineParser parser = new();
-            overrideSupplier = parser.ParseCommandLine(["--OverrideSupplierClassName", overrideSupplierClassName])?.OverrideSupplier;
+            overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
         }
 
         _configuration = new Configuration {
@@ -43,11 +42,6 @@ public class Spice86Creator {
             Xms = enableXms,
             Ems = enableEms
         };
-
-        if (overrideSupplierClassName != null) {
-            IOverrideSupplier? overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
-            _configuration.OverrideSupplier = overrideSupplier;
-        }
 
         _maxCycles = maxCycles;
     }
