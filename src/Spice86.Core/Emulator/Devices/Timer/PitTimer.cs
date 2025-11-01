@@ -96,9 +96,10 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
     /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
+    /// <param name="configuration">Optional configuration for instruction-based timing.</param>
     /// <param name="timeProvider">Optional time provider used for deterministic timekeeping. Defaults to the system clock.</param>
     public PitTimer(IoSystem ioSystem, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger,
-        ITimeProvider? timeProvider = null) {
+        Configuration? configuration = null, ITimeProvider? timeProvider = null) {
         _ioSystem = ioSystem;
         _pic = pic;
         _pcSpeaker = pcSpeaker;
@@ -298,10 +299,14 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         };
     }
 
-    private static void UpdateChannelDelay(ref PitChannel channel) {
+    private void UpdateChannelDelay(ref PitChannel channel) {
         // The divider cannot be zero, so a stored zero represents 65536 (or 10000 when programmed for BCD counts).
         int freqDivider = channel.Count != 0 ? channel.Count : GetMaxCount(channel) + 1;
 
+        // The delay calculation is the same regardless of whether InstructionsPerSecond is configured.
+        // When InstructionsPerSecond is set, the CyclesMax in PicPitCpuState will be adjusted accordingly
+        // by the CycleLimiterFactory, which ensures that ticks represent instruction-based time rather than
+        // wall-clock time. This maintains backward compatibility with the old instruction-based timer model.
         channel.Delay = 1000.0 * freqDivider / PitTickRate;
     }
 
@@ -319,11 +324,6 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // The ignored `value` parameter is preserved for parity with the PIC event signature.
     private void PitChannel0Event(uint value) {
         _pic.ActivateIrq(0);
-
-        // TEMPORARY DEBUG
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("PitChannel0Event fired at PIC tick {Ticks}", _pic.Ticks);
-        }
 
         if (Channel0.Mode == PitMode.InterruptOnTerminalCount) {
             return;
