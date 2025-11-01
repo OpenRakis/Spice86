@@ -27,6 +27,7 @@ public sealed class GdbServer : IDisposable {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     private readonly MemoryDataExporter _memoryDataExporter;
+    private readonly DumpContext _dumpContext;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
@@ -40,13 +41,14 @@ public sealed class GdbServer : IDisposable {
     /// <param name="executionDumpFactory">The class that dumps machine code execution flow.</param>
     /// <param name="emulatorBreakpointsManager">The class that handles breakpoints.</param>
     /// <param name="pauseHandler">The class used to support pausing/resuming the emulation via GDB commands.</param>
+    /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     public GdbServer(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, 
         State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, 
         IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
-        ILoggerService loggerService) {
+        DumpContext dumpContext, ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _memoryDataExporter = memoryDataExporter;
@@ -57,6 +59,7 @@ public sealed class GdbServer : IDisposable {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _configuration = configuration;
         _functionHandlerProvider = functionHandlerProvider;
+        _dumpContext = dumpContext;
     }
 
     /// <inheritdoc />
@@ -93,7 +96,7 @@ public sealed class GdbServer : IDisposable {
             _emulatorBreakpointsManager, _executionDumpFactory, _functionCatalogue,
             gdbIo,
             _loggerService,
-            _configuration);
+            _dumpContext);
         gdbCommandHandler.PauseEmulator();
         while (gdbCommandHandler.IsConnected && gdbIo.IsClientConnected()) {
             string command = gdbIo.ReadCommand();

@@ -77,7 +77,7 @@ public class CommandLineParser {
         return File.Exists(exePath) ? new FileInfo(exePath).FullName : unixPathValue;
     }
 
-    private static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
+    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
         string? supplierClassName = configuration.OverrideSupplierClassName;
         if (supplierClassName == null) {
             return null;

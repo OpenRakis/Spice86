@@ -31,6 +31,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
+    private readonly DumpContext _dumpContext;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -48,6 +49,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionDumpFactory">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
         EmulationLoop emulationLoop,
@@ -57,17 +59,18 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, ILoggerService loggerService) {
+        IScreenPresenter? screenPresenter, DumpContext dumpContext, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _dumpContext = dumpContext;
         _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
             state, functionCatalogue,
             executionDumpFactory,
-            emulatorBreakpointsManager, pauseHandler, _loggerService);
+            emulatorBreakpointsManager, pauseHandler, dumpContext, _loggerService);
         ExecutableFileLoader loader = CreateExecutableFileLoader(configuration,
             memory, state, dos);
         if (configuration.InitializeDOS is null) {
@@ -98,7 +101,7 @@ public sealed class ProgramExecutor : IDisposable {
         _emulationLoop.Run();
 
         if (_configuration.DumpDataOnExit is not false) {
-            _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_configuration.RecordedDataDirectory);
+            _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_dumpContext.DumpDirectory);
         }
     }
 
@@ -139,7 +142,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
         FunctionCatalogue functionCatalogue, IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, DumpContext dumpContext, ILoggerService loggerService) {
         if (configuration.GdbPort == 0) {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("GDB port is 0, disabling GDB server.");
@@ -148,7 +151,7 @@ public sealed class ProgramExecutor : IDisposable {
         }
         return new GdbServer(configuration, memory, functionHandlerProvider, state, memoryDataExporter,
                 functionCatalogue, executionDumpFactory,
-            emulatorBreakpointsManager, pauseHandler, loggerService);
+            emulatorBreakpointsManager, pauseHandler, dumpContext, loggerService);
     }
 
     private void LoadFileToRun(Configuration configuration, ExecutableFileLoader loader) {

@@ -77,13 +77,21 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Set logging level...");
         }
 
+        // Create DumpContext with program hash and dump directory computation
+        DumpContext dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
+        
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Dump context created with program hash {ProgramHash} and dump directory {DumpDirectory}",
+                dumpContext.ProgramHash, dumpContext.DumpDirectory);
+        }
+
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Pause handler created...");
         }
 
-        RecordedDataReader reader = new(configuration.RecordedDataDirectory,
+        RecordedDataReader reader = new(dumpContext.DumpDirectory,
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -308,19 +316,19 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
-            configuration, configuration.RecordedDataDirectory, loggerService);
+            configuration, dumpContext.DumpDirectory, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
         }
 
        
-        EmulatorStateSerializer emulatorStateSerializer = new(configuration,
+        EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
             memoryDataExporter, state, executionDumpFactory, functionCatalogue,
             emulatorBreakpointsManager, loggerService);
 
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
-              emulatorStateSerializer.LoadBreakpoints(configuration.RecordedDataDirectory);
+              emulatorStateSerializer.LoadBreakpoints(dumpContext.DumpDirectory);
       
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
@@ -340,7 +348,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
             hostStorageProvider = new HostStorageProvider(
-                mainWindow.StorageProvider, configuration, emulatorStateSerializer);
+                mainWindow.StorageProvider, configuration, emulatorStateSerializer, dumpContext);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
 
             PerformanceViewModel performanceViewModel = new(
@@ -497,7 +505,7 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
             functionHandlerProvider, memoryDataExporter, state, dos,
             functionCatalogue, executionDumpFactory, pauseHandler,
-            mainWindowViewModel, loggerService);
+            mainWindowViewModel, dumpContext, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");

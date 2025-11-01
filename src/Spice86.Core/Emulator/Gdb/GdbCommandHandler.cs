@@ -37,10 +37,10 @@ public class GdbCommandHandler {
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    /// <param name="configuration">The configuration object containing GDB settings.</param>
+    /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     public GdbCommandHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, State state, MemoryDataExporter memoryDataExporter, IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IExecutionDumpFactory executionDumpFactory,
-        FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, Configuration configuration) {
+        FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, DumpContext dumpContext) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;
@@ -51,7 +51,7 @@ public class GdbCommandHandler {
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
             memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, executionDumpFactory, emulatorBreakpointsManager, gdbIo,
             _loggerService,
-            _gdbCommandBreakpointHandler.OnBreakPointReached, configuration.RecordedDataDirectory);
+            _gdbCommandBreakpointHandler.OnBreakPointReached, dumpContext.DumpDirectory);
     }
 
     /// <summary>

@@ -46,9 +46,11 @@ General process:
 
 | Setting | Description |
 |---------|-------------|
-| Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control where data is dumped |
-| Command Line | Use `--RecordedDataDirectory` to specify the dump location |
+| Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control the base directory where data is dumped |
+| Command Line | Use `--RecordedDataDirectory` to specify the base dump location |
 | Default Location | Current directory if neither of the above is specified |
+
+**Note:** Regardless of the base directory setting, dumps are always placed in a subdirectory named with the program's SHA-256 hash. This ensures that multiple executables from the same game (e.g., SETUP.EXE, GAME.EXE) have isolated dump folders.
 
 The emulator dumps the following files:
 - **spice86dumpMemoryDump.bin**: Snapshot of the real mode address space
@@ -66,7 +68,7 @@ When there is already data in the specified location, the emulator will load it 
   --A20Gate                          (Default: false) Disables the 20th address line to support programs relying on the rollover of memory addresses above the HMA (slightly above 1 MB).
   -m, --Mt32RomsPath                 Zip file or directory containing the MT-32 ROM files
   -c, --CDrive                       Path to C drive, default is exe parent
-  -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. Working directory if blank
+  -r, --RecordedDataDirectory        Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature
   -e, --Exe                          Required. Path to executable
   -a, --ExeArgs                      List of parameters to give to the emulated program
   -x, --ExpectedChecksum             Hexadecimal string representing the expected SHA256 checksum of the emulated program
