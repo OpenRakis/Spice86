@@ -302,6 +302,10 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         // The divider cannot be zero, so a stored zero represents 65536 (or 10000 when programmed for BCD counts).
         int freqDivider = channel.Count != 0 ? channel.Count : GetMaxCount(channel) + 1;
 
+        // The delay calculation is the same regardless of whether InstructionsPerSecond is configured.
+        // When InstructionsPerSecond is set, the CyclesMax in PicPitCpuState will be adjusted accordingly
+        // by the CycleLimiterFactory, which ensures that ticks represent instruction-based time rather than
+        // wall-clock time. This maintains backward compatibility with the old instruction-based timer model.
         channel.Delay = 1000.0 * freqDivider / PitTickRate;
     }
 
