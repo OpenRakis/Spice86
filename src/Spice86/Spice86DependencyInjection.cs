@@ -11,6 +11,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -154,6 +155,13 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Dual PIC created...");
         }
 
+        var realTimeClock = new RealTimeClock(state, ioPortDispatcher, dualPic,
+            pauseHandler, configuration.FailOnUnhandledPort, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Real Time Clock created...");
+        }
+
         CallbackHandler callbackHandler = new(state, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -294,7 +302,7 @@ public class Spice86DependencyInjection : IDisposable {
             functionHandlerProvider, stack, state, a20Gate,
             configuration.InitializeDOS is not false, loggerService);
         
-        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
+        SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea, realTimeClock,
             functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
@@ -435,7 +443,7 @@ public class Spice86DependencyInjection : IDisposable {
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, loggerService,
+                { "BLASTER", soundBlaster.BlasterString } }, realTimeClock, loggerService,
             xms);
 
         if (configuration.InitializeDOS is not false) {
