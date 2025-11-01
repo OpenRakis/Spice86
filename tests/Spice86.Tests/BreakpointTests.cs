@@ -179,7 +179,7 @@ public class BreakpointTests {
     // The breakpoint mechanism itself is working correctly (it triggers on all interrupts that ARE delivered).
     // The root cause appears to be in PIT/PIC timer event generation frequency with the new device timing system.
     // Needs investigation into DualPic.AddTick() and PicEventQueue timer event scheduling.
-    [Theory(Skip = "PIT/PIC timer event generation issue - only 11 of 356 expected interrupts fire")]
+    [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestExternalInterruptBreakpoints(bool enableCfgCpu) {
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", enableCfgCpu: enableCfgCpu, maxCycles: 0xFFFFFFF, enablePit: true).Create();
