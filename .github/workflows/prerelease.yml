@@ -58,6 +58,11 @@ jobs:
          run: zip -qq -r ReleaseBuild.zip Release
          working-directory: ./src/Spice86/bin
 
+       # Suppress the following warnings during NuGet packing:
+       #   1591   - Missing XML documentation
+       #   NU5104 - Package icon issues
+       #   NU1507 - Package validation issues
+       # Semicolons are URL-encoded as %3B for compatibility.
        - name: Pack prerelease NuGet packages
          working-directory: ./src
          run: dotnet pack Spice86.sln --configuration Release --include-symbols --include-source -p:PackageVersion=${PRERELEASE_VERSION} -p:SymbolPackageFormat=snupkg -p:NoWarn=1591%3BNU5104%3BNU1507
