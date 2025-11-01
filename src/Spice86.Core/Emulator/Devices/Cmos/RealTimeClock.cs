@@ -10,7 +10,6 @@ using Spice86.Shared.Interfaces;
 using Serilog.Events;
 
 /// <summary>
-/// <summary>
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
 /// Handles register semantics, BCD handling, and periodic/status register behavior.
 /// Periodic events are processed lazily on port access; paused time (via IPauseHandler) does not advance RTC timing.

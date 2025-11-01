@@ -79,12 +79,41 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// CF clear if successful<br/>
     /// CF set on error<br/>
     /// </summary>
+    /// <remarks>
+    /// This is a stub implementation that reports success but does not actually perform the wait.
+    /// A full implementation would require an event scheduling system to trigger callbacks
+    /// after the specified time has elapsed without blocking the emulation.
+    /// </remarks>
     /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
     public void WaitFunction(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION");
+            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION (stub implementation)");
         }
 
+        // Check if canceling alarm
+        if (State.AL == 0x01) {
+            // Cancel alarm - just return success
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
+
+        // Check if setting alarm (AL=0)
+        if (State.AL == 0x00) {
+            // Get microsecond count from CX:DX
+            uint microseconds = ((uint)State.CX << 16) | State.DX;
+
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("INT 15h, AH=83h - Wait request for {Microseconds} microseconds", microseconds);
+            }
+
+            // Stub: report success without actually scheduling the wait
+            // A proper implementation would need an event system similar to RTC periodic events
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
+
+        // Invalid AL value
+        SetCarryFlag(true, calledFromVm);
     }
 
     /// <summary>
