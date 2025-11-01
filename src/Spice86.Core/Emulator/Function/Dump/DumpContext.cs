@@ -16,10 +16,12 @@ public class DumpContext {
 
     /// <summary>
     /// Gets the directory where dumps should be written.
-    /// Priority order:
+    /// Always contains a subdirectory named with the program hash to isolate dumps per executable.
+    /// Base directory priority:
     /// 1. Explicit directory from command line (RecordedDataDirectory)
     /// 2. SPICE86_DUMPS_FOLDER environment variable (if it exists as a directory)
-    /// 3. Subdirectory named with the program hash
+    /// 3. Current directory
+    /// Final path is always: {BaseDirectory}/{ProgramHash}/
     /// </summary>
     public string DumpDirectory { get; }
 
@@ -48,18 +50,24 @@ public class DumpContext {
     }
 
     private string DetermineDumpDirectory(string? explicitDirectory) {
+        string baseDirectory;
+        
         // Priority 1: Explicit directory from command line
         if (!string.IsNullOrWhiteSpace(explicitDirectory)) {
-            return explicitDirectory;
+            baseDirectory = explicitDirectory;
         }
-
         // Priority 2: SPICE86_DUMPS_FOLDER environment variable (if directory exists)
-        string? envFolder = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
-        if (!string.IsNullOrWhiteSpace(envFolder) && Directory.Exists(envFolder)) {
-            return envFolder;
+        else {
+            string? envFolder = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER");
+            if (!string.IsNullOrWhiteSpace(envFolder) && Directory.Exists(envFolder)) {
+                baseDirectory = envFolder;
+            } else {
+                // Priority 3: Current directory
+                baseDirectory = ".";
+            }
         }
 
-        // Priority 3: Subdirectory named with program hash
-        return ProgramHash;
+        // Always append program hash as subdirectory to isolate dumps per executable
+        return Path.Combine(baseDirectory, ProgramHash);
     }
 }
