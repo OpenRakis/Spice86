@@ -191,11 +191,8 @@ public class VbeIntegrationTests {
     /// Tests that VBE mode 0x100 (640x400x256) is actually set correctly.
     /// Verifies the mode by checking BIOS data area settings (columns should be 80).
     /// Binary: Resources/vbeTests/vbe_verify_mode100.com
-    /// NOTE: This test is currently skipped due to an environmental issue with VgaSetMode in test harness.
-    /// The VBE API itself is correct (verified by mode info tests), but VgaSetMode's initialization
-    /// sequence doesn't complete properly in the test environment.
     /// </summary>
-    [Fact(Skip = "VgaSetMode environmental issue in test harness - VBE API is correct")]
+    [Fact]
     public void VbeTest_SetMode_NoClear_ShouldReturn() {
         // Act
         VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_noclear.com", maxCycles: long.MaxValue);
@@ -206,11 +203,8 @@ public class VbeIntegrationTests {
 
     /// <summary>
     /// Tests that VBE mode 0x100 (640x400x256) is actually set correctly.
-    /// NOTE: This test is currently skipped due to an environmental issue with VgaSetMode in test harness.
-    /// The VBE API itself is correct (verified by mode info tests), but VgaSetMode's initialization
-    /// sequence doesn't complete properly in the test environment.
     /// </summary>
-    [Fact(Skip = "VgaSetMode environmental issue in test harness - VBE API is correct")]
+    [Fact]
     public void VbeSetMode_Mode100_ShouldSet640x400x256() {
         // Act
         VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode100.com", maxCycles: long.MaxValue);
@@ -234,11 +228,8 @@ public class VbeIntegrationTests {
 
     /// <summary>
     /// Test INT 10h AX=4F02h returns at all
-    /// NOTE: This test is currently skipped due to an environmental issue with VgaSetMode in test harness.
-    /// The VBE API itself is correct (verified by mode info tests), but VgaSetMode's initialization
-    /// sequence doesn't complete properly in the test environment.
     /// </summary>
-    [Fact(Skip = "VgaSetMode environmental issue in test harness - VBE API is correct")]
+    [Fact]
     public void VbeTest_SetMode_ShouldReturn() {
         // Act
         VbeTestHandler testHandler = RunVbeTest("vbe_test_setmode_nocheck.com", maxCycles: long.MaxValue);
@@ -251,11 +242,8 @@ public class VbeIntegrationTests {
     /// Tests that VBE mode 0x101 (640x480x256) is actually set correctly.
     /// Verifies the mode by checking BIOS data area settings (columns should be 80, character height 16).
     /// Binary: Resources/vbeTests/vbe_verify_mode101.com
-    /// NOTE: This test is currently skipped due to an environmental issue with VgaSetMode in test harness.
-    /// The VBE API itself is correct (verified by mode info tests), but VgaSetMode's initialization
-    /// sequence doesn't complete properly in the test environment.
     /// </summary>
-    [Fact(Skip = "VgaSetMode environmental issue in test harness - VBE API is correct")]
+    [Fact]
     public void VbeSetMode_Mode101_ShouldSet640x480x256() {
         // Act
         VbeTestHandler testHandler = RunVbeTest("vbe_verify_mode101.com", maxCycles: long.MaxValue);
@@ -303,7 +291,7 @@ public class VbeIntegrationTests {
     /// <param name="maxCycles">Maximum CPU cycles to run (default 100000)</param>
     private VbeTestHandler RunVbeTest(string fileName, long maxCycles = 100000L) {
         // Get full path to the binary file
-        string filePath = Path.GetFullPath(Path.Combine("Resources", "vbeTests", fileName));
+        string filePath = Path.GetFullPath(Path.Join("Resources", "vbeTests", fileName));
 
         // Setup emulator
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
