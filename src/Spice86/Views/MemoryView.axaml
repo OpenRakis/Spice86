@@ -352,12 +352,12 @@
 				CloseOnClickAway="False"
 				IsOpen="{Binding IsViewingAsBitmap}">
 				<dialogHost:DialogHost.DialogContent>
-					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+					<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
 						  ColumnDefinitions="Auto,*"
 						  Margin="8">
 						<Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
 							   HorizontalAlignment="Center"
-							   Content="View memory as bitmap (VGA indexed)"
+							   Content="View memory as bitmap"
 							   FontWeight="Bold" />
 						<Label Grid.Row="1" Grid.Column="0" Content="Width (X):" />
 						<TextBox Grid.Row="1" Grid.Column="1" Width="120"

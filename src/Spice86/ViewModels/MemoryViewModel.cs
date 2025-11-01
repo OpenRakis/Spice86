@@ -24,6 +24,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 public partial class MemoryViewModel : ViewModelWithErrorDialog {
     private readonly IMemory _memory;
     private readonly IStructureViewModelFactory _structureViewModelFactory;
+    private readonly IMemoryBitmapViewModelFactory _memoryBitmapViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
@@ -35,6 +36,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         IPauseHandler pauseHandler, IMessenger messenger, IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory,
+        IMemoryBitmapViewModelFactory memoryBitmapViewModelFactory,
         bool canCloseTab = false, string? startAddress = null, string? endAddress = null)
         : base(uiDispatcher, textClipboard) {
         _state = state;
@@ -48,6 +50,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         _messenger = messenger;
         _storageProvider = storageProvider;
         _structureViewModelFactory = structureViewModelFactory;
+        _memoryBitmapViewModelFactory = memoryBitmapViewModelFactory;
         if (TryParseAddressString(startAddress, _state, out uint? startAddressValue)) {
             StartAddress = ConvertUtils.ToHex32(startAddressValue.Value);
         } else {
@@ -477,7 +480,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         MemoryViewModel memoryViewModel = new(_memory, _memoryDataExporter, _state,
             _breakpointsViewModel, _pauseHandler,
             _messenger, _uiDispatcher, _textClipboard,
-            _storageProvider, _structureViewModelFactory, canCloseTab: true);
+            _storageProvider, _structureViewModelFactory, _memoryBitmapViewModelFactory, canCloseTab: true);
         if (startAddress is not null) {
             memoryViewModel.StartAddress = ConvertUtils.ToHex32(startAddress.Value);
         }
@@ -657,11 +660,11 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     [RelayCommand]
     private void ConfirmViewAsBitmap() {
         if (BitmapViewWidth <= 0 || BitmapViewHeight <= 0) {
-            ShowError(new ArgumentOutOfRangeException($"Invalid bitmap size: {BitmapViewWidth}x{BitmapViewHeight}"));
+            ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewWidth), $"Invalid bitmap size: {BitmapViewWidth}x{BitmapViewHeight}"));
             return;
         }
         if (!TryParseAddressString(BitmapViewStartAddress, _state, out uint? startAddress)) {
-            ShowError(new ArgumentOutOfRangeException($"Invalid start address: {BitmapViewStartAddress}"));
+            ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Invalid start address: {BitmapViewStartAddress}"));
             return;
         }
 
@@ -670,7 +673,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         if (TryParseAddressString(BitmapViewEndAddress, _state, out uint? endAddressParsed)) {
             // Respect the provided end address and clamp the read length accordingly
             if (!GetIsMemoryRangeValid(startAddress, endAddressParsed, 0)) {
-                ShowError(new ArgumentOutOfRangeException($"Invalid address range: {BitmapViewStartAddress} - {BitmapViewEndAddress}"));
+                ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Invalid address range: {BitmapViewStartAddress} - {BitmapViewEndAddress}"));
                 return;
             }
             uint available = endAddressParsed.Value - startAddress.Value + 1;
@@ -680,7 +683,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             // Else, compute end from length
             endAddress = startAddress.Value + bytesToRead - 1;
             if (!GetIsMemoryRangeValid(startAddress, endAddress, 0)) {
-                ShowError(new ArgumentOutOfRangeException($"Computed address range out of bounds:" +
+                ShowError(new ArgumentOutOfRangeException(nameof(BitmapViewStartAddress), $"Computed address range out of bounds:" +
                     $" {ConvertUtils.ToHex32(startAddress.Value)} - {ConvertUtils.ToHex32(endAddress)}"));
                 return;
             }
@@ -688,14 +691,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
 
         byte[] bytes = _memory.ReadRam(startAddress.Value, bytesToRead);
 
-        MemoryBitmapViewModel? vm = null;
-        _messenger.Send(new CreateMemoryBitmapViewModelMessage(m => vm = m));
-        if (vm is null) {
-            ShowError(new InvalidOperationException("No MemoryBitmapViewModel provider is registered."));
-            return;
-        }
-
+        MemoryBitmapViewModel vm = _memoryBitmapViewModelFactory.CreateNew();
         vm.WidthPixels = BitmapViewWidth;
+        vm.StartAddress = startAddress.Value;
         vm.Data = bytes;
         MemoryBitmap = vm;
         _memBitmapUpdateOnPause = () => {
