@@ -33,7 +33,6 @@ public class GdbClientProcess : IDisposable {
 
         // Start the GDB client process
         string dllPath = typeof(GdbClientProcess).Assembly.Location;
-        string exePath = dllPath.Replace(".dll", ".exe");
         
         ProcessStartInfo startInfo = new() {
             FileName = "dotnet",
