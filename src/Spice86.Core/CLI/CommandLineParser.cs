@@ -7,6 +7,7 @@ using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
@@ -19,7 +20,7 @@ public class CommandLineParser {
     /// </summary>
     /// <param name="args">The application command line arguments</param>
     /// <returns>A <see cref="Configuration"/> object representing the command line arguments</returns>
-    /// <exception cref="UnrecoverableException">When the command line arguments are unrecognized.</exception>
+    /// <exception cref="UnreachableException">When the command line arguments are unrecognized.</exception>
     public Configuration? ParseCommandLine(string[] args) {
         string[] reducedArgs = ProcessArgs(args, out string exeArgs);
 
@@ -31,7 +32,7 @@ public class CommandLineParser {
             initialConfig.Exe = ParseExePath(initialConfig.Exe);
             initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
             initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
-            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
+            initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig);
             initialConfig.ExeArgs = exeArgs;
             if (initialConfig.Cycles != null) {
                 initialConfig.InstructionsPerSecond = null;
@@ -76,7 +77,8 @@ public class CommandLineParser {
         return File.Exists(exePath) ? new FileInfo(exePath).FullName : unixPathValue;
     }
 
-    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
+    public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(Configuration configuration) {
+        string? supplierClassName = configuration.OverrideSupplierClassName;
         if (supplierClassName == null) {
             return null;
         }
