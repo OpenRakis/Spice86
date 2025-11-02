@@ -169,8 +169,7 @@
 								Grid.Row="1"
 								Grid.Column="1"
 								FontFamily="RobotoMonoFont" HorizontalAlignment="Center"
-								Text="{Binding AddressOFoundOccurence
-									}" />
+								Text="{Binding AddressOFoundOccurence}" />
 						</Grid>
 						<StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Grid.Row="3">
 							<Button Command="{Binding FirstOccurrenceCommand}"
@@ -219,8 +218,7 @@
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
-								Text="{Binding MemoryEditAddress, Mode=TwoWay 
-									}">
+								Text="{Binding MemoryEditAddress, Mode=TwoWay}">
 								<Interaction.Behaviors>
 									<behaviors:UpdateBindingOnEnterBehavior />
 								</Interaction.Behaviors>
@@ -291,8 +289,7 @@
 								    Grid.Row="0"
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
-									Text="{Binding MemoryBreakpointStartAddress 
-										}">
+									Text="{Binding MemoryBreakpointStartAddress}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
@@ -302,8 +299,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding MemoryBreakpointEndAddress 
-										}">
+									Text="{Binding MemoryBreakpointEndAddress}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>
@@ -313,8 +309,7 @@
 									Grid.Column="1"
 									FontFamily="RobotoMonoFont"
 									Watermark="optional"
-									Text="{Binding MemoryBreakpointValueCondition 
-										}">
+									Text="{Binding MemoryBreakpointValueCondition}">
 									<Interaction.Behaviors>
 										<behaviors:UpdateBindingOnEnterBehavior />
 									</Interaction.Behaviors>

@@ -35,24 +35,24 @@ jobs:
     - name: Upload NuGet Bufdio.Spice86
       if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
       working-directory: ./src/Bufdio.Spice86/bin/Release
-      run: dotnet nuget push Bufdio.Spice86.11.0.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push Bufdio.Spice86.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
     - name: Upload NuGet Spice86.Shared
       if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
       working-directory: ./src/Spice86.Shared/bin/Release
-      run: dotnet nuget push Spice86.Shared.11.0.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push Spice86.Shared.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
     - name: Upload NuGet Spice86.Logging
       if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
       working-directory: ./src/Spice86.Logging/bin/Release
-      run: dotnet nuget push Spice86.Logging.11.0.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push Spice86.Logging.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
     - name: Upload NuGet Spice86.Core
       if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
       working-directory: ./src/Spice86.Core/bin/Release
-      run: dotnet nuget push Spice86.Core.11.0.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push Spice86.Core.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
     - name: Upload NuGet Spice86
       if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
       working-directory: ./src/Spice86/bin/Release
-      run: dotnet nuget push Spice86.11.0.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+      run: dotnet nuget push Spice86.11.1.0.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
