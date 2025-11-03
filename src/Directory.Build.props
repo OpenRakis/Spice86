@@ -27,7 +27,7 @@
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-        <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 </Project>
