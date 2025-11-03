@@ -146,7 +146,7 @@ public class Alu32 : Alu<uint, int, ulong, long>  {
     }
 
     public override uint Ror(uint value, int count) {
-        count = (count & ShiftCountMask) % 16;
+        count = (count & ShiftCountMask) % 32;
         if (count == 0) {
             return value;
         }
