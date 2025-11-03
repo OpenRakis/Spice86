@@ -18,7 +18,7 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        helper.ModRm.R{{Size}} = helper.ModRm.MandatoryMemoryOffset;
+        helper.ModRm.R{{Size}} = {{ if Size == 16 }}(ushort){{ end }}helper.ModRm.MandatoryMemoryOffset;
         helper.MoveIpAndSetNextNode(this);
     }
 
