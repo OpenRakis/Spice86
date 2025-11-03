@@ -22,6 +22,8 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
         uint memoryAddress = helper.ModRm.MandatoryMemoryAddress;
         helper.ModRm.R{{Size}} = helper.Memory.UInt{{Size}}[memoryAddress];
         helper.State.{{SegmentRegister}} = helper.Memory.UInt16[memoryAddress + ({{Size}}/8)];
+        {{ if SegmentRegister == "SS" }}helper.State.InterruptShadowing = true;
+        {{ end }}        
         helper.MoveIpAndSetNextNode(this);
     }
 
