@@ -16,10 +16,10 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>11.0.0</Version>
+		<Version>11.1.0</Version>
 		<PackageReleaseNotes>
             <![CDATA[
-            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v11-release-notes
+            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v11.1-release-notes
             ]]>
 		</PackageReleaseNotes>
 		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Edu Garcia, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg</Authors>
@@ -27,7 +27,7 @@
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/OpenRakis/Spice86</RepositoryUrl>
-		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 </Project>

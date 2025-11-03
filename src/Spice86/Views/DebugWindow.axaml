@@ -121,11 +121,6 @@
 							<TextBlock Text="{Binding Header}" />
 						</DataTemplate>
 					</TabControl.ItemTemplate>
-					<TabControl.ContentTemplate>
-						<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-							<ContentPresenter Content="{Binding}" />
-						</DataTemplate>
-					</TabControl.ContentTemplate>
 				</TabControl>
 			</controls:HotKeyTabItem>
 			<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F5">
