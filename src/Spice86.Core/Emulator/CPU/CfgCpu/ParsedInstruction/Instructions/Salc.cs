@@ -8,17 +8,10 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>
 /// Undocumented instruction SALC
 /// </summary>
-public class Salc : CfgInstruction {
-
-    public Salc(SegmentedAddress address, InstructionField<ushort> opcodeField) : base(address, opcodeField, 1) {
-    }
-
+public class Salc(SegmentedAddress address, InstructionField<ushort> opcodeField)
+    : CfgInstruction(address, opcodeField, 1) {
     public override void Execute(InstructionExecutionHelper helper) {
-        if (helper.State.CarryFlag) {
-            helper.State.AL = 0;
-        } else {
-            helper.State.AL = 0xFF;
-        }
+        helper.State.AL = helper.State.CarryFlag ? (byte)0xFF : (byte)0;
         helper.MoveIpAndSetNextNode(this);
     }
 
