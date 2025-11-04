@@ -1,9 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Timer;
 
 /// <summary>
-///     Provides deterministic access to the current UTC time and delay primitives.
+///     Provides deterministic access to the current UTC time.
 /// </summary>
-public interface ITimeProvider {
+public interface IWallClock {
     /// <summary>
     ///     Gets the current coordinated universal time.
     /// </summary>

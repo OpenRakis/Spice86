@@ -75,7 +75,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // Three PIT channels are supported. Each uses the same state machine while addressing distinct peripherals.
     private readonly PitChannel[] _pitChannels = new PitChannel[3];
     private readonly List<IoReadHandler> _readHandlers = [];
-    private readonly ITimeProvider _timeProvider;
+    private readonly IWallClock _wallClock;
     private readonly List<IoWriteHandler> _writeHandlers = [];
 
     private bool _isChannel2GateHigh;
@@ -96,15 +96,13 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
     /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
-    /// <param name="timeProvider">Optional time provider used for deterministic timekeeping. Defaults to the system clock.</param>
-    public PitTimer(IoSystem ioSystem, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger,
-        ITimeProvider? timeProvider = null) {
+    public PitTimer(IoSystem ioSystem, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger) {
         _ioSystem = ioSystem;
         _pic = pic;
         _pcSpeaker = pcSpeaker;
         _logger = logger;
-        _timeProvider = timeProvider ?? SystemTimeProvider.Instance;
-        SystemStartTime = _timeProvider.UtcNow;
+        _wallClock = new WallClock();
+        SystemStartTime = _wallClock.UtcNow;
 
         InstallHandlers();
         InitializeChannels();
@@ -861,7 +859,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// </summary>
     /// <returns>Elapsed milliseconds.</returns>
     public long GetTicks() {
-        return (long)(_timeProvider.UtcNow - SystemStartTime).TotalMilliseconds;
+        return (long)(_wallClock.UtcNow - SystemStartTime).TotalMilliseconds;
     }
 
     /// <summary>
@@ -869,7 +867,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// </summary>
     /// <returns>Elapsed microseconds.</returns>
     public long GetTicksUs() {
-        return (long)((_timeProvider.UtcNow - SystemStartTime).TotalMilliseconds * 1000.0);
+        return (long)((_wallClock.UtcNow - SystemStartTime).TotalMilliseconds * 1000.0);
     }
 
     /// <summary>
