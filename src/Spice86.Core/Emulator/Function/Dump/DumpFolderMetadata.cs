@@ -41,6 +41,13 @@ public class DumpFolderMetadata {
 
         ProgramHash = ComputeProgramHash(exePath);
         DumpDirectory = DetermineDumpDirectory(explicitDumpDirectory);
+        CreateIfNotExist(DumpDirectory);
+    }
+
+    private void CreateIfNotExist(string directoryPath) {
+        if (!Directory.Exists(directoryPath)) {
+            Directory.CreateDirectory(directoryPath);
+        }
     }
 
     private string ComputeProgramHash(string exePath) {
