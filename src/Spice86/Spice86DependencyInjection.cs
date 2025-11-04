@@ -78,7 +78,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         // Create DumpContext with program hash and dump directory computation
-        DumpContext dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
+        DumpFolderMetadata dumpContext = new(configuration.Exe, configuration.RecordedDataDirectory);
         
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dump context created with program hash {ProgramHash} and dump directory {DumpDirectory}",

@@ -40,7 +40,7 @@ public class GdbCommandHandler {
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     public GdbCommandHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, State state, MemoryDataExporter memoryDataExporter, IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IExecutionDumpFactory executionDumpFactory,
-        FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, DumpContext dumpContext) {
+        FunctionCatalogue functionCatalogue, GdbIo gdbIo, ILoggerService loggerService, DumpFolderMetadata dumpContext) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;

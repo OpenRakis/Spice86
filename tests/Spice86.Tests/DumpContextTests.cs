@@ -20,7 +20,7 @@ public class DumpContextTests {
             string expectedHash = Convert.ToHexString(SHA256.HashData(testData));
 
             // Act
-            DumpContext context = new(tempFile, null);
+            DumpFolderMetadata context = new(tempFile, null);
 
             // Assert
             context.ProgramHash.Should().Be(expectedHash);
@@ -34,7 +34,7 @@ public class DumpContextTests {
     [Fact]
     public void Constructor_WithNullExePath_ThrowsArgumentException() {
         // Act & Assert
-        Action act = () => new DumpContext(null, null);
+        Action act = () => new DumpFolderMetadata(null, null);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -44,7 +44,7 @@ public class DumpContextTests {
         string nonExistentFile = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString());
 
         // Act & Assert
-        Action act = () => new DumpContext(nonExistentFile, null);
+        Action act = () => new DumpFolderMetadata(nonExistentFile, null);
         act.Should().Throw<FileNotFoundException>();
     }
 
@@ -59,7 +59,7 @@ public class DumpContextTests {
             string expectedHash = Convert.ToHexString(SHA256.HashData(testData));
 
             // Act
-            DumpContext context = new(tempFile, explicitDir);
+            DumpFolderMetadata context = new(tempFile, explicitDir);
 
             // Assert
             string expectedPath = Path.Combine(explicitDir, expectedHash);
@@ -86,7 +86,7 @@ public class DumpContextTests {
             Environment.SetEnvironmentVariable("SPICE86_DUMPS_FOLDER", envDir);
 
             // Act
-            DumpContext context = new(tempFile, null);
+            DumpFolderMetadata context = new(tempFile, null);
 
             // Assert
             string expectedPath = Path.Combine(envDir, expectedHash);
@@ -115,7 +115,7 @@ public class DumpContextTests {
             Environment.SetEnvironmentVariable("SPICE86_DUMPS_FOLDER", null);
 
             // Act
-            DumpContext context = new(tempFile, null);
+            DumpFolderMetadata context = new(tempFile, null);
 
             // Assert
             string expectedPath = Path.Combine(".", expectedHash);
@@ -142,7 +142,7 @@ public class DumpContextTests {
             Environment.SetEnvironmentVariable("SPICE86_DUMPS_FOLDER", nonExistentDir);
 
             // Act
-            DumpContext context = new(tempFile, null);
+            DumpFolderMetadata context = new(tempFile, null);
 
             // Assert
             string expectedPath = Path.Combine(".", expectedHash);

@@ -16,7 +16,7 @@ public class EmulatorStateSerializer {
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ILoggerService _loggerService;
     private readonly MemoryDataExporter _memoryDataExporter;
-    private readonly DumpContext _dumpContext;
+    private readonly DumpFolderMetadata _dumpContext;
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
 
     private const string BreakpointsFileName = "Breakpoints.json";
@@ -24,7 +24,7 @@ public class EmulatorStateSerializer {
     /// <summary>
     /// Initializes a new instance of <see cref="EmulatorStateSerializer"/>.
     /// </summary>
-    public EmulatorStateSerializer(DumpContext dumpContext,
+    public EmulatorStateSerializer(DumpFolderMetadata dumpContext,
         MemoryDataExporter memoryDataExporter, 
         State state, IExecutionDumpFactory executionDumpFactory,
         FunctionCatalogue functionCatalogue,

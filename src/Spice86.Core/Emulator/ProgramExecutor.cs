@@ -31,7 +31,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    private readonly DumpContext _dumpContext;
+    private readonly DumpFolderMetadata _dumpContext;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -59,7 +59,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DumpContext dumpContext, ILoggerService loggerService) {
+        IScreenPresenter? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;
@@ -142,7 +142,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, IFunctionHandlerProvider functionHandlerProvider, State state,
         FunctionCatalogue functionCatalogue, IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, DumpContext dumpContext, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         if (configuration.GdbPort == 0) {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("GDB port is 0, disabling GDB server.");

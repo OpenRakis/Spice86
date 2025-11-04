@@ -27,7 +27,7 @@ public sealed class GdbServer : IDisposable {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
 
     private readonly MemoryDataExporter _memoryDataExporter;
-    private readonly DumpContext _dumpContext;
+    private readonly DumpFolderMetadata _dumpContext;
 
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
@@ -48,7 +48,7 @@ public sealed class GdbServer : IDisposable {
         State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, 
         IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
-        DumpContext dumpContext, ILoggerService loggerService) {
+        DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _memoryDataExporter = memoryDataExporter;

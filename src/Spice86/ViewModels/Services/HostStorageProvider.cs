@@ -12,9 +12,9 @@ public class HostStorageProvider : IHostStorageProvider {
     private readonly IStorageProvider _storageProvider;
     private readonly Configuration _configuration;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    private readonly DumpContext _dumpContext;
+    private readonly DumpFolderMetadata _dumpContext;
 
-    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer, DumpContext dumpContext) {
+    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer, DumpFolderMetadata dumpContext) {
         _storageProvider = storageProvider;
         _configuration = configuration;
         _emulatorStateSerializer = emulatorStateSerializer;

@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 /// Contains computed context information for dumping emulator state.
 /// This includes the program hash and the directory where dumps should be written.
 /// </summary>
-public class DumpContext {
+public class DumpFolderMetadata {
     /// <summary>
     /// Gets the SHA-256 hash of the program executable.
     /// </summary>
@@ -26,13 +26,13 @@ public class DumpContext {
     public string DumpDirectory { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DumpContext"/> class.
+    /// Initializes a new instance of the <see cref="DumpFolderMetadata"/> class.
     /// </summary>
     /// <param name="exePath">Path to the executable file.</param>
     /// <param name="explicitDumpDirectory">Optional explicit dump directory from command line.</param>
     /// <exception cref="ArgumentException">Thrown when exePath is null or whitespace.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the executable file doesn't exist.</exception>
-    public DumpContext(string? exePath, string? explicitDumpDirectory) {
+    public DumpFolderMetadata(string? exePath, string? explicitDumpDirectory) {
         ArgumentException.ThrowIfNullOrWhiteSpace(exePath);
         
         if (!File.Exists(exePath)) {
