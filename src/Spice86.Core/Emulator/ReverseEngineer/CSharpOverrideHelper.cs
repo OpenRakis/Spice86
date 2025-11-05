@@ -1,7 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-using System.Linq;
-
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -14,11 +12,13 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
+using System.Linq;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -37,7 +37,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The IBM PC timer device.
     /// </summary>
-    protected readonly Timer _timer;
+    protected readonly PitTimer _timer;
 
     /// <summary>
     /// The class that manages software breakpoints.
@@ -723,7 +723,6 @@ public class CSharpOverrideHelper {
             Exit();
         }
         State.IncCycles();
-        _timer.Tick();
         if (!InterruptFlag) {
             return;
         }

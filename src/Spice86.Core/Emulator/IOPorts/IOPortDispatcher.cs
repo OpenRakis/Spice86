@@ -35,6 +35,15 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
+
+    /// <summary>
+    ///     Removes a previously registered I/O port handler from the dispatcher.
+    /// </summary>
+    /// <param name="port">The port number to remove.</param>
+    /// <returns><see langword="true" /> if the handler was removed; otherwise <see langword="false" />.</returns>
+    public bool RemoveIOPortHandler(int port) {
+        return _ioPortHandlers.Remove(port);
+    }
     
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
