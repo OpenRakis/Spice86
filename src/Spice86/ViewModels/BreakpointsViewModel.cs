@@ -363,9 +363,10 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             bool isRemovedOnTrigger,
             Action onReached,
             Func<long, bool>? additionalTriggerCondition = null,
-            string comment = "") {
+            string comment = "",
+            string? conditionExpression = null) {
         return AddAddressRangeBreakpoint(trigger, trigger, type, isRemovedOnTrigger, onReached,
-            additionalTriggerCondition, comment);
+            additionalTriggerCondition, comment, conditionExpression);
     }
 
     public BreakpointViewModel AddAddressRangeBreakpoint(
@@ -375,12 +376,13 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             bool isRemovedOnTrigger,
             Action onReached,
             Func<long, bool>? additionalTriggerCondition,
-            string comment = "") {
+            string comment = "",
+            string? conditionExpression = null) {
         RemoveFirstIfEdited();
         var breakpointViewModel = new BreakpointViewModel(
                     this,
                     _emulatorBreakpointsManager,
-                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment);
+                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment, conditionExpression);
         AddBreakpointInternal(breakpointViewModel);
         return breakpointViewModel;
     }
@@ -478,13 +480,31 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 break;
         }
 
+        // Compile condition expression if present
+        Func<long, bool>? condition = null;
+        string? conditionExpression = breakpointData.ConditionExpression;
+        if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
+            try {
+                var parser = new Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser();
+                var ast = parser.Parse(conditionExpression);
+                condition = (address) => {
+                    var context = new Core.Emulator.VM.Breakpoint.BreakpointExpressionContext(_state, _memory, address);
+                    return ast.Evaluate(context) != 0;
+                };
+            } catch {
+                // If parsing fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+            }
+        }
+
         BreakpointViewModel breakpointVm = AddAddressBreakpoint(
             breakpointData.Trigger,
             breakpointData.Type,
             false,
             onReached,
-            null,
-            ExecutionBreakpoint);
+            condition,
+            ExecutionBreakpoint,
+            conditionExpression);
 
         if (!breakpointData.IsEnabled) {
             breakpointVm.Disable();

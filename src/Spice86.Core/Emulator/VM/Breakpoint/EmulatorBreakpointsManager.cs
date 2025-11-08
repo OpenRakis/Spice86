@@ -16,6 +16,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
     private readonly IPauseHandler _pauseHandler;
+    private Memory.IMemory? _memory;
     private BreakPoint? _machineStartBreakPoint;
     private BreakPoint? _machineStopBreakPoint;
 
@@ -32,6 +33,14 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
+    }
+    
+    /// <summary>
+    /// Sets the memory interface for expression evaluation in conditional breakpoints.
+    /// </summary>
+    /// <param name="memory">The memory interface.</param>
+    public void SetMemory(Memory.IMemory memory) {
+        _memory = memory;
     }
 
     public AddressReadWriteBreakpoints MemoryReadWriteBreakpoints { get; }
@@ -172,7 +181,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                 Trigger = start,
                 EndTrigger = end,
                 Type = type,
-                IsEnabled = sorted[i].IsEnabled
+                IsEnabled = sorted[i].IsEnabled,
+                ConditionExpression = sorted[i].ConditionExpression
             };
             result.Add(item);
         }
@@ -194,7 +204,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         return new SerializableUserBreakpoint {
             Trigger = breakpoint.Address,
             Type = breakpoint.BreakPointType,
-            IsEnabled = breakpoint.IsEnabled
+            IsEnabled = breakpoint.IsEnabled,
+            ConditionExpression = breakpoint.ConditionExpression
         };
     }
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
@@ -221,16 +232,35 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-    private static AddressBreakPoint FromSerializable(
+    private AddressBreakPoint FromSerializable(
         SerializableUserBreakpoint serializableBreakpoint,
         Action<BreakPoint> onReached, bool removeOnTrigger) {
+        Func<long, bool>? condition = null;
+        string? conditionExpression = serializableBreakpoint.ConditionExpression;
+        
+        // Compile the condition expression if present and memory is available
+        if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
+            try {
+                var parser = new Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser();
+                var ast = parser.Parse(conditionExpression);
+                condition = (address) => {
+                    var context = new BreakpointExpressionContext(_state, _memory!, address);
+                    return ast.Evaluate(context) != 0;
+                };
+            } catch {
+                // If parsing fails, treat as unconditional
+                conditionExpression = null;
+            }
+        }
+        
         return serializableBreakpoint.Type switch {
             BreakPointType.CPU_EXECUTION_ADDRESS or BreakPointType.CPU_INTERRUPT or BreakPointType.CPU_CYCLES or
             BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE or
             BreakPointType.IO_ACCESS or BreakPointType.IO_READ or BreakPointType.IO_WRITE
                 => new AddressBreakPoint(serializableBreakpoint.Type,
-                    serializableBreakpoint.Trigger, onReached, removeOnTrigger) {
+                    serializableBreakpoint.Trigger, onReached, removeOnTrigger, condition, conditionExpression) {
                     IsEnabled = serializableBreakpoint.IsEnabled,
+                    IsUserBreakpoint = true
                 },
             BreakPointType.MACHINE_START => throw new NotSupportedException("Emulator start/stop breakpoints don't need to be serialized"),
             BreakPointType.MACHINE_STOP => throw new NotSupportedException("Machine breakpoint are not serialized"),

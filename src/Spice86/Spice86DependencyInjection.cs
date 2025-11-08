@@ -150,6 +150,8 @@ public class Spice86DependencyInjection : IDisposable {
             MemoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+        
+        emulatorBreakpointsManager.SetMemory(memory);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory bus created...");
