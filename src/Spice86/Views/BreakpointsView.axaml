@@ -69,11 +69,12 @@
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
 							<userControls:MemoryBreakpointUserControl 
-								ShowValueCondition="False"
+								ShowValueCondition="True"
 								SelectedBreakpointType="{Binding SelectedMemoryBreakpointType}"
 								BreakpointTypes="{Binding MemoryBreakpointTypes}"
 								StartAddress="{Binding MemoryBreakpointStartAddress}"
-								EndAddress="{Binding MemoryBreakpointEndAddress}" />
+								EndAddress="{Binding MemoryBreakpointEndAddress}"
+								ValueCondition="{Binding MemoryBreakpointValueCondition}" />
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
                                 IsVisible="{Binding IsExecutionBreakpointSelected}">
