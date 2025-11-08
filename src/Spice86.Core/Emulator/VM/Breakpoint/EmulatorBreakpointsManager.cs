@@ -15,7 +15,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
     private readonly IPauseHandler _pauseHandler;
-    private Memory.IMemory? _memory;
+    private readonly Memory.IMemory _memory;
     private BreakPoint? _machineStartBreakPoint;
     private BreakPoint? _machineStopBreakPoint;
 
@@ -24,22 +24,19 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     /// </summary>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    public EmulatorBreakpointsManager(IPauseHandler pauseHandler, State state) {
+    /// <param name="memory">The memory interface for expression evaluation in conditional breakpoints.</param>
+    /// <param name="memoryReadWriteBreakpoints">The breakpoint holder for memory read/write breakpoints.</param>
+    /// <param name="ioReadWriteBreakpoints">The breakpoint holder for I/O read/write breakpoints.</param>
+    public EmulatorBreakpointsManager(IPauseHandler pauseHandler, State state, Memory.IMemory memory,
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints, AddressReadWriteBreakpoints ioReadWriteBreakpoints) {
         _state = state;
-        MemoryReadWriteBreakpoints = new();
-        IoReadWriteBreakpoints = new();
+        _memory = memory;
+        MemoryReadWriteBreakpoints = memoryReadWriteBreakpoints;
+        IoReadWriteBreakpoints = ioReadWriteBreakpoints;
         InterruptBreakPoints = new();
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
         _pauseHandler = pauseHandler;
-    }
-    
-    /// <summary>
-    /// Sets the memory interface for expression evaluation in conditional breakpoints.
-    /// </summary>
-    /// <param name="memory">The memory interface.</param>
-    public void SetMemory(Memory.IMemory memory) {
-        _memory = memory;
     }
 
     public AddressReadWriteBreakpoints MemoryReadWriteBreakpoints { get; }
@@ -240,13 +237,13 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         Func<long, bool>? condition = null;
         string? conditionExpression = serializableBreakpoint.ConditionExpression;
         
-        // Compile the condition expression if present and memory is available
-        if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
+        // Compile the condition expression if present
+        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
             try {
                 Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
                 Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
                 condition = (address) => {
-                    BreakpointExpressionContext context = new(_state, _memory!, address);
+                    BreakpointExpressionContext context = new(_state, _memory, address);
                     return ast.Evaluate(context) != 0;
                 };
             } catch (ArgumentException) {

@@ -480,7 +480,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
         // Compile condition expression if present
         Func<long, bool>? condition = null;
         string? conditionExpression = breakpointData.ConditionExpression;
-        if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
+        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
             try {
                 Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
                 Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
