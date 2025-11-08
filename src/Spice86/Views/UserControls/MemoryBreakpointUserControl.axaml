@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
+             xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             x:Class="Spice86.Views.UserControls.MemoryBreakpointUserControl"
+             x:Name="MemoryBreakpointControl">
+	<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+		<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
+		<ComboBox Grid.Column="0" Grid.Row="1"
+			SelectedItem="{Binding #MemoryBreakpointControl.SelectedBreakpointType}"
+			ItemsSource="{Binding #MemoryBreakpointControl.BreakpointTypes}" />
+		<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
+			Header="Memory start address">
+			<TextBox
+				Text="{Binding #MemoryBreakpointControl.StartAddress,
+					Mode=TwoWay}"
+				Watermark="1000:FFFF (example) or like 'cs:ip'">
+				<Interaction.Behaviors>
+					<behaviors:UpdateBindingOnEnterBehavior />
+				</Interaction.Behaviors>
+			</TextBox>
+		</controls:GroupBox>
+		<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
+			Header="Memory end address">
+			<TextBox
+				Text="{Binding #MemoryBreakpointControl.EndAddress,
+					Mode=TwoWay}"
+				Watermark="1000:FFFF (example) or like 'cs:ip'">
+				<Interaction.Behaviors>
+					<behaviors:UpdateBindingOnEnterBehavior />
+				</Interaction.Behaviors>
+			</TextBox>
+		</controls:GroupBox>
+		<controls:GroupBox Margin="5" Grid.Row="3" Grid.Column="1"
+			Header="Memory value condition"
+			IsVisible="{Binding #MemoryBreakpointControl.ShowValueCondition}">
+			<TextBox
+				Text="{Binding #MemoryBreakpointControl.ValueCondition,
+					Mode=TwoWay}"
+				FontFamily="RobotoMonoFont"
+				Watermark="optional">
+				<Interaction.Behaviors>
+					<behaviors:UpdateBindingOnEnterBehavior />
+				</Interaction.Behaviors>
+			</TextBox>
+		</controls:GroupBox>
+	</Grid>
+</UserControl>

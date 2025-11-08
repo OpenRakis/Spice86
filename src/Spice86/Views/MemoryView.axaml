@@ -264,69 +264,14 @@
 							HorizontalAlignment="Center"
 							Content="Creating memory breakpoint on hex, decimal, or segmented address"
 							FontWeight="Bold" />
-						<Grid
+						<userControls:MemoryBreakpointUserControl
 							Grid.Row="1"
-							ColumnDefinitions="Auto,*"
-							RowDefinitions="Auto,Auto">
-							<Grid Grid.Column="0"
-								Grid.ColumnSpan="2"
-								Grid.Row="0"
-								RowDefinitions="Auto,Auto,Auto"
-								ColumnDefinitions="Auto,*">
-								<Label
-									Grid.Row="0"
-									Grid.Column="0"
-									Content="Breakpoint Range Start:" />
-								<Label
-									Grid.Row="1"
-									Grid.Column="0"
-									Content="Breakpoint Range End:" />
-								<Label
-									Grid.Row="2"
-									Grid.Column="0"
-									Content="Breakpoint Value condition:" />
-								<TextBox
-								    Grid.Row="0"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Text="{Binding MemoryBreakpointStartAddress}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-								<TextBox
-								    Grid.Row="1"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Watermark="optional"
-									Text="{Binding MemoryBreakpointEndAddress}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-								<TextBox
-									Grid.Row="2"
-									Grid.Column="1"
-									FontFamily="RobotoMonoFont"
-									Watermark="optional"
-									Text="{Binding MemoryBreakpointValueCondition}">
-									<Interaction.Behaviors>
-										<behaviors:UpdateBindingOnEnterBehavior />
-									</Interaction.Behaviors>
-								</TextBox>
-							</Grid>
-							<Label
-								Grid.Row="1"
-								Grid.Column="0"
-								VerticalContentAlignment="Center"
-								HorizontalContentAlignment="Left"
-								Content="Access type:" />
-							<ComboBox
-								Grid.Row="1"
-								Grid.Column="1"
-								SelectedItem="{Binding SelectedBreakpointType}"
-								ItemsSource="{Binding BreakpointTypes, Mode=OneTime}" />
-						</Grid>
+							ShowValueCondition="True"
+							SelectedBreakpointType="{Binding SelectedBreakpointType}"
+							BreakpointTypes="{Binding BreakpointTypes}"
+							StartAddress="{Binding MemoryBreakpointStartAddress}"
+							EndAddress="{Binding MemoryBreakpointEndAddress}"
+							ValueCondition="{Binding MemoryBreakpointValueCondition}" />
 						<StackPanel
 							Grid.Row="2"
 							HorizontalAlignment="Right"

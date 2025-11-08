@@ -68,34 +68,12 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
-								<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
-								<ComboBox Grid.Column="0" Grid.Row="1"
-									SelectedItem="{Binding SelectedMemoryBreakpointType}"
-                                    ItemsSource="{Binding MemoryBreakpointTypes}" />
-								<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
-									Header="Memory start address">
-									<TextBox
-										Text="{Binding MemoryBreakpointStartAddress,
-											Mode=TwoWay}"
-										Watermark="1000:FFFF (example) or like 'cs:ip'">
-										<Interaction.Behaviors>
-											<behaviors:UpdateBindingOnEnterBehavior />
-										</Interaction.Behaviors>
-									</TextBox>
-								</controls:GroupBox>
-								<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
-									Header="Memory end address">
-									<TextBox
-										Text="{Binding MemoryBreakpointEndAddress,
-											Mode=TwoWay}"
-										Watermark="1000:FFFF (example) or like 'cs:ip'">
-										<Interaction.Behaviors>
-											<behaviors:UpdateBindingOnEnterBehavior />
-										</Interaction.Behaviors>
-									</TextBox>
-								</controls:GroupBox>
-							</Grid>
+							<userControls:MemoryBreakpointUserControl 
+								ShowValueCondition="False"
+								SelectedBreakpointType="{Binding SelectedMemoryBreakpointType}"
+								BreakpointTypes="{Binding MemoryBreakpointTypes}"
+								StartAddress="{Binding MemoryBreakpointStartAddress}"
+								EndAddress="{Binding MemoryBreakpointEndAddress}" />
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
                                 IsVisible="{Binding IsExecutionBreakpointSelected}">
