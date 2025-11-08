@@ -13,6 +13,7 @@ using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
@@ -35,10 +36,12 @@ public class DosProgramSegmentPrefixTrackerTests {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         PauseHandler pauseHandler = new(loggerService);
         State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState, memory, memoryBreakpoints, ioBreakpoints);
 
         var configuration = new Configuration {
             ProgramEntryPointSegment = (ushort)0x1000

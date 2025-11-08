@@ -11,6 +11,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -47,10 +48,12 @@ public class DosMemoryManagerTests {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         PauseHandler pauseHandler = new(_loggerService);
         State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        _memory = new Memory(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        _memory = new Memory(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState, _memory, memoryBreakpoints, ioBreakpoints);
 
         // Create the PSP tracker that reads the configuration and informs the memory manager what
         // it can allocate. We can effectively start it wherever we want for testing.

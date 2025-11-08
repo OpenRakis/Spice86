@@ -60,8 +60,8 @@ public class BreakpointExpressionContext : IExpressionContext {
         if (address < 0 || address >= _memory.Length) {
             return 0;
         }
-        // Use Ram.Read directly to avoid triggering memory breakpoints during condition evaluation
-        return _memory.Ram.Read((uint)address);
+        // Use SneakilyRead to avoid triggering memory breakpoints during condition evaluation
+        return _memory.SneakilyRead((uint)address);
     }
     
     /// <inheritdoc/>
@@ -69,9 +69,9 @@ public class BreakpointExpressionContext : IExpressionContext {
         if (address < 0 || address + 1 >= _memory.Length) {
             return 0;
         }
-        // Read bytes directly from Ram to avoid triggering memory breakpoints
-        byte low = _memory.Ram.Read((uint)address);
-        byte high = _memory.Ram.Read((uint)address + 1);
+        // Use SneakilyRead to avoid triggering memory breakpoints
+        byte low = _memory.SneakilyRead((uint)address);
+        byte high = _memory.SneakilyRead((uint)address + 1);
         return (ushort)((high << 8) | low);
     }
     
@@ -80,7 +80,7 @@ public class BreakpointExpressionContext : IExpressionContext {
         if (address < 0 || address + 3 >= _memory.Length) {
             return 0;
         }
-        // Read bytes directly from Ram to avoid triggering memory breakpoints
+        // Use SneakilyRead to avoid triggering memory breakpoints
         ushort low = ReadMemoryWord(address);
         ushort high = ReadMemoryWord(address + 2);
         return (uint)((high << 16) | low);
