@@ -241,13 +241,13 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         // Compile the condition expression if present and memory is available
         if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
             try {
-                var parser = new Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser();
-                var ast = parser.Parse(conditionExpression);
+                Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
+                Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
                 condition = (address) => {
-                    var context = new BreakpointExpressionContext(_state, _memory!, address);
+                    BreakpointExpressionContext context = new(_state, _memory!, address);
                     return ast.Evaluate(context) != 0;
                 };
-            } catch {
+            } catch (ArgumentException) {
                 // If parsing fails, treat as unconditional
                 conditionExpression = null;
             }
