@@ -181,16 +181,16 @@ public class GdbCommandBreakpointHandler {
             Func<long, bool>? condition = null;
             if (!string.IsNullOrWhiteSpace(conditionExpression) && _state != null && _memory != null) {
                 try {
-                    var parser = new Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser();
-                    var ast = parser.Parse(conditionExpression);
+                    Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
+                    Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
                     condition = (addr) => {
-                        var context = new BreakpointExpressionContext(_state, _memory, addr);
+                        BreakpointExpressionContext context = new(_state, _memory, addr);
                         return ast.Evaluate(context) != 0;
                     };
                     if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                         _loggerService.Information("Compiled conditional breakpoint: {Expression}", conditionExpression);
                     }
-                } catch (Exception ex) {
+                } catch (ArgumentException ex) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning(ex, "Failed to parse condition expression: {Expression}", conditionExpression);
                     }
