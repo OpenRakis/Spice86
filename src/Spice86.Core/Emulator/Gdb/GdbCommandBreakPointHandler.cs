@@ -18,6 +18,8 @@ public class GdbCommandBreakpointHandler {
     private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
+    private readonly CPU.State? _state;
+    private readonly IMemory? _memory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandBreakpointHandler"/> class.
@@ -26,14 +28,19 @@ public class GdbCommandBreakpointHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    /// <param name="state">The CPU state for expression evaluation.</param>
+    /// <param name="memory">The memory interface for expression evaluation.</param>
     public GdbCommandBreakpointHandler(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService,
+        CPU.State? state = null, IMemory? memory = null) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPauseFromEmulator;
         _gdbIo = gdbIo;
+        _state = state;
+        _memory = memory;
     }
 
     /// <summary>
@@ -116,9 +123,37 @@ public class GdbCommandBreakpointHandler {
     /// </summary>
     /// <param name="command">The breakpoint command string to parse.</param>
     /// <returns>A <see cref="BreakPoint"/> object if parsing succeeds, otherwise null.</returns>
+    /// <remarks>
+    /// Supports GDB remote protocol format: type,address,kind[;X:condition_expression]
+    /// where X is a condition type (we support 'cond' or 'X' for condition expressions).
+    /// Example: "0,1000,1;X:ax==0x100" sets an execution breakpoint at 0x1000 with condition "ax==0x100"
+    /// </remarks>
     public BreakPoint? ParseBreakPoint(string command) {
         try {
-            string[] commandSplit = command.Split(",");
+            // Check for optional condition parameter (separated by semicolon)
+            string? conditionExpression = null;
+            string baseCommand = command;
+            
+            int semicolonIndex = command.IndexOf(';');
+            if (semicolonIndex >= 0) {
+                baseCommand = command.Substring(0, semicolonIndex);
+                string conditionPart = command.Substring(semicolonIndex + 1);
+                
+                // Parse condition part - format is "X:expression" or "cond:expression"
+                int colonIndex = conditionPart.IndexOf(':');
+                if (colonIndex >= 0) {
+                    string condType = conditionPart.Substring(0, colonIndex);
+                    if (condType.Equals("X", StringComparison.OrdinalIgnoreCase) || 
+                        condType.Equals("cond", StringComparison.OrdinalIgnoreCase)) {
+                        conditionExpression = conditionPart.Substring(colonIndex + 1);
+                        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                            _loggerService.Debug("Parsed condition expression: {Condition}", conditionExpression);
+                        }
+                    }
+                }
+            }
+            
+            string[] commandSplit = baseCommand.Split(",");
             int type = int.Parse(commandSplit[0]);
             BreakPointType? breakPointType = type switch {
                 0 => BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -141,7 +176,30 @@ public class GdbCommandBreakpointHandler {
                 }
                 return null;
             }
-            return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false);
+            
+            // Compile condition expression if present
+            Func<long, bool>? condition = null;
+            if (!string.IsNullOrWhiteSpace(conditionExpression) && _state != null && _memory != null) {
+                try {
+                    var parser = new Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser();
+                    var ast = parser.Parse(conditionExpression);
+                    condition = (addr) => {
+                        var context = new BreakpointExpressionContext(_state, _memory, addr);
+                        return ast.Evaluate(context) != 0;
+                    };
+                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                        _loggerService.Information("Compiled conditional breakpoint: {Expression}", conditionExpression);
+                    }
+                } catch (Exception ex) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning(ex, "Failed to parse condition expression: {Expression}", conditionExpression);
+                    }
+                    // Continue without condition if parsing fails
+                    conditionExpression = null;
+                }
+            }
+            
+            return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false, condition, conditionExpression);
         } catch (FormatException nfe) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(nfe, "Cannot parse breakpoint {Command}", command);
