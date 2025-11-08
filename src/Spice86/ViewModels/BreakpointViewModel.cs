@@ -11,6 +11,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     private readonly List<BreakPoint> _breakpoints = new List<BreakPoint>();
     private readonly Action _onReached;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
+    private readonly string? _conditionExpression;
 
     public BreakpointViewModel(
         BreakpointsViewModel breakpointsViewModel,
@@ -21,7 +22,8 @@ public partial class BreakpointViewModel : ViewModelBase {
         bool isRemovedOnTrigger,
         Action onReached,
         Func<long, bool>? additionalTriggerCondition,
-        string comment = "") {
+        string comment = "",
+        string? conditionExpression = null) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         Address = trigger;
         Type = type;
@@ -37,6 +39,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         Comment = comment;
         Parameter = $"0x{trigger:X2}";
         EndAddress = endAddress;
+        _conditionExpression = conditionExpression;
         for (long i = Address; i <= EndAddress; i++) {
             AddressBreakPoint breakpoint = CreateBreakpointWithAddressAndCondition(i, additionalTriggerCondition);
             breakpoint.IsEnabled = true;
@@ -93,7 +96,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     protected AddressBreakPoint CreateBreakpointWithAddressAndCondition(long address, Func<long, bool>? additionalTriggerCondition) {
-        AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger, additionalTriggerCondition);
+        AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger, additionalTriggerCondition, _conditionExpression);
         bp.IsUserBreakpoint = true;
         return bp;
     }

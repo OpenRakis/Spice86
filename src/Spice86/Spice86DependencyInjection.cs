@@ -141,6 +141,8 @@ public class Spice86DependencyInjection : IDisposable {
             MemoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+        
+        emulatorBreakpointsManager.SetMemory(memory);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory bus created...");
@@ -523,7 +525,7 @@ public class Spice86DependencyInjection : IDisposable {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher);
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, memory);
             
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
