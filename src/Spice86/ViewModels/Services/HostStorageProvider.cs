@@ -12,11 +12,13 @@ public class HostStorageProvider : IHostStorageProvider {
     private readonly IStorageProvider _storageProvider;
     private readonly Configuration _configuration;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
+    private readonly DumpFolderMetadata _dumpContext;
 
-    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer) {
+    public HostStorageProvider(IStorageProvider storageProvider, Configuration configuration, EmulatorStateSerializer emulatorStateSerializer, DumpFolderMetadata dumpContext) {
         _storageProvider = storageProvider;
         _configuration = configuration;
         _emulatorStateSerializer = emulatorStateSerializer;
+        _dumpContext = dumpContext;
     }
 
     /// <inheritdoc />
@@ -78,21 +80,12 @@ public class HostStorageProvider : IHostStorageProvider {
     }
 
     public async Task SaveVideoCardInfoFile(string videoCardInfoJson) {
-        if (CanSave && CanPickFolder) {
-            FilePickerSaveOptions options = new() {
-                Title = "Save video card info...",
-                SuggestedFileName = "VideoCardInfo.json",
-                DefaultExtension = "json",
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
-            };
-            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
-                options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
-            }
-            string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(file)) {
-                await File.WriteAllTextAsync(file, videoCardInfoJson);
-            }
+        string dumpDir = _dumpContext.DumpDirectory;
+        if (!Directory.Exists(dumpDir)) {
+            Directory.CreateDirectory(dumpDir);
         }
+        string filePath = Path.Join(dumpDir, "VideoCardInfo.json");
+        await File.WriteAllTextAsync(filePath, videoCardInfoJson);
     }
 
     public async Task DumpEmulatorStateToFile() {
@@ -100,9 +93,9 @@ public class HostStorageProvider : IHostStorageProvider {
             FolderPickerOpenOptions options = new() {
                 Title = "Dump emulator state to directory...",
                 AllowMultiple = false,
-                SuggestedStartLocation = await TryGetFolderFromPathAsync(_configuration.RecordedDataDirectory)
+                SuggestedStartLocation = await TryGetFolderFromPathAsync(_dumpContext.DumpDirectory)
             };
-            if (!Directory.Exists(_configuration.RecordedDataDirectory)) {
+            if (!Directory.Exists(_dumpContext.DumpDirectory)) {
                 options.SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents);
             }
             IReadOnlyList<IStorageFolder> dirs = await OpenFolderPickerAsync(options);

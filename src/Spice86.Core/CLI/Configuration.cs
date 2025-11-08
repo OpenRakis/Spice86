@@ -92,10 +92,10 @@ public sealed class Configuration {
     public int GdbPort { get; init; }
 
     /// <summary>
-    /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory.
+    /// Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature.
     /// </summary>
-    [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to working directory")]
-    public string RecordedDataDirectory { get; init; } = Environment.GetEnvironmentVariable("SPICE86_DUMPS_FOLDER") ?? Environment.CurrentDirectory;
+    [Option('r', nameof(RecordedDataDirectory), Required = false, HelpText = "Directory to dump data to when not specified otherwise. If blank dumps to SPICE86_DUMPS_FOLDER, and if not defined dumps to a sub directory named with the program SHA 256 signature")]
+    public string? RecordedDataDirectory { get; init; }
 
     /// <summary>
     /// Install DOS interrupt vectors or not.
