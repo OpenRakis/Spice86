@@ -7,17 +7,17 @@
              xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
              x:Class="Spice86.Views.UserControls.MemoryBreakpointUserControl"
-             x:Name="MemoryBreakpointControl">
+             x:CompileBindings="True"
+             x:DataType="viewModels:MemoryBreakpointUserControlViewModel">
 	<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
 		<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
 		<ComboBox Grid.Column="0" Grid.Row="1"
-			SelectedItem="{Binding #MemoryBreakpointControl.SelectedBreakpointType}"
-			ItemsSource="{Binding #MemoryBreakpointControl.BreakpointTypes}" />
+			SelectedItem="{Binding SelectedBreakpointType}"
+			ItemsSource="{Binding BreakpointTypes}" />
 		<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
 			Header="Memory start address">
 			<TextBox
-				Text="{Binding #MemoryBreakpointControl.StartAddress,
-					Mode=TwoWay}"
+				Text="{Binding StartAddress, Mode=TwoWay}"
 				Watermark="1000:FFFF (example) or like 'cs:ip'">
 				<Interaction.Behaviors>
 					<behaviors:UpdateBindingOnEnterBehavior />
@@ -27,8 +27,7 @@
 		<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
 			Header="Memory end address">
 			<TextBox
-				Text="{Binding #MemoryBreakpointControl.EndAddress,
-					Mode=TwoWay}"
+				Text="{Binding EndAddress, Mode=TwoWay}"
 				Watermark="1000:FFFF (example) or like 'cs:ip'">
 				<Interaction.Behaviors>
 					<behaviors:UpdateBindingOnEnterBehavior />
@@ -37,10 +36,9 @@
 		</controls:GroupBox>
 		<controls:GroupBox Margin="5" Grid.Row="3" Grid.Column="1"
 			Header="Memory value condition"
-			IsVisible="{Binding #MemoryBreakpointControl.ShowValueCondition}">
+			IsVisible="{Binding ShowValueCondition}">
 			<TextBox
-				Text="{Binding #MemoryBreakpointControl.ValueCondition,
-					Mode=TwoWay}"
+				Text="{Binding ValueCondition, Mode=TwoWay}"
 				FontFamily="RobotoMonoFont"
 				Watermark="optional">
 				<Interaction.Behaviors>
