@@ -266,12 +266,11 @@
 							FontWeight="Bold" />
 						<userControls:MemoryBreakpointUserControl
 							Grid.Row="1"
-							ShowValueCondition="True"
+							ShowValueCondition="False"
 							SelectedBreakpointType="{Binding SelectedBreakpointType}"
 							BreakpointTypes="{Binding BreakpointTypes}"
 							StartAddress="{Binding MemoryBreakpointStartAddress}"
-							EndAddress="{Binding MemoryBreakpointEndAddress}"
-							ValueCondition="{Binding MemoryBreakpointValueCondition}" />
+							EndAddress="{Binding MemoryBreakpointEndAddress}" />
 						<StackPanel
 							Grid.Row="2"
 							HorizontalAlignment="Right"
