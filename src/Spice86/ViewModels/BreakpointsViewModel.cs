@@ -25,14 +25,14 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly State _state;
-    private readonly Core.Emulator.Memory.IMemory? _memory;
+    private readonly Core.Emulator.Memory.IMemory _memory;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IUIDispatcher uiDispatcher,
-        Core.Emulator.Memory.IMemory? memory = null) {
+        Core.Emulator.Memory.IMemory memory) {
         _state = state;
         _memory = memory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -530,7 +530,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         // Compile condition expression if present
         Func<long, bool>? condition = null;
         string? conditionExpression = breakpointData.ConditionExpression;
-        if (!string.IsNullOrWhiteSpace(conditionExpression) && _memory != null) {
+        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
             try {
                 Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
                 Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);

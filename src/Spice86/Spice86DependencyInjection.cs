@@ -111,14 +111,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("State created...");
         }
 
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator breakpoints manager created...");
-        }
+        // Create breakpoint holders before EmulatorBreakpointsManager to avoid circular dependency
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
+        AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
         IOPortDispatcher ioPortDispatcher = new(
-            emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
+            ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -137,15 +135,19 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("A20 gate created...");
         }
 
-        Memory memory = new(emulatorBreakpointsManager.
-            MemoryReadWriteBreakpoints,
+        Memory memory = new(memoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        
-        emulatorBreakpointsManager.SetMemory(memory);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory bus created...");
+        }
+
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, 
+            memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator breakpoints manager created...");
         }
 
         var biosDataArea =

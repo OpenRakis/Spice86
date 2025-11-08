@@ -105,11 +105,13 @@ public class DosFileManagerTests {
         RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
         var dualPic = new DualPic(state, ioPortDispatcher, configuration.FailOnUnhandledPort,
