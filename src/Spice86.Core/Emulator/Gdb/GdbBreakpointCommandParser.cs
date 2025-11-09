@@ -101,9 +101,14 @@ public class GdbBreakpointCommandParser {
         long address;
         try {
             address = ConvertUtils.ParseHex32(gdbCommand.Address);
-        } catch (Exception ex) {
+        } catch (FormatException ex) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(ex, "Failed to parse address: {Address}", gdbCommand.Address);
+                _loggerService.Error(ex, "Invalid address format: {Address}", gdbCommand.Address);
+            }
+            return null;
+        } catch (OverflowException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
+                _loggerService.Error(ex, "Address value too large: {Address}", gdbCommand.Address);
             }
             return null;
         }
