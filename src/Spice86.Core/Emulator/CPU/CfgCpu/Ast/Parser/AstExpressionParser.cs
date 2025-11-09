@@ -76,9 +76,11 @@ public class AstExpressionParser {
         ValueNode left = ParseRelational();
         while (true) {
             if (Match("==")) {
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.EQUAL, ParseRelational());
+                ValueNode right = ParseRelational();
+                left = ApplyBinaryOperation(BinaryOperation.EQUAL, left, right);
             } else if (Match("!=")) {
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.NOT_EQUAL, ParseRelational());
+                ValueNode right = ParseRelational();
+                left = ApplyBinaryOperation(BinaryOperation.NOT_EQUAL, left, right);
             } else {
                 break;
             }
@@ -90,15 +92,19 @@ public class AstExpressionParser {
         ValueNode left = ParseShift();
         while (true) {
             if (Match("<=")) {
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.LESS_THAN_OR_EQUAL, ParseShift());
+                ValueNode right = ParseShift();
+                left = ApplyBinaryOperation(BinaryOperation.LESS_THAN_OR_EQUAL, left, right);
             } else if (Match(">=")) {
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.GREATER_THAN_OR_EQUAL, ParseShift());
+                ValueNode right = ParseShift();
+                left = ApplyBinaryOperation(BinaryOperation.GREATER_THAN_OR_EQUAL, left, right);
             } else if (CurrentChar() == '<') {
                 Advance();
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.LESS_THAN, ParseShift());
+                ValueNode right = ParseShift();
+                left = ApplyBinaryOperation(BinaryOperation.LESS_THAN, left, right);
             } else if (CurrentChar() == '>') {
                 Advance();
-                left = new BinaryOperationNode(DataType.BOOL, left, BinaryOperation.GREATER_THAN, ParseShift());
+                ValueNode right = ParseShift();
+                left = ApplyBinaryOperation(BinaryOperation.GREATER_THAN, left, right);
             } else {
                 break;
             }
@@ -185,30 +191,27 @@ public class AstExpressionParser {
             return expr;
         }
 
-        // Memory access: byte[...], word[...], dword[...]
-        if (Match("byte[")) {
-            ValueNode address = ParseExpression();
-            if (CurrentChar() != ']') {
-                throw new ArgumentException("Expected ']'");
+        // Memory access: byte ptr [...], word ptr [...], dword ptr [...], or byte ptr segment:[...]
+        if (Match("byte")) {
+            SkipWhitespace();
+            if (Match("ptr")) {
+                SkipWhitespace();
+                return ParsePointerNode(DataType.UINT8);
             }
-            Advance();
-            return new AbsolutePointerNode(DataType.UINT8, address);
         }
-        if (Match("word[")) {
-            ValueNode address = ParseExpression();
-            if (CurrentChar() != ']') {
-                throw new ArgumentException("Expected ']'");
+        if (Match("word")) {
+            SkipWhitespace();
+            if (Match("ptr")) {
+                SkipWhitespace();
+                return ParsePointerNode(DataType.UINT16);
             }
-            Advance();
-            return new AbsolutePointerNode(DataType.UINT16, address);
         }
-        if (Match("dword[")) {
-            ValueNode address = ParseExpression();
-            if (CurrentChar() != ']') {
-                throw new ArgumentException("Expected ']'");
+        if (Match("dword")) {
+            SkipWhitespace();
+            if (Match("ptr")) {
+                SkipWhitespace();
+                return ParsePointerNode(DataType.UINT32);
             }
-            Advance();
-            return new AbsolutePointerNode(DataType.UINT32, address);
         }
 
         // Numbers
@@ -262,8 +265,18 @@ public class AstExpressionParser {
             return new ConstantNode(DataType.UINT32, 0); // Special marker for trigger address
         }
 
-        // 16-bit registers
         return identifier switch {
+            // 8-bit registers (low)
+            "al" => new RegisterNode(DataType.UINT8, 0),
+            "cl" => new RegisterNode(DataType.UINT8, 1),
+            "dl" => new RegisterNode(DataType.UINT8, 2),
+            "bl" => new RegisterNode(DataType.UINT8, 3),
+            // 8-bit registers (high)
+            "ah" => new RegisterNode(DataType.UINT8, 4),
+            "ch" => new RegisterNode(DataType.UINT8, 5),
+            "dh" => new RegisterNode(DataType.UINT8, 6),
+            "bh" => new RegisterNode(DataType.UINT8, 7),
+            // 16-bit registers
             "ax" => new RegisterNode(DataType.UINT16, 0),
             "cx" => new RegisterNode(DataType.UINT16, 1),
             "dx" => new RegisterNode(DataType.UINT16, 2),
@@ -272,6 +285,15 @@ public class AstExpressionParser {
             "bp" => new RegisterNode(DataType.UINT16, 5),
             "si" => new RegisterNode(DataType.UINT16, 6),
             "di" => new RegisterNode(DataType.UINT16, 7),
+            // 32-bit registers
+            "eax" => new RegisterNode(DataType.UINT32, 0),
+            "ecx" => new RegisterNode(DataType.UINT32, 1),
+            "edx" => new RegisterNode(DataType.UINT32, 2),
+            "ebx" => new RegisterNode(DataType.UINT32, 3),
+            "esp" => new RegisterNode(DataType.UINT32, 4),
+            "ebp" => new RegisterNode(DataType.UINT32, 5),
+            "esi" => new RegisterNode(DataType.UINT32, 6),
+            "edi" => new RegisterNode(DataType.UINT32, 7),
             // Segment registers
             "es" => new SegmentRegisterNode(0),
             "cs" => new SegmentRegisterNode(1),
@@ -281,6 +303,95 @@ public class AstExpressionParser {
             "gs" => new SegmentRegisterNode(5),
             _ => throw new ArgumentException($"Unknown identifier: {identifier}")
         };
+    }
+    
+    private ValueNode ParsePointerNode(DataType dataType) {
+        // Parse either absolute pointer [addr] or segmented pointer segment:[offset]
+        SkipWhitespace();
+        
+        // Check if it's a segmented register (like ES, CS, DS, etc.)
+        int savedPosition = _position;
+        if (char.IsLetter(CurrentChar())) {
+            ValueNode potentialSegment = ParseIdentifier();
+            SkipWhitespace();
+            if (CurrentChar() == ':') {
+                // It's a segmented pointer: segment:[offset]
+                Advance(); // skip ':'
+                if (CurrentChar() != '[') {
+                    throw new ArgumentException("Expected '[' after segment:");
+                }
+                Advance(); // skip '['
+                ValueNode offset = ParseExpression();
+                if (CurrentChar() != ']') {
+                    throw new ArgumentException("Expected ']'");
+                }
+                Advance();
+                return new SegmentedPointerNode(dataType, potentialSegment, offset);
+            }
+            // Not a segmented pointer, restore position
+            _position = savedPosition;
+        }
+        
+        // Absolute pointer: [address]
+        if (CurrentChar() != '[') {
+            throw new ArgumentException("Expected '[' or segment register for pointer");
+        }
+        Advance(); // skip '['
+        ValueNode address = ParseExpression();
+        if (CurrentChar() != ']') {
+            throw new ArgumentException("Expected ']'");
+        }
+        Advance();
+        return new AbsolutePointerNode(dataType, address);
+    }
+    
+    private ValueNode EnsureTypeCompatibility(ValueNode left, ValueNode right, out DataType commonType) {
+        // Determine the common type based on operand types
+        DataType leftType = left.DataType;
+        DataType rightType = right.DataType;
+        
+        // If types are the same, no conversion needed
+        if (leftType.BitWidth == rightType.BitWidth && leftType.Signed == rightType.Signed) {
+            commonType = leftType;
+            return left;
+        }
+        
+        // Choose the larger type
+        commonType = GetLargerType(leftType, rightType);
+        
+        // Convert left if needed
+        if (leftType.BitWidth != commonType.BitWidth || leftType.Signed != commonType.Signed) {
+            left = new TypeConversionNode(commonType, left);
+        }
+        
+        return left;
+    }
+    
+    private DataType GetLargerType(DataType type1, DataType type2) {
+        // Order by bit width: 8 < 16 < 32
+        if (type1.BitWidth != type2.BitWidth) {
+            return (int)type1.BitWidth > (int)type2.BitWidth ? type1 : type2;
+        }
+        // Same width: prefer unsigned
+        return type1.Signed ? type2 : type1;
+    }
+    
+    private ValueNode ApplyBinaryOperation(BinaryOperation operation, ValueNode left, ValueNode right) {
+        // For comparison and logical operations, convert operands to common type first
+        if (operation == BinaryOperation.EQUAL || operation == BinaryOperation.NOT_EQUAL ||
+            operation == BinaryOperation.LESS_THAN || operation == BinaryOperation.GREATER_THAN ||
+            operation == BinaryOperation.LESS_THAN_OR_EQUAL || operation == BinaryOperation.GREATER_THAN_OR_EQUAL) {
+            // Ensure operands have compatible types
+            DataType commonType;
+            left = EnsureTypeCompatibility(left, right, out commonType);
+            if (right.DataType.BitWidth != commonType.BitWidth || right.DataType.Signed != commonType.Signed) {
+                right = new TypeConversionNode(commonType, right);
+            }
+            return new BinaryOperationNode(DataType.BOOL, left, operation, right);
+        }
+        
+        // For arithmetic and bitwise operations, use UINT32 as default result type
+        return new BinaryOperationNode(DataType.UINT32, left, operation, right);
     }
 
     private bool Match(string text) {
