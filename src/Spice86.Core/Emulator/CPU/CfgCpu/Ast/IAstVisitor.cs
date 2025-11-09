@@ -13,6 +13,7 @@ public interface IAstVisitor<T> {
     public T VisitSegmentedAddressConstantNode(SegmentedAddressConstantNode node);
     public T VisitBinaryOperationNode(BinaryOperationNode node);
     public T VisitUnaryOperationNode(UnaryOperationNode node);
+    public T VisitTypeConversionNode(TypeConversionNode node);
     public T VisitInstructionNode(InstructionNode node);
     public T VisitConstantNode(ConstantNode node);
 }
