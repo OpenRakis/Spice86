@@ -117,9 +117,23 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     private string OperationToString(BinaryOperation binaryOperation) {
         return binaryOperation switch {
             BinaryOperation.PLUS => "+",
+            BinaryOperation.MINUS => "-",
             BinaryOperation.MULTIPLY => "*",
+            BinaryOperation.DIVIDE => "/",
+            BinaryOperation.MODULO => "%",
             BinaryOperation.EQUAL => "==",
             BinaryOperation.NOT_EQUAL => "!=",
+            BinaryOperation.LESS_THAN => "<",
+            BinaryOperation.GREATER_THAN => ">",
+            BinaryOperation.LESS_THAN_OR_EQUAL => "<=",
+            BinaryOperation.GREATER_THAN_OR_EQUAL => ">=",
+            BinaryOperation.LOGICAL_AND => "&&",
+            BinaryOperation.LOGICAL_OR => "||",
+            BinaryOperation.BITWISE_AND => "&",
+            BinaryOperation.BITWISE_OR => "|",
+            BinaryOperation.BITWISE_XOR => "^",
+            BinaryOperation.LEFT_SHIFT => "<<",
+            BinaryOperation.RIGHT_SHIFT => ">>",
             BinaryOperation.ASSIGN => "=",
             _ => throw new InvalidOperationException($"Unsupported AST operation {binaryOperation}")
         };
@@ -128,6 +142,8 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     private string OperationToString(UnaryOperation unaryOperation) {
         return unaryOperation switch {
             UnaryOperation.NOT => "!",
+            UnaryOperation.NEGATE => "-",
+            UnaryOperation.BITWISE_NOT => "~",
             _ => throw new InvalidOperationException($"Unsupported AST operation {unaryOperation}")
         };
     }
