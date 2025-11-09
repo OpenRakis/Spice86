@@ -39,6 +39,18 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     private Expression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
+        // For comparison, logical, and bitwise operations, convert operands to a common type if needed
+        if (left.Type != right.Type && binaryOperation != BinaryOperation.ASSIGN) {
+            // Convert to the larger type
+            Type targetType = GetLargerType(left.Type, right.Type);
+            if (left.Type != targetType) {
+                left = Expression.Convert(left, targetType);
+            }
+            if (right.Type != targetType) {
+                right = Expression.Convert(right, targetType);
+            }
+        }
+        
         return binaryOperation switch {
             BinaryOperation.PLUS => Expression.Add(left, right),
             BinaryOperation.MINUS => Expression.Subtract(left, right),
@@ -61,6 +73,34 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             BinaryOperation.ASSIGN => Expression.Assign(left, right),
             _ => throw new InvalidOperationException($"Unhandled Operation: {binaryOperation}")
         };
+    }
+    
+    private Type GetLargerType(Type type1, Type type2) {
+        // For boolean types, keep them as-is
+        if (type1 == typeof(bool) || type2 == typeof(bool)) {
+            return typeof(bool);
+        }
+        
+        // Order types by size: byte < ushort < uint < ulong
+        int size1 = GetTypeSize(type1);
+        int size2 = GetTypeSize(type2);
+        return size1 >= size2 ? type1 : type2;
+    }
+    
+    private int GetTypeSize(Type type) {
+        if (type == typeof(byte) || type == typeof(sbyte)) {
+            return 1;
+        }
+        if (type == typeof(ushort) || type == typeof(short)) {
+            return 2;
+        }
+        if (type == typeof(uint) || type == typeof(int)) {
+            return 4;
+        }
+        if (type == typeof(ulong) || type == typeof(long)) {
+            return 8;
+        }
+        return 4; // Default to 32-bit
     }
     
     private Expression ToExpression(UnaryOperation unaryOperation, Expression value) {
