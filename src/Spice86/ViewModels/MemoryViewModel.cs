@@ -21,14 +21,12 @@ using Spice86.Views;
 using System.Text;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
-public partial class MemoryViewModel : ViewModelWithErrorDialog {
-    private readonly IMemory _memory;
+public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly MemoryDataExporter _memoryDataExporter;
-    private readonly State _state;
 
     public MemoryViewModel(IMemory memory, MemoryDataExporter memoryDataExporter,
         State state, BreakpointsViewModel breakpointsViewModel,
@@ -36,12 +34,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         ITextClipboard textClipboard, IHostStorageProvider storageProvider,
         IStructureViewModelFactory structureViewModelFactory,
         bool canCloseTab = false, string? startAddress = null, string? endAddress = null)
-        : base(uiDispatcher, textClipboard) {
-        _state = state;
+        : base(uiDispatcher, textClipboard, state, memory) {
         _pauseHandler = pauseHandler;
         _memoryDataExporter = memoryDataExporter;
         _breakpointsViewModel = breakpointsViewModel;
-        _memory = memory;
         _pauseHandler.Paused += OnPaused;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => _uiDispatcher.Post(() => IsPaused = false);
@@ -154,98 +150,22 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
             uint rangeStart = (uint)(startAddress.Value + SelectionRange.Value.Start.ByteIndex);
             // -1 because when one element is selected, end points to the next element
             uint rangeEnd = (uint)(startAddress.Value + SelectionRange.Value.End.ByteIndex - 1);
-            _memoryBreakpointStartAddress = ConvertUtils.ToHex32(rangeStart);
-            _memoryBreakpointEndAddress = ConvertUtils.ToHex32(rangeEnd);
-            OnPropertyChanged(nameof(MemoryBreakpointStartAddress));
-            OnPropertyChanged(nameof(MemoryBreakpointEndAddress));
+            MemoryBreakpointStartAddress = ConvertUtils.ToHex32(rangeStart);
+            MemoryBreakpointEndAddress = ConvertUtils.ToHex32(rangeEnd);
         }
     }
 
-    private string? _memoryBreakpointEndAddress;
-
-    public string? MemoryBreakpointEndAddress {
-        get => _memoryBreakpointEndAddress;
-        set {
-            SetProperty(ref _memoryBreakpointEndAddress, value);
-            ValidateBreakPointForm(_memoryBreakpointStartAddress, _memoryBreakpointEndAddress, _memoryBreakpointValueCondition);
-            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-        }
+    protected override void NotifyMemoryBreakpointCanExecuteChanged() {
+        ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
     }
-
-    private string? _memoryBreakpointStartAddress;
-
-    public string? MemoryBreakpointStartAddress {
-        get => _memoryBreakpointStartAddress;
-        set {
-            SetProperty(ref _memoryBreakpointStartAddress, value);
-            ValidateBreakPointForm(_memoryBreakpointStartAddress, _memoryBreakpointEndAddress, _memoryBreakpointValueCondition);
-            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private string? _memoryBreakpointValueCondition;
-
-    public string? MemoryBreakpointValueCondition {
-        get => _memoryBreakpointValueCondition;
-        set {
-            SetProperty(ref _memoryBreakpointValueCondition, value);
-            ValidateBreakPointForm(_memoryBreakpointStartAddress, _memoryBreakpointEndAddress, _memoryBreakpointValueCondition);
-            ConfirmCreateMemoryBreakpointCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private void ValidateBreakPointForm(
-        string? memoryBreakpointStartAddress, 
-        string? memoryBreakpointEndAddress, 
-        string? memoryBreakpointValueCondition
-        ) {
-        // Validate start
-        ValidateAddressProperty(memoryBreakpointStartAddress, _state, nameof(MemoryBreakpointStartAddress));
-        ValidateAddressRange(_state, memoryBreakpointStartAddress, memoryBreakpointEndAddress, 0,
-            nameof(MemoryBreakpointStartAddress));
-        ValidateMemoryAddressIsWithinLimit(_state, memoryBreakpointStartAddress);
-        AddressAndValueParser.TryParseAddressString(memoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress);
-
-        // Validate end
-        ValidateAddressProperty(memoryBreakpointEndAddress, _state, nameof(MemoryBreakpointEndAddress));
-        ValidateAddressRange(_state, memoryBreakpointStartAddress, memoryBreakpointEndAddress, 0,
-            nameof(MemoryBreakpointEndAddress));
-        ValidateMemoryAddressIsWithinLimit(_state, memoryBreakpointEndAddress);
-        AddressAndValueParser.TryParseAddressString(memoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress);
-
-        // Validate value
-        int length = 1;
-        if (breakpointRangeStartAddress != null && breakpointRangeEndAddress != null) {
-            length = (int)(breakpointRangeEndAddress.Value - breakpointRangeStartAddress.Value) + 1;
-        }
-
-        ValidateHexProperty(memoryBreakpointValueCondition, length, nameof(MemoryBreakpointValueCondition));
-    }
-
-    [ObservableProperty]
-    private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_WRITE;
-
-    public BreakPointType[] MemoryBreakpointTypes => [
-        BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ, BreakPointType.MEMORY_ACCESS
-    ];
 
     private bool ConfirmCreateMemoryBreakpointCanExecute() {
-        return
-            !ScanForValidationErrors(
-                nameof(MemoryBreakpointStartAddress),
-                nameof(MemoryBreakpointEndAddress), nameof(MemoryBreakpointValueCondition));
+        return HasNoMemoryBreakpointValidationErrors();
     }
 
     [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {
-        MemoryBreakpointHelper.TryCreateMemoryBreakpoint(
-            MemoryBreakpointStartAddress,
-            MemoryBreakpointEndAddress,
-            MemoryBreakpointValueCondition,
-            SelectedMemoryBreakpointType,
-            _state,
-            _memory,
-            _breakpointsViewModel.CreateMemoryBreakpointAtAddress);
+        TryCreateMemoryBreakpointFromForm(_breakpointsViewModel.CreateMemoryBreakpointAtAddress);
         CreatingMemoryBreakpoint = false;
     }
 

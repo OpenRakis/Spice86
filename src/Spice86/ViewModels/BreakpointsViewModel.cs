@@ -18,30 +18,30 @@ using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelBase {
+public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
     private readonly IUIDispatcher _uiDispatcher;
-    private readonly State _state;
-    private readonly IMemory _memory;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IUIDispatcher uiDispatcher,
-        IMemory memory) {
-        _state = state;
+        IMemory memory) : base(state, memory) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        _memory = memory;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
+    }
+
+    protected override void NotifyMemoryBreakpointCanExecuteChanged() {
+        ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
     }
 
     private bool _mustRemoveSelectedBreakpoint;
@@ -73,10 +73,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 case BreakPointType.MEMORY_ACCESS:
                 case BreakPointType.MEMORY_READ:
                 case BreakPointType.MEMORY_WRITE:
-                    _memoryBreakpointEndAddress = _memoryBreakpointStartAddress = ConvertUtils.ToHex32((uint)
-                        SelectedBreakpoint.Address);
-                    OnPropertyChanged(MemoryBreakpointStartAddress);
-                    OnPropertyChanged(MemoryBreakpointEndAddress);
+                    MemoryBreakpointStartAddress = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
                     MemoryBreakpointEndAddress = ConvertUtils.ToHex32((uint)SelectedBreakpoint.EndAddress);
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
@@ -139,10 +136,9 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void BeginCreateBreakpoint() {
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
-        ExecutionAddressValue = _memoryBreakpointStartAddress = _memoryBreakpointEndAddress =
-            State.IpSegmentedAddress.ToString();
-        OnPropertyChanged(nameof(MemoryBreakpointStartAddress));
-        OnPropertyChanged(nameof(MemoryBreakpointEndAddress));
+        ExecutionAddressValue = State.IpSegmentedAddress.ToString();
+        MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
+        MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
 
     private long? _cyclesValue;
@@ -168,63 +164,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
     }
 
-    private string? _memoryBreakpointStartAddress;
-
-    public string? MemoryBreakpointStartAddress {
-        get => _memoryBreakpointStartAddress;
-        set {
-            SetProperty(ref _memoryBreakpointStartAddress, value);
-            ValidateMemoryBreakpointForm();
-            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private string? _memoryBreakpointEndAddress;
-
-    public string? MemoryBreakpointEndAddress {
-        get => _memoryBreakpointEndAddress;
-        set {
-            SetProperty(ref _memoryBreakpointEndAddress, value);
-            ValidateMemoryBreakpointForm();
-            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private string? _memoryBreakpointValueCondition;
-
-    public string? MemoryBreakpointValueCondition {
-        get => _memoryBreakpointValueCondition;
-        set {
-            SetProperty(ref _memoryBreakpointValueCondition, value);
-            ValidateMemoryBreakpointForm();
-            ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private void ValidateMemoryBreakpointForm() {
-        // Validate start address
-        ValidateAddressProperty(_memoryBreakpointStartAddress, _state, nameof(MemoryBreakpointStartAddress));
-        ValidateAddressRange(_state, _memoryBreakpointStartAddress, _memoryBreakpointEndAddress, 0,
-            nameof(MemoryBreakpointStartAddress));
-        ValidateMemoryAddressIsWithinLimit(_state, _memoryBreakpointStartAddress);
-        AddressAndValueParser.TryParseAddressString(_memoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress);
-
-        // Validate end address
-        ValidateAddressProperty(_memoryBreakpointEndAddress, _state, nameof(MemoryBreakpointEndAddress));
-        ValidateAddressRange(_state, _memoryBreakpointStartAddress, _memoryBreakpointEndAddress, 0,
-            nameof(MemoryBreakpointEndAddress));
-        ValidateMemoryAddressIsWithinLimit(_state, _memoryBreakpointEndAddress);
-        AddressAndValueParser.TryParseAddressString(_memoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress);
-
-        // Validate value condition
-        int length = 1;
-        if (breakpointRangeStartAddress != null && breakpointRangeEndAddress != null) {
-            length = (int)(breakpointRangeEndAddress.Value - breakpointRangeStartAddress.Value) + 1;
-        }
-
-        ValidateHexProperty(_memoryBreakpointValueCondition, length, nameof(MemoryBreakpointValueCondition));
-    }
-
     private string? _ioPortNumber = "0x0";
 
     public string? IoPortNumber {
@@ -247,13 +186,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
         }
     }
 
-    [ObservableProperty]
-    private BreakPointType _selectedMemoryBreakpointType = BreakPointType.MEMORY_WRITE;
-
-    public BreakPointType[] MemoryBreakpointTypes => [
-        BreakPointType.MEMORY_WRITE, BreakPointType.MEMORY_READ, BreakPointType.MEMORY_ACCESS
-    ];
-
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
         if (IsExecutionBreakpointSelected) {
@@ -270,14 +202,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            MemoryBreakpointHelper.TryCreateMemoryBreakpoint(
-                MemoryBreakpointStartAddress,
-                MemoryBreakpointEndAddress,
-                MemoryBreakpointValueCondition,
-                SelectedMemoryBreakpointType,
-                _state,
-                _memory,
-                CreateMemoryBreakpointAtAddress);
+            TryCreateMemoryBreakpointFromForm(CreateMemoryBreakpointAtAddress);
         } else if (IsCyclesBreakpointSelected) {
             if (CyclesValue is null) {
                 return;
@@ -339,11 +264,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
         } else if (IsCyclesBreakpointSelected) {
             return !ScanForValidationErrors(nameof(CyclesValue));
         } else if (IsMemoryBreakpointSelected) {
-            return
-                !ScanForValidationErrors(
-                    nameof(MemoryBreakpointStartAddress),
-                    nameof(MemoryBreakpointEndAddress),
-                    nameof(MemoryBreakpointValueCondition));
+            return HasNoMemoryBreakpointValidationErrors();
         } else if (IsExecutionBreakpointSelected) {
             return !ScanForValidationErrors(nameof(ExecutionAddressValue));
         }
