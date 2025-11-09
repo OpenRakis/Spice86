@@ -18,8 +18,8 @@ public class GdbCommandBreakpointHandler {
     private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly CPU.State? _state;
-    private readonly IMemory? _memory;
+    private readonly CPU.State _state;
+    private readonly IMemory _memory;
     private readonly GdbBreakpointCommandParser _commandParser;
 
     /// <summary>
@@ -34,7 +34,7 @@ public class GdbCommandBreakpointHandler {
     public GdbCommandBreakpointHandler(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService,
-        CPU.State? state = null, IMemory? memory = null) {
+        CPU.State state, IMemory memory) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
