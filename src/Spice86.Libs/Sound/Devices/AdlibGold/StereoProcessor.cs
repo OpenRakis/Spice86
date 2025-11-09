@@ -232,8 +232,8 @@ internal sealed class StereoProcessor {
     private void SetLowShelfGain(double gainDb) {
         const double cutoffHz = 400.0;
         const double slope = 0.5;
-        foreach (LowShelf filter in _lowShelf) {
-            filter.Setup(_sampleRateHz, cutoffHz, gainDb, slope);
+        for (int i = 0; i < _lowShelf.Length; i++) {
+            _lowShelf[i].Setup(_sampleRateHz, cutoffHz, gainDb, slope);
         }
     }
 
@@ -244,8 +244,8 @@ internal sealed class StereoProcessor {
     private void SetHighShelfGain(double gainDb) {
         const double cutoffHz = 2500.0;
         const double slope = 0.5;
-        foreach (HighShelf filter in _highShelf) {
-            filter.Setup(_sampleRateHz, cutoffHz, gainDb, slope);
+        for (int i = 0; i < _highShelf.Length; i++) {
+            _highShelf[i].Setup(_sampleRateHz, cutoffHz, gainDb, slope);
         }
     }
 
@@ -253,12 +253,12 @@ internal sealed class StereoProcessor {
     ///     Resets all shelving filters and the all-pass filter to their initial state.
     /// </summary>
     private void ResetFilters() {
-        foreach (LowShelf filter in _lowShelf) {
-            filter.Reset();
+        for (int i = 0; i < _lowShelf.Length; i++) {
+            _lowShelf[i].Reset();
         }
 
-        foreach (HighShelf filter in _highShelf) {
-            filter.Reset();
+        for (int i = 0; i < _highShelf.Length; i++) {
+            _highShelf[i].Reset();
         }
 
         _allPass.Reset();
@@ -269,14 +269,23 @@ internal sealed class StereoProcessor {
     /// </summary>
     /// <param name="frame">The input frame.</param>
     /// <returns>The re-routed frame.</returns>
-    private AudioFrame ProcessSourceSelection(AudioFrame frame) {
-        return _sourceSelector switch {
-            StereoProcessorSourceSelector.SoundA1 => new AudioFrame(frame.Left, frame.Left),
-            StereoProcessorSourceSelector.SoundA2 => new AudioFrame(frame.Left, frame.Left),
-            StereoProcessorSourceSelector.SoundB1 => new AudioFrame(frame.Right, frame.Right),
-            StereoProcessorSourceSelector.SoundB2 => new AudioFrame(frame.Right, frame.Right),
-            _ => frame
-        };
+    private void ProcessSourceSelection(ref AudioFrame frame) {
+        switch (_sourceSelector) {
+            case StereoProcessorSourceSelector.SoundA1:
+            case StereoProcessorSourceSelector.SoundA2: {
+                float left = frame.Left;
+                frame.Left = left;
+                frame.Right = left;
+                break;
+            }
+            case StereoProcessorSourceSelector.SoundB1:
+            case StereoProcessorSourceSelector.SoundB2: {
+                float right = frame.Right;
+                frame.Left = right;
+                frame.Right = right;
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -284,16 +293,16 @@ internal sealed class StereoProcessor {
     /// </summary>
     /// <param name="frame">The input frame.</param>
     /// <returns>The filtered frame.</returns>
-    private AudioFrame ProcessShelvingFilters(AudioFrame frame) {
-        var result = new AudioFrame();
-        for (int i = 0; i < 2; i++) {
-            float sample = frame[i];
-            sample = _lowShelf[i].Filter(sample);
-            sample = _highShelf[i].Filter(sample);
-            result[i] = sample;
-        }
+    private void ProcessShelvingFilters(ref AudioFrame frame) {
+        float left = frame.Left;
+        left = _lowShelf[0].Filter(left);
+        left = _highShelf[0].Filter(left);
+        frame.Left = left;
 
-        return result;
+        float right = frame.Right;
+        right = _lowShelf[1].Filter(right);
+        right = _highShelf[1].Filter(right);
+        frame.Right = right;
     }
 
     /// <summary>
@@ -301,25 +310,33 @@ internal sealed class StereoProcessor {
     /// </summary>
     /// <param name="frame">The frame to process.</param>
     /// <returns>The processed frame.</returns>
-    private AudioFrame ProcessStereoProcessing(AudioFrame frame) {
+    private void ProcessStereoProcessing(ref AudioFrame frame) {
         switch (_stereoMode) {
-            case StereoProcessorStereoMode.ForcedMono:
-                return new AudioFrame(frame.Left + frame.Right);
-            case StereoProcessorStereoMode.PseudoStereo:
-                return new AudioFrame(_allPass.Filter(frame.Left), frame.Right);
+            case StereoProcessorStereoMode.ForcedMono: {
+                float mono = frame.Left + frame.Right;
+                frame.Left = mono;
+                frame.Right = mono;
+                break;
+            }
+            case StereoProcessorStereoMode.PseudoStereo: {
+                frame.Left = _allPass.Filter(frame.Left);
+                break;
+            }
             case StereoProcessorStereoMode.SpatialStereo: {
                 const float crosstalkPercentage = 52.0f;
                 const float k = crosstalkPercentage / 100.0f;
                 float l = frame.Left;
                 float r = frame.Right;
-                return new AudioFrame(l + ((l - r) * k), r + ((r - l) * k));
+                frame.Left = l + ((l - r) * k);
+                frame.Right = r + ((r - l) * k);
+                break;
             }
             case StereoProcessorStereoMode.LinearStereo:
-                return frame;
+                break;
             default:
                 _logger.Warning("Unsupported stereo mode {StereoMode} encountered. Leaving frame unchanged.",
                     _stereoMode);
-                return frame;
+                break;
         }
     }
 
@@ -328,12 +345,11 @@ internal sealed class StereoProcessor {
     /// </summary>
     /// <param name="frame">The frame to process.</param>
     /// <returns>The processed frame.</returns>
-    internal AudioFrame Process(AudioFrame frame) {
-        frame = ProcessSourceSelection(frame);
-        frame = ProcessShelvingFilters(frame);
-        frame = ProcessStereoProcessing(frame);
+    internal void Process(ref AudioFrame frame) {
+        ProcessSourceSelection(ref frame);
+        ProcessShelvingFilters(ref frame);
+        ProcessStereoProcessing(ref frame);
         frame.Left *= _gain.Left;
         frame.Right *= _gain.Right;
-        return frame;
     }
 }

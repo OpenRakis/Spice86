@@ -3,6 +3,8 @@
 
 namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 
+using System.Runtime.CompilerServices;
+
 /*
     Envelope generator
 */
@@ -21,15 +23,17 @@ internal static class Opl3Envelope {
         EnvelopeCalcSin7
     ];
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcExp(uint level) {
         if (level > 0x1fff) {
             level = 0x1fff;
         }
 
-        int value = (Opl3Tables.ExpRom[(int)(level & 0xff)] << 1) >> (int)(level >> 8);
+        int value = (Opl3Tables.ReadExp((int)(level & 0xff)) << 1) >> (int)(level >> 8);
         return (short)value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin0(ushort phase, ushort envelope) {
         ushort neg = 0;
         phase &= 0x3ff;
@@ -38,38 +42,41 @@ internal static class Opl3Envelope {
         }
 
         ushort output = (phase & 0x100) != 0
-            ? Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff]
-            : Opl3Tables.LogSinRom[phase & 0xff];
+            ? Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff)
+            : Opl3Tables.ReadLogSin(phase & 0xff);
 
         ushort sample = (ushort)EnvelopeCalcExp((uint)(output + (envelope << 3)));
         return unchecked((short)(sample ^ neg));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin1(ushort phase, ushort envelope) {
         ushort output;
         phase &= 0x3ff;
         if ((phase & 0x200) != 0) {
             output = 0x1000;
         } else if ((phase & 0x100) != 0) {
-            output = Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff];
+            output = Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff);
         } else {
-            output = Opl3Tables.LogSinRom[phase & 0xff];
+            output = Opl3Tables.ReadLogSin(phase & 0xff);
         }
 
         return EnvelopeCalcExp((uint)(output + (envelope << 3)));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin2(ushort phase, ushort envelope) {
         const ushort neg = 0xffff;
         phase &= 0x3ff;
         ushort output = (phase & 0x100) != 0
-            ? Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff]
-            : Opl3Tables.LogSinRom[phase & 0xff];
+            ? Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff)
+            : Opl3Tables.ReadLogSin(phase & 0xff);
 
         ushort sample = (ushort)EnvelopeCalcExp((uint)(output + (envelope << 3)));
         return unchecked((short)(sample ^ neg));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin3(ushort phase, ushort envelope) {
         ushort output;
         const ushort neg = 0xffff;
@@ -77,15 +84,16 @@ internal static class Opl3Envelope {
         if ((phase & 0x200) != 0) {
             output = 0x1000;
         } else if ((phase & 0x100) != 0) {
-            output = Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff];
+            output = Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff);
         } else {
-            output = Opl3Tables.LogSinRom[phase & 0xff];
+            output = Opl3Tables.ReadLogSin(phase & 0xff);
         }
 
         ushort sample = (ushort)EnvelopeCalcExp((uint)(output + (envelope << 3)));
         return unchecked((short)(sample ^ neg));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin4(ushort phase, ushort envelope) {
         ushort output;
         const ushort neg = 0xffff;
@@ -100,6 +108,7 @@ internal static class Opl3Envelope {
         return unchecked((short)(sample ^ neg));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin5(ushort phase, ushort envelope) {
         ushort output;
         phase &= 0x3ff;
@@ -116,6 +125,7 @@ internal static class Opl3Envelope {
         return EnvelopeCalcExp((uint)(output + (envelope << 3)));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin6(ushort phase, ushort envelope) {
         ushort output;
         const ushort neg = 0xffff;
@@ -123,36 +133,37 @@ internal static class Opl3Envelope {
         if ((phase & 0x200) != 0) {
             output = 0x1000;
         } else if ((phase & 0x100) != 0) {
-            output = Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff];
+            output = Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff);
         } else {
-            output = Opl3Tables.LogSinRom[phase & 0xff];
+            output = Opl3Tables.ReadLogSin(phase & 0xff);
         }
 
         phase = (ushort)((phase + 0x80) & 0x3ff);
-        output += Opl3Tables.LogSinRom[phase & 0xff];
+        output += Opl3Tables.ReadLogSin(phase & 0xff);
         ushort sample = (ushort)EnvelopeCalcExp((uint)(output + (envelope << 3)));
         return unchecked((short)(sample ^ neg));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static short EnvelopeCalcSin7(ushort phase, ushort envelope) {
         ushort output;
         phase &= 0x3ff;
         if ((phase & 0x200) != 0) {
             output = 0x1000;
         } else if ((phase & 0x100) != 0) {
-            output = Opl3Tables.LogSinRom[(phase & 0xff) ^ 0xff];
+            output = Opl3Tables.ReadLogSin((phase & 0xff) ^ 0xff);
         } else {
-            output = Opl3Tables.LogSinRom[phase & 0xff];
+            output = Opl3Tables.ReadLogSin(phase & 0xff);
         }
 
         phase = (ushort)((phase + 0x80) & 0x3ff);
-        output += Opl3Tables.LogSinRom[phase & 0xff];
+        output += Opl3Tables.ReadLogSin(phase & 0xff);
         return EnvelopeCalcExp((uint)(output + (envelope << 3)));
     }
 
     internal static void EnvelopeUpdateKsl(Opl3Operator slot) {
         Opl3Channel channel = slot.Channel ?? throw new InvalidOperationException("Channel not assigned.");
-        short value = (short)((Opl3Tables.KeyScaleLevels[channel.FNumber >> 6] << 2)
+        short value = (short)((Opl3Tables.ReadKeyScaleLevel(channel.FNumber >> 6) << 2)
                               - ((0x08 - channel.Block) << 5));
         if (value < 0) {
             value = 0;
@@ -170,11 +181,12 @@ internal static class Opl3Envelope {
         int egIncrement = 0;
         byte reset = 0;
 
+        byte tremoloValue = slot.TremoloEnabled ? chip.Tremolo : (byte)0;
         slot.EnvelopeGeneratorLevel = (ushort)(slot.EnvelopeGeneratorOutput + (slot.RegTotalLevel << 2)
                                                                             + (slot.EffectiveKeyScaleLevel >>
-                                                                               Opl3Tables.KeyScaleShifts[
-                                                                                   slot.RegKeyScaleLevel]) +
-                                                                            (slot.TremoloControlSource?.Invoke() ?? 0));
+                                                                               Opl3Tables.ReadKeyScaleShift(
+                                                                                   slot.RegKeyScaleLevel)) +
+                                                                            tremoloValue);
 
         if (slot.RegKeyState != 0 && slot.EnvelopeGeneratorState == (byte)EnvelopeGeneratorStage.Release) {
             reset = 1;
@@ -294,9 +306,10 @@ internal static class Opl3Envelope {
         slot.RegKeyState = (byte)(slot.RegKeyState & ~(byte)type);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static short GenerateWaveform(Opl3Operator slot) {
         int index = slot.RegWaveformSelect & 0x07;
-        short mod = slot.ModulationSource.Invoke();
+        short mod = slot.ModulationSource.Read();
         ushort phase = (ushort)unchecked(slot.PhaseGeneratorOutput + (ushort)mod);
         return EnvelopeSin[index](phase, slot.EnvelopeGeneratorLevel);
     }

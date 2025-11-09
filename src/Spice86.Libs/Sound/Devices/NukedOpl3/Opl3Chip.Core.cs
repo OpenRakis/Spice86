@@ -4,6 +4,7 @@
 namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 public sealed partial class Opl3Chip {
     /* Original C: static void OPL3_PhaseGenerate(opl3_slot *slot) */
@@ -38,7 +39,7 @@ public sealed partial class Opl3Chip {
             slot.RegPhaseGeneratorAccumulator = 0;
         }
 
-        byte freqMultiplier = Opl3Tables.FrequencyMultipliers[slot.RegFrequencyMultiplier];
+        byte freqMultiplier = Opl3Tables.ReadFrequencyMultiplier(slot.RegFrequencyMultiplier);
         slot.RegPhaseGeneratorAccumulator =
             unchecked(slot.RegPhaseGeneratorAccumulator + ((baseFreq * freqMultiplier) >> 1));
 
@@ -92,9 +93,7 @@ public sealed partial class Opl3Chip {
 
     /* Original C: static void OPL3_SlotWrite20(opl3_slot *slot, uint8_t data) */
     private static void SlotWrite20(Opl3Operator slot, byte data) {
-        Opl3Chip chip = slot.Chip ?? throw new InvalidOperationException("Slot chip not assigned.");
-
-        slot.TremoloControlSource = ((data >> 7) & 0x01) != 0 ? chip.TremoloSource : ZeroByteSource;
+        slot.TremoloEnabled = ((data >> 7) & 0x01) != 0;
         slot.RegVibrato = (byte)((data >> 6) & 0x01);
         slot.RegOperatorType = (byte)((data >> 5) & 0x01);
         slot.RegKeyScaleRate = (byte)((data >> 4) & 0x01);
@@ -133,11 +132,13 @@ public sealed partial class Opl3Chip {
     }
 
     /* Original C: static void OPL3_SlotGenerate(opl3_slot *slot) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SlotGenerate(Opl3Operator slot) {
         slot.Out = Opl3Envelope.GenerateWaveform(slot);
     }
 
     /* Original C: static void OPL3_SlotCalcFB(opl3_slot *slot) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SlotCalcFeedback(Opl3Operator slot) {
         Opl3Channel channel = slot.Channel ?? throw new InvalidOperationException("Slot channel not assigned.");
         if (channel.Feedback != 0) {
@@ -153,19 +154,19 @@ public sealed partial class Opl3Chip {
     private static void ChannelSetupAlgorithm(Opl3Channel channel) {
         if (channel.ChannelType == ChannelType.Drum) {
             if (channel.ChannelNumber is 7 or 8) {
-                channel.Slotz[0].ModulationSource = ZeroShortSource;
-                channel.Slotz[1].ModulationSource = ZeroShortSource;
+                channel.Slotz[0].ModulationSource = ShortSignalSource.Zero;
+                channel.Slotz[1].ModulationSource = ShortSignalSource.Zero;
                 return;
             }
 
             switch (channel.Algorithm & 0x01) {
                 case 0x00:
-                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackModulationSource;
-                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSource;
+                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackSignal;
+                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSignal;
                     break;
                 case 0x01:
-                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackModulationSource;
-                    channel.Slotz[1].ModulationSource = ZeroShortSource;
+                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackSignal;
+                    channel.Slotz[1].ModulationSource = ShortSignalSource.Zero;
                     break;
             }
 
@@ -178,70 +179,70 @@ public sealed partial class Opl3Chip {
 
         if ((channel.Algorithm & 0x04) != 0) {
             Opl3Channel pair = channel.Pair ?? throw new InvalidOperationException("Missing 4-op pair.");
-            pair.Out[0] = ZeroShortSource;
-            pair.Out[1] = ZeroShortSource;
-            pair.Out[2] = ZeroShortSource;
-            pair.Out[3] = ZeroShortSource;
+            pair.Out[0] = ShortSignalSource.Zero;
+            pair.Out[1] = ShortSignalSource.Zero;
+            pair.Out[2] = ShortSignalSource.Zero;
+            pair.Out[3] = ShortSignalSource.Zero;
 
             switch (channel.Algorithm & 0x03) {
                 case 0x00:
-                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackModulationSource;
-                    pair.Slotz[1].ModulationSource = pair.Slotz[0].OutputSource;
-                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSource;
-                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSource;
-                    channel.Out[0] = channel.Slotz[1].OutputSource;
-                    channel.Out[1] = ZeroShortSource;
-                    channel.Out[2] = ZeroShortSource;
-                    channel.Out[3] = ZeroShortSource;
+                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackSignal;
+                    pair.Slotz[1].ModulationSource = pair.Slotz[0].OutputSignal;
+                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSignal;
+                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSignal;
+                    channel.Out[0] = channel.Slotz[1].OutputSignal;
+                    channel.Out[1] = ShortSignalSource.Zero;
+                    channel.Out[2] = ShortSignalSource.Zero;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
                 case 0x01:
-                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackModulationSource;
-                    pair.Slotz[1].ModulationSource = pair.Slotz[0].OutputSource;
-                    channel.Slotz[0].ModulationSource = ZeroShortSource;
-                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSource;
-                    channel.Out[0] = pair.Slotz[1].OutputSource;
-                    channel.Out[1] = channel.Slotz[1].OutputSource;
-                    channel.Out[2] = ZeroShortSource;
-                    channel.Out[3] = ZeroShortSource;
+                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackSignal;
+                    pair.Slotz[1].ModulationSource = pair.Slotz[0].OutputSignal;
+                    channel.Slotz[0].ModulationSource = ShortSignalSource.Zero;
+                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSignal;
+                    channel.Out[0] = pair.Slotz[1].OutputSignal;
+                    channel.Out[1] = channel.Slotz[1].OutputSignal;
+                    channel.Out[2] = ShortSignalSource.Zero;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
                 case 0x02:
-                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackModulationSource;
-                    pair.Slotz[1].ModulationSource = ZeroShortSource;
-                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSource;
-                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSource;
-                    channel.Out[0] = pair.Slotz[0].OutputSource;
-                    channel.Out[1] = channel.Slotz[1].OutputSource;
-                    channel.Out[2] = ZeroShortSource;
-                    channel.Out[3] = ZeroShortSource;
+                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackSignal;
+                    pair.Slotz[1].ModulationSource = ShortSignalSource.Zero;
+                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSignal;
+                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSignal;
+                    channel.Out[0] = pair.Slotz[0].OutputSignal;
+                    channel.Out[1] = channel.Slotz[1].OutputSignal;
+                    channel.Out[2] = ShortSignalSource.Zero;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
                 case 0x03:
-                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackModulationSource;
-                    pair.Slotz[1].ModulationSource = ZeroShortSource;
-                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSource;
-                    channel.Slotz[1].ModulationSource = ZeroShortSource;
-                    channel.Out[0] = pair.Slotz[0].OutputSource;
-                    channel.Out[1] = channel.Slotz[0].OutputSource;
-                    channel.Out[2] = channel.Slotz[1].OutputSource;
-                    channel.Out[3] = ZeroShortSource;
+                    pair.Slotz[0].ModulationSource = pair.Slotz[0].FeedbackSignal;
+                    pair.Slotz[1].ModulationSource = ShortSignalSource.Zero;
+                    channel.Slotz[0].ModulationSource = pair.Slotz[1].OutputSignal;
+                    channel.Slotz[1].ModulationSource = ShortSignalSource.Zero;
+                    channel.Out[0] = pair.Slotz[0].OutputSignal;
+                    channel.Out[1] = channel.Slotz[0].OutputSignal;
+                    channel.Out[2] = channel.Slotz[1].OutputSignal;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
             }
         } else {
             switch (channel.Algorithm & 0x01) {
                 case 0x00:
-                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackModulationSource;
-                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSource;
-                    channel.Out[0] = channel.Slotz[1].OutputSource;
-                    channel.Out[1] = ZeroShortSource;
-                    channel.Out[2] = ZeroShortSource;
-                    channel.Out[3] = ZeroShortSource;
+                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackSignal;
+                    channel.Slotz[1].ModulationSource = channel.Slotz[0].OutputSignal;
+                    channel.Out[0] = channel.Slotz[1].OutputSignal;
+                    channel.Out[1] = ShortSignalSource.Zero;
+                    channel.Out[2] = ShortSignalSource.Zero;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
                 case 0x01:
-                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackModulationSource;
-                    channel.Slotz[1].ModulationSource = ZeroShortSource;
-                    channel.Out[0] = channel.Slotz[0].OutputSource;
-                    channel.Out[1] = channel.Slotz[1].OutputSource;
-                    channel.Out[2] = ZeroShortSource;
-                    channel.Out[3] = ZeroShortSource;
+                    channel.Slotz[0].ModulationSource = channel.Slotz[0].FeedbackSignal;
+                    channel.Slotz[1].ModulationSource = ShortSignalSource.Zero;
+                    channel.Out[0] = channel.Slotz[0].OutputSignal;
+                    channel.Out[1] = channel.Slotz[1].OutputSignal;
+                    channel.Out[2] = ShortSignalSource.Zero;
+                    channel.Out[3] = ShortSignalSource.Zero;
                     break;
             }
         }
@@ -256,20 +257,20 @@ public sealed partial class Opl3Chip {
             Opl3Channel channel7 = chip.Channels[7];
             Opl3Channel channel8 = chip.Channels[8];
 
-            channel6.Out[0] = channel6.Slotz[1].OutputSource;
-            channel6.Out[1] = channel6.Slotz[1].OutputSource;
-            channel6.Out[2] = ZeroShortSource;
-            channel6.Out[3] = ZeroShortSource;
+            channel6.Out[0] = channel6.Slotz[1].OutputSignal;
+            channel6.Out[1] = channel6.Slotz[1].OutputSignal;
+            channel6.Out[2] = ShortSignalSource.Zero;
+            channel6.Out[3] = ShortSignalSource.Zero;
 
-            channel7.Out[0] = channel7.Slotz[0].OutputSource;
-            channel7.Out[1] = channel7.Slotz[0].OutputSource;
-            channel7.Out[2] = channel7.Slotz[1].OutputSource;
-            channel7.Out[3] = channel7.Slotz[1].OutputSource;
+            channel7.Out[0] = channel7.Slotz[0].OutputSignal;
+            channel7.Out[1] = channel7.Slotz[0].OutputSignal;
+            channel7.Out[2] = channel7.Slotz[1].OutputSignal;
+            channel7.Out[3] = channel7.Slotz[1].OutputSignal;
 
-            channel8.Out[0] = channel8.Slotz[0].OutputSource;
-            channel8.Out[1] = channel8.Slotz[0].OutputSource;
-            channel8.Out[2] = channel8.Slotz[1].OutputSource;
-            channel8.Out[3] = channel8.Slotz[1].OutputSource;
+            channel8.Out[0] = channel8.Slotz[0].OutputSignal;
+            channel8.Out[1] = channel8.Slotz[0].OutputSignal;
+            channel8.Out[2] = channel8.Slotz[1].OutputSignal;
+            channel8.Out[3] = channel8.Slotz[1].OutputSignal;
 
             for (int ch = 6; ch < 9; ch++) {
                 chip.Channels[ch].ChannelType = ChannelType.Drum;
@@ -314,10 +315,10 @@ public sealed partial class Opl3Chip {
             for (int ch = 6; ch < 9; ch++) {
                 Opl3Channel channel = chip.Channels[ch];
                 channel.ChannelType = ChannelType.TwoOp;
-                channel.Out[0] = ZeroShortSource;
-                channel.Out[1] = ZeroShortSource;
-                channel.Out[2] = ZeroShortSource;
-                channel.Out[3] = ZeroShortSource;
+                channel.Out[0] = ShortSignalSource.Zero;
+                channel.Out[1] = ShortSignalSource.Zero;
+                channel.Out[2] = ShortSignalSource.Zero;
+                channel.Out[3] = ShortSignalSource.Zero;
                 ChannelSetupAlgorithm(channel);
             }
         }
@@ -509,6 +510,7 @@ public sealed partial class Opl3Chip {
     }
 
     /* Original C: static void OPL3_ProcessSlot(opl3_slot *slot) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ProcessSlot(Opl3Operator slot) {
         Opl3Envelope.EnvelopeCalc(slot);
         PhaseGenerate(slot);
@@ -516,6 +518,16 @@ public sealed partial class Opl3Chip {
         SlotCalcFeedback(slot);
     }
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int SumChannelOutputs(Opl3Channel channel) {
+        ShortSignalSource[] outputs = channel.Out;
+        ref ShortSignalSource first = ref MemoryMarshal.GetArrayDataReference(outputs);
+        return first.Read()
+               + Unsafe.Add(ref first, 1).Read()
+               + Unsafe.Add(ref first, 2).Read()
+               + Unsafe.Add(ref first, 3).Read();
+    }
 
     /* Original C: void OPL3_Generate4Ch(opl3_chip *chip, int16_t *buf4) */
     private void Generate4ChCore(Span<short> buffer) {
@@ -531,16 +543,18 @@ public sealed partial class Opl3Chip {
             ProcessSlot(Slots[ii]);
         }
 #else
-        foreach (Opl3Operator t in Slots) {
-            ProcessSlot(t);
+        Opl3Operator[] localSlots = Slots;
+        for (int ii = 0; ii < localSlots.Length; ii++) {
+            ProcessSlot(localSlots[ii]);
         }
 #endif
 
         int mix0 = 0;
         int mix1 = 0;
-        foreach (Opl3Channel channel in Channels) {
-            int accm = channel.Out[0].Invoke() + channel.Out[1].Invoke() + channel.Out[2].Invoke() +
-                       channel.Out[3].Invoke();
+        Opl3Channel[] channels = Channels;
+        for (int channelIndex = 0; channelIndex < channels.Length; channelIndex++) {
+            Opl3Channel channel = channels[channelIndex];
+            int accm = SumChannelOutputs(channel);
 #if OPL_ENABLE_STEREOEXT
             int panLeft = (int)(((long)accm * channel.LeftPan) >> 16);
             mix0 = unchecked(mix0 + (short)panLeft);
@@ -572,9 +586,9 @@ public sealed partial class Opl3Chip {
 
         mix0 = 0;
         mix1 = 0;
-        foreach (Opl3Channel channel in Channels) {
-            int accm = channel.Out[0].Invoke() + channel.Out[1].Invoke() + channel.Out[2].Invoke() +
-                       channel.Out[3].Invoke();
+        for (int channelIndex = 0; channelIndex < channels.Length; channelIndex++) {
+            Opl3Channel channel = channels[channelIndex];
+            int accm = SumChannelOutputs(channel);
 
 #if OPL_ENABLE_STEREOEXT
             int panRight = (int)(((long)accm * channel.RightPan) >> 16);
@@ -663,6 +677,23 @@ public sealed partial class Opl3Chip {
             throw new ArgumentException("Buffer must contain at least four samples.", nameof(buffer));
         }
 
+        ref short destination = ref MemoryMarshal.GetReference(buffer);
+        Generate4ChResampledCore(
+            ref destination,
+            ref Unsafe.Add(ref destination, 1),
+            ref Unsafe.Add(ref destination, 2),
+            ref Unsafe.Add(ref destination, 3));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Generate4ChResampledCore(
+        // ReSharper disable RedundantAssignment
+        ref short channel0,
+        ref short channel1,
+        ref short channel2,
+        ref short channel3
+        // ReSharper restore RedundantAssignment
+    ) {
         while (RateRatio != 0 && SampleCounter >= RateRatio) {
             OldSamples[0] = Samples[0];
             OldSamples[1] = Samples[1];
@@ -674,34 +705,39 @@ public sealed partial class Opl3Chip {
         }
 
         if (RateRatio != 0) {
-            buffer[0] = (short)(((OldSamples[0] * (RateRatio - SampleCounter)) + (Samples[0] * SampleCounter)) /
-                                RateRatio);
-            buffer[1] = (short)(((OldSamples[1] * (RateRatio - SampleCounter)) + (Samples[1] * SampleCounter)) /
-                                RateRatio);
-            buffer[2] = (short)(((OldSamples[2] * (RateRatio - SampleCounter)) + (Samples[2] * SampleCounter)) /
-                                RateRatio);
-            buffer[3] = (short)(((OldSamples[3] * (RateRatio - SampleCounter)) + (Samples[3] * SampleCounter)) /
-                                RateRatio);
+            channel0 = (short)(((OldSamples[0] * (RateRatio - SampleCounter)) + (Samples[0] * SampleCounter)) /
+                               RateRatio);
+            channel1 = (short)(((OldSamples[1] * (RateRatio - SampleCounter)) + (Samples[1] * SampleCounter)) /
+                               RateRatio);
+            channel2 = (short)(((OldSamples[2] * (RateRatio - SampleCounter)) + (Samples[2] * SampleCounter)) /
+                               RateRatio);
+            channel3 = (short)(((OldSamples[3] * (RateRatio - SampleCounter)) + (Samples[3] * SampleCounter)) /
+                               RateRatio);
         } else {
-            buffer[0] = Samples[0];
-            buffer[1] = Samples[1];
-            buffer[2] = Samples[2];
-            buffer[3] = Samples[3];
+            channel0 = Samples[0];
+            channel1 = Samples[1];
+            channel2 = Samples[2];
+            channel3 = Samples[3];
         }
 
         SampleCounter += 1 << ResampleFractionBits;
     }
 
     /* Original C: void OPL3_GenerateResampled(opl3_chip *chip, int16_t *buf) */
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void GenerateResampledCore(Span<short> buffer) {
         if (buffer.Length < 2) {
             throw new ArgumentException("Buffer must contain at least two samples.", nameof(buffer));
         }
 
-        Span<short> temp = stackalloc short[4];
-        Generate4ChResampledCore(temp);
-        buffer[0] = temp[0];
-        buffer[1] = temp[1];
+        ref short destination = ref MemoryMarshal.GetReference(buffer);
+        short discardRearLeft = 0;
+        short discardRearRight = 0;
+        Generate4ChResampledCore(
+            ref destination,
+            ref Unsafe.Add(ref destination, 1),
+            ref discardRearLeft,
+            ref discardRearRight);
     }
 
     /* Original C: void OPL3_Reset(opl3_chip *chip, uint32_t samplerate) */
@@ -741,19 +777,19 @@ public sealed partial class Opl3Chip {
         WriteBufferLast = 0;
         WriteBufferLastTime = 0;
 
-        foreach (Opl3WriteBufferEntry t in WriteBuffer) {
-            t.Register = 0;
-            t.Data = 0;
-            t.Time = 0;
+        Opl3WriteBufferEntry[] writeBuffer = WriteBuffer;
+        for (int i = 0; i < writeBuffer.Length; i++) {
+            Opl3WriteBufferEntry entry = writeBuffer[i];
+            entry.Register = 0;
+            entry.Data = 0;
+            entry.Time = 0;
         }
-
-        ReadOnlySpan<byte> channelSlot = Opl3Tables.ChannelSlots;
 
         for (int slotIndex = 0; slotIndex < Slots.Length; slotIndex++) {
             Opl3Operator slot = Slots[slotIndex];
             slot.Channel = null;
             slot.Chip = this;
-            slot.ModulationSource = ZeroShortSource;
+            slot.ModulationSource = ShortSignalSource.Zero;
             slot.PreviousOutputSample = 0;
             slot.Out = 0;
             slot.FeedbackModifiedSignal = 0;
@@ -763,7 +799,7 @@ public sealed partial class Opl3Chip {
             slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Release;
             slot.EffectiveEnvelopeRateIndex = 0;
             slot.EffectiveKeyScaleLevel = 0;
-            slot.TremoloControlSource = ZeroByteSource;
+            slot.TremoloEnabled = false;
             slot.RegVibrato = 0;
             slot.RegOperatorType = 0;
             slot.RegKeyScaleRate = 0;
@@ -784,7 +820,7 @@ public sealed partial class Opl3Chip {
 
         for (int channelIndex = 0; channelIndex < Channels.Length; channelIndex++) {
             Opl3Channel channel = Channels[channelIndex];
-            byte localSlot = channelSlot[channelIndex];
+            byte localSlot = Opl3Tables.ReadChannelSlot(channelIndex);
             channel.Slotz[0] = Slots[localSlot];
             channel.Slotz[1] = Slots[localSlot + 3];
             channel.Slotz[0].Channel = channel;
@@ -801,10 +837,10 @@ public sealed partial class Opl3Chip {
             };
 
             channel.Chip = this;
-            channel.Out[0] = ZeroShortSource;
-            channel.Out[1] = ZeroShortSource;
-            channel.Out[2] = ZeroShortSource;
-            channel.Out[3] = ZeroShortSource;
+            channel.Out[0] = ShortSignalSource.Zero;
+            channel.Out[1] = ShortSignalSource.Zero;
+            channel.Out[2] = ShortSignalSource.Zero;
+            channel.Out[3] = ShortSignalSource.Zero;
             channel.ChannelType = ChannelType.TwoOp;
             channel.FNumber = 0;
             channel.Block = 0;
@@ -857,7 +893,7 @@ public sealed partial class Opl3Chip {
 
             case 0x20:
             case 0x30: {
-                int slotIndex = Opl3Tables.AddressDecodeSlots[regm & 0x1f];
+                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
                 if (slotIndex >= 0) {
                     SlotWrite20(Slots[slotBase + slotIndex], value);
                 }
@@ -867,7 +903,7 @@ public sealed partial class Opl3Chip {
 
             case 0x40:
             case 0x50: {
-                int slotIndex = Opl3Tables.AddressDecodeSlots[regm & 0x1f];
+                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
                 if (slotIndex >= 0) {
                     SlotWrite40(Slots[slotBase + slotIndex], value);
                 }
@@ -877,7 +913,7 @@ public sealed partial class Opl3Chip {
 
             case 0x60:
             case 0x70: {
-                int slotIndex = Opl3Tables.AddressDecodeSlots[regm & 0x1f];
+                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
                 if (slotIndex >= 0) {
                     SlotWrite60(Slots[slotBase + slotIndex], value);
                 }
@@ -887,7 +923,7 @@ public sealed partial class Opl3Chip {
 
             case 0x80:
             case 0x90: {
-                int slotIndex = Opl3Tables.AddressDecodeSlots[regm & 0x1f];
+                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
                 if (slotIndex >= 0) {
                     SlotWrite80(Slots[slotBase + slotIndex], value);
                 }
@@ -897,7 +933,7 @@ public sealed partial class Opl3Chip {
 
             case 0xe0:
             case 0xf0: {
-                int slotIndex = Opl3Tables.AddressDecodeSlots[regm & 0x1f];
+                int slotIndex = Opl3Tables.ReadAddressDecodeSlot(regm & 0x1f);
                 if (slotIndex >= 0) {
                     SlotWriteE0(Slots[slotBase + slotIndex], value);
                 }
@@ -976,15 +1012,19 @@ public sealed partial class Opl3Chip {
         }
 
         int frames = Math.Min(stream1.Length, stream2.Length) / 2;
-        Span<short> temp = stackalloc short[4];
-        int offset1 = 0;
-        int offset2 = 0;
+        if (frames == 0) {
+            return;
+        }
+
+        ref short leftReference = ref MemoryMarshal.GetReference(stream1);
+        ref short rightReference = ref MemoryMarshal.GetReference(stream2);
         for (int i = 0; i < frames; i++) {
-            Generate4ChResampledCore(temp);
-            stream1[offset1++] = temp[0];
-            stream1[offset1++] = temp[1];
-            stream2[offset2++] = temp[2];
-            stream2[offset2++] = temp[3];
+            int offset = i << 1;
+            Generate4ChResampledCore(
+                ref Unsafe.Add(ref leftReference, offset),
+                ref Unsafe.Add(ref leftReference, offset + 1),
+                ref Unsafe.Add(ref rightReference, offset),
+                ref Unsafe.Add(ref rightReference, offset + 1));
         }
     }
 
@@ -995,8 +1035,20 @@ public sealed partial class Opl3Chip {
         }
 
         int frames = stream.Length / 2;
-        for (int i = 0; i < frames; i++) {
-            GenerateResampledCore(stream.Slice(i * 2, 2));
+        if (frames == 0) {
+            return;
+        }
+
+        ref short destination = ref MemoryMarshal.GetReference(stream);
+        short discardRearLeft = default;
+        short discardRearRight = default;
+        for (int sampleIndex = 0; sampleIndex < frames; sampleIndex++) {
+            int offset = sampleIndex << 1;
+            Generate4ChResampledCore(
+                ref Unsafe.Add(ref destination, offset),
+                ref Unsafe.Add(ref destination, offset + 1),
+                ref discardRearLeft,
+                ref discardRearRight);
         }
     }
 }

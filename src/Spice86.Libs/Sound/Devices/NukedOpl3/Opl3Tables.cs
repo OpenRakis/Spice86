@@ -32,12 +32,9 @@
 
 namespace Spice86.Libs.Sound.Devices.NukedOpl3;
 
-internal static class Opl3Tables {
-    /*
-        logsin table
-    */
-    internal static ReadOnlySpan<ushort> LogSinRom => LogSinRomData;
+using System.Runtime.CompilerServices;
 
+internal static class Opl3Tables {
     private static readonly ushort[] LogSinRomData = [
         0x859, 0x6c3, 0x607, 0x58b, 0x52e, 0x4e4, 0x4a6, 0x471,
         0x443, 0x41a, 0x3f5, 0x3d3, 0x3b5, 0x398, 0x37e, 0x365,
@@ -72,11 +69,6 @@ internal static class Opl3Tables {
         0x002, 0x001, 0x001, 0x001, 0x001, 0x001, 0x001, 0x001,
         0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000
     ];
-
-    /*
-        exp table
-    */
-    internal static ReadOnlySpan<ushort> ExpRom => ExpRomData;
 
     private static readonly ushort[] ExpRomData = [
         0x7fa, 0x7f5, 0x7ef, 0x7ea, 0x7e4, 0x7df, 0x7da, 0x7d4,
@@ -113,49 +105,22 @@ internal static class Opl3Tables {
         0x414, 0x411, 0x40e, 0x40b, 0x408, 0x406, 0x403, 0x400
     ];
 
-    /*
-        freq mult table multiplied by 2
-
-        1/2, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15
-    */
-    internal static ReadOnlySpan<byte> FrequencyMultipliers => FrequencyMultiplierData;
-
     private static readonly byte[] FrequencyMultiplierData = [
         1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 20, 24, 24, 30, 30
     ];
-
-    /*
-        ksl table
-    */
-    internal static ReadOnlySpan<byte> KeyScaleLevels => KeyScaleLevelData;
 
     private static readonly byte[] KeyScaleLevelData = [
         0, 32, 40, 45, 48, 51, 53, 55, 56, 58, 59, 60, 61, 62, 63, 64
     ];
 
-    /*
-        ksl shift values
-    */
-    internal static ReadOnlySpan<byte> KeyScaleShifts => KeyScaleShiftData;
-
     private static readonly byte[] KeyScaleShiftData = [
         8, 1, 2, 0
     ];
-
-    /*
-        address decoding
-    */
-    internal static ReadOnlySpan<sbyte> AddressDecodeSlots => AddressDecodeSlotData;
 
     private static readonly sbyte[] AddressDecodeSlotData = [
         0, 1, 2, 3, 4, 5, -1, -1, 6, 7, 8, 9, 10, 11, -1, -1,
         12, 13, 14, 15, 16, 17, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
     ];
-
-    /*
-        channel slot offsets
-    */
-    internal static ReadOnlySpan<byte> ChannelSlots => ChannelSlotData;
 
     private static readonly byte[] ChannelSlotData = [
         0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20, 24, 25, 26, 30, 31, 32
@@ -189,4 +154,39 @@ internal static class Opl3Tables {
         { 1, 0, 1, 0 },
         { 1, 1, 1, 0 }
     };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ushort ReadLogSin(int index) {
+        return LogSinRomData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ushort ReadExp(int index) {
+        return ExpRomData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte ReadKeyScaleLevel(int index) {
+        return KeyScaleLevelData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte ReadKeyScaleShift(int index) {
+        return KeyScaleShiftData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte ReadFrequencyMultiplier(int index) {
+        return FrequencyMultiplierData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte ReadChannelSlot(int index) {
+        return ChannelSlotData[index];
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static sbyte ReadAddressDecodeSlot(int index) {
+        return AddressDecodeSlotData[index];
+    }
 }

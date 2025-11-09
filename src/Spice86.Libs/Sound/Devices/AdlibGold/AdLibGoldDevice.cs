@@ -5,6 +5,9 @@ using Serilog;
 using Spice86.Libs.Sound.Common;
 using Spice86.Libs.Sound.Devices.NukedOpl3;
 
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
 /// <summary>
 ///     Provides surround and stereo processing that replicates the AdLib Gold signal chain.
 /// </summary>
@@ -95,24 +98,24 @@ public sealed class AdLibGoldDevice : IDisposable {
             throw new ArgumentException("Output buffer too small for requested frames.", nameof(output));
         }
 
-        int inputIndex = 0;
-        int outputIndex = 0;
+        int samples = frames * 2;
+        ref short inputRef = ref MemoryMarshal.GetReference(input);
+        ref float outputRef = ref MemoryMarshal.GetReference(output);
         const float wetBoost = 1.8f;
 
-        for (int i = 0; i < frames; i++) {
-            var frame = new AudioFrame(input[inputIndex], input[inputIndex + 1]);
+        for (int sampleIndex = 0; sampleIndex < samples; sampleIndex += 2) {
+            short left16 = Unsafe.Add(ref inputRef, sampleIndex);
+            short right16 = Unsafe.Add(ref inputRef, sampleIndex + 1);
+            var frame = new AudioFrame(left16, right16);
             AudioFrame wet = _surround.Process(frame);
 
             frame.Left += wet.Left * wetBoost;
             frame.Right += wet.Right * wetBoost;
 
-            frame = _stereo.Process(frame);
+            _stereo.Process(ref frame);
 
-            output[outputIndex] = frame.Left;
-            output[outputIndex + 1] = frame.Right;
-
-            inputIndex += 2;
-            outputIndex += 2;
+            Unsafe.Add(ref outputRef, sampleIndex) = frame.Left;
+            Unsafe.Add(ref outputRef, sampleIndex + 1) = frame.Right;
         }
     }
 }

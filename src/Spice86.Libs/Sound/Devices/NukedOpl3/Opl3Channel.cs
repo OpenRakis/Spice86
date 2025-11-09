@@ -29,7 +29,7 @@ internal sealed class Opl3Channel {
     internal Opl3Operator[] Slotz { get; } = new Opl3Operator[2];
     internal Opl3Channel? Pair { get; set; }
     internal Opl3Chip? Chip { get; set; }
-    internal Func<short>[] Out { get; } = new Func<short>[4];
+    internal ShortSignalSource[] Out { get; } = new ShortSignalSource[4];
 #if OPL_ENABLE_STEREOEXT
     internal int LeftPan;
     internal int RightPan;

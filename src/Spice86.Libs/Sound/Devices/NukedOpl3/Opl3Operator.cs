@@ -76,7 +76,7 @@ public sealed class Opl3Operator {
     ///     External modulation source providing the modulator signal for this operator (usually previous operator in
     ///     algorithm).
     /// </summary>
-    internal Func<short> ModulationSource = Opl3Chip.ZeroShortSource;
+    internal ShortSignalSource ModulationSource = ShortSignalSource.Zero;
 
     /// <summary>
     ///     Current operator audio output sample (linear, post-EG, post-waveform).
@@ -181,12 +181,6 @@ public sealed class Opl3Operator {
     /// </summary>
     internal byte SlotIndex;
 
-    internal Opl3Operator() {
-        OutputSource = () => Out;
-        FeedbackModulationSource = () => FeedbackModifiedSignal;
-    }
-
-
     /// <summary>
     ///     Back-reference to the owning channel this operator belongs to.
     /// </summary>
@@ -198,17 +192,17 @@ public sealed class Opl3Operator {
     internal Opl3Chip? Chip { get; set; }
 
     /// <summary>
-    ///     Tremolo control source (amplitude modulation LFO value).
+    ///     Indicates whether the tremolo LFO is applied to this operator.
     /// </summary>
-    internal Func<byte>? TremoloControlSource { get; set; } = Opl3Chip.ZeroByteSource;
+    internal bool TremoloEnabled { get; set; }
 
     /// <summary>
     ///     Value source exposing current operator output sample.
     /// </summary>
-    internal Func<short> OutputSource { get; }
+    internal ShortSignalSource OutputSignal => ShortSignalSource.FromOutput(this);
 
     /// <summary>
     ///     Value source exposing feedback-modified signal.
     /// </summary>
-    internal Func<short> FeedbackModulationSource { get; }
+    internal ShortSignalSource FeedbackSignal => ShortSignalSource.FromFeedback(this);
 }

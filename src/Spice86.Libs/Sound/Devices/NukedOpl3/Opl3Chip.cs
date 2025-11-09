@@ -46,14 +46,7 @@ public sealed partial class Opl3Chip {
     internal ulong WriteBufferLastTime;
     private Opl3WriteBufferEntry[] WriteBuffer { get; } = new Opl3WriteBufferEntry[WriteBufferSize];
 
-    internal static readonly Func<short> ZeroShortSource = () => 0;
-    internal static readonly Func<byte> ZeroByteSource = () => 0;
-
-    private Func<byte> TremoloSource { get; }
-
     public Opl3Chip() {
-        TremoloSource = () => Tremolo;
-
         for (int i = 0; i < Channels.Length; i++) {
             Channels[i] = new Opl3Channel {
                 Chip = this,
@@ -61,7 +54,7 @@ public sealed partial class Opl3Chip {
                 ChannelType = ChannelType.TwoOp
             };
             for (int j = 0; j < Channels[i].Out.Length; j++) {
-                Channels[i].Out[j] = ZeroShortSource;
+                Channels[i].Out[j] = ShortSignalSource.Zero;
             }
         }
 
@@ -69,8 +62,8 @@ public sealed partial class Opl3Chip {
             Slots[i] = new Opl3Operator {
                 Chip = this,
                 SlotIndex = (byte)i,
-                ModulationSource = ZeroShortSource,
-                TremoloControlSource = ZeroByteSource
+                ModulationSource = ShortSignalSource.Zero,
+                TremoloEnabled = false
             };
         }
 
