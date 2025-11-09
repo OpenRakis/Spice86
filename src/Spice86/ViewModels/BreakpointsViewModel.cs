@@ -319,29 +319,46 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     private Func<long, bool>? CreateCheckForBreakpointMemoryValue(byte[]? triggerValueCondition, long startAddress) {
-        if (triggerValueCondition is null || triggerValueCondition.Length == 0) {
-            return null;
+        return BreakpointUtils.CreateCheckForBreakpointMemoryValue(
+            triggerValueCondition,
+            startAddress,
+            SelectedMemoryBreakpointType,
+            address => _memory.SneakilyRead((uint)address),
+            () => _memory.CurrentlyWritingByte
+        );
+    }
+
+    // Utility class for shared breakpoint logic
+    private static class BreakpointUtils {
+        public static Func<long, bool>? CreateCheckForBreakpointMemoryValue(
+            byte[]? triggerValueCondition,
+            long startAddress,
+            BreakPointType type,
+            Func<long, byte> readMemory,
+            Func<byte> getCurrentlyWritingByte
+        ) {
+            if (triggerValueCondition is null || triggerValueCondition.Length == 0) {
+                return null;
+            }
+
+            return (long address) => {
+                long index = address - startAddress;
+                byte expectedValue = triggerValueCondition[index];
+                if (type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS) {
+                    if (readMemory(address) == expectedValue) {
+                        return true;
+                    }
+                }
+
+                if (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS) {
+                    if (getCurrentlyWritingByte() == expectedValue) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
         }
-
-        BreakPointType type = SelectedMemoryBreakpointType;
-
-        return (long address) => {
-            long index = address - startAddress;
-            byte expectedValue = triggerValueCondition[index];
-            if (type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS) {
-                if (_memory.SneakilyRead((uint)address) == expectedValue) {
-                    return true;
-                }
-            }
-
-            if (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS) {
-                if (_memory.CurrentlyWritingByte == expectedValue) {
-                    return true;
-                }
-            }
-
-            return false;
-        };
     }
 
     internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, BreakPointType type, Func<long, bool>? additionalTriggerCondition) {
