@@ -38,20 +38,36 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         };
     }
 
-    private BinaryExpression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
+    private Expression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
         return binaryOperation switch {
             BinaryOperation.PLUS => Expression.Add(left, right),
+            BinaryOperation.MINUS => Expression.Subtract(left, right),
             BinaryOperation.MULTIPLY => Expression.Multiply(left, right),
+            BinaryOperation.DIVIDE => Expression.Divide(left, right),
+            BinaryOperation.MODULO => Expression.Modulo(left, right),
             BinaryOperation.EQUAL => Expression.Equal(left, right),
             BinaryOperation.NOT_EQUAL => Expression.NotEqual(left, right),
+            BinaryOperation.LESS_THAN => Expression.LessThan(left, right),
+            BinaryOperation.GREATER_THAN => Expression.GreaterThan(left, right),
+            BinaryOperation.LESS_THAN_OR_EQUAL => Expression.LessThanOrEqual(left, right),
+            BinaryOperation.GREATER_THAN_OR_EQUAL => Expression.GreaterThanOrEqual(left, right),
+            BinaryOperation.LOGICAL_AND => Expression.AndAlso(left, right),
+            BinaryOperation.LOGICAL_OR => Expression.OrElse(left, right),
+            BinaryOperation.BITWISE_AND => Expression.And(left, right),
+            BinaryOperation.BITWISE_OR => Expression.Or(left, right),
+            BinaryOperation.BITWISE_XOR => Expression.ExclusiveOr(left, right),
+            BinaryOperation.LEFT_SHIFT => Expression.LeftShift(left, right),
+            BinaryOperation.RIGHT_SHIFT => Expression.RightShift(left, right),
             BinaryOperation.ASSIGN => Expression.Assign(left, right),
             _ => throw new InvalidOperationException($"Unhandled Operation: {binaryOperation}")
         };
     }
     
-    private UnaryExpression ToExpression(UnaryOperation unaryOperation, Expression value) {
+    private Expression ToExpression(UnaryOperation unaryOperation, Expression value) {
         return unaryOperation switch {
             UnaryOperation.NOT => Expression.Not(value),
+            UnaryOperation.NEGATE => Expression.Negate(value),
+            UnaryOperation.BITWISE_NOT => Expression.OnesComplement(value),
             _ => throw new InvalidOperationException($"Unhandled Operation: {unaryOperation}")
         };
     }
