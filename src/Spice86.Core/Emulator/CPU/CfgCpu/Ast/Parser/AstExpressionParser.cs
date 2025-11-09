@@ -258,13 +258,6 @@ public class AstExpressionParser {
         }
         string identifier = _input.Substring(start, _position - start).ToLowerInvariant();
 
-        // Special keyword: address (the trigger address)
-        if (identifier == "address") {
-            // Return a constant representing the trigger address (will be set at evaluation time)
-            // For now, use 0 as a placeholder; the evaluator will handle this specially
-            return new ConstantNode(DataType.UINT32, 0); // Special marker for trigger address
-        }
-
         return identifier switch {
             // 8-bit registers (low)
             "al" => new RegisterNode(DataType.UINT8, 0),
