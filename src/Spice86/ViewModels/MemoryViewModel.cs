@@ -237,29 +237,12 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
     }
 
     private Func<long, bool>? CreateCheckForBreakpointMemoryValue(byte[]? triggerValueCondition, long startAddress) {
-        if (triggerValueCondition == null) {
-            return null;
-        }
-
-        BreakPointType type = SelectedMemoryBreakpointType;
-
-        return (long address) => {
-            long index = address - startAddress;
-            byte expectedValue = triggerValueCondition[index];
-            if (type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS) {
-                if (_memory.SneakilyRead((uint)address) == expectedValue) {
-                    return true;
-                }
-            }
-
-            if (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS) {
-                if (_memory.CurrentlyWritingByte == expectedValue) {
-                    return true;
-                }
-            }
-
-            return false;
-        };
+        return MemoryBreakpointHelper.CreateCheckForBreakpointMemoryValue(
+            triggerValueCondition,
+            startAddress,
+            SelectedMemoryBreakpointType,
+            _memory
+        );
     }
     [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {

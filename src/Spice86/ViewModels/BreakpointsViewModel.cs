@@ -173,11 +173,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointStartAddress {
         get => _memoryBreakpointStartAddress;
         set {
-            ValidateAddressProperty(value, _state);
-            ValidateMemoryAddressIsWithinLimit(_state, value);
-            ValidateAddressRange(_state, value,
-                MemoryBreakpointEndAddress, 0, nameof(MemoryBreakpointStartAddress));
             SetProperty(ref _memoryBreakpointStartAddress, value);
+            ValidateMemoryBreakpointForm();
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
@@ -187,11 +184,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
     public string? MemoryBreakpointEndAddress {
         get => _memoryBreakpointEndAddress;
         set {
-            ValidateAddressProperty(value, _state);
-            ValidateMemoryAddressIsWithinLimit(_state, value);
-            ValidateAddressRange(_state, MemoryBreakpointStartAddress,
-                value, 0, nameof(MemoryBreakpointEndAddress));
             SetProperty(ref _memoryBreakpointEndAddress, value);
+            ValidateMemoryBreakpointForm();
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
@@ -202,18 +196,32 @@ public partial class BreakpointsViewModel : ViewModelBase {
         get => _memoryBreakpointValueCondition;
         set {
             SetProperty(ref _memoryBreakpointValueCondition, value);
-            ValidateMemoryBreakpointValueCondition();
+            ValidateMemoryBreakpointForm();
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
 
-    private void ValidateMemoryBreakpointValueCondition() {
+    private void ValidateMemoryBreakpointForm() {
+        // Validate start address
+        ValidateAddressProperty(_memoryBreakpointStartAddress, _state, nameof(MemoryBreakpointStartAddress));
+        ValidateAddressRange(_state, _memoryBreakpointStartAddress, _memoryBreakpointEndAddress, 0,
+            nameof(MemoryBreakpointStartAddress));
+        ValidateMemoryAddressIsWithinLimit(_state, _memoryBreakpointStartAddress);
+        AddressAndValueParser.TryParseAddressString(_memoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress);
+
+        // Validate end address
+        ValidateAddressProperty(_memoryBreakpointEndAddress, _state, nameof(MemoryBreakpointEndAddress));
+        ValidateAddressRange(_state, _memoryBreakpointStartAddress, _memoryBreakpointEndAddress, 0,
+            nameof(MemoryBreakpointEndAddress));
+        ValidateMemoryAddressIsWithinLimit(_state, _memoryBreakpointEndAddress);
+        AddressAndValueParser.TryParseAddressString(_memoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress);
+
+        // Validate value condition
         int length = 1;
-        if (AddressAndValueParser.TryParseAddressString(_memoryBreakpointStartAddress, _state, out uint? startAddr) &&
-            AddressAndValueParser.TryParseAddressString(_memoryBreakpointEndAddress, _state, out uint? endAddr) &&
-            startAddr.HasValue && endAddr.HasValue) {
-            length = (int)(endAddr.Value - startAddr.Value) + 1;
+        if (breakpointRangeStartAddress != null && breakpointRangeEndAddress != null) {
+            length = (int)(breakpointRangeEndAddress.Value - breakpointRangeStartAddress.Value) + 1;
         }
+
         ValidateHexProperty(_memoryBreakpointValueCondition, length, nameof(MemoryBreakpointValueCondition));
     }
 
@@ -322,40 +330,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
     }
 
     private Func<long, bool>? CreateCheckForBreakpointMemoryValue(byte[]? triggerValueCondition, long startAddress) {
-        return BreakpointUtils.CreateCheckForBreakpointMemoryValue(
+        return MemoryBreakpointHelper.CreateCheckForBreakpointMemoryValue(
             triggerValueCondition,
             startAddress,
             SelectedMemoryBreakpointType,
-            address => _memory.SneakilyRead((uint)address),
-            () => _memory.CurrentlyWritingByte
+            _memory
         );
-    }
-
-    // Utility class for shared breakpoint logic
-    private static class BreakpointUtils {
-        public static Func<long, bool>? CreateCheckForBreakpointMemoryValue(
-            byte[]? triggerValueCondition,
-            long startAddress,
-            BreakPointType type,
-            Func<long, byte> readMemory,
-            Func<byte> getCurrentlyWritingByte
-        ) {
-            if (triggerValueCondition is null || triggerValueCondition.Length == 0) {
-                return null;
-            }
-
-            return (long address) => {
-                long index = address - startAddress;
-                byte expectedValue = triggerValueCondition[index];
-                
-                if ((type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS && readMemory(address) == expectedValue) ||
-                    (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS && getCurrentlyWritingByte() == expectedValue)) {
-                    return true;
-                }
-
-                return false;
-            };
-        }
     }
 
     internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, BreakPointType type, Func<long, bool>? additionalTriggerCondition) {
