@@ -532,14 +532,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
         string? conditionExpression = breakpointData.ConditionExpression;
         if (!string.IsNullOrWhiteSpace(conditionExpression)) {
             try {
-                Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
-                Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
-                condition = (address) => {
-                    Core.Emulator.VM.Breakpoint.BreakpointExpressionContext context = new(_state, _memory, address);
-                    return ast.Evaluate(context) != 0;
-                };
+                Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
+                condition = compiler.Compile(conditionExpression);
             } catch (ArgumentException) {
-                // If parsing fails, treat as unconditional and clear the expression
+                // If parsing/compilation fails, treat as unconditional and clear the expression
                 conditionExpression = null;
             }
         }
