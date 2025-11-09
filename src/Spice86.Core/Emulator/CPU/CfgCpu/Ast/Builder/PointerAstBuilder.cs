@@ -18,6 +18,6 @@ public class PointerAstBuilder {
     }
 
     public ValueNode ToSegmentedPointer(DataType targetDataType, ValueNode segment, ValueNode offset) {
-        return new SegmentedPointer(targetDataType, segment, offset);
+        return new SegmentedPointerNode(targetDataType, segment, offset);
     }
 }
