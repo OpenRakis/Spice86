@@ -67,6 +67,13 @@ public class ExpressionEvaluator : IAstVisitor<long> {
             _ => throw new ArgumentException($"Unsupported unary operation: {node.UnaryOperation}")
         };
     }
+    
+    public long VisitTypeConversionNode(TypeConversionNode node) {
+        // Evaluate the inner value and return it
+        // Type conversions are mainly for Expression tree compilation,
+        // runtime evaluation just returns the value as-is
+        return node.Value.Accept(this);
+    }
 
     public long VisitConstantNode(ConstantNode node) {
         return node.Value;
