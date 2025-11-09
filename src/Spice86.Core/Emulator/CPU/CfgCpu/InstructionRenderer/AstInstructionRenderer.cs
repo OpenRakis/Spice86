@@ -91,6 +91,17 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         string value = node.Value.Accept(this);
         return OperationToString(node.UnaryOperation) + value;
     }
+    
+    public string VisitTypeConversionNode(TypeConversionNode node) {
+        string typeStr = node.DataType.BitWidth switch {
+            BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
+            BitWidth.WORD_16 => node.DataType.Signed ? "(short)" : "(ushort)",
+            BitWidth.DWORD_32 => node.DataType.Signed ? "(int)" : "(uint)",
+            _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
+        };
+        string value = node.Value.Accept(this);
+        return typeStr + value;
+    }
 
     private bool IsZero(ValueNode valueNode) {
         return valueNode is ConstantNode constantNode && constantNode.Value == 0;

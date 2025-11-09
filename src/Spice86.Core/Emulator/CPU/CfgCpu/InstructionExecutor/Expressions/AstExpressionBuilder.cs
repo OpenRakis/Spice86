@@ -215,6 +215,12 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return ToExpression(node.UnaryOperation, value);
     }
     
+    public Expression VisitTypeConversionNode(TypeConversionNode node) {
+        Expression value = node.Value.Accept(this);
+        Type targetType = FromDataType(node.DataType);
+        return Expression.Convert(value, targetType);
+    }
+    
     public Expression VisitInstructionNode(InstructionNode node) {
         throw new NotImplementedException();
     }
