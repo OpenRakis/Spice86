@@ -42,7 +42,13 @@ public class GdbCommandBreakpointHandler {
         _gdbIo = gdbIo;
         _state = state;
         _memory = memory;
-        _commandParser = new GdbBreakpointCommandParser(loggerService);
+        
+        // Create condition compiler if we have state and memory
+        BreakpointConditionCompiler? conditionCompiler = null;
+        if (state != null && memory != null) {
+            conditionCompiler = new BreakpointConditionCompiler(state, memory);
+        }
+        _commandParser = new GdbBreakpointCommandParser(loggerService, conditionCompiler);
     }
 
     /// <summary>
@@ -131,43 +137,14 @@ public class GdbCommandBreakpointHandler {
     /// Example: "0,1000,1;X:ax==0x100" sets an execution breakpoint at 0x1000 with condition "ax==0x100"
     /// </remarks>
     public BreakPoint? ParseBreakPoint(string command) {
-        // Parse command using dedicated parser
+        // Parse command string into structured data
         GdbBreakpointCommand? parsedCommand = _commandParser.Parse(command);
         if (parsedCommand == null) {
             return null;
         }
         
-        // Compile condition expression if present
-        Func<long, bool>? condition = null;
-        string? conditionExpression = parsedCommand.ConditionExpression;
-        
-        if (!string.IsNullOrWhiteSpace(conditionExpression) && _state != null && _memory != null) {
-            try {
-                Shared.Emulator.VM.Breakpoint.Expression.ExpressionParser parser = new();
-                Shared.Emulator.VM.Breakpoint.Expression.IExpressionNode ast = parser.Parse(conditionExpression);
-                condition = (addr) => {
-                    BreakpointExpressionContext context = new(_state, _memory, addr);
-                    return ast.Evaluate(context) != 0;
-                };
-                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("Compiled conditional breakpoint: {Expression}", conditionExpression);
-                }
-            } catch (ArgumentException ex) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning(ex, "Failed to parse condition expression: {Expression}", conditionExpression);
-                }
-                // Continue without condition if parsing fails
-                conditionExpression = null;
-            }
-        }
-        
-        return new AddressBreakPoint(
-            parsedCommand.BreakPointType, 
-            parsedCommand.Address, 
-            OnBreakPointReached, 
-            false, 
-            condition, 
-            conditionExpression);
+        // Convert to Spice86 breakpoint
+        return _commandParser.CreateBreakPoint(parsedCommand, OnBreakPointReached);
     }
 
     /// <summary>
