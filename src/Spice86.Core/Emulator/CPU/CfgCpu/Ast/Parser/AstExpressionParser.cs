@@ -253,8 +253,8 @@ public class AstExpressionParser {
 
     private ValueNode ParseIdentifier() {
         int start = _position;
-        while (char.IsLetterOrDigit(CurrentChar()) || CurrentChar() == '_') {
-            Advance();
+        while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_')) {
+            _position++;
         }
         string identifier = _input.Substring(start, _position - start).ToLowerInvariant();
 
