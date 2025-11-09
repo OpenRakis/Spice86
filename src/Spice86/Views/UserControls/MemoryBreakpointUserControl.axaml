@@ -4,20 +4,18 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
              xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
-             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
              x:Class="Spice86.Views.UserControls.MemoryBreakpointUserControl"
-             x:CompileBindings="True"
-             x:DataType="viewModels:MemoryBreakpointUserControlViewModel">
+             x:CompileBindings="False">
 	<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto">
 		<Label Grid.Row="0" Grid.Column="0" Content="Memory access type" />
 		<ComboBox Grid.Column="0" Grid.Row="1"
-			SelectedItem="{Binding SelectedBreakpointType}"
-			ItemsSource="{Binding BreakpointTypes}" />
+			SelectedItem="{Binding SelectedMemoryBreakpointType}"
+			ItemsSource="{Binding MemoryBreakpointTypes}" />
 		<controls:GroupBox Margin="5" Grid.Row="1" Grid.Column="1"
 			Header="Memory start address">
 			<TextBox
-				Text="{Binding StartAddress, Mode=TwoWay}"
+				Text="{Binding MemoryBreakpointStartAddress, Mode=TwoWay}"
 				Watermark="1000:FFFF (example) or like 'cs:ip'">
 				<Interaction.Behaviors>
 					<behaviors:UpdateBindingOnEnterBehavior />
@@ -27,7 +25,7 @@
 		<controls:GroupBox Margin="5" Grid.Row="2" Grid.Column="1"
 			Header="Memory end address">
 			<TextBox
-				Text="{Binding EndAddress, Mode=TwoWay}"
+				Text="{Binding MemoryBreakpointEndAddress, Mode=TwoWay}"
 				Watermark="1000:FFFF (example) or like 'cs:ip'">
 				<Interaction.Behaviors>
 					<behaviors:UpdateBindingOnEnterBehavior />
@@ -35,10 +33,9 @@
 			</TextBox>
 		</controls:GroupBox>
 		<controls:GroupBox Margin="5" Grid.Row="3" Grid.Column="1"
-			Header="Memory value condition"
-			IsVisible="{Binding ShowValueCondition}">
+			Header="Memory value condition">
 			<TextBox
-				Text="{Binding ValueCondition, Mode=TwoWay}"
+				Text="{Binding MemoryBreakpointValueCondition, Mode=TwoWay}"
 				FontFamily="RobotoMonoFont"
 				Watermark="optional">
 				<Interaction.Behaviors>
