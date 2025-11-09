@@ -40,7 +40,6 @@ public class RegisterRenderer {
     private string Reg32Name(int regIndex) {
         return "E" + Reg16Name(regIndex);
     }
-
     public string ToStringRegister(BitWidth bitWidth, int registerIndex) {
         return bitWidth switch {
             BitWidth.BYTE_8=> Reg8Name(registerIndex),
@@ -49,6 +48,7 @@ public class RegisterRenderer {
             _ => throw new ArgumentOutOfRangeException(nameof(bitWidth), bitWidth, null)
         };
     }
+
 
     public string ToStringSegmentRegister(int registerIndex) {
         return _segmentRegistersNames[registerIndex];
