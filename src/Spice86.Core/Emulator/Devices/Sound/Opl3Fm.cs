@@ -13,6 +13,7 @@ using Spice86.Shared.Utils;
 ///     Virtual device which emulates OPL3 FM sound.
 /// </summary>
 public class Opl3Fm : DefaultIOPortHandler, IDisposable {
+    private const int MaxSamplesPerGenerationBatch = 512;
     private readonly AdLibGoldDevice? _adLibGold;
     private readonly AdLibGoldIo? _adLibGoldIo;
     private readonly Opl3Chip _chip = new();
@@ -23,14 +24,14 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
     private readonly PicEventHandler _oplTimerHandler;
-    private readonly float[] _playBuffer = new float[4096];
+    private readonly float[] _playBuffer = new float[2048];
 
     /// <summary>
     ///     The sound channel used for the OPL3 FM synth.
     /// </summary>
     private readonly SoundChannel _soundChannel;
 
-    private readonly short[] _tmpInterleaved = new short[4096];
+    private readonly short[] _tmpInterleaved = new short[2048];
     private readonly bool _useOplIrq;
     private bool _disposed;
     private bool _oplFlushScheduled;
@@ -99,7 +100,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private void InitializeToneGenerators() {
         int[] fourOp = [0, 1, 2, 6, 7, 8, 12, 13, 14];
         foreach (int index in fourOp) {
-            Opl3Operator? slot = _chip.Slots[index];
+            Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 571;
             slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
@@ -114,7 +115,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         int[] twoOp = [3, 4, 5, 9, 10, 11, 15, 16, 17];
         foreach (int index in twoOp) {
-            Opl3Operator? slot = _chip.Slots[index];
+            Opl3Operator slot = _chip.Slots[index];
             slot.EnvelopeGeneratorOutput = 511;
             slot.EnvelopeGeneratorLevel = 511;
             slot.EnvelopeGeneratorState = (byte)EnvelopeGeneratorStage.Sustain;
@@ -290,9 +291,15 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         Span<short> interleaved = _tmpInterleaved.AsSpan(0, samples);
 
-        lock (_chipLock) {
-            interleaved.Clear();
-            _chip.GenerateStream(interleaved);
+        int generatedSamples = 0;
+        while (generatedSamples < samples) {
+            int batchSamples = Math.Min(MaxSamplesPerGenerationBatch, samples - generatedSamples);
+            Span<short> batch = interleaved.Slice(generatedSamples, batchSamples);
+            lock (_chipLock) {
+                _chip.GenerateStream(batch);
+            }
+
+            generatedSamples += batchSamples;
         }
 
         const float scale = 1.0f / 32768f;
@@ -312,7 +319,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private void ScheduleOplFlush(double currentTick) {
         double? delay;
         lock (_chipLock) {
-            delay = _oplIo.GetTicksUntilNextWrite(currentTick);
+            delay = GetNextFlushDelayUnsafe(currentTick, true);
         }
 
         if (_oplFlushScheduled) {
@@ -370,7 +377,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         lock (_chipLock) {
             _oplIo.FlushDueWritesUpTo(now);
-            delay = _oplIo.GetTicksUntilNextWrite(now);
+            delay = GetNextFlushDelayUnsafe(now, false);
         }
 
         _oplFlushScheduled = false;
@@ -413,6 +420,16 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
         _dualPic.AddEvent(_oplTimerHandler, d);
         _oplTimerScheduled = true;
+    }
+
+    private double? GetNextFlushDelayUnsafe(double currentTick, bool flushImmediately) {
+        double? delay = _oplIo.GetTicksUntilNextWrite(currentTick);
+        if (!flushImmediately || delay is not { } d || d > 0) {
+            return delay;
+        }
+
+        _oplIo.FlushDueWritesUpTo(currentTick);
+        return _oplIo.GetTicksUntilNextWrite(currentTick);
     }
 
     /// <summary>
