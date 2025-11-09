@@ -60,7 +60,48 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
         }
         CanCloseTab = canCloseTab;
         TryUpdateHeaderAndMemoryDocument();
+        
+        // Initialize the child ViewModel for the UserControl
+        MemoryBreakpointUserControlViewModel = new MemoryBreakpointUserControlViewModel {
+            ShowValueCondition = true,
+            SelectedBreakpointType = SelectedBreakpointType,
+            BreakpointTypes = BreakpointTypes,
+            StartAddress = MemoryBreakpointStartAddress,
+            EndAddress = MemoryBreakpointEndAddress,
+            ValueCondition = MemoryBreakpointValueCondition
+        };
+        
+        // Set up two-way synchronization
+        MemoryBreakpointUserControlViewModel.PropertyChanged += (s, args) => {
+            if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.SelectedBreakpointType)) {
+                SelectedBreakpointType = MemoryBreakpointUserControlViewModel.SelectedBreakpointType;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.StartAddress)) {
+                MemoryBreakpointStartAddress = MemoryBreakpointUserControlViewModel.StartAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.EndAddress)) {
+                MemoryBreakpointEndAddress = MemoryBreakpointUserControlViewModel.EndAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.ValueCondition)) {
+                MemoryBreakpointValueCondition = MemoryBreakpointUserControlViewModel.ValueCondition;
+            }
+        };
+        
+        PropertyChanged += (s, args) => {
+            if (args.PropertyName == nameof(SelectedBreakpointType)) {
+                MemoryBreakpointUserControlViewModel.SelectedBreakpointType = SelectedBreakpointType;
+            } else if (args.PropertyName == nameof(MemoryBreakpointStartAddress)) {
+                MemoryBreakpointUserControlViewModel.StartAddress = MemoryBreakpointStartAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointEndAddress)) {
+                MemoryBreakpointUserControlViewModel.EndAddress = MemoryBreakpointEndAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointValueCondition)) {
+                MemoryBreakpointUserControlViewModel.ValueCondition = MemoryBreakpointValueCondition;
+            }
+        };
     }
+    
+    /// <summary>
+    /// Gets the ViewModel for the MemoryBreakpointUserControl.
+    /// </summary>
+    public MemoryBreakpointUserControlViewModel MemoryBreakpointUserControlViewModel { get; }
+    
     public State State => _state;
 
     [ObservableProperty]

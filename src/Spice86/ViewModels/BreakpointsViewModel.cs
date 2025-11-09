@@ -42,7 +42,47 @@ public partial class BreakpointsViewModel : ViewModelBase {
         _memory = memory;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
+        
+        // Initialize the child ViewModel for the UserControl
+        MemoryBreakpointUserControlViewModel = new MemoryBreakpointUserControlViewModel {
+            ShowValueCondition = true,
+            SelectedBreakpointType = SelectedMemoryBreakpointType,
+            BreakpointTypes = MemoryBreakpointTypes,
+            StartAddress = MemoryBreakpointStartAddress,
+            EndAddress = MemoryBreakpointEndAddress,
+            ValueCondition = MemoryBreakpointValueCondition
+        };
+        
+        // Set up two-way synchronization
+        MemoryBreakpointUserControlViewModel.PropertyChanged += (s, args) => {
+            if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.SelectedBreakpointType)) {
+                SelectedMemoryBreakpointType = MemoryBreakpointUserControlViewModel.SelectedBreakpointType;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.StartAddress)) {
+                MemoryBreakpointStartAddress = MemoryBreakpointUserControlViewModel.StartAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.EndAddress)) {
+                MemoryBreakpointEndAddress = MemoryBreakpointUserControlViewModel.EndAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.ValueCondition)) {
+                MemoryBreakpointValueCondition = MemoryBreakpointUserControlViewModel.ValueCondition;
+            }
+        };
+        
+        PropertyChanged += (s, args) => {
+            if (args.PropertyName == nameof(SelectedMemoryBreakpointType)) {
+                MemoryBreakpointUserControlViewModel.SelectedBreakpointType = SelectedMemoryBreakpointType;
+            } else if (args.PropertyName == nameof(MemoryBreakpointStartAddress)) {
+                MemoryBreakpointUserControlViewModel.StartAddress = MemoryBreakpointStartAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointEndAddress)) {
+                MemoryBreakpointUserControlViewModel.EndAddress = MemoryBreakpointEndAddress;
+            } else if (args.PropertyName == nameof(MemoryBreakpointValueCondition)) {
+                MemoryBreakpointUserControlViewModel.ValueCondition = MemoryBreakpointValueCondition;
+            }
+        };
     }
+    
+    /// <summary>
+    /// Gets the ViewModel for the MemoryBreakpointUserControl.
+    /// </summary>
+    public MemoryBreakpointUserControlViewModel MemoryBreakpointUserControlViewModel { get; }
 
     private bool _mustRemoveSelectedBreakpoint;
 
@@ -210,7 +250,8 @@ public partial class BreakpointsViewModel : ViewModelBase {
     private void ValidateMemoryBreakpointValueCondition() {
         int length = 1;
         if (AddressAndValueParser.TryParseAddressString(_memoryBreakpointStartAddress, _state, out uint? startAddr) &&
-            AddressAndValueParser.TryParseAddressString(_memoryBreakpointEndAddress, _state, out uint? endAddr)) {
+            AddressAndValueParser.TryParseAddressString(_memoryBreakpointEndAddress, _state, out uint? endAddr) &&
+            startAddr.HasValue && endAddr.HasValue) {
             length = (int)(endAddr.Value - startAddr.Value) + 1;
         }
         ValidateHexProperty(_memoryBreakpointValueCondition, length, nameof(MemoryBreakpointValueCondition));
@@ -261,13 +302,15 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            if (!AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress)) {
+            if (!AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) ||
+                !memorystartAddress.HasValue) {
                 return;
             }
             byte[]? triggerValueCondition = AddressAndValueParser.ParseHexAsArray(MemoryBreakpointValueCondition);
             Func<long, bool>? condition = CreateCheckForBreakpointMemoryValue(triggerValueCondition, memorystartAddress.Value);
             
-            if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress)) {
+            if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress) &&
+                memoryEndAddress.HasValue) {
                 CreateMemoryBreakpointAtAddress(memorystartAddress.Value,
                     memoryEndAddress.Value, SelectedMemoryBreakpointType, condition);
             } else {
@@ -277,7 +320,7 @@ public partial class BreakpointsViewModel : ViewModelBase {
                     SelectedMemoryBreakpointType,
                     condition);
             }
-        }else if (IsCyclesBreakpointSelected) {
+        } else if (IsCyclesBreakpointSelected) {
             if (CyclesValue is null) {
                 return;
             }
@@ -344,16 +387,10 @@ public partial class BreakpointsViewModel : ViewModelBase {
             return (long address) => {
                 long index = address - startAddress;
                 byte expectedValue = triggerValueCondition[index];
-                if (type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS) {
-                    if (readMemory(address) == expectedValue) {
-                        return true;
-                    }
-                }
-
-                if (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS) {
-                    if (getCurrentlyWritingByte() == expectedValue) {
-                        return true;
-                    }
+                
+                if ((type is BreakPointType.MEMORY_READ or BreakPointType.MEMORY_ACCESS && readMemory(address) == expectedValue) ||
+                    (type is BreakPointType.MEMORY_WRITE or BreakPointType.MEMORY_ACCESS && getCurrentlyWritingByte() == expectedValue)) {
+                    return true;
                 }
 
                 return false;

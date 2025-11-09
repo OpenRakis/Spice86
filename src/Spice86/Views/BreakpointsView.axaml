@@ -68,7 +68,7 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Memory"
                                  IsVisible="{Binding IsMemoryBreakpointSelected}">
-							<userControls:MemoryBreakpointUserControl x:Name="MemoryBreakpointControl" />
+							<userControls:MemoryBreakpointUserControl DataContext="{Binding MemoryBreakpointUserControlViewModel}" />
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Execution"
                                 IsVisible="{Binding IsExecutionBreakpointSelected}">

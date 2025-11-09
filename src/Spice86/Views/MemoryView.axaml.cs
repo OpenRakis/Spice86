@@ -42,44 +42,6 @@ public partial class MemoryView : UserControl {
         if (hexEditor != null && DataContext is MemoryViewModel viewModel) {
             hexEditor.Selection.RangeChanged -= viewModel.OnSelectionRangeChanged;
             hexEditor.Selection.RangeChanged += viewModel.OnSelectionRangeChanged;
-            
-            // Initialize the MemoryBreakpointUserControl ViewModel
-            var controlViewModel = new MemoryBreakpointUserControlViewModel {
-                ShowValueCondition = true,
-                SelectedBreakpointType = viewModel.SelectedBreakpointType,
-                BreakpointTypes = viewModel.BreakpointTypes,
-                StartAddress = viewModel.MemoryBreakpointStartAddress,
-                EndAddress = viewModel.MemoryBreakpointEndAddress,
-                ValueCondition = viewModel.MemoryBreakpointValueCondition
-            };
-            
-            // Set up two-way binding by updating parent when child changes
-            controlViewModel.PropertyChanged += (s, args) => {
-                if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.SelectedBreakpointType)) {
-                    viewModel.SelectedBreakpointType = controlViewModel.SelectedBreakpointType;
-                } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.StartAddress)) {
-                    viewModel.MemoryBreakpointStartAddress = controlViewModel.StartAddress;
-                } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.EndAddress)) {
-                    viewModel.MemoryBreakpointEndAddress = controlViewModel.EndAddress;
-                } else if (args.PropertyName == nameof(MemoryBreakpointUserControlViewModel.ValueCondition)) {
-                    viewModel.MemoryBreakpointValueCondition = controlViewModel.ValueCondition;
-                }
-            };
-            
-            // Set up the other direction - update child when parent changes
-            viewModel.PropertyChanged += (s, args) => {
-                if (args.PropertyName == nameof(MemoryViewModel.SelectedBreakpointType)) {
-                    controlViewModel.SelectedBreakpointType = viewModel.SelectedBreakpointType;
-                } else if (args.PropertyName == nameof(MemoryViewModel.MemoryBreakpointStartAddress)) {
-                    controlViewModel.StartAddress = viewModel.MemoryBreakpointStartAddress;
-                } else if (args.PropertyName == nameof(MemoryViewModel.MemoryBreakpointEndAddress)) {
-                    controlViewModel.EndAddress = viewModel.MemoryBreakpointEndAddress;
-                } else if (args.PropertyName == nameof(MemoryViewModel.MemoryBreakpointValueCondition)) {
-                    controlViewModel.ValueCondition = viewModel.MemoryBreakpointValueCondition;
-                }
-            };
-            
-            MemoryBreakpointControl.DataContext = controlViewModel;
         }
     }
 }

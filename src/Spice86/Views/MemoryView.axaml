@@ -264,7 +264,7 @@
 							HorizontalAlignment="Center"
 							Content="Creating memory breakpoint on hex, decimal, or segmented address"
 							FontWeight="Bold" />
-						<userControls:MemoryBreakpointUserControl Grid.Row="1" x:Name="MemoryBreakpointControl" />
+						<userControls:MemoryBreakpointUserControl Grid.Row="1" DataContext="{Binding MemoryBreakpointUserControlViewModel}" />
 						<StackPanel
 							Grid.Row="2"
 							HorizontalAlignment="Right"
