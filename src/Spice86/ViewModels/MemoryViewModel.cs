@@ -236,34 +236,16 @@ public partial class MemoryViewModel : ViewModelWithErrorDialog {
                 nameof(MemoryBreakpointEndAddress), nameof(MemoryBreakpointValueCondition));
     }
 
-    private Func<long, bool>? CreateCheckForBreakpointMemoryValue(byte[]? triggerValueCondition, long startAddress) {
-        return MemoryBreakpointHelper.CreateCheckForBreakpointMemoryValue(
-            triggerValueCondition,
-            startAddress,
-            SelectedMemoryBreakpointType,
-            _memory
-        );
-    }
     [RelayCommand(CanExecute = nameof(ConfirmCreateMemoryBreakpointCanExecute))]
     private void ConfirmCreateMemoryBreakpoint() {
-        if (!AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? breakpointRangeStartAddress)) {
-            CreatingMemoryBreakpoint = false;
-            return;
-        }
-        byte[]? triggerValueCondition = AddressAndValueParser.ParseHexAsArray(MemoryBreakpointValueCondition);
-        Func<long, bool>? condition =
-            CreateCheckForBreakpointMemoryValue(triggerValueCondition, breakpointRangeStartAddress.Value);
-        if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? breakpointRangeEndAddress) &&
-            GetIsMemoryRangeValid(breakpointRangeStartAddress, breakpointRangeEndAddress, 0)) {
-            _breakpointsViewModel.CreateMemoryBreakpointAtAddress(
-                breakpointRangeStartAddress.Value, breakpointRangeEndAddress.Value, SelectedMemoryBreakpointType, condition);
-        } else {
-            _breakpointsViewModel.CreateMemoryBreakpointAtAddress(
-                breakpointRangeStartAddress.Value,
-                breakpointRangeStartAddress.Value,
-                SelectedMemoryBreakpointType,
-                condition);
-        }
+        MemoryBreakpointHelper.TryCreateMemoryBreakpoint(
+            MemoryBreakpointStartAddress,
+            MemoryBreakpointEndAddress,
+            MemoryBreakpointValueCondition,
+            SelectedMemoryBreakpointType,
+            _state,
+            _memory,
+            _breakpointsViewModel.CreateMemoryBreakpointAtAddress);
         CreatingMemoryBreakpoint = false;
     }
 

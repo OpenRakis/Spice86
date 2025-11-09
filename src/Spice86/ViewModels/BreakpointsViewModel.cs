@@ -270,24 +270,14 @@ public partial class BreakpointsViewModel : ViewModelBase {
                 }, null, ExecutionBreakpoint);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
-            if (!AddressAndValueParser.TryParseAddressString(MemoryBreakpointStartAddress, _state, out uint? memorystartAddress) ||
-                !memorystartAddress.HasValue) {
-                return;
-            }
-            byte[]? triggerValueCondition = AddressAndValueParser.ParseHexAsArray(MemoryBreakpointValueCondition);
-            Func<long, bool>? condition = CreateCheckForBreakpointMemoryValue(triggerValueCondition, memorystartAddress.Value);
-            
-            if (AddressAndValueParser.TryParseAddressString(MemoryBreakpointEndAddress, _state, out uint? memoryEndAddress) &&
-                memoryEndAddress.HasValue) {
-                CreateMemoryBreakpointAtAddress(memorystartAddress.Value,
-                    memoryEndAddress.Value, SelectedMemoryBreakpointType, condition);
-            } else {
-                CreateMemoryBreakpointAtAddress(
-                    memorystartAddress.Value,
-                    memorystartAddress.Value,
-                    SelectedMemoryBreakpointType,
-                    condition);
-            }
+            MemoryBreakpointHelper.TryCreateMemoryBreakpoint(
+                MemoryBreakpointStartAddress,
+                MemoryBreakpointEndAddress,
+                MemoryBreakpointValueCondition,
+                SelectedMemoryBreakpointType,
+                _state,
+                _memory,
+                CreateMemoryBreakpointAtAddress);
         } else if (IsCyclesBreakpointSelected) {
             if (CyclesValue is null) {
                 return;
@@ -327,15 +317,6 @@ public partial class BreakpointsViewModel : ViewModelBase {
             BreakpointCreated?.Invoke(ioPortVm);
         }
         CreatingBreakpoint = false;
-    }
-
-    private Func<long, bool>? CreateCheckForBreakpointMemoryValue(byte[]? triggerValueCondition, long startAddress) {
-        return MemoryBreakpointHelper.CreateCheckForBreakpointMemoryValue(
-            triggerValueCondition,
-            startAddress,
-            SelectedMemoryBreakpointType,
-            _memory
-        );
     }
 
     internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, BreakPointType type, Func<long, bool>? additionalTriggerCondition) {
