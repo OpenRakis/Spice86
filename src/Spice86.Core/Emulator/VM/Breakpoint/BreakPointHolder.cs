@@ -9,11 +9,12 @@ public class BreakPointHolder {
     private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new(1000);
 
     private readonly List<BreakPoint> _unconditionalBreakPoints = new(1000);
+    private int _activeBreakpoints;
 
     /// <summary>
-    /// Gets a value indicating whether this BreakPointHolder is empty.
+    /// Gets the number of currently active breakpoints.
     /// </summary>
-    public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
+    public bool HasActiveBreakpoints => _activeBreakpoints > 0;
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
         return _addressBreakPoints.Values
@@ -37,6 +38,12 @@ public class BreakPointHolder {
                 ToggleAddressBreakPoint(addressBreakPoint, on);
                 break;
         }
+
+        UpdateActiveBreakPoints();
+    }
+
+    private void UpdateActiveBreakPoints() {
+        _activeBreakpoints = GetAllBreakpoints().Count(x => x.IsEnabled);
     }
 
     private void ToggleAddressBreakPoint(AddressBreakPoint breakPoint, bool on) {

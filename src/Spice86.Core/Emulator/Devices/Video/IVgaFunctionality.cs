@@ -311,6 +311,12 @@ public interface IVgaFunctionality {
     void SetFontBlockSpecifier(byte fontBlock);
 
     /// <summary>
+    ///     Read the current value of the VGA character map select register (sequencer index 0x03).
+    /// </summary>
+    /// <returns>The raw register value describing which font blocks are active.</returns>
+    byte GetCharacterMapSelectRegister();
+
+    /// <summary>
     ///     Set the amount of scan lines to use per row.
     /// </summary>
     void SetScanLines(byte lines);
