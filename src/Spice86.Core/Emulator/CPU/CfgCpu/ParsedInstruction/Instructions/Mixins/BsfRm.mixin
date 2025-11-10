@@ -1,9 +1,11 @@
 @moxy
 @attribute required int Size
-@attribute required string SegmentRegister
+@attribute required string Operation
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
+
+using System.Numerics;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
@@ -13,24 +15,28 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
-    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes,
-         ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
-     }
-    
+
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
+    }
+
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        uint memoryAddress = helper.ModRm.MandatoryMemoryAddress;
-        helper.ModRm.R{{Size}} = helper.Memory.UInt{{Size}}[memoryAddress];
-        helper.State.{{SegmentRegister}} = helper.Memory.UInt16[memoryAddress + ({{Size}}/8)];
-        {{ if SegmentRegister == "SS" }}helper.State.InterruptShadowing = true;
-        {{ end }}        
+        {{ if Size == 16 }}ushort{{ else }}uint{{ end }} source = helper.ModRm.RM{{Size}};
+        if (source == 0) {
+            helper.State.ZeroFlag = true;
+            helper.MoveIpAndSetNextNode(this);
+            return;
+        }
+
+        helper.State.ZeroFlag = false;
+        uint index = (uint)BitOperations.TrailingZeroCount(source);
+        helper.ModRm.R{{Size}} = ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})index;
         helper.MoveIpAndSetNextNode(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.L{{SegmentRegister}},
+        return new InstructionNode(InstructionOperation.{{Operation}},
             builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext),
             builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext));
     }
 }
-

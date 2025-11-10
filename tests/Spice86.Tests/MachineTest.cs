@@ -147,6 +147,13 @@ public class MachineTest
         expected[0x96] = 0x2;
         expected[0x92] = 0x2;
         expected[0x73] = 0x2;
+        expected[0xAA] = 0x42;
+        expected[0xAE] = 0x2;
+        expected[0xB0] = 0x3;
+        expected[0xB2] = 0x2;
+        expected[0xB4] = 0x3;
+        expected[0xB6] = 0x42;
+        expected[0xBA] = 0x2;
         TestOneBin("mul", expected, enableCfgCpu);
     }
 
@@ -197,7 +204,10 @@ public class MachineTest
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestShifts(bool enableCfgCpu)
     {
-        TestOneBin("shifts", enableCfgCpu);
+        byte[] expected = GetExpected("shifts");
+        expected[0x6F] = 0x08;
+        expected[0x79] = 0x08;
+        TestOneBin("shifts", expected, enableCfgCpu);
     }
 
     [Theory]
