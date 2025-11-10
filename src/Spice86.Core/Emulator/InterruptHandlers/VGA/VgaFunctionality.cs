@@ -579,6 +579,11 @@ public class VgaFunctionality : IVgaFunctionality {
     }
 
     /// <inheritdoc />
+    public byte GetCharacterMapSelectRegister() {
+        return ReadSequencer(0x03);
+    }
+
+    /// <inheritdoc />
     public void EnableVideoAddressing(bool state) {
         byte value = (byte)(state ? 0x02 : 0x00);
         WriteMaskedToMiscellaneousRegister(0x02, value);
@@ -1222,6 +1227,11 @@ public class VgaFunctionality : IVgaFunctionality {
 
     private void WriteToSequencer(byte index, byte value) {
         WriteWordToIoPort((ushort)(value << 8 | index), VgaPort.SequencerAddress);
+    }
+
+    private byte ReadSequencer(byte index) {
+        WriteByteToIoPort(index, VgaPort.SequencerAddress);
+        return _ioPortDispatcher.ReadByte((ushort)VgaPort.SequencerAddress + 1);
     }
 
     private void WriteWordToIoPort(ushort value, VgaPort port) {
