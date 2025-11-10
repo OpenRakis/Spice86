@@ -126,7 +126,9 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     private void RunOnce() {
-        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+        if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+            _emulatorBreakpointsManager.TriggerBreakpoints();
+        }
         _pauseHandler.WaitIfPaused();
         _cpu.ExecuteNext();
         MaybeUpdatePerformanceMeasurements();
