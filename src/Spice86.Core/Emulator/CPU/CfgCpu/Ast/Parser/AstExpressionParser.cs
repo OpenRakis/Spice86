@@ -185,7 +185,7 @@ public class AstExpressionParser {
             Advance();
             ValueNode expr = ParseExpression();
             if (CurrentChar() != ')') {
-                throw new ArgumentException("Expected ')'");
+                throw new ExpressionParseException("Expected ')'", _input, _position);
             }
             Advance();
             return expr;
@@ -224,7 +224,7 @@ public class AstExpressionParser {
             return ParseIdentifier();
         }
 
-        throw new ArgumentException($"Unexpected character: {CurrentChar()} at position {_position}");
+        throw new ExpressionParseException($"Unexpected character: '{CurrentChar()}'", _input, _position);
     }
 
     private ValueNode ParseNumber() {
@@ -294,7 +294,7 @@ public class AstExpressionParser {
             "ds" => new SegmentRegisterNode(3),
             "fs" => new SegmentRegisterNode(4),
             "gs" => new SegmentRegisterNode(5),
-            _ => throw new ArgumentException($"Unknown identifier: {identifier}")
+            _ => throw new ExpressionParseException($"Unknown identifier: '{identifier}'", _input, _position - identifier.Length)
         };
     }
     
@@ -311,12 +311,12 @@ public class AstExpressionParser {
                 // It's a segmented pointer: segment:[offset]
                 Advance(); // skip ':'
                 if (CurrentChar() != '[') {
-                    throw new ArgumentException("Expected '[' after segment:");
+                    throw new ExpressionParseException("Expected '[' after segment:", _input, _position);
                 }
                 Advance(); // skip '['
                 ValueNode offset = ParseExpression();
                 if (CurrentChar() != ']') {
-                    throw new ArgumentException("Expected ']'");
+                    throw new ExpressionParseException("Expected ']'", _input, _position);
                 }
                 Advance();
                 return new SegmentedPointerNode(dataType, potentialSegment, offset);
@@ -327,12 +327,12 @@ public class AstExpressionParser {
         
         // Absolute pointer: [address]
         if (CurrentChar() != '[') {
-            throw new ArgumentException("Expected '[' or segment register for pointer");
+            throw new ExpressionParseException("Expected '[' or segment register for pointer", _input, _position);
         }
         Advance(); // skip '['
         ValueNode address = ParseExpression();
         if (CurrentChar() != ']') {
-            throw new ArgumentException("Expected ']'");
+            throw new ExpressionParseException("Expected ']'", _input, _position);
         }
         Advance();
         return new AbsolutePointerNode(dataType, address);
