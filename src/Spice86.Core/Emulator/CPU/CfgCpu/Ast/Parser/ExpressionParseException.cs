@@ -27,19 +27,6 @@ public class ExpressionParseException : Exception {
         Position = position;
     }
 
-    /// <summary>
-    /// Initializes a new instance with an inner exception.
-    /// </summary>
-    /// <param name="message">The error message describing what went wrong.</param>
-    /// <param name="expression">The input expression that failed to parse.</param>
-    /// <param name="position">The character index where the error occurred.</param>
-    /// <param name="innerException">The exception that caused this parsing error.</param>
-    public ExpressionParseException(string message, string expression, int position, Exception innerException)
-        : base($"{message} at position {position}", innerException) {
-        Expression = expression;
-        Position = position;
-    }
-
     /// <inheritdoc />
     public override string ToString() {
         string contextSnippet = GetContextSnippet();
