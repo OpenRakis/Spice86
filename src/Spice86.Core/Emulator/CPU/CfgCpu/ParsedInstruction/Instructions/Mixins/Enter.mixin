@@ -24,16 +24,28 @@ public partial class {{ moxy.Class.Name }} : EnterInstruction {
     public override void Execute(InstructionExecutionHelper helper) {
         ushort storage = helper.InstructionFieldValueRetriever.GetFieldValue(StorageField);
         byte level = helper.InstructionFieldValueRetriever.GetFieldValue(LevelField);
-        helper.Stack.Push{{Size}}(helper.State.{{BasePointerRegister}});
-        level &= 0x1f;
-        {{StackPointerType}} framePtr = helper.State.{{StackPointerRegister}};
-        for (int i = 0; i < level; i++) {
-            helper.State.{{BasePointerRegister}} -= {{Size}}/8;
-            helper.Stack.Push{{Size}}(helper.State.{{BasePointerRegister}});
+        level &= 0x1F;
+        {{StackPointerType}} pointerSize = ({{StackPointerType}})({{Size}} / 8);
+        {{StackPointerType}} oldBasePointer = helper.State.{{BasePointerRegister}};
+        {{StackPointerType}} oldStackPointer = helper.State.{{StackPointerRegister}};
+        {{StackPointerType}} spIndex = unchecked(({{StackPointerType}})(oldStackPointer - pointerSize));
+        helper.Memory.UInt{{Size}}[helper.State.SS, (ushort)spIndex] = oldBasePointer;
+        {{StackPointerType}} framePtr = spIndex;
+        if (level != 0) {
+            {{StackPointerType}} bpIndex = oldBasePointer;
+            for (int i = 1; i < level; i++) {
+                bpIndex = unchecked(({{StackPointerType}})(bpIndex - pointerSize));
+                spIndex = unchecked(({{StackPointerType}})(spIndex - pointerSize));
+                helper.Memory.UInt{{Size}}[helper.State.SS, (ushort)spIndex] =
+                    helper.Memory.UInt{{Size}}[helper.State.SS, (ushort)bpIndex];
+            }
+            spIndex = unchecked(({{StackPointerType}})(spIndex - pointerSize));
+            helper.Memory.UInt{{Size}}[helper.State.SS, (ushort)spIndex] = framePtr;
         }
 
         helper.State.{{BasePointerRegister}} = framePtr;
-        helper.State.{{StackPointerRegister}} -= storage;
+        spIndex = unchecked(({{StackPointerType}})(spIndex - ({{StackPointerType}})storage));
+        helper.State.{{StackPointerRegister}} = spIndex;
         helper.MoveIpAndSetNextNode(this);
     }
 

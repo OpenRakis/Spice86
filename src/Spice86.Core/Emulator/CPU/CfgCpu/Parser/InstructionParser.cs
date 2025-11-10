@@ -81,6 +81,14 @@ public class InstructionParser : BaseInstructionParser {
     private readonly XaddRmParser _xaddRmParser;
     private readonly ShrdClRmParser _shrdClRmParser;
     private readonly ShrdImm8RmParser _shrdImm8RmParser;
+    private readonly BtRmParser _btRmParser;
+    private readonly BtsRmParser _btsRmParser;
+    private readonly BtrRmParser _btrRmParser;
+    private readonly BtcRmParser _btcRmParser;
+    private readonly BitTestImmediateParser _bitTestImmediateParser;
+    private readonly BsfRmParser _bsfRmParser;
+    private readonly BsrRmParser _bsrRmParser;
+    private readonly CmpxchgRmParser _cmpxchgRmParser;
 
     public InstructionParser(IIndexable memory, State state) : base(new(memory), state) {
         _adcAluOperationParser = new(this);
@@ -151,6 +159,14 @@ public class InstructionParser : BaseInstructionParser {
         _xchgRmParser = new(this);
         _xorAluOperationParser = new(this);
         _xaddRmParser = new(this);
+        _btRmParser = new BtRmParser(this);
+        _btsRmParser = new BtsRmParser(this);
+        _btrRmParser = new BtrRmParser(this);
+        _btcRmParser = new BtcRmParser(this);
+        _bitTestImmediateParser = new BitTestImmediateParser(this);
+        _bsfRmParser = new BsfRmParser(this);
+        _bsrRmParser = new BsrRmParser(this);
+        _cmpxchgRmParser = new CmpxchgRmParser(this);
     }
 
     private InstructionField<ushort> ReadOpcode() {
@@ -317,7 +333,15 @@ public class InstructionParser : BaseInstructionParser {
                 return _pushaParser.Parse(context);
             case 0x61:
                 return _popaParser.Parse(context);
-            case 0x62: // BOUND
+            case 0x62: {
+                // BOUND
+                ModRmContext modRmContext = _modRmParser.EnsureNotMode3(_modRmParser.ParseNext(context));
+                if (HasOperandSize32(context.Prefixes)) {
+                    return new Bound32(context.Address, context.OpcodeField, context.Prefixes, modRmContext);
+                }
+
+                return new Bound16(context.Address, context.OpcodeField, context.Prefixes, modRmContext);
+            }
             case 0x63: // ARPL
                 return HandleInvalidOpcode(context);
             case 0x64:
@@ -672,6 +696,11 @@ public class InstructionParser : BaseInstructionParser {
             case 0x0FA1:
                 return new PopSReg(context.Address, context.OpcodeField, context.Prefixes,
                     (int)SegmentRegisterIndex.FsIndex);
+            case 0x0FA2:
+                // CPUID (unsupported on 386-class CPU): parse explicitly to an instruction that raises invalid-op at execution
+                return new Cpuid(context.Address, context.OpcodeField, context.Prefixes);
+            case 0x0FA3:
+                return _btRmParser.Parse(context);
             case 0x0FA4:
                 return _shldImm8RmParser.Parse(context);
             case 0x0FA5:
@@ -682,6 +711,8 @@ public class InstructionParser : BaseInstructionParser {
             case 0x0FA9:
                 return new PopSReg(context.Address, context.OpcodeField, context.Prefixes,
                     (int)SegmentRegisterIndex.GsIndex);
+            case 0x0FAB:
+                return _btsRmParser.Parse(context);
             case 0xFAC:
                 return _shrdImm8RmParser.Parse(context);
             case 0xFAD:
@@ -694,11 +725,20 @@ public class InstructionParser : BaseInstructionParser {
                 return _lfsParser.Parse(context);
             case 0x0FB5:
                 return _lgsParser.Parse(context);
+            case 0x0FB0:
+            case 0x0FB1:
+                return _cmpxchgRmParser.Parse(context);
             case 0x0FB6:
                 return _movRmZeroExtendByteParser.Parse(context);
             case 0x0FB7:
                 return new MovRmZeroExtendWord32(context.Address, context.OpcodeField, context.Prefixes,
                     _modRmParser.ParseNext(context));
+            case 0x0FB3:
+                return _btrRmParser.Parse(context);
+            case 0x0FBA:
+                return _bitTestImmediateParser.Parse(context);
+            case 0x0FBB:
+                return _btcRmParser.Parse(context);
             case 0x0FBE:
                 return _movRmSignExtendByteParser.Parse(context);
             case 0x0FBF:
@@ -707,6 +747,21 @@ public class InstructionParser : BaseInstructionParser {
             case 0x0FC0:
             case 0x0FC1:
                 return _xaddRmParser.Parse(context);
+            case 0x0FBC:
+                return _bsfRmParser.Parse(context);
+            case 0x0FBD:
+                return _bsrRmParser.Parse(context);
+            case 0x0FC8:
+            case 0x0FC9:
+            case 0x0FCA:
+            case 0x0FCB:
+            case 0x0FCC:
+            case 0x0FCD:
+            case 0x0FCE:
+            case 0x0FCF: {
+                int regIndex = context.OpcodeField.Value & 0x7;
+                return new BswapReg32(context.Address, context.OpcodeField, context.Prefixes, regIndex);
+            }
             case 0xDBE3:
                 return new FnInit(context.Address, context.OpcodeField, context.Prefixes);
         }

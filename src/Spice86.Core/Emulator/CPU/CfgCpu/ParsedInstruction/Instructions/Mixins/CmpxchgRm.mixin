@@ -1,5 +1,6 @@
 @moxy
 @attribute required int Size
+@attribute required string Accumulator
 @moxy
 
 namespace {{ moxy.Class.Namespace }};
@@ -18,11 +19,21 @@ public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
 
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
-        helper.ModRm.R{{Size}} = {{ if Size == 16 }}(ushort){{ end }}helper.ModRm.MandatoryMemoryOffset;
+        if (helper.ModRm.RM{{Size}} == helper.State.{{Accumulator}}) {
+            helper.State.ZeroFlag = true;
+            helper.ModRm.RM{{Size}} = helper.ModRm.R{{Size}};
+        } else {
+            helper.State.ZeroFlag = false;
+            helper.State.{{Accumulator}} = helper.ModRm.RM{{Size}};
+        }
         helper.MoveIpAndSetNextNode(this);
     }
 
     public override InstructionNode ToInstructionAst(AstBuilder builder) {
-        return new InstructionNode(InstructionOperation.LEA, builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext), builder.ModRm.MemoryOffsetToNode(ModRmContext));
+        return new InstructionNode(InstructionOperation.CMPXCHG,
+            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext)
+        );
     }
 }
+

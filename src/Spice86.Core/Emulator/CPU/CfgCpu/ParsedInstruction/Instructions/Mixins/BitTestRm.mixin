@@ -1,0 +1,78 @@
+@moxy
+@attribute required int Size
+@attribute required string Operation
+@attribute required string Mutation
+@moxy
+
+namespace {{ moxy.Class.Namespace }};
+
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Shared.Emulator.Memory;
+
+public partial class {{ moxy.Class.Name }} : InstructionWithModRm {
+
+    public {{ moxy.Class.Name }}(SegmentedAddress address, InstructionField<ushort> opcodeField, List<InstructionPrefix> prefixes, ModRmContext modRmContext) : base(address, opcodeField, prefixes, modRmContext, 1) {
+    }
+
+    public override void Execute(InstructionExecutionHelper helper) {
+        helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
+        uint bitIndex = helper.ModRm.R{{Size}};
+        ExecuteBitOperation(helper, bitIndex);
+        helper.MoveIpAndSetNextNode(this);
+    }
+
+    private void ExecuteBitOperation(InstructionExecutionHelper helper, uint bitIndex) {
+        {{ if Size == 16 }}ushort{{ else }}uint{{ end }} value;
+        bool isMemory = helper.ModRm.MemoryAddress != null;
+        if (!isMemory) {
+            value = helper.ModRm.RM{{Size}};
+            helper.State.CarryFlag = IsBitSet(value, bitIndex % {{Size}});
+            {{ if Mutation != "None" }}
+            value = ApplyMutation(value, bitIndex % {{Size}});
+            helper.ModRm.RM{{Size}} = value;
+            {{ end }}
+            return;
+        }
+
+        uint baseAddress = helper.ModRm.MandatoryMemoryAddress;
+        uint elementSize = {{Size}};
+        uint elementBytes = elementSize / 8;
+        uint elementIndex = bitIndex / elementSize;
+        uint bitInElement = bitIndex % elementSize;
+        uint address = baseAddress + elementIndex * elementBytes;
+        {{ if Size == 16 }}value = helper.Memory.UInt16[address];{{ else }}value = helper.Memory.UInt32[address];{{ end }}
+        helper.State.CarryFlag = IsBitSet(value, bitInElement);
+        {{ if Mutation != "None" }}
+        value = ApplyMutation(value, bitInElement);
+        {{ if Size == 16 }}helper.Memory.UInt16[address] = value;{{ else }}helper.Memory.UInt32[address] = value;{{ end }}
+        {{ end }}
+    }
+
+    private bool IsBitSet({{ if Size == 16 }}ushort{{ else }}uint{{ end }} value, uint bitIndex) {
+        {{ if Size == 16 }}ushort mask = (ushort)(1 << (int)bitIndex);{{ else }}uint mask = 1u << (int)bitIndex;{{ end }}
+        return (value & mask) != 0;
+    }
+
+    private {{ if Size == 16 }}ushort{{ else }}uint{{ end }} ApplyMutation({{ if Size == 16 }}ushort{{ else }}uint{{ end }} value, uint bitIndex) {
+        {{ if Size == 16 }}ushort mask = (ushort)(1 << (int)bitIndex);{{ else }}uint mask = 1u << (int)bitIndex;{{ end }}
+        {{ if Mutation == "Set" }}
+        return ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})(value | mask);
+        {{ else if Mutation == "Reset" }}
+        return ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})(value & ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})~mask);
+        {{ else if Mutation == "Toggle" }}
+        return ({{ if Size == 16 }}ushort{{ else }}uint{{ end }})(value ^ mask);
+        {{ else }}
+        return value;
+        {{ end }}
+    }
+
+    public override InstructionNode ToInstructionAst(AstBuilder builder) {
+        return new InstructionNode(InstructionOperation.{{Operation}},
+            builder.ModRm.RmToNode(builder.UType({{Size}}), ModRmContext),
+            builder.ModRm.RToNode(builder.UType({{Size}}), ModRmContext));
+    }
+}
