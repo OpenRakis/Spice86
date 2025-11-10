@@ -2,11 +2,10 @@ namespace Spice86.Shared.Diagnostics;
 
 using Spice86.Shared.Interfaces;
 
-/// <inheritdoc />
+/// <inheritdoc cref="IPerformanceMeasureReader" />
 public class PerformanceMeasurer : IPerformanceMeasureReader, IPerformanceMeasureWriter {
     private long _measure;
     private long _lastTimeInMilliseconds;
-    private long _sampledMetricsCount;
 
     /// <inheritdoc />
     public long ValuePerMillisecond { get; private set; }
@@ -26,45 +25,57 @@ public class PerformanceMeasurer : IPerformanceMeasureReader, IPerformanceMeasur
 
     private const int WindowSizeInSeconds = 30;
 
-    private static long GetCurrentTime() => System.Environment.TickCount64;
+    private static long GetCurrentTime() {
+        return Environment.TickCount64;
+    }
 
     /// <inheritdoc />
     public void UpdateValue(long newMeasure) {
         long newTimeInMilliseconds = GetCurrentTime();
         if (IsFirstMeasurement()) {
             _firstMeasureTimeInMilliseconds = newTimeInMilliseconds;
-        } else if (IsLastMeasurementExpired(newTimeInMilliseconds)) {
-            ResetMetrics(newTimeInMilliseconds);
+            _lastTimeInMilliseconds = newTimeInMilliseconds;
+            _measure = newMeasure;
+            return;
+        }
+
+        if (IsLastMeasurementExpired(newTimeInMilliseconds)) {
+            ResetMetrics(newTimeInMilliseconds, newMeasure);
+            return;
         }
 
         long millisecondsDelta = newTimeInMilliseconds - _lastTimeInMilliseconds;
         if (millisecondsDelta == 0) {
             return;
         }
+
         _lastTimeInMilliseconds = newTimeInMilliseconds;
         long valueDelta = newMeasure - _measure;
         _measure = newMeasure;
         ValuePerMillisecond = valueDelta / millisecondsDelta;
-        AverageValuePerSecond = ApproxRollingAverage(AverageValuePerSecond, 
-            ValuePerSecond, _sampledMetricsCount++);
+        long valuePerSecond = ValuePerSecond;
+        AverageValuePerSecond = AverageValuePerSecond == 0
+            ? valuePerSecond
+            : SmoothingAverage(AverageValuePerSecond, valuePerSecond);
     }
 
     private bool IsFirstMeasurement() {
         return _firstMeasureTimeInMilliseconds == 0;
     }
 
-    private void ResetMetrics(long newTimeInMilliseconds) {
+    private void ResetMetrics(long newTimeInMilliseconds, long newMeasure) {
         _firstMeasureTimeInMilliseconds = newTimeInMilliseconds;
-        _sampledMetricsCount = 0;
+        _measure = newMeasure;
+        _lastTimeInMilliseconds = newTimeInMilliseconds;
+        ValuePerMillisecond = 0;
         AverageValuePerSecond = 0;
     }
 
     private bool IsLastMeasurementExpired(long newTimeInMilliseconds) =>
         newTimeInMilliseconds - _firstMeasureTimeInMilliseconds > WindowSizeInSeconds * 1000;
 
-    private static long ApproxRollingAverage(long measureAverage, long valuePerSecond, long sampledMetricsCount) {
-        measureAverage -= measureAverage / Math.Max(sampledMetricsCount, 1);
-        measureAverage += valuePerSecond / Math.Max(sampledMetricsCount, 1);
-        return measureAverage;
+    private static long SmoothingAverage(long currentAverage, long latestValuePerSecond) {
+        const double alpha = 0.2;
+        return (long)((currentAverage * (1 - alpha)) + (latestValuePerSecond * alpha));
     }
 }

@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -12,7 +14,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
-
 
 /// <summary>
 /// This class orchestrates the execution of the emulated CPU, <br/>
@@ -31,6 +32,12 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
+    private const int PerformanceMeasureCheckInterval = 512;
+    private const long PerformanceMeasureMinCycleDelta = 3000;
+    private const int PerformanceMeasureMaxIntervalMilliseconds = 10;
+    private int _performanceMeasureCountdown = 1;
+    private long _lastPerformanceMeasureCycles;
+    private long _lastPerformanceMeasureTimestamp = Environment.TickCount64;
 
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
@@ -122,14 +129,34 @@ public class EmulationLoop : ICyclesLimiter {
         _emulatorBreakpointsManager.CheckExecutionBreakPoints();
         _pauseHandler.WaitIfPaused();
         _cpu.ExecuteNext();
-        _performanceMeasurer.UpdateValue(_cpuState.Cycles);
+        MaybeUpdatePerformanceMeasurements();
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
         _cyclesLimiter.RegulateCycles(_cpuState);
     }
 
+    private void MaybeUpdatePerformanceMeasurements() {
+        if (--_performanceMeasureCountdown > 0) {
+            return;
+        }
+
+        _performanceMeasureCountdown = PerformanceMeasureCheckInterval;
+        long cycles = _cpuState.Cycles;
+        long cycleDelta = cycles - _lastPerformanceMeasureCycles;
+        long now = Environment.TickCount64;
+        long timeDelta = now - _lastPerformanceMeasureTimestamp;
+        if (cycleDelta < PerformanceMeasureMinCycleDelta &&
+            timeDelta < PerformanceMeasureMaxIntervalMilliseconds) {
+            return;
+        }
+
+        _lastPerformanceMeasureCycles = cycles;
+        _lastPerformanceMeasureTimestamp = now;
+        _performanceMeasurer.UpdateValue(cycles);
+    }
+
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
             long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
             _loggerService.Warning(
