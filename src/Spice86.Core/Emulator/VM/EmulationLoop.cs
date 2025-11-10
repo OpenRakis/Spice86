@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -12,7 +14,6 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
-
 
 /// <summary>
 /// This class orchestrates the execution of the emulated CPU, <br/>
@@ -119,7 +120,9 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     private void RunOnce() {
-        _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+        if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+            _emulatorBreakpointsManager.TriggerBreakpoints();
+        }
         _pauseHandler.WaitIfPaused();
         _cpu.ExecuteNext();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
@@ -129,7 +132,7 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             long cyclesPerSeconds = _performanceMeasurer.AverageValuePerSecond;
             long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
             _loggerService.Warning(
