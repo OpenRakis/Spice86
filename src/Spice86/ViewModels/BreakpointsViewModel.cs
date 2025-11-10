@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -534,8 +535,12 @@ public partial class BreakpointsViewModel : ViewModelBase {
             try {
                 Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
                 condition = compiler.Compile(conditionExpression);
-            } catch (ArgumentException) {
-                // If parsing/compilation fails, treat as unconditional and clear the expression
+            } catch (ExpressionParseException) {
+                // If parsing fails, treat as unconditional and clear the expression
+                // Future enhancement: show error in UI with ex.Position to indicate where the error is
+                conditionExpression = null;
+            } catch (Exception) {
+                // If compilation fails for other reasons, treat as unconditional
                 conditionExpression = null;
             }
         }
