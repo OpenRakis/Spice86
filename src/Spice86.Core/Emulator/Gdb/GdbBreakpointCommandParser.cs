@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Gdb;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -144,7 +145,14 @@ public class GdbBreakpointCommandParser {
                 if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                     _loggerService.Information("Compiled conditional breakpoint: {Expression}", conditionExpression);
                 }
-            } catch (ArgumentException ex) {
+            } catch (ExpressionParseException ex) {
+                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    _loggerService.Warning(ex, "Failed to compile condition expression at position {Position}: {Expression}", 
+                        ex.Position, conditionExpression);
+                }
+                // Continue without condition if compilation fails
+                conditionExpression = null;
+            } catch (Exception ex) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning(ex, "Failed to compile condition expression: {Expression}", conditionExpression);
                 }
