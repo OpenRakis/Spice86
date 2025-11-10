@@ -76,6 +76,8 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                     MemoryBreakpointStartAddress = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
                     MemoryBreakpointEndAddress = ConvertUtils.ToHex32((uint)SelectedBreakpoint.EndAddress);
                     SelectedMemoryBreakpointType = SelectedBreakpoint.Type;
+                    // Note: Value condition cannot be recovered from the breakpoint function, so it's cleared when editing
+                    MemoryBreakpointValueCondition = null;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Memory");
                     break;
             }
