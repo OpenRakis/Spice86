@@ -28,16 +28,15 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly Timer _timer;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-    private readonly PerformanceMeasurer _performanceMeasurer = new();
+
+    private readonly PerformanceMeasurer _performanceMeasurer = new(new PerformanceMeasureOptions {
+        CheckInterval = 512,
+        MinValueDelta = 3000,
+        MaxIntervalMilliseconds = 10
+    });
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly DmaController _dmaController;
     private readonly CycleLimiterBase _cyclesLimiter;
-    private const int PerformanceMeasureCheckInterval = 512;
-    private const long PerformanceMeasureMinCycleDelta = 3000;
-    private const int PerformanceMeasureMaxIntervalMilliseconds = 10;
-    private int _performanceMeasureCountdown = 1;
-    private long _lastPerformanceMeasureCycles;
-    private long _lastPerformanceMeasureTimestamp = Environment.TickCount64;
 
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
@@ -131,30 +130,10 @@ public class EmulationLoop : ICyclesLimiter {
         }
         _pauseHandler.WaitIfPaused();
         _cpu.ExecuteNext();
-        MaybeUpdatePerformanceMeasurements();
+        _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         _timer.Tick();
         _dmaController.PerformDmaTransfers();
         _cyclesLimiter.RegulateCycles(_cpuState);
-    }
-
-    private void MaybeUpdatePerformanceMeasurements() {
-        if (--_performanceMeasureCountdown > 0) {
-            return;
-        }
-
-        _performanceMeasureCountdown = PerformanceMeasureCheckInterval;
-        long cycles = _cpuState.Cycles;
-        long cycleDelta = cycles - _lastPerformanceMeasureCycles;
-        long now = Environment.TickCount64;
-        long timeDelta = now - _lastPerformanceMeasureTimestamp;
-        if (cycleDelta < PerformanceMeasureMinCycleDelta &&
-            timeDelta < PerformanceMeasureMaxIntervalMilliseconds) {
-            return;
-        }
-
-        _lastPerformanceMeasureCycles = cycles;
-        _lastPerformanceMeasureTimestamp = now;
-        _performanceMeasurer.UpdateValue(cycles);
     }
 
     private void OutputPerfStats() {
