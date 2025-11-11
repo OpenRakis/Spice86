@@ -40,6 +40,8 @@ public class EmulationLoop : ICyclesLimiter {
     private long _nextSliceTick;
     private bool _sliceInitialized;
     private readonly long _sliceDurationTicks;
+    private readonly double _sliceDurationMilliseconds;
+    private readonly AdaptiveCycleBudgeter _adaptiveCycleBudgeter;
 
     /// <summary>
     ///     Gets a reader exposing CPU performance metrics.
@@ -86,6 +88,8 @@ public class EmulationLoop : ICyclesLimiter {
         _pauseHandler = pauseHandler;
         _cyclesLimiter = CycleLimiterFactory.Create(configuration);
         _sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
+        _sliceDurationMilliseconds = _sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
+        _adaptiveCycleBudgeter = new AdaptiveCycleBudgeter(_cyclesLimiter, _sliceDurationMilliseconds);
         _pauseHandler.Paused += OnPauseStateChanged;
         _pauseHandler.Resumed += OnPauseStateChanged;
         _sliceStopwatch.Start();
@@ -160,10 +164,9 @@ public class EmulationLoop : ICyclesLimiter {
     private bool RunSlice() {
         _pauseHandler.WaitIfPaused();
         InitializeSliceTimer();
-        int targetCycles = _cyclesLimiter.TargetCpuCyclesPerMs;
-        if (targetCycles <= 0) {
-            targetCycles = 1;
-        }
+        long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
+        long sliceStartCycles = _cpuState.Cycles;
+        int targetCycles = _adaptiveCycleBudgeter.GetNextSliceBudget();
 
         _picPitCpuState.CyclesMax = targetCycles;
         _dualPic.AddTick();
@@ -183,6 +186,7 @@ public class EmulationLoop : ICyclesLimiter {
 
         _dualPic.RunQueue();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
+        UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
         return HandleSliceTiming();
     }
 
@@ -262,6 +266,32 @@ public class EmulationLoop : ICyclesLimiter {
     private void ResetSliceTimer() {
         _sliceInitialized = false;
         _nextSliceTick = _sliceStopwatch.ElapsedTicks;
+    }
+
+    /// <summary>
+    ///     Updates the adaptive cycle budget based on the actual duration of the executed slice.
+    /// </summary>
+    private void UpdateAdaptiveCycleBudget(long sliceStartTicks, long sliceStartCycles) {
+        if (!_cpuState.IsRunning) {
+            return;
+        }
+
+        long elapsedTicks = _sliceStopwatch.ElapsedTicks - sliceStartTicks;
+        if (elapsedTicks <= 0) {
+            return;
+        }
+
+        double elapsedMilliseconds = elapsedTicks * 1000.0 / Stopwatch.Frequency;
+        if (elapsedMilliseconds <= 0) {
+            return;
+        }
+
+        long cyclesExecuted = _cpuState.Cycles - sliceStartCycles;
+        if (cyclesExecuted <= 0) {
+            return;
+        }
+
+        _adaptiveCycleBudgeter.UpdateBudget(elapsedMilliseconds, cyclesExecuted, _cpuState.IsRunning);
     }
 
     /// <summary>
