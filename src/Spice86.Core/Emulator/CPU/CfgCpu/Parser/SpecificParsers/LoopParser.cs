@@ -4,14 +4,11 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Shared.Emulator.Memory;
 
-public class LoopParser : BaseInstructionParser {
-    public LoopParser(BaseInstructionParser instructionParser) : base(instructionParser) {
-    }
-
+public class LoopParser(BaseInstructionParser instructionParser) : BaseInstructionParser(instructionParser) {
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth addressWidth = context.AddressWidthFromPrefixes;
         ushort opcode = context.OpcodeField.Value;
-        InstructionField<sbyte> offsetField = _instructionReader.Int8.NextField(false);
+        InstructionField<sbyte> offsetField = _instructionReader.Int8.NextField(true);
         if(BitIsTrue(opcode, 1)) {
             // Loop with no condition
             return addressWidth switch {

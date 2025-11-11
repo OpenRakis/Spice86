@@ -1,23 +1,23 @@
+namespace Spice86.Tests.CfgCpu;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Immutable;
+using System.Reflection;
 
 using Xunit;
-
-namespace Spice86.Tests.CfgCpu;
-
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
-using Spice86.Core.Emulator.VM.Breakpoint;
 
 public class InstructionsFeederTest {
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
@@ -33,7 +33,6 @@ public class InstructionsFeederTest {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new EmulatorBreakpointsManager(new PauseHandler(loggerService), state);
         _memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(64), new A20Gate());
         _instructionReplacer = new();
-        
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer);
     }
 
@@ -47,12 +46,31 @@ public class InstructionsFeederTest {
         _memory.UInt16[address + 1] = 0xFFFF;
     }
 
+    private void WriteLoop(SegmentedAddress address, sbyte relativeOffset) {
+        _memory.UInt8[address] = 0xE2;
+        _memory.Int8[address + 1] = relativeOffset;
+    }
+
     private JmpNearImm8 CreateReplacementInstruction() {
         var opcodeField = new InstructionField<ushort>(0, 1, 0, 0xEB, ImmutableList.Create<byte?>(0xEB), true);
         // Replacement has a null signature byte for offset field -> will not be taken into account when comparing with ram
         var offsetField = new InstructionField<sbyte>(1, 1, 1, -2, ImmutableList.Create((byte?)null), false);
         JmpNearImm8 res = new JmpNearImm8(ZeroAddress, opcodeField, new List<InstructionPrefix>(), offsetField);
         return res;
+    }
+
+    private static readonly FieldInfo TargetIpField =
+        typeof(JmpNearImm8).GetField("_targetIp", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    private static ushort GetLoopTarget(JmpNearImm8 loopInstruction) {
+        return (ushort)TargetIpField.GetValue(loopInstruction)!;
+    }
+
+    private static ushort ExpectedLoopTarget(CfgInstruction instruction, sbyte relativeOffset) {
+        unchecked {
+            int nextOffset = instruction.Address.Offset + instruction.Length;
+            return (ushort)(nextOffset + relativeOffset);
+        }
     }
 
     [Fact]
@@ -142,6 +160,25 @@ public class InstructionsFeederTest {
 
         // Assert
         Assert.Equal(typeof(MovRegImm16), instruction2.GetType());
+    }
+
+    [Fact]
+    public void LoopSelfModifyingOffsetUpdatesTarget() {
+        // Arrange
+        InstructionsFeeder instructionsFeeder = CreateInstructionsFeeder();
+        WriteLoop(ZeroAddress, -2);
+
+        // Act
+        var initialLoop = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+        WriteLoop(ZeroAddress, -4);
+        var afterFirstModification = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+        WriteLoop(ZeroAddress, -6);
+        var afterSecondModification = (Loop16)instructionsFeeder.GetInstructionFromMemory(ZeroAddress);
+
+        // Assert
+        Assert.Equal(ExpectedLoopTarget(initialLoop, -2), GetLoopTarget(initialLoop));
+        Assert.Equal(ExpectedLoopTarget(afterFirstModification, -4), GetLoopTarget(afterFirstModification));
+        Assert.Equal(ExpectedLoopTarget(afterSecondModification, -6), GetLoopTarget(afterSecondModification));
     }
 
     [Fact]
