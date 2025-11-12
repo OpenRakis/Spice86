@@ -19,7 +19,6 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.Core.Emulator.Devices.Sound.PCSpeaker;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
@@ -41,6 +40,8 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -49,6 +50,8 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -59,6 +62,7 @@ public class Spice86DependencyInjection : IDisposable {
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGui _gui;
     private bool _disposed;
+    private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
         : this(configuration, null) {
@@ -125,6 +129,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("IO port dispatcher created...");
         }
 
+        IoSystem ioSystem = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+
+        loggerService.Information("IO system bridge created...");
+
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -154,9 +162,16 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        var dualPic = new DualPic(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort,
-            configuration.InitializeDOS is false, loggerService);
+        PicPitCpuState picPitCpuState = new(state);
+
+        var dualPic = new DualPic(ioSystem, picPitCpuState, loggerService);
+
+        if (configuration.InitializeDOS is false) {
+            loggerService.Information("Masking all PIC IRQs...");
+            for (uint irq = 0; irq < 16; irq++) {
+                dualPic.SetIrqMask(irq, true);
+            }
+        }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dual PIC created...");
@@ -210,7 +225,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, ioPortDispatcher, callbackHandler,
+            dualPic, picPitCpuState, ioPortDispatcher, callbackHandler,
             emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -218,14 +233,13 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
+            dualPic, picPitCpuState, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
         }
 
-        IInstructionExecutor instructionExecutor = configuration.CfgCpu ? cfgCpu : cpu;
         IFunctionHandlerProvider functionHandlerProvider = configuration.CfgCpu ? cfgCpu : cpu;
         IExecutionDumpFactory executionDumpFactory =
             configuration.CfgCpu ? new CfgCpuFlowDumper(cfgCpu, executionDump) : executionFlowRecorder;
@@ -235,21 +249,13 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         // IO devices
-        Timer timer = new Timer(configuration, state, ioPortDispatcher,
-            new CounterConfiguratorFactory(configuration,
-            state, pauseHandler, loggerService), loggerService, dualPic);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Timer created...");
-        }
-
         var timerInt8Handler = new TimerInt8Handler(dualPic, biosDataArea);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Timer int8 handler created...");
         }
 
-        DmaController dmaController =
+        DmaSystem dmaSystem =
             new(memory, state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -315,6 +321,27 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
+        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
+        var midiDevice = new Midi(configuration, softwareMixer, state,
+            ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
+            configuration.FailOnUnhandledPort, loggerService);
+        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
+            pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
+        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService);
+        pcSpeaker.AttachPitControl(pitTimer);
+        loggerService.Information("PIT created...");
+
+        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
+        loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
+        var soundBlaster = new SoundBlaster(ioPortDispatcher,
+            softwareMixer, state, dmaSystem, dualPic,
+            configuration.FailOnUnhandledPort,
+            loggerService, soundBlasterHardwareConfig, pauseHandler);
+        var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService);
+
+        loggerService.Information("Sound devices created...");
+
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler,
             configuration, dumpContext.DumpDirectory, loggerService);
 
@@ -332,9 +359,12 @@ public class Spice86DependencyInjection : IDisposable {
       
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
-            cpuForEmulationLoop, state, timer, emulatorBreakpointsManager,
-            dmaController, pauseHandler, loggerService);
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
+        ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
+
+        EmulationLoop emulationLoop = new(functionHandler,
+            cpuForEmulationLoop, state, picPitCpuState, dualPic,
+            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -362,7 +392,7 @@ public class Spice86DependencyInjection : IDisposable {
             };
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
-                timer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
+                pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel, exceptionHandler, emulationLoop);
             _gui = mainWindowViewModel;
         } else {
@@ -396,25 +426,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Input devices created...");
         }
 
-        SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        Midi midiDevice = new Midi(configuration, softwareMixer, state,
-                    ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
-                    configuration.FailOnUnhandledPort, loggerService);
-        PcSpeaker pcSpeaker = new PcSpeaker(softwareMixer, state, timer.GetCounter(2),
-            ioPortDispatcher, pauseHandler, loggerService, configuration.FailOnUnhandledPort);
-        var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(
-            7, 1, 5, SbType.SbPro2);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaController, dualPic,
-            configuration.FailOnUnhandledPort,
-            loggerService, soundBlasterHardwareConfig, pauseHandler);
-        GravisUltraSound gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Sound devices created...");
-        }
-
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulation loop created...");
         }
@@ -440,6 +451,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
+            InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
         }
 
         var dosClock = new Clock(loggerService);
@@ -483,11 +495,11 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler,
-            timer,
+            pitTimer,
             timerInt8Handler,
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
-            dmaController, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
+            dmaSystem, soundBlaster.Opl3Fm, softwareMixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -517,6 +529,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Machine = machine;
         ProgramExecutor = programExecutor;
+        ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
@@ -577,6 +590,26 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
+    private static ICyclesBudgeter CreateDefaultCyclesBudgeter(ICyclesLimiter cyclesLimiter) {
+        long sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
+        double sliceDurationMilliseconds = sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
+        ICyclesBudgeter cyclesBudgeter = new AdaptiveCyclesBudgeter(cyclesLimiter, sliceDurationMilliseconds);
+        return cyclesBudgeter;
+    }
+
+    private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];
+
+    private void InstallDefaultInterruptHandlers(InterruptInstaller interruptInstaller, DualPic dualPic,
+        BiosDataArea biosDataArea, LoggerService loggerService)
+    {
+        _loggerService.Information("Installing default interrupt handlers for IRQs {IRQs}...",
+            string.Join(", ", _defaultIrqs));
+        foreach (byte irq in _defaultIrqs) {
+            interruptInstaller.InstallInterruptHandler(new DefaultIrqHandler(dualPic, irq, biosDataArea,
+                loggerService));
+        }
+    }
+
     public void HeadlessModeStart() {
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Finally starting headless mode...");
@@ -633,8 +666,9 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 ProgramExecutor.Dispose();
-                Machine.Dispose();
+                DisposeMachineAfterRun();
 
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
@@ -642,5 +676,18 @@ public class Spice86DependencyInjection : IDisposable {
             }
             _disposed = true;
         }
+    }
+
+    private void OnProgramExecutorEmulationStopped(object? sender, EventArgs e) {
+        DisposeMachineAfterRun();
+    }
+
+    private void DisposeMachineAfterRun() {
+        if (_machineDisposedAfterRun) {
+            return;
+        }
+
+        _machineDisposedAfterRun = true;
+        Machine.Dispose();
     }
 }

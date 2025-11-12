@@ -67,14 +67,17 @@ public class InstructionExecutionHelper {
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
     public ICfgNode? NextNode { get; set; }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort SegmentValue(IInstructionWithSegmentRegisterIndex instruction) {
         return State.SegmentRegisters.UInt16[instruction.SegmentRegisterIndex];
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, ushort offset) {
         return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), offset);
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, uint offset) {
         if (offset > 0xFFFF) {
             throw new CpuGeneralProtectionFaultException("Offset overflows 16 bits");
@@ -259,6 +262,7 @@ public class InstructionExecutionHelper {
     
     public uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint GetMemoryAddressOverridableDsSi(IInstructionWithSegmentRegisterIndex instruction) {
         return PhysicalAddress(instruction, State.SI);
     }

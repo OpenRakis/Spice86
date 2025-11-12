@@ -32,6 +32,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly DumpFolderMetadata _dumpContext;
+    public event EventHandler? EmulationStopped;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -90,18 +91,26 @@ public sealed class ProgramExecutor : IDisposable {
     /// Starts the loaded program.
     /// </summary>
     public void Run() {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Starting the emulation loop");
-        }
-        if (_configuration.Debug) {
-            ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START, "Starting the emulated program in paused state.");
-            ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP, "Stopping the emulated program in paused state.");
-        }
-        _gdbServer?.StartServer();
-        _emulationLoop.Run();
+        try {
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("Starting the emulation loop");
+            }
 
-        if (_configuration.DumpDataOnExit is not false) {
-            _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_dumpContext.DumpDirectory);
+            if (_configuration.Debug) {
+                ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START,
+                    "Starting the emulated program in paused state.");
+                ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP,
+                    "Stopping the emulated program in paused state.");
+            }
+
+            _gdbServer?.StartServer();
+            _emulationLoop.Run();
+
+            if (_configuration.DumpDataOnExit is not false) {
+                _emulatorStateSerializer.SerializeEmulatorStateToDirectory(_dumpContext.DumpDirectory);
+            }
+        } finally {
+            EmulationStopped?.Invoke(this, EventArgs.Empty);
         }
     }
 

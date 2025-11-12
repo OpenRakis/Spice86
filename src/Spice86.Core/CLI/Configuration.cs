@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.VM.CycleBudget;
 
 /// <summary> Configuration for spice86, that is what to run and how. Set on startup. </summary>
 public sealed class Configuration {
@@ -104,7 +105,7 @@ public sealed class Configuration {
     public bool? InitializeDOS { get; set; }
 
     /// <summary>
-    /// Only for <see cref="Timer"/>
+    /// Only for <see cref="PitTimer"/>
     /// </summary>
     [Option('i', nameof(InstructionsPerSecond), Required = false, HelpText = "<number of instructions that have to be executed by the emulator to consider a second passed> if blank will use time based timer.")]
     public long? InstructionsPerSecond { get; set; }
@@ -184,4 +185,7 @@ public sealed class Configuration {
 
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
+
+    //TODO: Temporary fix, replace with real dependency injection
+    public ICyclesBudgeter? CyclesBudgeter { get; init; }
 }

@@ -1,9 +1,13 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
-using Spice86.Core.Emulator.Memory;
+using Serilog.Events;
 
-using System;
-using System.Threading;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
+
+using System.Buffers;
+using System.Timers;
 
 /// <summary>
 /// Emulates the Sound Blaster 16 DSP.
@@ -12,55 +16,53 @@ public sealed class Dsp : IDisposable {
     private readonly ADPCM2 _adpcm2;
     private readonly ADPCM3 _adpcm3;
     private readonly ADPCM4 _adpcm4;
+    private readonly DmaSystem _dmaSystem;
+    private readonly object _pumpLock = new();
+    private readonly ILoggerService _logger;
+    private readonly int _lowDmaChannelNumber;
+    private readonly int? _highDmaChannelNumber;
 
     /// <summary>
     /// Initializes a new instance of the Digital Signal Processor.
     /// </summary>
-    /// <param name="eightBitDmaChannel">The 8-bit wide DMA channel</param>
-    /// <param name="sixteenBitDmaChannel">The 16-bit wide DMA channel</param>
-    public Dsp(DmaChannel eightBitDmaChannel, DmaChannel sixteenBitDmaChannel) {
-        _adpcm2 = new();
-        _adpcm3 = new();
-        _adpcm4 = new();
-        _dmaChannel8 = eightBitDmaChannel;
-        _dmaChannel16 = sixteenBitDmaChannel;
+    /// <param name="dmaSystem">DMA subsystem providing channel access.</param>
+    /// <param name="lowDmaChannelNumber">Channel number used for 8-bit transfers.</param>
+    /// <param name="highDmaChannelNumber">Optional channel number used for 16-bit transfers.</param>
+    /// <param name="loggerService">Service instance used to log DSP activity.</param>
+    public Dsp(DmaSystem dmaSystem, int lowDmaChannelNumber, int? highDmaChannelNumber, ILoggerService loggerService) {
+        _adpcm2 = new ADPCM2();
+        _adpcm3 = new ADPCM3();
+        _adpcm4 = new ADPCM4();
+        _dmaSystem = dmaSystem;
+        _logger = loggerService;
+        _lowDmaChannelNumber = lowDmaChannelNumber;
+        _highDmaChannelNumber = highDmaChannelNumber;
         SampleRate = 22050;
         BlockTransferSize = 65536;
+
+        _logger.Debug(
+            "DSP initialized with low DMA channel {LowDma} and high DMA channel {HighDma}",
+            _lowDmaChannelNumber,
+            _highDmaChannelNumber);
     }
 
     /// <summary>
-    /// Gets whether the DSP can receive PCM data
+    /// Determines whether the DSP write buffer can accept additional PCM data.
     /// </summary>
-    /// <returns></returns>
+    /// <returns><c>true</c> when the current state prevents new data from being queued or the buffer is full.</returns>
     public bool IsWriteBufferAtCapacity() {
-        if (State == DspState.Normal) {
-            return true;
-        }
-        if (IsDmaTransferActive) {
-            return true;
-        }
-        return IsAtCapacity;
+        return State != DspState.Normal || IsAtCapacity;
     }
 
     /// <summary>
-    /// Gets or sets the current DSP State
+    /// Gets the current DSP state.
     /// </summary>
     public DspState State { get; private set; }
-
-    /// <summary>
-    /// Occurs when a buffer has been transferred in auto-initialize mode.
-    /// </summary>
-    public event Action? OnAutoInitBufferComplete;
 
     /// <summary>
     /// Gets or sets the DSP's sample rate.
     /// </summary>
     public int SampleRate { get; set; }
-
-    /// <summary>
-    /// Gets a value indicating whether the DMA mode is set to auto-initialize.
-    /// </summary>
-    public bool AutoInitialize { get; private set; }
 
     /// <summary>
     /// Gets or sets the size of a transfer block for auto-init mode.
@@ -73,6 +75,11 @@ public sealed class Dsp : IDisposable {
     public bool Is16Bit { get; private set; }
 
     /// <summary>
+    ///     Gets a value indicating whether the DSP fell back to 8-bit DMA for a 16-bit transfer.
+    /// </summary>
+    public bool IsUsing16BitAliasedDma { get; private set; }
+
+    /// <summary>
     /// Gets a value indicating whether the waveform data is stereo.
     /// </summary>
     public bool IsStereo { get; private set; }
@@ -82,20 +89,33 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     public bool IsDmaTransferActive { get; set; }
 
-    public bool IsAtCapacity => _waveBuffer.IsAtCapacity;
+    /// <summary>
+    ///     Currently active DMA channel.
+    /// </summary>
+    internal DmaChannel? CurrentChannel { get; private set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the internal waveform buffer reached capacity.
+    /// </summary>
+    private bool IsAtCapacity => _waveBuffer.IsAtCapacity;
+
+    /// <summary>
+    ///     Raised after bytes have been transferred from the DMA channel into the DSP buffer.
+    /// </summary>
+    public event Action<int>? DmaBytesTransferred;
 
     /// <summary>
     /// Starts a new DMA transfer.
     /// </summary>
     /// <param name="is16Bit">Value indicating whether this is a 16-bit transfer.</param>
     /// <param name="isStereo">Value indicating whether this is a stereo transfer.</param>
-    /// <param name="autoInitialize">Value indicating whether the DMA controller is in auto-initialize mode.</param>
     /// <param name="compressionLevel">Compression level of the expected data.</param>
     /// <param name="referenceByte">Value indicating whether a reference byte is expected.</param>
-    public void Begin(bool is16Bit, bool isStereo, bool autoInitialize, CompressionLevel compressionLevel = CompressionLevel.None, bool referenceByte = false) {
+    public void Begin(bool is16Bit, bool isStereo, CompressionLevel compressionLevel = CompressionLevel.None,
+        bool referenceByte = false) {
         Is16Bit = is16Bit;
         IsStereo = isStereo;
-        AutoInitialize = autoInitialize;
+        IsUsing16BitAliasedDma = false;
         _referenceByteExpected = referenceByte;
         _compression = compressionLevel;
         IsDmaTransferActive = true;
@@ -106,41 +126,121 @@ public sealed class Dsp : IDisposable {
             CompressionLevel.ADPCM2 => _adpcm2,
             CompressionLevel.ADPCM3 => _adpcm3,
             CompressionLevel.ADPCM4 => _adpcm4,
-            _ => null,
+            _ => null
         };
 
-        _currentChannel = _dmaChannel8;
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug(
+                "DSP beginning DMA transfer. 16-bit: {Is16Bit}, Stereo: {IsStereo}, Compression: {Compression}, ReferenceByte: {ReferenceByteExpected}",
+                is16Bit,
+                isStereo,
+                compressionLevel,
+                referenceByte);
+        }
 
-        int transferRate = SampleRate;
         if (Is16Bit) {
-            transferRate *= 2;
+            if (_highDmaChannelNumber.HasValue) {
+                CurrentChannel = _dmaSystem.GetChannel((byte)_highDmaChannelNumber.Value);
+            }
+
+            if (CurrentChannel is null) {
+                IsUsing16BitAliasedDma = true;
+                CurrentChannel = _dmaSystem.GetChannel((byte)_lowDmaChannelNumber)
+                                 ?? throw new InvalidOperationException(
+                                     $"DMA channel {_lowDmaChannelNumber} unavailable for aliased 16-bit transfer.");
+            }
+        } else {
+            CurrentChannel = _dmaSystem.GetChannel((byte)_lowDmaChannelNumber)
+                             ?? throw new InvalidOperationException($"DMA channel {_lowDmaChannelNumber} unavailable.");
         }
 
-        if (IsStereo) {
-            transferRate *= 2;
+        if (_logger.IsEnabled(LogEventLevel.Debug) && CurrentChannel is not null) {
+            _logger.Debug(
+                "DSP bound to DMA channel {ChannelNumber} ({ChannelWidth}-bit){AliasInfo}",
+                CurrentChannel.ChannelNumber,
+                CurrentChannel.Is16Bit ? 16 : 8,
+                IsUsing16BitAliasedDma ? " using aliased 16-bit mode" : string.Empty);
         }
 
-        double factor = 1.0;
-        if (autoInitialize) {
-            factor = 1.5;
-        }
-
-        _currentChannel.TransferRate = (int)(transferRate * factor);
-        _currentChannel.IsActive = true;
-
+        _resetTimer.Elapsed -= OnResetTimerElapsed;
         _resetTimer.Elapsed += OnResetTimerElapsed;
     }
 
+    /// <summary>
+    ///     Handles the reset timer's elapsed event by restoring the DSP to the normal state.
+    /// </summary>
     private void OnResetTimerElapsed(object? sender, EventArgs e) {
         State = DspState.Normal;
         _resetTimer.Stop();
     }
 
     /// <summary>
-    /// Exits autoinitialize mode.
+    ///     Attempts to advance the current DMA transfer and fill the internal waveform buffer.
     /// </summary>
-    public void ExitAutoInit() {
-        AutoInitialize = false;
+    /// <param name="requestedBytes">Optional number of bytes requested from the DMA channel.</param>
+    public int PumpDma(int? requestedBytes = null) {
+        lock (_pumpLock) {
+            if (CurrentChannel is null || !IsDmaTransferActive) {
+                return 0;
+            }
+
+            return PumpDmaFromChannel(CurrentChannel, requestedBytes);
+        }
+    }
+
+    /// <summary>
+    ///     Pulls data from the specified DMA channel and writes it into the waveform buffer.
+    /// </summary>
+    /// <param name="channel">The DMA channel to read data from.</param>
+    /// <param name="requestedBytes">Optional number of bytes requested from the channel.</param>
+    /// <returns>The number of bytes transferred into the waveform buffer.</returns>
+    private int PumpDmaFromChannel(DmaChannel channel, int? requestedBytes) {
+        int wordCountAvailable = channel.CurrentCount + 1;
+        if (wordCountAvailable <= 0) {
+            return 0;
+        }
+
+        int bytesAvailable = wordCountAvailable << channel.ShiftCount;
+        int bytesRequested = requestedBytes ?? bytesAvailable;
+        if (bytesRequested <= 0) {
+            bytesRequested = bytesAvailable;
+        }
+
+        if (channel.Is16Bit) {
+            bytesRequested &= ~1;
+            if (bytesRequested == 0) {
+                return 0;
+            }
+        }
+
+        int bytesToTransfer = Math.Min(bytesRequested, bytesAvailable);
+        if (bytesToTransfer <= 0) {
+            return 0;
+        }
+
+        int wordsToTransfer = channel.Is16Bit ? bytesToTransfer >> 1 : bytesToTransfer;
+
+        byte[] rented = ArrayPool<byte>.Shared.Rent(bytesToTransfer);
+        try {
+            Span<byte> span = rented.AsSpan(0, bytesToTransfer);
+            int wordsTransferred = channel.Read(wordsToTransfer, span);
+            int bytesTransferred = wordsTransferred << channel.ShiftCount;
+            if (bytesTransferred <= 0) {
+                _logger.Debug("DSP received no data from DMA channel {ChannelNumber} during pump operation.",
+                    channel.ChannelNumber);
+                return 0;
+            }
+
+            var segment = new ArraySegment<byte>(rented, 0, bytesTransferred);
+            int bytesWritten = DmaWrite(segment);
+            if (bytesTransferred > 0) {
+                DmaBytesTransferred?.Invoke(bytesTransferred);
+            }
+
+            return Math.Min(bytesTransferred, bytesWritten);
+        } finally {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
     }
 
     /// <summary>
@@ -205,17 +305,15 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     /// <param name="source">Pointer to data in memory.</param>
     /// <returns>Number of bytes actually written.</returns>
-    public int DmaWrite(IList<byte> source) {
-        int actualCount = _waveBuffer.Write(source);
-        if (AutoInitialize) {
-            _autoInitTotal += actualCount;
-            if (_autoInitTotal >= BlockTransferSize) {
-                _autoInitTotal -= BlockTransferSize;
-                OnAutoInitBufferComplete?.Invoke();
-            }
+    private int DmaWrite(ArraySegment<byte> source) {
+        int bytesWritten = _waveBuffer.Write(source);
+        if (bytesWritten < source.Count) {
+            _logger.Warning(
+                "DSP waveform buffer accepted {BytesWritten} of {SourceCount} requested bytes; buffer is saturated.",
+                bytesWritten, source.Count);
         }
 
-        return actualCount;
+        return bytesWritten;
     }
 
     /// <summary>
@@ -225,63 +323,88 @@ public sealed class Dsp : IDisposable {
         State = DspState.ResetWait;
         SampleRate = 22050;
         BlockTransferSize = 65536;
-        AutoInitialize = false;
         Is16Bit = false;
         IsStereo = false;
-        _autoInitTotal = 0;
+        IsUsing16BitAliasedDma = false;
         _readIdleCycles = 0;
+        CurrentChannel = null;
+        IsDmaTransferActive = false;
+        _hasLoggedStreamStarvation = false;
         State = DspState.Reset;
         _resetTimer.Start();
+        _logger.Debug("DSP reset to default state.");
     }
 
-    private readonly System.Timers.Timer _resetTimer = new System.Timers.Timer(TimeSpan.FromMicroseconds(20));
+    private readonly Timer _resetTimer = new(TimeSpan.FromMicroseconds(20));
 
     /// <summary>
-    /// Reads samples from the internal buffer.
+    /// Reads samples from the internal waveform buffer into the supplied span, blocking until data becomes available or zero-filling when idle.
     /// </summary>
     /// <param name="buffer">Buffer into which sample data is written.</param>
     private void InternalRead(Span<byte> buffer) {
         Span<byte> dest = buffer;
+        SpinWait spinner = new();
 
         while (dest.Length > 0) {
             int amt = _waveBuffer.Read(dest);
 
             if (amt == 0) {
-                if (!IsDmaTransferActive || _readIdleCycles >= 100) {
+                if (IsDmaTransferActive && CurrentChannel is not null) {
+                    PumpDma(dest.Length);
+                    amt = _waveBuffer.Read(dest);
+                    if (amt > 0) {
+                        _readIdleCycles = 0;
+                        _hasLoggedStreamStarvation = false;
+                        spinner.Reset();
+                        dest = dest[amt..];
+                        continue;
+                    }
+                }
+
+                if (!IsDmaTransferActive) {
                     byte zeroValue = Is16Bit ? (byte)0 : (byte)128;
                     dest.Fill(zeroValue);
+                    _readIdleCycles = 0;
+                    _hasLoggedStreamStarvation = false;
                     return;
                 }
 
                 _readIdleCycles++;
-                Thread.Sleep(1);
-            } else {
+
+                switch (_readIdleCycles) {
+                    case < 250: {
+                        spinner.SpinOnce();
+                        if (spinner.NextSpinWillYield) {
+                            Thread.Yield();
+                        }
+
+                        continue;
+                    }
+                    case < 4000:
+                        spinner.Reset();
+                        HighResolutionWaiter.WaitMilliseconds(0.25);
+                        continue;
+                }
+
+                int idleCycles = _readIdleCycles;
+                byte zeroValueFallback = Is16Bit ? (byte)0 : (byte)128;
+                dest.Fill(zeroValueFallback);
+                if (!_hasLoggedStreamStarvation) {
+                    _logger.Warning(
+                        "DSP filled output with silence after {IdleCycles} idle cycles while DMA was active.",
+                        idleCycles);
+                }
                 _readIdleCycles = 0;
+                _hasLoggedStreamStarvation = true;
+                return;
             }
 
+            _readIdleCycles = 0;
+            _hasLoggedStreamStarvation = false;
+            spinner.Reset();
             dest = dest[amt..];
         }
     }
-
-    /// <summary>
-    /// DMA channel used for 8-bit data transfers.
-    /// </summary>
-    private readonly DmaChannel _dmaChannel8;
-
-    /// <summary>
-    /// DMA channel used for 16-bit data transfers.
-    /// </summary>
-    private readonly DmaChannel _dmaChannel16;
-
-    /// <summary>
-    /// Currently active DMA channel.
-    /// </summary>
-    private DmaChannel? _currentChannel;
-
-    /// <summary>
-    /// Number of bytes transferred in the current auto-init cycle.
-    /// </summary>
-    private int _autoInitTotal;
 
     /// <summary>
     /// Number of cycles with no new input data.
@@ -313,6 +436,7 @@ public sealed class Dsp : IDisposable {
     /// </summary>
     private int _decodeRemainderOffset;
     private bool _disposedValue;
+    private bool _hasLoggedStreamStarvation;
 
     /// <summary>
     /// Remaining decoded bytes.
@@ -327,21 +451,23 @@ public sealed class Dsp : IDisposable {
     /// <summary>
     /// Size of output buffer in samples.
     /// </summary>
-    private const int TargetBufferSize = 1024;
+    private const int TargetBufferSize = 32768;
 
     private void Dispose(bool disposing) {
-        if (!_disposedValue) {
-            if (disposing) {
-                _resetTimer.Dispose();
-            }
-            _disposedValue = true;
+        if (_disposedValue) {
+            return;
         }
+
+        if (disposing) {
+            _resetTimer.Dispose();
+        }
+
+        _disposedValue = true;
     }
 
     /// <inheritdoc/>
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }
