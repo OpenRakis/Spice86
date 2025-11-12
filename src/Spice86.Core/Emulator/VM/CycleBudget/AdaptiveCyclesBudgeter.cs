@@ -1,11 +1,11 @@
-﻿namespace Spice86.Core.Emulator.VM;
+﻿namespace Spice86.Core.Emulator.VM.CycleBudget;
 
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 
 /// <summary>
 ///     Dynamically adjusts the per-slice CPU cycle budget so that emulation stays in sync with real time.
 /// </summary>
-internal sealed class AdaptiveCycleBudgeter {
+public sealed class AdaptiveCyclesBudgeter : ICyclesBudgeter {
     private const double MinAdaptiveScaleFactor = 0.25;
     private const double MaxAdaptiveScaleFactor = 4.0;
 
@@ -14,11 +14,11 @@ internal sealed class AdaptiveCycleBudgeter {
     private double _adaptiveCyclesPerSlice;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="AdaptiveCycleBudgeter" /> class.
+    ///     Initializes a new instance of the <see cref="AdaptiveCyclesBudgeter" /> class.
     /// </summary>
     /// <param name="cyclesLimiter">Limiter exposing the user-configured cycles-per-millisecond target.</param>
     /// <param name="sliceDurationMilliseconds">Duration, in milliseconds, of each emulation slice.</param>
-    public AdaptiveCycleBudgeter(ICyclesLimiter cyclesLimiter, double sliceDurationMilliseconds) {
+    public AdaptiveCyclesBudgeter(ICyclesLimiter cyclesLimiter, double sliceDurationMilliseconds) {
         _cyclesLimiter = cyclesLimiter;
         _sliceDurationMilliseconds = Math.Max(0.001, sliceDurationMilliseconds);
         _adaptiveCyclesPerSlice = Math.Max(1, _cyclesLimiter.TargetCpuCyclesPerMs);

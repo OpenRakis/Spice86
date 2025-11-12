@@ -40,6 +40,8 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -48,6 +50,8 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
+
+using System.Diagnostics;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -58,6 +62,7 @@ public class Spice86DependencyInjection : IDisposable {
     public ProgramExecutor ProgramExecutor { get; }
     private readonly IGui _gui;
     private bool _disposed;
+    private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
         : this(configuration, null) {
@@ -354,9 +359,12 @@ public class Spice86DependencyInjection : IDisposable {
       
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
-        EmulationLoop emulationLoop = new(configuration, functionHandler,
+        ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
+        ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
+
+        EmulationLoop emulationLoop = new(functionHandler,
             cpuForEmulationLoop, state, picPitCpuState, dualPic,
-            emulatorBreakpointsManager, pauseHandler, loggerService);
+            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -521,6 +529,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Machine = machine;
         ProgramExecutor = programExecutor;
+        ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
@@ -579,6 +588,13 @@ public class Spice86DependencyInjection : IDisposable {
                 debugWindowViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
+    }
+
+    private static ICyclesBudgeter CreateDefaultCyclesBudgeter(ICyclesLimiter cyclesLimiter) {
+        long sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
+        double sliceDurationMilliseconds = sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
+        ICyclesBudgeter cyclesBudgeter = new AdaptiveCyclesBudgeter(cyclesLimiter, sliceDurationMilliseconds);
+        return cyclesBudgeter;
     }
 
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];
@@ -650,8 +666,9 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 ProgramExecutor.Dispose();
-                Machine.Dispose();
+                DisposeMachineAfterRun();
 
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
@@ -659,5 +676,18 @@ public class Spice86DependencyInjection : IDisposable {
             }
             _disposed = true;
         }
+    }
+
+    private void OnProgramExecutorEmulationStopped(object? sender, EventArgs e) {
+        DisposeMachineAfterRun();
+    }
+
+    private void DisposeMachineAfterRun() {
+        if (_machineDisposedAfterRun) {
+            return;
+        }
+
+        _machineDisposedAfterRun = true;
+        Machine.Dispose();
     }
 }

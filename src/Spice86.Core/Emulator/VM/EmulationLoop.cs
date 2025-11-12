@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -40,8 +41,7 @@ public class EmulationLoop : ICyclesLimiter {
     private long _nextSliceTick;
     private bool _sliceInitialized;
     private readonly long _sliceDurationTicks;
-    private readonly double _sliceDurationMilliseconds;
-    private readonly AdaptiveCycleBudgeter _adaptiveCycleBudgeter;
+    private readonly ICyclesBudgeter _cyclesBudgeter;
 
     /// <summary>
     ///     Gets a reader exposing CPU performance metrics.
@@ -64,7 +64,6 @@ public class EmulationLoop : ICyclesLimiter {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">The emulator configuration. This is what to run and how.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
@@ -73,11 +72,12 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="picPitCpuState">Shared cycle budgeting state consumed by the PIC/PIT scheduler.</param>
     /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
-    public EmulationLoop(Configuration configuration,
-        FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
+    /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
+    /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
+    public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         PicPitCpuState picPitCpuState, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
@@ -86,10 +86,9 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic = dualPic;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        _cyclesLimiter = CycleLimiterFactory.Create(configuration);
+        _cyclesLimiter = cyclesLimiter;
         _sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
-        _sliceDurationMilliseconds = _sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
-        _adaptiveCycleBudgeter = new AdaptiveCycleBudgeter(_cyclesLimiter, _sliceDurationMilliseconds);
+        _cyclesBudgeter = cyclesBudgeter;
         _pauseHandler.Paused += OnPauseStateChanged;
         _pauseHandler.Resumed += OnPauseStateChanged;
         _sliceStopwatch.Start();
@@ -166,7 +165,7 @@ public class EmulationLoop : ICyclesLimiter {
         InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
-        int targetCycles = _adaptiveCycleBudgeter.GetNextSliceBudget();
+        int targetCycles = _cyclesBudgeter.GetNextSliceBudget();
 
         _picPitCpuState.CyclesMax = targetCycles;
         _dualPic.AddTick();
@@ -291,7 +290,7 @@ public class EmulationLoop : ICyclesLimiter {
             return;
         }
 
-        _adaptiveCycleBudgeter.UpdateBudget(elapsedMilliseconds, cyclesExecuted, _cpuState.IsRunning);
+        _cyclesBudgeter.UpdateBudget(elapsedMilliseconds, cyclesExecuted, _cpuState.IsRunning);
     }
 
     /// <summary>
