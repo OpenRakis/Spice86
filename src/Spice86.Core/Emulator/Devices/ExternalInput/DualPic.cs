@@ -590,7 +590,7 @@ public sealed class DualPic : IDisposable {
         // before the processor picks up the interrupt. Let's try with 2
         // cycles here.
         // Required by Panic demo (irq0), It came from the desert (MPU401)
-        // Does it matter if CyclesLeft becomes negative?
+        // Does it matter if _executionStateSlice.CyclesLeft becomes negative?
         // It might be an idea to do this always to simulate this
         // So on writing mask and EOI as well. (so inside the activate function)
         //		CyclesLeft += (CyclesUntilReevaluation-2);
