@@ -26,7 +26,7 @@ using System.Runtime.CompilerServices;
 ///     Represents the callback signature invoked when a queued PIC event fires.
 /// </summary>
 /// <param name="value">Controller-supplied value associated with the event.</param>
-public delegate void DeviceEventHandler(uint value);
+public delegate void EmulatedTimeEventHandler(uint value);
 
 /// <summary>
 ///     Represents the callback signature invoked once per simulated millisecond tick.
@@ -698,7 +698,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="handler">Callback to invoke.</param>
     /// <param name="delay">Delay in tick units relative to the current index.</param>
     /// <param name="val">Value forwarded to the callback.</param>
-    public void AddEvent(DeviceEventHandler handler, double delay, uint val = 0) {
+    public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
         _logger.Verbose("PIC: Scheduling event {Handler} with delay {Delay} and payload {Value}", handler.Method.Name,
             delay, val);
         _eventQueue.AddEvent(handler, delay, val);
@@ -709,7 +709,7 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <param name="handler">Handler to match.</param>
     /// <param name="val">Value to match.</param>
-    public void RemoveSpecificEvents(DeviceEventHandler handler, uint val) {
+    public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
         _logger.Verbose("PIC: Removing specific events for {Handler} with payload {Value}", handler.Method.Name, val);
         _eventQueue.RemoveSpecificEvents(handler, val);
     }
@@ -718,7 +718,7 @@ public sealed class DualPic : IDisposable {
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     /// <param name="handler">Handler to remove.</param>
-    public void RemoveEvents(DeviceEventHandler handler) {
+    public void RemoveEvents(EmulatedTimeEventHandler handler) {
         _logger.Verbose("PIC: Removing all events for {Handler}", handler.Method.Name);
         _eventQueue.RemoveEvents(handler);
     }

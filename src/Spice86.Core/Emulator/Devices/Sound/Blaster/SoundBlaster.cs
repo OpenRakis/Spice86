@@ -54,7 +54,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly DeviceThread _deviceThread;
     private readonly DmaPlaybackState _dmaState = new();
 
-    private readonly DeviceEventHandler _dmaTransferEventHandler;
+    private readonly EmulatedTimeEventHandler _dmaTransferEventHandler;
     private readonly Dsp _dsp;
     private readonly DualPic _dualPic;
     private readonly Queue<byte> _outputData = new();
@@ -64,7 +64,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly byte[] _readFromDspBuffer = new byte[512];
     private readonly short[] _renderingBuffer = new short[65536 * 2];
     private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly DeviceEventHandler _suppressDmaEventHandler;
+    private readonly EmulatedTimeEventHandler _suppressDmaEventHandler;
     private BlasterState _blasterState;
     private bool _blockTransferSizeSet;
     private byte _commandDataLength;

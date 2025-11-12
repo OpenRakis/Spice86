@@ -20,10 +20,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly object _chipLock = new();
     private readonly DeviceThread _deviceThread;
     private readonly DualPic _dualPic;
-    private readonly DeviceEventHandler _oplFlushHandler;
+    private readonly EmulatedTimeEventHandler _oplFlushHandler;
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
-    private readonly DeviceEventHandler _oplTimerHandler;
+    private readonly EmulatedTimeEventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
 
     /// <summary>

@@ -69,7 +69,7 @@ internal sealed class DeviceScheduler {
     ///     When invoked from inside <see cref="RunQueue" />, the new entry inherits the in-flight index instead of the
     ///     current tick position, which preserves ordering.
     /// </remarks>
-    public void AddEvent(DeviceEventHandler handler, double delay, uint val = 0) {
+    public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
         if (_freeEntry == null) {
             if (_logger.IsEnabled(LogEventLevel.Error)) {
                 string handlerName = GetHandlerName(handler);
@@ -108,7 +108,7 @@ internal sealed class DeviceScheduler {
     /// </summary>
     /// <param name="handler">Handler to match.</param>
     /// <param name="val">Value to match.</param>
-    public void RemoveSpecificEvents(DeviceEventHandler handler, uint val) {
+    public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
         ScheduledEntry? entry = _nextEntry;
         ScheduledEntry? prevEntry = null;
         int removedCount = 0;
@@ -147,7 +147,7 @@ internal sealed class DeviceScheduler {
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     /// <param name="handler">Handler to remove.</param>
-    public void RemoveEvents(DeviceEventHandler handler) {
+    public void RemoveEvents(EmulatedTimeEventHandler handler) {
         ScheduledEntry? entry = _nextEntry;
         ScheduledEntry? prevEntry = null;
         int removedCount = 0;
@@ -307,7 +307,7 @@ internal sealed class DeviceScheduler {
     /// </summary>
     /// <param name="handler">The delegate whose name is requested.</param>
     /// <returns>The method name when available; otherwise a placeholder.</returns>
-    private static string GetHandlerName(DeviceEventHandler? handler) {
+    private static string GetHandlerName(EmulatedTimeEventHandler? handler) {
         if (handler == null) {
             return "<null>";
         }
@@ -323,7 +323,7 @@ internal sealed class DeviceScheduler {
         /// <summary>
         /// Callback stored for dispatch.
         /// </summary>
-        public DeviceEventHandler? Handler;
+        public EmulatedTimeEventHandler? Handler;
         /// <summary>
         /// Fractional tick deadline.
         /// </summary>
