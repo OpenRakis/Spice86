@@ -36,7 +36,7 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
-    private readonly PicPitCpuState _picPitCpuState;
+    private readonly ExecutionStateSlice _executionStateSlice;
     private readonly Stopwatch _sliceStopwatch = new();
     private long _nextSliceTick;
     private bool _sliceInitialized;
@@ -70,19 +70,19 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
-    /// <param name="picPitCpuState">Shared cycle budgeting state consumed by the PIC/PIT scheduler.</param>
+    /// <param name="executionStateSlice">Shared cycle budgeting state consumed by the Device Scheduler or PIT scheduler.</param>
     /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
-        PicPitCpuState picPitCpuState, DualPic dualPic,
+        ExecutionStateSlice executionStateSlice, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
-        _picPitCpuState = picPitCpuState;
+        _executionStateSlice = executionStateSlice;
         _dualPic = dualPic;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
@@ -167,7 +167,7 @@ public class EmulationLoop : ICyclesLimiter {
         long sliceStartCycles = _cpuState.Cycles;
         int targetCycles = _cyclesBudgeter.GetNextSliceBudget();
 
-        _picPitCpuState.CyclesMax = targetCycles;
+        _executionStateSlice.CyclesAllocated = targetCycles;
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
@@ -175,7 +175,7 @@ public class EmulationLoop : ICyclesLimiter {
                 break;
             }
 
-            while (_cpuState.IsRunning && _picPitCpuState.Cycles > 0) {
+            while (_cpuState.IsRunning && _executionStateSlice.CyclesUntilReevaluation > 0) {
                 if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
                     _emulatorBreakpointsManager.TriggerBreakpoints();
                 }

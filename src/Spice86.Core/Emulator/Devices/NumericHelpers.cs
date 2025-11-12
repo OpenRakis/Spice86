@@ -5,9 +5,9 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 
 /// <summary>
-///     Deterministic numeric helpers used by the NewPIC scheduler and PIT implementation.
+///     Deterministic numeric helpers used by the Device Scheduler and PIT chip.
 /// </summary>
-internal static class NumericHelpers {
+internal static class NumericConverters {
     /// <summary>
     ///     Casts <paramref name="value" /> to the target integer type using checked semantics.
     /// </summary>

@@ -129,7 +129,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("IO port dispatcher created...");
         }
 
-        IoSystem ioSystem = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
         loggerService.Information("IO system bridge created...");
 
@@ -162,9 +162,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        PicPitCpuState picPitCpuState = new(state);
+        ExecutionStateSlice executionStateSlice = new(state);
 
-        var dualPic = new DualPic(ioSystem, picPitCpuState, loggerService);
+        var dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
 
         if (configuration.InitializeDOS is false) {
             loggerService.Information("Masking all PIC IRQs...");
@@ -225,7 +225,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, picPitCpuState, ioPortDispatcher, callbackHandler,
+            dualPic, executionStateSlice, ioPortDispatcher, callbackHandler,
             emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -233,7 +233,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, picPitCpuState, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
+            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -327,7 +327,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
             pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService);
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
@@ -363,7 +363,7 @@ public class Spice86DependencyInjection : IDisposable {
         ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
 
         EmulationLoop emulationLoop = new(functionHandler,
-            cpuForEmulationLoop, state, picPitCpuState, dualPic,
+            cpuForEmulationLoop, state, executionStateSlice, dualPic,
             emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

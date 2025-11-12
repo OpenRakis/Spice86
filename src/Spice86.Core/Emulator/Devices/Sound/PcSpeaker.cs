@@ -616,7 +616,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private float GetPicTickIndex() {
-        double full = _dualPic.GetFullIndex();
+        double full = _dualPic.GetFractionalTickIndex();
         return (float)(full - Math.Floor(full));
     }
 

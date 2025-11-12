@@ -54,7 +54,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly DeviceThread _deviceThread;
     private readonly DmaPlaybackState _dmaState = new();
 
-    private readonly PicEventHandler _dmaTransferEventHandler;
+    private readonly DeviceEventHandler _dmaTransferEventHandler;
     private readonly Dsp _dsp;
     private readonly DualPic _dualPic;
     private readonly Queue<byte> _outputData = new();
@@ -64,7 +64,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private readonly byte[] _readFromDspBuffer = new byte[512];
     private readonly short[] _renderingBuffer = new short[65536 * 2];
     private readonly DmaChannel? _secondaryDmaChannel;
-    private readonly PicEventHandler _suppressDmaEventHandler;
+    private readonly DeviceEventHandler _suppressDmaEventHandler;
     private BlasterState _blasterState;
     private bool _blockTransferSizeSet;
     private byte _commandDataLength;
@@ -600,7 +600,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
 
         uint available = GetAvailableDmaBytes();
         uint chunk = chunkHint != 0 ? NormalizeDmaRequest(Math.Min(chunkHint, available), available) : 0;
@@ -766,7 +766,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        double nowMs = _dualPic.GetFullIndex();
+        double nowMs = _dualPic.GetFractionalTickIndex();
         double elapsedMs = nowMs - _dmaState.LastPumpTimeMs;
         if (elapsedMs <= 0.0) {
             return;
@@ -823,7 +823,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         requestedBytes = NormalizeDmaRequest(requestedBytes, remainingBytes);
 
         if (requestedBytes == 0) {
-            _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+            _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
             if (!HandleDmaBlockCompletion()) {
                 return;
             }
@@ -853,7 +853,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
             return;
         }
 
-        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
 
         if (_dmaState.RemainingBytes == 0) {
             bool continuePlayback = HandleDmaBlockCompletion();
@@ -1008,7 +1008,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dmaState.AutoSizeBytes = 0;
         _dmaState.IrqRaisedForCurrentBlock = false;
         _dmaState.DmaMasked = false;
-        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
         Volatile.Write(ref _pendingDmaCompletion, 0);
     }
 
@@ -1054,7 +1054,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         }
 
         UpdateActiveDmaRate();
-        _dmaState.LastPumpTimeMs = _dualPic.GetFullIndex();
+        _dmaState.LastPumpTimeMs = _dualPic.GetFractionalTickIndex();
     }
 
     private void UpdateActiveDmaRate() {

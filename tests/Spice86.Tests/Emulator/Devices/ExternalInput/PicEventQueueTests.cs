@@ -16,11 +16,11 @@ public sealed class PicEventQueueTests {
     public void RunQueueDoesNotProcessWhenNoCyclesRemain() {
         ILoggerService logger = Substitute.For<ILoggerService>();
         var state = new State(CpuModel.INTEL_80286);
-        var cpuState = new PicPitCpuState(state) {
-            CyclesMax = 128,
+        var cpuState = new ExecutionStateSlice(state) {
+            CyclesAllocated = 128,
             CyclesLeft = 0
         };
-        var queue = new PicEventQueue(cpuState, logger);
+        var queue = new DeviceScheduler(cpuState, logger);
 
         bool invoked = false;
         queue.AddEvent(_ => invoked = true, 0.25);

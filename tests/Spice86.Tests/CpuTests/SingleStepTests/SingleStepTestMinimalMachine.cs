@@ -34,15 +34,15 @@ public class SingleStepTestMinimalMachine {
         }
         IOPortDispatcher ioPortDispatcher =
             new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, false);
-        IoSystem ioSystem = new(ioPortDispatcher, state, loggerService, false);
-        PicPitCpuState picPitCpuState = new(state) {
-            CyclesMax = 1,
+        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, false);
+        ExecutionStateSlice executionStateSlice = new(state) {
+            CyclesAllocated = 1,
             CyclesLeft = 1
         };
         CallbackHandler callbackHandler = new(state, loggerService);
-        DualPic dualPic = new(ioSystem, picPitCpuState, loggerService);
+        DualPic dualPic = new(ioPortHandlerRegistry, executionStateSlice, loggerService);
         FunctionCatalogue functionCatalogue = new();
-        Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic, picPitCpuState,
+        Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic, executionStateSlice,
             emulatorBreakpointsManager, functionCatalogue, false, loggerService);
     }
 
