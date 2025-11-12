@@ -897,7 +897,14 @@ public sealed class DualPic : IDisposable {
     /// Represents a node in a singly linked list of timer tick handlers.
     /// </summary>
     private sealed class TickHandlerNode {
+        /// <summary>
+        ///     The timer tick handler delegate to invoke for this node.
+        /// </summary>
         public TimerTickHandler? Handler;
+
+        /// <summary>
+        ///     Reference to the next node in the linked list of tick handlers.
+        /// </summary>
         public TickHandlerNode? Next;
     }
 }
