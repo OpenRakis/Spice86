@@ -329,11 +329,11 @@ internal sealed class DeviceScheduler {
         /// </summary>
         public double Deadline;
         /// <summary>
-        /// Gets or sets the next scheduled entry in the sequence, or null if there are no further entries.
+        /// Gets or sets the next entry in the linked list, or null if this is the last entry.
         /// </summary>
         public ScheduledEntry? Next;
         /// <summary>
-        /// Return value passed to the handler.
+        /// Parameter value passed to the handler when invoked.
         /// </summary>
         public uint Value;
     }
