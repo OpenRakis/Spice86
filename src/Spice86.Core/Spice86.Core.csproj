@@ -27,13 +27,9 @@
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance"/>
         <PackageReference Include="JetBrains.Annotations"/>
-        <PackageReference Include="Newtonsoft.Json"/>
         <PackageReference Include="Serilog"/>
-        <PackageReference Include="Serilog.Sinks.Console"/>
-        <PackageReference Include="Serilog.Sinks.Debug"/>
         <PackageReference Include="System.Buffers"/>
         <PackageReference Include="System.Memory"/>
-        <PackageReference Include="System.Memory.Data"/>
         <PackageReference Include="System.Text.Encoding.CodePages"/>
         <PackageReference Include="CommandLineParser"/>
         <PackageReference Include="MeltySynth"/>

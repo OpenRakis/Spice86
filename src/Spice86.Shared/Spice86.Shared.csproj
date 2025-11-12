@@ -14,8 +14,6 @@
     <ItemGroup>
         <PackageReference Include="Avalonia"/>
         <PackageReference Include="Serilog"/>
-        <PackageReference Include="Serilog.Sinks.Console"/>
-        <PackageReference Include="Serilog.Sinks.Debug"/>
     </ItemGroup>
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
