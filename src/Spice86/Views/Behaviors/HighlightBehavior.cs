@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Reactive;
 using Avalonia.Styling;
 
 using Spice86.Views.Converters;
@@ -22,9 +23,9 @@ public static class HighlightBehavior {
         AvaloniaProperty.RegisterAttached<TextBlock, bool>("HighlightForeground", typeof(HighlightBehavior), defaultValue: true);
 
     static HighlightBehavior() {
-        IsHighlightedProperty.Changed.Subscribe(OnIsHighlightedChanged);
-        IsContentHighlightedProperty.Changed.Subscribe(OnIsContentHighlightedChanged);
-        IsPanelHighlightedProperty.Changed.Subscribe(OnIsPanelHighlightedChanged);
+        IsHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsHighlightedChanged));
+        IsContentHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsContentHighlightedChanged));
+        IsPanelHighlightedProperty.Changed.Subscribe(new AnonymousObserver<AvaloniaPropertyChangedEventArgs<bool>>(OnIsPanelHighlightedChanged));
     }
 
     public static void SetIsHighlighted(TextBlock element, bool value) =>

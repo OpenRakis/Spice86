@@ -6,9 +6,9 @@
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentAssertions" Version="[7.1.0]" />
+    <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.2" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.14.1" />
@@ -18,9 +18,9 @@
     <PackageVersion Include="SingleStepTests.Intel80286.40-7F" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.80-BF" Version="2025.10.8" />
     <PackageVersion Include="SingleStepTests.Intel80286.C0-FF" Version="2025.10.8" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.7" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.8" />
   </ItemGroup>
 </Project>
