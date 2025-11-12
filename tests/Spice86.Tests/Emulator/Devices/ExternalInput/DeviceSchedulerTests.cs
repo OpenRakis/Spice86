@@ -11,7 +11,7 @@ using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public sealed class PicEventQueueTests {
+public sealed class DeviceSchedulerTests {
     [Fact]
     public void RunQueueDoesNotProcessWhenNoCyclesRemain() {
         ILoggerService logger = Substitute.For<ILoggerService>();
