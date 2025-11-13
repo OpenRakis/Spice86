@@ -161,7 +161,6 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
-        _pauseHandler.WaitIfPaused();
         InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
@@ -179,6 +178,7 @@ public class EmulationLoop : ICyclesLimiter {
                 if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
                     _emulatorBreakpointsManager.TriggerBreakpoints();
                 }
+                _pauseHandler.WaitIfPaused();
                 _cpu.ExecuteNext();
             }
         }
