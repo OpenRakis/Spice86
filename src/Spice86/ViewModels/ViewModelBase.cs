@@ -148,10 +148,14 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         }
 
         string? valueAsString = value as string;
+        // Always remove any existing validation errors first
+        _validationErrors.Remove(propertyName);
+        
         if (string.IsNullOrWhiteSpace(valueAsString)) {
+            // Value is empty, which is valid for optional fields - trigger error changed event
+            OnErrorsChanged(propertyName);
             return;
         }
-        _validationErrors.Remove(propertyName);
         if (!AddressAndValueParser.IsValidHex(valueAsString)) {
             _validationErrors[propertyName] = ["Invalid hex value"];
         } else {
