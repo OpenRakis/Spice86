@@ -22,9 +22,9 @@ internal sealed class DeviceScheduler {
     private bool _isServicingEvents;
     private ScheduledEntry? _nextEntry;
     /// <summary>
-    /// Captures the active entry index while the queue is executing handlers.
+    /// Time in the slice at which the currently active event is running.
     /// </summary>
-    private double _activeEntryIndex;
+    private double _activeEventScheduledTime;
 
     /// <summary>
     ///     Initializes a new queue bound to the provided CPU state and logger.
@@ -56,7 +56,7 @@ internal sealed class DeviceScheduler {
         _freeEntry = _entryPool[0];
         _nextEntry = null;
         _isServicingEvents = false;
-        _activeEntryIndex = 0.0;
+        _activeEventScheduledTime = 0.0;
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ internal sealed class DeviceScheduler {
         ScheduledEntry? entry = _freeEntry;
         _freeEntry = _freeEntry!.Next;
 
-        entry.Deadline = (_isServicingEvents ? _activeEntryIndex : _executionStateSlice.NormalizedSliceProgress) + delay;
+        entry.ScheduledTime = (_isServicingEvents ? _activeEventScheduledTime : _executionStateSlice.NormalizedSliceProgress) + delay;
         entry.Handler = handler;
         entry.Value = val;
 
@@ -96,7 +96,7 @@ internal sealed class DeviceScheduler {
                 "Queued Device scheduler event {Handler} with delay {DelayTicks}, scheduled index {Index}, value {Value}",
                 handlerName,
                 delay,
-                entry.Deadline,
+                entry.ScheduledTime,
                 val);
         }
 
@@ -198,44 +198,19 @@ internal sealed class DeviceScheduler {
             return false;
         }
 
-        double indexNd = _executionStateSlice.CyclesConsumed;
-        double cyclesMax = _executionStateSlice.CyclesAllocated;
+        double cyclesConsumedInSlice = _executionStateSlice.CyclesConsumedInSlice;
 
-        _isServicingEvents = true;
-        int processedCount = 0;
-        while (_nextEntry != null &&
-               _nextEntry.Deadline * cyclesMax <= indexNd) {
-            ScheduledEntry? entry = _nextEntry;
-            _nextEntry = entry.Next;
+        // Process all entries up to current cycles
+        int processedCount = ProcessAllDueEvents(cyclesConsumedInSlice);
 
-            _activeEntryIndex = entry.Deadline;
-            entry.Handler?.Invoke(entry.Value);
-            processedCount++;
-
-            entry.Next = _freeEntry;
-            _freeEntry = entry;
-        }
-
-        _isServicingEvents = false;
-
-        int scheduledCycles = 0;
-        if (_nextEntry != null && _executionStateSlice.CyclesLeft > 0) {
-            double targetIndexNd = _nextEntry.Deadline * cyclesMax;
-            int cyclesToNext = (int)(targetIndexNd - indexNd);
-            if (cyclesToNext <= 0) {
-                cyclesToNext = 1;
-            }
-
-            scheduledCycles = cyclesToNext <= _executionStateSlice.CyclesLeft ? cyclesToNext : _executionStateSlice.CyclesLeft;
-        } else if (_executionStateSlice.CyclesLeft > 0 && _nextEntry == null) {
-            scheduledCycles = _executionStateSlice.CyclesLeft;
-        }
+        // Schedule next stop
+        int scheduledCycles = ComputeNextEventTimeInCyclesDelta(cyclesConsumedInSlice);
 
         _executionStateSlice.CyclesUntilReevaluation = scheduledCycles;
         _executionStateSlice.CyclesLeft -= scheduledCycles;
 
         if (processedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            double? nextIndex = _nextEntry?.Deadline;
+            double? nextIndex = _nextEntry?.ScheduledTime;
             _logger.Debug(
                 "Processed {ProcessedCount} device events; scheduled {ScheduledCycles} cycles; remaining cycles {RemainingCycles}; next index {NextIndex}",
                 processedCount,
@@ -245,6 +220,45 @@ internal sealed class DeviceScheduler {
         }
 
         return _executionStateSlice.CyclesUntilReevaluation > 0 || _executionStateSlice.CyclesLeft > 0;
+    }
+
+    private int ProcessAllDueEvents(double cyclesConsumedInSlice) {
+        _isServicingEvents = true;
+
+        int processedCount = 0;
+        while (_nextEntry != null && ConvertNormalizedToCycles(_nextEntry.ScheduledTime) <= cyclesConsumedInSlice) {
+            ScheduledEntry? entry = _nextEntry;
+            _nextEntry = entry.Next;
+
+            _activeEventScheduledTime = entry.ScheduledTime;
+            entry.Handler?.Invoke(entry.Value);
+            processedCount++;
+
+            entry.Next = _freeEntry;
+            _freeEntry = entry;
+        }
+        _isServicingEvents = false;
+
+        return processedCount;
+    }
+
+    private int ComputeNextEventTimeInCyclesDelta(double cyclesConsumedInSlice) {
+        int scheduledCycles = 0;
+        if (_nextEntry != null && _executionStateSlice.CyclesLeft > 0) {
+            int cyclesToNext = (int)(ConvertNormalizedToCycles(_nextEntry.ScheduledTime) - cyclesConsumedInSlice);
+            if (cyclesToNext <= 0) {
+                cyclesToNext = 1;
+            }
+
+            scheduledCycles = cyclesToNext <= _executionStateSlice.CyclesLeft ? cyclesToNext : _executionStateSlice.CyclesLeft;
+        } else if (_executionStateSlice.CyclesLeft > 0 && _nextEntry == null) {
+            scheduledCycles = _executionStateSlice.CyclesLeft;
+        }
+        return scheduledCycles;
+    }
+
+    private double ConvertNormalizedToCycles(double amount) {
+        return _executionStateSlice.CyclesAllocatedForSlice * amount;
     }
 
     /// <summary>
@@ -257,7 +271,7 @@ internal sealed class DeviceScheduler {
     public void DecrementIndicesForTick() {
         ScheduledEntry? entry = _nextEntry;
         while (entry != null) {
-            entry.Deadline -= 1.0f;
+            entry.ScheduledTime -= 1.0f;
             entry = entry.Next;
         }
     }
@@ -272,13 +286,13 @@ internal sealed class DeviceScheduler {
         if (findEntry == null) {
             entry.Next = null;
             _nextEntry = entry;
-        } else if (findEntry.Deadline > entry.Deadline) {
+        } else if (findEntry.ScheduledTime > entry.ScheduledTime) {
             _nextEntry = entry;
             entry.Next = findEntry;
         } else {
             while (findEntry != null) {
                 if (findEntry.Next != null) {
-                    if (findEntry.Next.Deadline > entry.Deadline) {
+                    if (findEntry.Next.ScheduledTime > entry.ScheduledTime) {
                         entry.Next = findEntry.Next;
                         findEntry.Next = entry;
                         break;
@@ -293,7 +307,7 @@ internal sealed class DeviceScheduler {
             }
         }
 
-        int cycles = _executionStateSlice.ConvertNormalizedToCycles(_nextEntry!.Deadline - _executionStateSlice.NormalizedSliceProgress);
+        int cycles = _executionStateSlice.ConvertNormalizedToCycles(_nextEntry!.ScheduledTime - _executionStateSlice.NormalizedSliceProgress);
         if (cycles >= _executionStateSlice.CyclesUntilReevaluation) {
             return;
         }
@@ -325,9 +339,9 @@ internal sealed class DeviceScheduler {
         /// </summary>
         public EmulatedTimeEventHandler? Handler;
         /// <summary>
-        /// Fractional tick deadline.
+        /// Fractional tick scheduled time.
         /// </summary>
-        public double Deadline;
+        public double ScheduledTime;
         /// <summary>
         /// Gets or sets the next entry in the linked list, or null if this is the last entry.
         /// </summary>

@@ -166,7 +166,7 @@ public class EmulationLoop : ICyclesLimiter {
         long sliceStartCycles = _cpuState.Cycles;
         int targetCycles = _cyclesBudgeter.GetNextSliceBudget();
 
-        _executionStateSlice.CyclesAllocated = targetCycles;
+        _executionStateSlice.CyclesAllocatedForSlice = targetCycles;
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {

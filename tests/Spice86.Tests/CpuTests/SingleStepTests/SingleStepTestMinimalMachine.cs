@@ -36,7 +36,7 @@ public class SingleStepTestMinimalMachine {
             new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, false);
         IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, false);
         ExecutionStateSlice executionStateSlice = new(state) {
-            CyclesAllocated = 1,
+            CyclesAllocatedForSlice = 1,
             CyclesLeft = 1
         };
         CallbackHandler callbackHandler = new(state, loggerService);

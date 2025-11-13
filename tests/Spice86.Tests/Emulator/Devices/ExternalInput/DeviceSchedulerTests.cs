@@ -17,7 +17,7 @@ public sealed class DeviceSchedulerTests {
         ILoggerService logger = Substitute.For<ILoggerService>();
         var state = new State(CpuModel.INTEL_80286);
         var cpuState = new ExecutionStateSlice(state) {
-            CyclesAllocated = 128,
+            CyclesAllocatedForSlice = 128,
             CyclesLeft = 0
         };
         var queue = new DeviceScheduler(cpuState, logger);

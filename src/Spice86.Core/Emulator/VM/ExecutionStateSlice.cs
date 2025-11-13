@@ -9,12 +9,6 @@ using System.Diagnostics;
 /// </summary>
 public sealed class ExecutionStateSlice(State state) {
     /// <summary>
-    ///     Delegate executed by the CPU core to decode the next instruction.
-    /// </summary>
-    /// <returns>Pointer to the entry point for the decoded instruction.</returns>
-    public delegate nint CpuDecoder();
-
-    /// <summary>
     ///     Cycles remaining before the Device Scheduler or PIT scheduler re-evaluates pending work.
     /// </summary>
     public int CyclesUntilReevaluation { get; set; }
@@ -27,7 +21,7 @@ public sealed class ExecutionStateSlice(State state) {
     /// <summary>
     ///     Maximum cycles allocated to the current slice.
     /// </summary>
-    public int CyclesAllocated { get; set; }
+    public int CyclesAllocatedForSlice { get; set; }
 
     /// <summary>
     ///     Current processor interrupt flag.
@@ -50,19 +44,19 @@ public sealed class ExecutionStateSlice(State state) {
     /// <summary>
     ///     Number of cycles consumed inside the active slice.
     /// </summary>
-    public int CyclesConsumed => CyclesAllocated - CyclesLeft - CyclesUntilReevaluation;
+    public int CyclesConsumedInSlice => CyclesAllocatedForSlice - CyclesLeft - CyclesUntilReevaluation;
 
     /// <summary>
     ///     Computes the fractional progress through the current slice.
     /// </summary>
-    /// <returns>Progress in the range 0.0–1.0 relative to <see cref="CyclesAllocated" />.</returns>
+    /// <returns>Progress in the range 0.0–1.0 relative to <see cref="CyclesAllocatedForSlice" />.</returns>
     public double NormalizedSliceProgress {
         get {
-            if (CyclesAllocated == 0) {
+            if (CyclesAllocatedForSlice == 0) {
                 return 0.0;
             }
 
-            return (double)CyclesConsumed / CyclesAllocated;
+            return (double)CyclesConsumedInSlice / CyclesAllocatedForSlice;
         }
     }
 
@@ -72,7 +66,7 @@ public sealed class ExecutionStateSlice(State state) {
     /// <param name="amount">Fraction of the slice, typically between 0.0 and 1.0.</param>
     /// <returns>Number of cycles corresponding to the provided fraction.</returns>
     public int ConvertNormalizedToCycles(double amount) {
-        double cycles = CyclesAllocated * amount;
+        double cycles = CyclesAllocatedForSlice * amount;
         Debug.Assert(cycles is >= int.MinValue and <= int.MaxValue);
         return (int)cycles;
     }

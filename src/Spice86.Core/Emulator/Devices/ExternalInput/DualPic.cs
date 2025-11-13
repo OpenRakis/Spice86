@@ -793,7 +793,7 @@ public sealed class DualPic : IDisposable {
     /// </remarks>
     public void AddTick() {
         // Set up new number of cycles for the device scheduler.
-        _executionStateSlice.CyclesLeft = _executionStateSlice.CyclesAllocated;
+        _executionStateSlice.CyclesLeft = _executionStateSlice.CyclesAllocatedForSlice;
         _executionStateSlice.CyclesUntilReevaluation = 0;
         Ticks++;
 

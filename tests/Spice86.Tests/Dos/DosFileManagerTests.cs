@@ -106,7 +106,7 @@ public class DosFileManagerTests {
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
         ExecutionStateSlice executionStateSlice = new(state) {
-            CyclesAllocated = 1,
+            CyclesAllocatedForSlice = 1,
             CyclesLeft = 1
         };
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);

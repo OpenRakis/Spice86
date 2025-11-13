@@ -58,7 +58,7 @@ public sealed class PitTimerTests : IDisposable {
             State = new State(CpuModel.ZET_86);
             CpuState = new ExecutionStateSlice(State) {
                 InterruptFlag = true,
-                CyclesAllocated = 256,
+                CyclesAllocatedForSlice = 256,
                 CyclesLeft = 256
             };
             var breakpoints = new AddressReadWriteBreakpoints();
