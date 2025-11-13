@@ -22,8 +22,8 @@ public partial class BreakpointViewModel : ViewModelBase {
         bool isRemovedOnTrigger,
         Action onReached,
         Func<long, bool>? additionalTriggerCondition,
-        string comment = "",
-        string? conditionExpression = null) {
+        string comment,
+        string? conditionExpression) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         Address = trigger;
         Type = type;
