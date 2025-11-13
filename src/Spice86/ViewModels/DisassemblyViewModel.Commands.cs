@@ -47,7 +47,7 @@ public partial class DisassemblyViewModel {
             if (_logger.IsEnabled(LogEventLevel.Debug)) {
                 _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
             }
-        }, null, "Step over breakpoint");
+        }, null, "Step over breakpoint", null);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Resuming execution for step over");
@@ -81,9 +81,10 @@ public partial class DisassemblyViewModel {
         if (debuggerLine.Breakpoint != null) {
             debuggerLine.Breakpoint.Toggle();
         } else {
+            string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
             _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
-                Pause($"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.");
-            });
+                Pause(message);
+            }, null, message, null);
         }
     }
 
@@ -145,9 +146,10 @@ public partial class DisassemblyViewModel {
     [RelayCommand]
     private void CreateExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint == null) {
+            string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
             _breakpointsViewModel.AddAddressBreakpoint(debuggerLine.Address, BreakPointType.CPU_EXECUTION_ADDRESS, false, () => {
-                Pause($"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.");
-            });
+                Pause(message);
+            }, null, message, null);
         }
     }
 
