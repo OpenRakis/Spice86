@@ -361,7 +361,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // Check if wait is complete
         memoryAsmWriter.RegisterAndWriteCallback(CallbackCheckWaitFlag);
         // JNZ wait_loop (loop back to check again)
-        memoryAsmWriter.WriteJnz(-4);
+        memoryAsmWriter.WriteJnz(-6);
         
         // error_return:
         memoryAsmWriter.WriteIret();
