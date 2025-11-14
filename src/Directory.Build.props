@@ -1,12 +1,12 @@
 <Project>
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<EnablePackageValidation>true</EnablePackageValidation>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<NoWarn>$(NoWarn);1591;NU1507</NoWarn>
+		<NoWarn>$(NoWarn);1591;NU1507;NU1510</NoWarn>
 	</PropertyGroup>
 	<PropertyGroup>
 		<EnvironmentVariables>
