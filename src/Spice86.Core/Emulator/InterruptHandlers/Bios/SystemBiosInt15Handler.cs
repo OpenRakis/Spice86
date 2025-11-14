@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
-using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -24,6 +23,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     private readonly Configuration _configuration;
     private readonly BiosDataArea _biosDataArea;
     private readonly DualPic _dualPic;
+    private readonly IOPorts.IOPortDispatcher _ioPortDispatcher;
 
     /// <summary>
     /// Initializes a new instance.
@@ -34,19 +34,22 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="a20Gate">The A20 line gate.</param>
-    /// <param name="biosDataArea">The BIOS data area for storing wait state.</param>
+    /// <param name="biosDataArea">The BIOS data area for accessing system flags and variables.</param>
     /// <param name="dualPic">The PIC for timing operations.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, BiosDataArea biosDataArea, DualPic dualPic,
-        bool initializeResetVector, ILoggerService loggerService)
+        IOPorts.IOPortDispatcher ioPortDispatcher, bool initializeResetVector,
+        ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         _configuration = configuration;
         _biosDataArea = biosDataArea;
         _dualPic = dualPic;
+        _ioPortDispatcher = ioPortDispatcher;
         if (initializeResetVector) {
             // Put HLT instruction at the reset address
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
@@ -63,6 +66,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
+        AddAction(0x83, () => WaitFunction(true));
     }
 
     /// <inheritdoc />
@@ -72,6 +76,91 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public override void Run() {
         byte operation = State.AH;
         Run(operation);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=83h - SYSTEM - WAIT (WAIT FUNCTION) - **PARTIALLY IMPLEMENTED / STUB**
+    /// <para>
+    /// <b>WARNING:</b> This is a <b>partial/stub implementation</b>. The wait completion mechanism is <b>not implemented</b>.
+    /// Programs calling this function will NOT have their waits automatically completed, which may cause programs to hang
+    /// unless they cancel the wait with AL=01h.
+    /// </para>
+    /// <para>
+    /// This function allows programs to request a timed delay with optional user callback.
+    /// The function uses the RTC periodic interrupt to implement the delay.
+    /// </para><br/>
+    /// <b>Inputs:</b><br/>
+    /// AH = 83h<br/>
+    /// AL = 00h to set alarm, 01h to cancel alarm<br/>
+    /// CX:DX = microseconds to wait<br/>
+    /// ES:BX = address of user interrupt routine (0000:0000 means no callback)<br/>
+    /// <b>Outputs:</b><br/>
+    /// CF clear if successful<br/>
+    /// CF set on error<br/>
+    /// AH = status (80h if event already in progress)<br/>
+    /// <para>
+    /// <b>Implementation Note:</b> This implementation stores the callback pointer and timeout values in the BIOS data area
+    /// and enables/disables the RTC periodic interrupt (bit 6 of Status Register B). However, it does <b>not</b> currently
+    /// implement the IRQ 8 (INT 70h) handler that would periodically decrement the timeout, set bit 7 of RtcWaitFlag upon
+    /// completion, disable the periodic interrupt, and invoke the callback at UserWaitCompleteFlag (if non-zero).
+    /// The actual wait completion mechanism is not yet implemented and programs relying on this function for timing
+    /// may experience issues until an IRQ 8 handler is added to complete the wait operation.
+    /// </para>
+    /// </summary>
+    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
+    public void WaitFunction(bool calledFromVm) {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
+        }
+
+        // AL = 01h: Cancel the wait
+        if (State.AL == 0x01) {
+            // Clear the wait flag
+            _biosDataArea.RtcWaitFlag = 0;
+            
+            // Disable RTC periodic interrupt (clear bit 6 of Status Register B)
+            ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value & ~0x40));
+            
+            SetCarryFlag(false, calledFromVm);
+            
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                LoggerService.Verbose("WAIT FUNCTION cancelled");
+            }
+            return;
+        }
+        
+        // Check if a wait is already in progress
+        if (_biosDataArea.RtcWaitFlag != 0) {
+            State.AH = 0x80;  // Event already in progress
+            SetCarryFlag(true, calledFromVm);
+            
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("WAIT FUNCTION called while event already in progress");
+            }
+            return;
+        }
+        
+        // AL = 00h: Set up the wait
+        uint count = ((uint)State.CX << 16) | State.DX;
+        
+        // Store the callback pointer (ES:BX)
+        _biosDataArea.UserWaitCompleteFlag = new SegmentedAddress(State.ES, State.BX);
+        
+        // Store the wait count (microseconds)
+        _biosDataArea.UserWaitTimeout = count;
+        
+        // Mark the wait as active
+        _biosDataArea.RtcWaitFlag = 1;
+        
+        // Enable RTC periodic interrupt (set bit 6 of Status Register B)
+        ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value | 0x40));
+        
+        SetCarryFlag(false, calledFromVm);
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("WAIT FUNCTION set: count={Count} microseconds, callback={Segment:X4}:{Offset:X4}",
+                count, State.ES, State.BX);
+        }
     }
 
     /// <summary>
@@ -242,6 +331,21 @@ public class SystemBiosInt15Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// Modifies a CMOS register by reading its current value, applying a transformation function,
+    /// and writing the result back. This encapsulates the read-modify-write pattern required
+    /// for the MC146818 chip (write address, read data, write address again, write data).
+    /// </summary>
+    /// <param name="register">The CMOS register address to modify.</param>
+    /// <param name="modifier">A function that takes the current register value and returns the new value.</param>
+    private void ModifyCmosRegister(byte register, Func<byte, byte> modifier) {
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
+        byte currentValue = _ioPortDispatcher.ReadByte(Devices.Cmos.CmosPorts.Data);
+        byte newValue = modifier(currentValue);
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
+        _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Data, newValue);
+    }
+
+    /// <summary>
     /// INT 15h, AH=86h - BIOS - WAIT (AT, PS)
     /// <para>
     /// Waits for CX:DX microseconds using the RTC timer.
@@ -296,93 +400,5 @@ public class SystemBiosInt15Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("BIOS WAIT completed");
         }
-    }
-
-    /// <summary>
-    ///     Emits an INT 15h handler stub into guest RAM that handles AH=86h (BIOS Wait) in-place
-    ///     and dispatches all other AH values back to the C# handler via a callback.
-    /// </summary>
-    /// <remarks><![CDATA[
-    ///     Assembled control flow for AH=86h (BIOS Wait):
-    ///     
-    ///     L_HANDLER:
-    ///     cmp ah, 86h
-    ///     jz  L_AH86
-    /// 
-    ///     L_DEFAULT:
-    ///     int 0A5h   ; DefaultDispatch -> calls C# Run()
-    ///     iret
-    /// 
-    ///     L_AH86:
-    ///     int 0A6h   ; CallbackBiosWait -> C# handler to set up wait
-    ///     jc  error_return  ; If carry set, error occurred
-    ///     
-    ///     wait_loop:
-    ///     int 0A7h   ; CallbackCheckWaitFlag -> checks RtcWaitFlag
-    ///     jnz wait_loop     ; Loop while flag is set
-    ///     
-    ///     error_return:
-    ///     iret
-    /// 
-    ///     Callback vector mapping:
-    ///     - 0xA5 => Run (default C# dispatcher for unsupported AH values)
-    ///     - 0xA6 => CallbackBiosWait (initiates wait)
-    ///     - 0xA7 => CallbackCheckWaitFlag (polls wait status)
-    ///     
-    ///     Notes:
-    ///     - The wait loop uses INT calls to yield control back to the emulator
-    ///     - This avoids blocking the emulation loop with a tight spin
-    ///     - Each INT instruction allows other interrupts and events to process
-    /// ]]></remarks>
-    /// <param name="memoryAsmWriter">Helper used to write machine code and callbacks into guest memory.</param>
-    /// <returns>The segment:offset address where the handler stub was emitted.</returns>
-    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
-        SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
-
-        // CMP AH, 86h
-        memoryAsmWriter.WriteUInt8(0x80);
-        memoryAsmWriter.WriteUInt8(0xFC);
-        memoryAsmWriter.WriteUInt8(0x86);
-        // JZ L_AH86 (+0x05 to skip the default callback and IRET)
-        memoryAsmWriter.WriteJz(4 + 1);
-
-        // L_DEFAULT: callback DefaultDispatch then IRET
-        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
-        memoryAsmWriter.WriteIret();
-
-        // L_AH86:
-        // Call BiosWait setup callback
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackBiosWaitSetup);
-        // JC error_return (+0x06 to skip wait loop)
-        memoryAsmWriter.WriteUInt8(0x72); // JC (Jump if Carry)
-        memoryAsmWriter.WriteInt8(6);
-        
-        // wait_loop:
-        // Check if wait is complete
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackCheckWaitFlag);
-        // JNZ wait_loop (loop back to check again)
-        memoryAsmWriter.WriteJnz(-6);
-        
-        // error_return:
-        memoryAsmWriter.WriteIret();
-
-        return handlerAddress;
-    }
-
-    /// <summary>
-    /// Callback to initiate the BIOS wait operation.
-    /// Sets up the wait state and returns with carry flag indicating success/failure.
-    /// </summary>
-    private void CallbackBiosWaitSetup() {
-        BiosWait(false);
-    }
-
-    /// <summary>
-    /// Callback to check the wait flag status.
-    /// Sets ZF=0 (non-zero) if wait is still active, ZF=1 if wait is complete.
-    /// </summary>
-    private void CallbackCheckWaitFlag() {
-        // ZF = 1 when wait is complete (flag is 0), 0 when still waiting (flag is non-zero)
-        SetZeroFlag(_biosDataArea.RtcWaitFlag == 0, false);
     }
 }
