@@ -11,16 +11,16 @@ using Spice86.Shared.Interfaces;
 
 using Xunit;
 
-public sealed class PicEventQueueTests {
+public sealed class DeviceSchedulerTests {
     [Fact]
     public void RunQueueDoesNotProcessWhenNoCyclesRemain() {
         ILoggerService logger = Substitute.For<ILoggerService>();
         var state = new State(CpuModel.INTEL_80286);
-        var cpuState = new PicPitCpuState(state) {
-            CyclesMax = 128,
+        var cpuState = new ExecutionStateSlice(state) {
+            CyclesAllocatedForSlice = 128,
             CyclesLeft = 0
         };
-        var queue = new PicEventQueue(cpuState, logger);
+        var queue = new DeviceScheduler(cpuState, logger);
 
         bool invoked = false;
         queue.AddEvent(_ => invoked = true, 0.25);

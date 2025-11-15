@@ -6,30 +6,33 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-///     Manages deterministic scheduling of PIC events relative to the CPU tick index.
+///     Manages deterministic scheduling of device events relative to the CPU tick index.
 /// </summary>
 /// <remarks>
-///     Pools entries to avoid allocations and relies on the shared <see cref="PicPitCpuState" /> for cycle accounting.
+///     Pools entries to avoid allocations and relies on the shared <see cref="ExecutionStateSlice" /> for cycle accounting.
 /// </remarks>
-internal sealed class PicEventQueue {
+internal sealed class DeviceScheduler {
     private const int PicQueueSize = 8192; // Larger value from DosBox-X. Staging uses 512.
-    private readonly PicPitCpuState _cpuState;
-    private readonly PicEntry[] _entryPool = new PicEntry[PicQueueSize];
+    private readonly ExecutionStateSlice _executionStateSlice;
+    private readonly ScheduledEntry[] _entryPool = new ScheduledEntry[PicQueueSize];
 
     private readonly ILoggerService _logger;
 
-    private PicEntry? _freeEntry;
-    private bool _inEventService;
-    private PicEntry? _nextEntry;
-    private double _srvLag; // Captures the active entry index while the queue is executing handlers.
+    private ScheduledEntry? _freeEntry;
+    private bool _isServicingEvents;
+    private ScheduledEntry? _nextEntry;
+    /// <summary>
+    /// Time in the slice at which the currently active event is running.
+    /// </summary>
+    private double _activeEventScheduledTime;
 
     /// <summary>
     ///     Initializes a new queue bound to the provided CPU state and logger.
     /// </summary>
     /// <param name="cpuState">Shared CPU timing state that provides cycle counters.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
-    public PicEventQueue(PicPitCpuState cpuState, ILoggerService logger) {
-        _cpuState = cpuState;
+    public DeviceScheduler(ExecutionStateSlice cpuState, ILoggerService logger) {
+        _executionStateSlice = cpuState;
         _logger = logger;
         Initialize();
     }
@@ -42,7 +45,7 @@ internal sealed class PicEventQueue {
     /// </remarks>
     public void Initialize() {
         for (int i = 0; i < _entryPool.Length; i++) {
-            _entryPool[i] = new PicEntry();
+            _entryPool[i] = new ScheduledEntry();
         }
 
         for (int i = 0; i < _entryPool.Length - 1; i++) {
@@ -52,8 +55,8 @@ internal sealed class PicEventQueue {
         _entryPool[^1].Next = null;
         _freeEntry = _entryPool[0];
         _nextEntry = null;
-        _inEventService = false;
-        _srvLag = 0.0;
+        _isServicingEvents = false;
+        _activeEventScheduledTime = 0.0;
     }
 
     /// <summary>
@@ -66,7 +69,7 @@ internal sealed class PicEventQueue {
     ///     When invoked from inside <see cref="RunQueue" />, the new entry inherits the in-flight index instead of the
     ///     current tick position, which preserves ordering.
     /// </remarks>
-    public void AddEvent(PicEventHandler handler, double delay, uint val = 0) {
+    public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
         if (_freeEntry == null) {
             if (_logger.IsEnabled(LogEventLevel.Error)) {
                 string handlerName = GetHandlerName(handler);
@@ -80,20 +83,20 @@ internal sealed class PicEventQueue {
             return;
         }
 
-        PicEntry? entry = _freeEntry;
+        ScheduledEntry? entry = _freeEntry;
         _freeEntry = _freeEntry!.Next;
 
-        entry.Index = (_inEventService ? _srvLag : _cpuState.GetTickIndex()) + delay;
+        entry.ScheduledTime = (_isServicingEvents ? _activeEventScheduledTime : _executionStateSlice.NormalizedSliceProgress) + delay;
         entry.Handler = handler;
         entry.Value = val;
 
         if (_logger.IsEnabled(LogEventLevel.Verbose)) {
             string handlerName = GetHandlerName(handler);
             _logger.Verbose(
-                "Queued PIC event {Handler} with delay {DelayTicks}, scheduled index {Index}, value {Value}",
+                "Queued Device scheduler event {Handler} with delay {DelayTicks}, scheduled index {Index}, value {Value}",
                 handlerName,
                 delay,
-                entry.Index,
+                entry.ScheduledTime,
                 val);
         }
 
@@ -105,14 +108,14 @@ internal sealed class PicEventQueue {
     /// </summary>
     /// <param name="handler">Handler to match.</param>
     /// <param name="val">Value to match.</param>
-    public void RemoveSpecificEvents(PicEventHandler handler, uint val) {
-        PicEntry? entry = _nextEntry;
-        PicEntry? prevEntry = null;
+    public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
+        ScheduledEntry? entry = _nextEntry;
+        ScheduledEntry? prevEntry = null;
         int removedCount = 0;
 
         while (entry != null) {
             if (entry.Handler == handler && entry.Value == val) {
-                PicEntry? next = entry.Next;
+                ScheduledEntry? next = entry.Next;
                 if (prevEntry != null) {
                     prevEntry.Next = next;
                 } else {
@@ -133,7 +136,7 @@ internal sealed class PicEventQueue {
         if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
             string handlerName = GetHandlerName(handler);
             _logger.Debug(
-                "Removed {RemovedCount} PIC events for handler {Handler} with value {Value}",
+                "Removed {RemovedCount} device events for handler {Handler} with value {Value}",
                 removedCount,
                 handlerName,
                 val);
@@ -144,14 +147,14 @@ internal sealed class PicEventQueue {
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     /// <param name="handler">Handler to remove.</param>
-    public void RemoveEvents(PicEventHandler handler) {
-        PicEntry? entry = _nextEntry;
-        PicEntry? prevEntry = null;
+    public void RemoveEvents(EmulatedTimeEventHandler handler) {
+        ScheduledEntry? entry = _nextEntry;
+        ScheduledEntry? prevEntry = null;
         int removedCount = 0;
 
         while (entry != null) {
             if (entry.Handler == handler) {
-                PicEntry? next = entry.Next;
+                ScheduledEntry? next = entry.Next;
                 if (prevEntry != null) {
                     prevEntry.Next = next;
                 } else {
@@ -172,7 +175,7 @@ internal sealed class PicEventQueue {
         if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
             string handlerName = GetHandlerName(handler);
             _logger.Debug(
-                "Removed {RemovedCount} PIC events for handler {Handler}",
+                "Removed {RemovedCount} device events for handler {Handler}",
                 removedCount,
                 handlerName);
         }
@@ -189,59 +192,73 @@ internal sealed class PicEventQueue {
     ///     after draining ready handlers.
     /// </remarks>
     public bool RunQueue() {
-        _cpuState.CyclesLeft += _cpuState.Cycles;
-        _cpuState.Cycles = 0;
-        if (_cpuState.CyclesLeft <= 0) {
+        _executionStateSlice.CyclesLeft += _executionStateSlice.CyclesUntilReevaluation;
+        _executionStateSlice.CyclesUntilReevaluation = 0;
+        if (_executionStateSlice.CyclesLeft <= 0) {
             return false;
         }
 
-        double indexNd = _cpuState.TickIndexNd;
-        double cyclesMax = _cpuState.CyclesMax;
+        double cyclesConsumedInSlice = _executionStateSlice.CyclesConsumedInSlice;
 
-        _inEventService = true;
+        // Process all entries up to current cycles
+        int processedCount = ProcessAllDueEvents(cyclesConsumedInSlice);
+
+        // Schedule next stop
+        int scheduledCycles = ComputeNextEventTimeInCyclesDelta(cyclesConsumedInSlice);
+
+        _executionStateSlice.CyclesUntilReevaluation = scheduledCycles;
+        _executionStateSlice.CyclesLeft -= scheduledCycles;
+
+        if (processedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
+            double? nextIndex = _nextEntry?.ScheduledTime;
+            _logger.Debug(
+                "Processed {ProcessedCount} device events; scheduled {ScheduledCycles} cycles; remaining cycles {RemainingCycles}; next index {NextIndex}",
+                processedCount,
+                scheduledCycles,
+                _executionStateSlice.CyclesLeft,
+                nextIndex);
+        }
+
+        return _executionStateSlice.CyclesUntilReevaluation > 0 || _executionStateSlice.CyclesLeft > 0;
+    }
+
+    private int ProcessAllDueEvents(double cyclesConsumedInSlice) {
+        _isServicingEvents = true;
+
         int processedCount = 0;
-        while (_nextEntry != null &&
-               _nextEntry.Index * cyclesMax <= indexNd) {
-            PicEntry? entry = _nextEntry;
+        while (_nextEntry != null && ConvertNormalizedToCycles(_nextEntry.ScheduledTime) <= cyclesConsumedInSlice) {
+            ScheduledEntry? entry = _nextEntry;
             _nextEntry = entry.Next;
 
-            _srvLag = entry.Index;
+            _activeEventScheduledTime = entry.ScheduledTime;
             entry.Handler?.Invoke(entry.Value);
             processedCount++;
 
             entry.Next = _freeEntry;
             _freeEntry = entry;
         }
+        _isServicingEvents = false;
 
-        _inEventService = false;
+        return processedCount;
+    }
 
+    private int ComputeNextEventTimeInCyclesDelta(double cyclesConsumedInSlice) {
         int scheduledCycles = 0;
-        if (_nextEntry != null && _cpuState.CyclesLeft > 0) {
-            double targetIndexNd = _nextEntry.Index * cyclesMax;
-            int cyclesToNext = (int)(targetIndexNd - indexNd);
+        if (_nextEntry != null && _executionStateSlice.CyclesLeft > 0) {
+            int cyclesToNext = (int)(ConvertNormalizedToCycles(_nextEntry.ScheduledTime) - cyclesConsumedInSlice);
             if (cyclesToNext <= 0) {
                 cyclesToNext = 1;
             }
 
-            scheduledCycles = cyclesToNext <= _cpuState.CyclesLeft ? cyclesToNext : _cpuState.CyclesLeft;
-        } else if (_cpuState.CyclesLeft > 0 && _nextEntry == null) {
-            scheduledCycles = _cpuState.CyclesLeft;
+            scheduledCycles = cyclesToNext <= _executionStateSlice.CyclesLeft ? cyclesToNext : _executionStateSlice.CyclesLeft;
+        } else if (_executionStateSlice.CyclesLeft > 0 && _nextEntry == null) {
+            scheduledCycles = _executionStateSlice.CyclesLeft;
         }
+        return scheduledCycles;
+    }
 
-        _cpuState.Cycles = scheduledCycles;
-        _cpuState.CyclesLeft -= scheduledCycles;
-
-        if (processedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            double? nextIndex = _nextEntry?.Index;
-            _logger.Debug(
-                "Processed {ProcessedCount} PIC events; scheduled {ScheduledCycles} cycles; remaining cycles {RemainingCycles}; next index {NextIndex}",
-                processedCount,
-                scheduledCycles,
-                _cpuState.CyclesLeft,
-                nextIndex);
-        }
-
-        return _cpuState.Cycles > 0 || _cpuState.CyclesLeft > 0;
+    private double ConvertNormalizedToCycles(double amount) {
+        return _executionStateSlice.CyclesAllocatedForSlice * amount;
     }
 
     /// <summary>
@@ -252,9 +269,9 @@ internal sealed class PicEventQueue {
     ///     millisecond tick.
     /// </remarks>
     public void DecrementIndicesForTick() {
-        PicEntry? entry = _nextEntry;
+        ScheduledEntry? entry = _nextEntry;
         while (entry != null) {
-            entry.Index -= 1.0f;
+            entry.ScheduledTime -= 1.0f;
             entry = entry.Next;
         }
     }
@@ -263,19 +280,19 @@ internal sealed class PicEventQueue {
     ///     Inserts the provided entry into the queue, preserving ordering and updating CPU cycle scheduling.
     /// </summary>
     /// <param name="entry">Entry retrieved from the pool that should be enqueued.</param>
-    private void AddEntry(PicEntry entry) {
+    private void AddEntry(ScheduledEntry entry) {
         // Maintain the list in ascending order of the scheduled index.
-        PicEntry? findEntry = _nextEntry;
+        ScheduledEntry? findEntry = _nextEntry;
         if (findEntry == null) {
             entry.Next = null;
             _nextEntry = entry;
-        } else if (findEntry.Index > entry.Index) {
+        } else if (findEntry.ScheduledTime > entry.ScheduledTime) {
             _nextEntry = entry;
             entry.Next = findEntry;
         } else {
             while (findEntry != null) {
                 if (findEntry.Next != null) {
-                    if (findEntry.Next.Index > entry.Index) {
+                    if (findEntry.Next.ScheduledTime > entry.ScheduledTime) {
                         entry.Next = findEntry.Next;
                         findEntry.Next = entry;
                         break;
@@ -290,21 +307,21 @@ internal sealed class PicEventQueue {
             }
         }
 
-        int cycles = _cpuState.MakeCycles(_nextEntry!.Index - _cpuState.GetTickIndex());
-        if (cycles >= _cpuState.Cycles) {
+        int cycles = _executionStateSlice.ConvertNormalizedToCycles(_nextEntry!.ScheduledTime - _executionStateSlice.NormalizedSliceProgress);
+        if (cycles >= _executionStateSlice.CyclesUntilReevaluation) {
             return;
         }
 
-        _cpuState.CyclesLeft += _cpuState.Cycles;
-        _cpuState.Cycles = 0;
+        _executionStateSlice.CyclesLeft += _executionStateSlice.CyclesUntilReevaluation;
+        _executionStateSlice.CyclesUntilReevaluation = 0;
     }
 
     /// <summary>
-    ///     Provides a readable name for a PIC event handler to enrich log statements.
+    ///     Provides a readable name for a device event handler to enrich log statements.
     /// </summary>
     /// <param name="handler">The delegate whose name is requested.</param>
     /// <returns>The method name when available; otherwise a placeholder.</returns>
-    private static string GetHandlerName(PicEventHandler? handler) {
+    private static string GetHandlerName(EmulatedTimeEventHandler? handler) {
         if (handler == null) {
             return "<null>";
         }
@@ -314,12 +331,24 @@ internal sealed class PicEventQueue {
     }
 
     /// <summary>
-    ///     Represents a pooled event entry associated with the PIC.
+    ///     Represents a pooled event entry associated with the Device Scheduler.
     /// </summary>
-    private sealed class PicEntry {
-        public PicEventHandler? Handler; // Callback stored for dispatch.
-        public double Index; // Fractional tick deadline.
-        public PicEntry? Next;
-        public uint Value; // Value forwarded to the handler.
+    private sealed class ScheduledEntry {
+        /// <summary>
+        /// Callback stored for dispatch.
+        /// </summary>
+        public EmulatedTimeEventHandler? Handler;
+        /// <summary>
+        /// Fractional tick scheduled time.
+        /// </summary>
+        public double ScheduledTime;
+        /// <summary>
+        /// Gets or sets the next entry in the linked list, or null if this is the last entry.
+        /// </summary>
+        public ScheduledEntry? Next;
+        /// <summary>
+        /// Parameter value passed to the handler when invoked.
+        /// </summary>
+        public uint Value;
     }
 }

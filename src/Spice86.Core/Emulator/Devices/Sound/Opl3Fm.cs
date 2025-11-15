@@ -20,10 +20,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private readonly object _chipLock = new();
     private readonly DeviceThread _deviceThread;
     private readonly DualPic _dualPic;
-    private readonly PicEventHandler _oplFlushHandler;
+    private readonly EmulatedTimeEventHandler _oplFlushHandler;
     private readonly Opl3Io _oplIo;
     private readonly byte _oplIrqLine;
-    private readonly PicEventHandler _oplTimerHandler;
+    private readonly EmulatedTimeEventHandler _oplTimerHandler;
     private readonly float[] _playBuffer = new float[2048];
 
     /// <summary>
@@ -68,7 +68,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
         _oplFlushHandler = FlushOplWrites;
         _oplTimerHandler = ServiceOplTimers;
 
-        _oplIo = new Opl3Io(_chip, dualPic.GetAtomicIndex) {
+        _oplIo = new Opl3Io(_chip, dualPic.GetCachedFractionalTickIndex) {
             OnIrqChanged = OnOplIrqChanged
         };
 
@@ -231,7 +231,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
                 return;
         }
 
-        double now = _dualPic.GetFullIndex();
+        double now = _dualPic.GetFractionalTickIndex();
 
         if (audioWrite) {
             ScheduleOplFlush(now);
@@ -372,7 +372,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// </summary>
     /// <param name="unusedTick">Unused parameter supplied by the PIC event system.</param>
     private void FlushOplWrites(uint unusedTick) {
-        double now = _dualPic.GetFullIndex();
+        double now = _dualPic.GetFractionalTickIndex();
         double? delay;
 
         lock (_chipLock) {
@@ -400,7 +400,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="unusedTick">Unused parameter supplied by the PIC event system.</param>
     private void ServiceOplTimers(uint unusedTick) {
         _ = unusedTick;
-        double now = _dualPic.GetFullIndex();
+        double now = _dualPic.GetFractionalTickIndex();
         double? delay;
 
         lock (_chipLock) {

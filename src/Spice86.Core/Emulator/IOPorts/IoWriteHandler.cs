@@ -12,12 +12,12 @@ public delegate void IoWriteDelegate(ushort port, uint value);
 /// <summary>
 ///     Manages the lifecycle of a write delegate within the deterministic I/O fabric.
 /// </summary>
-internal sealed class IoWriteHandler(IoSystem ioSystem, IoWriteDelegate handler, ILoggerService logger) {
+internal sealed class IoWriteHandler(IOPortHandlerRegistry ioPortHandlerRegistry, IoWriteDelegate handler, ILoggerService logger) {
     private ushort? _installedPort;
     private ushort? _installedPortRange;
 
     /// <summary>
-    ///     Registers the delegate with the underlying <see cref="IoSystem" /> for the specified port range.
+    ///     Registers the delegate with the underlying <see cref="IOPortHandlerRegistry" /> for the specified port range.
     /// </summary>
     /// <param name="port">First I/O port covered by the delegate.</param>
     /// <param name="portRange">Number of consecutive ports handled by this delegate.</param>
@@ -32,12 +32,12 @@ internal sealed class IoWriteHandler(IoSystem ioSystem, IoWriteDelegate handler,
 
         _installedPort = port;
         _installedPortRange = portRange;
-        ioSystem.RegisterWriteHandler(handler, port, portRange);
+        ioPortHandlerRegistry.RegisterWriteHandler(handler, port, portRange);
         logger.Debug("Installed write handler on port 0x{Port:X4} with range {PortRange}", port, portRange);
     }
 
     /// <summary>
-    ///     Removes a previously registered delegate from the <see cref="IoSystem" />.
+    ///     Removes a previously registered delegate from the <see cref="IOPortHandlerRegistry" />.
     /// </summary>
     public void Uninstall() {
         if (_installedPort == null) {
@@ -47,7 +47,7 @@ internal sealed class IoWriteHandler(IoSystem ioSystem, IoWriteDelegate handler,
 
         ushort port = _installedPort.Value;
         ushort range = _installedPortRange!.Value;
-        ioSystem.FreeHandler(port, range);
+        ioPortHandlerRegistry.FreeHandler(port, range);
         _installedPort = null;
         _installedPortRange = null;
         logger.Debug("Uninstalled write handler previously mapped to port 0x{Port:X4} with range {PortRange}", port,

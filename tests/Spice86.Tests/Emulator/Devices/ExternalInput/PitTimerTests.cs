@@ -24,9 +24,9 @@ public sealed class PitTimerTests : IDisposable {
     [Fact]
     public void Channel0ProgrammingUpdatesSnapshot() {
         // Mode 2 with low/high byte writes.
-        _fixture.IoSystem.Write(0x43, 0x34);
-        _fixture.IoSystem.Write(0x40, 0x05);
-        _fixture.IoSystem.Write(0x40, 0x00);
+        _fixture.IoPortHandlerRegistry.Write(0x43, 0x34);
+        _fixture.IoPortHandlerRegistry.Write(0x40, 0x05);
+        _fixture.IoPortHandlerRegistry.Write(0x40, 0x00);
 
         PitChannelSnapshot snapshot = _fixture.PitTimer.GetChannelSnapshot(0);
         snapshot.Count.Should().Be(5);
@@ -35,7 +35,7 @@ public sealed class PitTimerTests : IDisposable {
 
     [Fact]
     public void Channel2ProgrammingNotifiesSpeaker() {
-        _fixture.IoSystem.Write(0x43, 0xB6);
+        _fixture.IoPortHandlerRegistry.Write(0x43, 0xB6);
 
         _fixture.Speaker.LastControlMode.Should().Be(PitMode.SquareWave);
         _fixture.Speaker.ControlInvocationCount.Should().Be(1);
@@ -43,9 +43,9 @@ public sealed class PitTimerTests : IDisposable {
         _fixture.Speaker.LastCounterMode.Should().Be(PitMode.SquareWave);
         _fixture.Speaker.LastCount.Should().Be(0);
 
-        _fixture.IoSystem.Write(0x42, 0x34);
+        _fixture.IoPortHandlerRegistry.Write(0x42, 0x34);
         _fixture.Speaker.CounterInvocationCount.Should().Be(1);
-        _fixture.IoSystem.Write(0x42, 0x12);
+        _fixture.IoPortHandlerRegistry.Write(0x42, 0x12);
 
         _fixture.Speaker.LastCount.Should().Be(0x1234);
         _fixture.Speaker.LastCounterMode.Should().Be(PitMode.SquareWave);
@@ -56,24 +56,24 @@ public sealed class PitTimerTests : IDisposable {
         public PitFixture() {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
-            CpuState = new PicPitCpuState(State) {
+            CpuState = new ExecutionStateSlice(State) {
                 InterruptFlag = true,
-                CyclesMax = 256,
+                CyclesAllocatedForSlice = 256,
                 CyclesLeft = 256
             };
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
-            IoSystem = new IoSystem(Dispatcher, State, Logger, false);
-            DualPic = new DualPic(IoSystem, CpuState, Logger);
+            IoPortHandlerRegistry = new IOPortHandlerRegistry(Dispatcher, State, Logger, false);
+            DualPic = new DualPic(IoPortHandlerRegistry, CpuState, Logger);
             Speaker = new StubPitSpeaker();
-            PitTimer = new PitTimer(IoSystem, DualPic, Speaker, Logger);
+            PitTimer = new PitTimer(IoPortHandlerRegistry, DualPic, Speaker, Logger);
         }
 
         public ILoggerService Logger { get; }
         public State State { get; }
-        public PicPitCpuState CpuState { get; }
+        public ExecutionStateSlice CpuState { get; }
         public IOPortDispatcher Dispatcher { get; }
-        public IoSystem IoSystem { get; }
+        public IOPortHandlerRegistry IoPortHandlerRegistry { get; }
         public DualPic DualPic { get; }
         public StubPitSpeaker Speaker { get; }
         public PitTimer PitTimer { get; }
@@ -81,7 +81,7 @@ public sealed class PitTimerTests : IDisposable {
         public void Dispose() {
             PitTimer.Dispose();
             DualPic.Dispose();
-            IoSystem.Reset();
+            IoPortHandlerRegistry.Reset();
         }
     }
 

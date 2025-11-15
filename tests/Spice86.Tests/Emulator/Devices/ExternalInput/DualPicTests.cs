@@ -63,27 +63,27 @@ public sealed class DualPicTests : IDisposable {
         public DualPicFixture() {
             Logger = Substitute.For<ILoggerService>();
             State = new State(CpuModel.ZET_86);
-            CpuState = new PicPitCpuState(State) {
+            CpuState = new ExecutionStateSlice(State) {
                 InterruptFlag = true,
-                CyclesMax = 256,
+                CyclesAllocatedForSlice = 256,
                 CyclesLeft = 256
             };
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
-            IoSystem = new IoSystem(Dispatcher, State, Logger, false);
-            DualPic = new DualPic(IoSystem, CpuState, Logger);
+            IoPortHandlerRegistry = new IOPortHandlerRegistry(Dispatcher, State, Logger, false);
+            DualPic = new DualPic(IoPortHandlerRegistry, CpuState, Logger);
         }
 
         public ILoggerService Logger { get; }
         public State State { get; }
-        public PicPitCpuState CpuState { get; }
+        public ExecutionStateSlice CpuState { get; }
         public IOPortDispatcher Dispatcher { get; }
-        public IoSystem IoSystem { get; }
+        public IOPortHandlerRegistry IoPortHandlerRegistry { get; }
         public DualPic DualPic { get; }
 
         public void Dispose() {
             DualPic.Dispose();
-            IoSystem.Reset();
+            IoPortHandlerRegistry.Reset();
         }
     }
 }

@@ -72,7 +72,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     private readonly CircularBuffer<SegmentedAddress> _lastAddresses = new(20);
 
     private readonly IOPortDispatcher _ioPortDispatcher;
-    private readonly PicPitCpuState _picPitCpuState;
+    private readonly ExecutionStateSlice _executionStateSlice;
 
     public ExecutionFlowRecorder ExecutionFlowRecorder { get; }
 
@@ -81,14 +81,14 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
     public Cpu(InterruptVectorTable interruptVectorTable,
         Stack stack, FunctionHandler functionHandler, FunctionHandler functionHandlerInExternalInterrupt,
         IMemory memory, State state, DualPic dualPic,
-        PicPitCpuState picPitCpuState,
+        ExecutionStateSlice executionStateSlice,
         IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         ILoggerService loggerService, ExecutionFlowRecorder executionFlowRecorder) {
         _loggerService = loggerService;
         _memory = memory;
         State = state;
         DualPic = dualPic;
-        _picPitCpuState = picPitCpuState;
+        _executionStateSlice = executionStateSlice;
         _ioPortDispatcher = ioPortDispatcher;
         _callbackHandler = callbackHandler;
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -136,8 +136,8 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
         AddressSize = 16;
         State.ClearPrefixes();
         State.IncCycles();
-        if (_picPitCpuState.Cycles > 0) {
-            _picPitCpuState.Cycles--;
+        if (_executionStateSlice.CyclesUntilReevaluation > 0) {
+            _executionStateSlice.CyclesUntilReevaluation--;
         }
         HandleExternalInterrupt();
         State.IP = _internalIp;

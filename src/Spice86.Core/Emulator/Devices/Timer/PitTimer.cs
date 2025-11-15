@@ -9,38 +9,6 @@ using Spice86.Shared.Interfaces;
 using System.Diagnostics;
 
 /// <summary>
-///     Lists the programmable interval timer operating modes as encoded by the control word.
-/// </summary>
-public enum PitMode : byte {
-    /// <summary>Counts down once and raises an interrupt when the terminal count is reached.</summary>
-    InterruptOnTerminalCount = 0x0,
-
-    /// <summary>Produces a hardware-triggerable one-shot pulse using the gate input.</summary>
-    OneShot = 0x1,
-
-    /// <summary>Continuously generates rate pulses by reloading the counter after each expiration.</summary>
-    RateGenerator = 0x2,
-
-    /// <summary>Produces a square wave, toggling the output at half the reload period.</summary>
-    SquareWave = 0x3,
-
-    /// <summary>Triggers a strobe when the terminal count is reached, using software gating.</summary>
-    SoftwareStrobe = 0x4,
-
-    /// <summary>Triggers a strobe when the terminal count is reached, using an external gate.</summary>
-    HardwareStrobe = 0x5,
-
-    /// <summary>Alias for <see cref="RateGenerator" /> as exposed by the three-bit mode field.</summary>
-    RateGeneratorAlias = 0x6,
-
-    /// <summary>Alias for <see cref="SquareWave" /> as exposed by the three-bit mode field.</summary>
-    SquareWaveAlias = 0x7,
-
-    /// <summary>Indicates an unprogrammed channel.</summary>
-    Inactive
-}
-
-/// <summary>
 ///     Simulates the three-channel programmable interval timer, wiring channel 0 to the PIC scheduler and channel 2 to
 ///     the PC speaker shim while maintaining deterministic behavior.
 /// </summary>
@@ -67,7 +35,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     private const int MaxDecCount = 0x10000;
 
     private const byte TimerStatusModeMask = 0x07;
-    private readonly IoSystem _ioSystem;
+    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
     private readonly ILoggerService _logger;
     private readonly IPitSpeaker _pcSpeaker;
     private readonly DualPic _pic;
@@ -92,12 +60,12 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <summary>
     ///     Initializes a new PIT instance and installs I/O handlers for all timer ports.
     /// </summary>
-    /// <param name="ioSystem">I/O subsystem used to register read and write handlers.</param>
+    /// <param name="ioPortHandlerRegistry">I/O subsystem used to register read and write handlers.</param>
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
     /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
-    public PitTimer(IoSystem ioSystem, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger) {
-        _ioSystem = ioSystem;
+    public PitTimer(IOPortHandlerRegistry ioPortHandlerRegistry, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger) {
+        _ioPortHandlerRegistry = ioPortHandlerRegistry;
         _pic = pic;
         _pcSpeaker = pcSpeaker;
         _logger = logger;
@@ -135,7 +103,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // can read the output level through bit 5 of the same port.
     private ref PitChannel Channel2 => ref _pitChannels[2];
 
-    private double PicFullIndex => _pic.GetFullIndex();
+    private double PicFullIndex => _pic.GetFractionalTickIndex();
 
     /// <summary>
     ///     Uninstalls all registered I/O handlers and clears the scheduled channel 0 event.
@@ -266,13 +234,13 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     }
 
     private void InstallWriteHandler(ushort port, IoWriteDelegate handler) {
-        var writeHandler = new IoWriteHandler(_ioSystem, handler, _logger);
+        var writeHandler = new IoWriteHandler(_ioPortHandlerRegistry, handler, _logger);
         writeHandler.Install(port);
         _writeHandlers.Add(writeHandler);
     }
 
     private void InstallReadHandler(ushort port, IoReadDelegate handler) {
-        var readHandler = new IoReadHandler(_ioSystem, handler, _logger);
+        var readHandler = new IoReadHandler(_ioPortHandlerRegistry, handler, _logger);
         readHandler.Install(port);
         _readHandlers.Add(readHandler);
     }
@@ -301,7 +269,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         int freqDivider = channel.Count != 0 ? channel.Count : GetMaxCount(channel) + 1;
 
         // The delay calculation is the same regardless of whether InstructionsPerSecond is configured.
-        // When InstructionsPerSecond is set, the CyclesMax in PicPitCpuState will be adjusted accordingly
+        // When InstructionsPerSecond is set, the CyclesAllocated in ExecutionStateSlice will be adjusted accordingly
         // by the CycleLimiterFactory, which ensures that ticks represent instruction-based time rather than
         // wall-clock time. This maintains backward compatibility with the old instruction-based timer model.
         channel.Delay = 1000.0 * freqDivider / PitTickRate;
@@ -309,8 +277,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
 
     private static void SaveReadLatch(ref PitChannel channel, double latchTime) {
         // Latch is a 16-bit counter, wrap it to ensure it doesn't overflow
-        int wrapped = NumericHelpers.RoundToNearestInt(latchTime) % ushort.MaxValue;
-        channel.ReadLatch = NumericHelpers.CheckCast<ushort, int>(wrapped);
+        int wrapped = NumericConverters.RoundToNearestInt(latchTime) % ushort.MaxValue;
+        channel.ReadLatch = NumericConverters.CheckCast<ushort, int>(wrapped);
     }
 
     // Handles the scheduled channel 0 callback:
@@ -531,13 +499,13 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // loaded, it refreshes the running counter, reschedules IRQ0 events, and notifies the PC speaker.
     private void WriteLatch(ushort port, uint value) {
         // write_latch is 16-bits
-        byte val = NumericHelpers.CheckCast<byte, uint>(value);
+        byte val = NumericConverters.CheckCast<byte, uint>(value);
         byte channelNum = (byte)(port - PitChannel0Port);
 
         ref PitChannel channel = ref _pitChannels[channelNum];
 
         if (channel.Bcd) {
-            channel.WriteLatch = NumericHelpers.DecimalToBcd(channel.WriteLatch);
+            channel.WriteLatch = NumericConverters.DecimalToBcd(channel.WriteLatch);
         }
 
         switch (channel.WriteMode) {
@@ -568,7 +536,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         }
 
         if (channel.Bcd) {
-            channel.WriteLatch = NumericHelpers.BcdToDecimal(channel.WriteLatch);
+            channel.WriteLatch = NumericConverters.BcdToDecimal(channel.WriteLatch);
         }
 
         if (channel.WriteMode == AccessMode.Latch) {
@@ -641,7 +609,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             }
 
             if (channel.Bcd) {
-                channel.ReadLatch = NumericHelpers.DecimalToBcd(channel.ReadLatch);
+                channel.ReadLatch = NumericConverters.DecimalToBcd(channel.ReadLatch);
             }
 
             switch (channel.ReadMode) {
@@ -675,7 +643,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             }
 
             if (channel.Bcd) {
-                channel.ReadLatch = NumericHelpers.BcdToDecimal(channel.ReadLatch);
+                channel.ReadLatch = NumericConverters.BcdToDecimal(channel.ReadLatch);
             }
         }
 
@@ -784,7 +752,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // Decodes writes to the PIT control port. The command byte selects either a specific channel (handled by
     // `LatchSingleChannel`) or the aggregate read-back path (`LatchAllChannels`).
     private void HandleControlPortWrite(ushort port, uint value) {
-        byte val = NumericHelpers.CheckCast<byte, uint>(value);
+        byte val = NumericConverters.CheckCast<byte, uint>(value);
         byte channelNum = (byte)((val >> 6) & 0x03);
 
         if (channelNum < 3) {
@@ -921,165 +889,4 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
         SuppressStatusLatch = 0x10,
         SuppressCountLatch = 0x20
     }
-}
-
-/// <summary>
-///     Encodes the read/write sequencing bits used by the data port state machine.
-/// </summary>
-/// <remarks>
-///     <para>Bits 4 and 5 of the control word map as follows:</para>
-///     <para>00 = latch count value command</para>
-///     <para>01 = low byte only</para>
-///     <para>10 = high byte only</para>
-///     <para>11 = low byte followed by high byte</para>
-/// </remarks>
-internal enum AccessMode : byte {
-    Latch = 0x0,
-    Low = 0x1,
-    High = 0x2,
-    Both = 0x3
-}
-
-/// <summary>
-///     Represents the read-back status byte and exposes helpers for its individual bitfields.
-/// </summary>
-/// <remarks>
-///     <![CDATA[
-/// Read Back Status Byte
-/// Bit/s        Usage
-/// 7            Output pin state
-/// 6            Null count flags
-/// 4 and 5      Access mode :
-///                 0 0 = Latch count value command
-///                 0 1 = Access mode: lobyte only
-///                 1 0 = Access mode: hibyte only
-///                 1 1 = Access mode: lobyte/hibyte
-/// 1 to 3       Operating mode :
-///                 0 0 0 = Mode 0 (interrupt on terminal count)
-///                 0 0 1 = Mode 1 (hardware re-triggerable one-shot)
-///                 0 1 0 = Mode 2 (rate generator)
-///                 0 1 1 = Mode 3 (square wave generator)
-///                 1 0 0 = Mode 4 (software triggered strobe)
-///                 1 0 1 = Mode 5 (hardware triggered strobe)
-///                 1 1 0 = Mode 2 (rate generator, same as 010b)
-///                 1 1 1 = Mode 3 (square wave generator, same as 011b)
-/// 0            BCD/Binary mode: 0 = 16-bit binary, 1 = four-digit BCD
-/// ]]>
-/// </remarks>
-internal struct ReadBackStatus {
-    /// <summary>
-    ///     Raw status byte supplied by the control port.
-    /// </summary>
-    public byte Data;
-
-    /// <summary>
-    ///     Gets a value indicating whether the channel is operating in BCD mode.
-    /// </summary>
-    public bool BcdState => (Data & 0x01) != 0;
-
-    /// <summary>
-    ///     Gets the decoded operating mode.
-    /// </summary>
-    public PitMode PitMode => (PitMode)((Data >> 1) & 0x07);
-
-    /// <summary>
-    ///     Gets the access mode used for subsequent counter reads.
-    /// </summary>
-    public AccessMode AccessMode => (AccessMode)((Data >> 4) & 0x03);
-
-    /// <summary>
-    ///     Gets a value indicating whether no access mode bits are set.
-    /// </summary>
-    public bool AccessModeNone => (Data & 0x30) == 0;
-}
-
-/// <summary>
-///     Holds the mutable state for an individual PIT channel, including the staged latches and control flags.
-/// </summary>
-/// <remarks>
-///     <para>
-///         The countdown fields mirror the reference implementation: <see cref="Count" /> stores the active divisor,
-///         <see cref="Delay" /> caches the millisecond period, and <see cref="Start" /> records the scheduler index at
-///         which
-///         the current cycle began.
-///     </para>
-///     <para>
-///         The read and write latches assemble control-port data according to the access mode machine. The boolean
-///         flags model the reference flip-flops: <see cref="GoReadLatch" /> toggles whether a refreshed latch is required,
-///         <see cref="ModeChanged" /> stays true until a reload occurs, <see cref="CounterStatusSet" /> mirrors the
-///         latched-status path, <see cref="Counting" /> tracks gate-controlled activity, and <see cref="UpdateCount" />
-///         signals
-///         deferred reloads in mode 2.
-///     </para>
-/// </remarks>
-internal struct PitChannel {
-    /// <summary>
-    ///     Current divisor value. A zero entry mirrors the hardware behavior that treats it as 65536 (or 10000 in BCD).
-    /// </summary>
-    public int Count;
-
-    /// <summary>
-    ///     Cached delay in milliseconds computed from the divisor. Used to schedule the next event without recomputing.
-    /// </summary>
-    public double Delay;
-
-    /// <summary>
-    ///     Scheduler index (milliseconds) marking when the current countdown started.
-    /// </summary>
-    public double Start;
-
-    /// <summary>
-    ///     Latched counter value returned to the CPU on the next data-port read.
-    /// </summary>
-    public ushort ReadLatch;
-
-    /// <summary>
-    ///     Accumulates incoming bytes from the write path before committing them to <see cref="Count" />.
-    /// </summary>
-    public ushort WriteLatch;
-
-    /// <summary>
-    ///     Active operating mode for the channel.
-    /// </summary>
-    public PitMode Mode;
-
-    /// <summary>
-    ///     Access mode used when servicing reads.
-    /// </summary>
-    public AccessMode ReadMode;
-
-    /// <summary>
-    ///     Access mode used when servicing writes.
-    /// </summary>
-    public AccessMode WriteMode;
-
-    /// <summary>
-    ///     Indicates whether the channel interprets counts as BCD values.
-    /// </summary>
-    public bool Bcd;
-
-    /// <summary>
-    ///     Indicates whether the next read should refresh the latch before returning data.
-    /// </summary>
-    public bool GoReadLatch;
-
-    /// <summary>
-    ///     Tracks whether a new control word has been written without reloading the counter yet.
-    /// </summary>
-    public bool ModeChanged;
-
-    /// <summary>
-    ///     When true, the status byte has been latched and must be returned before a new status is captured.
-    /// </summary>
-    public bool CounterStatusSet;
-
-    /// <summary>
-    ///     Reflects whether the counter is actively decrementing, subject to the gate input.
-    /// </summary>
-    public bool Counting;
-
-    /// <summary>
-    ///     Signals that the divisor update should be applied when the current period completes (mode 2 behavior).
-    /// </summary>
-    public bool UpdateCount;
 }

@@ -19,7 +19,7 @@ public class Pit8254Tests {
     private const ushort PitChannel1Port = 0x41;
     private const ushort PitChannel2Port = 0x42;
     private const ushort PitControlPort = 0x43;
-    private readonly IoSystem _ioSystem;
+    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
 
     private readonly PitTimer _pit;
     private readonly IPitSpeaker _speaker;
@@ -29,12 +29,12 @@ public class Pit8254Tests {
         _speaker = Substitute.For<IPitSpeaker>();
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _ioSystem = new IoSystem(dispatcher, state, logger, false);
-        var cpuState = new PicPitCpuState(state) {
+        _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
+        var cpuState = new ExecutionStateSlice(state) {
             InterruptFlag = true
         };
-        var pic = new DualPic(_ioSystem, cpuState, logger);
-        _pit = new PitTimer(_ioSystem, pic, _speaker, logger);
+        var pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
+        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, logger);
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public class Pit8254Tests {
         PitChannelSnapshot snapshotBefore = _pit.GetChannelSnapshot(counterIndex);
 
         ConfigureCounter(counterIndex, 3, 3, 0);
-        _ioSystem.Write(port, 0x01);
+        _ioPortHandlerRegistry.Write(port, 0x01);
 
         PitChannelSnapshot snapshotAfter = _pit.GetChannelSnapshot(counterIndex);
         snapshotAfter.Count.Should().Be(snapshotBefore.Count);
@@ -132,14 +132,14 @@ public class Pit8254Tests {
     }
 
     private void ConfigureCounter(byte counter, byte readWritePolicy, byte mode, byte bcd) {
-        _ioSystem.Write(PitControlPort, GenerateConfigureCounterByte(counter, readWritePolicy, mode, bcd));
+        _ioPortHandlerRegistry.Write(PitControlPort, GenerateConfigureCounterByte(counter, readWritePolicy, mode, bcd));
     }
 
     private void WriteFullReload(byte counterIndex, ushort value) {
         ConfigureCounter(counterIndex, 3, 3, 0);
         ushort port = GetPort(counterIndex);
-        _ioSystem.Write(port, (byte)(value & 0xFF));
-        _ioSystem.Write(port, (byte)((value >> 8) & 0xFF));
+        _ioPortHandlerRegistry.Write(port, (byte)(value & 0xFF));
+        _ioPortHandlerRegistry.Write(port, (byte)((value >> 8) & 0xFF));
     }
 
     private static ushort GetPort(byte counterIndex) {
@@ -165,10 +165,10 @@ public class Pit8254Tests {
     }
 
     private ushort ReadLatchedValue(byte counterIndex) {
-        _ioSystem.Write(PitControlPort, GenerateConfigureCounterByte(counterIndex, 0, 0, 0));
+        _ioPortHandlerRegistry.Write(PitControlPort, GenerateConfigureCounterByte(counterIndex, 0, 0, 0));
         ushort port = GetPort(counterIndex);
-        byte lsb = (byte)_ioSystem.Read(port);
-        byte msb = (byte)_ioSystem.Read(port);
+        byte lsb = (byte)_ioPortHandlerRegistry.Read(port);
+        byte msb = (byte)_ioPortHandlerRegistry.Read(port);
         return (ushort)(lsb | (msb << 8));
     }
 

@@ -26,7 +26,7 @@ using System.Runtime.CompilerServices;
 ///     Represents the callback signature invoked when a queued PIC event fires.
 /// </summary>
 /// <param name="value">Controller-supplied value associated with the event.</param>
-public delegate void PicEventHandler(uint value);
+public delegate void EmulatedTimeEventHandler(uint value);
 
 /// <summary>
 ///     Represents the callback signature invoked once per simulated millisecond tick.
@@ -71,9 +71,9 @@ public sealed class DualPic : IDisposable {
     private const byte SpecificEoiBase = (byte)(Ocw2Flags.EndOfInterrupt | Ocw2Flags.Specific);
 
     private const int HandlerCount = 4;
-    private readonly PicPitCpuState _cpuState;
-    private readonly PicEventQueue _eventQueue;
-    private readonly IoSystem _ioSystem;
+    private readonly ExecutionStateSlice _executionStateSlice;
+    private readonly DeviceScheduler _eventQueue;
+    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
     private readonly ILoggerService _logger;
 
     private readonly Intel8259Pic _primaryPic;
@@ -82,23 +82,23 @@ public sealed class DualPic : IDisposable {
     private readonly IoWriteHandler[] _writeHandlers = new IoWriteHandler[HandlerCount];
 
     // Thread-safe copy of the fractional tick index used by asynchronous consumers.
-    private double _atomicIndex;
-    private TickerBlock? _firstTicker;
+    private double _cachedFractionalTickIndex;
+    private TickHandlerNode? _firstTicker;
 
     /// <summary>
     ///     Initializes controller state, registers I/O handlers, and configures deterministic scheduling.
     /// </summary>
-    /// <param name="ioSystem">I/O fabric used to register command and data port handlers.</param>
+    /// <param name="ioPortHandlerRegistry">I/O fabric used to register command and data port handlers.</param>
     /// <param name="cpuState">Shared CPU timing state consumed by both controllers.</param>
     /// <param name="loggerService">Logger used for diagnostic messages.</param>
-    public DualPic(IoSystem ioSystem, PicPitCpuState cpuState, ILoggerService loggerService) {
-        _ioSystem = ioSystem;
-        _cpuState = cpuState;
+    public DualPic(IOPortHandlerRegistry ioPortHandlerRegistry, ExecutionStateSlice cpuState, ILoggerService loggerService) {
+        _ioPortHandlerRegistry = ioPortHandlerRegistry;
+        _executionStateSlice = cpuState;
         _logger = loggerService;
 
-        _primaryPic = new PrimaryPic(_logger, _cpuState, SetIrqCheck);
+        _primaryPic = new PrimaryPic(_logger, _executionStateSlice, SetIrqCheck);
         _secondaryPic = new SecondaryPic(_logger, CascadeRaiseFromSecondary, CascadeLowerFromSecondary);
-        _eventQueue = new PicEventQueue(_cpuState, _logger);
+        _eventQueue = new DeviceScheduler(_executionStateSlice, _logger);
 
         InitializeControllers();
         InitializeQueue();
@@ -141,22 +141,22 @@ public sealed class DualPic : IDisposable {
     ///     Installs all I/O handlers required to expose the PIC command and data ports.
     /// </summary>
     private void InstallHandlers() {
-        _readHandlers[0] = new IoReadHandler(_ioSystem, ReadCommand, _logger);
+        _readHandlers[0] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
         _readHandlers[0].Install(PrimaryPicCommandPort);
-        _readHandlers[1] = new IoReadHandler(_ioSystem, ReadData, _logger);
+        _readHandlers[1] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
         _readHandlers[1].Install(PrimaryPicDataPort);
-        _readHandlers[2] = new IoReadHandler(_ioSystem, ReadCommand, _logger);
+        _readHandlers[2] = new IoReadHandler(_ioPortHandlerRegistry, ReadCommand, _logger);
         _readHandlers[2].Install(SecondaryPicCommandPort);
-        _readHandlers[3] = new IoReadHandler(_ioSystem, ReadData, _logger);
+        _readHandlers[3] = new IoReadHandler(_ioPortHandlerRegistry, ReadData, _logger);
         _readHandlers[3].Install(SecondaryPicDataPort);
 
-        _writeHandlers[0] = new IoWriteHandler(_ioSystem, WriteCommand, _logger);
+        _writeHandlers[0] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
         _writeHandlers[0].Install(PrimaryPicCommandPort);
-        _writeHandlers[1] = new IoWriteHandler(_ioSystem, WriteData, _logger);
+        _writeHandlers[1] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
         _writeHandlers[1].Install(PrimaryPicDataPort);
-        _writeHandlers[2] = new IoWriteHandler(_ioSystem, WriteCommand, _logger);
+        _writeHandlers[2] = new IoWriteHandler(_ioPortHandlerRegistry, WriteCommand, _logger);
         _writeHandlers[2].Install(SecondaryPicCommandPort);
-        _writeHandlers[3] = new IoWriteHandler(_ioSystem, WriteData, _logger);
+        _writeHandlers[3] = new IoWriteHandler(_ioPortHandlerRegistry, WriteData, _logger);
         _writeHandlers[3].Install(SecondaryPicDataPort);
     }
 
@@ -222,12 +222,12 @@ public sealed class DualPic : IDisposable {
     /// <returns>The vector number, or <see langword="null" /> if none is pending.</returns>
     public byte? ComputeVectorNumber() {
         RunIrqs();
-        byte? last = _cpuState.LastHardwareInterrupt;
+        byte? last = _executionStateSlice.LastHardwareInterrupt;
         if (last == null) {
             return null;
         }
 
-        _cpuState.ClearLastHardwareInterrupt();
+        _executionStateSlice.ClearLastHardwareInterrupt();
         return last.Value;
     }
 
@@ -256,7 +256,7 @@ public sealed class DualPic : IDisposable {
     private void InitializeQueue() {
         _eventQueue.Initialize();
         _firstTicker = null;
-        _atomicIndex = 0.0;
+        _cachedFractionalTickIndex = 0.0;
     }
 
     /// <summary>
@@ -329,7 +329,7 @@ public sealed class DualPic : IDisposable {
     ///     Handles command port writes, decoding ICW/OCW sequences and maintaining controller state.
     /// </summary>
     private void WriteCommand(ushort port, uint value) {
-        byte rawValue = NumericHelpers.CheckCast<byte, uint>(value);
+        byte rawValue = NumericConverters.CheckCast<byte, uint>(value);
         Intel8259Pic pic = GetCommandPicByPort(port);
 
         if (ProcessInitializationCommand(rawValue, pic)) {
@@ -494,7 +494,7 @@ public sealed class DualPic : IDisposable {
     ///     Handles data port writes, updating OCW1 or the remaining ICW fields.
     /// </summary>
     private void WriteData(ushort port, uint value) {
-        byte val = NumericHelpers.CheckCast<byte, uint>(value);
+        byte val = NumericConverters.CheckCast<byte, uint>(value);
         Intel8259Pic pic = GetDataPicByPort(port);
         switch (pic.CurrentIcwIndex) {
             case 0:
@@ -577,25 +577,25 @@ public sealed class DualPic : IDisposable {
 
         byte controllerIrq = GetEffectiveControllerIrq(irq);
 
-        int oldCycles = _cpuState.Cycles;
+        int oldCycles = _executionStateSlice.CyclesUntilReevaluation;
         GetPicByIrq(irq).RaiseIrq(controllerIrq);
 
-        if (oldCycles == _cpuState.Cycles) {
+        if (oldCycles == _executionStateSlice.CyclesUntilReevaluation) {
             return;
         }
 
-        // if CPU_Cycles have changed, this means that the interrupt was triggered by an I/O
+        // if CyclesUntilReevaluation have changed, this means that the interrupt was triggered by an I/O
         // register writing rather than an event.
         // Real hardware executes 0 to ~13 NOPs or comparable instructions
         // before the processor picks up the interrupt. Let's try with 2
         // cycles here.
         // Required by Panic demo (irq0), It came from the desert (MPU401)
-        // Does it matter if CPU_CycleLeft becomes negative?
+        // Does it matter if _executionStateSlice.CyclesLeft becomes negative?
         // It might be an idea to do this always to simulate this
         // So on writing mask and EOI as well. (so inside the activate function)
-        //		CPU_CycleLeft += (CPU_Cycles-2);
-        _cpuState.CyclesLeft -= 2;
-        _cpuState.Cycles = 2;
+        //		CyclesLeft += (CyclesUntilReevaluation-2);
+        _executionStateSlice.CyclesLeft -= 2;
+        _executionStateSlice.CyclesUntilReevaluation = 2;
     }
 
     /// <summary>
@@ -633,13 +633,13 @@ public sealed class DualPic : IDisposable {
 
         _secondaryPic.StartIrq(selectedIrq);
         _primaryPic.StartIrq(2);
-        _cpuState.CpuHwInterrupt((byte)(_secondaryPic.InterruptVectorBase + selectedIrq));
+        _executionStateSlice.SetLastHardwareInterrupt((byte)(_secondaryPic.InterruptVectorBase + selectedIrq));
     }
 
     // Starts servicing the specified primary IRQ and notifies the CPU.
     private void PrimaryStartIrq(byte index) {
         _primaryPic.StartIrq(index);
-        _cpuState.CpuHwInterrupt((byte)(_primaryPic.InterruptVectorBase + index));
+        _executionStateSlice.SetLastHardwareInterrupt((byte)(_primaryPic.InterruptVectorBase + index));
     }
 
     /// <summary>
@@ -650,7 +650,7 @@ public sealed class DualPic : IDisposable {
     ///     sentinel used to drain outstanding cycles.
     /// </remarks>
     private void RunIrqs() {
-        if (!_cpuState.InterruptFlag || _cpuState.InterruptShadowing || !IrqCheck) {
+        if (!_executionStateSlice.InterruptFlag || _executionStateSlice.InterruptShadowing || !IrqCheck) {
             return;
         }
 
@@ -698,7 +698,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="handler">Callback to invoke.</param>
     /// <param name="delay">Delay in tick units relative to the current index.</param>
     /// <param name="val">Value forwarded to the callback.</param>
-    public void AddEvent(PicEventHandler handler, double delay, uint val = 0) {
+    public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
         _logger.Verbose("PIC: Scheduling event {Handler} with delay {Delay} and payload {Value}", handler.Method.Name,
             delay, val);
         _eventQueue.AddEvent(handler, delay, val);
@@ -709,7 +709,7 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <param name="handler">Handler to match.</param>
     /// <param name="val">Value to match.</param>
-    public void RemoveSpecificEvents(PicEventHandler handler, uint val) {
+    public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
         _logger.Verbose("PIC: Removing specific events for {Handler} with payload {Value}", handler.Method.Name, val);
         _eventQueue.RemoveSpecificEvents(handler, val);
     }
@@ -718,7 +718,7 @@ public sealed class DualPic : IDisposable {
     ///     Removes all queued events matching the provided handler.
     /// </summary>
     /// <param name="handler">Handler to remove.</param>
-    public void RemoveEvents(PicEventHandler handler) {
+    public void RemoveEvents(EmulatedTimeEventHandler handler) {
         _logger.Verbose("PIC: Removing all events for {Handler}", handler.Method.Name);
         _eventQueue.RemoveEvents(handler);
     }
@@ -730,11 +730,11 @@ public sealed class DualPic : IDisposable {
     ///     <see langword="true" /> when the queue processed or retained events; otherwise <see langword="false" />.
     /// </returns>
     /// <remarks>
-    ///     Invokes <see cref="UpdateAtomicIndex" /> before processing so asynchronous consumers observe the latest
+    ///     Invokes <see cref="UpdateCachedFractionalTickIndex" /> before processing so asynchronous consumers observe the latest
     ///     fractional tick.
     /// </remarks>
     public bool RunQueue() {
-        UpdateAtomicIndex();
+        UpdateCachedFractionalTickIndex();
         bool queueResult = _eventQueue.RunQueue();
         if (queueResult) {
             RunIrqs();
@@ -751,8 +751,8 @@ public sealed class DualPic : IDisposable {
     ///     No action is taken if the handler is not present.
     /// </remarks>
     public void RemoveTickHandler(TimerTickHandler handler) {
-        TickerBlock? previous = null;
-        TickerBlock? current = _firstTicker;
+        TickHandlerNode? previous = null;
+        TickHandlerNode? current = _firstTicker;
 
         while (current != null) {
             if (current.Handler == handler) {
@@ -778,7 +778,7 @@ public sealed class DualPic : IDisposable {
     ///     Handlers execute in last-in-first-out order because new registrations are added to the front of the list.
     /// </remarks>
     public void AddTickHandler(TimerTickHandler handler) {
-        var newTicker = new TickerBlock {
+        var newTicker = new TickHandlerNode {
             Handler = handler,
             Next = _firstTicker
         };
@@ -792,18 +792,18 @@ public sealed class DualPic : IDisposable {
     ///     Resets the CPU slice counters to their maximum values before evaluating queued events for the new tick.
     /// </remarks>
     public void AddTick() {
-        // Set up new number of cycles for PIC.
-        _cpuState.CyclesLeft = _cpuState.CyclesMax;
-        _cpuState.Cycles = 0;
+        // Set up new number of cycles for the device scheduler.
+        _executionStateSlice.CyclesLeft = _executionStateSlice.CyclesAllocatedForSlice;
+        _executionStateSlice.CyclesUntilReevaluation = 0;
         Ticks++;
 
         // Decrement each scheduled entry by one tick (the queue stores offsets in 1.0 tick units).
         _eventQueue.DecrementIndicesForTick();
 
         // Call our list of ticker handlers.
-        TickerBlock? ticker = _firstTicker;
+        TickHandlerNode? ticker = _firstTicker;
         while (ticker != null) {
-            TickerBlock? nextTicker = ticker.Next;
+            TickHandlerNode? nextTicker = ticker.Next;
             ticker.Handler?.Invoke();
             ticker = nextTicker;
         }
@@ -814,18 +814,18 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <returns>Tick count with a sub-tick fractional component.</returns>
     /// <remarks>
-    ///     Adds the integral tick counter to the fraction returned by <see cref="PicPitCpuState.GetTickIndex" />.
+    ///     Adds the integral tick counter to the fraction returned by <see cref="ExecutionStateSlice.NormalizedSliceProgress" />.
     /// </remarks>
-    public double GetFullIndex() {
-        return Ticks + _cpuState.GetTickIndex();
+    public double GetFractionalTickIndex() {
+        return Ticks + _executionStateSlice.NormalizedSliceProgress;
     }
 
     /// <summary>
     ///     Stores a thread-safe copy of the fractional tick index.
     /// </summary>
-    /// <remarks>Further calls to <see cref="GetAtomicIndex" /> return the value captured here.</remarks>
-    public void UpdateAtomicIndex() {
-        _atomicIndex = GetFullIndex();
+    /// <remarks>Further calls to <see cref="GetCachedFractionalTickIndex" /> return the value captured here.</remarks>
+    public void UpdateCachedFractionalTickIndex() {
+        _cachedFractionalTickIndex = GetFractionalTickIndex();
     }
 
     /// <summary>
@@ -833,10 +833,10 @@ public sealed class DualPic : IDisposable {
     /// </summary>
     /// <returns>Previously stored fractional tick value.</returns>
     /// <remarks>
-    ///     The returned value is only refreshed by <see cref="UpdateAtomicIndex" />.
+    ///     The returned value is only refreshed by <see cref="UpdateCachedFractionalTickIndex" />.
     /// </remarks>
-    public double GetAtomicIndex() {
-        return _atomicIndex;
+    public double GetCachedFractionalTickIndex() {
+        return _cachedFractionalTickIndex;
     }
 
     /// <summary>
@@ -845,7 +845,7 @@ public sealed class DualPic : IDisposable {
     /// <param name="amount">Fraction of the current tick window.</param>
     /// <returns>Integral cycle count.</returns>
     public int MakeCycles(double amount) {
-        return _cpuState.MakeCycles(amount);
+        return _executionStateSlice.ConvertNormalizedToCycles(amount);
     }
 
     /// <summary>
@@ -893,8 +893,18 @@ public sealed class DualPic : IDisposable {
         SpecialFullyNestedMode = 0x10
     }
 
-    private sealed class TickerBlock {
+    /// <summary>
+    /// Represents a node in a singly linked list of timer tick handlers.
+    /// </summary>
+    private sealed class TickHandlerNode {
+        /// <summary>
+        ///     The timer tick handler delegate to invoke for this node.
+        /// </summary>
         public TimerTickHandler? Handler;
-        public TickerBlock? Next;
+
+        /// <summary>
+        ///     Reference to the next node in the linked list of tick handlers.
+        /// </summary>
+        public TickHandlerNode? Next;
     }
 }

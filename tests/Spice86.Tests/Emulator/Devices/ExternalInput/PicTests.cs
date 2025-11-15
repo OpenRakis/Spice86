@@ -24,7 +24,7 @@ public class PicTests {
 
     private const ushort PrimaryCommandPort = 0x20;
     private const ushort PrimaryDataPort = 0x21;
-    private readonly IoSystem _ioSystem;
+    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
 
     private readonly DualPic _pic;
 
@@ -32,11 +32,11 @@ public class PicTests {
         ILoggerService logger = Substitute.For<ILoggerService>();
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _ioSystem = new IoSystem(dispatcher, state, logger, false);
-        var cpuState = new PicPitCpuState(state) {
+        _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
+        var cpuState = new ExecutionStateSlice(state) {
             InterruptFlag = true
         };
-        _pic = new DualPic(_ioSystem, cpuState, logger);
+        _pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
     }
 
     [Fact]
@@ -331,14 +331,14 @@ public class PicTests {
     }
 
     private void WriteCommand(byte value) {
-        _ioSystem.Write(PrimaryCommandPort, value);
+        _ioPortHandlerRegistry.Write(PrimaryCommandPort, value);
     }
 
     private void WriteData(byte value) {
-        _ioSystem.Write(PrimaryDataPort, value);
+        _ioPortHandlerRegistry.Write(PrimaryDataPort, value);
     }
 
     private byte ReadCommand() {
-        return (byte)_ioSystem.Read(PrimaryCommandPort);
+        return (byte)_ioPortHandlerRegistry.Read(PrimaryCommandPort);
     }
 }

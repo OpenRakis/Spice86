@@ -17,7 +17,7 @@ using Xunit;
 public class PitModeTests {
     private const ushort PitChannel2Port = 0x42;
     private const ushort PitControlPort = 0x43;
-    private readonly IoSystem _ioSystem;
+    private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
     private readonly DualPic _pic;
 
     private readonly PitTimer _pit;
@@ -28,12 +28,12 @@ public class PitModeTests {
         _speaker = Substitute.For<IPitSpeaker>();
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _ioSystem = new IoSystem(dispatcher, state, logger, false);
-        var cpuState = new PicPitCpuState(state) {
+        _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
+        var cpuState = new ExecutionStateSlice(state) {
             InterruptFlag = true
         };
-        _pic = new DualPic(_ioSystem, cpuState, logger);
-        _pit = new PitTimer(_ioSystem, _pic, _speaker, logger);
+        _pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
+        _pit = new PitTimer(_ioPortHandlerRegistry, _pic, _speaker, logger);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class PitModeTests {
         ConfigureChannel2(PitMode.InterruptOnTerminalCount);
         WriteReloadValue(2, 3);
 
-        double gateIndex = _pic.GetFullIndex();
+        double gateIndex = _pic.GetFractionalTickIndex();
         _pit.SetGate2(true);
 
         PitChannelSnapshot snapshot = _pit.GetChannelSnapshot(2);
@@ -102,7 +102,7 @@ public class PitModeTests {
     }
 
     private void ConfigureChannel2(PitMode mode) {
-        _ioSystem.Write(PitControlPort, GenerateConfigureCounterByte(2, 3, (byte)mode, 0));
+        _ioPortHandlerRegistry.Write(PitControlPort, GenerateConfigureCounterByte(2, 3, (byte)mode, 0));
     }
 
     private void WriteReloadValue(byte counterIndex, ushort value) {
@@ -111,8 +111,8 @@ public class PitModeTests {
             _ => throw new ArgumentOutOfRangeException(nameof(counterIndex), counterIndex, null)
         };
 
-        _ioSystem.Write(port, (byte)(value & 0xFF));
-        _ioSystem.Write(port, (byte)((value >> 8) & 0xFF));
+        _ioPortHandlerRegistry.Write(port, (byte)(value & 0xFF));
+        _ioPortHandlerRegistry.Write(port, (byte)((value >> 8) & 0xFF));
     }
 
     private static byte GenerateConfigureCounterByte(byte counter, byte readWritePolicy, byte mode, byte bcd) {

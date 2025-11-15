@@ -105,19 +105,19 @@ public class DosFileManagerTests {
         RecordedDataReader reader = new(configuration.RecordedDataDirectory!, loggerService);
         ExecutionFlowRecorder executionFlowRecorder = new(configuration.DumpDataOnExit is not false, new());
         State state = new(CpuModel.INTEL_80286);
-        PicPitCpuState picPitCpuState = new(state) {
-            CyclesMax = 1,
+        ExecutionStateSlice executionStateSlice = new(state) {
+            CyclesAllocatedForSlice = 1,
             CyclesLeft = 1
         };
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
         IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
-        IoSystem ioSystem = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
         Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(ioSystem, picPitCpuState, loggerService);
+        var dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
@@ -127,7 +127,7 @@ public class DosFileManagerTests {
         FunctionHandler functionHandlerInExternalInterrupt = new(memory, state, executionFlowRecorder, functionCatalogue, false, loggerService);
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, picPitCpuState, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
+            dualPic, executionStateSlice, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager,
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
@@ -136,7 +136,7 @@ public class DosFileManagerTests {
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,
             configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioSystem, dualPic, pcSpeaker, loggerService);
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
         pcSpeaker.AttachPitControl(pitTimer);
 
         DmaSystem dmaSystem =

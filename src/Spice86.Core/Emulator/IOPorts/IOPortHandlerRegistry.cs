@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 ///     Coordinates delegate-based registration for emulated I/O port reads and writes on top of the shared
 ///     <see cref="IOPortDispatcher" />.
 /// </summary>
-public sealed class IoSystem(
+public sealed class IOPortHandlerRegistry(
     IOPortDispatcher dispatcher, State state, ILoggerService loggerService, bool failOnUnhandledPort) {
     private readonly Dictionary<ushort, DelegatePortHandler> _handlers = new();
 
@@ -18,11 +18,11 @@ public sealed class IoSystem(
     public void Reset() {
         int handlerCount = _handlers.Count;
         if (handlerCount == 0) {
-            loggerService.Debug("IoSystem reset requested but no handlers are currently registered.");
+            loggerService.Debug("IoPortHandlerRegistry reset requested but no handlers are currently registered.");
             return;
         }
 
-        loggerService.Debug("Resetting IoSystem; removing {HandlerCount} port handler(s).", handlerCount);
+        loggerService.Debug("Resetting IoPortHandlerRegistry; removing {HandlerCount} port handler(s).", handlerCount);
 
         foreach ((ushort port, DelegatePortHandler handler) in _handlers) {
             handler.Dispose();
@@ -114,7 +114,7 @@ public sealed class IoSystem(
     /// <param name="port">Port number to write to.</param>
     /// <param name="value">Value to write. The handler uses only the low byte.</param>
     public void Write(ushort port, uint value) {
-        WriteByteInternal(port, NumericHelpers.CheckCast<byte, uint>(value));
+        WriteByteInternal(port, NumericConverters.CheckCast<byte, uint>(value));
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public sealed class IoSystem(
     }
 
     private sealed class DelegatePortHandler(
-        IoSystem owner, State state, bool failOnUnhandledPort, ILoggerService loggerService)
+        IOPortHandlerRegistry owner, State state, bool failOnUnhandledPort, ILoggerService loggerService)
         : DefaultIOPortHandler(state, failOnUnhandledPort, loggerService), IDisposable {
         /// <summary>
         ///     Gets or sets the delegate that services byte reads for the port.
