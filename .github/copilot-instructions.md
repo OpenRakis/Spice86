@@ -112,6 +112,17 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - The repository already has telemetry disabled in code, but it may still cause issues for AI agents.
 - Be aware of this configuration to avoid telemetry-related blocking issues.
 
+### MCP Server Usage
+- **A Model Context Protocol (MCP) server is present** in this repository.
+- **Always use the MCP server** and take advantage of it in every work you do.
+- The MCP server provides tools for:
+  - Reading CPU registers (`read_cpu_registers`)
+  - Reading memory (`read_memory`)
+  - Listing functions (`list_functions`)
+  - Inspecting CFG CPU graph (`read_cfg_cpu_graph` - requires `--CfgCpu` flag)
+- Enable with: `--McpServer true`
+- See `doc/mcpServerReadme.md` for detailed documentation
+
 ### Code Style (enforced by `.editorconfig`)
 - **No `var` keyword**: Use explicit types instead (enforced by `.editorconfig`)
   ```csharp
