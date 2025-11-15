@@ -52,7 +52,8 @@ public class BlockDevice : VirtualDeviceBase {
     public BlockDevice(IMemory memory, uint baseAddress, DeviceAttributes attributes,
         byte unitCount, string signature = "")
         : base(new DosDeviceHeader(memory, baseAddress) {
-            Attributes = attributes
+            Attributes = attributes,
+            NextDevicePointer = new Spice86.Shared.Emulator.Memory.SegmentedAddress(0xFFFF, 0xFFFF)
         }) {
         UnitCount = unitCount;
         Signature = signature.Length > 7 ? signature[..7] : signature;

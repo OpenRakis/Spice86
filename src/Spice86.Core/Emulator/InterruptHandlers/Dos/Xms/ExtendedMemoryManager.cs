@@ -238,7 +238,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             headerAddress) {
             Name = XmsIdentifier,
             StrategyEntryPoint = 0,
-            InterruptEntryPoint = 0
+            InterruptEntryPoint = 0,
+            NextDevicePointer = new SegmentedAddress(0xFFFF, 0xFFFF)
         };
         _state = state;
         _a20Gate = a20Gate;

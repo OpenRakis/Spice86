@@ -124,7 +124,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             Name = EmsIdentifier,
             Attributes = DeviceAttributes.Ioctl | DeviceAttributes.Character,
             StrategyEntryPoint = 0,
-            InterruptEntryPoint = 0
+            InterruptEntryPoint = 0,
+            NextDevicePointer = new SegmentedAddress(0xFFFF, 0xFFFF)
         };
         FillDispatchTable();
 

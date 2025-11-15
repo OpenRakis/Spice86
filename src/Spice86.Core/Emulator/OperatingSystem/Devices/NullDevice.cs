@@ -15,7 +15,8 @@ public class NullDevice : VirtualDeviceBase {
     public NullDevice(ILoggerService loggerService, IByteReaderWriter memory, uint baseAddress)
         : base(new DosDeviceHeader(memory, baseAddress) {
             Attributes = Enums.DeviceAttributes.CurrentNull,
-            Name = NUL
+            Name = NUL,
+            NextDevicePointer = new Spice86.Shared.Emulator.Memory.SegmentedAddress(0xFFFF, 0xFFFF)
         }) {
         _loggerService = loggerService;
     }

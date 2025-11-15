@@ -256,29 +256,33 @@ public sealed class Dos {
     /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     private void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         DosDeviceHeader header = device.Header;
-        // Store the location of the header
-        segment ??= MemoryMap.DeviceDriversSegment;
-        offset ??= (ushort)(Devices.Count * DosDeviceHeader.HeaderLength);
-        // Write the DOS device driver header to memory
-        ushort index = (ushort)(offset.Value + 10); //10 bytes in our DosDeviceHeader structure.
+        
+        // Initialize the header with proper values using MemoryBasedDataStructure accessors
+        header.StrategyEntryPoint = 0;  // Internal devices don't use real strategy routines
+        header.InterruptEntryPoint = 0; // Internal devices don't use real interrupt routines
+        
+        // Write device-specific data (name for character devices, unit count for block devices)
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes( $"{device.Name,-8}"));
-        } else if(device is BlockDevice blockDevice) {
-            _memory.UInt8[segment.Value, index] = blockDevice.UnitCount;
-            index++;
-            _memory.LoadData(MemoryUtils.ToPhysicalAddress(segment.Value, index),
-                Encoding.ASCII.GetBytes($"{blockDevice.Signature, -7}"));
+            header.Name = device.Name;
+        } else if (device is BlockDevice blockDevice) {
+            header.UnitCount = blockDevice.UnitCount;
+            // Write signature if present (7 bytes starting at offset 0x0B)
+            if (!string.IsNullOrEmpty(blockDevice.Signature)) {
+                byte[] sigBytes = Encoding.ASCII.GetBytes(blockDevice.Signature.PadRight(7)[..7]);
+                _memory.LoadData(header.BaseAddress + 0x0B, sigBytes);
+            }
         }
 
-        // Make the previous device point to this one
+        // Link the previous device to this one
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
-            _memory.SegmentedAddress16[previousDevice.Header.BaseAddress] =
-                new SegmentedAddress(segment.Value, offset.Value);
+            previousDevice.Header.NextDevicePointer = new SegmentedAddress(
+                (ushort)(header.BaseAddress >> 4), 
+                (ushort)(header.BaseAddress & 0x0F)
+            );
         }
 
-        // Handle changing of current input, output or clock devices.
+        // Handle changing of current input, output or clock devices
         if (header.Attributes.HasFlag(DeviceAttributes.CurrentStdin) ||
             header.Attributes.HasFlag(DeviceAttributes.CurrentStdout)) {
             CurrentConsoleDevice = (CharacterDevice)device;

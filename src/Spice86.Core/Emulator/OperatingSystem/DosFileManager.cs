@@ -933,10 +933,14 @@ public class DosFileManager {
     public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
-        string operationName = $"IOCTL function 0x{state.AL:X2}";
+        IoctlFunction function = (IoctlFunction)state.AL;
+        string operationName = $"IOCTL function {function} (0x{state.AL:X2})";
 
-        if (state.AL is < 4 or 0x06 or 0x07 or
-            0x0a or 0x0c or 0x10) {
+        if (function is IoctlFunction.GetDeviceInformation or IoctlFunction.SetDeviceInformation or
+            IoctlFunction.ReadFromControlChannel or IoctlFunction.WriteToControlChannel or
+            IoctlFunction.GetInputStatus or IoctlFunction.GetOutputStatus or
+            IoctlFunction.IsHandleRemote or IoctlFunction.GenericIoctlForCharacterDevices or
+            IoctlFunction.QueryGenericIoctlCapabilityForHandle) {
             handle = (byte)state.BX;
             if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -944,8 +948,8 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.InvalidHandle);
             }
-        } else if (state.AL < 0x12) {
-            if (state.AL != 0x0b) {
+        } else if ((byte)function <= (byte)IoctlFunction.QueryGenericIoctlCapabilityForBlockDevice) {
+            if (function != IoctlFunction.SetSharingRetryCount) {
                 drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : state.BX - 1);
                 if (drive >= 2 && (drive >= _dosDriveManager.NumberOfPotentiallyValidDriveLetters ||
                     _dosDriveManager.Count < (drive + 1))) {
@@ -963,8 +967,8 @@ public class DosFileManager {
             return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
 
-        switch (state.AL) {
-            case 0x00:      /* Get Device Information */
+        switch (function) {
+            case IoctlFunction.GetDeviceInformation:
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
                 if (fileOrDevice is IVirtualDevice virtualDevice) {
                     state.DX = (ushort)(virtualDevice.Information & ~ExtDeviceBit);
@@ -984,7 +988,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Value16(state.DX);
 
-            case 0x01:      /* Set Device Information */
+            case IoctlFunction.SetDeviceInformation:
                 if (state.DH != 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid data for Set Device Information - DH={DH:X2}", state.DH);
@@ -1002,7 +1006,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x02:      /* Read from Device Control Channel */
+            case IoctlFunction.ReadFromControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice readDevice &&
                     (readDevice.Information & 0xc000) > 0) {
                     if (readDevice is PrinterDevice printer && !printer.CanRead) {
@@ -1022,7 +1026,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
-            case 0x03:      /* Write to Device Control Channel */
+            case IoctlFunction.WriteToControlChannel:
                 if (OpenFiles[handle] is IVirtualDevice writtenDevice &&
                     (writtenDevice.Information & 0xc000) > 0) {
                     /* is character device with IOCTL support */
@@ -1043,7 +1047,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
 
-            case 0x06:      /* Get Input Status */
+            case IoctlFunction.GetInputStatus:
                 if (OpenFiles[handle] is IVirtualDevice inputDevice) {
                     if ((inputDevice.Information & 0x8000) > 0) {
                         if (((inputDevice.Information & 0x40) > 0)) {
@@ -1069,7 +1073,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x07:      /* Get Output Status */
+            case IoctlFunction.GetOutputStatus:
                 if (OpenFiles[handle] is IVirtualDevice outputDevice &&
                     (outputDevice.Information & ExtDeviceBit) > 0) {
                     state.AL = outputDevice.GetStatus(false);
@@ -1080,7 +1084,7 @@ public class DosFileManager {
                 state.AL = 0xFF;
                 return DosFileOperationResult.NoValue();
 
-            case 0x08:      /* Check if block device removable */
+            case IoctlFunction.IsBlockDeviceRemovable:
                 //* cdrom drives and drive A and B are removable */
                 if (drive < 2) {
                     state.AX = 0;
@@ -1094,7 +1098,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x09:      /* Check if block device remote */
+            case IoctlFunction.IsBlockDeviceRemote:
                 if ((drive >= 2) && _dosDriveManager.ElementAt(drive).Value.IsRemote) {
                     state.DX = 0x1000;  // device is remote
                                         // undocumented bits always clear
@@ -1105,7 +1109,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x0B:      /* Set sharing retry count */
+            case IoctlFunction.SetSharingRetryCount:
                 if (state.DX == 0) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid retry count 0 for Set sharing retry count");
@@ -1114,7 +1118,7 @@ public class DosFileManager {
                 }
                 return DosFileOperationResult.NoValue();
 
-            case 0x0D:      /* Generic block device request */
+            case IoctlFunction.GenericIoctlForBlockDevices:
                 if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is null) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
@@ -1131,8 +1135,9 @@ public class DosFileManager {
 
                 SegmentedAddress parameterBlock = new(state.DS, state.DX);
 
-                switch (state.CL) {
-                    case 0x60:  // Get Device Parameters
+                GenericBlockDeviceCommand blockCommand = (GenericBlockDeviceCommand)state.CL;
+                switch (blockCommand) {
+                    case GenericBlockDeviceCommand.GetDeviceParameters:
                         DosDeviceParameterBlock dosDeviceParameterBlock = new(_memory, parameterBlock.Linear);
                         dosDeviceParameterBlock.DeviceType = (byte)(drive >= 2 ? 0x05 : 0x07);
                         dosDeviceParameterBlock.DeviceAttributes = (ushort)(drive >= 2 ? 0x01 : 0x00);
@@ -1141,14 +1146,14 @@ public class DosFileManager {
                         dosDeviceParameterBlock.BiosParameterBlock.BytesPerSector = 0x0200; // (Win3 File Mgr. uses it)
                         break;
 
-                    case 0x46:  // Set Volume Serial Number (not yet implemented)
+                    case GenericBlockDeviceCommand.SetVolumeSerialNumber:
                         // TODO: pull new serial from DS:DX buffer and store it somewhere
                         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("IOCTL: Set Volume Serial Number called but not yet implemented for drive {Drive}", drive);
                         }
                         break;
 
-                    case 0x66:  // Get Volume Serial Number + Volume Label + FS Type
+                    case GenericBlockDeviceCommand.GetVolumeSerialNumber:
                         {
                             VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
                             DosVolumeInfo dosVolumeInfo = new (_memory, parameterBlock.Linear);
@@ -1169,7 +1174,7 @@ public class DosFileManager {
                 state.AX = 0;
                 return DosFileOperationResult.NoValue();
 
-            case 0x0E:      /* Get Logical Drive Map */
+            case IoctlFunction.GetLogicalDriveMap:
                 if (drive < 2) {
                     if (_dosDriveManager.HasDriveAtIndex(drive)) {
                         state.AL = (byte)(drive + 1);
