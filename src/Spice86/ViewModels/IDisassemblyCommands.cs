@@ -50,6 +50,11 @@ public interface IDisassemblyCommands {
     IRelayCommand<DebuggerLineViewModel> CreateExecutionBreakpointHereCommand { get; }
 
     /// <summary>
+    ///     Command to create an execution breakpoint with a dialog for specifying conditions.
+    /// </summary>
+    IRelayCommand<DebuggerLineViewModel> CreateExecutionBreakpointWithDialogCommand { get; }
+
+    /// <summary>
     ///     Command to remove an execution breakpoint at the current instruction.
     /// </summary>
     IRelayCommand<DebuggerLineViewModel> RemoveExecutionBreakpointHereCommand { get; }

@@ -127,7 +127,7 @@
                 <ListBox.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Create breakpoint here"
-                                  Command="{Binding CreateExecutionBreakpointHereCommand}"
+                                  Command="{Binding CreateExecutionBreakpointWithDialogCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine}"
                                   IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}" />
                         <MenuItem Header="Remove breakpoint"
