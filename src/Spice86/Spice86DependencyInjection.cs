@@ -45,6 +45,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Logging;
+using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
@@ -391,29 +392,43 @@ public class Spice86DependencyInjection : IDisposable {
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
 
+        // Declare variables needed for both GUI and headless modes
+        InputEventQueue? inputEventQueue = null;
+        IExceptionHandler exceptionHandler;
+        PerformanceViewModel? performanceViewModel = null;
+        
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
+            // GUI mode: create actual UI components
             hostStorageProvider = new HostStorageProvider(
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer, dumpContext);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-
-            PerformanceViewModel performanceViewModel = new(
-                state, pauseHandler, uiDispatcher, emulationLoop.CpuPerformanceMeasurer);
-
-            mainWindow.PerformanceViewModel = performanceViewModel;
-
-            IExceptionHandler exceptionHandler = configuration.HeadlessMode switch {
-                null => new MainWindowExceptionHandler(pauseHandler),
-                _ => new HeadlessModeExceptionHandler(uiDispatcher)
-            };
-
+            
+            performanceViewModel = new PerformanceViewModel(state, pauseHandler, uiDispatcher, emulationLoop.CpuPerformanceMeasurer);
+            
+            exceptionHandler = new MainWindowExceptionHandler(pauseHandler);
+            
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
-                loggerService, pauseHandler, performanceViewModel, exceptionHandler, emulationLoop);
+                loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
+            
+            inputEventQueue = mainWindowViewModel.InputEventQueue;
+            
+            mainWindow.PerformanceViewModel = performanceViewModel;
             _gui = mainWindowViewModel;
         } else {
+            // Headless mode
             _gui = new HeadlessGui();
+            inputEventQueue = new InputEventQueue(_gui, _gui);
         }
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator state serializer created...");
+        }
+
+        Intel8042Controller keyboardController = new(
+            state, ioPortDispatcher, a20Gate, dualPic,
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
 
@@ -421,12 +436,11 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("VGA card created...");
         }
 
-        Keyboard keyboard = new(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            _gui, configuration.FailOnUnhandledPort);
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory,
-            functionHandlerProvider, stack, state, dualPic, keyboard,
-            biosKeyboardBuffer, loggerService);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
+            state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
+            keyboardController, biosKeyboardBuffer, loggerService);
+
         Mouse mouse = new(state, sharedMouseData, dualPic, _gui,
                     configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse, _gui,
@@ -434,7 +448,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+            biosKeyboardBuffer);
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
@@ -507,7 +521,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardInt9Handler,
             callbackHandler, cpu,
             cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, keyboard, keyboardInt16Handler,
+            joystick, keyboardController, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler,

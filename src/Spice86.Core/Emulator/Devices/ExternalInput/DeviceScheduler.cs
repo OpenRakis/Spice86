@@ -11,7 +11,7 @@ using Spice86.Shared.Interfaces;
 /// <remarks>
 ///     Pools entries to avoid allocations and relies on the shared <see cref="ExecutionStateSlice" /> for cycle accounting.
 /// </remarks>
-internal sealed class DeviceScheduler {
+public sealed class DeviceScheduler {
     private const int PicQueueSize = 8192; // Larger value from DosBox-X. Staging uses 512.
     private readonly ExecutionStateSlice _executionStateSlice;
     private readonly ScheduledEntry[] _entryPool = new ScheduledEntry[PicQueueSize];

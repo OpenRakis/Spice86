@@ -91,9 +91,9 @@ public sealed class Machine : IDisposable {
     public Joystick Joystick { get; }
 
     /// <summary>
-    /// An IBM PC Keyboard
+    /// An IBM PC Keyboard (PS/2 Controller)
     /// </summary>
-    public Keyboard Keyboard { get; }
+    public Intel8042Controller KeyboardController { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -239,7 +239,7 @@ public sealed class Machine : IDisposable {
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
-        Keyboard keyboard,
+        Intel8042Controller keyboardController,
         KeyboardInt16Handler keyboardInt16Handler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IMemory memory,
@@ -277,7 +277,7 @@ public sealed class Machine : IDisposable {
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;
         Joystick = joystick;
-        Keyboard = keyboard;
+        KeyboardController = keyboardController;
         KeyboardInt16Handler = keyboardInt16Handler;
         EmulatorBreakpointsManager = emulatorBreakpointsManager;
         Memory = memory;

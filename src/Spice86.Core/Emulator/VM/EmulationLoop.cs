@@ -61,6 +61,8 @@ public class EmulationLoop : ICyclesLimiter {
         set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
     }
 
+    private readonly InputEventQueue? _inputEventQueue;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -74,10 +76,13 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
+    /// <param name="inputEventQueue">Optional queue for processing keyboard and mouse events from the UI thread.</param>
+    /// <param name="cpuPerformanceMeasurer">Optional performance measurer shared with PerformanceViewModel.</param>
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         ExecutionStateSlice executionStateSlice, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter) {
+        IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter,
+        InputEventQueue? inputEventQueue = null, PerformanceMeasurer? cpuPerformanceMeasurer = null) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
@@ -89,6 +94,12 @@ public class EmulationLoop : ICyclesLimiter {
         _cyclesLimiter = cyclesLimiter;
         _sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
         _cyclesBudgeter = cyclesBudgeter;
+        _inputEventQueue = inputEventQueue;
+        _performanceMeasurer = cpuPerformanceMeasurer ?? new PerformanceMeasurer(new PerformanceMeasureOptions {
+            CheckInterval = 512,
+            MinValueDelta = 3000,
+            MaxIntervalMilliseconds = 10
+        });
         _pauseHandler.Paused += OnPauseStateChanged;
         _pauseHandler.Resumed += OnPauseStateChanged;
         _sliceStopwatch.Start();
@@ -161,6 +172,8 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
+        _pauseHandler.WaitIfPaused();
+        
         InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
@@ -180,6 +193,12 @@ public class EmulationLoop : ICyclesLimiter {
                 }
                 _pauseHandler.WaitIfPaused();
                 _cpu.ExecuteNext();
+                
+                // Process pending input events from the UI thread after each CPU instruction
+                // Only process if there are events to avoid unnecessary overhead
+                if (_inputEventQueue?.HasPendingEvents is true) {
+                    _inputEventQueue.ProcessAllPendingInputEvents();
+                }
             }
         }
 

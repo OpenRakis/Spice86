@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
@@ -25,7 +26,9 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Logging;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels;
 
 using Xunit;
 
@@ -152,16 +155,25 @@ public class DosFileManagerTests {
             biosDataArea, vgaRom,
             bootUpInTextMode: configuration.InitializeDOS is true);
 
-        Keyboard keyboard = new Keyboard(state, ioPortDispatcher, a20Gate, dualPic, loggerService,
-            null, configuration.FailOnUnhandledPort);
+        // For testing purposes, create minimal keyboard setup
+        SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(configuration, memory,
+            functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic, ioPortDispatcher,
+            initializeResetVector: false, loggerService);
+        
+        using HeadlessGui headlessGui = new HeadlessGui();
+        using InputEventQueue inputEventQueue = new InputEventQueue(headlessGui, headlessGui);
+        Intel8042Controller keyboardController = new Intel8042Controller(
+            state, ioPortDispatcher, a20Gate, dualPic,
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
+        
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, functionHandlerProvider, stack,
-            state, dualPic, keyboard, biosKeyboardBuffer, loggerService);
+            new BiosKeyboardInt9Handler(memory, stack, state, functionHandlerProvider, 
+            dualPic, systemBiosInt15Handler, keyboardController, biosKeyboardBuffer, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-        biosKeyboardInt9Handler.BiosKeyboardBuffer);
+            biosKeyboardBuffer);
 
         DosTables dosTables = new DosTables();
         Dos dos = new Dos(configuration, memory, functionHandlerProvider, stack, state,
