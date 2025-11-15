@@ -417,6 +417,45 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     /// <summary>
+    /// Creates an execution breakpoint at the specified address with an optional condition.
+    /// </summary>
+    /// <param name="debuggerLine">The debugger line where the breakpoint should be created.</param>
+    /// <param name="conditionExpression">Optional condition expression for the breakpoint.</param>
+    public void CreateExecutionBreakpointWithCondition(DebuggerLineViewModel debuggerLine, string? conditionExpression) {
+        if (debuggerLine.Breakpoint != null) {
+            return;
+        }
+
+        string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
+        
+        // Compile condition expression if present
+        Func<long, bool>? condition = null;
+        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
+            try {
+                Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(State, _memory);
+                condition = compiler.Compile(conditionExpression);
+            } catch (Exception ex) {
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+                }
+                // If compilation fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+            }
+        }
+
+        _breakpointsViewModel.AddAddressBreakpoint(
+            debuggerLine.Address, 
+            Shared.Emulator.VM.Breakpoint.BreakPointType.CPU_EXECUTION_ADDRESS, 
+            false, 
+            () => {
+                Pause(message);
+            }, 
+            condition, 
+            message, 
+            conditionExpression);
+    }
+
+    /// <summary>
     /// Activates the view model, subscribing to pause events and loading initial data if needed.
     /// This should be called when the view becomes visible.
     /// </summary>
