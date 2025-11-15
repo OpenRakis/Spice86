@@ -45,6 +45,11 @@ public static class Commands {
     public const byte GetVersionNumber = 0xE1;
 
     /// <summary>
+    /// Command to perform DMA identification by echoing back a data byte.
+    /// </summary>
+    public const byte DmaIdentification = 0xE2;
+
+    /// <summary>
     /// Command to output data using auto-init DMA mode in 8-bit mode.
     /// </summary>
     public const byte AutoInitDmaOutput8 = 0x1C;
