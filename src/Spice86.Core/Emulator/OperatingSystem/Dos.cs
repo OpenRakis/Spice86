@@ -117,6 +117,11 @@ public sealed class Dos {
     public DosSysVars DosSysVars { get; }
 
     /// <summary>
+    /// The DOS tables including CDS and DBCS structures.
+    /// </summary>
+    public DosTables DosTables { get; }
+
+    /// <summary>
     /// The EMS device driver.
     /// </summary>
     public ExpandedMemoryManager? Ems { get; private set; }
@@ -138,13 +143,14 @@ public sealed class Dos {
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
+    /// <param name="dosTables">The DOS tables structure.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, ILoggerService loggerService,
-        IOPortDispatcher ioPortDispatcher,
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables,
         ExtendedMemoryManager? xms = null) {
         _loggerService = loggerService;
         Xms = xms;
@@ -161,6 +167,16 @@ public sealed class Dos {
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
+        // Initialize DOS tables (CDS and DBCS structures)
+        DosTables = dosTables;
+        DosTables.Initialize(memory);
+        
+        // Set up the CDS pointer in DosSysVars
+        if (DosTables.CurrentDirectoryStructure is not null) {
+            DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+            DosSysVars.CurrentDirectoryStructureCount = 26; // Support A-Z drives
+        }
+
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(0xb2, 0));
 
@@ -175,7 +191,7 @@ public sealed class Dos {
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, pspTracker, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
-            MemoryManager, FileManager, DosDriveManager, ioPortDispatcher, _loggerService);
+            MemoryManager, FileManager, DosDriveManager, ioPortDispatcher, DosTables, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
