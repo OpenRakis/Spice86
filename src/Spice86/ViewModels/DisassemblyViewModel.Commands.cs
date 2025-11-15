@@ -154,6 +154,13 @@ public partial class DisassemblyViewModel {
     }
 
     [RelayCommand]
+    private void CreateExecutionBreakpointWithDialog(DebuggerLineViewModel debuggerLine) {
+        if (debuggerLine.Breakpoint == null) {
+            _messenger.Send(new ShowBreakpointDialogMessage(debuggerLine, debuggerLine.SegmentedAddress));
+        }
+    }
+
+    [RelayCommand]
     private void RemoveExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint != null) {
             _breakpointsViewModel.RemoveBreakpointInternal(debuggerLine.Breakpoint);
