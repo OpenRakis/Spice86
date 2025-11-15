@@ -186,6 +186,12 @@ public sealed class Configuration {
     [Option(nameof(Xms), Default = null, Required = false, HelpText = "Enable XMS. Default is true.")]
     public bool? Xms { get; init; }
 
+    /// <summary>
+    /// Determines whether to enable MCP (Model Context Protocol) server with stdio transport.
+    /// </summary>
+    [Option(nameof(McpServer), Default = false, Required = false, HelpText = "Enable MCP (Model Context Protocol) server with stdio transport for programmatic emulator state inspection")]
+    public bool McpServer { get; init; }
+
     //TODO: Temporary fix, replace with real dependency injection
     public ICyclesBudgeter? CyclesBudgeter { get; init; }
 }
