@@ -109,6 +109,28 @@ public class RtcIntegrationTests {
     }
 
     /// <summary>
+    /// Tests BIOS INT 15h, AH=83h wait setup and INT 70h RTC configuration.
+    /// Verifies that the wait function properly configures the RTC periodic interrupt.
+    /// </summary>
+    [Fact]
+    public void BiosInt15h_83h_ShouldConfigureRtcProperly() {
+        // This test runs bios_int70_wait.asm which verifies INT 15h, AH=83h:
+        // - Sets up a wait with user flag address and timeout
+        // - Enables RTC periodic interrupt (bit 6 of Status Register B)
+        // - Stores wait timeout in BIOS data area
+        // - Canceling the wait disables the periodic interrupt
+        // - Wait flag is properly managed in BIOS data area
+        RtcTestHandler testHandler = RunRtcTest("bios_int70_wait.com");
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
+            "BIOS INT 15h, AH=83h should configure RTC periodic interrupt correctly");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+        
+        // All 7 tests should have passed (last test writes 0x07 to details port)
+        testHandler.Details.Should().Contain(0x07, "All 7 tests should have completed");
+    }
+
+    /// <summary>
     /// Runs an RTC test program and returns a test handler with results.
     /// </summary>
     private RtcTestHandler RunRtcTest(string comFileName,

@@ -45,6 +45,28 @@ Tests DOS INT 21H date/time services (functions 2Ah-2Dh).
 - INT 21H, AH=2Dh: Set System Time (invalid seconds)
 - INT 21H, AH=2Dh: Set System Time (invalid hundredths)
 
+### 4. bios_int15h_83h.com
+Tests BIOS INT 15h, AH=83h - Event Wait Interval function.
+
+**Tests performed (5 total):**
+- Set a wait event (AL=00h)
+- Detect already-active wait (should return error AH=80h)
+- Cancel a wait event (AL=01h)
+- Set a new wait after canceling (should succeed)
+- Cancel the second wait
+
+### 5. bios_int70_wait.com
+Tests BIOS INT 15h, AH=83h RTC configuration and INT 70h setup.
+
+**Tests performed (7 total):**
+- Set up a wait with INT 15h, AH=83h and user flag address
+- Verify RTC wait flag is set in BIOS data area (offset 0xA0)
+- Verify CMOS Status Register B has periodic interrupt enabled (bit 6)
+- Verify user wait timeout is stored in BIOS data area (offset 0x9C)
+- Cancel the wait with AL=01h
+- Verify RTC wait flag is cleared after cancel
+- Verify CMOS Status Register B has periodic interrupt disabled after cancel
+
 ## Test Protocol
 
 Each test program uses a simple I/O port protocol to report results:
@@ -70,6 +92,8 @@ cd tests/Spice86.Tests/Resources/RtcTests
 nasm -f bin -o cmos_ports.com cmos_ports.asm
 nasm -f bin -o bios_int1a.com bios_int1a.asm
 nasm -f bin -o dos_int21h.com dos_int21h.asm
+nasm -f bin -o bios_int15h_83h.com bios_int15h_83h.asm
+nasm -f bin -o bios_int70_wait.com bios_int70_wait.asm
 ```
 
 Or compile all at once:

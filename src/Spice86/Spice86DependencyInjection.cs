@@ -322,6 +322,8 @@ public class Spice86DependencyInjection : IDisposable {
             realTimeClock, functionHandlerProvider, stack, state, loggerService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             functionHandlerProvider, stack, state, loggerService);
+        RtcInt70Handler rtcInt70Handler = new(memory, functionHandlerProvider, stack, state,
+            dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("BIOS interrupt handlers created...");
@@ -455,6 +457,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
+            interruptInstaller.InstallInterruptHandler(rtcInt70Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
@@ -602,6 +605,7 @@ public class Spice86DependencyInjection : IDisposable {
         return cyclesBudgeter;
     }
 
+    // IRQ 8 (INT 70h) is handled by RtcInt70Handler, not the default handler
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];
 
     private void InstallDefaultInterruptHandlers(InterruptInstaller interruptInstaller, DualPic dualPic,
