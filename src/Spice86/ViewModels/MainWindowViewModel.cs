@@ -85,7 +85,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
-    
+
     /// <summary>
     /// Gets the InputEventQueue that processes keyboard and mouse events for the emulator.
     /// </summary>
@@ -104,7 +104,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _exceptionHandler = exceptionHandler;
         Configuration = configuration;
         _loggerService = loggerService;
-        
+
         // Create InputEventQueue with this MainWindowViewModel as the event source
         _inputEventQueue = new InputEventQueue(this, this);
         _hostStorageProvider = hostStorageProvider;
@@ -155,9 +155,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
-        
-        // Pass only the Avalonia Key - no scancode conversion here
-        KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.Key, IsPressed: false));
+
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
+        KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
     }
 
     [RelayCommand]
@@ -205,9 +205,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
-        
-        // Pass only the Avalonia Key - no scancode conversion here
-        KeyDown?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.Key, IsPressed: true));
+
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
+        KeyDown?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
     [ObservableProperty]
@@ -231,7 +231,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
-    
+
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {
             return;
@@ -241,7 +241,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
-        if(_pauseHandler.IsPaused) {
+        if (_pauseHandler.IsPaused) {
             return;
         }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
@@ -366,8 +366,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
-            {UseCodeOverride: false, OverrideSupplier: not null} =>
+            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
+            { UseCodeOverride: false, OverrideSupplier: not null } =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
@@ -383,7 +383,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     internal event Action? Disposing;
-    
+
     private void Dispose(bool disposing) {
         if (!_disposed) {
             _disposed = true;
@@ -395,7 +395,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
-                
+
                 _inputEventQueue.Dispose();
 
                 // Dispose of UI-related resources in the UI thread
@@ -423,7 +423,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty]
     private string _currentLogLevel = "";
-    
+
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;

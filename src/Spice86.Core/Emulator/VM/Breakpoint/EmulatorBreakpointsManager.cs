@@ -164,8 +164,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             long end = start;
             BreakPointType type = sorted[i].BreakPointType;
 
-            while (i + 1 < sorted.Count && 
-                   sorted[i + 1].Address == end + 1 && 
+            while (i + 1 < sorted.Count &&
+                   sorted[i + 1].Address == end + 1 &&
                    sorted[i + 1].BreakPointType == type) {
                 end = sorted[++i].Address;
             }

@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Enums;
+
 using System;
 using System.Diagnostics;
 

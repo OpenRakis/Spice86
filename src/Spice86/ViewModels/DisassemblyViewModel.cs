@@ -13,9 +13,9 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.ViewModels.Messages;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 
@@ -128,12 +128,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 return;
             }
             _isActive = value;
-            
+
             if (_isActive) {
                 // Subscribe to pause events when the view becomes active
                 _pauseHandler.Paused += OnPaused;
                 _pauseHandler.Resumed += OnResumed;
-                
+
                 // If already paused, update the view
                 if (_pauseHandler.IsPaused) {
                     OnPaused();
@@ -186,7 +186,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
                 _currentInstructionAddress = value;
                 OnPropertyChanged();
                 UpdateHeader(value);
-                
+
                 if (_isActive) {
                     UpdateCpuInstructionHighlighting();
                 }
@@ -208,7 +208,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     ///     Defines a filter for the autocomplete functionality, filtering functions based on the search text
     /// </summary>
     public AutoCompleteFilterPredicate<object?> FunctionFilter => (search, item) =>
-        string.IsNullOrWhiteSpace(search) || item is FunctionInfo {Name: not null} functionInformation && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+        string.IsNullOrWhiteSpace(search) || item is FunctionInfo { Name: not null } functionInformation && functionInformation.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Create the text that is displayed in the textbox when a function is selected.
@@ -298,14 +298,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         if (!_isActive) {
             return;
         }
-        
+
         // Ensure we're on the UI thread
         if (!_uiDispatcher.CheckAccess()) {
             _uiDispatcher.Post(OnPaused);
 
             return;
         }
-    
+
         // Capture the current CPU instruction pointer at the moment of pausing
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {

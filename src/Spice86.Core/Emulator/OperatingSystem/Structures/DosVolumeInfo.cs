@@ -40,8 +40,8 @@ public class DosVolumeInfo : MemoryBasedDataStructure {
         set {
             // Truncate to fit within maxLength including null terminator
             // For 11 bytes, we can store max 10 chars + null terminator
-            string truncated = value.Length >= VolumeLabelLength 
-                ? value[..(VolumeLabelLength - 1)] 
+            string truncated = value.Length >= VolumeLabelLength
+                ? value[..(VolumeLabelLength - 1)]
                 : value;
             SetZeroTerminatedString(0x06, truncated, VolumeLabelLength);
         }
@@ -55,8 +55,8 @@ public class DosVolumeInfo : MemoryBasedDataStructure {
         set {
             // Truncate to fit within maxLength including null terminator
             // For 8 bytes, we can store max 7 chars + null terminator
-            string truncated = value.Length >= FileSystemTypeLength 
-                ? value[..(FileSystemTypeLength - 1)] 
+            string truncated = value.Length >= FileSystemTypeLength
+                ? value[..(FileSystemTypeLength - 1)]
                 : value;
             SetZeroTerminatedString(0x11, truncated, FileSystemTypeLength);
         }

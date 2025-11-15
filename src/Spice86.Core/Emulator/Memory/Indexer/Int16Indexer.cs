@@ -29,7 +29,7 @@ public class Int16Indexer : MemoryIndexer<short> {
         get => (short)_uInt16Indexer[segment, offset];
         set => _uInt16Indexer[segment, offset] = (ushort)value;
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count;
 }

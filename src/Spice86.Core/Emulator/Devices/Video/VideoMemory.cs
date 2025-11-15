@@ -48,9 +48,9 @@ public class VideoMemory : IVideoMemory {
 
                 break;
             case ReadMode.ReadMode1: {
-                // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
-                // If the color matches, the corresponding bit in the result is set
-                // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
+                    // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
+                    // If the color matches, the corresponding bit in the result is set
+                    // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
 
                 // We take the inverse of the colorDontCare register and OR both the colorCompare and
                 // the extracted bits with them. This makes sure that the colorDontCare bits are always
@@ -73,8 +73,8 @@ public class VideoMemory : IVideoMemory {
                     }
                 }
 
-                break;
-            }
+                    break;
+                }
             default:
                 throw new InvalidOperationException($"Unknown readMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode}");
         }

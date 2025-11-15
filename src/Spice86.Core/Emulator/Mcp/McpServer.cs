@@ -67,7 +67,7 @@ public sealed class McpServer : IMcpServer {
                 InputSchema = ConvertToJsonElement(CreateFunctionListInputSchema())
             }
         };
-        
+
         // Add CFG CPU tool only if CFG CPU is available
         if (_cfgCpu != null) {
             Tool[] allTools = new Tool[baseTools.Length + 1];
@@ -79,7 +79,7 @@ public sealed class McpServer : IMcpServer {
             };
             return allTools;
         }
-        
+
         return baseTools;
     }
 
@@ -280,7 +280,7 @@ public sealed class McpServer : IMcpServer {
         }
 
         byte[] data = _memory.ReadRam((uint)length, address);
-        
+
         return new MemoryReadResponse {
             Address = address,
             Length = length,
@@ -290,14 +290,14 @@ public sealed class McpServer : IMcpServer {
 
     private FunctionListResponse ListFunctions(JsonElement? arguments) {
         int limit = 100;
-        
+
         if (arguments != null) {
             JsonElement argsValue = arguments.Value;
             if (argsValue.TryGetProperty("limit", out JsonElement limitElement)) {
                 limit = limitElement.GetInt32();
             }
         }
-        
+
         FunctionInfo[] functions = _functionCatalogue.FunctionInformations.Values
             .OrderByDescending(f => f.CalledCount)
             .Take(limit)
@@ -385,7 +385,7 @@ public sealed class McpServer : IMcpServer {
         };
         string serializedResult = JsonSerializer.Serialize(result, options);
         JsonNode? resultNode = JsonNode.Parse(serializedResult);
-        
+
         JsonObject response = new JsonObject {
             ["jsonrpc"] = "2.0",
             ["result"] = resultNode
@@ -404,7 +404,7 @@ public sealed class McpServer : IMcpServer {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
         string serializedResult = JsonSerializer.Serialize(toolResult, options);
-        
+
         JsonObject content = new JsonObject {
             ["type"] = "text",
             ["text"] = serializedResult

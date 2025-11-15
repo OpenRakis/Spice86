@@ -11,7 +11,7 @@ public class CfgGraphDumper {
     private readonly NodeToString _nodeToString = new();
     public List<string> ToAssemblyListing(Machine machine) {
         List<ICfgNode> nodes = DumpInOrder(machine);
-        
+
         List<string> res = new();
         foreach (ICfgNode node in nodes) {
             string address = node.Address.ToString();

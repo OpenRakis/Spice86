@@ -6,7 +6,7 @@ using Spice86.Shared.Utils;
 using System.Collections;
 
 public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
-    
+
     /// <summary>
     /// Gets or sets the data at the specified segment and offset in the memory.
     /// </summary>

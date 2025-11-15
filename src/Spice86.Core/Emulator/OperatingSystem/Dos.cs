@@ -170,7 +170,7 @@ public sealed class Dos {
         // Initialize DOS tables (CDS and DBCS structures)
         DosTables = dosTables;
         DosTables.Initialize(memory);
-        
+
         // Set up the CDS pointer in DosSysVars
         if (DosTables.CurrentDirectoryStructure is not null) {
             DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
@@ -256,11 +256,11 @@ public sealed class Dos {
     /// <param name="offset">The offset part of the segmented address for the DOS device header.</param>
     private void AddDevice(IVirtualDevice device, ushort? segment = null, ushort? offset = null) {
         DosDeviceHeader header = device.Header;
-        
+
         // Initialize the header with proper values using MemoryBasedDataStructure accessors
         header.StrategyEntryPoint = 0;  // Internal devices don't use real strategy routines
         header.InterruptEntryPoint = 0; // Internal devices don't use real interrupt routines
-        
+
         // Write device-specific data (name for character devices, unit count for block devices)
         if (header.Attributes.HasFlag(DeviceAttributes.Character)) {
             header.Name = device.Name;
@@ -277,7 +277,7 @@ public sealed class Dos {
         if (Devices.Count > 0) {
             IVirtualDevice previousDevice = Devices[^1];
             previousDevice.Header.NextDevicePointer = new SegmentedAddress(
-                (ushort)(header.BaseAddress >> 4), 
+                (ushort)(header.BaseAddress >> 4),
                 (ushort)(header.BaseAddress & 0x0F)
             );
         }

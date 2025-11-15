@@ -29,13 +29,13 @@ public class PrinterDevice : CharacterDevice {
 
     public override long Position { get; set; } = 0;
 
-    public override bool CanRead =>  false;
+    public override bool CanRead => false;
 
     public override bool CanWrite => true;
 
     public override void Write(byte[] buffer, int offset, int count) {
         string output = System.Text.Encoding.ASCII.GetString(buffer, offset, count);
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Writing to printer: {Output}", output);
         }
     }

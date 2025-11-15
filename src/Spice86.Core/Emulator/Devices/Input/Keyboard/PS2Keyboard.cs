@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Shared.Emulator.Keyboard;
@@ -17,7 +18,7 @@ public class PS2Keyboard : IDisposable {
     private readonly State _cpuState;
     private readonly DualPic _dualPic;
     private readonly IGuiKeyboardEvents? _gui;
-    
+
     // Handler references for PIC event management
     private readonly EmulatedTimeEventHandler _service1msHandler;
     private readonly EmulatedTimeEventHandler _ledsAllOnExpireHandler;
@@ -122,7 +123,7 @@ public class PS2Keyboard : IDisposable {
         _cpuState = cpuState;
         _loggerService = loggerService;
         _dualPic = dualPic;
-        
+
         // Initialize handler references
         _service1msHandler = TypematicTickHandler;
         _ledsAllOnExpireHandler = LedsAllOnExpireHandler;
@@ -230,7 +231,7 @@ public class PS2Keyboard : IDisposable {
         // Simulate key press
         AddKey(_repeat.Key, isPressed: true);
     }
-    
+
     private void LedsAllOnExpireHandler(uint _) {
         _ledsAllOn = false;
         MaybeNotifyLedState();
@@ -357,7 +358,7 @@ public class PS2Keyboard : IDisposable {
     }
 
     private void ExecuteCommand(KeyboardCommand command) {
-        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}", (byte)command);
         }
 
@@ -485,7 +486,7 @@ public class PS2Keyboard : IDisposable {
     }
 
     private void ExecuteCommand(KeyboardCommand command, byte param) {
-        if(_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}, parameter 0x{Param:X2}", (byte)command, param);
         }
 

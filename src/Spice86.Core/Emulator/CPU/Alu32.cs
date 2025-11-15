@@ -87,7 +87,7 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
     }
 
     public override uint Rcl(uint value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 33);
+        count = (byte)((count & ShiftCountMask) % 33);
         if (count == 0) {
             return value;
         }
@@ -128,7 +128,7 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
     }
 
     public override uint Rol(uint value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 32);
+        count = (byte)((count & ShiftCountMask) % 32);
         if (count == 0) {
             return value;
         }
@@ -242,7 +242,7 @@ public class Alu32(State state) : Alu<uint, int, ulong, long>(state) {
         return res;
     }
 
-    
+
     public override uint Xor(uint value1, uint value2) {
         uint res = value1 ^ value2;
         UpdateFlags(res);

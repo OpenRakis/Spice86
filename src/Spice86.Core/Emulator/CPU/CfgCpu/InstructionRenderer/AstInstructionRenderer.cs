@@ -86,7 +86,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
         }
         return left + OperationToString(node.BinaryOperation) + right;
     }
-    
+
     public string VisitUnaryOperationNode(UnaryOperationNode node) {
         string value = node.Value.Accept(this);
         return OperationToString(node.UnaryOperation) + value;
@@ -124,7 +124,7 @@ public class AstInstructionRenderer : IAstVisitor<string> {
             _ => throw new InvalidOperationException($"Unsupported AST operation {binaryOperation}")
         };
     }
-    
+
     private string OperationToString(UnaryOperation unaryOperation) {
         return unaryOperation switch {
             UnaryOperation.NOT => "!",

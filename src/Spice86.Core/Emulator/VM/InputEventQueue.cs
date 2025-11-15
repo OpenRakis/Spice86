@@ -31,7 +31,7 @@ public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents, IDisposable 
         IGuiMouseEvents mouseEvents) {
         _keyboardEvents = keyboardEvents;
         _mouseEvents = mouseEvents;
-        
+
         _keyboardEvents.KeyDown += OnKeyDown;
         _keyboardEvents.KeyUp += OnKeyUp;
         _mouseEvents.MouseMoved += OnMouseMoved;

@@ -9,7 +9,7 @@ public class InstructionNode(RepPrefix? repPrefix, InstructionOperation operatio
     public RepPrefix? RepPrefix { get; } = repPrefix;
     public InstructionOperation Operation { get; } = operation;
     public IReadOnlyList<ValueNode> Parameters { get; } = parameters;
-    
+
     public virtual T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitInstructionNode(this);
     }

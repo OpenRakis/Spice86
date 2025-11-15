@@ -49,7 +49,7 @@ public partial class StructureViewModel : ViewModelBase, IDisposable {
     private StructType? _selectedStructure;
 
     [ObservableProperty]
-    private AvaloniaList<StructureMember> _structureMembers = new() {ResetBehavior = ResetBehavior.Remove};
+    private AvaloniaList<StructureMember> _structureMembers = new() { ResetBehavior = ResetBehavior.Remove };
 
     [ObservableProperty]
     private IBinaryDocument _structureMemory;

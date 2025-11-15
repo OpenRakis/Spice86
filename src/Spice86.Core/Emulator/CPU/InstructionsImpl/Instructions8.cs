@@ -9,7 +9,7 @@ public class Instructions8 : Instructions {
         base(cpu, memory, modRm) {
         _alu8 = new Alu8(state);
     }
-    
+
     public void Aam(byte v2) {
         byte v1 = State.AL;
         if (v2 == 0) {

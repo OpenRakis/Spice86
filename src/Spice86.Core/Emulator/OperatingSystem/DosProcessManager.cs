@@ -128,7 +128,7 @@ public class DosProcessManager : DosFileLoader {
     /// <returns>A byte array containing the DOS environment block.</returns>
     private byte[] CreateEnvironmentBlock(string programPath) {
         using MemoryStream ms = new();
-    
+
         // Add each environment variable as NAME=VALUE followed by a null terminator
         foreach (KeyValuePair<string, string> envVar in _environmentVariables) {
             string envString = $"{envVar.Key}={envVar.Value}";
@@ -136,23 +136,23 @@ public class DosProcessManager : DosFileLoader {
             ms.Write(envBytes, 0, envBytes.Length);
             ms.WriteByte(0); // Null terminator for this variable
         }
-    
+
         // Add final null byte to mark end of environment block
         ms.WriteByte(0);
-    
+
         // Write a word with value 1 after the environment variables
         // This is required by DOS
         ms.WriteByte(1);
         ms.WriteByte(0);
-    
+
         // Get the DOS path for the program (not the host path)
         string dosPath = _fileManager.GetDosProgramPath(programPath);
-    
+
         // Write the DOS path to the environment block
         byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
         ms.Write(programPathBytes, 0, programPathBytes.Length);
         ms.WriteByte(0); // Null terminator for program path
-    
+
         return ms.ToArray();
     }
 

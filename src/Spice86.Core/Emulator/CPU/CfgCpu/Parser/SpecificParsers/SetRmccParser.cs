@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 
-public  class SetRmccParser : BaseInstructionParser {
+public class SetRmccParser : BaseInstructionParser {
     public SetRmccParser(BaseInstructionParser other) : base(other) {
     }
 

@@ -31,13 +31,13 @@ public static class BcdConverter {
     public static byte FromBcd(byte bcd) {
         int highNibble = (bcd >> 4) & 0x0F;
         int lowNibble = bcd & 0x0F;
-        
+
         // Validate BCD: each nibble must be 0-9
         if (highNibble > 9 || lowNibble > 9) {
             throw new ArgumentOutOfRangeException(nameof(bcd), bcd,
                 $"Invalid BCD value: 0x{bcd:X2}. Each nibble must be 0-9 (high={highNibble}, low={lowNibble}).");
         }
-        
+
         return (byte)((highNibble * 10) + lowNibble);
     }
 }

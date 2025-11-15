@@ -15,7 +15,7 @@ public sealed class ExtendedMemoryMoveStructure : MemoryBasedDataStructure {
     /// </summary>
     /// <param name="byteReaderWriter">The memory bus.</param>
     /// <param name="baseAddress">Physical address where the structure is located (DS:SI).</param>
-    public ExtendedMemoryMoveStructure(IByteReaderWriter byteReaderWriter, uint baseAddress) 
+    public ExtendedMemoryMoveStructure(IByteReaderWriter byteReaderWriter, uint baseAddress)
         : base(byteReaderWriter, baseAddress) {
     }
 

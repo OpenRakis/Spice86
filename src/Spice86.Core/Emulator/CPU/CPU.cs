@@ -713,11 +713,11 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 _instructions16Or32.Cwd();
                 break;
             case 0x9A: {
-                ushort ip = NextUint16();
-                ushort cs = NextUint16();
-                FarCall(State.CS, _internalIp, cs, ip);
-                break;
-            }
+                    ushort ip = NextUint16();
+                    ushort cs = NextUint16();
+                    FarCall(State.CS, _internalIp, cs, ip);
+                    break;
+                }
             // Do nothing, this is to wait for the FPU which is not implemented
             case 0x9B:
                 // WAIT FPU
@@ -892,52 +892,52 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 HandleInvalidOpcode(opcode);
                 break;
             case 0xD9: {
-                _modRM.Read();
-                uint groupIndex = _modRM.RegisterIndex;
-                switch (groupIndex) {
-                    case 0x7: {
-                        // FNSTCW
-                        // Set the control word to the value expected after init since FPU is not supported.
-                        _modRM.SetRm16(0x37F);
+                    _modRM.Read();
+                    uint groupIndex = _modRM.RegisterIndex;
+                    switch (groupIndex) {
+                        case 0x7: {
+                                // FNSTCW
+                                // Set the control word to the value expected after init since FPU is not supported.
+                                _modRM.SetRm16(0x37F);
 
-                        break;
+                                break;
+                            }
+                        default: throw new InvalidGroupIndexException(State, groupIndex);
                     }
-                    default: throw new InvalidGroupIndexException(State, groupIndex);
+                    break;
                 }
-                break;
-            }
             case 0xDA:
                 // FPU stuff
                 HandleInvalidOpcode(opcode);
                 break;
             case 0xDB: {
-                byte opCodeNextByte = NextUint8();
-                if (opCodeNextByte != 0xE3) {
-                    ushort fullOpCode = (ushort)(opcode << 8 | opCodeNextByte);
-                    HandleInvalidOpcode(fullOpCode);
+                    byte opCodeNextByte = NextUint8();
+                    if (opCodeNextByte != 0xE3) {
+                        ushort fullOpCode = (ushort)(opcode << 8 | opCodeNextByte);
+                        HandleInvalidOpcode(fullOpCode);
+                    }
+                    // FNINIT
+                    // Do nothing, no FPU emulation, but this is used to detect FPU
+                    break;
                 }
-                // FNINIT
-                // Do nothing, no FPU emulation, but this is used to detect FPU
-                break;
-            }
             case 0xDC:
                 // FPU stuff
                 HandleInvalidOpcode(opcode);
                 break;
             case 0xDD: {
-                _modRM.Read();
-                uint groupIndex = _modRM.RegisterIndex;
-                switch (groupIndex) {
-                    case 0x7:
-                        // FNSTSW
-                        // Set non zero, means no FPU installed when called after FNINIT.
-                        _modRM.SetRm16(0xFF);
-                        break;
-                    default:
-                        throw new InvalidGroupIndexException(State, groupIndex);
+                    _modRM.Read();
+                    uint groupIndex = _modRM.RegisterIndex;
+                    switch (groupIndex) {
+                        case 0x7:
+                            // FNSTSW
+                            // Set non zero, means no FPU installed when called after FNINIT.
+                            _modRM.SetRm16(0xFF);
+                            break;
+                        default:
+                            throw new InvalidGroupIndexException(State, groupIndex);
+                    }
+                    break;
                 }
-                break;
-            }
             case 0xDE:
             case 0xDF:
                 // FPU stuff
@@ -945,40 +945,40 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 break;
             case 0xE0:
             case 0xE1: {
-                // zeroFlag==true => LOOPZ
-                // zeroFlag==false =>  LOOPNZ
-                bool zeroFlag = (opcode & 0x1) == 1;
-                sbyte address = (sbyte)NextUint8();
-                bool done = AddressSize switch {
-                    16 => --State.CX == 0,
-                    32 => --State.ECX == 0,
-                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-                };
-                if (!done && State.ZeroFlag == zeroFlag) {
-                    ushort targetIp = (ushort)(_internalIp + address);
-                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                    _internalIp = targetIp;
-                }
+                    // zeroFlag==true => LOOPZ
+                    // zeroFlag==false =>  LOOPNZ
+                    bool zeroFlag = (opcode & 0x1) == 1;
+                    sbyte address = (sbyte)NextUint8();
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                    };
+                    if (!done && State.ZeroFlag == zeroFlag) {
+                        ushort targetIp = (ushort)(_internalIp + address);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        _internalIp = targetIp;
+                    }
 
-                break;
-            }
+                    break;
+                }
             case 0xE2: {
-                // LOOP
-                sbyte address = (sbyte)NextUint8();
-                bool done = AddressSize switch {
-                    16 => --State.CX == 0,
-                    32 => --State.ECX == 0,
-                    _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
-                };
+                    // LOOP
+                    sbyte address = (sbyte)NextUint8();
+                    bool done = AddressSize switch {
+                        16 => --State.CX == 0,
+                        32 => --State.ECX == 0,
+                        _ => throw new InvalidOperationException($"Invalid address size: {AddressSize}")
+                    };
 
-                if (!done) {
-                    ushort targetIp = (ushort)(_internalIp + address);
-                    ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
-                    _internalIp = targetIp;
+                    if (!done) {
+                        ushort targetIp = (ushort)(_internalIp + address);
+                        ExecutionFlowRecorder.RegisterJump(State.CS, State.IP, State.CS, targetIp);
+                        _internalIp = targetIp;
+                    }
+
+                    break;
                 }
-
-                break;
-            }
             case 0xE3: // JCXZ, JECXZ
                 Jcc(TestJumpConditionCXZ());
                 break;
@@ -995,29 +995,29 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
                 _instructions16Or32.OutImm8();
                 break;
             case 0xE8: {
-                // CALL NEAR
-                short offset = (short)NextUint16();
-                ushort nextInstruction = _internalIp;
-                ushort callAddress = (ushort)(nextInstruction + offset);
-                NearCall(nextInstruction, callAddress);
-                break;
-            }
+                    // CALL NEAR
+                    short offset = (short)NextUint16();
+                    ushort nextInstruction = _internalIp;
+                    ushort callAddress = (ushort)(nextInstruction + offset);
+                    NearCall(nextInstruction, callAddress);
+                    break;
+                }
             case 0xE9: {
-                short offset = (short)NextUint16();
-                JumpNear((ushort)(_internalIp + offset));
-                break;
-            }
+                    short offset = (short)NextUint16();
+                    JumpNear((ushort)(_internalIp + offset));
+                    break;
+                }
             case 0xEA: {
-                ushort ip = NextUint16();
-                ushort cs = NextUint16();
-                JumpFar(cs, ip);
-                break;
-            }
+                    ushort ip = NextUint16();
+                    ushort cs = NextUint16();
+                    JumpFar(cs, ip);
+                    break;
+                }
             case 0xEB: {
-                sbyte offset = (sbyte)NextUint8();
-                JumpNear((ushort)(_internalIp + offset));
-                break;
-            }
+                    sbyte offset = (sbyte)NextUint8();
+                    JumpNear((ushort)(_internalIp + offset));
+                    break;
+                }
             case 0xEC:
                 _instructions8.InDx();
                 break;
@@ -1124,7 +1124,7 @@ public class Cpu : IInstructionExecutor, IFunctionHandlerProvider {
             State.InterruptShadowing = false;
             return;
         }
-        
+
         if (!State.InterruptFlag) {
             return;
         }

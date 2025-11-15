@@ -173,7 +173,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
         _pauseHandler.WaitIfPaused();
-        
+
         InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
@@ -193,7 +193,7 @@ public class EmulationLoop : ICyclesLimiter {
                 }
                 _pauseHandler.WaitIfPaused();
                 _cpu.ExecuteNext();
-                
+
                 // Process pending input events from the UI thread after each CPU instruction
                 // Only process if there are events to avoid unnecessary overhead
                 if (_inputEventQueue?.HasPendingEvents is true) {

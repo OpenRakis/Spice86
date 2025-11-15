@@ -118,46 +118,46 @@ public class SystemBiosInt15Handler : InterruptHandler {
         if (State.AL == 0x01) {
             // Clear the wait flag
             _biosDataArea.RtcWaitFlag = 0;
-            
+
             // Disable RTC periodic interrupt (clear bit 6 of Status Register B)
             ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value & ~0x40));
-            
+
             SetCarryFlag(false, calledFromVm);
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("WAIT FUNCTION cancelled");
             }
             return;
         }
-        
+
         // Check if a wait is already in progress
         if (_biosDataArea.RtcWaitFlag != 0) {
             State.AH = 0x80;  // Event already in progress
             SetCarryFlag(true, calledFromVm);
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("WAIT FUNCTION called while event already in progress");
             }
             return;
         }
-        
+
         // AL = 00h: Set up the wait
         uint count = ((uint)State.CX << 16) | State.DX;
-        
+
         // Store the callback pointer (ES:BX)
         _biosDataArea.UserWaitCompleteFlag = new SegmentedAddress(State.ES, State.BX);
-        
+
         // Store the wait count (microseconds)
         _biosDataArea.UserWaitTimeout = count;
-        
+
         // Mark the wait as active
         _biosDataArea.RtcWaitFlag = 1;
-        
+
         // Enable RTC periodic interrupt (set bit 6 of Status Register B)
         ModifyCmosRegister(Devices.Cmos.CmosRegisterAddresses.StatusRegisterB, value => (byte)(value | 0x40));
-        
+
         SetCarryFlag(false, calledFromVm);
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("WAIT FUNCTION set: count={Count} microseconds, callback={Segment:X4}:{Offset:X4}",
                 count, State.ES, State.BX);
@@ -248,7 +248,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         uint wordCount = State.CX;
         uint byteCount = wordCount * 2;
-        
+
         // Validate word count first
         if (wordCount == 0) {
             SetCarryFlag(false, calledFromVm);
@@ -313,7 +313,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // Perform the memory copy using spans (following XMS pattern)
         IList<byte> sourceSpan = Memory.GetSlice((int)sourceAddress, (int)byteCount);
         IList<byte> destinationSpan = Memory.GetSlice((int)destinationAddress, (int)byteCount);
-        
+
         sourceSpan.CopyTo(destinationSpan);
 
         // Restore A20 state
@@ -370,7 +370,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         }
 
         uint microseconds = ((uint)State.CX << 16) | State.DX;
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("BIOS WAIT requested for {Microseconds} microseconds", microseconds);
         }

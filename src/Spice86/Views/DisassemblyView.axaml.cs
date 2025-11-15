@@ -4,9 +4,9 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
-using System.ComponentModel;
-
 using Spice86.ViewModels;
+
+using System.ComponentModel;
 
 /// <summary>
 /// View for the disassembly interface.
@@ -20,7 +20,7 @@ public partial class DisassemblyView : UserControl {
     public DisassemblyView() {
         InitializeComponent();
         DataContextChanged += DisassemblyView_DataContextChanged;
-        
+
         // Subscribe to attached/detached events
         AttachedToVisualTree += DisassemblyView_AttachedToVisualTree;
         DetachedFromVisualTree += DisassemblyView_DetachedFromVisualTree;
@@ -42,7 +42,7 @@ public partial class DisassemblyView : UserControl {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
     }
-    
+
     private void DisassemblyView_AttachedToVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e) {
         // Activate the view model when the view is attached to the visual tree
         _viewModel?.Activate();
@@ -57,7 +57,7 @@ public partial class DisassemblyView : UserControl {
     }
 
     private void OnBreakpointClicked(object? sender, TappedEventArgs e) {
-        if (sender is not Control {DataContext: DebuggerLineViewModel debuggerLine}
+        if (sender is not Control { DataContext: DebuggerLineViewModel debuggerLine }
             || _viewModel == null
             || !_viewModel.ToggleBreakpointCommand.CanExecute(debuggerLine)) {
             return;

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
 using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Function;
@@ -28,7 +29,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public SystemClockInt1AHandler(IMemory memory, BiosDataArea biosDataArea,
-        RealTimeClock realTimeClock, IFunctionHandlerProvider functionHandlerProvider, 
+        RealTimeClock realTimeClock, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
@@ -68,7 +69,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.CX = (ushort)(ticks >> 16);
         State.DX = (ushort)(ticks & 0xFFFF);
         State.AL = _biosDataArea.TimerRollover;
-        
+
         // Clear rollover flag after reading
         _biosDataArea.TimerRollover = 0;
     }

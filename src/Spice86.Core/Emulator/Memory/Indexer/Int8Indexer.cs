@@ -29,7 +29,7 @@ public class Int8Indexer : MemoryIndexer<sbyte> {
         get => (sbyte)_uInt8Indexer[segment, offset];
         set => _uInt8Indexer[segment, offset] = (byte)value;
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt8Indexer.Count;
 }

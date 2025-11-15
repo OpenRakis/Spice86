@@ -28,8 +28,8 @@ public class ModRmExecutor {
     /// <summary>
     /// Gets the linear address the ModRM byte can point at. Can be <c>null</c>.
     /// </summary>
-    public uint? MemoryAddress  { get; private set; }
-    
+    public uint? MemoryAddress { get; private set; }
+
     /// <summary>
     /// Gets the MemoryAddress field, crashes if it was <c>null</c>.
     /// </summary>
@@ -42,7 +42,7 @@ public class ModRmExecutor {
             return MemoryAddress.Value;
         }
     }
-    
+
     /// <summary>
     /// Gets the memory offset of the ModRM byte can point at. Can be <c>null</c>.
     /// </summary>

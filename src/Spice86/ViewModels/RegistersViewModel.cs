@@ -27,7 +27,7 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
     /// Gets the pointer registers.
     /// </summary>
     public ObservableCollection<RegisterViewModel> PointerRegisters { get; } = [];
-    
+
     /// <summary>
     /// Gets the eflag register.
     /// </summary>
@@ -99,7 +99,7 @@ public partial class RegistersViewModel : ObservableObject, IRegistersViewModel 
         foreach (RegisterViewModel register in PointerRegisters) {
             register.Update();
         }
-        
+
         EFlagRegister.Update();
 
         foreach (FlagViewModel flag in Flags) {

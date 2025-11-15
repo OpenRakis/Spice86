@@ -691,15 +691,15 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             // so the interrupt is cleared immediately, while modes 2 and 3 start high. The prior output level guards the
             // edge detection, so only low-to-high transitions trigger the activation path.
             case 0: {
-                _pic.RemoveEvents(PitChannel0Event);
-                if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
-                    _pic.ActivateIrq(0);
-                } else {
-                    _pic.DeactivateIrq(0);
-                }
+                    _pic.RemoveEvents(PitChannel0Event);
+                    if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
+                        _pic.ActivateIrq(0);
+                    } else {
+                        _pic.DeactivateIrq(0);
+                    }
 
-                break;
-            }
+                    break;
+                }
             case 2:
                 _pcSpeaker.SetCounter(0, PitMode.SquareWave);
                 break;

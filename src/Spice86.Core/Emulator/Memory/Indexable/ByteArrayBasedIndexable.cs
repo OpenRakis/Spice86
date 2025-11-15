@@ -42,7 +42,7 @@ public class ByteArrayBasedIndexable : Indexable {
     public override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;

@@ -21,7 +21,7 @@ public abstract class Indexable : IIndexable {
     public abstract UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <summary>
     ///     Allows indexed big endian word access to the memory.
     /// </summary>
@@ -71,7 +71,7 @@ public abstract class Indexable : IIndexable {
     public abstract SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
-    
+
     internal static (UInt8Indexer, UInt16Indexer, UInt16BigEndianIndexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddress16Indexer, SegmentedAddress32Indexer) InstantiateIndexersFromByteReaderWriter(
             IByteReaderWriter byteReaderWriter) {
         UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter);

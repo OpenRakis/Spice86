@@ -40,10 +40,10 @@ public class GdbCommandBreakpointHandler {
     /// Handles a pause coming event from the emulator UI, so GDB client can inspect the state of the emulator again.
     /// </summary>
     private void OnPauseFromEmulator() {
-        if(!_resumeEmulatorOnCommandEnd) {
+        if (!_resumeEmulatorOnCommandEnd) {
             return;
         }
-        if(_loggerService.Equals(LogEventLevel.Debug)) {
+        if (_loggerService.Equals(LogEventLevel.Debug)) {
             _loggerService.Debug("Notification of emulator pause from the UI to the GDB client.");
         }
         _resumeEmulatorOnCommandEnd = false;
@@ -57,7 +57,7 @@ public class GdbCommandBreakpointHandler {
     /// <returns>A response string to send back to GDB.</returns>
     public string AddBreakpoint(string commandContent) {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
-        if(breakPoint is not null) {
+        if (breakPoint is not null) {
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);

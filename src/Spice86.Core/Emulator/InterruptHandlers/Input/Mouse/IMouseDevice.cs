@@ -51,7 +51,7 @@ public interface IMouseDevice : IIOPortHandler {
     ///     The sample rate of the mouse. Currently unused.
     /// </summary>
     int SampleRate { get; set; }
-    
+
     /// <summary>
     ///     The amount of movement in the Y direction since the last update.
     /// </summary>

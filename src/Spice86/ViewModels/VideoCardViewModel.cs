@@ -4,13 +4,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Spice86.Core.Emulator.Devices.Video;
-using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.ViewModels.PropertiesMappers;
 using Spice86.ViewModels.Services;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.Text.Json;
 
-public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewModel {
+public partial class VideoCardViewModel : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
     private readonly IVgaRenderer _vgaRenderer;

@@ -29,7 +29,7 @@ public class Int32Indexer : MemoryIndexer<int> {
         get => (int)_uInt32Indexer[segment, offset];
         set => _uInt32Indexer[segment, offset] = (uint)value;
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt32Indexer.Count;
 }

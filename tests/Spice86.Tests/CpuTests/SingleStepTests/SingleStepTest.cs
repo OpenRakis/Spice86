@@ -82,7 +82,7 @@ public class SingleStepTest {
         state.ESP = ConvertReg(registers.SP);
         state.ESI = ConvertReg(registers.SI);
         state.EDI = ConvertReg(registers.DI);
-        
+
         state.CS = ConvertReg(registers.CS);
         state.DS = ConvertReg(registers.DS);
         state.ES = ConvertReg(registers.ES);
@@ -102,11 +102,11 @@ public class SingleStepTest {
             if (value > 0xFF) {
                 throw new ArgumentOutOfRangeException("ram", $"Value {value} is not a byte for address {physicalAddress}");
             }
-            
+
             memory.UInt8[physicalAddress] = (byte)value;
         }
     }
-    
+
     private void CompareRegistersWithExpected(CpuState cpuState, State state) {
         Registers registers = cpuState.Registers;
         CompareReg(nameof(state.EAX), registers.AX, state.EAX);
@@ -128,7 +128,7 @@ public class SingleStepTest {
         CompareReg(nameof(state.IP), registers.IP, state.IP);
         CompareReg(nameof(state.Flags), registers.Flags, state.Flags.FlagRegister16, true);
     }
-    
+
     private void CompareMemoryWithExpected(CpuState cpuState, Memory memory) {
         uint[][] ram = cpuState.Ram;
         foreach (uint[] ramLine in ram) {
@@ -149,7 +149,7 @@ public class SingleStepTest {
         }
     }
 
-    private void CompareReg(string register, uint? expected, uint actual, bool isFlags=false) {
+    private void CompareReg(string register, uint? expected, uint actual, bool isFlags = false) {
         if (expected == null) {
             return;
         }
@@ -184,7 +184,7 @@ public class SingleStepTest {
     }
 
     private string? CompareFlag(string flagname, uint mask, uint expected, uint actual) {
-        if((expected & mask) == (actual & mask)) {
+        if ((expected & mask) == (actual & mask)) {
             return null;
         }
 
@@ -205,7 +205,7 @@ public class SingleStepTest {
             InitializeRegistersFromTest(cpuTest.Initial, _singleStepTestMinimalMachine.State);
             CfgCpu cfgCpu = _singleStepTestMinimalMachine.Cpu;
             cfgCpu.SignalEntry();
-            for(int i=0;i<maxCycles;i++) {
+            for (int i = 0; i < maxCycles; i++) {
                 // some tests have 2 instructions
                 cfgCpu.ExecuteNext();
             }
@@ -218,7 +218,7 @@ public class SingleStepTest {
             throw new Exception($"An error occurred while running test {name} in {fileName} (index {index}) for {cpuModel} (Instruction bytes are {instructionBytes}): {e.Message}", e);
         }
     }
-    
+
     private static string FormatBytesAsHex(uint[] byteValues) {
         byte[] bytes = byteValues.Select(i => (byte)i).ToArray();
         return Convert.ToHexString(bytes);

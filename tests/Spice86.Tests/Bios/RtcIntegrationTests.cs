@@ -34,10 +34,10 @@ public class RtcIntegrationTests {
         // and validates that they contain proper BCD-encoded time/date values
         RtcTestHandler testHandler = RunRtcTest("cmos_ports.com");
 
-        testHandler.Results.Should().Contain((byte)TestResult.Success, 
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
             "CMOS registers should return valid BCD time/date values");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        
+
         // All 7 tests should have passed (last test writes 0x07 to details port)
         testHandler.Details.Should().Contain(0x07, "All 7 tests should have completed");
     }
@@ -60,7 +60,7 @@ public class RtcIntegrationTests {
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 1A functions should execute successfully");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        
+
         // All 6 tests should have passed (last test writes 0x06 to details port)
         testHandler.Details.Should().Contain(0x06, "All 6 tests should have completed");
     }
@@ -81,7 +81,7 @@ public class RtcIntegrationTests {
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "DOS INT 21H date/time functions should execute successfully");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        
+
         // All 11 tests should have passed (last test writes 0x0B to details port)
         testHandler.Details.Should().Contain(0x0B, "All 11 tests should have completed");
     }
@@ -103,7 +103,7 @@ public class RtcIntegrationTests {
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h WAIT function should execute successfully");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        
+
         // All 5 tests should have passed (last test writes 0x05 to details port)
         testHandler.Details.Should().Contain(0x05, "All 5 tests should have completed");
     }
@@ -125,7 +125,7 @@ public class RtcIntegrationTests {
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h should configure RTC periodic interrupt correctly");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        
+
         // All 7 tests should have passed (last test writes 0x07 to details port)
         testHandler.Details.Should().Contain(0x07, "All 7 tests should have completed");
     }
@@ -135,11 +135,11 @@ public class RtcIntegrationTests {
     /// </summary>
     private RtcTestHandler RunRtcTest(string comFileName,
         [CallerMemberName] string unitTestName = "test") {
-        
+
         // Load the compiled .com file from Resources/RtcTests directory
         string resourcePath = Path.Join("Resources", "RtcTests", comFileName);
         string fullPath = Path.GetFullPath(resourcePath);
-        
+
         if (!File.Exists(fullPath)) {
             throw new FileNotFoundException(
                 $"RTC test program not found: {fullPath}. " +
@@ -173,13 +173,10 @@ public class RtcIntegrationTests {
             spice86DependencyInjection.ProgramExecutor.Run();
 
             return testHandler;
-        }
-        finally {
+        } finally {
             // Clean up the temp file
             if (File.Exists(tempFilePath)) {
-                try { File.Delete(tempFilePath); } 
-                catch (IOException) { /* ignore file in use, etc. */ }
-                catch (UnauthorizedAccessException) { /* ignore permission issues */ }
+                try { File.Delete(tempFilePath); } catch (IOException) { /* ignore file in use, etc. */ } catch (UnauthorizedAccessException) { /* ignore permission issues */ }
                 // optionally catch other expected exceptions or rethrow unexpected ones
             }
         }

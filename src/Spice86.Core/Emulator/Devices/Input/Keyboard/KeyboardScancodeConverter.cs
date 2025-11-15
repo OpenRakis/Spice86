@@ -11,9 +11,9 @@ using System.Collections.Generic;
 public class KeyboardScancodeConverter {
     private static readonly FrozenDictionary<PhysicalKey, KbdKey> _keyToKbdKey = new Dictionary<PhysicalKey, KbdKey>() {
         // Number row
-        { PhysicalKey.Digit1, KbdKey.D1 }, { PhysicalKey.Digit2, KbdKey.D2 }, { PhysicalKey.Digit3, KbdKey.D3 }, 
-        { PhysicalKey.Digit4, KbdKey.D4 }, { PhysicalKey.Digit5, KbdKey.D5 }, { PhysicalKey.Digit6, KbdKey.D6 }, 
-        { PhysicalKey.Digit7, KbdKey.D7 }, { PhysicalKey.Digit8, KbdKey.D8 }, { PhysicalKey.Digit9, KbdKey.D9 }, 
+        { PhysicalKey.Digit1, KbdKey.D1 }, { PhysicalKey.Digit2, KbdKey.D2 }, { PhysicalKey.Digit3, KbdKey.D3 },
+        { PhysicalKey.Digit4, KbdKey.D4 }, { PhysicalKey.Digit5, KbdKey.D5 }, { PhysicalKey.Digit6, KbdKey.D6 },
+        { PhysicalKey.Digit7, KbdKey.D7 }, { PhysicalKey.Digit8, KbdKey.D8 }, { PhysicalKey.Digit9, KbdKey.D9 },
         { PhysicalKey.Digit0, KbdKey.D0 },
         
         // Letters
@@ -26,14 +26,14 @@ public class KeyboardScancodeConverter {
         { PhysicalKey.N, KbdKey.N }, { PhysicalKey.M, KbdKey.M },
         
         // Function keys
-        { PhysicalKey.F1, KbdKey.F1 }, { PhysicalKey.F2, KbdKey.F2 }, { PhysicalKey.F3, KbdKey.F3 }, 
+        { PhysicalKey.F1, KbdKey.F1 }, { PhysicalKey.F2, KbdKey.F2 }, { PhysicalKey.F3, KbdKey.F3 },
         { PhysicalKey.F4, KbdKey.F4 }, { PhysicalKey.F5, KbdKey.F5 }, { PhysicalKey.F6, KbdKey.F6 },
-        { PhysicalKey.F7, KbdKey.F7 }, { PhysicalKey.F8, KbdKey.F8 }, { PhysicalKey.F9, KbdKey.F9 }, 
+        { PhysicalKey.F7, KbdKey.F7 }, { PhysicalKey.F8, KbdKey.F8 }, { PhysicalKey.F9, KbdKey.F9 },
         { PhysicalKey.F10, KbdKey.F10 }, { PhysicalKey.F11, KbdKey.F11 }, { PhysicalKey.F12, KbdKey.F12 },
         
         // Special keys
-        { PhysicalKey.Escape, KbdKey.Escape }, { PhysicalKey.Tab, KbdKey.Tab }, 
-        { PhysicalKey.Backspace, KbdKey.Backspace }, { PhysicalKey.Enter, KbdKey.Enter }, 
+        { PhysicalKey.Escape, KbdKey.Escape }, { PhysicalKey.Tab, KbdKey.Tab },
+        { PhysicalKey.Backspace, KbdKey.Backspace }, { PhysicalKey.Enter, KbdKey.Enter },
         { PhysicalKey.Space, KbdKey.Space },
         
         // Modifier keys
@@ -43,33 +43,33 @@ public class KeyboardScancodeConverter {
         { PhysicalKey.MetaLeft, KbdKey.LeftGui }, { PhysicalKey.MetaRight, KbdKey.RightGui },
         
         // Lock keys
-        { PhysicalKey.CapsLock, KbdKey.CapsLock }, { PhysicalKey.ScrollLock, KbdKey.ScrollLock }, 
+        { PhysicalKey.CapsLock, KbdKey.CapsLock }, { PhysicalKey.ScrollLock, KbdKey.ScrollLock },
         { PhysicalKey.NumLock, KbdKey.NumLock },
         
         // Punctuation
-        { PhysicalKey.Backquote, KbdKey.Grave }, { PhysicalKey.Minus, KbdKey.Minus }, 
+        { PhysicalKey.Backquote, KbdKey.Grave }, { PhysicalKey.Minus, KbdKey.Minus },
         { PhysicalKey.Equal, KbdKey.Equals }, { PhysicalKey.Backslash, KbdKey.Backslash },
-        { PhysicalKey.BracketLeft, KbdKey.LeftBracket }, 
+        { PhysicalKey.BracketLeft, KbdKey.LeftBracket },
         { PhysicalKey.BracketRight, KbdKey.RightBracket },
         { PhysicalKey.Semicolon, KbdKey.Semicolon }, { PhysicalKey.Quote, KbdKey.Quote },
-        { PhysicalKey.IntlBackslash, KbdKey.Oem102 }, { PhysicalKey.Period, KbdKey.Period }, 
+        { PhysicalKey.IntlBackslash, KbdKey.Oem102 }, { PhysicalKey.Period, KbdKey.Period },
         { PhysicalKey.Comma, KbdKey.Comma }, { PhysicalKey.Slash, KbdKey.Slash },
         
         // Navigation keys
         { PhysicalKey.PrintScreen, KbdKey.PrintScreen }, { PhysicalKey.Pause, KbdKey.Pause },
-        { PhysicalKey.Insert, KbdKey.Insert }, { PhysicalKey.Home, KbdKey.Home }, 
-        { PhysicalKey.PageUp, KbdKey.PageUp }, { PhysicalKey.Delete, KbdKey.Delete }, 
+        { PhysicalKey.Insert, KbdKey.Insert }, { PhysicalKey.Home, KbdKey.Home },
+        { PhysicalKey.PageUp, KbdKey.PageUp }, { PhysicalKey.Delete, KbdKey.Delete },
         { PhysicalKey.End, KbdKey.End }, { PhysicalKey.PageDown, KbdKey.PageDown },
-        { PhysicalKey.ArrowLeft, KbdKey.Left }, { PhysicalKey.ArrowUp, KbdKey.Up }, 
+        { PhysicalKey.ArrowLeft, KbdKey.Left }, { PhysicalKey.ArrowUp, KbdKey.Up },
         { PhysicalKey.ArrowDown, KbdKey.Down }, { PhysicalKey.ArrowRight, KbdKey.Right },
         
         // Keypad
-        { PhysicalKey.NumPad0, KbdKey.Kp0 }, { PhysicalKey.NumPad1, KbdKey.Kp1 }, 
-        { PhysicalKey.NumPad2, KbdKey.Kp2 }, { PhysicalKey.NumPad3, KbdKey.Kp3 }, 
-        { PhysicalKey.NumPad4, KbdKey.Kp4 }, { PhysicalKey.NumPad5, KbdKey.Kp5 }, 
-        { PhysicalKey.NumPad6, KbdKey.Kp6 }, { PhysicalKey.NumPad7, KbdKey.Kp7 }, 
+        { PhysicalKey.NumPad0, KbdKey.Kp0 }, { PhysicalKey.NumPad1, KbdKey.Kp1 },
+        { PhysicalKey.NumPad2, KbdKey.Kp2 }, { PhysicalKey.NumPad3, KbdKey.Kp3 },
+        { PhysicalKey.NumPad4, KbdKey.Kp4 }, { PhysicalKey.NumPad5, KbdKey.Kp5 },
+        { PhysicalKey.NumPad6, KbdKey.Kp6 }, { PhysicalKey.NumPad7, KbdKey.Kp7 },
         { PhysicalKey.NumPad8, KbdKey.Kp8 }, { PhysicalKey.NumPad9, KbdKey.Kp9 },
-        { PhysicalKey.NumPadDivide, KbdKey.KpDivide }, { PhysicalKey.NumPadMultiply, KbdKey.KpMultiply }, 
+        { PhysicalKey.NumPadDivide, KbdKey.KpDivide }, { PhysicalKey.NumPadMultiply, KbdKey.KpMultiply },
         { PhysicalKey.NumPadSubtract, KbdKey.KpMinus }, { PhysicalKey.NumPadAdd, KbdKey.KpPlus },
         { PhysicalKey.NumPadEnter, KbdKey.KpEnter }, { PhysicalKey.NumPadDecimal, KbdKey.KpPeriod }
     }.ToFrozenDictionary();
@@ -246,11 +246,11 @@ public class KeyboardScancodeConverter {
         }
 
         List<byte> result = [];
-        
+
         if (extend) {
             result.Add(0xE0);
         }
-        
+
         result.Add((byte)(code | (isPressed ? 0 : 0x80)));
         return result;
     }
@@ -269,7 +269,7 @@ public class KeyboardScancodeConverter {
     public List<byte> GetScanCode2(KbdKey keyType, bool isPressed) {
         return GetScanCode1(keyType, isPressed); // Fallback to set 1
     }
-    
+
     /// <summary>
     /// Gets scan codes for keyboard scan code set 3.
     /// </summary>

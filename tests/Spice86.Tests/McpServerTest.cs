@@ -26,7 +26,7 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         string request = """{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-06-18"},"id":1}""";
 
         // Act
@@ -51,7 +51,7 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         string request = """{"jsonrpc":"2.0","method":"tools/list","id":2}""";
 
         // Act
@@ -62,11 +62,11 @@ public class McpServerTest {
         responseNode.Should().NotBeNull();
         responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
         responseNode["id"]?.GetValue<int>().Should().Be(2);
-        
+
         JsonArray? tools = responseNode["result"]?["tools"]?.AsArray();
         tools.Should().NotBeNull();
         tools!.Count.Should().Be(3);
-        
+
         // Verify tool names
         string[] toolNames = tools.Select(t => t?["name"]?.GetValue<string>() ?? "").ToArray();
         toolNames.Should().Contain("read_cpu_registers");
@@ -84,13 +84,13 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         // Set some register values
         spice86.Machine.CpuState.EAX = 0x12345678;
         spice86.Machine.CpuState.EBX = 0xABCDEF01;
         spice86.Machine.CpuState.CS = 0x1000;
         spice86.Machine.CpuState.IP = 0x0100;
-        
+
         string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_cpu_registers","arguments":{}},"id":3}""";
 
         // Act
@@ -101,10 +101,10 @@ public class McpServerTest {
         responseNode.Should().NotBeNull();
         responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
         responseNode["id"]?.GetValue<int>().Should().Be(3);
-        
+
         string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
         resultText.Should().NotBeNull();
-        
+
         JsonNode? registers = JsonNode.Parse(resultText!);
         registers.Should().NotBeNull();
         registers!["generalPurpose"]?["EAX"]?.GetValue<uint>().Should().Be(0x12345678);
@@ -123,11 +123,11 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         // Write some test data to memory
         byte[] testData = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
         spice86.Machine.Memory.WriteRam(testData, 0x1000);
-        
+
         string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":4096,"length":5}},"id":4}""";
 
         // Act
@@ -138,10 +138,10 @@ public class McpServerTest {
         responseNode.Should().NotBeNull();
         responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
         responseNode["id"]?.GetValue<int>().Should().Be(4);
-        
+
         string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
         resultText.Should().NotBeNull();
-        
+
         JsonNode? memoryData = JsonNode.Parse(resultText!);
         memoryData.Should().NotBeNull();
         memoryData!["address"]?.GetValue<uint>().Should().Be(4096);
@@ -159,15 +159,15 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         // Add some test functions
         FunctionInformation func1 = functionCatalogue.GetOrCreateFunctionInformation(new SegmentedAddress(0x1000, 0x0000), "TestFunction1");
         func1.Enter(null);
         func1.Enter(null);
-        
+
         FunctionInformation func2 = functionCatalogue.GetOrCreateFunctionInformation(new SegmentedAddress(0x2000, 0x0100), "TestFunction2");
         func2.Enter(null);
-        
+
         string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"list_functions","arguments":{"limit":10}},"id":5}""";
 
         // Act
@@ -178,18 +178,18 @@ public class McpServerTest {
         responseNode.Should().NotBeNull();
         responseNode!["jsonrpc"]?.GetValue<string>().Should().Be("2.0");
         responseNode["id"]?.GetValue<int>().Should().Be(5);
-        
+
         string? resultText = responseNode["result"]?["content"]?[0]?["text"]?.GetValue<string>();
         resultText.Should().NotBeNull();
-        
+
         JsonNode? functionData = JsonNode.Parse(resultText!);
         functionData.Should().NotBeNull();
         functionData!["totalCount"]?.GetValue<int>().Should().Be(2);
-        
+
         JsonArray? functions = functionData["functions"]?.AsArray();
         functions.Should().NotBeNull();
         functions!.Count.Should().Be(2);
-        
+
         // The function with more calls should be first (ordered by CalledCount descending)
         functions[0]?["name"]?.GetValue<string>().Should().Be("TestFunction1");
         functions[0]?["calledCount"]?.GetValue<int>().Should().Be(2);
@@ -207,7 +207,7 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         string request = "invalid json";
 
         // Act
@@ -230,7 +230,7 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         string request = """{"jsonrpc":"2.0","method":"unknown_method","id":99}""";
 
         // Act
@@ -253,7 +253,7 @@ public class McpServerTest {
         Spice86DependencyInjection spice86 = creator.Create();
         FunctionCatalogue functionCatalogue = new FunctionCatalogue();
         McpServer server = new(spice86.Machine.Memory, spice86.Machine.CpuState, functionCatalogue, null, spice86.Machine.PauseHandler, new LoggerService());
-        
+
         string request = """{"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_memory","arguments":{"address":0,"length":10000}},"id":6}""";
 
         // Act

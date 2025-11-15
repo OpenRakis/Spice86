@@ -76,7 +76,7 @@ public class DosDiskTransferArea : MemoryBasedDataStructure {
     /// </summary>
     public uint FileSize { get => UInt32[FileSizeOffset]; set => UInt32[FileSizeOffset] = value; }
 
-    [Range(0,13)]
+    [Range(0, 13)]
     public string FileName {
         get => GetZeroTerminatedString(FileNameOffset, FileNameLength);
         set => SetZeroTerminatedString(FileNameOffset, value, FileNameLength);

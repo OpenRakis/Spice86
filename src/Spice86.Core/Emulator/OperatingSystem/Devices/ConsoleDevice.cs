@@ -109,7 +109,7 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
-        if(count == 0 || offset > buffer.Length || buffer.Length == 0) {
+        if (count == 0 || offset > buffer.Length || buffer.Length == 0) {
             return 0;
         }
         ushort oldAx = _state.AX;
@@ -122,7 +122,7 @@ public class ConsoleDevice : CharacterDevice {
             }
             _readCache = 0;
         }
-        while(index < buffer.Length && readCount < count) {
+        while (index < buffer.Length && readCount < count) {
             _keyboardInt16Handler.GetKeystroke();
             byte scanCode = _state.AL;
             switch (scanCode) {
@@ -228,8 +228,8 @@ public class ConsoleDevice : CharacterDevice {
                     continue;
                 }
             }
-            if(!_ansi.Sci) {
-                switch((char)chr) {
+            if (!_ansi.Sci) {
+                switch ((char)chr) {
                     case '[':
                         _ansi.Sci = true;
                         break;
@@ -238,7 +238,7 @@ public class ConsoleDevice : CharacterDevice {
                     case 'D': // Scrolling down
                     case 'M': // Scrolling up
                     default:
-                        if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                             _loggerService.Warning("ANSI: Unknown char {AnsiChar} after an Esc character", $"{chr:X2}");
                         }
                         ClearAnsi();
@@ -282,7 +282,7 @@ public class ConsoleDevice : CharacterDevice {
                                 _ansi.Attribute |= 0x08;
                                 break;
                             case 4: // Underline
-                                if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+                                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                                     _loggerService.Information("ANSI: No support for underline yet");
                                 }
                                 break;
@@ -366,7 +366,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'f':
                 case 'H': // Cursor Position
-                    if(!_ansi.WasWarned && _loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    if (!_ansi.WasWarned && _loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _ansi.WasWarned = true;
                         _loggerService.Warning("ANSI Warning to debugger: ANSI SEQUENCES USED");
                     }
@@ -457,7 +457,7 @@ public class ConsoleDevice : CharacterDevice {
                     break;
                 case 'h': // Set mode (if code =7 enable linewrap)
                 case 'I': // Reset mode
-                    if(_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("ANSI: set/reset mode called (not supported)");
                     }
                     ClearAnsi();
@@ -491,7 +491,7 @@ public class ConsoleDevice : CharacterDevice {
                     _vgaFunctionality.SetActivePage(page);
                     _vgaFunctionality.VerifyScroll(0, row, 0,
                         (byte)(ncols - 1), (byte)(nrows - 1),
-                        _ansi.Data[0] > 0 ? - _ansi.Data[0] : -1,
+                        _ansi.Data[0] > 0 ? -_ansi.Data[0] : -1,
                         _ansi.Attribute);
                     break;
                 case 'l': // (if code =7) disable linewrap
@@ -513,7 +513,7 @@ public class ConsoleDevice : CharacterDevice {
                 return NoInputAvailable;
             }
 
-            if(_readCache is not 0 || _biosKeybardBuffer.PeekKeyCode() is not null) {
+            if (_readCache is not 0 || _biosKeybardBuffer.PeekKeyCode() is not null) {
                 return InputAvailable;
             }
 
@@ -567,7 +567,7 @@ public class ConsoleDevice : CharacterDevice {
     }
 
     private void OutputWithNoAttributes(byte byteChar) {
-        if(!GetIsInTextMode()) {
+        if (!GetIsInTextMode()) {
             return;
         }
         OutputWithNoAttributes((char)byteChar);

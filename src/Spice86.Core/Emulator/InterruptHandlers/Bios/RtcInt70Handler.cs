@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
 using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -46,7 +47,7 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// <param name="biosDataArea">The BIOS data area for wait flag and counter access.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for CMOS register access.</param>
     /// <param name="loggerService">The logger service.</param>
-    public RtcInt70Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, 
+    public RtcInt70Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, DualPic dualPic, BiosDataArea biosDataArea,
         IOPortDispatcher ioPortDispatcher, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
@@ -120,7 +121,7 @@ public sealed class RtcInt70Handler : InterruptHandler {
         // Decrement the wait counter (DOSBox uses 997 microseconds per interrupt)
         const uint InterruptIntervalMicroseconds = 997;
         uint count = _biosDataArea.UserWaitTimeout;
-        
+
         if (count > InterruptIntervalMicroseconds) {
             // Still waiting - decrement the counter
             _biosDataArea.UserWaitTimeout = count - InterruptIntervalMicroseconds;
@@ -149,7 +150,7 @@ public sealed class RtcInt70Handler : InterruptHandler {
             // Only set the flag if not a null pointer (0000:0000)
             byte currentValue = Memory.UInt8[userFlagAddress.Segment, userFlagAddress.Offset];
             Memory.UInt8[userFlagAddress.Segment, userFlagAddress.Offset] = (byte)(currentValue | 0x80);
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("Set user wait flag at {Segment:X4}:{Offset:X4} to 0x{Value:X2}",
                     userFlagAddress.Segment, userFlagAddress.Offset, currentValue | 0x80);

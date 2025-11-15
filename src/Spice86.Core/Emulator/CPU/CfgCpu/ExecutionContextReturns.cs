@@ -1,7 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Maps return address to a stack of execution contexts to restore.

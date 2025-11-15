@@ -63,7 +63,7 @@ public class ModRmExecutorTest {
         Assert.NotNull(executor.MemoryAddress);
         Assert.Equal((DS * 16) + 0x2211, (int)executor.MemoryAddress);
     }
-    
+
     [Fact]
     public void Execute16Mod1R0Rm110() {
         // Arrange
@@ -82,9 +82,9 @@ public class ModRmExecutorTest {
         Assert.Equal(expectedOffset, (int)executor.MemoryOffset);
         Assert.NotNull(executor.MemoryAddress);
         Assert.Equal((SS * 16) + expectedOffset, (int)executor.MemoryAddress);
-        
+
     }
-    
+
     [Fact]
     public void Execute16Mod1R0Rm110NegativeDisplacement() {
         // Arrange
@@ -103,7 +103,7 @@ public class ModRmExecutorTest {
         Assert.Equal(expectedOffset, (int)executor.MemoryOffset);
         Assert.NotNull(executor.MemoryAddress);
         Assert.Equal((SS * 16) + expectedOffset, (int)executor.MemoryAddress);
-        
+
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class ModRmExecutorTest {
         Assert.NotNull(executor.MemoryAddress);
         Assert.Equal((DS * 16) + expectedOffset, (int)executor.MemoryAddress);
     }
-    
+
     [Fact]
     public void Execute32Mod0R0Rm100Base5Fails() {
         // Arrange

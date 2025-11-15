@@ -67,7 +67,7 @@ public class DosInt21IntegrationTests {
         };
 
         DosTestHandler testHandler = RunDosTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -102,7 +102,7 @@ public class DosInt21IntegrationTests {
         };
 
         DosTestHandler testHandler = RunDosTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -156,7 +156,7 @@ public class DosInt21IntegrationTests {
         };
 
         DosTestHandler testHandler = RunDosTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -195,7 +195,7 @@ public class DosInt21IntegrationTests {
         };
 
         DosTestHandler testHandler = RunDosTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
@@ -235,7 +235,7 @@ public class DosInt21IntegrationTests {
     /// </summary>
     private class DosTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
-        
+
         public DosTestHandler(State state, ILoggerService loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
             ioPortDispatcher.AddIOPortHandler(ResultPort, this);

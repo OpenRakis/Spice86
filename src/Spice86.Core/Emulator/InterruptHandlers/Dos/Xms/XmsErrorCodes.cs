@@ -10,14 +10,14 @@ public enum XmsErrorCodes : byte {
     /// Operation completed successfully.
     /// </summary>
     Ok = 0x00,
-    
+
     /// <summary>
     /// Function not implemented.
     /// Returned when a requested XMS function is not supported by the XMS driver.
     /// Only UMB functions are optional.
     /// </summary>
     NotImplemented = 0x80,
-    
+
     /// <summary>
     /// VDISK device detected.
     /// Returned when a VDISK device is detected in the system, which may
@@ -26,7 +26,7 @@ public enum XmsErrorCodes : byte {
     /// </summary>
     /// <remarks>VDISK detection is not implemented.</remarks>
     VDiskDetected = 0x81,
-    
+
     /// <summary>
     /// A20 error.
     /// Returned when an error occurs while attempting to enable or disable
@@ -34,14 +34,14 @@ public enum XmsErrorCodes : byte {
     /// or conflicts with other software controlling the A20 line.
     /// </summary>
     A20LineError = 0x82,
-    
+
     /// <summary>
     /// General driver error.
     /// A general, non-specific error occurred in the XMS driver.
     /// This is typically a catch-all for errors not covered by other codes.
     /// </summary>
     GeneralDriverError = 0x8e,
-    
+
     /// <summary>
     /// HMA does not exist.
     /// Returned when a High Memory Area operation is attempted but the
@@ -49,7 +49,7 @@ public enum XmsErrorCodes : byte {
     /// limitations or configuration issues.
     /// </summary>
     HmaDoesNotExist = 0x90,
-    
+
     /// <summary>
     /// HMA is already in use.
     /// Returned when a program attempts to allocate the HMA (Function 01h)
@@ -57,15 +57,15 @@ public enum XmsErrorCodes : byte {
     /// used by one program at a time.
     /// </summary>
     HmaInUse = 0x91,
-    
+
     /// <summary>
     /// HMA requested size is too small.
     /// Returned when the size requested for the HMA allocation (in DX register)
     /// is less than the minimum size specified by the /HMAMIN= parameter in
     /// the XMS driver configuration. This helps ensure efficient use of the HMA.
     /// </summary>
-    HmaRequestNotBigEnough = 0x92, 
-    
+    HmaRequestNotBigEnough = 0x92,
+
     /// <summary>
     /// HMA not allocated.
     /// Returned when an operation that requires the HMA to be allocated
@@ -73,7 +73,7 @@ public enum XmsErrorCodes : byte {
     /// has not been allocated to the caller.
     /// </summary>
     HmaNotAllocated = 0x93,
-    
+
     /// <summary>
     /// A20 line still enabled.
     /// Returned when attempting to disable the A20 line (Function 04h or 06h)
@@ -81,14 +81,14 @@ public enum XmsErrorCodes : byte {
     /// This may be due to hardware issues or other software keeping A20 enabled.
     /// </summary>
     A20StillEnabled = 0x94,
-    
+
     /// <summary>
     /// All extended memory is allocated.
     /// Returned when attempting to allocate extended memory (Functions 09h or 89h)
     /// but there is no free extended memory available in the system.
     /// </summary>
     XmsOutOfMemory = 0xA0,
-    
+
     /// <summary>
     /// All available extended memory handles are in use.
     /// Returned when attempting to allocate extended memory (Functions 09h or 89h)
@@ -96,7 +96,7 @@ public enum XmsErrorCodes : byte {
     /// XMS drivers have a finite number of handles (typically 32-64).
     /// </summary>
     XmsOutOfHandles = 0xA1,
-    
+
     /// <summary>
     /// Invalid handle.
     /// Returned when an operation is attempted with an invalid or 
@@ -104,14 +104,14 @@ public enum XmsErrorCodes : byte {
     /// functions that require a valid handle (0Ah, 0Ch, 0Dh, 0Eh, 0Fh).
     /// </summary>
     XmsInvalidHandle = 0xA2,
-    
+
     /// <summary>
     /// Invalid source handle.
     /// Returned by the Move Extended Memory Block function (0Bh) when
     /// the source handle specified in the move structure is invalid.
     /// </summary>
     XmsInvalidSrcHandle = 0xA3,
-    
+
     /// <summary>
     /// Invalid source offset.
     /// Returned by the Move Extended Memory Block function (0Bh) when
@@ -119,14 +119,14 @@ public enum XmsErrorCodes : byte {
     /// bounds of the source memory block.
     /// </summary>
     XmsInvalidSrcOffset = 0xA4,
-    
+
     /// <summary>
     /// Invalid destination handle.
     /// Returned by the Move Extended Memory Block function (0Bh) when
     /// the destination handle specified in the move structure is invalid.
     /// </summary>
     XmsInvalidDestHandle = 0xA5,
-    
+
     /// <summary>
     /// Invalid destination offset.
     /// Returned by the Move Extended Memory Block function (0Bh) when
@@ -134,7 +134,7 @@ public enum XmsErrorCodes : byte {
     /// the bounds of the destination memory block.
     /// </summary>
     XmsInvalidDestOffset = 0xA6,
-    
+
     /// <summary>
     /// Invalid length.
     /// Returned by the Move Extended Memory Block function (0Bh) when
@@ -142,7 +142,7 @@ public enum XmsErrorCodes : byte {
     /// not even, or exceeds source or destination block boundaries).
     /// </summary>
     XmsInvalidLength = 0xA7,
-    
+
     /// <summary>
     /// Invalid memory block overlap.
     /// Returned by the Move Extended Memory Block function (0Bh) when
@@ -150,14 +150,14 @@ public enum XmsErrorCodes : byte {
     /// cause data corruption during the move operation.
     /// </summary>
     XmsInvalidOverlap = 0xA8,
-    
+
     /// <summary>
     /// Parity error.
     /// Returned when a memory parity error is detected during an XMS operation.
     /// This indicates a hardware problem with the memory.
     /// </summary>
     XmsParityError = 0xA9,
-    
+
     /// <summary>
     /// Block not locked.
     /// Returned when attempting to unlock a block (Function 0Dh) that
@@ -165,7 +165,7 @@ public enum XmsErrorCodes : byte {
     /// a corresponding unlock operation.
     /// </summary>
     XmsBlockNotLocked = 0xAA,
-    
+
     /// <summary>
     /// Block locked.
     /// Returned when attempting to perform an operation that requires
@@ -173,7 +173,7 @@ public enum XmsErrorCodes : byte {
     /// locked memory block. The block must be unlocked first.
     /// </summary>
     XmsBlockLocked = 0xAB,
-    
+
     /// <summary>
     /// Lock count overflow.
     /// Returned when attempting to lock a block (Function 0Ch) that
@@ -181,14 +181,14 @@ public enum XmsErrorCodes : byte {
     /// would overflow). XMS typically uses a 16-bit lock counter.
     /// </summary>
     XmsLockCountOverflow = 0xAC,
-    
+
     /// <summary>
     /// Lock failed.
     /// Returned when a block lock operation (Function 0Ch) fails for
     /// a reason other than a lock count overflow.
     /// </summary>
     XmsLockFailed = 0xAD,
-    
+
     /// <summary>
     /// UMB only smaller block available.
     /// Returned when requesting an Upper Memory Block (Function 10h) but
@@ -196,7 +196,7 @@ public enum XmsErrorCodes : byte {
     /// available size is returned in DX.
     /// </summary>
     UmbOnlySmallerBlock = 0xB0,
-    
+
     /// <summary>
     /// No UMBs available.
     /// Returned when requesting an Upper Memory Block (Function 10h) but
@@ -204,7 +204,7 @@ public enum XmsErrorCodes : byte {
     /// not support UMBs at all, or all UMBs may already be allocated.
     /// </summary>
     UmbNoBlocksAvailable = 0xB1,
-    
+
     /// <summary>
     /// Invalid UMB segment.
     /// Returned when attempting to release or reallocate an Upper Memory Block

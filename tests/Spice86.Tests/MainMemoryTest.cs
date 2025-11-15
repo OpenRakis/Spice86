@@ -16,7 +16,7 @@ public class MainMemoryTest {
         _memory.A20Gate.IsEnabled = true;
 
         // Act & Assert
-        Assert.Throws<IndexOutOfRangeException>(() =>_memory.UInt8[0xF800, 0x8000]);
+        Assert.Throws<IndexOutOfRangeException>(() => _memory.UInt8[0xF800, 0x8000]);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class MainMemoryTest {
         // Assert
         Assert.Equal(0x1234, actual);
     }
-    
+
     [Fact]
     public void TestGetUint16BigEndian() {
         // Arrange
@@ -356,7 +356,7 @@ public class MainMemoryTest {
         Assert.Equal(expected2, newMem.Read(0x1235));
     }
 
-    
+
     [Fact]
     public void TestMappedSetUint32() {
         // Arrange

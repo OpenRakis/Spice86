@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Structures;
+
 using System;
 using System.IO;
 

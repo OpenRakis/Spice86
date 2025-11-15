@@ -58,7 +58,7 @@ public class IoctlIntegrationTests {
         };
 
         IoctlTestHandler testHandler = RunIoctlTest(program);
-        testHandler.Results.Should().Contain((byte)TestResult.Success, 
+        testHandler.Results.Should().Contain((byte)TestResult.Success,
             "stdin should be reported as a character device");
     }
 

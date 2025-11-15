@@ -20,7 +20,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress> {
     /// </summary>
     /// <param name="uInt16Indexer">The class that provides indexed unsigned 16-byte integer access over memory.</param>
     /// <param name="uInt32Indexer">The class that provides indexed unsigned 32-byte integer access over memory.</param>
-    public SegmentedAddress32Indexer(UInt16Indexer uInt16Indexer, UInt32Indexer  uInt32Indexer) {
+    public SegmentedAddress32Indexer(UInt16Indexer uInt16Indexer, UInt32Indexer uInt32Indexer) {
         _uInt16Indexer = uInt16Indexer;
         _uInt32Indexer = uInt32Indexer;
     }
@@ -52,7 +52,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress> {
             _uInt16Indexer[segmentAddr] = value.Segment;
         }
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count / 3;
 }

@@ -17,10 +17,10 @@ internal sealed class ViewLocator : IDataTemplate {
     /// <returns>The corresponding View, or a TextBlock with the "Not Found" message if a match wasn't found.</returns>
     public Control Build(object? data) {
         string? name = data?.GetType().FullName?.Replace("ViewModel", "View");
-        if(name == "Spice86.Views.StackMemoryView") {
+        if (name == "Spice86.Views.StackMemoryView") {
             name = "Spice86.Views.MemoryView";
         }
-        if(name == "Spice86.Views.DataSegmentMemoryView") {
+        if (name == "Spice86.Views.DataSegmentMemoryView") {
             name = "Spice86.Views.MemoryView";
         }
         if (string.IsNullOrWhiteSpace(name)) {

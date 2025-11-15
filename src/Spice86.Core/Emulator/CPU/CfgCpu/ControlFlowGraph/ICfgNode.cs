@@ -45,7 +45,7 @@ public interface ICfgNode {
     /// Needs to be called each time a successor is added
     /// </summary>
     void UpdateSuccessorCache();
-    
+
     /// <summary>
     /// Execute this node
     /// </summary>
@@ -64,12 +64,12 @@ public interface ICfgNode {
     /// If null, it means the node can have an unlimited number of successors.
     /// </summary>
     int? MaxSuccessorsCount { get; set; }
-    
+
     /// <summary>
     /// Whether the node can have more successors in its current state 
     /// </summary>
     bool CanHaveMoreSuccessors { get; set; }
-    
+
     /// <summary>
     /// Direct access to successor for nodes with only one successor
     /// </summary>

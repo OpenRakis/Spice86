@@ -134,7 +134,7 @@ public class DosFileManagerTests {
             loggerService, executionFlowRecorder);
 
         IInstructionExecutor instructionExecutor = cpu;
-        IFunctionHandlerProvider functionHandlerProvider =  cpu;
+        IFunctionHandlerProvider functionHandlerProvider = cpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,
@@ -159,16 +159,16 @@ public class DosFileManagerTests {
         SystemBiosInt15Handler systemBiosInt15Handler = new SystemBiosInt15Handler(configuration, memory,
             functionHandlerProvider, stack, state, a20Gate, biosDataArea, dualPic, ioPortDispatcher,
             initializeResetVector: false, loggerService);
-        
+
         using HeadlessGui headlessGui = new HeadlessGui();
         using InputEventQueue inputEventQueue = new InputEventQueue(headlessGui, headlessGui);
         Intel8042Controller keyboardController = new Intel8042Controller(
             state, ioPortDispatcher, a20Gate, dualPic,
             configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
-        
+
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler =
-            new BiosKeyboardInt9Handler(memory, stack, state, functionHandlerProvider, 
+            new BiosKeyboardInt9Handler(memory, stack, state, functionHandlerProvider,
             dualPic, systemBiosInt15Handler, keyboardController, biosKeyboardBuffer, loggerService);
 
         KeyboardInt16Handler keyboardInt16Handler = new KeyboardInt16Handler(

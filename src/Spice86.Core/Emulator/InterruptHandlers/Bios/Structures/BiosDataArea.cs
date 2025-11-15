@@ -11,8 +11,7 @@ using Spice86.Shared.Utils;
 /// Provides access to emulated memory mapped BIOS values. <br/>
 /// <see href="https://flint.cs.yale.edu/feng/cos/resources/BIOS/Resources/biosdata.htm" />
 /// </summary>
-public sealed class BiosDataArea : MemoryBasedDataStructure
-{
+public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>

@@ -41,11 +41,11 @@ public class BreakpointTests {
         int readWrite0Triggered = 0;
         AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.MEMORY_ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
         emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, true);
-        _ =  memory.UInt8[0];
+        _ = memory.UInt8[0];
         memory.UInt8[0] = 0;
         emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, false);
         // Should not trigger
-        _ =  memory.UInt8[0];
+        _ = memory.UInt8[0];
         Assert.Equal(2, readWrite0Triggered);
 
         // Memset
@@ -191,7 +191,7 @@ public class BreakpointTests {
             triggers++;
         }, false), true);
         programExecutor.Run();
-        
+
         // Allow ±1% tolerance for timing differences between instruction-based and event-based models
         const int expected = 356;
         int tolerance = expected / 100; // 1% of expected

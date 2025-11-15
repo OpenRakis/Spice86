@@ -1,13 +1,15 @@
 namespace Spice86.Core.Emulator.Devices.Cmos;
 
-using System;
-using System.Diagnostics;
+using Serilog.Events;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
-using Serilog.Events;
+
+using System;
+using System.Diagnostics;
 
 /// <summary>
 /// Emulates the MC146818 Real Time Clock (RTC) and CMOS RAM.
@@ -102,11 +104,11 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterA] = 0x26;  // Default rate (1024 Hz) + 22-stage divider
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterB] = 0x02;  // 24-hour mode, no interrupts
         _cmosRegisters[CmosRegisterAddresses.StatusRegisterD] = 0x80;  // Valid RAM + battery good
-        
+
         // Initialize BCD mode based on Status Register B (bit 2: 0=BCD, 1=binary)
         // Default 0x02 has bit 2 clear, so BCD mode is enabled
         _cmosRegisters.IsBcdMode = (_cmosRegisters[CmosRegisterAddresses.StatusRegisterB] & 0x04) == 0;
-        
+
         // Initialize CMOS RAM with base memory size.
         // Base memory in KB: 640 (0x0280), stored as little-endian low/high bytes (0x80 at 0x15, 0x02 at 0x16)
         _cmosRegisters[0x15] = 0x80;  // Low byte of 0x0280 (base memory in KB)
@@ -256,35 +258,35 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         DateTime now = DateTime.Now;
         switch (reg) {
             // Time registers - return current system time
-            case CmosRegisterAddresses.Seconds:      return EncodeTimeComponent(now.Second);
-            case CmosRegisterAddresses.Minutes:      return EncodeTimeComponent(now.Minute);
-            case CmosRegisterAddresses.Hours:        return EncodeTimeComponent(now.Hour);
-            case CmosRegisterAddresses.DayOfWeek:    return EncodeTimeComponent(((int)now.DayOfWeek + 1));
-            case CmosRegisterAddresses.DayOfMonth:   return EncodeTimeComponent(now.Day);
-            case CmosRegisterAddresses.Month:        return EncodeTimeComponent(now.Month);
-            case CmosRegisterAddresses.Year:         return EncodeTimeComponent(now.Year % 100);
-            case CmosRegisterAddresses.Century:      return EncodeTimeComponent(now.Year / 100);
-            
+            case CmosRegisterAddresses.Seconds: return EncodeTimeComponent(now.Second);
+            case CmosRegisterAddresses.Minutes: return EncodeTimeComponent(now.Minute);
+            case CmosRegisterAddresses.Hours: return EncodeTimeComponent(now.Hour);
+            case CmosRegisterAddresses.DayOfWeek: return EncodeTimeComponent(((int)now.DayOfWeek + 1));
+            case CmosRegisterAddresses.DayOfMonth: return EncodeTimeComponent(now.Day);
+            case CmosRegisterAddresses.Month: return EncodeTimeComponent(now.Month);
+            case CmosRegisterAddresses.Year: return EncodeTimeComponent(now.Year % 100);
+            case CmosRegisterAddresses.Century: return EncodeTimeComponent(now.Year / 100);
+
             // Alarm registers
             case 0x01:  // Seconds alarm
             case 0x03:  // Minutes alarm
             case 0x05:  // Hours alarm
                 return _cmosRegisters[reg];
-                
+
             case CmosRegisterAddresses.StatusRegisterA: {  // 0x0A - Status Register A
-                // Bit 7 = Update In Progress (UIP) - set during time update cycle
-                byte baseA = (byte)(_cmosRegisters[reg] & 0x7F);
-                return IsUpdateInProgress(now) ? (byte)(baseA | 0x80) : baseA;
-            }
-            
+                                                           // Bit 7 = Update In Progress (UIP) - set during time update cycle
+                    byte baseA = (byte)(_cmosRegisters[reg] & 0x7F);
+                    return IsUpdateInProgress(now) ? (byte)(baseA | 0x80) : baseA;
+                }
+
             case CmosRegisterAddresses.StatusRegisterC:  // 0x0C - Status Register C (interrupt flags, read clears)
                 return ReadStatusC();
-                
+
             // Control and status registers
             case CmosRegisterAddresses.StatusRegisterB:              // 0x0B - Status Register B
             case CmosRegisterAddresses.StatusRegisterD:              // 0x0D - Status Register D
             case CmosRegisterAddresses.ShutdownStatus: // 0x0F - Shutdown status
-            
+
             // CMOS configuration registers
             case 0x14:  // Equipment byte
             case 0x15:  // Base memory low byte
@@ -294,7 +296,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case 0x30:  // Extended memory low byte (alternate)
             case 0x31:  // Extended memory high byte (alternate)
                 return _cmosRegisters[reg];
-                
+
             default:
                 // Other CMOS RAM locations
                 return _cmosRegisters[reg];
@@ -334,7 +336,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             _cmosRegisters.Last.Timer = nowMs;
             value |= 0x40;
         }
-        
+
         // Update-ended interrupt flag (bit 4)
         if (nowMs >= (_cmosRegisters.Last.Ended + 1000.0)) {
             _cmosRegisters.Last.Ended = nowMs;

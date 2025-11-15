@@ -180,7 +180,7 @@ internal class AvaloniaKeyScanCodeConverter {
     /// <returns>The corresponding ASCII code, or <c>null</c> if not found.</returns>
     public byte? GetAsciiCode(byte? keyPressedScanCode) {
         if (keyPressedScanCode > 0x7F) {
-            keyPressedScanCode = (byte?) (keyPressedScanCode - 0x80);
+            keyPressedScanCode = (byte?)(keyPressedScanCode - 0x80);
         }
         if (keyPressedScanCode is not null && _scanCodeToAscii.TryGetValue((byte)keyPressedScanCode, out byte value)) {
             return value;

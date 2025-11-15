@@ -79,7 +79,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("BIOS INT13H: Verify Sectors 0x(AL:X2)", State.AL);
         }
-        if(State.AL == 0) {
+        if (State.AL == 0) {
             State.AH = 0x1;
             SetCarryFlag(true, calledFromVm);
             return;
@@ -98,7 +98,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
                 "hard drive value if asking for first hard drive." +
                 "Invalid drive otherwise.", nameof(GetDisketteOrHddType));
         }
-        if(State.DL is 0x80) { // first hard disk drive
+        if (State.DL is 0x80) { // first hard disk drive
             State.AL = 0x3; // hard drive type
             State.CX = 3;  // High word of 32-bit sector count
             State.DX = 0x4800; //105 megs (0x00034800 = 215,040 of 512 bytes sector = 105 megs)

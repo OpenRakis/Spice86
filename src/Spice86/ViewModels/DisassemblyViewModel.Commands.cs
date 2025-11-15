@@ -4,10 +4,11 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Serilog.Events;
-using Spice86.ViewModels.Messages;
-using Spice86.ViewModels.ValueViewModels.Debugging;
+
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
+using Spice86.ViewModels.Messages;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 public partial class DisassemblyViewModel {
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
@@ -110,7 +111,7 @@ public partial class DisassemblyViewModel {
 
     [RelayCommand]
     private void GoToFunction(FunctionInfo? functionInfo) {
-        if(functionInfo is null) {
+        if (functionInfo is null) {
             return;
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {

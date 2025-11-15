@@ -44,8 +44,8 @@ public sealed class GdbServer : IDisposable {
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
     public GdbServer(Configuration configuration, IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider, 
-        State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue, 
+        IFunctionHandlerProvider functionHandlerProvider,
+        State state, MemoryDataExporter memoryDataExporter, FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory,
         EmulatorBreakpointsManager emulatorBreakpointsManager, IPauseHandler pauseHandler,
         DumpFolderMetadata dumpContext, ILoggerService loggerService) {

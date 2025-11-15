@@ -33,7 +33,7 @@ public enum KbdKey {
 
     Insert, Home, PageUp,
     Delete, End, PageDown,
-    
+
     Left, Up, Down, Right,
 
     Kp1, Kp2, Kp3, Kp4, Kp5, Kp6, Kp7, Kp8, Kp9, Kp0,

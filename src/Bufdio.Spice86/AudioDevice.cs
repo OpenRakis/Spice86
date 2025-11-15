@@ -3,8 +3,7 @@
 /// <summary>
 /// A structure containing information about audio device capabilities.
 /// </summary>
-public readonly record struct AudioDevice
-{
+public readonly record struct AudioDevice {
     /// <summary>
     /// Initializes <see cref="AudioDevice"/> structure.
     /// </summary>
@@ -20,8 +19,7 @@ public readonly record struct AudioDevice
         int maxOutputChannels,
         double defaultLowOutputLatency,
         double defaultHighOutputLatency,
-        int defaultSampleRate)
-    {
+        int defaultSampleRate) {
         DeviceIndex = deviceIndex;
         Name = name;
         MaxOutputChannels = maxOutputChannels;

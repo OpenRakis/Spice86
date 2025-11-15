@@ -32,12 +32,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack,  State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        if(_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("Initializing VGA BIOS");
         }
         FillDispatchTable();
@@ -73,27 +73,27 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
-                State.AL = 0x1A; // Function supported
-                State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                State.BH = 0x00; // No secondary display
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
+                    State.BH = 0x00; // No secondary display
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             case 0x01: {
-                State.AL = 0x1A; // Function supported
-                _biosDataArea.DisplayCombinationCode = State.BL;
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
-                        nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    State.AL = 0x1A; // Function supported
+                    _biosDataArea.DisplayCombinationCode = State.BL;
+                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
+                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
+                            nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
+                    }
+                    break;
                 }
-                break;
-            }
             default: {
-                throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
-            }
+                    throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 1A");
+                }
         }
     }
 
@@ -612,7 +612,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     public void VesaFunctions() {
-        if(_logger.IsEnabled(LogEventLevel.Warning)) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
             // This can be valid, video cards came to the scene before VESA was a standard.
             // It seems some games can expect that (eg. Rules of Engagement 2)
             //TODO: Implement at least VESA 1.2

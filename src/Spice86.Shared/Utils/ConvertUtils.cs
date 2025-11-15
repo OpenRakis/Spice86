@@ -22,7 +22,7 @@ public static partial class ConvertUtils {
     public static sbyte Uint8b(byte value) {
         return (sbyte)Uint8(value);
     }
-    
+
     /// <summary>
     /// Returns the lower 16 bits of the given ushort value.
     /// </summary>
@@ -58,7 +58,7 @@ public static partial class ConvertUtils {
     public static byte Uint8(byte value) {
         return (byte)(value & 0xFF);
     }
-    
+
     /// <summary>
     /// Returns the least significant byte of a 32-bit unsigned integer.
     /// </summary>
@@ -91,9 +91,9 @@ public static partial class ConvertUtils {
     public static uint BytesToInt32(byte[] data, int start) {
         return (uint)((data[start] << 24 & 0xFF000000) | ((uint)data[start + 1] << 16 & 0x00FF0000) | ((uint)data[start + 2] << 8 & 0x0000FF00) | ((uint)data[start + 3] & 0x000000FF));
     }
-    
+
     private const int HexadecimalByteDigitLength = 2;
-    
+
     /// <summary>
     /// Converts a hexadecimal string to a byte array.
     /// </summary>
@@ -108,7 +108,7 @@ public static partial class ConvertUtils {
 
         return res;
     }
-    
+
     /// <summary>
     /// Tries to convert a hexadecimal string to a byte array.
     /// </summary>
@@ -122,7 +122,7 @@ public static partial class ConvertUtils {
         }
         byte[] result = new byte[valueString.Length / 2];
         for (int i = 0; i < valueString.Length; i += HexadecimalByteDigitLength) {
-            if(i + HexadecimalByteDigitLength > valueString.Length) {
+            if (i + HexadecimalByteDigitLength > valueString.Length) {
                 bytes = null;
                 return false;
             }
@@ -164,7 +164,7 @@ public static partial class ConvertUtils {
     public static ushort ParseHex16(string value) {
         return ushort.Parse(Replace0xWithBlank(value), NumberStyles.HexNumber);
     }
-    
+
     /// <summary>
     /// Removes any hexadecimal value starting with "0x" from the input string and returns the modified string.
     /// </summary>
@@ -179,8 +179,7 @@ public static partial class ConvertUtils {
     /// </summary>
     /// <param name="value">The input 16-bit unsigned integer.</param>
     /// <returns>The least significant byte of the input value.</returns>
-    public static byte ReadLsb(ushort value)
-    {
+    public static byte ReadLsb(ushort value) {
         return (byte)value;
     }
 
@@ -192,7 +191,7 @@ public static partial class ConvertUtils {
     public static byte ReadMsb(ushort value) {
         return (byte)(value >> 8);
     }
-    
+
     /// <summary>
     /// Returns the bits 8...15 of a 32-bit unsigned integer.
     /// </summary>
@@ -397,7 +396,7 @@ public static partial class ConvertUtils {
     public static ushort WriteLsb(ushort value, byte lsb) {
         return (ushort)((value & 0xFF00) | lsb);
     }
-    
+
     /// <summary>
     /// Returns a new uint value with the lower 8 bits replaced with the given byte value.
     /// </summary>
@@ -419,7 +418,7 @@ public static partial class ConvertUtils {
         ushort written = (ushort)((msb << 8) & 0xFF00);
         return (ushort)(erased | written);
     }
-    
+
     /// <summary>
     /// Returns a new uint value with the bits 8...15 replaced with the given byte value.
     /// </summary>
@@ -459,7 +458,7 @@ public static partial class ConvertUtils {
     /// </summary>
     /// <param name="path">The folder path string to modify.</param>
     public static string ToBackSlashPath(string path) {
-        if(string.IsNullOrWhiteSpace(path)) {
+        if (string.IsNullOrWhiteSpace(path)) {
             return path;
         }
         return path.Replace('/', '\\').Replace("//", @"\");

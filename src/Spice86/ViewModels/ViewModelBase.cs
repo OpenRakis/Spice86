@@ -141,7 +141,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         }
         OnErrorsChanged(propertyName);
     }
-    
+
     protected void ValidateHexProperty(object? value, int length, [CallerMemberName] string? propertyName = null) {
         if (string.IsNullOrWhiteSpace(propertyName)) {
             return;

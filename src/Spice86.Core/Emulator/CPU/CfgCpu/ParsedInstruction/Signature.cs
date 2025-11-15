@@ -22,7 +22,7 @@ public class Signature : IComparable<Signature> {
     public void NullifySignature() {
         SignatureValue = GenerateNullBytes(SignatureValue.Count);
     }
-    
+
     private static ImmutableList<byte?> GenerateNullBytes(int size) {
         List<byte?> res = new List<byte?>();
         for (int i = 0; i < size; i++) {
@@ -50,14 +50,14 @@ public class Signature : IComparable<Signature> {
                 if (thisByte == null || otherByte == null) {
                     continue;
                 }
-                
+
                 return thisByte.Value.CompareTo(otherByte.Value);
             }
         }
         // Equals
         return 0;
     }
-    
+
     /// <summary>
     /// Checks that the given span of bytes is equivalent to the signature.
     /// Equivalence means that they have the same length and their content is identical at each position or null
@@ -119,7 +119,7 @@ public class Signature : IComparable<Signature> {
 
     /// <inheritdoc/>
     public override bool Equals(object? obj) {
-        if (ReferenceEquals(null, obj)) {
+        if (obj is null) {
             return false;
         }
 

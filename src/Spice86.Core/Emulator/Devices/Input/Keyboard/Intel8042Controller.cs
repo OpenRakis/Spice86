@@ -230,7 +230,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
     private readonly A20Gate _a20Gate;
     private readonly DualPic _dualPic;
     private readonly State _cpuState;
-    
+
     // Handler reference for delay timer
     private readonly EmulatedTimeEventHandler _delayHandler;
 
@@ -247,7 +247,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
         _a20Gate = a20Gate;
         _dualPic = dualPic;
         _cpuState = state;
-        
+
         // Initialize handler reference
         _delayHandler = DelayExpireHandler;
 
@@ -431,7 +431,7 @@ public class Intel8042Controller : DefaultIOPortHandler {
         _isDelayRunning = true;
         IsDelayExpired = false;
     }
-    
+
     private void DelayExpireHandler(uint _) {
         _isDelayRunning = false;
         IsDelayExpired = true;

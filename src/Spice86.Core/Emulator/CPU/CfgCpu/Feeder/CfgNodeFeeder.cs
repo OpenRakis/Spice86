@@ -45,7 +45,7 @@ public class CfgNodeFeeder {
             // Reset it
             executionContext.CpuFault = false;
             // Node can still have successors, try to register the link in the graph
-            _nodeLinker.Link(type,lastExecuted, toExecute);
+            _nodeLinker.Link(type, lastExecuted, toExecute);
         }
 
         return toExecute;

@@ -46,7 +46,7 @@ public class DosStringDecoder {
     public string ConvertDosChars(byte[] characterBytes) {
         return ConvertDosChars(characterBytes.AsSpan());
     }
-    
+
     /// <summary>
     /// Converts a span of DOS character bytes to a string using the current encoding.
     /// </summary>

@@ -753,10 +753,10 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                    _callbackHandler.RunFromOverriden(callback);
+                _callbackHandler.RunFromOverriden(callback);
 
-                    return InterruptRet();
-                }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
+                return InterruptRet();
+            }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
         }
     }
 

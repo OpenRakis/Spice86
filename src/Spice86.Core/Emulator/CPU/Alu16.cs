@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 /// <summary>
 /// Arithmetic Logic Unit code for 16bits operations.
 /// </summary>
-public class Alu16 : Alu<ushort, short, uint, int>  {
+public class Alu16 : Alu<ushort, short, uint, int> {
     private const ushort BeforeMsbMask = 0x4000;
 
     private const ushort MsbMask = 0x8000;
@@ -36,7 +36,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
         _state.OverflowFlag = false;
         return res;
     }
-    
+
     /// <inheritdoc/>
     public override ushort Div(uint value1, ushort value2) {
         if (value2 == 0) {
@@ -75,7 +75,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override uint Mul(ushort value1, ushort value2) {
-        uint res = (uint) (value1 * value2);
+        uint res = (uint)(value1 * value2);
         bool upperHalfNonZero = (res & 0xFFFF0000) != 0;
         _state.OverflowFlag = upperHalfNonZero;
         _state.CarryFlag = upperHalfNonZero;
@@ -94,7 +94,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override ushort Rcl(ushort value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 17);
+        count = (byte)((count & ShiftCountMask) % 17);
         if (count == 0) {
             return value;
         }
@@ -135,7 +135,7 @@ public class Alu16 : Alu<ushort, short, uint, int>  {
     }
 
     public override ushort Rol(ushort value, byte count) {
-        count = (byte) ((count & ShiftCountMask) % 16);
+        count = (byte)((count & ShiftCountMask) % 16);
         if (count == 0) {
             return value;
         }

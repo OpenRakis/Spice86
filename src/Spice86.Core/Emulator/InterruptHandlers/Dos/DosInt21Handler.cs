@@ -156,7 +156,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort year = State.CX;
         byte month = State.DH;
         byte day = State.DL;
-        
+
         // Validate the date using DateTime to ensure day is valid for the given month/year
         bool valid = false;
         try {
@@ -168,32 +168,32 @@ public class DosInt21Handler : InterruptHandler {
             // Invalid date combination (e.g., Feb 31, Apr 31)
             valid = false;
         }
-        
+
         if (valid) {
             // Split year into century and year components
             int century = year / 100;
             int yearPart = year % 100;
-            
+
             // Convert to BCD
             byte yearBcd = BcdConverter.ToBcd((byte)yearPart);
             byte monthBcd = BcdConverter.ToBcd(month);
             byte dayBcd = BcdConverter.ToBcd(day);
             byte centuryBcd = BcdConverter.ToBcd((byte)century);
-            
+
             WriteCmosRegister(CmosRegisterAddresses.Year, yearBcd);
             WriteCmosRegister(CmosRegisterAddresses.Month, monthBcd);
             WriteCmosRegister(CmosRegisterAddresses.DayOfMonth, dayBcd);
             WriteCmosRegister(CmosRegisterAddresses.Century, centuryBcd);
-            
+
             State.AL = 0;
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("SET DOS DATE to CMOS: {Year}-{Month:D2}-{Day:D2}",
                     year, month, day);
             }
         } else {
             State.AL = 0xFF;
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("SET DOS DATE called with invalid date: {Year}-{Month:D2}-{Day:D2}",
                     year, month, day);
@@ -223,32 +223,32 @@ public class DosInt21Handler : InterruptHandler {
         byte minutes = State.CL;
         byte seconds = State.DH;
         byte hundredths = State.DL;
-        
+
         // Validate the time
         bool valid = hour <= 23 &&
                      minutes <= 59 &&
                      seconds <= 59 &&
                      hundredths <= 99;
-        
+
         if (valid) {
             // Convert to BCD
             byte hourBcd = BcdConverter.ToBcd(hour);
             byte minutesBcd = BcdConverter.ToBcd(minutes);
             byte secondsBcd = BcdConverter.ToBcd(seconds);
-            
+
             WriteCmosRegister(CmosRegisterAddresses.Hours, hourBcd);
             WriteCmosRegister(CmosRegisterAddresses.Minutes, minutesBcd);
             WriteCmosRegister(CmosRegisterAddresses.Seconds, secondsBcd);
-            
+
             State.AL = 0;
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("SET DOS TIME to CMOS: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
                     hour, minutes, seconds, hundredths);
             }
         } else {
             State.AL = 0xFF;
-            
+
             if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
                 LoggerService.Warning("SET DOS TIME called with invalid time: {Hour:D2}:{Minutes:D2}:{Seconds:D2}.{Hundredths:D2}",
                     hour, minutes, seconds, hundredths);
@@ -284,12 +284,12 @@ public class DosInt21Handler : InterruptHandler {
                 uint dbcsAddress = _dosTables.DoubleByteCharacterSet.BaseAddress;
                 ushort segment = MemoryUtils.ToSegment(dbcsAddress);
                 ushort offset = (ushort)(dbcsAddress & 0xF);
-                
+
                 State.DS = segment;
                 State.SI = offset;
                 State.AL = 0;
                 State.CarryFlag = false; // Undocumented behavior: DOSBox clears carry flag on success
-                
+
                 if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                     LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
                 }
@@ -515,7 +515,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
         byte operation = State.AL;
-        if(LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             LoggerService.Debug("CLEAR KEYBOARD AND CALL INT 21 {Operation}", operation);
         }
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
@@ -578,7 +578,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         dosInputBuffer.Characters = string.Empty;
 
-        while(State.IsRunning) {
+        while (State.IsRunning) {
             byte[] inputBuffer = new byte[1];
             readCount = standardInput.Read(inputBuffer, 0, 1);
             if (readCount < 1) {
@@ -606,7 +606,7 @@ public class DosInt21Handler : InterruptHandler {
                 standardOutput.Write(bell);
                 continue;
             }
-            if(standardOutput.CanWrite) {
+            if (standardOutput.CanWrite) {
                 standardOutput.Write(c);
             }
             dosInputBuffer.Characters += c;
@@ -633,7 +633,7 @@ public class DosInt21Handler : InterruptHandler {
     public void DirectConsoleIo(bool calledFromVm) {
         byte character = State.DL;
         if (character == 0xFF) {
-            if(LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn)
@@ -660,11 +660,11 @@ public class DosInt21Handler : InterruptHandler {
             }
             if (_dosFileManager.TryGetStandardOutput(out CharacterDevice? stdOut)
                 && stdOut.CanWrite) {
-                if(stdOut is ConsoleDevice consoleDeviceBefore) {
+                if (stdOut is ConsoleDevice consoleDeviceBefore) {
                     consoleDeviceBefore.DirectOutput = true;
                 }
                 stdOut.Write(character);
-                if(stdOut is ConsoleDevice consoleDeviceAfter) {
+                if (stdOut is ConsoleDevice consoleDeviceAfter) {
                     consoleDeviceAfter.DirectOutput = false;
                 }
                 State.AL = character;
@@ -704,7 +704,7 @@ public class DosInt21Handler : InterruptHandler {
             stdOut.CanWrite) {
             // Write to the standard output device
             stdOut.Write(characterByte);
-        } else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT21H DisplayOutput: Cannot write to standard output device.");
         }
         State.AL = _lastDisplayOutputCharacter;
@@ -854,17 +854,17 @@ public class DosInt21Handler : InterruptHandler {
         byte dayBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfMonth);
         byte dayOfWeekBcd = ReadCmosRegister(CmosRegisterAddresses.DayOfWeek);
         byte centuryBcd = ReadCmosRegister(CmosRegisterAddresses.Century);
-        
+
         // Convert from BCD to binary
         int year = BcdConverter.FromBcd(yearBcd);
         int century = BcdConverter.FromBcd(centuryBcd);
         int month = BcdConverter.FromBcd(monthBcd);
         int day = BcdConverter.FromBcd(dayBcd);
         int dayOfWeek = BcdConverter.FromBcd(dayOfWeekBcd);
-        
+
         // Calculate full year
         int fullYear = century * 100 + year;
-        
+
         // DOS day of week: 0=Sunday, 1=Monday, etc.
         // CMOS day of week: 1=Sunday, 2=Monday, etc., so subtract 1
         int dosDayOfWeek;
@@ -877,12 +877,12 @@ public class DosInt21Handler : InterruptHandler {
         } else {
             dosDayOfWeek = dayOfWeek - 1;
         }
-        
+
         State.CX = (ushort)fullYear;
         State.DH = (byte)month;
         State.DL = (byte)day;
         State.AL = (byte)dosDayOfWeek;
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DOS DATE from CMOS: {Year}-{Month:D2}-{Day:D2} (Day of week: {DayOfWeek})",
                 fullYear, month, day, dosDayOfWeek);
@@ -1041,21 +1041,21 @@ public class DosInt21Handler : InterruptHandler {
         byte hourBcd = ReadCmosRegister(CmosRegisterAddresses.Hours);
         byte minuteBcd = ReadCmosRegister(CmosRegisterAddresses.Minutes);
         byte secondBcd = ReadCmosRegister(CmosRegisterAddresses.Seconds);
-        
+
         // Convert from BCD to binary
         byte hour = BcdConverter.FromBcd(hourBcd);
         byte minute = BcdConverter.FromBcd(minuteBcd);
         byte second = BcdConverter.FromBcd(secondBcd);
-        
+
         // CMOS doesn't store hundredths of a second, so we approximate with 0
         // In a real system, this would use a higher resolution timer
         byte hundredths = 0;
-        
+
         State.CH = hour;
         State.CL = minute;
         State.DH = second;
         State.DL = hundredths;
-        
+
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET DOS TIME from CMOS: {Hour:D2}:{Minute:D2}:{Second:D2}.{Hundredths:D2}",
                 hour, minute, second, hundredths);
@@ -1117,7 +1117,7 @@ public class DosInt21Handler : InterruptHandler {
         ushort fileHandle = State.BX;
         int offset = (State.CX << 16) | State.DX;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}", 
+            LoggerService.Verbose("MOVE FILE POINTER USING HANDLE. {OriginOfMove}, {FileHandle}, {Offset}",
                 originOfMove, fileHandle, offset);
         }
 
@@ -1139,7 +1139,7 @@ public class DosInt21Handler : InterruptHandler {
         byte accessMode = State.AL;
         FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}", 
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}",
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
@@ -1215,9 +1215,9 @@ public class DosInt21Handler : InterruptHandler {
     /// The number of potentially valid drive letters in AL.
     /// </returns>
     public void SelectDefaultDrive() {
-        if(_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
+        if (_dosDriveManager.TryGetValue(DosDriveManager.DriveLetters.ElementAtOrDefault(State.DL).Key, out VirtualDrive? mountedDrive)) {
             _dosDriveManager.CurrentDrive = mountedDrive;
-        } 
+        }
         if (State.DL > DosDriveManager.MaxDriveCount && LoggerService.IsEnabled(LogEventLevel.Error)) {
             LoggerService.Error("DOS INT21H: Could not set default drive! Unrecognized index in State.DL: {DriveIndex}", State.DL);
         }

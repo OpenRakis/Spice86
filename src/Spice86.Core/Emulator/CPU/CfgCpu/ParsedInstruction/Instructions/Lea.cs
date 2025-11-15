@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
+
 [Lea(16)]
 public partial class Lea16;
 

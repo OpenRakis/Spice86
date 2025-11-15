@@ -26,7 +26,7 @@ public class InstructionsFeeder {
         PreviousInstructions = new(memory, replacerRegistry);
         _signatureReducer = new(replacerRegistry);
     }
-    
+
     public CurrentInstructions CurrentInstructions { get; }
     public PreviousInstructions PreviousInstructions { get; }
 

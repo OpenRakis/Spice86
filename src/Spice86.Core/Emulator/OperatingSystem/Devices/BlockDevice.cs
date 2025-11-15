@@ -22,22 +22,22 @@ public class BlockDevice : VirtualDeviceBase {
     /// <summary>
     /// An optional 7-byte field with the signature of the block device.
     /// </summary>
-    [Range(0,7)]
+    [Range(0, 7)]
     public string Signature { get; }
 
     public override ushort Information { get; }
     /// <inheritdoc/>
     public override bool CanRead { get; }
-    
+
     /// <inheritdoc/>
     public override bool CanSeek { get; }
 
     /// <inheritdoc/>
     public override bool CanWrite { get; }
-    
+
     /// <inheritdoc/>
     public override long Length { get; }
-    
+
     /// <inheritdoc/>
     public override long Position { get; set; }
 

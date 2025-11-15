@@ -53,7 +53,7 @@ public class UInt32Indexer : MemoryIndexer<uint> {
             _byteReaderWriter[address4] = (byte)(value >> 24);  // High byte at last address
         }
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _byteReaderWriter.Length / 4;
 }

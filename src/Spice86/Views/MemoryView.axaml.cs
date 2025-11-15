@@ -20,7 +20,7 @@ public partial class MemoryView : UserControl {
     }
 
     private void OnHexViewerDoubleTapped(object? sender, TappedEventArgs e) {
-        if(DataContext is MemoryViewModel viewModel &&
+        if (DataContext is MemoryViewModel viewModel &&
             viewModel.EditMemoryCommand.CanExecute(null)) {
             viewModel.EditMemoryCommand.Execute(null);
         }

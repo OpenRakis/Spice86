@@ -53,7 +53,7 @@ public class DosProgramSegmentPrefixTracker {
         _loggerService = loggerService;
         _loadedPsps = new();
 
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Initial program entry point at segment: {}",
                 ConvertUtils.ToHex16(_initialProgramEntryPointSegment));
         }

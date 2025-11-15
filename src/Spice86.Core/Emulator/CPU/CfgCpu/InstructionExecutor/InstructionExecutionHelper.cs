@@ -50,7 +50,7 @@ public class InstructionExecutionHelper {
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
     public State State { get; }
-    public IMemory Memory{ get; }
+    public IMemory Memory { get; }
     public InterruptVectorTable InterruptVectorTable { get; }
     public Stack Stack { get; }
     public IOPortDispatcher IoPortDispatcher { get; }
@@ -76,7 +76,7 @@ public class InstructionExecutionHelper {
     public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, ushort offset) {
         return MemoryUtils.ToPhysicalAddress(SegmentValue(instruction), offset);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint PhysicalAddress(IInstructionWithSegmentRegisterIndex instruction, uint offset) {
         if (offset > 0xFFFF) {
@@ -110,14 +110,14 @@ public class InstructionExecutionHelper {
     public void NearCallWithReturnIpNextInstruction16(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         Stack.Push16(State.IP);
-        HandleCall(instruction, CallType.NEAR16, new SegmentedAddress(State.CS, State.IP),  new SegmentedAddress(State.CS, callIP));
+        HandleCall(instruction, CallType.NEAR16, new SegmentedAddress(State.CS, State.IP), new SegmentedAddress(State.CS, callIP));
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCallWithReturnIpNextInstruction32(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         Stack.Push32(State.IP);
-        HandleCall(instruction, CallType.NEAR32, new SegmentedAddress(State.CS, State.IP),  new SegmentedAddress(State.CS, callIP));
+        HandleCall(instruction, CallType.NEAR32, new SegmentedAddress(State.CS, State.IP), new SegmentedAddress(State.CS, callIP));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -163,7 +163,7 @@ public class InstructionExecutionHelper {
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
-    
+
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
         _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
@@ -195,7 +195,7 @@ public class InstructionExecutionHelper {
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleNearRet32<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.NEAR32, instruction);
@@ -211,7 +211,7 @@ public class InstructionExecutionHelper {
         Stack.Discard(numberOfBytesToPop);
         SetNextNodeToSuccessorAtCsIp(instruction);
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleFarRet32<T>(T instruction, int numberOfBytesToPop = 0) where T : CfgInstruction, IReturnInstruction {
         CurrentFunctionHandler.Ret(CallType.FAR32, instruction);
@@ -259,14 +259,14 @@ public class InstructionExecutionHelper {
     public void Out16(ushort port, ushort val) => IoPortDispatcher.WriteWord(port, val);
 
     public void Out32(ushort port, uint val) => IoPortDispatcher.WriteDWord(port, val);
-    
+
     public uint MemoryAddressEsDi => MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint GetMemoryAddressOverridableDsSi(IInstructionWithSegmentRegisterIndex instruction) {
         return PhysicalAddress(instruction, State.SI);
     }
-    
+
     public void AdvanceSI(short diff) {
         State.SI = (ushort)(State.SI + diff);
     }
@@ -278,10 +278,10 @@ public class InstructionExecutionHelper {
         AdvanceSI(diff);
         AdvanceDI(diff);
     }
-    
+
     public void HandleCpuException(CfgInstruction instruction, CpuException cpuException) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+            _loggerService.Debug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         if (cpuException.ErrorCode != null) {
             Stack.Push16(cpuException.ErrorCode.Value);

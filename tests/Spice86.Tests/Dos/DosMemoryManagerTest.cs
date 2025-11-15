@@ -17,9 +17,9 @@ using Spice86.Shared.Utils;
 using Xunit;
 
 using Configuration = Spice86.Core.CLI.Configuration;
-using State = Spice86.Core.Emulator.CPU.State;
 using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
 using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
+using State = Spice86.Core.Emulator.CPU.State;
 
 /// <summary>
 /// Verifies that MCBs are allocated, released, modified, and freed correctly by DOS.

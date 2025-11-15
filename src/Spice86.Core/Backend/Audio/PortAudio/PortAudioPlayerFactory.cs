@@ -45,7 +45,7 @@ public class PortAudioPlayerFactory {
     /// <param name="suggestedLatency">The latency to suggest to PortAudio</param>
     /// <returns>An instance of the PortAudioPlayer, or <c>null</c> if the native library failed to load or was not found.</returns>
     public PortAudioPlayer? Create(int sampleRate, int framesPerBuffer, double? suggestedLatency = null) {
-        lock(_lock) {
+        lock (_lock) {
             try {
                 return new PortAudioPlayer(LoadPortAudioLibrary(), framesPerBuffer,
                     new AudioFormat(SampleRate: sampleRate, Channels: 2, SampleFormat.IeeeFloat32), suggestedLatency);

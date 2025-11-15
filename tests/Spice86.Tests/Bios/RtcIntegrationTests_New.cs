@@ -1,18 +1,20 @@
 namespace Spice86.Tests.Bios;
 
 using FluentAssertions;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
+
 using System.Runtime.CompilerServices;
+
 using Xunit;
 
 /// <summary>
 /// Integration tests for RTC/CMOS and BIOS/DOS time functions.
 /// Tests run inline x86 machine code through the emulation stack.
 /// </summary>
-public class RtcIntegrationTests_New
-{
+public class RtcIntegrationTests_New {
     private const int ResultPort = 0x999;
     private const int DetailsPort = 0x998;
 
@@ -40,7 +42,7 @@ public class RtcIntegrationTests_New
         };
 
         RtcTestHandler testHandler = RunRtcTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "INT 1A function 00h should execute without error");
     }
@@ -76,7 +78,7 @@ public class RtcIntegrationTests_New
         };
 
         RtcTestHandler testHandler = RunRtcTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "INT 21H function 2Ah should return valid system date");
     }
@@ -110,7 +112,7 @@ public class RtcIntegrationTests_New
         };
 
         RtcTestHandler testHandler = RunRtcTest(program);
-        
+
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "INT 21H function 2Ch should return valid system time");
     }
@@ -140,7 +142,7 @@ public class RtcIntegrationTests_New
             NSubstitute.Substitute.For<ILoggerService>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
         );
-        
+
         spice86DependencyInjection.ProgramExecutor.Run();
 
         return testHandler;
@@ -151,7 +153,7 @@ public class RtcIntegrationTests_New
     /// </summary>
     private class RtcTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
-        
+
         public RtcTestHandler(State state, ILoggerService loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
             ioPortDispatcher.AddIOPortHandler(ResultPort, this);

@@ -214,11 +214,11 @@ public sealed class DualPic : IDisposable {
                 WriteCommand(PrimaryPicCommandPort, (uint)(SpecificEoiBase | irq));
                 break;
             default: {
-                byte secondaryIrq = (byte)(irq - 8);
-                WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
-                WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
-                break;
-            }
+                    byte secondaryIrq = (byte)(irq - 8);
+                    WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
+                    WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
+                    break;
+                }
         }
     }
 

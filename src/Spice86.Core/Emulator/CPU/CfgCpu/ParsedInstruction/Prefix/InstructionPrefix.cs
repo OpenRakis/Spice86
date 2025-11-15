@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix; 
+namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 
 public class InstructionPrefix {
     public InstructionPrefix(InstructionField<byte> prefixField) {
