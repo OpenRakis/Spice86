@@ -1,682 +1,670 @@
 ﻿namespace Spice86.Shared.Emulator.Keyboard;
 
-//
-// Summary:
-//     Represents a keyboard physical key.
-//
-// Remarks:
-//     The names follow the W3C codes: https://www.w3.org/TR/uievents-code/
+/// <summary>
+/// Represents a keyboard physical key.
+/// </summary>
+/// <remarks>
+/// The names follow the W3C codes: https://www.w3.org/TR/uievents-code/
+/// </remarks>
 public enum PhysicalKey {
-    //
-    // Summary:
-    //     Represents no key.
+    /// <summary>
+    /// Represents no key.
+    /// </summary>
     None,
-    //
-    // Summary:
-    //     `~ on a US keyboard. This is the 半角/全角/漢字 (hankaku/zenkaku/kanji) key on Japanese
-    //     keyboards.
+    /// <summary>
+    /// `~ on a US keyboard. This is the 半角/全角/漢字 (hankaku/zenkaku/kanji) key on Japanese keyboards.
+    /// </summary>
     Backquote,
-    //
-    // Summary:
-    //     Used for both the US \| (on the 101-key layout) and also for the key located
-    //     between the " and Enter keys on row C of the 102-, 104- and 106-key layouts.
-    //     #~ on a UK (102) keyboard.
+    /// <summary>
+    /// Used for both the US \| (on the 101-key layout) and also for the key located between the " and Enter keys on row C of the 102-, 104- and 106-key layouts. #~ on a UK (102) keyboard.
+    /// </summary>
     Backslash,
-    //
-    // Summary:
-    //     [{ on a US keyboard.
+    /// <summary>
+    /// [{ on a US keyboard.
+    /// </summary>
     BracketLeft,
-    //
-    // Summary:
-    //     ]} on a US keyboard.
+    /// <summary>
+    /// ]} on a US keyboard.
+    /// </summary>
     BracketRight,
-    //
-    // Summary:
-    //     ,< on a US keyboard.
+    /// <summary>
+    /// ,&lt; on a US keyboard.
+    /// </summary>
     Comma,
-    //
-    // Summary:
-    //     0) on a US keyboard.
+    /// <summary>
+    /// 0) on a US keyboard.
+    /// </summary>
     Digit0,
-    //
-    // Summary:
-    //     1! on a US keyboard.
+    /// <summary>
+    /// 1! on a US keyboard.
+    /// </summary>
     Digit1,
-    //
-    // Summary:
-    //     2@ on a US keyboard.
+    /// <summary>
+    /// 2@ on a US keyboard.
+    /// </summary>
     Digit2,
-    //
-    // Summary:
-    //     3# on a US keyboard.
+    /// <summary>
+    /// 3# on a US keyboard.
+    /// </summary>
     Digit3,
-    //
-    // Summary:
-    //     4$ on a US keyboard.
+    /// <summary>
+    /// 4$ on a US keyboard.
+    /// </summary>
     Digit4,
-    //
-    // Summary:
-    //     5% on a US keyboard.
+    /// <summary>
+    /// 5% on a US keyboard.
+    /// </summary>
     Digit5,
-    //
-    // Summary:
-    //     6^ on a US keyboard.
+    /// <summary>
+    /// 6^ on a US keyboard.
+    /// </summary>
     Digit6,
-    //
-    // Summary:
-    //     7& on a US keyboard.
+    /// <summary>
+    /// 7&amp; on a US keyboard.
+    /// </summary>
     Digit7,
-    //
-    // Summary:
-    //     8* on a US keyboard.
+    /// <summary>
+    /// 8* on a US keyboard.
+    /// </summary>
     Digit8,
-    //
-    // Summary:
-    //     9( on a US keyboard.
+    /// <summary>
+    /// 9( on a US keyboard.
+    /// </summary>
     Digit9,
-    //
-    // Summary:
-    //     =+ on a US keyboard.
+    /// <summary>
+    /// =+ on a US keyboard.
+    /// </summary>
     Equal,
-    //
-    // Summary:
-    //     Located between the left Shift and Z keys. \| on a UK keyboard.
+    /// <summary>
+    /// Located between the left Shift and Z keys. \| on a UK keyboard.
+    /// </summary>
     IntlBackslash,
-    //
-    // Summary:
-    //     Located between the / and right Shift keys. \ろ (ro) on a Japanese keyboard.
+    /// <summary>
+    /// Located between the / and right Shift keys. \ろ (ro) on a Japanese keyboard.
+    /// </summary>
     IntlRo,
-    //
-    // Summary:
-    //     Located between the = and Backspace keys. ¥ (yen) on a Japanese keyboard. \/
-    //     on a Russian keyboard.
+    /// <summary>
+    /// Located between the = and Backspace keys. ¥ (yen) on a Japanese keyboard. \/ on a Russian keyboard.
+    /// </summary>
     IntlYen,
-    //
-    // Summary:
-    //     a on a US keyboard. q on an AZERTY (e.g., French) keyboard.
+    /// <summary>
+    /// a on a US keyboard. q on an AZERTY (e.g., French) keyboard.
+    /// </summary>
     A,
-    //
-    // Summary:
-    //     b on a US keyboard.
+    /// <summary>
+    /// b on a US keyboard.
+    /// </summary>
     B,
-    //
-    // Summary:
-    //     c on a US keyboard.
+    /// <summary>
+    /// c on a US keyboard.
+    /// </summary>
     C,
-    //
-    // Summary:
-    //     d on a US keyboard.
+    /// <summary>
+    /// d on a US keyboard.
+    /// </summary>
     D,
-    //
-    // Summary:
-    //     e on a US keyboard.
+    /// <summary>
+    /// e on a US keyboard.
+    /// </summary>
     E,
-    //
-    // Summary:
-    //     f on a US keyboard.
+    /// <summary>
+    /// f on a US keyboard.
+    /// </summary>
     F,
-    //
-    // Summary:
-    //     g on a US keyboard.
+    /// <summary>
+    /// g on a US keyboard.
+    /// </summary>
     G,
-    //
-    // Summary:
-    //     h on a US keyboard.
+    /// <summary>
+    /// h on a US keyboard.
+    /// </summary>
     H,
-    //
-    // Summary:
-    //     i on a US keyboard.
+    /// <summary>
+    /// i on a US keyboard.
+    /// </summary>
     I,
-    //
-    // Summary:
-    //     j on a US keyboard.
+    /// <summary>
+    /// j on a US keyboard.
+    /// </summary>
     J,
-    //
-    // Summary:
-    //     k on a US keyboard.
+    /// <summary>
+    /// k on a US keyboard.
+    /// </summary>
     K,
-    //
-    // Summary:
-    //     l on a US keyboard.
+    /// <summary>
+    /// l on a US keyboard.
+    /// </summary>
     L,
-    //
-    // Summary:
-    //     m on a US keyboard.
+    /// <summary>
+    /// m on a US keyboard.
+    /// </summary>
     M,
-    //
-    // Summary:
-    //     n on a US keyboard.
+    /// <summary>
+    /// n on a US keyboard.
+    /// </summary>
     N,
-    //
-    // Summary:
-    //     o on a US keyboard.
+    /// <summary>
+    /// o on a US keyboard.
+    /// </summary>
     O,
-    //
-    // Summary:
-    //     p on a US keyboard.
+    /// <summary>
+    /// p on a US keyboard.
+    /// </summary>
     P,
-    //
-    // Summary:
-    //     q on a US keyboard. a on an AZERTY (e.g., French) keyboard.
+    /// <summary>
+    /// q on a US keyboard. a on an AZERTY (e.g., French) keyboard.
+    /// </summary>
     Q,
-    //
-    // Summary:
-    //     r on a US keyboard.
+    /// <summary>
+    /// r on a US keyboard.
+    /// </summary>
     R,
-    //
-    // Summary:
-    //     s on a US keyboard.
+    /// <summary>
+    /// s on a US keyboard.
+    /// </summary>
     S,
-    //
-    // Summary:
-    //     t on a US keyboard.
+    /// <summary>
+    /// t on a US keyboard.
+    /// </summary>
     T,
-    //
-    // Summary:
-    //     u on a US keyboard.
+    /// <summary>
+    /// u on a US keyboard.
+    /// </summary>
     U,
-    //
-    // Summary:
-    //     v on a US keyboard.
+    /// <summary>
+    /// v on a US keyboard.
+    /// </summary>
     V,
-    //
-    // Summary:
-    //     w on a US keyboard. z on an AZERTY (e.g., French) keyboard.
+    /// <summary>
+    /// w on a US keyboard. z on an AZERTY (e.g., French) keyboard.
+    /// </summary>
     W,
-    //
-    // Summary:
-    //     x on a US keyboard.
+    /// <summary>
+    /// x on a US keyboard.
+    /// </summary>
     X,
-    //
-    // Summary:
-    //     y on a US keyboard. z on a QWERTZ (e.g., German) keyboard.
+    /// <summary>
+    /// y on a US keyboard. z on a QWERTZ (e.g., German) keyboard.
+    /// </summary>
     Y,
-    //
-    // Summary:
-    //     z on a US keyboard. w on an AZERTY (e.g., French) keyboard. y on a QWERTZ (e.g.,
-    //     German) keyboard.
+    /// <summary>
+    /// z on a US keyboard. w on an AZERTY (e.g., French) keyboard. y on a QWERTZ (e.g., German) keyboard.
+    /// </summary>
     Z,
-    //
-    // Summary:
-    //     -_ on a US keyboard.
+    /// <summary>
+    /// -_ on a US keyboard.
+    /// </summary>
     Minus,
-    //
-    // Summary:
-    //     .> on a US keyboard.
+    /// <summary>
+    /// .&gt; on a US keyboard.
+    /// </summary>
     Period,
-    //
-    // Summary:
-    //     '" on a US keyboard.
+    /// <summary>
+    /// '" on a US keyboard.
+    /// </summary>
     Quote,
-    //
-    // Summary:
-    //     ;: on a US keyboard.
+    /// <summary>
+    /// ;: on a US keyboard.
+    /// </summary>
     Semicolon,
-    //
-    // Summary:
-    //     /? on a US keyboard.
+    /// <summary>
+    /// /? on a US keyboard.
+    /// </summary>
     Slash,
-    //
-    // Summary:
-    //     Alt, Option or ⌥.
+    /// <summary>
+    /// Alt, Option or ⌥.
+    /// </summary>
     AltLeft,
-    //
-    // Summary:
-    //     Alt, Option or ⌥. This is labelled AltGr key on many keyboard layouts.
+    /// <summary>
+    /// Alt, Option or ⌥. This is labelled AltGr key on many keyboard layouts.
+    /// </summary>
     AltRight,
-    //
-    // Summary:
-    //     Backspace or ⌫. Labelled Delete on Apple keyboards.
+    /// <summary>
+    /// Backspace or ⌫. Labelled Delete on Apple keyboards.
+    /// </summary>
     Backspace,
-    //
-    // Summary:
-    //     CapsLock or ⇪.
+    /// <summary>
+    /// CapsLock or ⇪.
+    /// </summary>
     CapsLock,
-    //
-    // Summary:
-    //     The application context menu key, which is typically found between the right
-    //     Meta key and the right Control key.
+    /// <summary>
+    /// The application context menu key, which is typically found between the right Meta key and the right Control key.
+    /// </summary>
     ContextMenu,
-    //
-    // Summary:
-    //     Control or ⌃.
+    /// <summary>
+    /// Control or ⌃.
+    /// </summary>
     ControlLeft,
-    //
-    // Summary:
-    //     Control or ⌃.
+    /// <summary>
+    /// Control or ⌃.
+    /// </summary>
     ControlRight,
-    //
-    // Summary:
-    //     Enter or ↵. Labelled Return on Apple keyboards.
+    /// <summary>
+    /// Enter or ↵. Labelled Return on Apple keyboards.
+    /// </summary>
     Enter,
-    //
-    // Summary:
-    //     The ⊞ (Windows), ⌘, Command or other OS symbol key.
+    /// <summary>
+    /// The ⊞ (Windows), ⌘, Command or other OS symbol key.
+    /// </summary>
     MetaLeft,
-    //
-    // Summary:
-    //     The ⊞ (Windows), ⌘, Command or other OS symbol key.
+    /// <summary>
+    /// The ⊞ (Windows), ⌘, Command or other OS symbol key.
+    /// </summary>
     MetaRight,
-    //
-    // Summary:
-    //     Shift or ⇧.
+    /// <summary>
+    /// Shift or ⇧.
+    /// </summary>
     ShiftLeft,
-    //
-    // Summary:
-    //     Shift or ⇧.
+    /// <summary>
+    /// Shift or ⇧.
+    /// </summary>
     ShiftRight,
-    //
-    // Summary:
-    //     (space).
+    /// <summary>
+    /// (space).
+    /// </summary>
     Space,
-    //
-    // Summary:
-    //     Tab or ⇥.
+    /// <summary>
+    /// Tab or ⇥.
+    /// </summary>
     Tab,
-    //
-    // Summary:
-    //     Japanese: 変換 (henkan).
+    /// <summary>
+    /// Japanese: 変換 (henkan).
+    /// </summary>
     Convert,
-    //
-    // Summary:
-    //     Japanese: カタカナ/ひらがな/ローマ字 (katakana/hiragana/romaji).
+    /// <summary>
+    /// Japanese: カタカナ/ひらがな/ローマ字 (katakana/hiragana/romaji).
+    /// </summary>
     KanaMode,
-    //
-    // Summary:
-    //     Korean: HangulMode 한/영 (han/yeong). Japanese (Mac keyboard): かな (kana).
+    /// <summary>
+    /// Korean: HangulMode 한/영 (han/yeong). Japanese (Mac keyboard): かな (kana).
+    /// </summary>
     Lang1,
-    //
-    // Summary:
-    //     Korean: Hanja 한자 (hanja). Japanese (Mac keyboard): 英数 (eisu).
+    /// <summary>
+    /// Korean: Hanja 한자 (hanja). Japanese (Mac keyboard): 英数 (eisu).
+    /// </summary>
     Lang2,
-    //
-    // Summary:
-    //     Japanese (word-processing keyboard): Katakana.
+    /// <summary>
+    /// Japanese (word-processing keyboard): Katakana.
+    /// </summary>
     Lang3,
-    //
-    // Summary:
-    //     Japanese (word-processing keyboard): Hiragana.
+    /// <summary>
+    /// Japanese (word-processing keyboard): Hiragana.
+    /// </summary>
     Lang4,
-    //
-    // Summary:
-    //     Japanese (word-processing keyboard): Zenkaku/Hankaku.
+    /// <summary>
+    /// Japanese (word-processing keyboard): Zenkaku/Hankaku.
+    /// </summary>
     Lang5,
-    //
-    // Summary:
-    //     Japanese: 無変換 (muhenkan).
+    /// <summary>
+    /// Japanese: 無変換 (muhenkan).
+    /// </summary>
     NonConvert,
-    //
-    // Summary:
-    //     ⌦. The forward delete key. Note that on Apple keyboards, the key labelled Delete
-    //     on the main part of the keyboard is Avalonia.Input.PhysicalKey.Backspace.
+    /// <summary>
+    /// ⌦. The forward delete key. Note that on Apple keyboards, the key labelled Delete on the main part of the keyboard is Avalonia.Input.PhysicalKey.Backspace.
+    /// </summary>
     Delete,
-    //
-    // Summary:
-    //     End or ↘.
+    /// <summary>
+    /// End or ↘.
+    /// </summary>
     End,
-    //
-    // Summary:
-    //     Help. Not present on standard PC keyboards.
+    /// <summary>
+    /// Help. Not present on standard PC keyboards.
+    /// </summary>
     Help,
-    //
-    // Summary:
-    //     Home or ↖.
+    /// <summary>
+    /// Home or ↖.
+    /// </summary>
     Home,
-    //
-    // Summary:
-    //     Insert or Ins. Not present on Apple keyboards.
+    /// <summary>
+    /// Insert or Ins. Not present on Apple keyboards.
+    /// </summary>
     Insert,
-    //
-    // Summary:
-    //     Page Down, PgDn or ⇟.
+    /// <summary>
+    /// Page Down, PgDn or ⇟.
+    /// </summary>
     PageDown,
-    //
-    // Summary:
-    //     Page Up, PgUp or ⇞.
+    /// <summary>
+    /// Page Up, PgUp or ⇞.
+    /// </summary>
     PageUp,
-    //
-    // Summary:
-    //     ↓.
+    /// <summary>
+    /// ↓.
+    /// </summary>
     ArrowDown,
-    //
-    // Summary:
-    //     ←.
+    /// <summary>
+    /// ←.
+    /// </summary>
     ArrowLeft,
-    //
-    // Summary:
-    //     →.
+    /// <summary>
+    /// →.
+    /// </summary>
     ArrowRight,
-    //
-    // Summary:
-    //     ↑.
+    /// <summary>
+    /// ↑.
+    /// </summary>
     ArrowUp,
-    //
-    // Summary:
-    //     Numeric keypad Num Lock. On the Mac, this is used for the numpad Clear key.
+    /// <summary>
+    /// Numeric keypad Num Lock. On the Mac, this is used for the numpad Clear key.
+    /// </summary>
     NumLock,
-    //
-    // Summary:
-    //     Numeric keypad 0 Ins on a keyboard. 0 on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 0 Ins on a keyboard. 0 on a phone or remote control.
+    /// </summary>
     NumPad0,
-    //
-    // Summary:
-    //     Numeric keypad 1 End on a keyboard. 1 or 1 QZ on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 1 End on a keyboard. 1 or 1 QZ on a phone or remote control.
+    /// </summary>
     NumPad1,
-    //
-    // Summary:
-    //     Numeric keypad 2 ↓ on a keyboard. 2 ABC on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 2 ↓ on a keyboard. 2 ABC on a phone or remote control.
+    /// </summary>
     NumPad2,
-    //
-    // Summary:
-    //     Numeric keypad 3 PgDn on a keyboard. 3 DEF on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 3 PgDn on a keyboard. 3 DEF on a phone or remote control.
+    /// </summary>
     NumPad3,
-    //
-    // Summary:
-    //     Numeric keypad 4 ← on a keyboard. 4 GHI on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 4 ← on a keyboard. 4 GHI on a phone or remote control.
+    /// </summary>
     NumPad4,
-    //
-    // Summary:
-    //     Numeric keypad 5 on a keyboard. 5 JKL on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 5 on a keyboard. 5 JKL on a phone or remote control.
+    /// </summary>
     NumPad5,
-    //
-    // Summary:
-    //     Numeric keypad 6 → on a keyboard. 6 MNO on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 6 → on a keyboard. 6 MNO on a phone or remote control.
+    /// </summary>
     NumPad6,
-    //
-    // Summary:
-    //     Numeric keypad 7 Home on a keyboard. 7 PQRS or 7 PRS on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 7 Home on a keyboard. 7 PQRS or 7 PRS on a phone or remote control.
+    /// </summary>
     NumPad7,
-    //
-    // Summary:
-    //     Numeric keypad 8 ↑ on a keyboard. 8 TUV on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 8 ↑ on a keyboard. 8 TUV on a phone or remote control.
+    /// </summary>
     NumPad8,
-    //
-    // Summary:
-    //     Numeric keypad 9 PgUp on a keyboard. 9 WXYZ or 9 WXY on a phone or remote control.
+    /// <summary>
+    /// Numeric keypad 9 PgUp on a keyboard. 9 WXYZ or 9 WXY on a phone or remote control.
+    /// </summary>
     NumPad9,
-    //
-    // Summary:
-    //     Numeric keypad +.
+    /// <summary>
+    /// Numeric keypad +.
+    /// </summary>
     NumPadAdd,
-    //
-    // Summary:
-    //     Numeric keypad C or AC (All Clear). Also for use with numpads that have a Clear
-    //     key that is separate from the NumLock key. On the Mac, the numpad Clear key is
-    //     Avalonia.Input.PhysicalKey.NumLock.
+    /// <summary>
+    /// Numeric keypad C or AC (All Clear). Also for use with numpads that have a Clear key that is separate from the NumLock key. On the Mac, the numpad Clear key is Avalonia.Input.PhysicalKey.NumLock.
+    /// </summary>
     NumPadClear,
-    //
-    // Summary:
-    //     Numeric keypad , (thousands separator). For locales where the thousands separator
-    //     is a "." (e.g., Brazil), this key may generate a ..
+    /// <summary>
+    /// Numeric keypad , (thousands separator). For locales where the thousands separator is a "." (e.g., Brazil), this key may generate a ..
+    /// </summary>
     NumPadComma,
-    //
-    // Summary:
-    //     Numeric keypad . Del. For locales where the decimal separator is "," (e.g., Brazil),
-    //     this key may generate a ,.
+    /// <summary>
+    /// Numeric keypad . Del. For locales where the decimal separator is "," (e.g., Brazil), this key may generate a ,.
+    /// </summary>
     NumPadDecimal,
-    //
-    // Summary:
-    //     Numeric keypad /.
+    /// <summary>
+    /// Numeric keypad /.
+    /// </summary>
     NumPadDivide,
-    //
-    // Summary:
-    //     Numeric keypad Enter.
+    /// <summary>
+    /// Numeric keypad Enter.
+    /// </summary>
     NumPadEnter,
-    //
-    // Summary:
-    //     Numeric keypad =.
+    /// <summary>
+    /// Numeric keypad =.
+    /// </summary>
     NumPadEqual,
-    //
-    // Summary:
-    //     Numeric keypad * on a keyboard. For use with numpads that provide mathematical
-    //     operations (+, -, * and /).
+    /// <summary>
+    /// Numeric keypad * on a keyboard. For use with numpads that provide mathematical operations (+, -, * and /).
+    /// </summary>
     NumPadMultiply,
-    //
-    // Summary:
-    //     Numeric keypad (. Found on the Microsoft Natural Keyboard.
+    /// <summary>
+    /// Numeric keypad (. Found on the Microsoft Natural Keyboard.
+    /// </summary>
     NumPadParenLeft,
-    //
-    // Summary:
-    //     Numeric keypad ). Found on the Microsoft Natural Keyboard.
+    /// <summary>
+    /// Numeric keypad ). Found on the Microsoft Natural Keyboard.
+    /// </summary>
     NumPadParenRight,
-    //
-    // Summary:
-    //     Numeric keypad -.
+    /// <summary>
+    /// Numeric keypad -.
+    /// </summary>
     NumPadSubtract,
-    //
-    // Summary:
-    //     Esc or ⎋.
+    /// <summary>
+    /// Esc or ⎋.
+    /// </summary>
     Escape,
-    //
-    // Summary:
-    //     F1.
+    /// <summary>
+    /// F1.
+    /// </summary>
     F1,
-    //
-    // Summary:
-    //     F2.
+    /// <summary>
+    /// F2.
+    /// </summary>
     F2,
-    //
-    // Summary:
-    //     F3.
+    /// <summary>
+    /// F3.
+    /// </summary>
     F3,
-    //
-    // Summary:
-    //     F4.
+    /// <summary>
+    /// F4.
+    /// </summary>
     F4,
-    //
-    // Summary:
-    //     F5.
+    /// <summary>
+    /// F5.
+    /// </summary>
     F5,
-    //
-    // Summary:
-    //     F6.
+    /// <summary>
+    /// F6.
+    /// </summary>
     F6,
-    //
-    // Summary:
-    //     F7.
+    /// <summary>
+    /// F7.
+    /// </summary>
     F7,
-    //
-    // Summary:
-    //     F8.
+    /// <summary>
+    /// F8.
+    /// </summary>
     F8,
-    //
-    // Summary:
-    //     F9.
+    /// <summary>
+    /// F9.
+    /// </summary>
     F9,
-    //
-    // Summary:
-    //     F10.
+    /// <summary>
+    /// F10.
+    /// </summary>
     F10,
-    //
-    // Summary:
-    //     F11.
+    /// <summary>
+    /// F11.
+    /// </summary>
     F11,
-    //
-    // Summary:
-    //     F12.
+    /// <summary>
+    /// F12.
+    /// </summary>
     F12,
-    //
-    // Summary:
-    //     F13.
+    /// <summary>
+    /// F13.
+    /// </summary>
     F13,
-    //
-    // Summary:
-    //     F14.
+    /// <summary>
+    /// F14.
+    /// </summary>
     F14,
-    //
-    // Summary:
-    //     F15.
+    /// <summary>
+    /// F15.
+    /// </summary>
     F15,
-    //
-    // Summary:
-    //     F16.
+    /// <summary>
+    /// F16.
+    /// </summary>
     F16,
-    //
-    // Summary:
-    //     F17.
+    /// <summary>
+    /// F17.
+    /// </summary>
     F17,
-    //
-    // Summary:
-    //     F18.
+    /// <summary>
+    /// F18.
+    /// </summary>
     F18,
-    //
-    // Summary:
-    //     F19.
+    /// <summary>
+    /// F19.
+    /// </summary>
     F19,
-    //
-    // Summary:
-    //     F20.
+    /// <summary>
+    /// F20.
+    /// </summary>
     F20,
-    //
-    // Summary:
-    //     F21.
+    /// <summary>
+    /// F21.
+    /// </summary>
     F21,
-    //
-    // Summary:
-    //     F22.
+    /// <summary>
+    /// F22.
+    /// </summary>
     F22,
-    //
-    // Summary:
-    //     F23.
+    /// <summary>
+    /// F23.
+    /// </summary>
     F23,
-    //
-    // Summary:
-    //     F24.
+    /// <summary>
+    /// F24.
+    /// </summary>
     F24,
-    //
-    // Summary:
-    //     PrtScr SysRq or Print Screen.
+    /// <summary>
+    /// PrtScr SysRq or Print Screen.
+    /// </summary>
     PrintScreen,
-    //
-    // Summary:
-    //     Scroll Lock.
+    /// <summary>
+    /// Scroll Lock.
+    /// </summary>
     ScrollLock,
-    //
-    // Summary:
-    //     Pause Break.
+    /// <summary>
+    /// Pause Break.
+    /// </summary>
     Pause,
-    //
-    // Summary:
-    //     Browser Back. Some laptops place this key to the left of the ↑ key.
+    /// <summary>
+    /// Browser Back. Some laptops place this key to the left of the ↑ key.
+    /// </summary>
     BrowserBack,
-    //
-    // Summary:
-    //     Browser Favorites.
+    /// <summary>
+    /// Browser Favorites.
+    /// </summary>
     BrowserFavorites,
-    //
-    // Summary:
-    //     Browser Forward. Some laptops place this key to the right of the ↑ key.
+    /// <summary>
+    /// Browser Forward. Some laptops place this key to the right of the ↑ key.
+    /// </summary>
     BrowserForward,
-    //
-    // Summary:
-    //     Browser Home.
+    /// <summary>
+    /// Browser Home.
+    /// </summary>
     BrowserHome,
-    //
-    // Summary:
-    //     Browser Refresh.
+    /// <summary>
+    /// Browser Refresh.
+    /// </summary>
     BrowserRefresh,
-    //
-    // Summary:
-    //     Browser Search.
+    /// <summary>
+    /// Browser Search.
+    /// </summary>
     BrowserSearch,
-    //
-    // Summary:
-    //     Browser Stop.
+    /// <summary>
+    /// Browser Stop.
+    /// </summary>
     BrowserStop,
-    //
-    // Summary:
-    //     Eject or ⏏. This key is placed in the function section on some Apple keyboards.
+    /// <summary>
+    /// Eject or ⏏. This key is placed in the function section on some Apple keyboards.
+    /// </summary>
     Eject,
-    //
-    // Summary:
-    //     App 1. Sometimes labelled My Computer on the keyboard.
+    /// <summary>
+    /// App 1. Sometimes labelled My Computer on the keyboard.
+    /// </summary>
     LaunchApp1,
-    //
-    // Summary:
-    //     App 2. Sometimes labelled Calculator on the keyboard.
+    /// <summary>
+    /// App 2. Sometimes labelled Calculator on the keyboard.
+    /// </summary>
     LaunchApp2,
-    //
-    // Summary:
-    //     Mail.
+    /// <summary>
+    /// Mail.
+    /// </summary>
     LaunchMail,
-    //
-    // Summary:
-    //     Media Play/Pause or ⏵⏸.
+    /// <summary>
+    /// Media Play/Pause or ⏵⏸.
+    /// </summary>
     MediaPlayPause,
-    //
-    // Summary:
-    //     Media Select.
+    /// <summary>
+    /// Media Select.
+    /// </summary>
     MediaSelect,
-    //
-    // Summary:
-    //     Media Stop or ⏹.
+    /// <summary>
+    /// Media Stop or ⏹.
+    /// </summary>
     MediaStop,
-    //
-    // Summary:
-    //     Media Next or ⏭.
+    /// <summary>
+    /// Media Next or ⏭.
+    /// </summary>
     MediaTrackNext,
-    //
-    // Summary:
-    //     Media Previous or ⏮.
+    /// <summary>
+    /// Media Previous or ⏮.
+    /// </summary>
     MediaTrackPrevious,
-    //
-    // Summary:
-    //     Power.
+    /// <summary>
+    /// Power.
+    /// </summary>
     Power,
-    //
-    // Summary:
-    //     Sleep.
+    /// <summary>
+    /// Sleep.
+    /// </summary>
     Sleep,
-    //
-    // Summary:
-    //     Volume Down.
+    /// <summary>
+    /// Volume Down.
+    /// </summary>
     AudioVolumeDown,
-    //
-    // Summary:
-    //     Mute.
+    /// <summary>
+    /// Mute.
+    /// </summary>
     AudioVolumeMute,
-    //
-    // Summary:
-    //     Volume Up.
+    /// <summary>
+    /// Volume Up.
+    /// </summary>
     AudioVolumeUp,
-    //
-    // Summary:
-    //     Wake Up.
+    /// <summary>
+    /// Wake Up.
+    /// </summary>
     WakeUp,
-    //
-    // Summary:
-    //     Again. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Again. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Again,
-    //
-    // Summary:
-    //     Copy. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Copy. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Copy,
-    //
-    // Summary:
-    //     Cut. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Cut. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Cut,
-    //
-    // Summary:
-    //     Find. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Find. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Find,
-    //
-    // Summary:
-    //     Open. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Open. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Open,
-    //
-    // Summary:
-    //     Paste. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Paste. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Paste,
-    //
-    // Summary:
-    //     Props. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Props. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Props,
-    //
-    // Summary:
-    //     Select. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Select. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Select,
-    //
-    // Summary:
-    //     Undo. Legacy. Found on Sun’s USB keyboard.
+    /// <summary>
+    /// Undo. Legacy. Found on Sun’s USB keyboard.
+    /// </summary>
     Undo
 }
