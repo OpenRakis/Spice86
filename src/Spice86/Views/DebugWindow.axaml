@@ -63,7 +63,7 @@
 		</StackPanel>
 		<up:DockSpacePanel Grid.Row="1">
 			<up:RearrangeTabControl>
-				<up:ClosableTabItem HotKeyManager.HotKey="Alt+F1" Header="Disassembly" ToolTip.Tip="Alt-F1">
+				<TabItem HotKeyManager.HotKey="Alt+F1" Header="Disassembly" ToolTip.Tip="Alt-F1">
 					<TabControl ItemsSource="{Binding DisassemblyViewModels}">
 						<TabControl.ItemTemplate>
 							<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -76,21 +76,21 @@
 							</DataTemplate>
 						</TabControl.ContentTemplate>
 					</TabControl>
-				</up:ClosableTabItem>
-				<up:ClosableTabItem 
+				</TabItem>
+				<TabItem 
 					HotKeyManager.HotKey="Alt+F2" 
 					Header="Code Flow" 
 					ToolTip.Tip="Alt-F2"
 					IsVisible="{Binding CfgCpuViewModel.IsCfgCpuEnabled}"
 					Content="{Binding CfgCpuViewModel}">
-				</up:ClosableTabItem>
-				<up:ClosableTabItem 
+				</TabItem>
+				<TabItem 
 					HotKeyManager.HotKey="Alt+F3" 
 					Header="CPU" 
 					ToolTip.Tip="Alt-F3" 
 					Content="{Binding CpuViewModel}">
-				</up:ClosableTabItem>
-				<up:ClosableTabItem HotKeyManager.HotKey="Alt+F4" Header="Memory" ToolTip.Tip="Alt-F4">
+				</TabItem>
+				<TabItem HotKeyManager.HotKey="Alt+F4" Header="Memory" ToolTip.Tip="Alt-F4">
 					<TabControl ItemsSource="{Binding MemoryViewModels}">
 						<TabControl.ItemTemplate>
 							<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
@@ -98,21 +98,21 @@
 							</DataTemplate>
 						</TabControl.ItemTemplate>
 					</TabControl>
-				</up:ClosableTabItem>
-				<up:ClosableTabItem HotKeyManager.HotKey="Alt+F5" Header="Devices" ToolTip.Tip="Alt-F5">
+				</TabItem>
+				<TabItem HotKeyManager.HotKey="Alt+F5" Header="Devices" ToolTip.Tip="Alt-F5">
 					<TabControl>
 						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
 						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
 						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
 						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Software Mixer" ToolTip.Tip="Alt-F10" Content="{Binding SoftwareMixerViewModel}" />
 					</TabControl>
-				</up:ClosableTabItem>
-				<up:ClosableTabItem 
+				</TabItem>
+				<TabItem 
 					HotKeyManager.HotKey="Alt+F6" 
 					Header="Breakpoints" 
 					ToolTip.Tip="Alt-F6" 
 					Content="{Binding BreakpointsViewModel}">
-				</up:ClosableTabItem>
+				</TabItem>
 			</up:RearrangeTabControl>
 		</up:DockSpacePanel>
 		<views:StatusMessageView Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" DataContext="{Binding StatusMessageViewModel}" />
