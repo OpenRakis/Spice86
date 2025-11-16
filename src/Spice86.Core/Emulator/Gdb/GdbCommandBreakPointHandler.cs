@@ -43,11 +43,9 @@ public class GdbCommandBreakpointHandler {
         _state = state;
         _memory = memory;
         
-        // Create condition compiler if we have state and memory
-        BreakpointConditionCompiler? conditionCompiler = null;
-        if (state != null && memory != null) {
-            conditionCompiler = new BreakpointConditionCompiler(state, memory);
-        }
+        // Create condition compiler
+        BreakpointConditionCompiler? conditionCompiler = new BreakpointConditionCompiler(state, memory);
+        
         _commandParser = new GdbBreakpointCommandParser(loggerService, conditionCompiler);
     }
 
