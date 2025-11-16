@@ -32,6 +32,10 @@
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" />
         <PackageReference Include="Avalonia.Fonts.Inter" />
         <PackageReference Include="Avalonia.Headless" />
+        <PackageReference Include="Dock.Avalonia" />
+        <PackageReference Include="Dock.Avalonia.Themes.Fluent" />
+        <PackageReference Include="Dock.Model.Avalonia" />
+        <PackageReference Include="Dock.Model.Mvvm" />
         <PackageReference Include="PanAndZoom" />
         <PackageReference Include="AvaloniaGraphControl" />
         <PackageReference Include="AvaloniaHex" />
@@ -56,6 +60,5 @@
         <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
-        <ProjectReference Include="..\Avalonia.UpDock\Avalonia.UpDock.csproj" />
     </ItemGroup>
 </Project>

@@ -21,6 +21,10 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.9.3" />
+    <PackageVersion Include="Dock.Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageVersion Include="Dock.Model.Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Dock.Model.Mvvm" Version="11.3.8" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.2.313" />
     <PackageVersion Include="Iced" Version="1.21.0" />
@@ -44,7 +48,6 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="11.3.6.6" />

@@ -10,7 +10,7 @@
 	xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
 	xmlns:controls="clr-namespace:Spice86.Views.Controls"
 	xmlns:views="clr-namespace:Spice86.Views"
-	xmlns:up="clr-namespace:Avalonia.UpDock.Controls;assembly=Avalonia.UpDock"
+
 	x:CompileBindings="True"
 	x:DataType="vm:DebugWindowViewModel"
 	WindowStartupLocation="CenterOwner"
@@ -34,6 +34,7 @@
 		<factory:ViewLocator />
 	</Window.DataTemplates>
 	<Window.Styles>
+		<StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
@@ -61,60 +62,64 @@
 				</Button.Content>
 			</Button>
 		</StackPanel>
-		<up:DockSpacePanel Grid.Row="1">
-			<up:RearrangeTabControl>
-				<TabItem HotKeyManager.HotKey="Alt+F1" Header="Disassembly" ToolTip.Tip="Alt-F1">
-					<TabControl ItemsSource="{Binding DisassemblyViewModels}">
-						<TabControl.ItemTemplate>
-							<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-								<TextBlock Text="{Binding Header}" />
-							</DataTemplate>
-						</TabControl.ItemTemplate>
-						<TabControl.ContentTemplate>
-							<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
-								<ContentPresenter Content="{Binding}" />
-							</DataTemplate>
-						</TabControl.ContentTemplate>
-					</TabControl>
-				</TabItem>
-				<TabItem 
-					HotKeyManager.HotKey="Alt+F2" 
-					Header="Code Flow" 
-					ToolTip.Tip="Alt-F2"
-					IsVisible="{Binding CfgCpuViewModel.IsCfgCpuEnabled}"
-					Content="{Binding CfgCpuViewModel}">
-				</TabItem>
-				<TabItem 
-					HotKeyManager.HotKey="Alt+F3" 
-					Header="CPU" 
-					ToolTip.Tip="Alt-F3" 
-					Content="{Binding CpuViewModel}">
-				</TabItem>
-				<TabItem HotKeyManager.HotKey="Alt+F4" Header="Memory" ToolTip.Tip="Alt-F4">
-					<TabControl ItemsSource="{Binding MemoryViewModels}">
-						<TabControl.ItemTemplate>
-							<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
-								<TextBlock Text="{Binding Header}" />
-							</DataTemplate>
-						</TabControl.ItemTemplate>
-					</TabControl>
-				</TabItem>
-				<TabItem HotKeyManager.HotKey="Alt+F5" Header="Devices" ToolTip.Tip="Alt-F5">
-					<TabControl>
-						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" ToolTip.Tip="Alt-F7" Content="{Binding VideoCardViewModel}" />
-						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" ToolTip.Tip="Alt-F8" Content="{Binding PaletteViewModel}" />
-						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" ToolTip.Tip="Alt-F9" Content="{Binding MidiViewModel}" />
-						<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Software Mixer" ToolTip.Tip="Alt-F10" Content="{Binding SoftwareMixerViewModel}" />
-					</TabControl>
-				</TabItem>
-				<TabItem 
-					HotKeyManager.HotKey="Alt+F6" 
-					Header="Breakpoints" 
-					ToolTip.Tip="Alt-F6" 
-					Content="{Binding BreakpointsViewModel}">
-				</TabItem>
-			</up:RearrangeTabControl>
-		</up:DockSpacePanel>
+		<DockControl Grid.Row="1" InitializeLayout="True" InitializeFactory="True">
+			<DockControl.Factory>
+				<Factory />
+			</DockControl.Factory>
+			<RootDock IsCollapsable="False">
+				<DocumentDock CanCreateDocument="False">
+					<Document Id="Disassembly" Title="Disassembly" HotKeyManager.HotKey="Alt+F1">
+						<TabControl ItemsSource="{Binding $parent[Window].DataContext.DisassemblyViewModels}">
+							<TabControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+									<TextBlock Text="{Binding Header}" />
+								</DataTemplate>
+							</TabControl.ItemTemplate>
+							<TabControl.ContentTemplate>
+								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
+									<ContentPresenter Content="{Binding}" />
+								</DataTemplate>
+							</TabControl.ContentTemplate>
+						</TabControl>
+					</Document>
+					<Document 
+						Id="CodeFlow" 
+						Title="Code Flow" 
+						HotKeyManager.HotKey="Alt+F2">
+						<ContentPresenter Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
+					</Document>
+					<Document 
+						Id="Cpu" 
+						Title="CPU" 
+						HotKeyManager.HotKey="Alt+F3">
+						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
+					</Document>
+					<Document Id="Memory" Title="Memory" HotKeyManager.HotKey="Alt+F4">
+						<TabControl ItemsSource="{Binding $parent[Window].DataContext.MemoryViewModels}">
+							<TabControl.ItemTemplate>
+								<DataTemplate DataType="{x:Type vm:MemoryViewModel}">
+									<TextBlock Text="{Binding Header}" />
+								</DataTemplate>
+							</TabControl.ItemTemplate>
+						</TabControl>
+					</Document>
+					<Document Id="Devices" Title="Devices" HotKeyManager.HotKey="Alt+F5">
+						<TabControl DataContext="{Binding $parent[Window].DataContext}">
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F7" Header="Video Card" Content="{Binding VideoCardViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F8" Header="Color Palette" Content="{Binding PaletteViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F9" Header="General MIDI / MT-32" Content="{Binding MidiViewModel}" />
+							<controls:HotKeyTabItem HotKeyManager.HotKey="Alt+F10" Header="Software Mixer" Content="{Binding SoftwareMixerViewModel}" />
+						</TabControl>
+					</Document>
+					<Document 
+						Id="Breakpoints" 
+						Title="Breakpoints" 
+						HotKeyManager.HotKey="Alt+F6">
+						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
+					</Document>
+				</DocumentDock>
+			</RootDock>
+		</DockControl>
 		<views:StatusMessageView Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" DataContext="{Binding StatusMessageViewModel}" />
 	</Grid>
 </Window>
