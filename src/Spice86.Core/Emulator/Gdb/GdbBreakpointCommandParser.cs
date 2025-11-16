@@ -152,12 +152,6 @@ public class GdbBreakpointCommandParser {
                 }
                 // Continue without condition if compilation fails
                 conditionExpression = null;
-            } catch (Exception ex) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning(ex, "Failed to compile condition expression: {Expression}", conditionExpression);
-                }
-                // Continue without condition if compilation fails
-                conditionExpression = null;
             }
         }
 
