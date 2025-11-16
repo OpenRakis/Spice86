@@ -489,8 +489,9 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 // If parsing fails, treat as unconditional and clear the expression
                 // Future enhancement: show error in UI with ex.Position to indicate where the error is
                 conditionExpression = null;
-            } catch (Exception) {
+            } catch (Exception ex) {
                 // If compilation fails for other reasons, treat as unconditional
+                _loggerService.Error(ex, "Unexpected error compiling breakpoint condition expression: {Expression}", conditionExpression);
                 conditionExpression = null;
             }
         }
