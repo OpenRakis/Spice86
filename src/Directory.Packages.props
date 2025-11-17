@@ -21,6 +21,10 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.10.10" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.9.3" />
+    <PackageVersion Include="Dock.Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageVersion Include="Dock.Model.Avalonia" Version="11.3.8" />
+    <PackageVersion Include="Dock.Model.Mvvm" Version="11.3.8" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia.Fluent" Version="1.2.313" />
     <PackageVersion Include="Iced" Version="1.21.0" />
@@ -36,6 +40,7 @@
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.12.9" />
     <PackageVersion Include="Semi.Avalonia" Version="11.3.7" />
     <PackageVersion Include="Semi.Avalonia.DataGrid" Version="11.3.7" />
+    <PackageVersion Include="Semi.Avalonia.Dock" Version="11.3.2" />
     <PackageVersion Include="Semi.Avalonia.TreeDataGrid" Version="11.0.10.4" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
