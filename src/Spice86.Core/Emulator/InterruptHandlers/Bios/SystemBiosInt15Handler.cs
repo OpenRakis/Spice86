@@ -53,6 +53,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0xC4, Unsupported);
         AddAction(0x88, () => GetExtendedMemorySize(true));
         AddAction(0x87, () => CopyExtendedMemory(true));
+        AddAction(0x4F, () => KeyboardIntercept(true));
     }
 
     /// <inheritdoc />
@@ -229,5 +230,26 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // We are not an IBM PS/2
         SetCarryFlag(true, true);
         State.AH = 0x86;
+    }
+
+    /// <summary>
+    /// INT 15h, AH=4Fh - Keyboard intercept function
+    /// Called by the INT 9 handler to allow translation or filtering of keyboard scan codes.
+    /// </summary>
+    /// <remarks>
+    /// Input: AL = scan code
+    /// Output: CF clear if scan code should be ignored
+    ///         CF set if scan code should be processed
+    ///         AL = possibly modified scan code
+    /// </remarks>
+    public void KeyboardIntercept(bool calledFromVm) {
+        byte scanCode = State.AL;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("INT 15h AH=4Fh: Keyboard intercept called with scan code {ScanCode:X2}", scanCode);
+        }
+
+        // By default, we want to process the scan code (so set carry flag)
+        // A real keyboard hook could modify AL or clear CF here to alter behavior
+        SetCarryFlag(true, calledFromVm);
     }
 }
