@@ -434,6 +434,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <remarks>
     /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
     /// </remarks>
+    /// TODO: bugged! inline ASM maybe..does not WAIT for the keyboard...
     public void BufferedInput() {
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);

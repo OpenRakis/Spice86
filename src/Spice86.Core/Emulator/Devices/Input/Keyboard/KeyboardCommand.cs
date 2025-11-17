@@ -151,7 +151,12 @@ public enum KeyboardCommand : byte {
     /// <summary>
     /// Enable keyboard port
     /// </summary>
-    EnablePortKbd = 0xAE,
+    EnableKeyboardPort = 0xAE,
+
+    /// <summary>
+    /// Obsolete, only some controllers implement it.
+    /// </summary>
+    ReadKeyboardVersion = 0xAF,
 
     /// <summary>
     /// Read input port
@@ -196,12 +201,12 @@ public enum KeyboardCommand : byte {
     /// <summary>
     /// Disable A20 Address Line
     /// </summary>
-    DisableA20Gate = 0xDD,
+    DisableA20 = 0xDD,
 
     /// <summary>
     /// Enable A20 Address Line
     /// </summary>
-    EnableA20Gate = 0xDF,
+    EnableA20 = 0xDF,
 
     /// <summary>
     /// Read test inputs

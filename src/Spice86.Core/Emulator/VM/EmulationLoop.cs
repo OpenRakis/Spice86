@@ -42,7 +42,7 @@ public class EmulationLoop : ICyclesLimiter {
     private bool _sliceInitialized;
     private readonly long _sliceDurationTicks;
     private readonly ICyclesBudgeter _cyclesBudgeter;
-    private readonly InputEventQueue _inputEventQueue;
+    private readonly InputEventHub _inputEventQueue;
 
     /// <summary>
     ///     Gets a reader exposing CPU performance metrics.
@@ -80,7 +80,7 @@ public class EmulationLoop : ICyclesLimiter {
         ExecutionStateSlice executionStateSlice, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ICyclesLimiter cyclesLimiter,
-        InputEventQueue inputEventQueue, ICyclesBudgeter cyclesBudgeter,
+        InputEventHub inputEventQueue, ICyclesBudgeter cyclesBudgeter,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         _cpu = cpu;

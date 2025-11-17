@@ -7,21 +7,22 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
 /// Used by the emulation loop thread to avoid the UI thread modifying keyboard state via events,
-/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Keyboard"/> class. <br/>
+/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
 /// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
 /// </summary>
 /// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 
 /// around implementations of <see cref="IGuiKeyboardEvents"/> and <see cref="IGuiMouseEvents"/> to capture  and queue
 /// their events. The queued events can then be processed one at a time using the  <see cref="ProcessAllPendingInputEvents"/> method.
-/// The <see cref="InputEventQueue"/> also exposes properties and methods for interacting with mouse  coordinates and
+/// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
 /// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
-public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents {
-    private readonly Queue<Action> _eventQueue = new();
+public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
+    // a thread-safe queue, accessed by both UI thread and emulation thread.
+    private readonly ConcurrentQueue<Action> _eventQueue = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 
@@ -31,7 +32,7 @@ public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents {
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public InputEventQueue(IGuiKeyboardEvents? keyboardEvents = null,
+    public InputEventHub(IGuiKeyboardEvents? keyboardEvents = null,
         IGuiMouseEvents? mouseEvents = null) {
         if (keyboardEvents is not null) {
             _keyboardEvents = keyboardEvents;
