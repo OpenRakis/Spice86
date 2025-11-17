@@ -22,8 +22,6 @@ using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
-using IMouseDevice = Core.Emulator.InterruptHandlers.Input.Mouse.IMouseDevice;
-using Key = Spice86.Shared.Emulator.Keyboard.Key;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
@@ -34,7 +32,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
     private readonly IHostStorageProvider _hostStorageProvider;
-    private readonly AvaloniaKeyScanCodeConverter _avaloniaKeyScanCodeConverter;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
     private readonly ICyclesLimiter _cyclesLimiter;
@@ -98,7 +95,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _pit = pit;
         _performanceViewModel = performanceViewModel;
         _exceptionHandler = exceptionHandler;
-        _avaloniaKeyScanCodeConverter = new AvaloniaKeyScanCodeConverter();
         Configuration = configuration;
         _loggerService = loggerService;
         _hostStorageProvider = hostStorageProvider;
@@ -145,18 +141,15 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
+
     internal void OnKeyUp(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
             return;
         }
-        KeyUp?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                false,
-                _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyReleasedScancode((Key)e.Key))));
-    }
 
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
+        KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
+    }
     [RelayCommand]
     private async Task SaveBitmap() {
         if (Bitmap is not null) {
@@ -202,12 +195,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         if (_pauseHandler.IsPaused) {
             return;
         }
-        KeyDown?.Invoke(this,
-            new KeyboardEventArgs((Key)e.Key,
-                true,
-                _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key),
-                _avaloniaKeyScanCodeConverter.GetAsciiCode(
-                    _avaloniaKeyScanCodeConverter.GetKeyPressedScancode((Key)e.Key))));
+
+        // Use PhysicalKey from Avalonia which represents the physical keyboard location
+        KeyDown?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: true));
     }
 
     [ObservableProperty]
