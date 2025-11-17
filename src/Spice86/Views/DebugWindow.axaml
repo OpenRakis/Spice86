@@ -36,7 +36,8 @@
 		<factory:ViewLocator />
 	</Window.DataTemplates>
 	<Window.Styles>
-		<StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />
+		<!-- conflicts with semi theme for the same library, makes the docks headers only visible on mouse hover -->
+		<!--<StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />-->
 		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
