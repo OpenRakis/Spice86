@@ -7,9 +7,6 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 /// A20 Gate commands: <br/>
 /// - https://mrhopehub.github.io/2014/12/26/enabling-the-A20-Gate.html <br/>
 /// </summary>
-/// <remarks>
-/// Most of them are unimplemented right now.
-/// </remarks>
 public enum KeyboardCommand : byte {
     /// <summary>
     /// No command set.
