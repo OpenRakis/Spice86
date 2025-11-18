@@ -23,6 +23,19 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     private readonly SystemBiosInt15Handler _systemBiosInt15Handler;
     private readonly DualPic _dualPic;
 
+    private const byte Acknowledge = 0xFA;
+    private const byte ExtendedKeySpecial = 0xE1;
+    private const byte ExtendedKey = 0xE0;
+    private const byte CtrlReleased = 0x9D;
+    private const byte LeftShiftReleased = 0xAA;
+    private const byte RightShiftReleased = 0xB6;
+    private const byte KeypadMultiplyReleased = 0xB7;
+    private const byte AltReleased = 0xB8;
+    private const byte CapsLockReleased = 0xBA;
+    private const byte NumLockReleased = 0xC5;
+    private const byte ScrollLockReleased = 0xC6;
+    private const byte InsertReleased = 0xD2;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -307,16 +320,16 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     private void UpdateKeyboardFlagsByInterpretingScanCode(byte scanCode, KeyboardState keyboardState) {
         switch (scanCode) {
-            case 0xfa:  /* Acknowledge */
+            case Acknowledge:
                 keyboardState.Leds |= 0x10;
                 break;
-            case 0xe1:  /* Extended key special. Only pause uses this */
+            case ExtendedKeySpecial:
                 keyboardState.Flags3 |= 0x01;
                 break;
-            case 0xe0:                      /* Extended key */
+            case ExtendedKey:
                 keyboardState.Flags3 |= 0x02;
                 break;
-            case 0x1d:                      /* Ctrl Pressed */
+            case (byte)ScanCode1.LeftCtrl:
                 if ((keyboardState.Flags3 & 0x01) == 0) {
                     keyboardState.Flags1 |= 0x04;
                     if ((keyboardState.Flags3 & 0x02) != 0) {
@@ -326,7 +339,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     }
                 }   /* else it's part of the pause scancodes */
                 break;
-            case 0x9d:                      /* Ctrl Released */
+            case CtrlReleased:
                 if ((keyboardState.Flags3 & 0x01) == 0) {
                     if ((keyboardState.Flags3 & 0x02) != 0) {
                         keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x04);
@@ -338,32 +351,32 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     }
                 }
                 break;
-            case 0x2a:                      /* Left Shift Pressed */
+            case (byte)ScanCode1.LeftShift:
                 keyboardState.Flags1 |= 0x02;
                 break;
-            case 0xaa:                      /* Left Shift Released */
+            case LeftShiftReleased:
                 keyboardState.Flags1 = (byte)(keyboardState.Flags1 & ~0x02);
                 break;
-            case 0x36:                      /* Right Shift Pressed */
+            case (byte)ScanCode1.RightShift:
                 keyboardState.Flags1 |= 0x01;
                 break;
-            case 0xb6:                      /* Right Shift Released */
+            case RightShiftReleased:
                 keyboardState.Flags1 = (byte)(keyboardState.Flags1 & ~0x01);
                 break;
-            case 0x37:                      /* Keypad * or PrtSc Pressed */
+            case (byte)ScanCode1.KpMultiply:
                 if ((keyboardState.Flags3 & 0x02) == 0) {
                     HandleNormalKey(scanCode, keyboardState);
                     break;
                 }
                 // TODO: Not implemented -> call INT 0x5
                 break;
-            case 0xb7:                      /* Keypad * or PrtSc Released */
+            case KeypadMultiplyReleased:
                 if ((keyboardState.Flags3 & 0x02) == 0) {
                     HandleNormalKey(scanCode, keyboardState);
                     break;
                 }
                 break;
-            case 0x38:                      /* Alt Pressed */
+            case (byte)ScanCode1.LeftAlt:
                 keyboardState.Flags1 |= 0x08;
                 if ((keyboardState.Flags3 & 0x02) != 0) {
                     keyboardState.Flags3 |= 0x08;
@@ -371,7 +384,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags2 |= 0x02;
                 }
                 break;
-            case 0xb8:                      /* Alt Released */
+            case AltReleased:
                 if ((keyboardState.Flags3 & 0x02) != 0) {
                     keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x08);
                 } else {
@@ -386,14 +399,14 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     }
                 }
                 break;
-            case 0x3a: // CAPSLOCK
+            case (byte)ScanCode1.CapsLock:
                 keyboardState.Flags2 |= 0x40;
                 HandleCapsLock(keyboardState);
                 break;
-            case 0xba:
+            case CapsLockReleased:
                 HandleCapsLock(keyboardState);
                 break;
-            case 0x45:
+            case (byte)ScanCode1.NumLock:
                 if ((keyboardState.Flags3 & 0x01) != 0) {
                     /* last scancode of pause received; first remove 0xe1-prefix */
                     keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x01);
@@ -407,6 +420,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                         /* normal pause key */
                         _biosDataArea.KeyboardStatusFlag2 = (byte)(keyboardState.Flags2 | 8);
                         // busy loop until Pause is used again is not implemented
+                        // also real bios does not deal with printScreen this way
+                        // see  HARDWARE INT 09 H - ( IRQ LEVEL 1 )
+                        // https://github.com/NadeenUdantha/bios/blob/master/keybd.asm
                         return;
                     }
                 } else {
@@ -414,7 +430,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags2 |= 0x20;
                 }
                 break;
-            case 0xc5:
+            case NumLockReleased:
                 if ((keyboardState.Flags3 & 0x01) != 0) {
                     /* pause released */
                     keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x01);
@@ -424,12 +440,11 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x20);
                 }
                 break;
-            case 0x46: keyboardState.Flags2 |= 0x10;
-                break;               /* Scroll Lock */
-            case 0xc6: keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
+            case (byte)ScanCode1.ScrollLock: keyboardState.Flags2 |= 0x10;
                 break;
-            //case 0x52:flags2|=128;break;//See numpad					/* Insert */
-            case 0xd2:
+            case ScrollLockReleased: keyboardState.Flags1 ^= 0x10; keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x10); keyboardState.Leds ^= 0x01;
+                break;
+            case InsertReleased:
                 if ((keyboardState.Flags3 & 0x02) != 0) { /* Maybe honour the insert on keypad as well */
                     keyboardState.Flags1 ^= 0x80;
                     keyboardState.Flags2 = (byte)(keyboardState.Flags2 & ~0x80);
@@ -438,19 +453,19 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                     HandleIrq1End(scanCode, keyboardState); /*Normal release*/
                     return;
                 }
-            case 0x47:      /* Numpad */
-            case 0x48:
-            case 0x49:
-            case 0x4b:
-            case 0x4c:
-            case 0x4d:
-            case 0x4f:
-            case 0x50:
-            case 0x51:
-            case 0x52:
-            case 0x53: /* del . Not entirely correct, but works fine */
+            case (byte)ScanCode1.Kp7:
+            case (byte)ScanCode1.Kp8:
+            case (byte)ScanCode1.Kp9:
+            case (byte)ScanCode1.Kp4:
+            case (byte)ScanCode1.Kp5:
+            case (byte)ScanCode1.Kp6:
+            case (byte)ScanCode1.Kp1:
+            case (byte)ScanCode1.Kp2:
+            case (byte)ScanCode1.Kp3:
+            case (byte)ScanCode1.Kp0:
+            case (byte)ScanCode1.KpPeriod:
                 if ((keyboardState.Flags3 & 0x02) != 0) { /*extend key. e.g key above arrows or arrows*/
-                    if (scanCode == 0x52) {
+                    if (scanCode == (byte)ScanCode1.Kp0) {
                         keyboardState.Flags2 |= 0x80; /* press insert */
                     }
                     if ((keyboardState.Flags1 & 0x08) != 0) {
@@ -488,7 +503,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     }
 
     private static void HandleIrq1End(byte scanCode, KeyboardState keyboardState) {
-        if (scanCode != 0xe0) {
+        if (scanCode != ExtendedKey) {
             keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x02); //Reset 0xE0 Flag
         }
         if ((scanCode & 0x80) == 0) {
@@ -533,9 +548,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         }
         if ((keyboardState.Flags3 & 0x02) != 0) {
             /* extended key (numblock), return and slash need special handling */
-            if (scanCode == 0x1c) { /* return */
+            if (scanCode == (byte)ScanCode1.Enter) {
                 asciiscan = (keyboardState.Flags1 & 0x08) != 0 ? (ushort)0xa600 : (ushort)((asciiscan & 0xff) | 0xe000);
-            } else if (scanCode == 0x35) {  /* slash */
+            } else if (scanCode == (byte)ScanCode1.Slash) {
                 if ((keyboardState.Flags1 & 0x08) != 0) {
                     asciiscan = 0xa400;
                 } else if ((keyboardState.Flags1 & 0x04) != 0) {
