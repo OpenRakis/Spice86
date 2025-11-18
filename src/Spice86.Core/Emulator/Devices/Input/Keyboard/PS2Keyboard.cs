@@ -79,16 +79,13 @@ public partial class PS2Keyboard {
         _dualPic.AddEvent(_typematicTickHandler, 0.001);
 
         KeyboardReset(isStartup: true);
+        SetCodeSet(1);
 
         _gui = gui;
         if (_gui is not null) {
             _gui.KeyDown += OnKeyEvent;
             _gui.KeyUp += OnKeyEvent;
         }
-
-        const bool IsStartup = true;
-        KeyboardReset(IsStartup);
-        SetCodeSet(1);
     }
 
     private void WarnResend() {
