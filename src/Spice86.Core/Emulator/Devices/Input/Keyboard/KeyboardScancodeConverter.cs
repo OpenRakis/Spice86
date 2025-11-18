@@ -6,7 +6,8 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 
 /// <summary>
-/// Converts between KbdKey enum and keyboard scancodes for different code sets.
+/// Converts physical keyboard keys to PC keyboard key values and retrieving corresponding
+/// scancode sequences for various IBM keyboard scancode sets.
 /// </summary>
 public class KeyboardScancodeConverter {
     private static readonly FrozenDictionary<PhysicalKey, PcKeyboardKey> _keyToKbdKey = new Dictionary<PhysicalKey, PcKeyboardKey>() {
@@ -75,16 +76,25 @@ public class KeyboardScancodeConverter {
     }.ToFrozenDictionary();
 
     /// <summary>
-    /// Gets the KbdKey equivalent for an Avalonia Key
+    /// Converts a specified physical key to its corresponding PC keyboard key value.
     /// </summary>
+    /// <param name="key">The physical key to convert to a PC keyboard key.</param>
+    /// <returns>The corresponding <see cref="PcKeyboardKey"/> value if the mapping exists; otherwise, <see
+    /// cref="PcKeyboardKey.None"/>.</returns>
     public PcKeyboardKey ConvertToKbdKey(PhysicalKey key) {
         return _keyToKbdKey.TryGetValue(key, out PcKeyboardKey kbdKey) ? kbdKey : PcKeyboardKey.None;
     }
 
     /// <summary>
-    /// Gets all scancodes for a key based on the specified code set
-    /// Equivalent to DOSBox KEYBOARD_GetScanCode1/2/3 functions
+    /// Gets the sequence of scancodes corresponding to the specified PC keyboard key, key state, and scancode set.
     /// </summary>
+    /// <param name="keyType">The keyboard key for which to retrieve scancodes. Must not be PcKeyboardKey.None.</param>
+    /// <param name="isPressed">A value indicating whether the key is being pressed (<see langword="true"/>) or released (<see
+    /// langword="false"/>).</param>
+    /// <param name="codeSet">The scancode set to use. Valid values are 1, 2, or 3. If an unsupported value is specified, set 1 is used by
+    /// default.</param>
+    /// <returns>A list of bytes representing the scancode sequence for the specified key and state. Returns an empty list if
+    /// <paramref name="keyType"/> is PcKeyboardKey.None.</returns>
     public List<byte> GetScancodes(PcKeyboardKey keyType, bool isPressed, byte codeSet) {
         if (keyType == PcKeyboardKey.None) {
             return [];
