@@ -10,21 +10,37 @@ public partial class Intel8042Controller {
     public sealed class ConfigByte {
         public ConfigByte(byte initial = 0) => FromByte(initial);
 
-        // bit0: keyboard IRQ enabled (IRQ1)
+        /// <summary>
+        /// bit0: keyboard IRQ enabled (IRQ1)
+        /// </summary>
         public bool KbdIrqEnabled { get; set; }
-        // bit1: mouse IRQ enabled (IRQ12)
+        /// <summary>
+        /// bit1: mouse IRQ enabled (IRQ12)
+        /// </summary>
         public bool MouseIrqEnabled { get; set; }
-        // bit2: self-test passed
+        /// <summary>
+        /// bit2: self-test passed
+        /// </summary>
         public bool SelfTestPassed { get; set; }
-        // bit3: reserved
+        /// <summary>
+        /// bit3: reserved
+        /// </summary>
         public bool Reserved3 { get; set; }
-        // bit4: keyboard port disabled
+        /// <summary>
+        /// bit4: keyboard port disabled
+        /// </summary>
         public bool IsKeyboardPortDisabled { get; set; }
-        // bit5: aux (mouse) port disabled
+        /// <summary>
+        /// bit5: aux (mouse) port disabled
+        /// </summary>
         public bool IsAuxPortDisabled { get; set; }
-        // bit6: translation enabled (AT -> XT)
+        /// <summary>
+        /// bit6: translation enabled (AT -> XT)
+        /// </summary>
         public bool TranslationEnabled { get; set; }
-        // bit7: reserved
+        /// <summary>
+        /// bit7: reserved
+        /// </summary>
         public bool Reserved7 { get; set; }
 
         public byte ToByte() {
