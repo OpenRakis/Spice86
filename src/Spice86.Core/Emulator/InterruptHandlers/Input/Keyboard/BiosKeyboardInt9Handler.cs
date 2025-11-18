@@ -306,7 +306,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         }
 
         /// <summary>
-        /// Gets the key codes for a specific scan code - direct port of DOSBox's get_key_codes_for function
+        /// Gets the key codes for a specific scan code
         /// </summary>
         /// <param name="scanCode">The keyboard scan code</param>
         /// <returns>The key codes structure for the scan code</returns>
