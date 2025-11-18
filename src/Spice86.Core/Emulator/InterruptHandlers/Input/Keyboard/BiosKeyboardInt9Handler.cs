@@ -12,7 +12,6 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 using System.Collections.Frozen;
-using System.Diagnostics;
 
 /// <summary>
 /// Implementation of BIOS keyboard buffer handler (hardware interrupt 0x9, IRQ1)
