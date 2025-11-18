@@ -6,8 +6,8 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 
 /// <summary>
-/// Converts physical keyboard keys to PC keyboard key values and retrieving corresponding
-/// scancode sequences for various IBM keyboard scancode sets.
+/// Converts UI PhysicalKey to internal PcKeyboardKey and ultimately returns the corresponding
+/// scancode sequences for IBM Code Set 1.
 /// </summary>
 public class KeyboardScancodeConverter {
     private static readonly FrozenDictionary<PhysicalKey, PcKeyboardKey> _keyToKbdKey = new Dictionary<PhysicalKey, PcKeyboardKey>() {
