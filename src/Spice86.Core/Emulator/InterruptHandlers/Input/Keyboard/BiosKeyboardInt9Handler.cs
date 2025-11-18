@@ -60,19 +60,17 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        // Disable keyboard port only around the single read
+        // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
 
-        // Optional: log entry status for debugging
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
             byte st = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
             LoggerService.Debug("INT09: entry ST=0x{St:X2}", st);
         }
 
-        // Read scancode
         byte scancode = _ps2Controller.ReadByte(KeyboardPorts.Data);
 
-        // Re-enable keyboard port immediately (like DOSBox CB_IRQ1 does)
+        // Re-enable keyboard port immediately - otherwise Prince of Persia doesn't like it!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnableKeyboardPort);
 
         if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
@@ -127,7 +125,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Direct port of DOSBox's KeyCodes structure for keyboard scan code mappings.
+    /// Structure for keyboard scan code mappings.
     /// Each mapping is a ushort where the high byte contains the scan code and the low byte contains the ASCII code.
     /// </summary>
     public record KeyCodes {
@@ -163,7 +161,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Provides keyboard scan code to key code mappings, direct port of DOSBox's get_key_codes_for function.
+    /// Provides keyboard scan code to key code mappings.
     /// Maps hardware scan codes (from PS/2 keyboard) to BIOS key codes where each ushort value has
     /// the scan code in the high byte and ASCII character code in the low byte.
     /// </summary>
@@ -499,7 +497,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         }
         ;
     irq1_end:
-        if (scanCode != 0xe0) keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x02);                                    //Reset 0xE0 Flag
+        if (scanCode != 0xe0) keyboardState.Flags3 = (byte)(keyboardState.Flags3 & ~0x02); //Reset 0xE0 Flag
         if ((scanCode & 0x80) == 0) keyboardState.Flags2 &= 0xf7;
     }
 }
