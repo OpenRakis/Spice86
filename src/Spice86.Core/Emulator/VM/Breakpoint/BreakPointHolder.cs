@@ -140,7 +140,7 @@ public class BreakPointHolder {
         }
 
         breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
-        if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
+        if (breakPoint.IsEnabled && Volatile.Read(ref _activeBreakpoints) > 0) {
             Interlocked.Decrement(ref _activeBreakpoints);
         }
     }
@@ -148,7 +148,7 @@ public class BreakPointHolder {
     private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
         if (isEnabled) {
             Interlocked.Increment(ref _activeBreakpoints);
-        } else if (_activeBreakpoints > 0) {
+        } else if (Volatile.Read(ref _activeBreakpoints) > 0) {
             Interlocked.Decrement(ref _activeBreakpoints);
         }
     }
