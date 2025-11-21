@@ -153,8 +153,12 @@ public class InstructionExecutionHelper {
     /// <param name="instruction"></param>
     /// <param name="vectorNumber"></param>
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
+        // Trigger breakpoint before moving IP so the UI shows the INT instruction
+        _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
-        HandleInterruptCall(instruction, vectorNumber);
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -166,6 +170,10 @@ public class InstructionExecutionHelper {
     
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
         _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        return DoInterruptWithoutBreakpoint(vectorNumber);
+    }
+
+    private (SegmentedAddress, SegmentedAddress) DoInterruptWithoutBreakpoint(byte vectorNumber) {
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
         if (target.Segment == 0 && target.Offset == 0) {
             throw new UnhandledOperationException(State,
