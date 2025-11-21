@@ -14,7 +14,7 @@ public class BreakPointHolder {
     /// <summary>
     /// Gets a value indicating whether at least one breakpoint is currently enabled.
     /// </summary>
-    public bool HasActiveBreakpoints => _activeBreakpoints > 0;
+    public bool HasActiveBreakpoints => Volatile.Read(ref _activeBreakpoints) > 0;
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
         return _addressBreakPoints.Values
@@ -129,7 +129,7 @@ public class BreakPointHolder {
 
         breakPoint.IsEnabledChanged += OnBreakPointIsEnabledChanged;
         if (breakPoint.IsEnabled) {
-            _activeBreakpoints++;
+            Interlocked.Increment(ref _activeBreakpoints);
         }
     }
 
@@ -140,15 +140,15 @@ public class BreakPointHolder {
 
         breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
         if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
-            _activeBreakpoints--;
+            Interlocked.Decrement(ref _activeBreakpoints);
         }
     }
 
     private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
         if (isEnabled) {
-            _activeBreakpoints++;
+            Interlocked.Increment(ref _activeBreakpoints);
         } else if (_activeBreakpoints > 0) {
-            _activeBreakpoints--;
+            Interlocked.Decrement(ref _activeBreakpoints);
         }
     }
 }
