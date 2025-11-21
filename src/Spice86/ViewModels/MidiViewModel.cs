@@ -17,6 +17,7 @@ public partial class MidiViewModel : ViewModelBase, IEmulatorObjectViewModel {
 
     public MidiViewModel(Midi externalMidiDevice) {
         _externalMidiDevice = externalMidiDevice;
+        IsVisible = true;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 

@@ -19,6 +19,7 @@ public partial class SoftwareMixerViewModel : ViewModelBase, IEmulatorObjectView
     
     public SoftwareMixerViewModel(SoftwareMixer softwareMixer) {
         _softwareMixer = softwareMixer;
+        IsVisible = true;
     }
 
     public bool IsVisible { get; set; }

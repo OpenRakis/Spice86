@@ -22,6 +22,7 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
         _storageProvider = storageProvider;
+        IsVisible = true;
     }
 
     public bool IsVisible { get; set; }

@@ -17,6 +17,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel 
     private readonly Dictionary<uint, Color> ColorsCache = new();
     public PaletteViewModel(ArgbPalette argbPalette, IUIDispatcher uiDispatcher) {
         _argbPalette = argbPalette;
+        IsVisible = true;
         DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Background, UpdateValues);
     }
 
