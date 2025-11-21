@@ -11,6 +11,13 @@ using Spice86.ViewModels.Services;
 using Xunit;
 
 public class PerformanceViewModelTest {
+    private static void TriggerUpdate(PerformanceViewModel viewModel) {
+        // Use reflection to call private UpdatePerformanceInfo method
+        var method = typeof(PerformanceViewModel).GetMethod("UpdatePerformanceInfo", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method?.Invoke(viewModel, new object?[] { null, EventArgs.Empty });
+    }
+
     [Fact]
     public void TestPerformanceViewModelUpdatesWhenNotPaused() {
         // Arrange
@@ -32,10 +39,7 @@ public class PerformanceViewModelTest {
         state.IncCycles();
         state.IncCycles();
         
-        // Use reflection to call private UpdatePerformanceInfo method
-        var method = typeof(PerformanceViewModel).GetMethod("UpdatePerformanceInfo", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        method?.Invoke(performanceViewModel, new object?[] { null, EventArgs.Empty });
+        TriggerUpdate(performanceViewModel);
 
         // Assert
         Assert.Equal(3, performanceViewModel.InstructionsExecuted);
@@ -59,10 +63,7 @@ public class PerformanceViewModelTest {
         state.IncCycles();
         state.IncCycles();
         
-        // Use reflection to call private UpdatePerformanceInfo method
-        var method = typeof(PerformanceViewModel).GetMethod("UpdatePerformanceInfo", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        method?.Invoke(performanceViewModel, new object?[] { null, EventArgs.Empty });
+        TriggerUpdate(performanceViewModel);
 
         // Assert: Should still be 0 because it's paused
         Assert.Equal(0, performanceViewModel.InstructionsExecuted);
