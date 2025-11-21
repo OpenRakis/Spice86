@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
 using System.Linq;
+using System.Threading;
 
 /// <summary>
 /// Holds breakpoints and triggers them when certain conditions are met.
