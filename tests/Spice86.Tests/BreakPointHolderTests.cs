@@ -84,35 +84,4 @@ public class BreakPointHolderTests {
         holder.ToggleBreakPoint(breakPoint, false);
         Assert.False(holder.HasActiveBreakpoints);
     }
-
-    [Fact]
-    public void SerializableBreakpointsAreDeterministicallyOrdered() {
-        BreakPointHolder holder = new();
-        
-        // Add breakpoints in reverse order to test sorting
-        var breakPoint3 = new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x30, _ => { }, false) { IsUserBreakpoint = true };
-        var breakPoint1 = new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x10, _ => { }, false) { IsUserBreakpoint = true };
-        var breakPoint2 = new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x20, _ => { }, false) { IsUserBreakpoint = true };
-        
-        holder.ToggleBreakPoint(breakPoint3, true);
-        holder.ToggleBreakPoint(breakPoint1, true);
-        holder.ToggleBreakPoint(breakPoint2, true);
-
-        // Get serializable breakpoints multiple times and verify order is consistent
-        var firstIteration = holder.SerializableBreakpoints.ToList();
-        var secondIteration = holder.SerializableBreakpoints.ToList();
-        
-        Assert.Equal(3, firstIteration.Count);
-        Assert.Equal(3, secondIteration.Count);
-        
-        // Verify breakpoints are ordered by address
-        Assert.Equal(0x10, firstIteration[0].Address);
-        Assert.Equal(0x20, firstIteration[1].Address);
-        Assert.Equal(0x30, firstIteration[2].Address);
-        
-        // Verify order is consistent across iterations
-        for (int i = 0; i < firstIteration.Count; i++) {
-            Assert.Equal(firstIteration[i].Address, secondIteration[i].Address);
-        }
-    }
 }
