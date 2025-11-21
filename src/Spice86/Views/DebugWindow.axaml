@@ -13,6 +13,7 @@
 	xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
 	xmlns:dockModel="clr-namespace:Dock.Model.Avalonia.Controls;assembly=Dock.Model.Avalonia"
 	xmlns:dockMvvm="clr-namespace:Dock.Model.Mvvm;assembly=Dock.Model.Mvvm"
+	xmlns:semi="https://irihi.tech/semi"
 	x:CompileBindings="True"
 	x:DataType="vm:DebugWindowViewModel"
 	WindowStartupLocation="CenterOwner"
@@ -38,6 +39,7 @@
 	<Window.Styles>
 		<!-- conflicts with semi theme for the same library, makes the docks headers only visible on mouse hover -->
 		<!--<StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml" />-->
+		<semi:DockSemiTheme />
 		<StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
 		<StyleInclude Source="avares://Semi.Avalonia.TreeDataGrid/Index.axaml" />
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />

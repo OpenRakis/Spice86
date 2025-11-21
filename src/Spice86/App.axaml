@@ -9,7 +9,6 @@
 	<Application.Styles>
 		<dialogHostAvalonia:DialogHostStyles />
 		<semi:SemiTheme Locale="en-US" />
-		<semi:DockSemiTheme />
 	</Application.Styles>
 
 </Application>
