@@ -231,6 +231,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
+
+    [ObservableProperty]
+    private double _pixelAspectRatioX = 1.0;
     
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {
@@ -281,6 +284,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
             _isSettingResolution = false;
             UpdateShownEmulatorMouseCursorPosition();
             InitializeRenderingTimer();
+        }, DispatcherPriority.Background);
+    }
+
+    public void SetPixelAspectRatio(double pixelAspectRatio) {
+        _uiDispatcher.Post(() => {
+            PixelAspectRatioX = pixelAspectRatio;
         }, DispatcherPriority.Background);
     }
 

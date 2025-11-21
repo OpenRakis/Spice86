@@ -41,6 +41,18 @@ public class Renderer : IVgaRenderer {
     public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
 
     /// <inheritdoc />
+    public double PixelAspectRatio {
+        get {
+            // For 320x200 modes (mode 13h and similar), pixels should have 5:4 aspect ratio for proper CRT display
+            // For other modes, pixels are square (1:1)
+            if (Width == 320 && Height == 200) {
+                return 5.0 / 4.0; // 1.25
+            }
+            return 1.0; // Square pixels for other modes
+        }
+    }
+
+    /// <inheritdoc />
     public int BufferSize { get; private set; }
 
     /// <inheritdoc />

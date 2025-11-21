@@ -121,11 +121,15 @@
 						ScaleY="{Binding Scale}">
 					</ScaleTransform>
 				</LayoutTransformControl.RenderTransform>
-				<Viewbox>
+				<Viewbox Stretch="Uniform">
 					<Image x:Name="Image"
 					    RenderOptions.BitmapInterpolationMode="None"
 					    Cursor="{Binding Cursor}"
-					    Source="{Binding Bitmap}" />
+					    Source="{Binding Bitmap}">
+						<Image.RenderTransform>
+							<ScaleTransform ScaleX="{Binding PixelAspectRatioX}" ScaleY="1" />
+						</Image.RenderTransform>
+					</Image>
 				</Viewbox>
 			</LayoutTransformControl>
 		</Viewbox>

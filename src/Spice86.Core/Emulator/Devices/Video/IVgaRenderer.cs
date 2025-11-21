@@ -15,6 +15,11 @@ public interface IVgaRenderer {
     int Height { get; }
 
     /// <summary>
+    ///     Gets the pixel aspect ratio (width/height) for proper CRT display.
+    /// </summary>
+    double PixelAspectRatio { get; }
+
+    /// <summary>
     ///     Gets the size of the buffer that was presented to the renderer.
     /// </summary>
     int BufferSize { get; }

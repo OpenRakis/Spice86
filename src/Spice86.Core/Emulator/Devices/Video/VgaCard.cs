@@ -29,6 +29,9 @@ public class VgaCard {
             _gui.RenderScreen += (_, e) => Render(e);
             // Init bitmaps, needed for GUI to start calling Render function
             _gui.SetResolution(_renderer.Width, _renderer.Height);
+            if (_gui is IScreenPresenter screenPresenter) {
+                screenPresenter.SetPixelAspectRatio(_renderer.PixelAspectRatio);
+            }
         }
     }
 
@@ -38,6 +41,9 @@ public class VgaCard {
             return true;
         }
         _gui?.SetResolution(_renderer.Width, _renderer.Height);
+        if (_gui is IScreenPresenter screenPresenter) {
+            screenPresenter.SetPixelAspectRatio(_renderer.PixelAspectRatio);
+        }
         // Wait for it to be applied
         while (_renderer.Width != _gui?.Width || _renderer.Height != _gui?.Height);
         // Report that resolution did not match
