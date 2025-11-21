@@ -17,8 +17,10 @@ public class BreakPointHolder {
     public bool HasActiveBreakpoints => _activeBreakpoints > 0;
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
-        return _addressBreakPoints.Values
-        .SelectMany(list => list).Concat(_unconditionalBreakPoints);
+        return _addressBreakPoints
+            .OrderBy(kvp => kvp.Key)
+            .SelectMany(kvp => kvp.Value)
+            .Concat(_unconditionalBreakPoints);
     }
 
     internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => GetAllBreakpoints().Where
