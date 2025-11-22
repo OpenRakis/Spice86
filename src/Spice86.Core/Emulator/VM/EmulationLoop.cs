@@ -204,23 +204,6 @@ public class EmulationLoop : ICyclesLimiter {
     }
 
     /// <summary>
-    ///     Runs emulation from <paramref name="startAddress" /> until <paramref name="endAddress" /> is reached
-    ///     or execution stops for another reason.
-    /// </summary>
-    /// <param name="startAddress">Address at which execution should begin.</param>
-    /// <param name="endAddress">Address at which execution should stop.</param>
-    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
-        _cpuState.IpSegmentedAddress = startAddress;
-        ResetSliceTimer();
-        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
-            bool runImmediately;
-            do {
-                runImmediately = RunSlice();
-            } while (runImmediately && _cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress);
-        }
-    }
-
-    /// <summary>
     ///     Increases the emulated CPU cycle budget.
     /// </summary>
     public void IncreaseCycles() {
