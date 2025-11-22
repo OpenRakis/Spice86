@@ -170,20 +170,15 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
-            if (!_dualPic.RunQueue()) {
+            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            _pauseHandler.WaitIfPaused();
+            _dualPic.RunQueue();
+            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
                 break;
             }
-
-            while (_cpuState.IsRunning && _executionStateSlice.CyclesUntilReevaluation > 0) {
-                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-                    _emulatorBreakpointsManager.TriggerBreakpoints();
-                }
-                _pauseHandler.WaitIfPaused();
-                _cpu.ExecuteNext();
-            }
+            _cpu.ExecuteNext();
         }
 
-        _dualPic.RunQueue();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
         return HandleSliceTiming();
@@ -199,23 +194,6 @@ public class EmulationLoop : ICyclesLimiter {
             _loggerService.Warning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
-        }
-    }
-
-    /// <summary>
-    ///     Runs emulation from <paramref name="startAddress" /> until <paramref name="endAddress" /> is reached
-    ///     or execution stops for another reason.
-    /// </summary>
-    /// <param name="startAddress">Address at which execution should begin.</param>
-    /// <param name="endAddress">Address at which execution should stop.</param>
-    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
-        _cpuState.IpSegmentedAddress = startAddress;
-        ResetSliceTimer();
-        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
-            bool runImmediately;
-            do {
-                runImmediately = RunSlice();
-            } while (runImmediately && _cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress);
         }
     }
 

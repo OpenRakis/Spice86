@@ -5,6 +5,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
+using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
@@ -104,14 +105,11 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-    public bool HasActiveBreakpoints =>
-        _executionBreakPoints.HasActiveBreakpoints || _cycleBreakPoints.HasActiveBreakpoints;
-
     /// <summary>
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
-    public void TriggerBreakpoints() {
-        if (_executionBreakPoints.HasActiveBreakpoints) {
+    public void CheckExecutionBreakPoints() {
+        if (!_executionBreakPoints.IsEmpty) {
             uint address;
             // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
             bool triggered;
@@ -121,7 +119,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             } while (triggered && address != _state.IpPhysicalAddress);
         }
 
-        if (_cycleBreakPoints.HasActiveBreakpoints) {
+        if (!_cycleBreakPoints.IsEmpty) {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
@@ -164,8 +162,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             long end = start;
             BreakPointType type = sorted[i].BreakPointType;
 
-            while (i + 1 < sorted.Count && 
-                   sorted[i + 1].Address == end + 1 && 
+            while (i + 1 < sorted.Count &&
+                   sorted[i + 1].Address == end + 1 &&
                    sorted[i + 1].BreakPointType == type) {
                 end = sorted[++i].Address;
             }
