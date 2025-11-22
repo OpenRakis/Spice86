@@ -174,11 +174,12 @@ public class EmulationLoop : ICyclesLimiter {
                 break;
             }
 
-            while (_cpuState.IsRunning && _executionStateSlice.CyclesUntilReevaluation > 0) {
-                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-                    _emulatorBreakpointsManager.TriggerBreakpoints();
-                }
+            while (_cpuState.IsRunning) {
+                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
                 _pauseHandler.WaitIfPaused();
+                if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
+                    break;
+                }
                 _cpu.ExecuteNext();
             }
         }
