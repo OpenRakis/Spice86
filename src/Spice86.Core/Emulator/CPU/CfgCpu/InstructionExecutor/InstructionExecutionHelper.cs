@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -26,6 +27,7 @@ public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
     private readonly BreakPointHolder _interruptBreakPoints;
     private readonly ExecutionContextManager _executionContextManager;
+    private readonly IPauseHandler _pauseHandler;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
@@ -33,6 +35,7 @@ public class InstructionExecutionHelper {
         CallbackHandler callbackHandler,
         BreakPointHolder interruptBreakPoints,
         ExecutionContextManager executionContextManager,
+        IPauseHandler pauseHandler,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -46,6 +49,7 @@ public class InstructionExecutionHelper {
         CallbackHandler = callbackHandler;
         _interruptBreakPoints = interruptBreakPoints;
         _executionContextManager = executionContextManager;
+        _pauseHandler = pauseHandler;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -155,6 +159,9 @@ public class InstructionExecutionHelper {
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
         // Trigger breakpoint before moving IP so the UI shows the INT instruction
         _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        // Wait if paused immediately after breakpoint triggers, before modifying State.IP
+        // This ensures the debugger sees State.IP pointing to the INT instruction
+        _pauseHandler.WaitIfPaused();
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
