@@ -170,21 +170,15 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
-            if (!_dualPic.RunQueue()) {
+            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            _pauseHandler.WaitIfPaused();
+            _dualPic.RunQueue();
+            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
                 break;
             }
-
-            while (_cpuState.IsRunning) {
-                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
-                _pauseHandler.WaitIfPaused();
-                if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
-                    break;
-                }
-                _cpu.ExecuteNext();
-            }
+            _cpu.ExecuteNext();
         }
 
-        _dualPic.RunQueue();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
         return HandleSliceTiming();
