@@ -60,14 +60,14 @@ public class InterruptBreakpointIpTests {
         Assert.NotNull(capturedInCallback);
         Assert.NotNull(capturedInPausedEvent);
         
-        // Verify that RequestPause was called (evidenced by the Paused event firing)
-        // Note: In CfgCpu, State.IP is modified during instruction execution,
-        // so by the time the breakpoint callback executes, IP has already moved.
-        // The UI should capture the IP when the Paused event fires and use that
-        // for display purposes. This is a known architectural difference in CfgCpu.
+        // With the Core fix, State.IP should point to the INT instruction when breakpoint fires
+        // Verify that the byte at the captured IP is 0xCD (INT opcode)
+        byte opcodeAtCallbackIp = memory.UInt8[MemoryUtils.ToPhysicalAddress(capturedInCallback.Value.Segment, capturedInCallback.Value.Offset)];
+        Assert.Equal(0xCD, opcodeAtCallbackIp);
         
-        // For now, we just verify the breakpoint mechanism works
-        Assert.True(true, "Interrupt breakpoint properly triggered pause handler");
+        // The Paused event should also see the correct IP
+        byte opcodeAtPausedEventIp = memory.UInt8[MemoryUtils.ToPhysicalAddress(capturedInPausedEvent.Value.Segment, capturedInPausedEvent.Value.Offset)];
+        Assert.Equal(0xCD, opcodeAtPausedEventIp);
     }
 
     private static Spice86DependencyInjection CreateEmulatorWithIntInstruction(bool enableCfgCpu) {
