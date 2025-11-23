@@ -3,6 +3,7 @@ namespace Spice86.Tests;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
@@ -18,12 +19,16 @@ public class InterruptBreakpointIpTests {
     [Fact]
     public void TestInterruptBreakpointCallsPauseHandler() {
         // Test with CfgCpu only (regular CPU will be removed)
-        using Spice86DependencyInjection spice86DependencyInjection = CreateEmulatorWithIntInstruction(enableCfgCpu: true);
-        State state = spice86DependencyInjection.Machine.CpuState;
-        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
+        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt",
+            enableCfgCpu: true,
+            installInterruptVectors: true).Create();
+        
+        Machine machine = spice86DependencyInjection.Machine;
+        State state = machine.CpuState;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
-        IMemory memory = spice86DependencyInjection.Machine.Memory;
-        var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
+        IMemory memory = machine.Memory;
+        var pauseHandler = machine.PauseHandler;
 
         SegmentedAddress? capturedInCallback = null;
         SegmentedAddress? capturedInPausedEvent = null;
@@ -68,12 +73,5 @@ public class InterruptBreakpointIpTests {
         // The Paused event should also see the correct IP
         byte opcodeAtPausedEventIp = memory.UInt8[MemoryUtils.ToPhysicalAddress(capturedInPausedEvent.Value.Segment, capturedInPausedEvent.Value.Offset)];
         Assert.Equal(0xCD, opcodeAtPausedEventIp);
-    }
-
-    private static Spice86DependencyInjection CreateEmulatorWithIntInstruction(bool enableCfgCpu) {
-        // Use the "interrupt" test binary which contains interrupt instructions
-        return new Spice86Creator("interrupt", 
-            enableCfgCpu: enableCfgCpu, 
-            installInterruptVectors: true).Create();
     }
 }
