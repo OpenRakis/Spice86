@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -90,6 +91,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     [ObservableProperty]
     private State _state;
+    
+    [ObservableProperty]
+    private bool _isCreatingBreakpoint;
+    
+    [ObservableProperty]
+    private string? _breakpointCondition;
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
@@ -434,7 +441,19 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             try {
                 Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(State, _memory);
                 condition = compiler.Compile(conditionExpression);
-            } catch (Exception ex) {
+            } catch (ExpressionParseException ex) {
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+                }
+                // If compilation fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+            } catch (ArgumentException ex) {
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+                }
+                // If compilation fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+            } catch (InvalidOperationException ex) {
                 if (_logger.IsEnabled(LogEventLevel.Warning)) {
                     _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
                 }

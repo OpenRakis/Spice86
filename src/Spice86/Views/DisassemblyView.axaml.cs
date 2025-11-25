@@ -4,19 +4,15 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 
-using CommunityToolkit.Mvvm.Messaging;
-
 using System.ComponentModel;
 
 using Spice86.ViewModels;
-using Spice86.ViewModels.Messages;
 
 /// <summary>
 /// View for the disassembly interface.
 /// </summary>
 public partial class DisassemblyView : UserControl {
     private IDisassemblyViewModel? _viewModel;
-    private DisassemblyViewModel? _concreteViewModel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DisassemblyView"/> class.
@@ -40,22 +36,11 @@ public partial class DisassemblyView : UserControl {
             _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
-        // Unsubscribe from messenger if we had a concrete view model
-        if (_concreteViewModel != null) {
-            WeakReferenceMessenger.Default.Unregister<ShowBreakpointDialogMessage>(this);
-        }
-
         // Subscribe to the new view model
         _viewModel = DataContext as IDisassemblyViewModel;
-        _concreteViewModel = DataContext as DisassemblyViewModel;
         
         if (_viewModel != null) {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        }
-
-        // Subscribe to messenger messages if we have a concrete view model
-        if (_concreteViewModel != null) {
-            WeakReferenceMessenger.Default.Register<ShowBreakpointDialogMessage>(this, OnShowBreakpointDialog);
         }
     }
     
@@ -101,35 +86,6 @@ public partial class DisassemblyView : UserControl {
                 _viewModel.GoToFunctionCommand.Execute(_viewModel.SelectedFunction);
                 e.Handled = true;
             }
-        }
-    }
-
-    private async void OnShowBreakpointDialog(object recipient, ShowBreakpointDialogMessage message) {
-        if (_concreteViewModel == null) {
-            return;
-        }
-
-        // Create and show the dialog
-        var dialogViewModel = new BreakpointDialogViewModel(message.Address);
-        var dialog = new BreakpointDialog {
-            DataContext = dialogViewModel
-        };
-
-        // Get the parent window
-        var parentWindow = TopLevel.GetTopLevel(this) as Window;
-        
-        if (parentWindow == null) {
-            return;
-        }
-        
-        // Show the dialog and wait for result
-        var result = await dialog.ShowDialog<bool>(parentWindow);
-
-        // If user clicked OK, create the breakpoint with the condition
-        if (result) {
-            _concreteViewModel.CreateExecutionBreakpointWithCondition(
-                message.DebuggerLine, 
-                dialogViewModel.Condition);
         }
     }
 }

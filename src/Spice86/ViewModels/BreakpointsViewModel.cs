@@ -139,6 +139,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = State.IpSegmentedAddress.ToString();
+        ExecutionConditionExpression = null;
         MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
         MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
@@ -165,6 +166,9 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
+
+    [ObservableProperty]
+    private string? _executionConditionExpression;
 
     private string? _ioPortNumber = "0x0";
 
@@ -194,6 +198,26 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             if (!AddressAndValueParser.TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
+            
+            // Compile condition expression if present
+            Func<long, bool>? condition = null;
+            string? conditionExpression = ExecutionConditionExpression;
+            if (!string.IsNullOrWhiteSpace(conditionExpression)) {
+                try {
+                    Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
+                    condition = compiler.Compile(conditionExpression);
+                } catch (ExpressionParseException e) {
+                    _uiDispatcher.Post(() => ShowError(e));
+                    return;
+                } catch (ArgumentException e) {
+                    _uiDispatcher.Post(() => ShowError(e));
+                    return;
+                } catch (InvalidOperationException e) {
+                    _uiDispatcher.Post(() => ShowError(e));
+                    return;
+                }
+            }
+            
             BreakpointViewModel executionVm = AddAddressBreakpoint(
                 executionAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -201,7 +225,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 () => {
                     PauseAndReportAddress(
                     ExecutionAddressValue);
-                }, null, ExecutionBreakpoint, null);
+                }, condition, ExecutionBreakpoint, conditionExpression);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
             TryCreateMemoryBreakpointFromForm(CreateMemoryBreakpointAtAddress);
@@ -484,7 +508,15 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             try {
                 Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
                 condition = compiler.Compile(conditionExpression);
-            } catch (Exception e) {
+            } catch (ExpressionParseException e) {
+                // If parsing fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+                _uiDispatcher.Post(() => ShowError(e));
+            } catch (ArgumentException e) {
+                // If parsing fails, treat as unconditional and clear the expression
+                conditionExpression = null;
+                _uiDispatcher.Post(() => ShowError(e));
+            } catch (InvalidOperationException e) {
                 // If parsing fails, treat as unconditional and clear the expression
                 conditionExpression = null;
                 _uiDispatcher.Post(() => ShowError(e));
