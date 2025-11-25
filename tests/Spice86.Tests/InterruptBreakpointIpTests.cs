@@ -23,18 +23,17 @@ public class InterruptBreakpointIpTests {
             enableCfgCpu: true,
             installInterruptVectors: true).Create();
         
-        Machine machine = spice86DependencyInjection.Machine;
-        State state = machine.CpuState;
-        EmulatorBreakpointsManager emulatorBreakpointsManager = machine.EmulatorBreakpointsManager;
+        State state = spice86DependencyInjection.Machine.CpuState;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
-        IMemory memory = machine.Memory;
-        var pauseHandler = machine.PauseHandler;
+        IMemory memory = spice86DependencyInjection.Machine.Memory;
+        IPauseHandler pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
 
         SegmentedAddress? capturedInCallback = null;
         SegmentedAddress? capturedInPausedEvent = null;
 
         // This flag tracks when the Paused event fires
-        var pausedEventFired = new System.Threading.ManualResetEvent(false);
+        using System.Threading.ManualResetEvent pausedEventFired = new(false);
         
         // Subscribe to Paused event like the UI does
         pauseHandler.Paused += () => {
