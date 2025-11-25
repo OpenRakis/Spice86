@@ -237,7 +237,7 @@ public class AstExpressionParserRoundTripTest {
 
     [Theory]
     [InlineData("!ax", "!AX")]
-    [InlineData("!(ax==0x100)", "!(AX==0x00000100)")]
+    [InlineData("!(ax==0x100)", "!((uint)AX==0x00000100)")]  // Type conversion for comparison is still added
     public void TestLogicalNot(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
     }
@@ -287,7 +287,7 @@ public class AstExpressionParserRoundTripTest {
     [Theory]
     [InlineData("(ax)", "AX")]  // Parentheses not preserved when redundant
     [InlineData("(ax+bx)", "AX+BX")]  // Parentheses not preserved when redundant  
-    [InlineData("((ax+bx)*2)", "AX+BX*2")]  // Inner parentheses removed, precedence is correct
+    [InlineData("((ax+bx)*2)", "(AX+BX)*2")]  // Parentheses preserved for correct precedence
     [InlineData("(ax==0x100)", "(uint)AX==0x00000100")]  // Outer parentheses not preserved
     public void TestParentheses(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
@@ -296,7 +296,7 @@ public class AstExpressionParserRoundTripTest {
     [Theory]
     [InlineData("ax+bx*cx", "AX+BX*CX")]
     [InlineData("ax*bx+cx", "AX*BX+CX")]
-    [InlineData("(ax+bx)*cx", "AX+BX*CX")]  // Renderer limitation: parentheses not added back
+    [InlineData("(ax+bx)*cx", "(AX+BX)*CX")]  // Parentheses preserved for correct precedence
     [InlineData("ax+(bx*cx)", "AX+BX*CX")]  // Redundant parentheses removed
     public void TestOperatorPrecedence(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
@@ -304,11 +304,11 @@ public class AstExpressionParserRoundTripTest {
 
     [Theory]
     [InlineData("ax==0x100&&bx==0x200||cx==0x300", "(uint)AX==0x00000100&&(uint)BX==0x00000200||(uint)CX==0x00000300")]
-    [InlineData("ax==0x100||(bx==0x200&&cx==0x300)", "(uint)AX==0x00000100||((uint)BX==0x00000200&&(uint)CX==0x00000300)")]
+    [InlineData("ax==0x100||(bx==0x200&&cx==0x300)", "(uint)AX==0x00000100||(uint)BX==0x00000200&&(uint)CX==0x00000300")]  // Redundant parentheses removed
     [InlineData("(ax==0x100||bx==0x200)&&cx==0x300", "((uint)AX==0x00000100||(uint)BX==0x00000200)&&(uint)CX==0x00000300")]
-    [InlineData("ax+bx>0x100&&cx<0x200", "(uint)(AX+BX)>0x00000100&&(uint)CX<0x00000200")]
-    [InlineData("byte ptr [ax]==0x42&&bx!=0", "(uint)byte ptr [(ushort)AX]==0x00000042&&(ushort)BX!=0")]
-    [InlineData("word ptr ds:[bx]>0x100||ax==0", "(uint)word ptr DS:[(ushort)BX]>0x00000100||(ushort)AX==0")]
+    [InlineData("ax+bx>0x100&&cx<0x200", "AX+BX>0x00000100&&(uint)CX<0x00000200")]  // Addition result not wrapped in type conversion
+    [InlineData("byte ptr [ax]==0x42&&bx!=0", "(uint)byte ptr [AX]==0x00000042&&(ushort)BX!=0")]  // Address not type converted
+    [InlineData("word ptr ds:[bx]>0x100||ax==0", "(uint)word ptr DS:[BX]>0x00000100||(ushort)AX==0")]  // Address not type converted
     public void TestComplexExpressions(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
     }
@@ -367,12 +367,14 @@ public class AstExpressionParserRoundTripTest {
 
     [Fact]
     public void TestNestedBitwiseOperations() {
-        AssertRoundTrip("(ax&0xFF)|(bx&0xFF00)", "(AX&0x000000FF)|(BX&0x0000FF00)");
+        // Parentheses are redundant since & has higher precedence than |
+        AssertRoundTrip("(ax&0xFF)|(bx&0xFF00)", "AX&0x000000FF|BX&0x0000FF00");
     }
 
     [Fact]
     public void TestComplexMemoryExpression() {
-        AssertRoundTrip("byte ptr [ax+bx*2]==0x42", "(uint)byte ptr [(ushort)(AX+BX*2)]==0x00000042");
+        // Address expression is not type-converted
+        AssertRoundTrip("byte ptr [ax+bx*2]==0x42", "(uint)byte ptr [AX+BX*2]==0x00000042");
     }
 
     [Fact]

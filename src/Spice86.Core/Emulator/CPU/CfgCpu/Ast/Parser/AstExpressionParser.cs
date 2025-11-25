@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Shared.Emulator.Memory;
 using System.Globalization;
 
 /// <summary>
@@ -132,7 +133,7 @@ public class AstExpressionParser {
             if (CurrentChar() == '+') {
                 Advance();
                 left = new BinaryOperationNode(DataType.UINT32, left, BinaryOperation.PLUS, ParseMultiplicative());
-            } else if (CurrentChar() == '-' && !char.IsDigit(PeekChar())) {
+            } else if (CurrentChar() == '-') {
                 Advance();
                 left = new BinaryOperationNode(DataType.UINT32, left, BinaryOperation.MINUS, ParseMultiplicative());
             } else {
@@ -349,6 +350,14 @@ public class AstExpressionParser {
             return left;
         }
         
+        // When comparing to constant 0, use the non-constant operand's type
+        if (right is ConstantNode { Value: 0 }) {
+            commonType = leftType;
+            // Add explicit type annotation for clarity
+            left = new TypeConversionNode(leftType, left);
+            return left;
+        }
+        
         // Choose the larger type
         commonType = GetLargerType(leftType, rightType);
         
@@ -377,7 +386,9 @@ public class AstExpressionParser {
             // Ensure operands have compatible types
             DataType commonType;
             left = EnsureTypeCompatibility(left, right, out commonType);
-            if (right.DataType.BitWidth != commonType.BitWidth || right.DataType.Signed != commonType.Signed) {
+            // Don't convert constant 0 - it implicitly matches any type
+            if (!(right is ConstantNode { Value: 0 }) && 
+                (right.DataType.BitWidth != commonType.BitWidth || right.DataType.Signed != commonType.Signed)) {
                 right = new TypeConversionNode(commonType, right);
             }
             return new BinaryOperationNode(DataType.BOOL, left, operation, right);
@@ -390,7 +401,7 @@ public class AstExpressionParser {
     private bool Match(string text) {
         SkipWhitespace();
         if (_position + text.Length <= _input.Length &&
-            _input.Substring(_position, text.Length) == text) {
+            string.Equals(_input.Substring(_position, text.Length), text, StringComparison.OrdinalIgnoreCase)) {
             _position += text.Length;
             return true;
         }
