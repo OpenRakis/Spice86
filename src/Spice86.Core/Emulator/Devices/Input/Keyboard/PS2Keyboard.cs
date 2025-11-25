@@ -521,7 +521,7 @@ public partial class PS2Keyboard {
     /// Called when the controller is ready to accept keyboard frames.
     /// </summary>
     internal void NotifyReadyForFrame() {
-        // Since INT9H (IRQ1 hardware handler) de
+        // Since INT9H (IRQ1 hardware handler) dequeued some items,
         // clear the buffer overflow flag, do not ignore keys any more
         _bufferOverflowed = false;
         TransferNextBufferedFrameIfReady();
