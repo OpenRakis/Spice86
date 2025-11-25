@@ -76,19 +76,66 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     public string VisitBinaryOperationNode(BinaryOperationNode node) {
-        string left = node.Left.Accept(this);
+        string left = RenderOperand(node.Left, node.BinaryOperation, isLeftOperand: true);
         if (IsZero(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left;
         }
-        string right = node.Right.Accept(this);
+        string right = RenderOperand(node.Right, node.BinaryOperation, isLeftOperand: false);
         if (IsNegative(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left + right;
         }
         return left + OperationToString(node.BinaryOperation) + right;
     }
     
+    private string RenderOperand(ValueNode operand, BinaryOperation parentOperation, bool isLeftOperand) {
+        string rendered = operand.Accept(this);
+        
+        // Check if we need to wrap in parentheses for precedence
+        if (operand is BinaryOperationNode childBinaryOp) {
+            int parentPrecedence = GetPrecedence(parentOperation);
+            int childPrecedence = GetPrecedence(childBinaryOp.BinaryOperation);
+            
+            // Wrap if child has lower precedence, or same precedence on right side (for left-associativity)
+            if (childPrecedence < parentPrecedence || 
+                (!isLeftOperand && childPrecedence == parentPrecedence)) {
+                rendered = "(" + rendered + ")";
+            }
+        }
+        
+        return rendered;
+    }
+    
+    private int GetPrecedence(BinaryOperation operation) {
+        return operation switch {
+            BinaryOperation.ASSIGN => 1,
+            BinaryOperation.LOGICAL_OR => 2,
+            BinaryOperation.LOGICAL_AND => 3,
+            BinaryOperation.BITWISE_OR => 4,
+            BinaryOperation.BITWISE_XOR => 5,
+            BinaryOperation.BITWISE_AND => 6,
+            BinaryOperation.EQUAL => 7,
+            BinaryOperation.NOT_EQUAL => 7,
+            BinaryOperation.LESS_THAN => 8,
+            BinaryOperation.GREATER_THAN => 8,
+            BinaryOperation.LESS_THAN_OR_EQUAL => 8,
+            BinaryOperation.GREATER_THAN_OR_EQUAL => 8,
+            BinaryOperation.LEFT_SHIFT => 9,
+            BinaryOperation.RIGHT_SHIFT => 9,
+            BinaryOperation.PLUS => 10,
+            BinaryOperation.MINUS => 10,
+            BinaryOperation.MULTIPLY => 11,
+            BinaryOperation.DIVIDE => 11,
+            BinaryOperation.MODULO => 11,
+            _ => 0
+        };
+    }
+    
     public string VisitUnaryOperationNode(UnaryOperationNode node) {
         string value = node.Value.Accept(this);
+        // Wrap binary operations in parentheses to preserve precedence
+        if (node.Value is BinaryOperationNode) {
+            value = "(" + value + ")";
+        }
         return OperationToString(node.UnaryOperation) + value;
     }
     
