@@ -41,7 +41,6 @@ public class DosProgramSegmentPrefixTrackerTests {
         A20Gate a20Gate = new(enabled: false);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState, memory, memoryBreakpoints, ioBreakpoints);
 
         var configuration = new Configuration {
             ProgramEntryPointSegment = (ushort)0x1000
