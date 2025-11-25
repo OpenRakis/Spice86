@@ -233,7 +233,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue, pauseHandler,
+            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue,
             configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

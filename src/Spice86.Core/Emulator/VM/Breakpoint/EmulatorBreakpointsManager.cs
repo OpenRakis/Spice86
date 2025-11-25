@@ -40,6 +40,16 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     public BreakPointHolder InterruptBreakPoints { get; }
 
     /// <summary>
+    /// Triggers matching interrupt breakpoints and waits if a pause was requested.
+    /// This ensures the emulator pauses while State.IP still points to the INT instruction.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector number.</param>
+    public void TriggerInterruptBreakPointsAndWait(byte vectorNumber) {
+        InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        _pauseHandler.WaitIfPaused();
+    }
+
+    /// <summary>
     /// Called when the machine starts.
     /// </summary>
     public void OnMachineStart() {

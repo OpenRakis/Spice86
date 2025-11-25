@@ -25,17 +25,15 @@ using System.Runtime.CompilerServices;
 
 public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
-    private readonly BreakPointHolder _interruptBreakPoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExecutionContextManager _executionContextManager;
-    private readonly IPauseHandler _pauseHandler;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
         CallbackHandler callbackHandler,
-        BreakPointHolder interruptBreakPoints,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
         ExecutionContextManager executionContextManager,
-        IPauseHandler pauseHandler,
         ILoggerService loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -47,9 +45,8 @@ public class InstructionExecutionHelper {
         Alu32 = new(state);
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
-        _interruptBreakPoints = interruptBreakPoints;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _executionContextManager = executionContextManager;
-        _pauseHandler = pauseHandler;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
     }
@@ -157,11 +154,9 @@ public class InstructionExecutionHelper {
     /// <param name="instruction"></param>
     /// <param name="vectorNumber"></param>
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
-        // Trigger breakpoint before moving IP so the UI shows the INT instruction
-        _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
-        // Wait if paused immediately after breakpoint triggers, before modifying State.IP
+        // Trigger breakpoint and wait if paused, before modifying State.IP
         // This ensures the debugger sees State.IP pointing to the INT instruction
-        _pauseHandler.WaitIfPaused();
+        _emulatorBreakpointsManager.TriggerInterruptBreakPointsAndWait(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
@@ -176,7 +171,7 @@ public class InstructionExecutionHelper {
     }
     
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
-        _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         return DoInterruptWithoutBreakpoint(vectorNumber);
     }
 

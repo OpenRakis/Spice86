@@ -27,7 +27,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
 
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, ExecutionStateSlice executionStateSlice, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        FunctionCatalogue functionCatalogue, IPauseHandler pauseHandler,
+        FunctionCatalogue functionCatalogue,
         bool useCodeOverride, ILoggerService loggerService) {
         _loggerService = loggerService;
         _state = state;
@@ -36,7 +36,7 @@ public class CfgCpu : IInstructionExecutor, IFunctionHandlerProvider {
         
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService);
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager.InterruptBreakPoints, _executionContextManager, pauseHandler, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, loggerService);
     }
     
     /// <summary>
