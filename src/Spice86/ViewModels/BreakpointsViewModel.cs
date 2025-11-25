@@ -200,22 +200,8 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             }
             
             // Compile condition expression if present
-            Func<long, bool>? condition = null;
-            string? conditionExpression = ExecutionConditionExpression;
-            if (!string.IsNullOrWhiteSpace(conditionExpression)) {
-                try {
-                    Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
-                    condition = compiler.Compile(conditionExpression);
-                } catch (ExpressionParseException e) {
-                    _uiDispatcher.Post(() => ShowError(e));
-                    return;
-                } catch (ArgumentException e) {
-                    _uiDispatcher.Post(() => ShowError(e));
-                    return;
-                } catch (InvalidOperationException e) {
-                    _uiDispatcher.Post(() => ShowError(e));
-                    return;
-                }
+            if (!TryCompileConditionWithErrorHandling(ExecutionConditionExpression, out Func<long, bool>? condition, out string? conditionExpression)) {
+                return;
             }
             
             BreakpointViewModel executionVm = AddAddressBreakpoint(
@@ -501,27 +487,9 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 break;
         }
 
-        // Compile condition expression if present
-        Func<long, bool>? condition = null;
+        // Compile condition expression if present (ignore errors for restore, just treat as unconditional)
         string? conditionExpression = breakpointData.ConditionExpression;
-        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
-            try {
-                Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
-                condition = compiler.Compile(conditionExpression);
-            } catch (ExpressionParseException e) {
-                // If parsing fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-                _uiDispatcher.Post(() => ShowError(e));
-            } catch (ArgumentException e) {
-                // If parsing fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-                _uiDispatcher.Post(() => ShowError(e));
-            } catch (InvalidOperationException e) {
-                // If parsing fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-                _uiDispatcher.Post(() => ShowError(e));
-            }
-        }
+        TryCompileConditionWithErrorDisplay(conditionExpression, out Func<long, bool>? condition, out conditionExpression);
 
         BreakpointViewModel breakpointVm = AddAddressBreakpoint(
             breakpointData.Trigger,
@@ -534,6 +502,64 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
         if (!breakpointData.IsEnabled) {
             breakpointVm.Disable();
+        }
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression and shows error if compilation fails.
+    /// Returns false if compilation fails, which can be used to abort the operation.
+    /// </summary>
+    /// <param name="expression">The condition expression to compile.</param>
+    /// <param name="condition">The compiled condition function, or null.</param>
+    /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
+    /// <returns>True if compilation succeeded or expression was empty, false if an error occurred.</returns>
+    private bool TryCompileConditionWithErrorHandling(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
+        condition = null;
+        validatedExpression = expression;
+        
+        if (string.IsNullOrWhiteSpace(expression)) {
+            return true;
+        }
+        
+        try {
+            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
+            condition = compiler.Compile(expression);
+            return true;
+        } catch (ExpressionParseException e) {
+            _uiDispatcher.Post(() => ShowError(e));
+        } catch (ArgumentException e) {
+            _uiDispatcher.Post(() => ShowError(e));
+        } catch (InvalidOperationException e) {
+            _uiDispatcher.Post(() => ShowError(e));
+        }
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression and displays error but doesn't abort.
+    /// Used for restore operations where we want to continue even if one condition fails.
+    /// </summary>
+    private void TryCompileConditionWithErrorDisplay(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
+        condition = null;
+        validatedExpression = expression;
+        
+        if (string.IsNullOrWhiteSpace(expression)) {
+            return;
+        }
+        
+        try {
+            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
+            condition = compiler.Compile(expression);
+        } catch (ExpressionParseException e) {
+            validatedExpression = null;
+            _uiDispatcher.Post(() => ShowError(e));
+        } catch (ArgumentException e) {
+            validatedExpression = null;
+            _uiDispatcher.Post(() => ShowError(e));
+        } catch (InvalidOperationException e) {
+            validatedExpression = null;
+            _uiDispatcher.Post(() => ShowError(e));
         }
     }
 }

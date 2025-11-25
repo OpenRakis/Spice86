@@ -436,31 +436,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
         
         // Compile condition expression if present
-        Func<long, bool>? condition = null;
-        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
-            try {
-                Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(State, _memory);
-                condition = compiler.Compile(conditionExpression);
-            } catch (ExpressionParseException ex) {
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
-                }
-                // If compilation fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-            } catch (ArgumentException ex) {
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
-                }
-                // If compilation fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-            } catch (InvalidOperationException ex) {
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
-                }
-                // If compilation fails, treat as unconditional and clear the expression
-                conditionExpression = null;
-            }
-        }
+        Func<long, bool>? condition = TryCompileCondition(conditionExpression, out string? validatedExpression);
+        conditionExpression = validatedExpression;
 
         _breakpointsViewModel.AddAddressBreakpoint(
             debuggerLine.Address, 
@@ -472,6 +449,42 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             condition, 
             message, 
             conditionExpression);
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression for breakpoint evaluation.
+    /// </summary>
+    /// <param name="conditionExpression">The condition expression to compile.</param>
+    /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
+    /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
+    private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
+        validatedExpression = conditionExpression;
+        
+        if (string.IsNullOrWhiteSpace(conditionExpression)) {
+            return null;
+        }
+        
+        try {
+            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(State, _memory);
+            return compiler.Compile(conditionExpression);
+        } catch (ExpressionParseException ex) {
+            LogConditionCompilationWarning(ex, conditionExpression);
+            validatedExpression = null;
+        } catch (ArgumentException ex) {
+            LogConditionCompilationWarning(ex, conditionExpression);
+            validatedExpression = null;
+        } catch (InvalidOperationException ex) {
+            LogConditionCompilationWarning(ex, conditionExpression);
+            validatedExpression = null;
+        }
+        
+        return null;
+    }
+    
+    private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+            _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+        }
     }
 
     /// <summary>
