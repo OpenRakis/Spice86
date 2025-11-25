@@ -835,7 +835,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     /// Adds a frame of bytes from auxiliary device (mouse).
     /// </summary>
     /// <remarks>
-    /// Not wired up. AUX port, mouse notiifation, and mouse frames are 'TODO'
+    /// Not wired up. AUX port, mouse notification, and mouse frames are 'TODO'
     /// </remarks>
     /// <param name="bytes">The bytes to add.</param>
     public void AddAuxFrame(IReadOnlyList<byte> bytes) {
