@@ -107,7 +107,45 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ## Project-Specific Conventions
 
+### Avalonia Telemetry
+- **Avalonia telemetry must be disabled** when working on the codebase.
+- The repository already has telemetry disabled in code, but it may still cause issues for AI agents.
+- Be aware of this configuration to avoid telemetry-related blocking issues.
+
 ### Code Style (enforced by `.editorconfig`)
+- **No `var` keyword**: Use explicit types instead (enforced by `.editorconfig`)
+  ```csharp
+  // Wrong
+  var count = 10;
+  
+  // Correct
+  int count = 10;
+  ```
+- **No generic catch clauses**: Catch specific exceptions
+  ```csharp
+  // Wrong
+  try {
+      // code
+  } catch (Exception ex) {
+      // handling
+  }
+  
+  // Correct
+  try {
+      // code
+  } catch (IOException ex) {
+      // handling
+  }
+  ```
+- **No bad practices with null, bangs (!), or ignored errors**:
+  - Avoid null-forgiving operator (!) unless absolutely necessary
+  - Don't ignore nullable warnings
+  - Properly handle null cases with null checks or null-coalescing operators
+- **Async usage restrictions**:
+  - **Do NOT let async "infect" the `Spice86.Core` assembly**
+  - Keep async code in the UI layer (`Spice86` project) only
+  - For the UI, use Dispatcher-based timer updates (mainly used on pause)
+  - This separation maintains clean architecture boundaries
 - **Brace style**: Java-style (opening brace on same line)
   ```csharp
   if (condition) {
@@ -122,6 +160,9 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Documentation**: XML comments required (`<GenerateDocumentationFile>true</GenerateDocumentationFile>`)
 
 ### Testing Patterns
+- **Prefer ASM-based tests over unit tests** for testing the emulator
+  - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
+  - Use assembly-based integration tests for comprehensive emulator validation
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
 - Theory tests for CPU configurations: `[Theory] [MemberData(nameof(GetCfgCpuConfigurations))]`
