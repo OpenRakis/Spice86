@@ -21,8 +21,38 @@ using Spice86.Shared.Utils;
 using System.Linq;
 
 /// <summary>
-/// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
+/// Base class for creating C# reimplementations of assembly functions during reverse engineering.
 /// </summary>
+/// <remarks>
+/// This helper provides convenient access to emulator components and utilities for writing C# function overrides:
+/// <list type="bullet">
+/// <item><b>Memory access:</b> <see cref="Memory"/>, <see cref="UInt8"/>, <see cref="UInt16"/>, <see cref="UInt32"/> indexers</item>
+/// <item><b>CPU state:</b> <see cref="State"/> for reading/writing registers and flags</item>
+/// <item><b>Stack operations:</b> <see cref="Stack"/> for push/pop operations</item>
+/// <item><b>Control flow:</b> <see cref="NearRet"/>, <see cref="FarRet"/>, <see cref="NearCall"/>, <see cref="FarCall"/> methods</item>
+/// <item><b>Function registration:</b> DefineFunction methods to map segmented addresses to C# methods</item>
+/// </list>
+/// <para>
+/// <b>Example usage:</b>
+/// <code>
+/// public class MyOverrides : CSharpOverrideHelper {
+///     public MyOverrides(Machine machine, ...) : base(...) {
+///         // Register a function at segment 0x1000, offset 0x1234
+///         DefineFunction(0x1000, 0x1234, MyFunction);
+///     }
+///     
+///     public Action MyFunction(int loadOffset) {
+///         // Access registers
+///         ushort ax = State.AX;
+///         // Read memory
+///         byte value = UInt8[State.DS, State.SI];
+///         // Return control flow action
+///         return NearRet();
+///     }
+/// }
+/// </code>
+/// </para>
+/// </remarks>
 public class CSharpOverrideHelper {
     /// <summary>
     /// The two programmable interrupt controllers.

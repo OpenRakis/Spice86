@@ -13,8 +13,22 @@ using Spice86.Shared.Utils;
 using System.Text;
 
 /// <summary>
-/// Handles function calls for the emulator machine.
+/// Manages function call tracking and C# function overrides for reverse engineering DOS programs.
 /// </summary>
+/// <remarks>
+/// This class is central to Spice86's reverse engineering workflow. It:
+/// <list type="bullet">
+/// <item>Tracks the call stack as the program executes (CALL/RET instructions)</item>
+/// <item>Records function boundaries and execution flow for later analysis</item>
+/// <item>Dispatches to C# reimplementations of assembly functions when code overrides are enabled</item>
+/// <item>Allows incremental rewriting of assembly into C# function by function</item>
+/// </list>
+/// <para>
+/// When a function override is registered at a specific segmented address, this handler intercepts
+/// calls to that address and executes the C# implementation instead, enabling gradual conversion
+/// from assembly to high-level code while maintaining a working program.
+/// </para>
+/// </remarks>
 public class FunctionHandler {
     private readonly ILoggerService _loggerService;
 

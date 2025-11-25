@@ -22,8 +22,26 @@ using Spice86.Shared.Utils;
 using System.Text;
 
 /// <summary>
-/// Represents the DOS kernel.
+/// Emulates DOS (Disk Operating System) kernel services for real mode programs.
 /// </summary>
+/// <remarks>
+/// This class provides implementations of DOS system calls typically accessed through software interrupts:
+/// <list type="bullet">
+/// <item><b>INT 20h</b>: Program termination</item>
+/// <item><b>INT 21h</b>: Primary DOS services (file I/O, memory management, process control, etc.)</item>
+/// <item><b>INT 2Fh</b>: Multiplexer interrupt (TSR communication, SHARE, MSCDEX, etc.)</item>
+/// </list>
+/// <para>
+/// The DOS implementation includes support for:
+/// <list type="bullet">
+/// <item>File system operations (open, read, write, close, seek)</item>
+/// <item>Memory management (MCB chain, allocation/deallocation)</item>
+/// <item>Process control (EXEC, terminate, return codes)</item>
+/// <item>Extended memory services (EMS, XMS)</item>
+/// <item>Device drivers and character I/O</item>
+/// </list>
+/// </para>
+/// </remarks>
 public sealed class Dos {
     //in DOSBox, this is the 'DOS_INFOBLOCK_SEG'
     private const int DosSysVarSegment = 0x80;

@@ -7,8 +7,22 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
+/// Routes I/O port read and write operations to the appropriate hardware device handlers.
 /// </summary>
+/// <remarks>
+/// In x86 architecture, I/O ports provide a separate address space from memory for communicating with hardware devices.
+/// The dispatcher maintains a registry of handlers for different port numbers and routes IN/OUT instructions to them.
+/// <para>
+/// Common port ranges include:
+/// <list type="bullet">
+/// <item>0x20-0x21: Master Programmable Interrupt Controller (PIC)</item>
+/// <item>0x40-0x43: Programmable Interval Timer (PIT)</item>
+/// <item>0x60-0x64: Keyboard Controller (8042)</item>
+/// <item>0x3C0-0x3DF: VGA graphics controller</item>
+/// <item>0x220-0x22F: Sound Blaster</item>
+/// </list>
+/// </para>
+/// </remarks>
 public class IOPortDispatcher : DefaultIOPortHandler {
     private readonly Dictionary<int, IIOPortHandler> _ioPortHandlers = new();
     private readonly AddressReadWriteBreakpoints _ioBreakpoints;

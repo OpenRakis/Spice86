@@ -1,5 +1,12 @@
 ﻿namespace Spice86.Core;
 
+/// <summary>
+/// Provides extension methods for <see cref="LinkedList{T}"/> to support in-place node replacement operations.
+/// </summary>
+/// <remarks>
+/// These extensions are particularly useful when working with instruction sequences or execution flow graphs
+/// where nodes need to be replaced without reconstructing the entire list.
+/// </remarks>
 public static class LinkedListExtensions {
     /// <summary>
     /// Replaces an existing linked list node with zero or more new nodes.
