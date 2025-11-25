@@ -1,10 +1,10 @@
 namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Base class for ViewModels that need memory breakpoint functionality.
