@@ -9,6 +9,9 @@
              xmlns:fluent="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
              xmlns:views="clr-namespace:Spice86.Views"
              xmlns:debugging="clr-namespace:Spice86.ViewModels.ValueViewModels.Debugging"
+             xmlns:dialogHost="clr-namespace:DialogHostAvalonia;assembly=DialogHost.Avalonia"
+             xmlns:userControls="clr-namespace:Spice86.Views.UserControls;assembly=Spice86"
+             xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Spice86.Views.DisassemblyView"
              x:DataType="viewModels:IDisassemblyViewModel">
@@ -233,5 +236,50 @@
                 <views:RegistersView DataContext="{Binding Registers}" />
             </Border>
         </Grid>
+        
+        <!-- Breakpoint creation dialog overlay -->
+        <Rectangle Fill="{Binding $parent[Window].Background}" Opacity="0.5" Grid.Row="0" Grid.RowSpan="2"
+                   IsVisible="{Binding IsCreatingBreakpoint}"/>
+        <dialogHost:DialogHost
+            Grid.Row="0" Grid.RowSpan="2"
+            Background="{Binding $parent[Window].Background}"
+            CloseOnClickAway="False"
+            IsOpen="{Binding IsCreatingBreakpoint}">
+            <dialogHost:DialogHost.DialogContent>
+                <Grid RowDefinitions="Auto,*,Auto" MinWidth="320" MinHeight="150">
+                    <Label
+                        Grid.Row="0"
+                        HorizontalAlignment="Center"
+                        Content="Create Breakpoint"
+                        FontWeight="Bold" />
+                    <StackPanel Grid.Row="1" Spacing="12" Margin="16">
+                        <controls:GroupBox Header="Address">
+                            <TextBox Text="{Binding BreakpointAddress}" IsReadOnly="True" />
+                        </controls:GroupBox>
+                        <controls:GroupBox Header="Condition (optional)">
+                            <TextBox
+                                Text="{Binding BreakpointCondition, Mode=TwoWay}"
+                                Watermark="e.g., ax == 0x1234" />
+                        </controls:GroupBox>
+                    </StackPanel>
+                    <StackPanel
+                        Grid.Row="2"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Margin="16">
+                        <Button
+                            Command="{Binding ConfirmBreakpointCreationCommand}"
+                            Content="OK"
+                            IsDefault="True"
+                            Margin="0,0,8,0" />
+                        <Button
+                            Command="{Binding CancelBreakpointCreationCommand}"
+                            Content="Cancel"
+                            IsCancel="True" />
+                    </StackPanel>
+                </Grid>
+            </dialogHost:DialogHost.DialogContent>
+        </dialogHost:DialogHost>
+        <userControls:ErrorModalDialogUserControl Grid.Row="0" Grid.RowSpan="2" />
     </Grid>
 </UserControl>

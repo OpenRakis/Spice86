@@ -108,4 +108,19 @@ public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCom
     /// This should be called when the view is hidden.
     /// </summary>
     void Deactivate();
+    
+    /// <summary>
+    /// Indicates whether the breakpoint creation dialog is visible.
+    /// </summary>
+    bool IsCreatingBreakpoint { get; set; }
+    
+    /// <summary>
+    /// The address for the breakpoint being created.
+    /// </summary>
+    string? BreakpointAddress { get; }
+    
+    /// <summary>
+    /// The condition expression for the breakpoint being created.
+    /// </summary>
+    string? BreakpointCondition { get; set; }
 }

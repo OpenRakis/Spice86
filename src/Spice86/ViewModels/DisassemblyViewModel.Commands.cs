@@ -4,12 +4,15 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Serilog.Events;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class DisassemblyViewModel {
+    private DebuggerLineViewModel? _pendingBreakpointDebuggerLine;
+    
     [RelayCommand(CanExecute = nameof(CanCloseTab))]
     private void CloseTab() {
         _messenger.Send(new RemoveViewModelMessage<DisassemblyViewModel>(this));
@@ -156,8 +159,29 @@ public partial class DisassemblyViewModel {
     [RelayCommand]
     private void CreateExecutionBreakpointWithDialog(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint == null) {
-            _messenger.Send(new ShowBreakpointDialogMessage(debuggerLine, debuggerLine.SegmentedAddress));
+            _pendingBreakpointDebuggerLine = debuggerLine;
+            BreakpointAddress = debuggerLine.SegmentedAddress.ToString();
+            BreakpointCondition = null;
+            IsCreatingBreakpoint = true;
         }
+    }
+    
+    [RelayCommand]
+    private void ConfirmBreakpointCreation() {
+        if (_pendingBreakpointDebuggerLine == null) {
+            IsCreatingBreakpoint = false;
+            return;
+        }
+        
+        CreateExecutionBreakpointWithCondition(_pendingBreakpointDebuggerLine, BreakpointCondition);
+        _pendingBreakpointDebuggerLine = null;
+        IsCreatingBreakpoint = false;
+    }
+    
+    [RelayCommand]
+    private void CancelBreakpointCreation() {
+        _pendingBreakpointDebuggerLine = null;
+        IsCreatingBreakpoint = false;
     }
 
     [RelayCommand]
