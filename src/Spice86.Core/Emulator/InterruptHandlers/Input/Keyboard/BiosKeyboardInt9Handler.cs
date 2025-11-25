@@ -545,7 +545,6 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
                 BiosKeyboardBuffer.EnqueueKeyCode(asciiscan);
                 break;
         }
-        ;
     irq1_end:
         //Reset 0xE0 Flag
         if (scanCode != 0xe0) {
