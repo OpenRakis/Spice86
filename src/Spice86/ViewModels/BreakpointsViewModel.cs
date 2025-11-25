@@ -303,6 +303,9 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
+        // Wait here to block the emulation thread until user resumes
+        // This ensures State.IP remains at the breakpoint location (e.g., INT instruction)
+        _pauseHandler.WaitIfPaused();
     }
 
     [RelayCommand]

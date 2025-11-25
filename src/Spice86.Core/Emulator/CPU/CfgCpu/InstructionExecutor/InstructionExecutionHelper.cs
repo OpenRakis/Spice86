@@ -154,9 +154,10 @@ public class InstructionExecutionHelper {
     /// <param name="instruction"></param>
     /// <param name="vectorNumber"></param>
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
-        // Trigger breakpoint and wait if paused, before modifying State.IP
+        // Trigger breakpoint before modifying State.IP
+        // The UI's breakpoint action calls WaitIfPaused() to block until user resumes
         // This ensures the debugger sees State.IP pointing to the INT instruction
-        _emulatorBreakpointsManager.TriggerInterruptBreakPointsAndWait(vectorNumber);
+        _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
