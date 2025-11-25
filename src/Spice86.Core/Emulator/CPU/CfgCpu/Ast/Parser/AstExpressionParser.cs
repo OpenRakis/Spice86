@@ -4,7 +4,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+
 using Spice86.Shared.Emulator.Memory;
+
 using System.Globalization;
 
 /// <summary>
@@ -134,6 +136,7 @@ public class AstExpressionParser {
                 Advance();
                 left = new BinaryOperationNode(DataType.UINT32, left, BinaryOperation.PLUS, ParseMultiplicative());
             } else if (CurrentChar() == '-') {
+                // Subtraction: negative numbers are handled separately in ParseUnary
                 Advance();
                 left = new BinaryOperationNode(DataType.UINT32, left, BinaryOperation.MINUS, ParseMultiplicative());
             } else {

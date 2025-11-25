@@ -237,7 +237,7 @@ public class AstExpressionParserRoundTripTest {
 
     [Theory]
     [InlineData("!ax", "!AX")]
-    [InlineData("!(ax==0x100)", "!((uint)AX==0x00000100)")]  // Type conversion for comparison is still added
+    [InlineData("!(ax==0x100)", "!((uint)AX==0x00000100)")]  // Type conversion for comparison is added as expected
     public void TestLogicalNot(string expression, string? expected = null) {
         AssertRoundTrip(expression, expected);
     }
