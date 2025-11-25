@@ -8,10 +8,10 @@
         x:Class="Spice86.Views.BreakpointDialog"
         x:CompileBindings="True"
         x:DataType="viewModels:BreakpointDialogViewModel"
-        Title="Create Execution Breakpoint"
-        Width="400"
-        Height="200"
-        CanResize="False">
+        Title="Create Breakpoint"
+        MinWidth="400"
+        MinHeight="200"
+        SizeToContent="WidthAndHeight">
     <DockPanel Margin="16">
         <!-- Content -->
         <StackPanel DockPanel.Dock="Top" Spacing="12">

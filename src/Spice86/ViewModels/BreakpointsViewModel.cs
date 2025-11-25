@@ -19,24 +19,23 @@ using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
+public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcher _uiDispatcher;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IUIDispatcher uiDispatcher,
-        IMemory memory) : base(state, memory) {
+        ITextClipboard textClipboard,
+        IMemory memory) : base(uiDispatcher, textClipboard, state, memory) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
-        _uiDispatcher = uiDispatcher;
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
     }
@@ -485,14 +484,10 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             try {
                 Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
                 condition = compiler.Compile(conditionExpression);
-            } catch (ExpressionParseException) {
+            } catch (Exception e) {
                 // If parsing fails, treat as unconditional and clear the expression
-                // Future enhancement: show error in UI with ex.Position to indicate where the error is
                 conditionExpression = null;
-            } catch (Exception ex) {
-                // If compilation fails for other reasons, treat as unconditional
-                _loggerService.Error(ex, "Unexpected error compiling breakpoint condition expression: {Expression}", conditionExpression);
-                conditionExpression = null;
+                _uiDispatcher.Post(() => ShowError(e));
             }
         }
 
