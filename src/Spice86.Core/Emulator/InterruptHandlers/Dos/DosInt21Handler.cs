@@ -24,6 +24,12 @@ using System.Text;
 /// Implementation of the DOS INT21H services.
 /// </summary>
 public class DosInt21Handler : InterruptHandler {
+    /// <summary>
+    /// The segment where the DOS SYSVARS (List of Lists) is located.
+    /// This must match the value in <c>Dos.DosSysVarSegment</c> (private const in Dos.cs, line 47).
+    /// </summary>
+    private const ushort DosSysVarsSegment = 0x80;
+
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly DosProgramSegmentPrefixTracker _dosPspTracker;
@@ -137,6 +143,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        AddAction(0x52, GetListOfLists);
         // INT 21h/58h: Get/Set Memory Allocation Strategy (related to memory functions 48h-4Ah)
         AddAction(0x58, () => GetSetMemoryAllocationStrategy(true));
         AddAction(0x62, GetPspAddress);
@@ -992,6 +999,41 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
                 ConvertUtils.ToHex16(pspSegment));
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=52h - Get List of Lists (SYSVARS).
+    /// <para>
+    /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
+    /// This is an undocumented but widely-used DOS function that provides access to internal
+    /// DOS data structures including the MCB chain, DPB chain, SFT chain, device driver chain,
+    /// and various system configuration values.
+    /// </para>
+    /// <b>Returns:</b><br/>
+    /// ES:BX = pointer to the DOS List of Lists (offset 0 of the SYSVARS structure)
+    /// <remarks>
+    /// The returned pointer points to the beginning of the documented portion of SYSVARS.
+    /// Some fields exist at negative offsets from this pointer (e.g., the first MCB segment at -2).
+    /// Similar to DOSBox, this updates the block device count before returning the pointer.
+    /// </remarks>
+    /// </summary>
+    private void GetListOfLists() {
+        // Update block device count in SYSVARS before returning the pointer
+        // This matches DOSBox behavior which counts block devices before returning
+        // Block device count is at offset 0x20 in the SYSVARS structure
+        byte blockDeviceCount = (byte)_dosDriveManager.Count;
+        uint sysVarsBase = MemoryUtils.ToPhysicalAddress(DosSysVarsSegment, 0);
+        Memory.UInt8[sysVarsBase + 0x20] = blockDeviceCount;
+
+        // Return pointer to the List of Lists (SYSVARS)
+        // ES:BX points to offset 0 of the SYSVARS structure
+        State.ES = DosSysVarsSegment;
+        State.BX = 0;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET LIST OF LISTS (SYSVARS) at {Address}, BlockDevices={BlockDeviceCount}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.ES, State.BX), blockDeviceCount);
         }
     }
 
