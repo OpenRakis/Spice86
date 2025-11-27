@@ -115,7 +115,7 @@ public abstract class CfgInstruction : CfgNode, ICfgInstruction {
     public Signature SignatureFinal {
         get {
             ImmutableList<byte?> signatureBytes = ComputeSignatureBytes(FieldsInOrder
-                .Where(field => field.Final));
+                .Where(x => x.Final));
             return new Signature(signatureBytes);
         }
     }
