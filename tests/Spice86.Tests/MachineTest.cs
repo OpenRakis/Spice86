@@ -248,6 +248,19 @@ public class MachineTest {
         TestOneBin("externalint", expected, enableCfgCpu, 0xFFFFFFF, true);
     }
 
+    /// <summary>
+    /// Tests PIT Channel 2 in Rate Generator mode (Mode 2) which is used by the PC speaker.
+    /// This exercises the SetPitControl pathway for RateGenerator mode.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetCfgCpuConfigurations))]
+    public void TestPitRateGenerator(bool enableCfgCpu) {
+        byte[] expected = new byte[2];
+        expected[0x00] = 0x01;
+        expected[0x01] = 0x00;
+        TestOneBin("pitrategen", expected, enableCfgCpu, enablePit: true);
+    }
+
     [Theory]
     [MemberData(nameof(GetCfgCpuConfigurations))]
     public void TestLinearAddressSameButSegmentedDifferent(bool enableCfgCpu) {
