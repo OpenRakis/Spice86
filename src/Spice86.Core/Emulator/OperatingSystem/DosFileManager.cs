@@ -1206,34 +1206,58 @@ public class DosFileManager {
     }
 
     /// <summary>
-    /// Gets the proper DOS path for the emulated program.
+    /// Converts a host file path to a proper DOS path for the emulated program.
     /// </summary>
-    /// <param name="programPath">The absolute host path to the executable file.</param>
+    /// <param name="hostPath">The absolute host path to the executable file.</param>
     /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
-    public string GetDosProgramPath(string programPath) {
-        // Extract just the filename without path if it's a full path
-        string fileName = Path.GetFileName(programPath);
-
-        // Create a DOS path using the current drive and directory
-        string currentDrive = _dosDriveManager.CurrentDrive.DosVolume;
-        string currentDir = _dosDriveManager.CurrentDrive.CurrentDosDirectory;
-
-        // Ensure current directory has trailing backslash
-        if (!string.IsNullOrEmpty(currentDir) && !currentDir.EndsWith('\\')) {
-            currentDir += '\\';
+    /// <remarks>
+    /// This method implements the DOS TRUENAME functionality to convert a host path
+    /// to a canonical DOS path. It finds the mounted drive that contains the host path
+    /// and constructs the full DOS path including the directory structure.
+    /// 
+    /// For example, if the C: drive is mounted at "/home/user/games" and the host path
+    /// is "/home/user/games/MYFOLDER/GAME.EXE", the result will be "C:\MYFOLDER\GAME.EXE".
+    /// 
+    /// This is critical for programs that need to find resources relative to their
+    /// own executable location (like VB3 runtimes embedded in the EXE).
+    /// </remarks>
+    public string GetDosProgramPath(string hostPath) {
+        // Normalize the host path once before iterating through drives
+        string normalizedHostPath = ConvertUtils.ToSlashPath(hostPath);
+        
+        // Try to find a mounted drive that contains this host path
+        foreach (VirtualDrive drive in _dosDriveManager.GetDrives()) {
+            string mountedDir = ConvertUtils.ToSlashPath(drive.MountedHostDirectory).TrimEnd('/');
+            
+            // Check if the host path starts with the mounted directory
+            // Ensure we match exact directory boundaries to avoid false positives
+            // (e.g., "/home/user/games" should not match "/home/user/gamesdir/file.exe")
+            if (normalizedHostPath.StartsWith(mountedDir, StringComparison.OrdinalIgnoreCase) &&
+                (normalizedHostPath.Length == mountedDir.Length || normalizedHostPath[mountedDir.Length] == '/')) {
+                // Get the relative path from the mount point
+                string relativePath = normalizedHostPath.Length > mountedDir.Length 
+                    ? normalizedHostPath[(mountedDir.Length + 1)..] // Skip the separator
+                    : "";
+                
+                // Convert to DOS path format using existing utilities
+                string dosRelativePath = ConvertUtils.ToBackSlashPath(relativePath);
+                string dosPath = string.IsNullOrEmpty(dosRelativePath)
+                    ? $"{drive.DosVolume}\\"
+                    : $"{drive.DosVolume}\\{dosRelativePath}";
+                
+                // Normalize to uppercase for DOS compatibility
+                dosPath = dosPath.ToUpperInvariant();
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("GetDosProgramPath: Converted host path '{HostPath}' to DOS path '{DosPath}'",
+                        hostPath, dosPath);
+                }
+                
+                return dosPath;
+            }
         }
-
-        // Build the full DOS path
-        string dosPath = $"{currentDrive}\\{currentDir}{fileName}";
-
-        // Replace slashes and standardize
-        dosPath = dosPath.Replace('/', '\\').ToUpperInvariant();
-
-        // Clean up any double backslashes
-        while (dosPath.Contains("\\\\")) {
-            dosPath = dosPath.Replace("\\\\", "\\");
-        }
-
-        return dosPath;
+        
+        // No matching drive found - this is an error condition
+        throw new InvalidOperationException($"No mounted drive contains the host path '{hostPath}'");
     }
 }

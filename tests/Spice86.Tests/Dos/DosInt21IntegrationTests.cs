@@ -262,6 +262,100 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests that a program can find its own path from the environment block.
+    /// This verifies the DOS environment block contains the ASCIZ program path after
+    /// the environment variables (double null + WORD count + path).
+    /// </summary>
+    /// <remarks>
+    /// DOS environment block structure:
+    /// - Environment variables as "KEY=VALUE\0" strings
+    /// - Double null (\0\0) to terminate the list
+    /// - WORD containing count of additional strings (usually 1)
+    /// - ASCIZ full path to the program
+    /// 
+    /// PSP offsets used:
+    /// - 0x2C: Environment segment
+    /// </remarks>
+    [Fact]
+    public void EnvironmentBlock_ContainsProgramPath() {
+        // This test verifies the environment segment is valid
+        // and contains the expected program path structure
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // 0x00: mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // 0x02: int 21h - BX = current PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // 0x04: mov es, bx
+            
+            // Read environment segment from PSP+0x2C using the proper encoding
+            // mov ax, word ptr es:[0x002C]
+            0x26, 0x8B, 0x06, 0x2C, 0x00,  // 0x06: mov ax, es:[002Ch]
+            
+            // Check environment segment is not 0
+            0x85, 0xC0,             // 0x0B: test ax, ax
+            0x74, 0x3F,             // 0x0D: je failed (target 0x4E, offset = 0x4E - 0x0F = 0x3F)
+            
+            // Load environment segment into ES
+            0x8E, 0xC0,             // 0x0F: mov es, ax
+            0x31, 0xFF,             // 0x11: xor di, di - start at offset 0
+            
+            // Scan for double null in environment block
+            // find_double_null: (offset 0x13)
+            0x26, 0x8A, 0x05,       // 0x13: mov al, es:[di]
+            0x3C, 0x00,             // 0x16: cmp al, 0
+            0x75, 0x08,             // 0x18: jne next_char (target 0x22, offset = 8)
+            0x26, 0x8A, 0x45, 0x01, // 0x1A: mov al, es:[di+1]
+            0x3C, 0x00,             // 0x1E: cmp al, 0
+            0x74, 0x03,             // 0x20: je found_end (target 0x25, offset = 3)
+            // next_char: (offset 0x22)
+            0x47,                   // 0x22: inc di
+            0xEB, 0xEE,             // 0x23: jmp find_double_null (target 0x13, offset = -18 = 0xEE)
+            
+            // found_end: (offset 0x25) - now at double null, skip past it
+            0x83, 0xC7, 0x02,       // 0x25: add di, 2 - skip double null
+            
+            // Skip the WORD count (should be 1)
+            0x26, 0x8B, 0x05,       // 0x28: mov ax, es:[di]
+            0x83, 0xF8, 0x01,       // 0x2B: cmp ax, 1 - should be 1
+            0x75, 0x1E,             // 0x2E: jne failed (target 0x4E, offset = 0x1E)
+            0x83, 0xC7, 0x02,       // 0x30: add di, 2 - now di points to program path
+            
+            // Verify path starts with 'C' (0x43)
+            0x26, 0x8A, 0x05,       // 0x33: mov al, es:[di]
+            0x3C, 0x43,             // 0x36: cmp al, 'C'
+            0x75, 0x14,             // 0x38: jne failed (target 0x4E, offset = 0x14)
+            
+            // Verify second char is ':' (0x3A)
+            0x26, 0x8A, 0x45, 0x01, // 0x3A: mov al, es:[di+1]
+            0x3C, 0x3A,             // 0x3E: cmp al, ':'
+            0x75, 0x0C,             // 0x40: jne failed (target 0x4E, offset = 0x0C)
+            
+            // Verify third char is '\' (0x5C)
+            0x26, 0x8A, 0x45, 0x02, // 0x42: mov al, es:[di+2]
+            0x3C, 0x5C,             // 0x46: cmp al, '\'
+            0x75, 0x04,             // 0x48: jne failed (target 0x4E, offset = 4)
+            
+            // Success
+            0xB0, 0x00,             // 0x4A: mov al, TestResult.Success
+            0xEB, 0x02,             // 0x4C: jmp writeResult (target 0x50, offset = 2)
+            
+            // failed: (offset 0x4E)
+            0xB0, 0xFF,             // 0x4E: mov al, TestResult.Failure
+            
+            // writeResult: (offset 0x50)
+            0xBA, 0x99, 0x09,       // 0x50: mov dx, ResultPort
+            0xEE,                   // 0x53: out dx, al
+            0xF4                    // 0x54: hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,

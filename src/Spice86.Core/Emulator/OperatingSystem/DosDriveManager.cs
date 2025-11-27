@@ -85,6 +85,14 @@ public class DosDriveManager : IDictionary<char, VirtualDrive> {
         return true;
     }
 
+    /// <summary>
+    /// Gets all mounted virtual drives (non-null drives).
+    /// </summary>
+    /// <returns>An enumerable of all mounted VirtualDrive instances.</returns>
+    public IEnumerable<VirtualDrive> GetDrives() {
+        return _driveMap.Values.OfType<VirtualDrive>();
+    }
+
     public byte NumberOfPotentiallyValidDriveLetters {
         get {
             // At least A: and B:

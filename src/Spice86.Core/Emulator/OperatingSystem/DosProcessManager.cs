@@ -603,6 +603,13 @@ public class DosProcessManager : DosFileLoader {
     /// <summary>
     /// Creates a DOS environment block from the current environment variables.
     /// </summary>
+    /// <remarks>
+    /// The environment block structure is:
+    /// - Environment variables as "KEY=VALUE\0" strings
+    /// - Double null (\0\0) to terminate the list  
+    /// - A WORD (16-bit little-endian) containing count of additional strings (usually 1)
+    /// - The full program path as an ASCIZ string (used by programs to find their own executable)
+    /// </remarks>
     private byte[] CreateEnvironmentBlock(string programPath) {
         using MemoryStream ms = new();
 
@@ -613,12 +620,16 @@ public class DosProcessManager : DosFileLoader {
             ms.WriteByte(0);
         }
 
-        ms.WriteByte(0);
-        ms.WriteByte(1);
+        ms.WriteByte(0);  // Extra null to create double-null terminator
+        ms.WriteByte(1);  // WORD count = 1 (little-endian)
         ms.WriteByte(0);
 
-        string dosPath = _fileManager.GetDosProgramPath(programPath);
-        byte[] programPathBytes = Encoding.ASCII.GetBytes(dosPath);
+        // programPath is already a full DOS path from Exec(), so we use it directly
+        // The path must be the full absolute DOS path (e.g., "C:\GAMES\MYGAME.EXE")
+        // so programs can find their runtime by extracting the directory from their path.
+        // This is the same as what FreeDOS and MS-DOS do with truename() in task.c
+        string normalizedPath = programPath.Replace('/', '\\').ToUpperInvariant();
+        byte[] programPathBytes = Encoding.ASCII.GetBytes(normalizedPath);
         ms.Write(programPathBytes, 0, programPathBytes.Length);
         ms.WriteByte(0);
 
