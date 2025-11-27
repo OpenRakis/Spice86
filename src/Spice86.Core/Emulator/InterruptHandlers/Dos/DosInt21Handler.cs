@@ -36,6 +36,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
+    private readonly DosFcbManager _dosFcbManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
@@ -82,6 +83,7 @@ public class DosInt21Handler : InterruptHandler {
         _ioPortDispatcher = ioPortDispatcher;
         _dosTables = dosTables;
         _interruptVectorTable = new InterruptVectorTable(memory);
+        _dosFcbManager = new DosFcbManager(memory, dosFileManager, dosDriveManager, loggerService);
         FillDispatchTable();
     }
 
@@ -103,11 +105,24 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x0C, ClearKeyboardBufferAndInvokeKeyboardFunction);
         AddAction(0x0D, DiskReset);
         AddAction(0x0E, SelectDefaultDrive);
+        // FCB file operations (CP/M compatible)
+        AddAction(0x0F, FcbOpenFile);
+        AddAction(0x10, FcbCloseFile);
+        AddAction(0x14, FcbSequentialRead);
+        AddAction(0x15, FcbSequentialWrite);
+        AddAction(0x16, FcbCreateFile);
         AddAction(0x19, GetCurrentDefaultDrive);
         AddAction(0x1A, SetDiskTransferAddress);
         AddAction(0x1B, GetAllocationInfoForDefaultDrive);
         AddAction(0x1C, GetAllocationInfoForAnyDrive);
+        AddAction(0x21, FcbRandomRead);
+        AddAction(0x22, FcbRandomWrite);
+        AddAction(0x23, FcbGetFileSize);
+        AddAction(0x24, FcbSetRandomRecordNumber);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x27, FcbRandomBlockRead);
+        AddAction(0x28, FcbRandomBlockWrite);
+        AddAction(0x29, FcbParseFilename);
         AddAction(0x2A, GetDate);
         AddAction(0x2B, SetDate);
         AddAction(0x2C, GetTime);
@@ -1644,4 +1659,262 @@ public class DosInt21Handler : InterruptHandler {
         _ioPortDispatcher.WriteByte(CmosPorts.Address, register);
         _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
     }
+
+    #region FCB File Operations (CP/M compatible)
+
+    /// <summary>
+    /// Gets the FCB address from DS:DX.
+    /// </summary>
+    private uint GetFcbAddress() {
+        return MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+    }
+
+    /// <summary>
+    /// Gets the DTA address for FCB operations.
+    /// </summary>
+    private uint GetDtaAddress() {
+        return MemoryUtils.ToPhysicalAddress(
+            _dosFileManager.DiskTransferAreaAddressSegment,
+            _dosFileManager.DiskTransferAreaAddressOffset);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=0Fh - Open File Using FCB.
+    /// Opens an existing file using a File Control Block.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an unopened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if file found, FFh if file not found</para>
+    /// </remarks>
+    private void FcbOpenFile() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB OPEN FILE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.OpenFile(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=10h - Close File Using FCB.
+    /// Closes a file opened with an FCB.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if file closed, FFh if file not found</para>
+    /// </remarks>
+    private void FcbCloseFile() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB CLOSE FILE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.CloseFile(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=14h - Sequential Read Using FCB.
+    /// Reads the next sequential record from a file.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if EOF and no data read, 02h if segment wrap, 03h if EOF with partial read</para>
+    /// </remarks>
+    private void FcbSequentialRead() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB SEQUENTIAL READ at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.SequentialRead(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=15h - Sequential Write Using FCB.
+    /// Writes the next sequential record to a file.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if disk full, 02h if segment wrap</para>
+    /// </remarks>
+    private void FcbSequentialWrite() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB SEQUENTIAL WRITE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.SequentialWrite(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=16h - Create File Using FCB.
+    /// Creates a new file or truncates an existing file.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an unopened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if file created, FFh if error</para>
+    /// </remarks>
+    private void FcbCreateFile() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB CREATE FILE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.CreateFile(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=21h - Random Read Using FCB.
+    /// Reads a record at the random record position.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if EOF, 02h if segment wrap, 03h if partial read</para>
+    /// </remarks>
+    private void FcbRandomRead() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB RANDOM READ at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.RandomRead(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=22h - Random Write Using FCB.
+    /// Writes a record at the random record position.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if disk full, 02h if segment wrap</para>
+    /// </remarks>
+    private void FcbRandomWrite() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB RANDOM WRITE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.RandomWrite(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=23h - Get File Size Using FCB.
+    /// Gets the file size in records and stores it in the FCB random record field.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an FCB with file name and record size set</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if file found (random record field set to file size in records), FFh if file not found</para>
+    /// </remarks>
+    private void FcbGetFileSize() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB GET FILE SIZE at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.GetFileSize(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=24h - Set Random Record Number Using FCB.
+    /// Sets the random record field from the current block and record numbers.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>Random record field in FCB is set based on current block and record</para>
+    /// </remarks>
+    private void FcbSetRandomRecordNumber() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB SET RANDOM RECORD NUMBER at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        _dosFcbManager.SetRandomRecordNumber(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=27h - Random Block Read Using FCB.
+    /// Reads one or more records starting at the random record position.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para>CX = number of records to read</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if EOF, 02h if segment wrap, 03h if partial read</para>
+    /// <para>CX = actual number of records read</para>
+    /// </remarks>
+    private void FcbRandomBlockRead() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB RANDOM BLOCK READ at {Address}, {Count} records",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX), State.CX);
+        }
+        ushort recordCount = State.CX;
+        State.AL = _dosFcbManager.RandomBlockRead(GetFcbAddress(), GetDtaAddress(), ref recordCount);
+        State.CX = recordCount;
+    }
+
+    /// <summary>
+    /// INT 21h, AH=28h - Random Block Write Using FCB.
+    /// Writes one or more records starting at the random record position.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an opened FCB</para>
+    /// <para>CX = number of records to write (0 = truncate file to random record position)</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if successful, 01h if disk full, 02h if segment wrap</para>
+    /// <para>CX = actual number of records written</para>
+    /// </remarks>
+    private void FcbRandomBlockWrite() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB RANDOM BLOCK WRITE at {Address}, {Count} records",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX), State.CX);
+        }
+        ushort recordCount = State.CX;
+        State.AL = _dosFcbManager.RandomBlockWrite(GetFcbAddress(), GetDtaAddress(), ref recordCount);
+        State.CX = recordCount;
+    }
+
+    /// <summary>
+    /// INT 21h, AH=29h - Parse Filename into FCB.
+    /// Parses a filename string into an FCB format.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:SI = pointer to filename string to parse</para>
+    /// <para>ES:DI = pointer to FCB to fill</para>
+    /// <para>AL = parsing control byte:</para>
+    /// <para>  bit 0: skip leading separators</para>
+    /// <para>  bit 1: set default drive if not specified</para>
+    /// <para>  bit 2: blank filename if not specified</para>
+    /// <para>  bit 3: blank extension if not specified</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if no wildcards, 01h if wildcards present, FFh if invalid drive</para>
+    /// <para>DS:SI = pointer to first byte after parsed filename</para>
+    /// </remarks>
+    private void FcbParseFilename() {
+        uint stringAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
+        uint fcbAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
+        byte parseControl = State.AL;
+
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB PARSE FILENAME from {StringAddress} to {FcbAddress}, control={Control:X2}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.SI),
+                ConvertUtils.ToSegmentedAddressRepresentation(State.ES, State.DI),
+                parseControl);
+        }
+
+        State.AL = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl);
+    }
+
+    #endregion
 }
