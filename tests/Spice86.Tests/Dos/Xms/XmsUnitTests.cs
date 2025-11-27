@@ -17,8 +17,25 @@ using Xunit;
 
 /// <summary>
 /// Tests the eXtended Memory Manager (XMS) functionality.
-/// Based on the HITEST.ASM tool from Microsoft's XMS driver validation suite,
-/// and on XMS 3.0 specs text file
+/// <para>
+/// Based on the XMS 2.0/3.0 specification:
+/// <list type="bullet">
+/// <item>XMS 2.0 functions (00h-11h) for basic memory management</item>
+/// <item>XMS 3.0 extended functions (88h, 89h, 8Eh, 8Fh) for 32-bit addressing</item>
+/// </list>
+/// </para>
+/// <para>
+/// The implementation was verified against:
+/// <list type="bullet">
+/// <item>The official XMS 2.0 specification text file</item>
+/// <item>HIMEM.SYS 2.06 source code: https://github.com/neozeed/himem.sys-2.06</item>
+/// <item>Microsoft's HITEST.ASM XMS driver validation suite</item>
+/// </list>
+/// </para>
+/// <para>
+/// Note: Upper Memory Blocks (UMBs) are optional per the specification and
+/// are not implemented as they are not required for real-mode emulation.
+/// </para>
 /// </summary>
 public class XmsUnitTests {
     private readonly ExtendedMemoryManager _xms;
