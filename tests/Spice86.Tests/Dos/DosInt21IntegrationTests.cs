@@ -262,6 +262,86 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests that the environment block is not corrupted by PSP initialization.
+    /// This specifically verifies that the first bytes of the environment block
+    /// are the expected 'BL' characters (from BLASTER=...), not garbage from the PSP.
+    /// Also verifies that bytes at offset 0x16 and 0x2C (PSP offsets for ParentPspSegment
+    /// and EnvironmentTableSegment) are not corrupted with 0x60 0x01 pattern.
+    /// </summary>
+    /// <remarks>
+    /// This test catches a specific bug where the environment block was being
+    /// allocated at the same segment as the PSP, causing PSP initialization to
+    /// overwrite various offsets in the environment block.
+    /// See: https://github.com/maximilien-noal/Spice86/issues/XXX
+    /// </remarks>
+    [Fact]
+    public void EnvironmentBlock_NotCorruptedByPsp() {
+        // This test verifies the environment block starts correctly with 'B' (from BLASTER)
+        // and not garbage like 0xCD (INT 20h opcode) from PSP corruption.
+        // It also checks that offset 0x16 (22) doesn't contain 0x60 (PSP ParentPspSegment corruption)
+        // and offset 0x2C (44) doesn't contain 0x60 (PSP EnvironmentTableSegment corruption).
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // 0x00: mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // 0x02: int 21h - BX = current PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // 0x04: mov es, bx
+            
+            // Read environment segment from PSP+0x2C
+            0x26, 0x8B, 0x06, 0x2C, 0x00,  // 0x06: mov ax, es:[002Ch]
+            
+            // Check environment segment is not 0
+            0x85, 0xC0,             // 0x0B: test ax, ax
+            0x74, 0x2A,             // 0x0D: je failed (target 0x39)
+            
+            // Load environment segment into ES
+            0x8E, 0xC0,             // 0x0F: mov es, ax
+            
+            // Read first byte of environment block
+            0x26, 0x8A, 0x06, 0x00, 0x00,  // 0x11: mov al, es:[0000h]
+            
+            // Check it's 'B' (0x42) - first char of BLASTER
+            0x3C, 0x42,             // 0x16: cmp al, 'B'
+            0x75, 0x1F,             // 0x18: jne failed (target 0x39)
+            
+            // Check second byte is 'L' (0x4C)
+            0x26, 0x8A, 0x06, 0x01, 0x00,  // 0x1A: mov al, es:[0001h]
+            0x3C, 0x4C,             // 0x1F: cmp al, 'L'
+            0x75, 0x18,             // 0x21: jne failed (target 0x3B)
+            
+            // Check byte at offset 0x16 (22) is NOT 0x60 (CommandCom segment)
+            // This would indicate PSP ParentPspSegment corruption
+            0x26, 0x8A, 0x06, 0x16, 0x00,  // 0x23: mov al, es:[0016h]
+            0x3C, 0x60,             // 0x28: cmp al, 0x60
+            0x74, 0x0F,             // 0x2A: je failed (target 0x3B)
+            
+            // Check byte at offset 0x2C (44) is NOT 0x60 (CommandCom segment)
+            // This would indicate PSP EnvironmentTableSegment corruption
+            0x26, 0x8A, 0x06, 0x2C, 0x00,  // 0x2C: mov al, es:[002Ch]
+            0x3C, 0x60,             // 0x31: cmp al, 0x60
+            0x74, 0x06,             // 0x33: je failed (target 0x3B)
+            
+            // Success
+            0xB0, 0x00,             // 0x35: mov al, TestResult.Success
+            0xEB, 0x02,             // 0x37: jmp writeResult (target 0x3B)
+            
+            // failed:
+            0xB0, 0xFF,             // 0x39: mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // 0x3B: mov dx, ResultPort
+            0xEE,                   // 0x3E: out dx, al
+            0xF4                    // 0x3F: hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Tests that a program can find its own path from the environment block.
     /// This verifies the DOS environment block contains the ASCIZ program path after
     /// the environment variables (double null + WORD count + path).

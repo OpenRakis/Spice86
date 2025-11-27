@@ -128,14 +128,33 @@ public class DosProcessManager : DosFileLoader {
         // For child processes, we use proper MCB-based allocation.
         bool isFirstProgram = _pspTracker.PspCount == 0;
 
-        // Create environment block using MCB
+        // Create environment block
         byte[] envBlockData = CreateEnvironmentBlock(programPath);
         ushort envSegment = environmentSegment;
         if (envSegment == 0) {
-            // Allocate new environment block
-            envSegment = _memoryManager.AllocateEnvironmentBlock(envBlockData, parentPspSegment);
-            if (envSegment == 0) {
-                return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+            if (isFirstProgram) {
+                // For the first program, we place the environment block in a fixed location
+                // that won't conflict with the PSP at InitialPspSegment. We use the segment
+                // right after COMMAND.COM's PSP area (segment 0x70), which is unused memory
+                // between COMMAND.COM and the program's PSP.
+                // This avoids using MCB allocation which would place the environment at
+                // InitialPspSegment, where it would be overwritten by PSP initialization.
+                // See: https://github.com/maximilien-noal/Spice86/issues/XXX
+                envSegment = (ushort)(_commandCom.NextSegment);
+                uint envAddress = MemoryUtils.ToPhysicalAddress(envSegment, 0);
+                _memory.LoadData(envAddress, envBlockData);
+                
+                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    _loggerService.Verbose(
+                        "Placed first program environment block at segment {Segment:X4} ({Size} bytes)",
+                        envSegment, envBlockData.Length);
+                }
+            } else {
+                // For child processes, use MCB allocation as normal
+                envSegment = _memoryManager.AllocateEnvironmentBlock(envBlockData, parentPspSegment);
+                if (envSegment == 0) {
+                    return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+                }
             }
         }
 
@@ -145,8 +164,8 @@ public class DosProcessManager : DosFileLoader {
             : LoadProgram(fileBytes, hostPath, arguments, parentPspSegment, envSegment, loadType);
 
         if (!result.Success) {
-            // Free the environment block if we allocated it
-            if (environmentSegment == 0 && envSegment != 0) {
+            // Free the environment block if we allocated it (only for non-first programs)
+            if (environmentSegment == 0 && envSegment != 0 && !isFirstProgram) {
                 _memoryManager.FreeMemoryBlock((ushort)(envSegment - 1));
             }
         }
