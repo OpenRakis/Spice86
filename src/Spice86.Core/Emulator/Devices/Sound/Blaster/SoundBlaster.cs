@@ -32,6 +32,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         { Commands.SingleCycleDmaOutput8, 2 },
         { Commands.DspIdentification, 1 },
         { Commands.DmaIdentification, 1 },
+        { Commands.WriteTestRegister, 1 },
         { Commands.SetBlockTransferSize, 2 },
         { Commands.SetSampleRate, 2 },
         { Commands.SetInputSampleRate, 2 },
@@ -85,6 +86,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
     private const uint MaxDmaChunkCeilingBytes = 1024;
     private int _pendingDmaCompletion;
     private int _dmaPumpRecursion;
+    private byte _testRegister;
 
     /// <summary>
     ///     Initializes a new instance of the SoundBlaster class.
@@ -1147,6 +1149,14 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
                 _outputData.Enqueue(_commandData[0]);
                 break;
 
+            case Commands.WriteTestRegister:
+                _testRegister = _commandData[0];
+                break;
+
+            case Commands.ReadTestRegister:
+                _outputData.Enqueue(_testRegister);
+                break;
+
             case Commands.SetTimeConstant:
                 _dsp.SampleRate = 256000000 / (65536 - (_commandData[0] << 8));
                 UpdateActiveDmaRate();
@@ -1343,6 +1353,7 @@ public class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt,
         _dsp.Reset();
         _resetCount++;
         _pendingIrq = false;
+        _testRegister = 0;
 
         _dmaState.SpeakerEnabled = HasSpeaker;
         _dmaState.WarmupRemainingFrames = _dmaState.SpeakerEnabled ? _dmaState.ColdWarmupFrames : 0;

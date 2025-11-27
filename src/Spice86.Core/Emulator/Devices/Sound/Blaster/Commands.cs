@@ -50,6 +50,16 @@ public static class Commands {
     public const byte DmaIdentification = 0xE2;
 
     /// <summary>
+    /// Command to write a byte to the DSP's internal test register.
+    /// </summary>
+    public const byte WriteTestRegister = 0xE4;
+
+    /// <summary>
+    /// Command to read the value from the DSP's internal test register.
+    /// </summary>
+    public const byte ReadTestRegister = 0xE8;
+
+    /// <summary>
     /// Command to output data using auto-init DMA mode in 8-bit mode.
     /// </summary>
     public const byte AutoInitDmaOutput8 = 0x1C;
