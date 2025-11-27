@@ -10,7 +10,7 @@ using System.Diagnostics;
 /// Represents the Program Segment Prefix (PSP)
 /// </summary>
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
-public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
+public class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;
 
     public DosProgramSegmentPrefix(IByteReaderWriter byteReaderWriter, uint baseAddress) : base(byteReaderWriter, baseAddress) {

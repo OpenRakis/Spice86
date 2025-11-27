@@ -201,6 +201,67 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests INT 21h, AH=62h - Get PSP Address and verifies parent PSP points to COMMAND.COM
+    /// This verifies the PSP chain is properly established with COMMAND.COM as the root.
+    /// </summary>
+    /// <remarks>
+    /// Magic numbers in the assembly code:
+    /// - 0x16: ParentProgramSegmentPrefix offset in PSP (see DosProgramSegmentPrefix.cs)
+    /// - 0x60: CommandCom.CommandComSegment - where COMMAND.COM's PSP is located
+    /// </remarks>
+    [Fact]
+    public void GetPspAddress_ParentPspPointsToCommandCom() {
+        // This test:
+        // 1. Gets current PSP segment via INT 21h, AH=62h
+        // 2. Reads the parent PSP segment at offset 0x16 in the PSP (ParentProgramSegmentPrefix)
+        // 3. Verifies the parent PSP segment is COMMAND.COM's segment (0x60 = CommandCom.CommandComSegment)
+        // 4. Verifies that COMMAND.COM's parent PSP points to itself (root of chain)
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // int 21h - BX = current PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // mov es, bx
+            
+            // Read parent PSP segment from offset 0x16 (ParentProgramSegmentPrefix in PSP)
+            0x26, 0x8B, 0x1E, 0x16, 0x00,  // mov bx, es:[0016h] - BX = parent PSP segment
+            
+            // Check if parent PSP is COMMAND.COM (segment 0x60 = CommandCom.CommandComSegment)
+            0x81, 0xFB, 0x60, 0x00, // cmp bx, 0060h
+            0x75, 0x13,             // jne failed
+            
+            // Now verify COMMAND.COM's PSP points to itself (root of chain)
+            // Load COMMAND.COM's PSP segment into ES
+            0x8E, 0xC3,             // mov es, bx (bx = 0x60 = CommandCom.CommandComSegment)
+            
+            // Read COMMAND.COM's parent PSP from offset 0x16 (ParentProgramSegmentPrefix)
+            0x26, 0x8B, 0x1E, 0x16, 0x00,  // mov bx, es:[0016h]
+            
+            // Verify it points to itself (0x60 = CommandCom.CommandComSegment marks root)
+            0x81, 0xFB, 0x60, 0x00, // cmp bx, 0060h
+            0x75, 0x04,             // jne failed
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,

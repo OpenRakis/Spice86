@@ -695,8 +695,14 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
-        GetFullHostPathFromDosOrDefault(dosPath);
+    /// <summary>
+    /// Resolves a DOS path to a host file system path.
+    /// </summary>
+    /// <param name="dosPath">The DOS path to resolve.</param>
+    /// <returns>The resolved host path, or null if the path cannot be resolved.</returns>
+    public string? GetHostPath(string dosPath) => _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
+
+    internal string? TryGetFullHostPathFromDos(string dosPath) => GetHostPath(dosPath);
 
     private static ushort ToDosDate(DateTime localDate) {
         int day = localDate.Day;
@@ -1204,7 +1210,7 @@ public class DosFileManager {
     /// </summary>
     /// <param name="programPath">The absolute host path to the executable file.</param>
     /// <returns>A properly formatted DOS absolute path for the PSP env block.</returns>
-    internal string GetDosProgramPath(string programPath) {
+    public string GetDosProgramPath(string programPath) {
         // Extract just the filename without path if it's a full path
         string fileName = Path.GetFileName(programPath);
 

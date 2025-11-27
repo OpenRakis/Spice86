@@ -4,13 +4,18 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -20,33 +25,49 @@ public class DosInt21HandlerTests {
     public void MoveFilePointerUsingHandle_ShouldTreatCxDxOffsetAsSignedValue() {
         // Arrange
         IMemory memory = Substitute.For<IMemory>();
-        var state = new State(CpuModel.INTEL_80286);
-        var stack = new Stack(memory, state);
+        State state = new(CpuModel.INTEL_80286);
+        Stack stack = new(memory, state);
         ILoggerService logger = Substitute.For<ILoggerService>();
         IFunctionHandlerProvider functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
         string cDrivePath = Path.GetTempPath();
-        var driveManager = new DosDriveManager(logger, cDrivePath, null);
-        var stringDecoder = new DosStringDecoder(memory, state);
+        string executablePath = Path.Combine(cDrivePath, "test.exe");
+        DosDriveManager driveManager = new(logger, cDrivePath, executablePath);
+        DosStringDecoder stringDecoder = new(memory, state);
         IList<IVirtualDevice> virtualDevices = new List<IVirtualDevice>();
-        var dosFileManager = new DosFileManager(memory, stringDecoder, driveManager, logger, virtualDevices);
-        var recordingFile = new RecordingVirtualFile();
+        DosFileManager dosFileManager = new(memory, stringDecoder, driveManager, logger, virtualDevices);
+        RecordingVirtualFile recordingFile = new();
         const ushort fileHandle = 0x0003;
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
 
-        var handler = new DosInt21Handler(
+        // Create minimal real instances for unused dependencies
+        Configuration configuration = new();
+        DosProgramSegmentPrefixTracker dosPspTracker = new(configuration, memory, logger);
+        DosMemoryManager dosMemoryManager = new(memory, dosPspTracker, logger);
+        BiosDataArea biosDataArea = new(memory, 640);  // 640KB conventional memory
+        BiosKeyboardBuffer biosKeyboardBuffer = new(memory, biosDataArea);
+        KeyboardInt16Handler keyboardHandler = new(memory, biosDataArea, functionHandlerProvider, stack, state, logger, biosKeyboardBuffer);
+        CountryInfo countryInfo = new();
+        DosTables dosTables = new();
+        DosProcessManager dosProcessManager = new(memory, state, dosPspTracker, dosMemoryManager, 
+            dosFileManager, driveManager, new Dictionary<string, string>(), logger);
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, logger, false);
+
+        DosInt21Handler handler = new(
             memory,
-            null!,
+            dosPspTracker,
             functionHandlerProvider,
             stack,
             state,
-            null!,
-            null!,
+            keyboardHandler,
+            countryInfo,
             stringDecoder,
-            null!,
+            dosMemoryManager,
             dosFileManager,
             driveManager,
-            null!,  // ioPortDispatcher
-            null!,  // dosTables
+            dosProcessManager,
+            ioPortDispatcher,
+            dosTables,
             logger);
 
         state.AL = (byte)SeekOrigin.Current;

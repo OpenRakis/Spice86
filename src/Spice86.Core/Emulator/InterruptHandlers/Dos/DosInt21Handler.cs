@@ -27,6 +27,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly DosProgramSegmentPrefixTracker _dosPspTracker;
+    private readonly DosProcessManager _dosProcessManager;
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
@@ -52,6 +53,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
     /// <param name="dosDriveManager">The DOS class responsible for DOS volumes.</param>
+    /// <param name="dosProcessManager">The DOS class responsible for program loading and execution.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports (e.g., CMOS).</param>
     /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
@@ -60,6 +62,7 @@ public class DosInt21Handler : InterruptHandler {
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        DosProcessManager dosProcessManager,
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, ILoggerService loggerService)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _countryInfo = countryInfo;
@@ -69,6 +72,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosMemoryManager = dosMemoryManager;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
+        _dosProcessManager = dosProcessManager;
         _ioPortDispatcher = ioPortDispatcher;
         _dosTables = dosTables;
         _interruptVectorTable = new InterruptVectorTable(memory);
@@ -1095,13 +1099,97 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Either only load a program or overlay, or load it and run it.
+    /// INT 21h, AH=4Bh - EXEC: Load and/or Execute Program.
     /// </summary>
+    /// <remarks>
+    /// <para>Based on MS-DOS 4.0 EXEC.ASM and RBIL documentation.</para>
+    /// <para>
+    /// AL = type of load:
+    ///   00h = Load and execute
+    ///   01h = Load but do not execute
+    ///   03h = Load overlay
+    /// </para>
+    /// <para>
+    /// DS:DX → ASCIZ program name (must include extension)<br/>
+    /// ES:BX → parameter block:
+    ///   - AL=00h/01h: DosExecParameterBlock (environment, command tail, FCBs, entry point info)
+    ///   - AL=03h: DosExecOverlayParameterBlock (load segment, relocation factor)
+    /// </para>
+    /// <para>
+    /// Returns:<br/>
+    /// CF clear on success (BX,DX destroyed)<br/>
+    /// CF set on error, AX = error code
+    /// </para>
+    /// </remarks>
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
-    /// <exception cref="NotImplementedException">This function is not implemented</exception>
     public void LoadAndOrExecute(bool calledFromVm) {
         string programName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        throw new NotImplementedException($"INT21H: load and/or execute program is not implemented. Emulated program tried to load and/or exec: {programName}");
+        DosExecLoadType loadType = (DosExecLoadType)State.AL;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information(
+                "INT21H EXEC: Program='{Program}', LoadType={LoadType}, ES:BX={EsBx}",
+                programName, loadType, 
+                ConvertUtils.ToSegmentedAddressRepresentation(State.ES, State.BX));
+        }
+
+        // Read the parameter block from ES:BX
+        uint paramBlockAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
+
+        DosExecResult result;
+
+        if (loadType == DosExecLoadType.LoadOverlay) {
+            // For overlay mode, use the overlay-specific parameter block
+            DosExecOverlayParameterBlock overlayParamBlock = new(Memory, paramBlockAddress);
+            
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug(
+                    "EXEC overlay param block: LoadSeg={LoadSeg:X4}, RelocFactor={RelocFactor:X4}",
+                    overlayParamBlock.LoadSegment, overlayParamBlock.RelocationFactor);
+            }
+
+            result = _dosProcessManager.ExecOverlay(
+                programName,
+                overlayParamBlock.LoadSegment,
+                overlayParamBlock.RelocationFactor);
+        } else {
+            // For load/execute and load-only modes, use the standard parameter block
+            DosExecParameterBlock paramBlock = new(Memory, paramBlockAddress);
+
+            // Get command tail from parameter block using the DosCommandTail structure
+            uint cmdTailAddress = MemoryUtils.ToPhysicalAddress(
+                paramBlock.CommandTailSegment, paramBlock.CommandTailOffset);
+            DosCommandTail cmdTail = new(Memory, cmdTailAddress);
+            string commandTail = cmdTail.Length > 0 ? cmdTail.Command.TrimEnd('\r') : "";
+
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug(
+                    "EXEC param block: EnvSeg={EnvSeg:X4}, CmdTail='{CmdTail}'",
+                    paramBlock.EnvironmentSegment, commandTail);
+            }
+
+            result = _dosProcessManager.Exec(
+                programName, 
+                commandTail,
+                loadType, 
+                paramBlock.EnvironmentSegment);
+
+            // For LoadOnly mode, fill in the entry point info in the parameter block
+            if (result.Success && loadType == DosExecLoadType.LoadOnly) {
+                paramBlock.InitialSS = result.InitialSS;
+                paramBlock.InitialSP = result.InitialSP;
+                paramBlock.InitialCS = result.InitialCS;
+                paramBlock.InitialIP = result.InitialIP;
+            }
+        }
+
+        if (result.Success) {
+            SetCarryFlag(false, calledFromVm);
+        } else {
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)result.ErrorCode;
+            LogDosError(calledFromVm);
+        }
     }
 
     /// <summary>
