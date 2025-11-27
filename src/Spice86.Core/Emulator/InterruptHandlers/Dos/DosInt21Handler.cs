@@ -947,11 +947,114 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Terminate the current process, and either prepare unloading it, or keep it in memory.
+    /// INT 21h, AH=31h - Terminate and Stay Resident (TSR).
+    /// <para>
+    /// Terminates the current program but keeps a specified amount of memory allocated.
+    /// This is used by TSR programs (like keyboard handlers, memory managers) to remain
+    /// resident in memory while allowing other programs to run.
+    /// </para>
+    /// <para>
+    /// Based on FreeDOS kernel behavior (FDOS/kernel inthndlr.c):
+    /// - Resizes the current PSP's memory block to DX paragraphs (minimum 6)
+    /// - Sets return code to AL | 0x300 (high byte 0x03 indicates TSR termination)
+    /// - Returns to parent process via terminate address stored in PSP
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// AL = return code passed to parent process<br/>
+    /// DX = number of paragraphs to keep resident (minimum 6)
     /// </summary>
-    /// <exception cref="NotImplementedException">TSR Support is not implemented</exception>
+    /// <remarks>
+    /// DOS convention requires at least 6 paragraphs (96 bytes) to be kept, which covers
+    /// the PSP itself (256 bytes = 16 paragraphs). FreeDOS enforces a minimum of 6 paragraphs.
+    /// Note: The $clock device absence mentioned in the problem statement is intentionally ignored.
+    /// </remarks>
     private void TerminateAndStayResident() {
-        throw new NotImplementedException("TSR Support is not implemented");
+        ushort paragraphsToKeep = State.DX;
+        byte returnCode = State.AL;
+        
+        // FreeDOS enforces a minimum of 6 paragraphs (96 bytes)
+        // This is less than the PSP size (16 paragraphs = 256 bytes), but it's what FreeDOS does
+        const ushort MinimumParagraphs = 6;
+        if (paragraphsToKeep < MinimumParagraphs) {
+            paragraphsToKeep = MinimumParagraphs;
+        }
+        
+        // Get the current PSP
+        DosProgramSegmentPrefix? currentPsp = _dosPspTracker.GetCurrentPsp();
+        ushort currentPspSegment = _dosPspTracker.GetCurrentPspSegment();
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information(
+                "TSR: Terminating with return code {ReturnCode}, keeping {Paragraphs} paragraphs at PSP {PspSegment:X4}",
+                returnCode, paragraphsToKeep, currentPspSegment);
+        }
+        
+        // Resize the memory block for the current PSP
+        // The memory block starts at PSP segment, and we resize it to keep only the requested paragraphs
+        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+            currentPspSegment, 
+            paragraphsToKeep, 
+            out DosMemoryControlBlock _);
+        
+        // Even if resize fails, we still terminate as a TSR
+        // This matches FreeDOS behavior - it doesn't check the return value of DosMemChange
+        if (errorCode != DosErrorCode.NoError && LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning(
+                "TSR: Failed to resize memory block to {Paragraphs} paragraphs, error: {Error}",
+                paragraphsToKeep, errorCode);
+        }
+        
+        // TSR does NOT remove the PSP from the tracker (the program stays resident)
+        // TSR does NOT free the process memory (the program stays in memory)
+        // TSR DOES return to parent process
+        
+        // Check if we have a valid PSP with a terminate address
+        // If the current PSP has a valid terminate address, return to the parent
+        // Otherwise, stop the emulation (for initial programs or test environments)
+        if (currentPsp is not null) {
+            uint terminateAddress = currentPsp.TerminateAddress;
+            ushort terminateSegment = (ushort)(terminateAddress >> 16);
+            ushort terminateOffset = (ushort)(terminateAddress & 0xFFFF);
+            
+            // Check if we have a valid parent to return to:
+            // - terminateAddress must be non-zero (was saved when program was loaded)
+            // - parentPspSegment must not be ourselves (we're not the root shell)
+            // - parentPspSegment must not be zero (there is a parent)
+            ushort parentPspSegment = currentPsp.ParentProgramSegmentPrefix;
+            bool hasValidParent = terminateAddress != 0 && 
+                                  parentPspSegment != currentPspSegment &&
+                                  parentPspSegment != 0;
+            
+            if (hasValidParent) {
+                // Restore the CPU stack to the state it was in when the program started.
+                // The PSP stores the parent's SS:SP at offset 0x2E, which was saved by
+                // INT 21h/4Bh (EXEC) when this program was loaded. Restoring it allows
+                // the parent to continue execution from where it called EXEC.
+                uint savedStackPointer = currentPsp.StackPointer;
+                State.SS = (ushort)(savedStackPointer >> 16);
+                State.SP = (ushort)(savedStackPointer & 0xFFFF);
+                
+                // Jump to the terminate address (INT 22h handler saved in PSP at offset 0x0A)
+                // This was set when the program was loaded and points back to the parent's
+                // continuation point. This is how DOS returns control to the parent process.
+                State.CS = terminateSegment;
+                State.IP = terminateOffset;
+                
+                if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                    LoggerService.Verbose(
+                        "TSR: Returning to parent at {Segment:X4}:{Offset:X4}, stack {SS:X4}:{SP:X4}",
+                        terminateSegment, terminateOffset, State.SS, State.SP);
+                }
+                return;
+            }
+        }
+        
+        // Fallback: If we're the initial program or no valid parent exists, stop the emulator
+        // This handles test environments and programs launched directly without EXEC
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("TSR: No valid parent process, stopping emulation");
+        }
+        State.IsRunning = false;
     }
 
     /// <summary>
