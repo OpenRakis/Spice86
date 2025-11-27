@@ -63,8 +63,8 @@ public class VideoMemory : IVideoMemory {
                     // latches and OR them together to get the pixel.
                     byte pixel = 0;
                     for (int j = 0; j < 4; j++) {
-                        int bit = _latches[j] & 1 << i;
-                        pixel |= (byte)(bit >> i - j);
+                        int bit = (_latches[j] >> i) & 1;
+                        pixel |= (byte)(bit << j);
                     }
                     // Then we compare the pixel to the colorCompare register, and set the corresponding
                     // bit in the result if they match.
