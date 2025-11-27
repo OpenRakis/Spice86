@@ -126,4 +126,5 @@ public class DosInt21HandlerTests {
             throw new NotSupportedException();
         }
     }
+
 }

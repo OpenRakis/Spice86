@@ -137,6 +137,8 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
+        // INT 21h/58h: Get/Set Memory Allocation Strategy (related to memory functions 48h-4Ah)
+        AddAction(0x58, () => GetSetMemoryAllocationStrategy(true));
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
     }
@@ -1095,6 +1097,71 @@ public class DosInt21Handler : InterruptHandler {
             SetCarryFlag(true, calledFromVm);
             State.AX = (byte)errorCode;
             State.BX = mcb.Size;
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=58h - Get/Set Memory Allocation Strategy.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// AL = subfunction:
+    ///   00h = Get allocation strategy
+    ///   01h = Set allocation strategy
+    /// </para>
+    /// <para>
+    /// For AL=00h (Get strategy):
+    ///   Returns AX = current strategy:
+    ///     00h = First fit
+    ///     01h = Best fit
+    ///     02h = Last fit
+    ///     40h-42h = First/Best/Last fit, high memory first
+    ///     80h-82h = First/Best/Last fit, high memory only
+    /// </para>
+    /// <para>
+    /// For AL=01h (Set strategy):
+    ///   BX = new strategy (same values as above)
+    /// </para>
+    /// <para>
+    /// Note: Subfunctions 02h (Get UMB link state) and 03h (Set UMB link state) 
+    /// are not implemented as UMB support is not available.
+    /// </para>
+    /// </remarks>
+    /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
+    public void GetSetMemoryAllocationStrategy(bool calledFromVm) {
+        byte subFunction = State.AL;
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("GET/SET MEMORY ALLOCATION STRATEGY subfunction {SubFunction}", subFunction);
+        }
+
+        SetCarryFlag(false, calledFromVm);
+
+        switch (subFunction) {
+            case 0x00: // Get allocation strategy
+                State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
+                break;
+
+            case 0x01: // Set allocation strategy
+                ushort newStrategy = State.BX;
+                // Validate the strategy value
+                byte fitType = (byte)(newStrategy & 0x03);
+                byte highMemBits = (byte)(newStrategy & 0xC0);
+
+                // Bits 2-5 must be zero; valid fit types are 0, 1, 2; high memory bits can be 0x00, 0x40, or 0x80
+                if ((newStrategy & 0x3C) != 0 || fitType > 0x02 || (highMemBits != 0x00 && highMemBits != 0x40 && highMemBits != 0x80)) {
+                    SetCarryFlag(true, calledFromVm);
+                    State.AX = (ushort)DosErrorCode.FunctionNumberInvalid;
+                    return;
+                }
+
+                _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)(byte)newStrategy;
+                break;
+
+            // UMB subfunctions 0x02 and 0x03 are not supported - UMBs are not implemented
+            default:
+                SetCarryFlag(true, calledFromVm);
+                State.AX = (ushort)DosErrorCode.FunctionNumberInvalid;
+                break;
         }
     }
 
