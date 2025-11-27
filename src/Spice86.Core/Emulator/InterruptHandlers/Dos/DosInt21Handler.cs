@@ -155,6 +155,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
+        AddAction(0x4D, GetChildReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
@@ -1484,15 +1485,88 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Quits the current DOS process and sets the exit code from the value in the AL register. <br/>
-    /// TODO: This is only a stub that sets the cpu state <see cref="State.IsRunning"/> property to <c>False</c>, thus ending the emulation loop !
+    /// INT 21h, AH=4Ch - Terminate Process with Return Code.
+    /// Also handles INT 21h, AH=00h (legacy termination).
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This function terminates the current process and returns control to the parent process.
+    /// The exit code in AL is stored and can be retrieved by the parent using INT 21h AH=4Dh.
+    /// </para>
+    /// <para>
+    /// Termination includes:
+    /// <list type="bullet">
+    /// <item>Storing return code for parent to retrieve</item>
+    /// <item>Freeing all memory blocks owned by the process</item>
+    /// <item>Restoring interrupt vectors 22h, 23h, 24h from PSP</item>
+    /// <item>Returning control to parent via INT 22h vector</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <strong>MCB Note:</strong> FreeDOS kernel calls return_code() and FreeProcessMem() 
+    /// in task.c. This implementation follows a similar pattern. Note that in real DOS,
+    /// the environment block is freed automatically because it's a separate MCB
+    /// owned by the terminating process.
+    /// </para>
+    /// </remarks>
     public void QuitWithExitCode() {
         byte exitCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("INT21H: QUIT WITH EXIT CODE {ExitCode}", ConvertUtils.ToHex8(exitCode));
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("INT21H AH=4Ch: TERMINATE with exit code {ExitCode:X2}", exitCode);
         }
-        State.IsRunning = false;
+
+        bool shouldContinue = _dosProcessManager.TerminateProcess(
+            exitCode, 
+            DosTerminationType.Normal,
+            _interruptVectorTable);
+
+        if (!shouldContinue) {
+            // No parent to return to - stop emulation
+            State.IsRunning = false;
+        }
+        // If shouldContinue is true, the CPU state (CS:IP) was set to the parent's
+        // return address by TerminateProcess, so execution will continue there.
+    }
+
+    /// <summary>
+    /// INT 21h, AH=4Dh - Get Return Code of Child Process (WAIT).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Returns the exit code and termination type of the last child process that was 
+    /// executed via INT 21h AH=4Bh and subsequently terminated.
+    /// </para>
+    /// <para>
+    /// <b>Returns:</b><br/>
+    /// AL = exit code (ERRORLEVEL) of the child process<br/>
+    /// AH = termination type (see <see cref="DosTerminationType"/>):
+    /// <list type="bullet">
+    /// <item>00h = Normal termination (INT 20h, INT 21h/00h, INT 21h/4Ch)</item>
+    /// <item>01h = Terminated by Ctrl-C (INT 23h)</item>
+    /// <item>02h = Terminated by critical error (INT 24h abort)</item>
+    /// <item>03h = Terminate and Stay Resident (INT 21h/31h, INT 27h)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <strong>MCB Note:</strong> In MS-DOS, this function can only be called once per 
+    /// child process termination - subsequent calls return 0. FreeDOS may behave 
+    /// slightly differently. The exit code is stored in the Swappable Data Area (SDA).
+    /// </para>
+    /// </remarks>
+    public void GetChildReturnCode() {
+        ushort returnCode = _dosProcessManager.LastChildReturnCode;
+        State.AX = returnCode;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            byte exitCode = (byte)(returnCode & 0xFF);
+            byte terminationType = (byte)(returnCode >> 8);
+            LoggerService.Verbose(
+                "INT21H AH=4Dh: GET CHILD RETURN CODE - ExitCode={ExitCode:X2}, TermType={TermType}",
+                exitCode, (DosTerminationType)terminationType);
+        }
+        
+        // In MS-DOS, subsequent calls to AH=4Dh return 0 after the first read
+        _dosProcessManager.LastChildReturnCode = 0;
     }
 
     /// <summary>

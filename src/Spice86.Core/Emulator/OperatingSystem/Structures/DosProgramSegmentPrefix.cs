@@ -7,8 +7,77 @@ using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using System.Diagnostics;
 
 /// <summary>
-/// Represents the Program Segment Prefix (PSP)
+/// Represents the Program Segment Prefix (PSP), a 256-byte header that DOS creates
+/// for each running program.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The PSP is always located at offset 0 of the program's memory allocation,
+/// with the program code starting at offset 100h (for COM files) or after the PSP
+/// (for EXE files).
+/// </para>
+/// <para>
+/// PSP structure (256 bytes):
+/// <code>
+/// Offset  Size  Description
+/// 00h     2B    INT 20h instruction (CP/M-style exit)
+/// 02h     WORD  Segment of first byte beyond program allocation
+/// 04h     BYTE  Reserved
+/// 05h     5B    Far call to DOS dispatcher (obsolete)
+/// 0Ah     DWORD Terminate address (INT 22h vector)
+/// 0Eh     DWORD Ctrl-C handler address (INT 23h vector)
+/// 12h     DWORD Critical error handler address (INT 24h vector)
+/// 16h     WORD  Parent PSP segment
+/// 18h     20B   Job File Table (file handle array)
+/// 2Ch     WORD  Environment segment
+/// 2Eh     DWORD SS:SP on entry to last INT 21h call
+/// 32h     WORD  Maximum file handles
+/// 34h     DWORD Pointer to Job File Table
+/// 38h     DWORD Previous PSP (for nested command interpreters)
+/// 3Ch     BYTE  Interim console flag
+/// 3Dh     BYTE  Truename flag
+/// 3Eh     WORD  NextPSP sharing file handles
+/// 40h     WORD  DOS version to return
+/// 42h     14B   Reserved
+/// 50h     3B    DOS function dispatcher (INT 21h, RETF)
+/// 53h     9B    Reserved
+/// 5Ch     16B   Default FCB #1
+/// 6Ch     16B   Default FCB #2 (overlaps FCB #1)
+/// 7Ch     4B    Reserved
+/// 80h     128B  Command tail (parameter length + command line + CR)
+/// </code>
+/// </para>
+/// <para>
+/// <strong>FreeDOS vs MS-DOS PSP Behavior Notes:</strong>
+/// <list type="bullet">
+/// <item>
+/// <term>Parent PSP (offset 16h):</term>
+/// <description>When a process is its own parent (PSP segment == parent PSP segment),
+/// it indicates the root of the PSP chain (typically COMMAND.COM). FreeDOS and MS-DOS
+/// treat self-parented processes slightly differently during INT 24h abort. See
+/// https://github.com/FDOS/kernel/issues/213 for details.</description>
+/// </item>
+/// <item>
+/// <term>Environment Block (offset 2Ch):</term>
+/// <description>The environment block is a separate MCB owned by the process.
+/// When the process terminates, this MCB is freed along with the program's memory.
+/// FreeDOS allocates the environment block immediately before the PSP.</description>
+/// </item>
+/// <item>
+/// <term>Job File Table (offset 18h and 34h):</term>
+/// <description>The internal JFT at offset 18h holds 20 file handles by default.
+/// The pointer at 34h normally points to offset 18h. Programs can expand the JFT
+/// by allocating memory and updating the pointer at 34h and count at 32h.</description>
+/// </item>
+/// <item>
+/// <term>Interrupt Vectors (offsets 0Ah-15h):</term>
+/// <description>When a program terminates, DOS restores INT 22h, 23h, and 24h
+/// from the values stored in the terminating process's PSP. This allows each
+/// program to have its own handlers that are restored on exit.</description>
+/// </item>
+/// </list>
+/// </para>
+/// </remarks>
 [DebuggerDisplay("BaseAddress={BaseAddress}, Parent={ParentProgramSegmentPrefix}, EnvSegment={EnvironmentTableSegment}, NextSegment={NextSegment}, StackPointer={StackPointer}, Cmd={DosCommandTail.Command}")]
 public class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     public const ushort MaxLength = 0x80 + 128;

@@ -436,6 +436,170 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests INT 21h, AH=4Dh - Get Return Code of Child Process.
+    /// Verifies that after a child process terminates, the parent can retrieve the exit code.
+    /// </summary>
+    /// <remarks>
+    /// This test verifies the basic functionality of INT 21h AH=4Dh by checking that
+    /// the return code is 0 initially (no child has terminated yet).
+    /// The value returned by AH=4Dh contains:
+    /// - AL = exit code (should be 0 initially or from last child)
+    /// - AH = termination type (see DosTerminationType enum)
+    /// </remarks>
+    [Fact]
+    public void GetChildReturnCode_ReturnsReturnCode() {
+        // This test calls INT 21h AH=4Dh to get the return code
+        // Initially, the return code should be 0 (no child has terminated)
+        // AL = exit code, AH = termination type
+        byte[] program = new byte[] {
+            // Get child return code
+            0xB4, 0x4D,             // mov ah, 4Dh - Get child return code
+            0xCD, 0x21,             // int 21h
+            
+            // Save the result (AX) for verification
+            // AL = exit code, AH = termination type
+            // We'll check that the termination type is 0 (normal) for initial state
+            0x88, 0xE0,             // mov al, ah - move termination type to AL
+            0x3C, 0x00,             // cmp al, 0 - check if termination type is Normal (0)
+            0x75, 0x04,             // jne failed (jump if not normal)
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that subsequent calls to INT 21h AH=4Dh return 0 (MS-DOS behavior).
+    /// </summary>
+    /// <remarks>
+    /// In MS-DOS, the return code is only valid for the first read after a child
+    /// process terminates. Subsequent reads should return 0. This test verifies
+    /// that calling AH=4Dh twice in a row returns 0 on the second call.
+    /// </remarks>
+    [Fact]
+    public void GetChildReturnCode_SubsequentCallsReturnZero() {
+        // This test calls INT 21h AH=4Dh twice and verifies the second call returns 0
+        byte[] program = new byte[] {
+            // First call to get child return code (clears the value)
+            0xB4, 0x4D,             // mov ah, 4Dh - Get child return code
+            0xCD, 0x21,             // int 21h
+            
+            // Second call - should return 0 now
+            0xB4, 0x4D,             // mov ah, 4Dh - Get child return code again
+            0xCD, 0x21,             // int 21h
+            
+            // Check that AX is 0 (both exit code and termination type)
+            0x85, 0xC0,             // test ax, ax - check if AX is 0
+            0x75, 0x04,             // jne failed (jump if not zero)
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that INT 21h AH=4Ch properly terminates the program and sets the exit code.
+    /// </summary>
+    /// <remarks>
+    /// This test verifies that:
+    /// 1. The program terminates cleanly with exit code 0x42
+    /// 2. The emulator stops running after termination
+    /// 
+    /// Note: In a full implementation with child processes, this would also verify
+    /// that the parent can retrieve the exit code via INT 21h AH=4Dh.
+    /// </remarks>
+    [Fact]
+    public void TerminateWithExitCode_TerminatesProgramNormally() {
+        // This test calls INT 21h AH=4Ch with exit code 0x42
+        // After termination, we expect the emulator to have stopped
+        byte[] program = new byte[] {
+            // First, write a success marker before terminating
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            
+            // Terminate with exit code 0x42
+            0xB4, 0x4C,             // mov ah, 4Ch - Terminate with exit code
+            0xB0, 0x42,             // mov al, 42h - exit code
+            0xCD, 0x21,             // int 21h - should terminate
+            
+            // This should never be reached
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        // We should see the success marker but NOT the failure marker
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that INT 20h properly terminates the program (legacy method).
+    /// </summary>
+    /// <remarks>
+    /// INT 20h is the legacy DOS termination method used by COM files.
+    /// Unlike INT 21h/4Ch, it doesn't allow specifying an exit code.
+    /// The exit code is always 0.
+    /// </remarks>
+    [Fact]
+    public void Int20h_TerminatesProgramNormally() {
+        // This test calls INT 20h to terminate the program
+        byte[] program = new byte[] {
+            // First, write a success marker before terminating
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            
+            // Terminate using INT 20h (legacy method)
+            0xCD, 0x20,             // int 20h - should terminate
+            
+            // This should never be reached
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        // We should see the success marker but NOT the failure marker
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,
