@@ -40,6 +40,8 @@ public class DosProgramSegmentPrefixTracker {
 
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly DosSwappableDataArea _dosSwappableDataArea;
+
 
     /// <summary>
     /// The PSPs for each program that is currently loaded.
@@ -47,7 +49,9 @@ public class DosProgramSegmentPrefixTracker {
     private readonly List<DosProgramSegmentPrefix> _loadedPsps;
 
     public DosProgramSegmentPrefixTracker(Configuration configuration, IMemory memory,
+        DosSwappableDataArea dosSwappableDataArea,
         ILoggerService loggerService) {
+        _dosSwappableDataArea = dosSwappableDataArea;
         _initialProgramEntryPointSegment = configuration.ProgramEntryPointSegment;
         _memory = memory;
         _loggerService = loggerService;
@@ -88,14 +92,10 @@ public class DosProgramSegmentPrefixTracker {
     /// Gets the PSP for the program that is currently loaded.
     /// </summary>
     /// <returns>
-    /// Returns the PSP for the current program if one is loaded, or <c>null</c> if no program has
-    /// been loaded by the emulator yet.
+    /// Returns the PSP set in the <see cref="DosSwappableDataArea"/>
     /// </returns>
-    public DosProgramSegmentPrefix? GetCurrentPsp() {
-        if (_loadedPsps.Count <= 0) {
-            return null;
-        }
-        return _loadedPsps[_loadedPsps.Count - 1];
+    public DosProgramSegmentPrefix GetCurrentPsp() {
+        return new DosProgramSegmentPrefix(_memory, MemoryUtils.ToPhysicalAddress(_dosSwappableDataArea.CurrentProgramSegmentPrefix, 0));
     }
 
     /// <summary>
@@ -103,8 +103,15 @@ public class DosProgramSegmentPrefixTracker {
     /// </summary>
     /// <returns>Returns the PSP segment for the current program.</returns>
     public ushort GetCurrentPspSegment() {
-        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        return currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
+        return _dosSwappableDataArea.CurrentProgramSegmentPrefix;
+    }
+
+    /// <summary>
+    /// Sets the current Program Segment Prefix (PSP) segment value for the DOS swappable data area.
+    /// </summary>
+    /// <param name="segment">The segment value to assign as the current Program Segment Prefix. Must be a valid <see cref="DosProgramSegmentPrefix"/> structure.</param>
+    public void SetCurrentPspSegment(ushort segment) {
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
     }
 
     /// <summary>
@@ -142,6 +149,7 @@ public class DosProgramSegmentPrefixTracker {
     public DosProgramSegmentPrefix PushPspSegment(ushort pspSegment) {
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
         DosProgramSegmentPrefix psp = new(_memory, pspAddress);
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = pspSegment;
         _loadedPsps.Add(psp);
         return psp;
     }
@@ -159,9 +167,7 @@ public class DosProgramSegmentPrefixTracker {
     /// Removes the last PSP segment from the top of the stack.
     /// </summary>
     public void PopCurrentPspSegment() {
-        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        if (currentPsp != null) {
-            _loadedPsps.Remove(currentPsp);
-        }
+        DosProgramSegmentPrefix currentPsp = GetCurrentPsp();
+        _loadedPsps.Remove(currentPsp);
     }
 }

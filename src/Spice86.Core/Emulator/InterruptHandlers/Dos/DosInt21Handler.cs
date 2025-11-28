@@ -152,6 +152,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x47, () => GetCurrentDirectory(true));
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
+        AddAction(0x50, () => SetCurrentPsp());
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
@@ -850,6 +851,14 @@ public class DosInt21Handler : InterruptHandler {
             // INVALID MEMORY BLOCK ADDRESS
             State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
         }
+    }
+
+    /// <summary>
+    /// Sets the current Program Segment Prefix (PSP) segment in the <see cref="DosSwappableDataArea"/>
+    /// </summary>
+    /// <remarks>Used by (for example) Day of the Tentacle</remarks>
+    public void SetCurrentPsp() {
+        _dosPspTracker.SetCurrentPspSegment(State.BX);
     }
 
     /// <summary>

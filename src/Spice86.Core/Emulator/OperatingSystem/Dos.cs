@@ -203,7 +203,7 @@ public sealed class Dos {
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
-        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, loggerService);
+        DosProgramSegmentPrefixTracker pspTracker = new(configuration, _memory, DosSwappableDataArea, loggerService);
         MemoryManager = new DosMemoryManager(_memory, pspTracker, loggerService);
         ProcessManager = new(_memory, state, pspTracker, MemoryManager, FileManager, DosDriveManager, envVars, loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
