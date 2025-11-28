@@ -40,20 +40,24 @@ public class DosProgramSegmentPrefixTracker {
 
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly DosSwappableDataArea _dosSwappableDataArea;
 
     /// <summary>
     /// The PSPs for each program that is currently loaded.
     /// </summary>
     private readonly List<DosProgramSegmentPrefix> _loadedPsps;
 
-    public DosProgramSegmentPrefixTracker(Configuration configuration, IMemory memory,
-        ILoggerService loggerService) {
+    public DosProgramSegmentPrefixTracker(
+        Configuration configuration, IMemory memory,
+        DosSwappableDataArea dosSwappableDataArea, ILoggerService loggerService) {
         _initialProgramEntryPointSegment = configuration.ProgramEntryPointSegment;
         _memory = memory;
+        _dosSwappableDataArea = dosSwappableDataArea;
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = _initialProgramEntryPointSegment;
         _loggerService = loggerService;
         _loadedPsps = new();
 
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Initial program entry point at segment: {}",
                 ConvertUtils.ToHex16(_initialProgramEntryPointSegment));
         }
@@ -95,6 +99,14 @@ public class DosProgramSegmentPrefixTracker {
     public ushort GetCurrentPspSegment() {
         DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
         return currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
+    }
+
+    /// <summary>
+    /// Sets the current Program Segment Prefix (PSP) segment value for the DOS swappable data area.
+    /// </summary>
+    /// <param name="segment">The segment value to assign as the current Program Segment Prefix. Must be a valid <see cref="DosProgramSegmentPrefix"/> structure.</param>
+    public void SetCurrentPspSegment(ushort segment) {
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
     }
 
     /// <summary>

@@ -68,7 +68,8 @@ public class DosMemoryManagerTests {
             // point, so these unit tests are valid regardless.
             ProgramEntryPointSegment = (ushort)0x1000
         };
-        _pspTracker = new(configuration, _memory, _loggerService);
+        _pspTracker = new(configuration, _memory, new DosSwappableDataArea(_memory, MemoryUtils.ToPhysicalAddress(0xb2, 0)),
+            _loggerService);
 
         // Arrange
         _memoryManager = new DosMemoryManager(_memory, _pspTracker, _loggerService);
