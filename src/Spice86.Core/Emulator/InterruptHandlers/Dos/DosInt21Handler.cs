@@ -691,10 +691,19 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sets the current Program Segment Prefix (PSP) segment in the <see cref="DosSwappableDataArea"/>
+    /// Sets the current Program Segment Prefix (PSP) segment. Function 50H. <br/>
     /// </summary>
-    /// <remarks>Used by (for example) Day of the Tentacle</remarks>
+    /// <remarks>
+    /// Input: BX = new PSP segment value. <br/>
+    /// Used by (for example) Day of the Tentacle.
+    /// </remarks>
+    /// <returns>
+    /// None.
+    /// </returns>
     public void SetCurrentPsp() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET CURRENT PSP: {PspSegment}", ConvertUtils.ToHex16(State.BX));
+        }
         _dosPspTracker.SetCurrentPspSegment(State.BX);
     }
 
