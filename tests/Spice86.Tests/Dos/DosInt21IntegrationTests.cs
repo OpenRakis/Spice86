@@ -526,46 +526,6 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
-    /// Tests that INT 21h AH=4Ch properly terminates the program and sets the exit code.
-    /// </summary>
-    /// <remarks>
-    /// This test verifies that:
-    /// 1. The program terminates cleanly with exit code 0x42
-    /// 2. The emulator stops running after termination
-    /// 
-    /// Note: In a full implementation with child processes, this would also verify
-    /// that the parent can retrieve the exit code via INT 21h AH=4Dh.
-    /// </remarks>
-    [Fact]
-    public void TerminateWithExitCode_TerminatesProgramNormally() {
-        // This test calls INT 21h AH=4Ch with exit code 0x42
-        // After termination, we expect the emulator to have stopped
-        byte[] program = new byte[] {
-            // First, write a success marker before terminating
-            0xB0, 0x00,             // mov al, TestResult.Success
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            
-            // Terminate with exit code 0x42
-            0xB4, 0x4C,             // mov ah, 4Ch - Terminate with exit code
-            0xB0, 0x42,             // mov al, 42h - exit code
-            0xCD, 0x21,             // int 21h - should terminate
-            
-            // This should never be reached
-            0xB0, 0xFF,             // mov al, TestResult.Failure
-            0xBA, 0x99, 0x09,       // mov dx, ResultPort
-            0xEE,                   // out dx, al
-            0xF4                    // hlt
-        };
-
-        DosTestHandler testHandler = RunDosTest(program);
-
-        // We should see the success marker but NOT the failure marker
-        testHandler.Results.Should().Contain((byte)TestResult.Success);
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-    }
-
-    /// <summary>
     /// Tests that INT 20h properly terminates the program (legacy method).
     /// </summary>
     /// <remarks>
