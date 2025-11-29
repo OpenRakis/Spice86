@@ -61,6 +61,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
         AddAction(0x6, Unsupported);
         AddAction(0x86, () => BiosWait(true));
+        AddAction(0x90, () => DeviceBusy(true));
+        AddAction(0x91, () => DevicePost(true));
         AddAction(0xC0, Unsupported);
         AddAction(0xC2, Unsupported);
         AddAction(0xC4, Unsupported);
@@ -422,5 +424,23 @@ public class SystemBiosInt15Handler : InterruptHandler {
         // By default, we want to process the scan code (so set carry flag)
         // A real keyboard hook could modify AL or clear CF here to alter behavior
         SetCarryFlag(true, calledFromVm);
+    }
+
+    /// <summary>
+    /// INT 15h, AH=90h - OS HOOK - DEVICE BUSY. Clears CF and sets AH=0.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
+    public void DeviceBusy(bool calledFromVm) {
+        SetCarryFlag(false, calledFromVm);
+        State.AH = 0;
+    }
+
+    /// <summary>
+    /// INT 15h, AH=91h - OS HOOK - DEVICE POST. Clears CF and sets AH=0.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this function is called directly from the VM.</param>
+    public void DevicePost(bool calledFromVm) {
+        SetCarryFlag(false, calledFromVm);
+        State.AH = 0;
     }
 }
