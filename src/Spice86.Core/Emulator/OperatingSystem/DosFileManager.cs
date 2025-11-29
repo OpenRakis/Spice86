@@ -514,8 +514,9 @@ public class DosFileManager {
     /// </summary>
     /// <param name="fileName">The name of the file to open.</param>
     /// <param name="accessMode">The access mode (read, write, or read+write)</param>
+    /// <param name="noInherit">If true, the file handle will not be inherited by child processes.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
-    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode) {
+    public DosFileOperationResult OpenFileOrDevice(string fileName, FileAccessMode accessMode, bool noInherit = false) {
         CharacterDevice? device = _dosVirtualDevices.OfType<CharacterDevice>()
             .FirstOrDefault(device => device.IsName(fileName));
         if (device is not null) {
@@ -534,10 +535,10 @@ public class DosFileManager {
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}", hostFileName, accessMode);
+            _loggerService.Debug("Opening file {HostFileName} with mode {OpenMode}, noInherit={NoInherit}", hostFileName, accessMode, noInherit);
         }
 
-        return OpenFileInternal(fileName, hostFileName, accessMode);
+        return OpenFileInternal(fileName, hostFileName, accessMode, noInherit);
     }
 
     /// <summary>
@@ -772,7 +773,7 @@ public class DosFileManager {
         return info;
     }
 
-    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {
+    private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode, bool noInherit = false) {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
             return FileNotFoundError(dosFileName);
@@ -786,7 +787,9 @@ public class DosFileManager {
         ushort dosIndex = (ushort)freeIndex.Value;
         try {
             Stream? randomAccessFile = null;
-            switch (openMode) {
+            // Extract just the access mode bits (0-2) for file open operations
+            FileAccessMode baseAccessMode = (FileAccessMode)((byte)openMode & 0b111);
+            switch (baseAccessMode) {
                 case FileAccessMode.ReadOnly: {
                         if (File.Exists(hostFileName)) {
                             randomAccessFile = File.Open(hostFileName,
@@ -815,7 +818,8 @@ public class DosFileManager {
             if (randomAccessFile != null) {
                 byte driveIndex = _dosDriveManager.CurrentDriveIndex;
                 DosFile dosFile = new(dosFileName, dosIndex, randomAccessFile) {
-                    Drive = driveIndex
+                    Drive = driveIndex,
+                    Flags = noInherit ? (byte)FileAccessMode.Private : (byte)0
                 };
                 dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
                 SetOpenFile(dosIndex, dosFile);

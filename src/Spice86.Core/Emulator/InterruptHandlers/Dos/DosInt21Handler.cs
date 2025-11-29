@@ -31,6 +31,11 @@ public class DosInt21Handler : InterruptHandler {
     /// This must match the value in <c>Dos.DosSysVarSegment</c> (private const in Dos.cs, line 47).
     /// </summary>
     private const ushort DosSysVarsSegment = 0x80;
+    
+    /// <summary>
+    /// Value set in AL after CreateChildPsp (per DOSBox behavior: reg_al=0xf0, "destroyed" value).
+    /// </summary>
+    private const byte CreateChildPspAlDestroyedValue = 0xF0;
 
     private readonly DosMemoryManager _dosMemoryManager;
     private readonly DosDriveManager _dosDriveManager;
@@ -166,6 +171,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x4F, () => FindNextMatchingFile(true));
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
+        AddAction(0x55, CreateChildPsp);
         // INT 21h/58h: Get/Set Memory Allocation Strategy (related to memory functions 48h-4Ah)
         AddAction(0x58, () => GetSetMemoryAllocationStrategy(true));
         AddAction(0x62, GetPspAddress);
@@ -1240,6 +1246,59 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
+    /// INT 21h, AH=55h - Create Child PSP.
+    /// <para>
+    /// Creates a new Program Segment Prefix at the specified segment address,
+    /// copying relevant data from the parent (current) PSP.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// DX = segment for new PSP<br/>
+    /// SI = size in paragraphs (16-byte units)
+    /// <b>Returns:</b><br/>
+    /// AL = 0xF0 (destroyed - per DOSBox behavior)<br/>
+    /// Current PSP is set to DX
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on DOSBox staging implementation and DOS 4.0 behavior.
+    /// This function is typically used by:
+    /// <list type="bullet">
+    /// <item>Debuggers that need to create process contexts</item>
+    /// <item>Overlay managers</item>
+    /// <item>Programs that manage multiple execution contexts</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The child PSP inherits:
+    /// <list type="bullet">
+    /// <item>File handle table from parent</item>
+    /// <item>Command tail from parent (offset 0x80)</item>
+    /// <item>FCB1 and FCB2 from parent</item>
+    /// <item>Environment segment from parent</item>
+    /// <item>Stack pointer from parent</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public void CreateChildPsp() {
+        ushort childSegment = State.DX;
+        ushort sizeInParagraphs = State.SI;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE CHILD PSP at segment {Segment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+        
+        // Create the child PSP
+        _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs, _interruptVectorTable);
+        
+        // Set current PSP to the new child PSP (per DOSBox behavior: dos.psp(reg_dx))
+        _dosPspTracker.SetCurrentPspSegment(childSegment);
+        
+        // AL is destroyed (per DOSBox: reg_al=0xf0)
+        State.AL = CreateChildPspAlDestroyedValue;
+    }
+
+    /// <summary>
     /// INT 21h, AH=52h - Get List of Lists (SYSVARS).
     /// <para>
     /// Returns a pointer to the DOS internal tables (also known as the "List of Lists" or SYSVARS).
@@ -1570,15 +1629,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the code was called by the emulator.</param>
     public void OpenFileorDevice(bool calledFromVm) {
         string fileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        byte accessMode = State.AL;
-        FileAccessMode fileAccessMode = (FileAccessMode)(accessMode & 0b111);
+        byte accessModeByte = State.AL;
+        // Pass the full access mode byte - bits 0-2 are access mode, bits 4-6 are sharing mode, bit 7 is no-inherit
+        FileAccessMode fileAccessMode = (FileAccessMode)accessModeByte;
+        bool noInherit = (accessModeByte & (byte)FileAccessMode.Private) != 0;
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode} : {FileAccessModeByte}",
-                fileName, fileAccessMode,
-                ConvertUtils.ToHex8(State.AL));
+            LoggerService.Verbose("OPEN FILE {FileName} with mode {AccessMode}, noInherit={NoInherit} : {FileAccessModeByte}",
+                fileName, fileAccessMode, noInherit,
+                ConvertUtils.ToHex8(accessModeByte));
         }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFileOrDevice(
-            fileName, fileAccessMode);
+            fileName, fileAccessMode, noInherit);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 

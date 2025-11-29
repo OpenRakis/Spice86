@@ -25,6 +25,82 @@ using System.Text;
 /// </remarks>
 public class DosProcessManager : DosFileLoader {
     private const ushort ComOffset = 0x100;
+    
+    /// <summary>
+    /// CALL FAR opcode (far call instruction) used in PSP at offset 0x05.
+    /// </summary>
+    private const byte FarCallOpcode = 0x9A;
+    
+    /// <summary>
+    /// INT instruction opcode.
+    /// </summary>
+    private const byte IntOpcode = 0xCD;
+    
+    /// <summary>
+    /// INT 21h interrupt number.
+    /// </summary>
+    private const byte Int21Number = 0x21;
+    
+    /// <summary>
+    /// RETF instruction opcode (far return).
+    /// </summary>
+    private const byte RetfOpcode = 0xCB;
+    
+    /// <summary>
+    /// Faked CPM segment address (intentionally invalid).
+    /// </summary>
+    private const ushort FakeCpmSegment = 0xDEAD;
+    
+    /// <summary>
+    /// Faked CPM offset address (intentionally invalid).
+    /// </summary>
+    private const ushort FakeCpmOffset = 0xFFFF;
+    
+    /// <summary>
+    /// Indicates no previous PSP in the chain.
+    /// </summary>
+    private const uint NoPreviousPsp = 0xFFFFFFFF;
+    
+    /// <summary>
+    /// Default DOS major version number.
+    /// </summary>
+    private const byte DefaultDosVersionMajor = 5;
+    
+    /// <summary>
+    /// Default DOS minor version number.
+    /// </summary>
+    private const byte DefaultDosVersionMinor = 0;
+    
+    /// <summary>
+    /// Offset within PSP where the file table is stored.
+    /// </summary>
+    private const ushort FileTableOffset = 0x18;
+    
+    /// <summary>
+    /// Default maximum number of open files per process.
+    /// </summary>
+    private const byte DefaultMaxOpenFiles = 20;
+    
+    /// <summary>
+    /// Value indicating an unused file handle in the PSP file table.
+    /// </summary>
+    private const byte UnusedFileHandle = 0xFF;
+    
+    /// <summary>
+    /// Offset within PSP where command tail data begins.
+    /// </summary>
+    private const ushort CommandTailDataOffset = 0x81;
+    
+    /// <summary>
+    /// Maximum length of the command tail (127 bytes).
+    /// </summary>
+    private const int MaxCommandTailLength = 127;
+    
+    /// <summary>
+    /// Size of a File Control Block (FCB) in bytes.
+    /// </summary>
+    private const int FcbSize = 16;
+    
     private readonly DosProgramSegmentPrefixTracker _pspTracker;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
@@ -555,17 +631,30 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
+    /// Initializes common PSP fields shared between regular and child PSP creation.
+    /// Sets the INT 20h instruction and parent PSP segment.
+    /// </summary>
+    /// <param name="psp">The PSP to initialize.</param>
+    /// <param name="parentPspSegment">The segment of the parent PSP.</param>
+    private static void InitializeCommonPspFields(DosProgramSegmentPrefix psp, ushort parentPspSegment) {
+        // Set the PSP's first 2 bytes to INT 20h (CP/M-style exit)
+        psp.Exit[0] = IntOpcode;
+        psp.Exit[1] = 0x20;
+        
+        // Set parent PSP segment
+        psp.ParentProgramSegmentPrefix = parentPspSegment;
+    }
+
+    /// <summary>
     /// Initializes a PSP with the given parameters.
     /// </summary>
     private void InitializePsp(DosProgramSegmentPrefix psp, ushort parentPspSegment, 
         ushort envSegment, string? arguments) {
         
-        // Set the PSP's first 2 bytes to INT 20h
-        psp.Exit[0] = 0xCD;
-        psp.Exit[1] = 0x20;
+        // Initialize common PSP fields (INT 20h and parent PSP)
+        InitializeCommonPspFields(psp, parentPspSegment);
 
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
-        psp.ParentProgramSegmentPrefix = parentPspSegment;
         psp.EnvironmentTableSegment = envSegment;
 
         // Load command-line arguments
@@ -846,5 +935,218 @@ public class DosProcessManager : DosFileLoader {
     /// <returns>A uint representing the far pointer in offset:segment format.</returns>
     public static uint MakeFarPointer(ushort segment, ushort offset) {
         return ((uint)segment << 16) | offset;
+    }
+
+    /// <summary>
+    /// Creates a child PSP (Program Segment Prefix) at the specified segment.
+    /// Implements INT 21h, AH=55h - Create Child PSP.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on DOSBox staging implementation and DOS 4.0 EXEC.ASM behavior:
+    /// <list type="bullet">
+    /// <item>Creates a new PSP at the specified segment</item>
+    /// <item>Sets the parent PSP to the current PSP</item>
+    /// <item>Copies the file handle table from the parent</item>
+    /// <item>Copies command tail from parent PSP (offset 0x80)</item>
+    /// <item>Copies FCB1 from parent (offset 0x5C)</item>
+    /// <item>Copies FCB2 from parent (offset 0x6C)</item>
+    /// <item>Inherits environment from parent</item>
+    /// <item>Inherits stack pointer from parent</item>
+    /// <item>Sets the PSP size</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This function is used by programs like debuggers or overlay managers
+    /// that need to create a child process context without actually loading a program.
+    /// </para>
+    /// </remarks>
+    /// <param name="childSegment">The segment address where the child PSP will be created.</param>
+    /// <param name="sizeInParagraphs">The size of the memory block in paragraphs (16-byte units).</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for saving current vectors.</param>
+    public void CreateChildPsp(ushort childSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateChildPsp: Creating child PSP at segment {ChildSegment:X4}, size {Size} paragraphs",
+                childSegment, sizeInParagraphs);
+        }
+
+        // Get the parent PSP segment (current PSP)
+        ushort parentPspSegment = _pspTracker.GetCurrentPspSegment();
+        
+        // Create the new PSP at the specified segment
+        uint childPspAddress = MemoryUtils.ToPhysicalAddress(childSegment, 0);
+        DosProgramSegmentPrefix childPsp = new(_memory, childPspAddress);
+        
+        // Initialize the child PSP with MakeNew-style initialization
+        InitializeChildPsp(childPsp, childSegment, parentPspSegment, sizeInParagraphs, interruptVectorTable);
+        
+        // Get the parent PSP to copy data from
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
+        
+        // Copy file handle table from parent
+        CopyFileTableFromParent(childPsp, parentPsp);
+        
+        // Copy command tail from parent (offset 0x80)
+        CopyCommandTailFromParent(childPsp, parentPsp);
+        
+        // Copy FCB1 from parent (offset 0x5C)
+        CopyFcb1FromParent(childPsp, parentPsp);
+        
+        // Copy FCB2 from parent (offset 0x6C)
+        CopyFcb2FromParent(childPsp, parentPsp);
+        
+        // Inherit environment from parent
+        childPsp.EnvironmentTableSegment = parentPsp.EnvironmentTableSegment;
+        
+        // Inherit stack pointer from parent
+        childPsp.StackPointer = parentPsp.StackPointer;
+        
+        // Note: We intentionally do NOT register this child PSP with _pspTracker.PushPspSegment().
+        // INT 21h/55h is used by debuggers and overlay managers that manage their own PSP tracking.
+        // The INT 21h handler (DosInt21Handler.CreateChildPsp) will call SetCurrentPspSegment() to 
+        // update the SDA's current PSP, but the PSP is not added to the tracker's internal list. 
+        // This matches DOSBox behavior where DOS_ChildPSP() creates the PSP but the caller is 
+        // responsible for managing PSP tracking.
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "CreateChildPsp: Parent={Parent:X4}, Env={Env:X4}, NextSeg={Next:X4}",
+                parentPspSegment, childPsp.EnvironmentTableSegment, childPsp.NextSegment);
+        }
+    }
+
+    /// <summary>
+    /// Initializes a child PSP with basic DOS structures.
+    /// Based on DOSBox DOS_PSP::MakeNew() implementation.
+    /// </summary>
+    private void InitializeChildPsp(DosProgramSegmentPrefix psp, ushort pspSegment, 
+        ushort parentPspSegment, ushort sizeInParagraphs, InterruptVectorTable interruptVectorTable) {
+        // Clear the PSP area first (256 bytes)
+        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
+            _memory.UInt8[psp.BaseAddress + (uint)i] = 0;
+        }
+        
+        // Initialize common PSP fields (INT 20h and parent PSP)
+        InitializeCommonPspFields(psp, parentPspSegment);
+        
+        // Set size (next_seg = psp_segment + size)
+        psp.NextSegment = (ushort)(pspSegment + sizeInParagraphs);
+        
+        // CALL FAR opcode (for far call to DOS INT 21h dispatcher at PSP offset 0x05)
+        psp.FarCall = FarCallOpcode;
+        
+        // CPM entry point - faked address
+        psp.CpmServiceRequestAddress = MakeFarPointer(FakeCpmSegment, FakeCpmOffset);
+        
+        // INT 21h / RETF at offset 0x50
+        psp.Service[0] = IntOpcode;
+        psp.Service[1] = Int21Number;
+        psp.Service[2] = RetfOpcode;
+        
+        // Previous PSP set to indicate no previous PSP
+        psp.PreviousPspAddress = NoPreviousPsp;
+        
+        // Set DOS version
+        psp.DosVersionMajor = DefaultDosVersionMajor;
+        psp.DosVersionMinor = DefaultDosVersionMinor;
+        
+        // Save current interrupt vectors 22h, 23h, 24h into the PSP
+        SaveInterruptVectors(psp, interruptVectorTable);
+        
+        // Initialize file table pointer to point to internal file table
+        psp.FileTableAddress = MakeFarPointer(pspSegment, FileTableOffset);
+        psp.MaximumOpenFiles = DefaultMaxOpenFiles;
+        
+        // Initialize file handles to unused
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            psp.Files[i] = UnusedFileHandle;
+        }
+    }
+
+    /// <summary>
+    /// Saves the current interrupt vectors (22h, 23h, 24h) into the PSP.
+    /// </summary>
+    private static void SaveInterruptVectors(DosProgramSegmentPrefix psp, InterruptVectorTable ivt) {
+        // INT 22h - Terminate address
+        SegmentedAddress int22 = ivt[0x22];
+        psp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        
+        // INT 23h - Break address  
+        SegmentedAddress int23 = ivt[0x23];
+        psp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        
+        // INT 24h - Critical error address
+        SegmentedAddress int24 = ivt[0x24];
+        psp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+    }
+
+    /// <summary>
+    /// Copies file handle table from parent PSP to child PSP, respecting the no-inherit flag.
+    /// Files opened with the no-inherit flag (bit 7 set) are not copied to the child.
+    /// </summary>
+    /// <remarks>
+    /// Based on DOSBox DOS_PSP::CopyFileTable() behavior when createchildpsp is true.
+    /// Files marked with <see cref="FileAccessMode.Private"/> in their Flags property will not be
+    /// inherited by the child process - they get 0xFF (unused) instead.
+    /// </remarks>
+    private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < DefaultMaxOpenFiles; i++) {
+            byte parentHandle = parentPsp.Files[i];
+            
+            // If handle is unused, keep it unused in child
+            if (parentHandle == UnusedFileHandle) {
+                childPsp.Files[i] = UnusedFileHandle;
+                continue;
+            }
+            
+            // Check if the file was opened with the no-inherit flag (FileAccessMode.Private)
+            if (parentHandle < _fileManager.OpenFiles.Length) {
+                VirtualFileBase? file = _fileManager.OpenFiles[parentHandle];
+                if (file is DosFile dosFile && (dosFile.Flags & (byte)FileAccessMode.Private) != 0) {
+                    // File has no-inherit flag set, don't copy to child
+                    childPsp.Files[i] = UnusedFileHandle;
+                    continue;
+                }
+            }
+            
+            // File can be inherited, copy the handle
+            childPsp.Files[i] = parentHandle;
+        }
+    }
+
+    /// <summary>
+    /// Copies the command tail from parent PSP (offset 0x80) to child PSP.
+    /// </summary>
+    private void CopyCommandTailFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        // Copy the command tail length byte and command string
+        childPsp.DosCommandTail.Length = parentPsp.DosCommandTail.Length;
+        
+        // Copy up to MaxCommandTailLength bytes of command tail data
+        uint parentTailAddr = parentPsp.BaseAddress + CommandTailDataOffset;
+        uint childTailAddr = childPsp.BaseAddress + CommandTailDataOffset;
+        
+        for (int i = 0; i < MaxCommandTailLength; i++) {
+            _memory.UInt8[childTailAddr + (uint)i] = _memory.UInt8[parentTailAddr + (uint)i];
+        }
+    }
+
+    /// <summary>
+    /// Copies FCB1 from parent PSP (offset 0x5C) to child PSP.
+    /// </summary>
+    private static void CopyFcb1FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.FirstFileControlBlock[i] = parentPsp.FirstFileControlBlock[i];
+        }
+    }
+
+    /// <summary>
+    /// Copies FCB2 from parent PSP (offset 0x6C) to child PSP.
+    /// </summary>
+    private static void CopyFcb2FromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
+        for (int i = 0; i < FcbSize; i++) {
+            childPsp.SecondFileControlBlock[i] = parentPsp.SecondFileControlBlock[i];
+        }
     }
 }

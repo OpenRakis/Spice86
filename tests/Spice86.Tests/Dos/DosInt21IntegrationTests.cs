@@ -560,6 +560,130 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests INT 21h, AH=55h - Create Child PSP.
+    /// Verifies that a child PSP is created at the specified segment with proper initialization.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This test:
+    /// <list type="number">
+    /// <item>Gets the current PSP segment via INT 21h, AH=62h</item>
+    /// <item>Creates a child PSP at a target segment using INT 21h, AH=55h</item>
+    /// <item>Verifies the new PSP segment is now the current PSP</item>
+    /// <item>Verifies the child PSP's parent pointer points to the original PSP</item>
+    /// <item>Verifies the INT 20h instruction is at the start of the PSP</item>
+    /// <item>Verifies the environment segment was inherited</item>
+    /// <item>Verifies AL is set to 0xF0 (DOSBox-compatible behavior - AL value is "destroyed")</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Note: The AL=0xF0 check validates Spice86's DOSBox-compatible behavior. In DOS, AL is 
+    /// considered "destroyed" after this call, meaning its value is undefined. DOSBox happens 
+    /// to set it to 0xF0, and we match that behavior for compatibility.
+    /// </para>
+    /// <para>
+    /// Based on DOSBox staging implementation:
+    /// <code>
+    /// case 0x55: /* Create Child PSP */
+    ///     DOS_ChildPSP(reg_dx, reg_si);
+    ///     dos.psp(reg_dx);
+    ///     reg_al = 0xf0; /* al destroyed */
+    ///     break;
+    /// </code>
+    /// </para>
+    /// <para>
+    /// PSP offsets used:
+    /// <list type="bullet">
+    /// <item>0x00-0x01: INT 20h instruction (0xCD, 0x20)</item>
+    /// <item>0x16: Parent PSP segment</item>
+    /// <item>0x2C: Environment segment</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void CreateChildPsp_CreatesValidPsp() {
+        // This test creates a child PSP and verifies:
+        // 1. Current PSP changes to the new segment
+        // 2. Parent PSP in child points to original PSP
+        // 3. INT 20h instruction at start of PSP
+        // 4. Environment segment is inherited
+        // 5. AL = 0xF0 after the call
+        // 
+        // Register usage:
+        // - BP = original PSP segment (saved)
+        // - DI = original environment segment (saved)
+        // - DX = child PSP segment (0x2000)
+        // - SI = size in paragraphs (0x10)
+        byte[] program = new byte[] {
+            // Get current PSP address (save for comparison)
+            0xB4, 0x62,             // mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // int 21h - BX = current PSP segment
+            0x89, 0xDD,             // mov bp, bx - save original PSP in BP
+            
+            // Save the environment segment from the original PSP
+            0x8E, 0xC3,             // mov es, bx - ES = current PSP segment
+            0x26, 0x8B, 0x3E, 0x2C, 0x00,  // mov di, es:[002Ch] - DI = env segment
+            
+            // Create child PSP at segment 0x2000, size 0x10 paragraphs
+            0xBA, 0x00, 0x20,       // mov dx, 2000h - child PSP segment
+            0xBE, 0x10, 0x00,       // mov si, 0010h - size in paragraphs
+            0xB4, 0x55,             // mov ah, 55h - Create Child PSP
+            0xCD, 0x21,             // int 21h
+            
+            // Check AL = 0xF0 (destroyed value per DOSBox)
+            0x3C, 0xF0,             // cmp al, 0F0h
+            0x0F, 0x85, 0x3E, 0x00, // jne failed (near jump)
+            
+            // Get current PSP to verify it changed to 0x2000
+            0xB4, 0x62,             // mov ah, 62h
+            0xCD, 0x21,             // int 21h - BX = current PSP (should be 2000h)
+            
+            // Check if current PSP is 0x2000
+            0x81, 0xFB, 0x00, 0x20, // cmp bx, 2000h
+            0x0F, 0x85, 0x32, 0x00, // jne failed (near jump)
+            
+            // Load new PSP segment to verify its contents
+            0x8E, 0xC3,             // mov es, bx - ES = child PSP (0x2000)
+            
+            // Check INT 20h instruction at offset 0 (0xCD, 0x20)
+            0x26, 0x8A, 0x06, 0x00, 0x00,  // mov al, es:[0000h]
+            0x3C, 0xCD,             // cmp al, 0CDh
+            0x0F, 0x85, 0x23, 0x00, // jne failed
+            
+            0x26, 0x8A, 0x06, 0x01, 0x00,  // mov al, es:[0001h]
+            0x3C, 0x20,             // cmp al, 20h
+            0x0F, 0x85, 0x18, 0x00, // jne failed
+            
+            // Check parent PSP segment at offset 0x16 matches original PSP (in BP)
+            0x26, 0x8B, 0x1E, 0x16, 0x00,  // mov bx, es:[0016h] - parent PSP
+            0x39, 0xEB,             // cmp bx, bp - compare with original PSP
+            0x0F, 0x85, 0x0D, 0x00, // jne failed
+            
+            // Check environment segment at offset 0x2C matches original (in DI)
+            0x26, 0x8B, 0x1E, 0x2C, 0x00,  // mov bx, es:[002Ch] - env segment
+            0x39, 0xFB,             // cmp bx, di - compare with original env
+            0x0F, 0x85, 0x02, 0x00, // jne failed
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,
