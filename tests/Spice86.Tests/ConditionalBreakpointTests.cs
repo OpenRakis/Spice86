@@ -69,7 +69,6 @@ public class ConditionalBreakpointTests {
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         var memory = spice86DependencyInjection.Machine.Memory;
         var state = spice86DependencyInjection.Machine.CpuState;
-        var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         
         // Set up test data
         memory.UInt8[0x200] = 0x55;
@@ -110,7 +109,6 @@ public class ConditionalBreakpointTests {
         emulatorBreakpointsManager.RestoreBreakpoints(serialized);
         
         // Test that the restored breakpoint works correctly
-        int triggerCount = 0;
         // We need to replace the breakpoint's onReached action since we can't serialize that
         // In practice, this is handled by the BreakpointsViewModel
         var restoredBreakpoints = emulatorBreakpointsManager.MemoryReadWriteBreakpoints.SerializableBreakpoints;

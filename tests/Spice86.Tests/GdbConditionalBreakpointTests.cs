@@ -29,7 +29,7 @@ public class GdbConditionalBreakpointTests {
         var memory = spice86DependencyInjection.Machine.Memory;
         var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         var loggerService = Substitute.For<ILoggerService>();
-        var gdbIo = new GdbIo(10000, loggerService);
+        using var gdbIo = new GdbIo(10000, loggerService);
         var emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         
         var gdbBreakpointHandler = new GdbCommandBreakpointHandler(
@@ -49,8 +49,6 @@ public class GdbConditionalBreakpointTests {
         addressBreakpoint.Address.Should().Be(0x1000);
         addressBreakpoint.BreakPointType.Should().Be(BreakPointType.CPU_EXECUTION_ADDRESS);
         addressBreakpoint.ConditionExpression.Should().Be("ax==0x100");
-        
-        gdbIo.Dispose();
     }
     
     [Theory]
