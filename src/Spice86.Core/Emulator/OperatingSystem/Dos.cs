@@ -160,7 +160,7 @@ public sealed class Dos {
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
 
         DosSwappableDataArea = new(_memory,
-            MemoryUtils.ToPhysicalAddress(0xb2, 0));
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
         DosStringDecoder dosStringDecoder = new(memory, state);
 

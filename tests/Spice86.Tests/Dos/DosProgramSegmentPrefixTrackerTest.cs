@@ -45,7 +45,8 @@ public class DosProgramSegmentPrefixTrackerTests {
             ProgramEntryPointSegment = (ushort)0x1000
         };
         _pspTracker = new(configuration, memory, 
-            new DosSwappableDataArea(memory, MemoryUtils.ToPhysicalAddress(0xb2, 0)),
+            new DosSwappableDataArea(memory,
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)),
             loggerService);
     }
 
