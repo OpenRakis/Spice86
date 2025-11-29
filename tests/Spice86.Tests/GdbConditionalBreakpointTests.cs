@@ -59,7 +59,7 @@ public class GdbConditionalBreakpointTests {
         var memory = spice86DependencyInjection.Machine.Memory;
         var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         var loggerService = Substitute.For<ILoggerService>();
-        var gdbIo = new GdbIo(10001, loggerService);
+        using var gdbIo = new GdbIo(10001, loggerService);
         var emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         
         var gdbBreakpointHandler = new GdbCommandBreakpointHandler(
@@ -102,7 +102,6 @@ public class GdbConditionalBreakpointTests {
         triggerCount.Should().Be(1);
         
         emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
-        gdbIo.Dispose();
     }
     
     [Theory]
@@ -113,7 +112,7 @@ public class GdbConditionalBreakpointTests {
         var memory = spice86DependencyInjection.Machine.Memory;
         var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         var loggerService = Substitute.For<ILoggerService>();
-        var gdbIo = new GdbIo(10002, loggerService);
+        using var gdbIo = new GdbIo(10002, loggerService);
         var emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         
         var gdbBreakpointHandler = new GdbCommandBreakpointHandler(
@@ -160,7 +159,6 @@ public class GdbConditionalBreakpointTests {
         triggerCount.Should().Be(1);
         
         emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
-        gdbIo.Dispose();
     }
     
     [Theory]
@@ -171,7 +169,7 @@ public class GdbConditionalBreakpointTests {
         var memory = spice86DependencyInjection.Machine.Memory;
         var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         var loggerService = Substitute.For<ILoggerService>();
-        var gdbIo = new GdbIo(10003, loggerService);
+        using var gdbIo = new GdbIo(10003, loggerService);
         var emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         
         var gdbBreakpointHandler = new GdbCommandBreakpointHandler(
@@ -188,8 +186,6 @@ public class GdbConditionalBreakpointTests {
         var addressBreakpoint = (AddressBreakPoint)breakpoint!;
         addressBreakpoint.Address.Should().Be(0x1000);
         addressBreakpoint.ConditionExpression.Should().BeNull();
-        
-        gdbIo.Dispose();
     }
     
     [Theory]
@@ -200,7 +196,7 @@ public class GdbConditionalBreakpointTests {
         var memory = spice86DependencyInjection.Machine.Memory;
         var pauseHandler = spice86DependencyInjection.Machine.PauseHandler;
         var loggerService = Substitute.For<ILoggerService>();
-        var gdbIo = new GdbIo(10004, loggerService);
+        using var gdbIo = new GdbIo(10004, loggerService);
         var emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         
         var gdbBreakpointHandler = new GdbCommandBreakpointHandler(
@@ -215,7 +211,5 @@ public class GdbConditionalBreakpointTests {
         breakpoint.Should().NotBeNull();
         var addressBreakpoint = (AddressBreakPoint)breakpoint!;
         addressBreakpoint.ConditionExpression.Should().BeNull();
-        
-        gdbIo.Dispose();
     }
 }
