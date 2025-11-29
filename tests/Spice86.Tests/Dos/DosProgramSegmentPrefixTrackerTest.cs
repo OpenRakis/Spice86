@@ -3,21 +3,15 @@ namespace Spice86.Tests.Dos;
 using FluentAssertions;
 using NSubstitute;
 
-using Spice86.Core.Emulator.CPU;
-
-using Configuration = Spice86.Core.CLI.Configuration;
-using State = Spice86.Core.Emulator.CPU.State;
-using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
-using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
-
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
+
+using Configuration = Spice86.Core.CLI.Configuration;
 
 /// <summary>
 /// Verifies that the DOS PSP tracker reads the configuration and adds/removes the PSP segments for
@@ -34,10 +28,7 @@ public class DosProgramSegmentPrefixTrackerTests {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        PauseHandler pauseHandler = new(loggerService);
-        State cpuState = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
-        AddressReadWriteBreakpoints ioBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
