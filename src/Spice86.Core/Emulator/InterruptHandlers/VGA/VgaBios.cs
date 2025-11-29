@@ -611,13 +611,353 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         AddAction(0x4F, VesaFunctions);
     }
 
+    /// <summary>
+    /// VESA VBE 1.0 function dispatcher (INT 10h AH=4Fh).
+    /// Dispatches to specific VBE functions based on AL subfunction.
+    /// </summary>
     public void VesaFunctions() {
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            // This can be valid, video cards came to the scene before VESA was a standard.
-            // It seems some games can expect that (eg. Rules of Engagement 2)
-            //TODO: Implement at least VESA 1.2
-            _logger.Warning("Emulated program tried to call VESA functions. Not implemented, moving on!");
+        byte subfunction = State.AL;
+        switch (subfunction) {
+            case 0x00:
+                VbeGetControllerInfo();
+                break;
+            case 0x01:
+                VbeGetModeInfo();
+                break;
+            case 0x02:
+                VbeSetMode();
+                break;
+            default:
+                if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                    _logger.Warning("{ClassName} INT 10 4F{Subfunction:X2} - Unsupported VBE function",
+                        nameof(VgaBios), subfunction);
+                }
+                // Return failure: AH=01h (function call failed), AL=4Fh (function is supported)
+                State.AX = 0x014F;
+                break;
         }
+    }
+
+    /// <summary>
+    /// VBE Function 00h - Return VBE Controller Information.
+    /// ES:DI = Pointer to VbeInfoBlock structure (256 bytes minimum, but caller should provide ~512 bytes
+    /// to accommodate the OEM string and mode list stored beyond the structure).
+    /// Returns: AX = VBE Return Status (004Fh = success).
+    /// </summary>
+    private void VbeGetControllerInfo() {
+        ushort segment = State.ES;
+        ushort offset = State.DI;
+        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
+
+        // Check if buffer has "VBE2" signature (VBE 2.0+ request)
+        // For VBE 1.0, we just fill the basic info
+
+        // Write VBE Info Block (VBE 1.0 structure - 256 bytes minimum)
+        // Signature: "VESA"
+        Memory.UInt8[address + 0] = (byte)'V';
+        Memory.UInt8[address + 1] = (byte)'E';
+        Memory.UInt8[address + 2] = (byte)'S';
+        Memory.UInt8[address + 3] = (byte)'A';
+
+        // VBE Version: 1.0 (0x0100)
+        Memory.UInt16[address + 4] = 0x0100;
+
+        // OEM String pointer (segment:offset) - point to a location in VGA ROM
+        // We'll use a dummy OEM string at ES:DI+256
+        Memory.UInt16[address + 6] = (ushort)(offset + 256);  // Offset
+        Memory.UInt16[address + 8] = segment;                  // Segment
+
+        // Capabilities (4 bytes) - DAC is switchable, controller is VGA compatible
+        Memory.UInt32[address + 10] = 0x00000001;
+
+        // Video Mode List pointer (segment:offset) - point after OEM string
+        Memory.UInt16[address + 14] = (ushort)(offset + 280);  // Offset
+        Memory.UInt16[address + 16] = segment;                  // Segment
+
+        // Total Memory in 64KB blocks (1MB = 16 blocks)
+        const ushort videoMemoryIn64KbBlocks = 16;
+        Memory.UInt16[address + 18] = videoMemoryIn64KbBlocks;
+
+        // Write OEM String at offset+256
+        string oemString = "Spice86 VBE";
+        for (int i = 0; i < oemString.Length; i++) {
+            Memory.UInt8[address + 256 + i] = (byte)oemString[i];
+        }
+        Memory.UInt8[address + 256 + oemString.Length] = 0; // Null terminator
+
+        // Write Video Mode List at offset+280
+        // Only list modes that have corresponding internal VGA modes
+        // Per VBE 1.2 spec, modes without hardware support should not be listed
+        ushort[] vesaModes = {
+            0x102, // 800x600x16 (4-bit planar) -> internal mode 0x6A
+            0xFFFF // End of list
+        };
+
+        for (int i = 0; i < vesaModes.Length; i++) {
+            Memory.UInt16[address + 280 + (i * 2)] = vesaModes[i];
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.0 info at {Segment:X4}:{Offset:X4}",
+                nameof(VgaBios), segment, offset);
+        }
+
+        // Return success: AH=00h (function successful), AL=4Fh (function is supported)
+        State.AX = 0x004F;
+    }
+
+    /// <summary>
+    /// VBE Function 01h - Return VBE Mode Information.
+    /// CX = Mode number.
+    /// ES:DI = Pointer to ModeInfoBlock structure (256 bytes).
+    /// Returns: AX = VBE Return Status (004Fh = success).
+    /// </summary>
+    private void VbeGetModeInfo() {
+        ushort modeNumber = State.CX;
+        ushort segment = State.ES;
+        ushort offset = State.DI;
+        uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
+
+        // Get mode parameters based on VESA mode number
+        (ushort width, ushort height, byte bpp, bool supported) = GetVesaModeParams(modeNumber);
+
+        if (!supported) {
+            if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                _logger.Warning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
+                    nameof(VgaBios), modeNumber);
+            }
+            // Return failure
+            State.AX = 0x014F;
+            return;
+        }
+
+        // Clear the mode info block (256 bytes)
+        for (int i = 0; i < 256; i++) {
+            Memory.UInt8[address + i] = 0;
+        }
+
+        // Mode Attributes (offset 0, 2 bytes)
+        // Bit 0: Mode supported by hardware
+        // Bit 1: Extended information available
+        // Bit 2: TTY output functions supported
+        // Bit 3: Color mode
+        // Bit 4: Graphics mode (not text)
+        ushort modeAttributes = 0x001B; // Supported, extended info, TTY, color, graphics
+        Memory.UInt16[address + 0] = modeAttributes;
+
+        // Window A attributes (offset 2)
+        Memory.UInt8[address + 2] = 0x07; // Readable, writable, supported
+
+        // Window B attributes (offset 3)
+        Memory.UInt8[address + 3] = 0x00; // Not supported
+
+        // Window granularity in KB (offset 4)
+        Memory.UInt16[address + 4] = 64;
+
+        // Window size in KB (offset 6)
+        Memory.UInt16[address + 6] = 64;
+
+        // Window A start segment (offset 8)
+        Memory.UInt16[address + 8] = 0xA000;
+
+        // Window B start segment (offset 10)
+        Memory.UInt16[address + 10] = 0x0000;
+
+        // Window function pointer (offset 12, 4 bytes) - not used in VBE 1.0
+        Memory.UInt32[address + 12] = 0;
+
+        // Bytes per scan line (offset 16)
+        // Per VBE 1.2 spec, this is the number of bytes between consecutive scanlines
+        // For planar modes (4-bit), this is bytes per plane (width/8 since 1 bit per pixel per plane)
+        ushort bytesPerLine;
+        if (bpp == 4) {
+            // 4-bit planar: 4 planes, each with 1 bit per pixel
+            bytesPerLine = (ushort)(width / 8);
+        } else if (bpp == 1) {
+            bytesPerLine = (ushort)(width / 8);
+        } else if (bpp == 15 || bpp == 16) {
+            // 15-bit and 16-bit modes use 2 bytes per pixel
+            bytesPerLine = (ushort)(width * 2);
+        } else if (bpp == 24) {
+            bytesPerLine = (ushort)(width * 3);
+        } else if (bpp == 32) {
+            bytesPerLine = (ushort)(width * 4);
+        } else {
+            // 8-bit packed pixel (bpp == 8)
+            bytesPerLine = width;
+        }
+        Memory.UInt16[address + 16] = bytesPerLine;
+
+        // X resolution (offset 18)
+        Memory.UInt16[address + 18] = width;
+
+        // Y resolution (offset 20)
+        Memory.UInt16[address + 20] = height;
+
+        // X char size (offset 22)
+        Memory.UInt8[address + 22] = 8;
+
+        // Y char size (offset 23)
+        Memory.UInt8[address + 23] = 16;
+
+        // Number of planes (offset 24)
+        Memory.UInt8[address + 24] = (byte)(bpp == 4 ? 4 : 1);
+
+        // Bits per pixel (offset 25)
+        Memory.UInt8[address + 25] = bpp;
+
+        // Number of banks (offset 26)
+        Memory.UInt8[address + 26] = 1;
+
+        // Memory model (offset 27)
+        // 0 = Text, 3 = EGA, 4 = Packed pixel, 5 = Non-chain 4 256 color, 6 = Direct color
+        byte memoryModel = bpp switch {
+            4 => 3,  // EGA/VGA planar
+            8 => 4,  // Packed pixel
+            15 => 6, // Direct color
+            16 => 6, // Direct color
+            24 => 6, // Direct color
+            32 => 6, // Direct color
+            _ => 4
+        };
+        Memory.UInt8[address + 27] = memoryModel;
+
+        // Bank size in KB (offset 28)
+        Memory.UInt8[address + 28] = 64;
+
+        // Number of image pages (offset 29)
+        Memory.UInt8[address + 29] = 0;
+
+        // Reserved (offset 30)
+        Memory.UInt8[address + 30] = 1;
+
+        // Direct color fields (for 15/16/24/32 bpp modes)
+        if (bpp >= 15) {
+            if (bpp == 15 || bpp == 16) {
+                // 15-bit: 5:5:5 format (R=5 bits at position 10, G=5 bits at position 5, B=5 bits at position 0)
+                // 16-bit: 5:6:5 format (R=5 bits at position 11, G=6 bits at position 5, B=5 bits at position 0)
+                Memory.UInt8[address + 31] = 5;  // Red mask size
+                Memory.UInt8[address + 32] = (byte)(bpp == 16 ? 11 : 10); // Red field position
+                Memory.UInt8[address + 33] = (byte)(bpp == 16 ? 6 : 5);   // Green mask size
+                Memory.UInt8[address + 34] = 5;  // Green field position
+                Memory.UInt8[address + 35] = 5;  // Blue mask size
+                Memory.UInt8[address + 36] = 0;  // Blue field position
+            } else if (bpp == 24 || bpp == 32) {
+                Memory.UInt8[address + 31] = 8;  // Red mask size
+                Memory.UInt8[address + 32] = 16; // Red field position
+                Memory.UInt8[address + 33] = 8;  // Green mask size
+                Memory.UInt8[address + 34] = 8;  // Green field position
+                Memory.UInt8[address + 35] = 8;  // Blue mask size
+                Memory.UInt8[address + 36] = 0;  // Blue field position
+            }
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 4F01 VbeGetModeInfo - Mode 0x{Mode:X4}: {Width}x{Height}x{Bpp}",
+                nameof(VgaBios), modeNumber, width, height, bpp);
+        }
+
+        // Return success
+        State.AX = 0x004F;
+    }
+
+    /// <summary>
+    /// VBE Function 02h - Set VBE Mode.
+    /// BX = Mode number (bit 14 = use linear frame buffer if set, bit 15 = don't clear display).
+    /// Note: VBE 1.0/1.2 does not support linear frame buffer (LFB) - that was introduced in VBE 2.0.
+    /// If bit 14 is set, this implementation ignores it and uses banked mode; programs expecting
+    /// LFB access will not work correctly but the mode set will succeed.
+    /// Returns: AX = VBE Return Status (004Fh = success).
+    /// </summary>
+    private void VbeSetMode() {
+        ushort modeNumber = State.BX;
+        // VBE 1.0/1.2 does not support LFB; bit 14 is ignored (banked mode is always used)
+        bool dontClearDisplay = (modeNumber & 0x8000) != 0;
+        ushort mode = (ushort)(modeNumber & 0x01FF);
+
+        // Map VESA mode to internal mode
+        int? internalMode = MapVesaModeToInternal(mode);
+
+        if (!internalMode.HasValue) {
+            if (_logger.IsEnabled(LogEventLevel.Warning)) {
+                _logger.Warning("{ClassName} INT 10 4F02 VbeSetMode - Unsupported mode 0x{Mode:X4}",
+                    nameof(VgaBios), mode);
+            }
+            // Return failure
+            State.AX = 0x014F;
+            return;
+        }
+
+        ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_biosDataArea.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
+        if (dontClearDisplay) {
+            flags |= ModeFlags.NoClearMem;
+        }
+
+        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("{ClassName} INT 10 4F02 VbeSetMode - Setting VESA mode 0x{VesaMode:X4} (internal mode 0x{InternalMode:X2})",
+                nameof(VgaBios), mode, internalMode.Value);
+        }
+
+        _vgaFunctions.VgaSetMode(internalMode.Value, flags);
+
+        // Return success
+        State.AX = 0x004F;
+    }
+
+    /// <summary>
+    /// Gets the parameters for a VESA mode number.
+    /// Returns mode information for all standard VESA modes defined in VBE 1.2 spec.
+    /// This is used by VbeGetModeInfo (VBE 01h) to return mode characteristics.
+    /// Note: supported=true means mode info is available for queries (per VBE spec);
+    /// actual ability to SET the mode depends on MapVesaModeToInternal returning a valid internal mode.
+    /// Programs query mode info before setting modes to check if they're suitable.
+    /// </summary>
+    private static (ushort width, ushort height, byte bpp, bool supported) GetVesaModeParams(ushort mode) {
+        return mode switch {
+            // VBE 1.2 standard modes - return info for queries
+            // Note: Only mode 0x102 can actually be SET (has internal VGA mode support)
+            0x100 => (640, 400, 8, true),    // 640x400x256
+            0x101 => (640, 480, 8, true),    // 640x480x256
+            0x102 => (800, 600, 4, true),    // 800x600x16 (planar) - CAN BE SET via mode 0x6A
+            0x103 => (800, 600, 8, true),    // 800x600x256
+            0x104 => (1024, 768, 4, true),   // 1024x768x16 (planar)
+            0x105 => (1024, 768, 8, true),   // 1024x768x256
+            0x106 => (1280, 1024, 4, true),  // 1280x1024x16 (planar)
+            0x107 => (1280, 1024, 8, true),  // 1280x1024x256
+            0x10D => (320, 200, 15, true),   // 320x200x15-bit
+            0x10E => (320, 200, 16, true),   // 320x200x16-bit
+            0x10F => (320, 200, 24, true),   // 320x200x24-bit
+            0x110 => (640, 480, 15, true),   // 640x480x15-bit (S3 mode 0x70)
+            0x111 => (640, 480, 16, true),   // 640x480x16-bit
+            0x112 => (640, 480, 24, true),   // 640x480x24-bit
+            0x113 => (800, 600, 15, true),   // 800x600x15-bit
+            0x114 => (800, 600, 16, true),   // 800x600x16-bit
+            0x115 => (800, 600, 24, true),   // 800x600x24-bit
+            0x116 => (1024, 768, 15, true),  // 1024x768x15-bit
+            0x117 => (1024, 768, 16, true),  // 1024x768x16-bit
+            0x118 => (1024, 768, 24, true),  // 1024x768x24-bit
+            0x119 => (1280, 1024, 15, true), // 1280x1024x15-bit
+            0x11A => (1280, 1024, 16, true), // 1280x1024x16-bit
+            0x11B => (1280, 1024, 24, true), // 1280x1024x24-bit
+            _ => (0, 0, 0, false)
+        };
+    }
+
+    /// <summary>
+    /// Maps a VESA mode number to an internal VGA mode number.
+    /// Returns null if the mode is not supported by the emulator's VGA hardware.
+    /// Per VBE 1.2 spec, only modes with actual hardware support should be settable.
+    /// </summary>
+    private static int? MapVesaModeToInternal(ushort vesaMode) {
+        // Only map modes that have actual internal VGA mode support
+        // The emulator currently only supports standard VGA modes + mode 0x6A (800x600x16)
+        // High-color/true-color modes and higher resolutions require SVGA hardware
+        // that is not emulated, so they return null (unsupported)
+        return vesaMode switch {
+            0x102 => 0x6A,  // 800x600x16 (planar) -> internal mode 0x6A
+            // All other VESA modes are not supported by the current VGA emulation
+            _ => null
+        };
     }
 
     /// <inheritdoc />
