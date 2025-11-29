@@ -1096,7 +1096,7 @@ public class DosFileManager {
                     }
                 } else if (OpenFiles[handle] is VirtualFileBase file) {
                     long oldLocation = file.Position;
-                    file.Seek(file.Position, SeekOrigin.End);
+                    file.Seek(0, SeekOrigin.End);
                     long endLocation = file.Position;
                     if (oldLocation < endLocation) { //Still data available
                         state.AL = 0xff;
@@ -1226,6 +1226,29 @@ public class DosFileManager {
                 } else { /* Only 1 logical drive assigned */
                     state.AL = 0;
                     state.AH = 0x07;
+                }
+                return DosFileOperationResult.NoValue();
+
+            case IoctlFunction.IsHandleRemote:
+                // Check if handle refers to a remote file/device
+                // DX bit 15 is set if handle is remote
+                VirtualFileBase? remoteCheckFile = OpenFiles[handle];
+                if (remoteCheckFile is IVirtualDevice) {
+                    // Character devices are local
+                    state.DX = 0;
+                    state.AX = 0;
+                } else if (remoteCheckFile is DosFile remoteFile) {
+                    // Check if file is on a remote drive
+                    byte fileDrive = remoteFile.Drive == 0xff ? _dosDriveManager.CurrentDriveIndex : remoteFile.Drive;
+                    state.DX = _dosDriveManager.ElementAtOrDefault(fileDrive).Value?.IsRemote == true ? (ushort)0x8000 : (ushort)0;
+                    state.AX = 0;
+                } else {
+                    // Unexpected file type or null; set default values and log warning
+                    state.DX = 0;
+                    state.AX = 0;
+                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                        _loggerService.Warning("IOCTL: IsHandleRemote called for unexpected file type {Type} at handle {Handle}", remoteCheckFile?.GetType().FullName ?? "null", handle);
+                    }
                 }
                 return DosFileOperationResult.NoValue();
 
