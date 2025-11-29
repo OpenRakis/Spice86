@@ -17,6 +17,7 @@ using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using Xunit;
 
@@ -41,7 +42,8 @@ public class DosInt21HandlerTests {
 
         // Create minimal real instances for unused dependencies
         Configuration configuration = new();
-        DosProgramSegmentPrefixTracker dosPspTracker = new(configuration, memory, logger);
+        DosSwappableDataArea dosSwappableDataArea = new(memory, MemoryUtils.ToPhysicalAddress(0xb2, 0));
+        DosProgramSegmentPrefixTracker dosPspTracker = new(configuration, memory, dosSwappableDataArea, logger);
         DosMemoryManager dosMemoryManager = new(memory, dosPspTracker, logger);
         BiosDataArea biosDataArea = new(memory, 640);  // 640KB conventional memory
         BiosKeyboardBuffer biosKeyboardBuffer = new(memory, biosDataArea);
