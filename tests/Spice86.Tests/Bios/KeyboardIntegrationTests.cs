@@ -227,6 +227,62 @@ public class KeyboardIntegrationTests {
     }
 
     /// <summary>
+    /// Tests that INT 21h, AH=01h (character input with echo) reads a key and returns ASCII in AL.
+    /// This function waits for keyboard input (polling INT 16h AH=01h) and echoes the character.
+    /// </summary>
+    [Fact]
+    public void Int21H_CharacterInputWithEcho_ShouldReadKeyAndEcho() {
+        // Program that reads one character using INT 21h, AH=01h
+        // and reports the ASCII code via I/O port
+        byte[] program = new byte[]
+        {
+            0xB4, 0x01,             // mov ah, 01h - Character input with echo
+            0xCD, 0x21,             // int 21h - Returns: AL=ASCII code
+            
+            // Write ASCII code (AL) to result port
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
+            // Simulate pressing and releasing the 'A' key
+            ps2kbd.AddKey(KbdKey.A, isPressed: true);
+            ps2kbd.AddKey(KbdKey.A, isPressed: false);
+        });
+
+        // The ASCII code for lowercase 'a' is 0x61
+        testHandler.Results.Should().Contain(0x61,
+            "INT 21h AH=01h should return ASCII code 0x61 for lowercase 'a'");
+    }
+
+    /// <summary>
+    /// Tests that INT 21h, AH=01h properly handles various letter keys.
+    /// </summary>
+    [Theory]
+    [InlineData(KbdKey.A, 0x61)] // A key -> ASCII 'a'
+    [InlineData(KbdKey.Z, 0x7A)] // Z key -> ASCII 'z'
+    [InlineData(KbdKey.D1, 0x31)] // 1 key -> ASCII '1'
+    public void Int21H_CharacterInputWithEcho_ShouldProduceCorrectAscii(KbdKey key, byte expectedAscii) {
+        byte[] program = new byte[]
+        {
+            0xB4, 0x01,             // mov ah, 01h - Character input with echo
+            0xCD, 0x21,             // int 21h
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al - write ASCII
+            0xF4                    // hlt
+        };
+
+        KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
+            ps2kbd.AddKey(key, isPressed: true);
+            ps2kbd.AddKey(key, isPressed: false);
+        });
+
+        testHandler.Results.Should().Contain(expectedAscii,
+            $"ASCII code for {key} should be 0x{expectedAscii:X2}");
+    }
+
+    /// <summary>
     /// Runs keyboard test program and returns handler with results
     /// </summary>
     private KeyboardTestHandler RunKeyboardTest(

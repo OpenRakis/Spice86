@@ -94,6 +94,7 @@ public class DosInt21Handler : InterruptHandler {
     /// </summary>
     private void FillDispatchTable() {
         AddAction(0x00, QuitWithExitCode);
+        AddAction(0x01, CharacterInputWithEcho);
         AddAction(0x02, DisplayOutput);
         AddAction(0x03, ReadCharacterFromStdAux);
         AddAction(0x04, WriteCharacterToStdAux);
@@ -393,6 +394,46 @@ public class DosInt21Handler : InterruptHandler {
             State.AL = 0xFF;
         } else {
             State.AL = 0x0;
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=01h - Character Input with Echo.
+    /// <para>
+    /// Reads a single character from standard input and echoes it to standard output.
+    /// The program waits for input; the user just needs to press the intended key
+    /// WITHOUT pressing "enter" key.
+    /// </para>
+    /// <b>Returns:</b><br/>
+    /// AL = ASCII code of the input character
+    /// </summary>
+    /// <remarks>
+    /// This is a blocking call that reads from STDIN (typically the console device).
+    /// The console device's Read method handles the echo internally when Echo is true.
+    /// </remarks>
+    public void CharacterInputWithEcho() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CHARACTER INPUT WITH ECHO");
+        }
+        if (_dosFileManager.TryGetStandardInput(out CharacterDevice? stdIn) &&
+            stdIn.CanRead) {
+            bool previousEchoState = true;
+            if (stdIn is ConsoleDevice consoleDevice) {
+                previousEchoState = consoleDevice.Echo;
+                consoleDevice.Echo = true;
+            }
+            byte[] bytes = new byte[1];
+            int readCount = stdIn.Read(bytes, 0, 1);
+            if (stdIn is ConsoleDevice consoleDeviceAfter) {
+                consoleDeviceAfter.Echo = previousEchoState;
+            }
+            if (readCount < 1) {
+                State.AL = 0;
+            } else {
+                State.AL = bytes[0];
+            }
+        } else {
+            State.AL = 0;
         }
     }
 
