@@ -111,4 +111,89 @@ public class DosProgramSegmentPrefixTrackerTests {
         _pspTracker.GetCurrentPspSegment().Should().Be(0x4000);
         _pspTracker.GetProgramEntryPointSegment().Should().Be(0x4010);
     }
+
+    /// <summary>
+    /// Ensures that SetCurrentPspSegment updates the current PSP segment value and GetCurrentPspSegment
+    /// returns the newly set value. This verifies the INT 21H/50H and INT 21H/51H consistency.
+    /// </summary>
+    [Fact]
+    public void SetCurrentPspSegmentUpdatesGetCurrentPspSegment() {
+        // Arrange
+        ushort arbitraryPspSegment = 0x1234;
+
+        // Act
+        _pspTracker.SetCurrentPspSegment(arbitraryPspSegment);
+
+        // Assert
+        _pspTracker.GetCurrentPspSegment().Should().Be(arbitraryPspSegment);
+    }
+
+    /// <summary>
+    /// Ensures that SetCurrentPspSegment can set an arbitrary PSP value that doesn't correspond
+    /// to a loaded PSP in the internal stack. This is valid DOS behavior where programs can set
+    /// the PSP to any segment value.
+    /// </summary>
+    [Fact]
+    public void SetCurrentPspSegmentWorksWithArbitraryValue() {
+        // Arrange
+        DosProgramSegmentPrefix psp1 = _pspTracker.PushPspSegment(0x2000);
+        ushort arbitraryPspSegment = 0x9999; // Not in the PSP stack
+
+        // Act
+        _pspTracker.SetCurrentPspSegment(arbitraryPspSegment);
+
+        // Assert
+        _pspTracker.GetCurrentPspSegment().Should().Be(arbitraryPspSegment);
+        // The internal PSP stack should remain unchanged
+        _pspTracker.PspCount.Should().Be(1);
+        _pspTracker.GetCurrentPsp().Should().Be(psp1);
+    }
+
+    /// <summary>
+    /// Ensures that pushing a new PSP segment updates GetCurrentPspSegment to the new segment.
+    /// This verifies that PushPspSegment keeps the SDA in sync with the stack.
+    /// </summary>
+    [Fact]
+    public void PushPspSegmentUpdatesGetCurrentPspSegment() {
+        // Act
+        _pspTracker.PushPspSegment(0x2000);
+
+        // Assert
+        _pspTracker.GetCurrentPspSegment().Should().Be(0x2000);
+    }
+
+    /// <summary>
+    /// Ensures that popping a PSP segment updates GetCurrentPspSegment to reflect the new top of stack.
+    /// This verifies that PopPspSegment keeps the SDA in sync with the stack.
+    /// </summary>
+    [Fact]
+    public void PopPspSegmentUpdatesGetCurrentPspSegment() {
+        // Arrange
+        _pspTracker.PushPspSegment(0x2000);
+        _pspTracker.PushPspSegment(0x3000);
+        _pspTracker.GetCurrentPspSegment().Should().Be(0x3000);
+
+        // Act
+        _pspTracker.PopCurrentPspSegment();
+
+        // Assert
+        _pspTracker.GetCurrentPspSegment().Should().Be(0x2000);
+    }
+
+    /// <summary>
+    /// Ensures that after setting a custom PSP via SetCurrentPspSegment, pushing a new PSP
+    /// will update the current PSP to the newly pushed segment.
+    /// </summary>
+    [Fact]
+    public void PushPspSegmentOverridesManuallySetPsp() {
+        // Arrange
+        _pspTracker.SetCurrentPspSegment(0x9999);
+        _pspTracker.GetCurrentPspSegment().Should().Be(0x9999);
+
+        // Act
+        _pspTracker.PushPspSegment(0x4000);
+
+        // Assert
+        _pspTracker.GetCurrentPspSegment().Should().Be(0x4000);
+    }
 }

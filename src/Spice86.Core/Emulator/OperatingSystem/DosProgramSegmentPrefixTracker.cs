@@ -95,16 +95,23 @@ public class DosProgramSegmentPrefixTracker {
     /// <summary>
     /// Gets the address of the PSP segment for the current program that is loaded.
     /// </summary>
+    /// <remarks>
+    /// This reads from the DOS Swappable Data Area (SDA) to ensure consistency with
+    /// INT 21H function 50H (Set Current PSP) which also uses the SDA.
+    /// </remarks>
     /// <returns>Returns the PSP segment for the current program.</returns>
     public ushort GetCurrentPspSegment() {
-        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
-        return currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
+        return _dosSwappableDataArea.CurrentProgramSegmentPrefix;
     }
 
     /// <summary>
-    /// Sets the current Program Segment Prefix (PSP) segment value for the DOS swappable data area.
+    /// Sets the current Program Segment Prefix (PSP) segment value in the DOS swappable data area.
     /// </summary>
-    /// <param name="segment">The segment value to assign as the current Program Segment Prefix. Must be a valid <see cref="DosProgramSegmentPrefix"/> structure.</param>
+    /// <remarks>
+    /// This method allows setting any segment value as the current PSP, which is valid DOS behavior
+    /// where programs can set the PSP to any segment address.
+    /// </remarks>
+    /// <param name="segment">The segment value to assign as the current Program Segment Prefix.</param>
     public void SetCurrentPspSegment(ushort segment) {
         _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
     }
@@ -145,6 +152,7 @@ public class DosProgramSegmentPrefixTracker {
         uint pspAddress = MemoryUtils.ToPhysicalAddress(pspSegment, 0);
         DosProgramSegmentPrefix psp = new(_memory, pspAddress);
         _loadedPsps.Add(psp);
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = pspSegment;
         return psp;
     }
 
@@ -154,7 +162,11 @@ public class DosProgramSegmentPrefixTracker {
     /// <param name="pspSegment">Address of the PSP segment for the program that is exiting.</param>
     /// <returns>Returns true if the given segment was found and could be removed.</returns>
     public bool PopPspSegment(ushort pspSegment) {
-        return _loadedPsps.RemoveAll(psp => MemoryUtils.ToSegment(psp.BaseAddress) == pspSegment) > 0;
+        bool result = _loadedPsps.RemoveAll(psp => MemoryUtils.ToSegment(psp.BaseAddress) == pspSegment) > 0;
+        if (result) {
+            UpdateSdaFromStack();
+        }
+        return result;
     }
 
     /// <summary>
@@ -164,6 +176,16 @@ public class DosProgramSegmentPrefixTracker {
         DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
         if (currentPsp != null) {
             _loadedPsps.Remove(currentPsp);
+            UpdateSdaFromStack();
         }
+    }
+
+    /// <summary>
+    /// Updates the SDA's current PSP segment to match the top of the internal stack.
+    /// </summary>
+    private void UpdateSdaFromStack() {
+        DosProgramSegmentPrefix? currentPsp = GetCurrentPsp();
+        ushort segment = currentPsp == null ? InitialPspSegment : MemoryUtils.ToSegment(currentPsp.BaseAddress);
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
     }
 }
