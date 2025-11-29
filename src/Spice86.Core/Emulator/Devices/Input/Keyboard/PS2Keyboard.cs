@@ -13,7 +13,7 @@ using System.Diagnostics;
 /// Emulates a PS/2 keyboard device, handling key events, scancode translation, and communication with a keyboard
 /// controller.
 /// </summary>
-[DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_bufferCurrentIndex}/{BufferSize} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
+[DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_keyboardFrameBuffer.Count}/{BufferSizeInScancodes} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
@@ -27,10 +27,9 @@ public partial class PS2Keyboard {
     /// Internal keyboard scancode buffer
     /// </summary>
     private const int BufferSizeInScancodes = 8;
-    private readonly List<byte>[] _buffer = new List<byte>[BufferSizeInScancodes];
+    // Buffer of keyboard frames to be sent to the controller. Holds the frames until controler is ready to receive them.
+    private readonly Queue<List<byte>> _keyboardFrameBuffer = new(BufferSizeInScancodes);
     private bool _bufferOverflowed = false;
-    private int _bufferStartIdx = 0;
-    private int _bufferCurrentIndex = 0;
     private RepeatData _repeat = new() { Key = PcKeyboardKey.None, WaitMs = 0, PauseMs = 500, RateMs = 33 };
     private readonly Dictionary<byte, Set3CodeInfoEntry> _set3CodeInfo = new();
 
@@ -113,14 +112,11 @@ public partial class PS2Keyboard {
     /// <remarks>If the buffer is empty or the controller is not ready to receive a keyboard frame, this
     /// method performs no action.</remarks>
     private void TransferNextBufferedFrameIfReady() {
-        if (_bufferCurrentIndex == 0 || !_controller.IsReadyForKbdFrame) {
+        if (_keyboardFrameBuffer.Count == 0 || !_controller.IsReadyForKbdFrame) {
             return;
         }
 
-        _controller.AddKeyboardFrame(_buffer[_bufferStartIdx]);
-
-        --_bufferCurrentIndex;
-        _bufferStartIdx = (_bufferStartIdx + 1) % BufferSizeInScancodes;
+        _controller.AddKeyboardFrame(_keyboardFrameBuffer.Dequeue());
     }
 
     private void EnqueueScanCodeFrame(List<byte>? scanCode) {
@@ -131,15 +127,14 @@ public partial class PS2Keyboard {
 
         // If buffer got overflowed, drop everything until
         // the controllers queue gets free for the keyboard
-        if (_bufferCurrentIndex == BufferSizeInScancodes) {
-            _bufferCurrentIndex = 0;
+        if (_keyboardFrameBuffer.Count == BufferSizeInScancodes) {
+            _keyboardFrameBuffer.Clear();
             _bufferOverflowed = true;
             return;
         }
 
         // We can safely add a scancode to the buffer
-        int idx = (_bufferStartIdx + _bufferCurrentIndex++) % BufferSizeInScancodes;
-        _buffer[idx] = [.. scanCode];
+        _keyboardFrameBuffer.Enqueue([.. scanCode]);
 
         // If possible, transfer the scancode to keyboard controller
         TransferNextBufferedFrameIfReady();
@@ -155,7 +150,7 @@ public partial class PS2Keyboard {
         }
 
         // Check if buffers are free
-        if (_bufferCurrentIndex > 0 || !_controller.IsReadyForKbdFrame) {
+        if (_keyboardFrameBuffer.Count > 0 || !_controller.IsReadyForKbdFrame) {
             _repeat.WaitMs = 1;
             return;
         }
@@ -205,8 +200,7 @@ public partial class PS2Keyboard {
     }
 
     private void ClearBuffer() {
-        _bufferStartIdx = 0;
-        _bufferCurrentIndex = 0;
+        _keyboardFrameBuffer.Clear();
         _bufferOverflowed = false;
 
         _repeat.Key = PcKeyboardKey.None;
