@@ -11,7 +11,6 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 /// <summary>
 /// Emulates the Intel 8042 keyboard controller, providing PS/2 keyboard and mouse (auxiliary device) port functionality
@@ -30,9 +29,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     /// </summary>
     private const double PortDelayMs = 0.300; // 0.3ms
 
-    private readonly BufferEntry[] _buffer = new BufferEntry[BufferSize];
-    private int _bufferStartIdx = 0;
-    private int _bufferNumUsed = 0;
+    private readonly Queue<BufferEntry> _buffer = new(BufferSize);
 
     private int _waitingBytesFromAux = 0;
     private int _waitingBytesFromKbd = 0;
@@ -250,8 +247,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
         _status.IsDataPending = false;
         _status.IsDataFromAux = false;
 
-        _bufferStartIdx = 0;
-        _bufferNumUsed = 0;
+        _buffer.Clear();
 
         bool shouldNotifyAux = !_shouldSkipDeviceNotify && !IsReadyForAuxFrame;
         bool shouldNotifyKbd = !_shouldSkipDeviceNotify && !IsReadyForKbdFrame;
@@ -277,7 +273,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     private void EnforceBufferSpace(int numBytes = 1) {
         ArgumentOutOfRangeException.ThrowIfGreaterThan(numBytes, BufferSize);
 
-        if (BufferSize < _bufferNumUsed + numBytes) {
+        if (BufferSize < _buffer.Count + numBytes) {
             LogWarnBufferIsFull();
             FlushBuffer();
         }
@@ -305,25 +301,24 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     /// expired.
     /// </summary>
     private void TransferNextBufferedByteIfReady() {
-        if (_status.IsDataPending || _bufferNumUsed == 0) {
+        if (_status.IsDataPending || _buffer.Count == 0) {
             // There is already some data waiting to be picked up,
             // or there is nothing waiting in the buffer
             return;
         }
 
         // If not set to skip the delay, do not send byte until timer expires
-        int idx = _bufferStartIdx;
-        if (!IsDelayExpired && !_buffer[idx].SkipDelay) {
+        BufferEntry entry = _buffer.Peek();
+        if (!IsDelayExpired && !entry.SkipDelay) {
             return;
         }
 
         // Mark byte as consumed
-        _bufferStartIdx = (_bufferStartIdx + 1) % BufferSize;
-        --_bufferNumUsed;
+        _buffer.Dequeue();
 
         // Transfer one byte of data from buffer to output port
-        _dataByte = _buffer[idx].Data;
-        _status.IsDataFromAux = _buffer[idx].IsFromAux;
+        _dataByte = entry.Data;
+        _status.IsDataFromAux = entry.IsFromAux;
         _status.IsDataPending = true;
         RestartDelayTimer();
         ActivateIrqsIfNeeded();
@@ -337,22 +332,22 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
             return;
         }
 
-        if (_bufferNumUsed >= BufferSize) {
+        if (_buffer.Count >= BufferSize) {
             LogWarnBufferIsFull();
             FlushBuffer();
             return;
         }
 
-        int idx = (_bufferStartIdx + _bufferNumUsed++) % BufferSize;
-
+        var entry = new BufferEntry();
         if ((isFromKbd && _config.TranslationEnabled)) {
-            _buffer[idx].Data = GetTranslated(value);
+            entry.Data = GetTranslated(value);
         } else {
-            _buffer[idx].Data = value;
+            entry.Data = value;
         }
-        _buffer[idx].IsFromAux = isFromAux;
-        _buffer[idx].IsFromKbd = isFromKbd;
-        _buffer[idx].SkipDelay = skipDelay || (!isFromAux && !isFromKbd);
+        entry.IsFromAux = isFromAux;
+        entry.IsFromKbd = isFromKbd;
+        entry.SkipDelay = skipDelay || (!isFromAux && !isFromKbd);
+        _buffer.Enqueue(entry);
 
         if (isFromAux) {
             ++_waitingBytesFromAux;
@@ -690,7 +685,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
                     return _dataByte;
                 }
 
-                if (_isDiagnosticDump && _bufferNumUsed == 0) {
+                if (_isDiagnosticDump && _buffer.Count == 0) {
                     // Diagnostic dump finished
                     _isDiagnosticDump = false;
                     if (IsReadyForAuxFrame) {
