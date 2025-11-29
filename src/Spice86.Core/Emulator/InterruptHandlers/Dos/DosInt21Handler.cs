@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -13,6 +14,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -1083,6 +1085,70 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <inheritdoc/>
     public override byte VectorNumber => 0x21;
+
+    /// <summary>
+    /// Emits the INT 21h handler stub into guest RAM with special handling for AH=0Ah (BufferedInput).
+    /// </summary>
+    /// <remarks><![CDATA[
+    /// For AH=0Ah (BufferedInput), we need to wait for keyboard input before calling the C# handler.
+    /// This uses a simple polling loop with INT 16h AH=01h to check keyboard status.
+    /// 
+    /// L_HANDLER:
+    ///     cmp ah, 0Ah            ; Is this BufferedInput?
+    ///     jz  L_BUFFERED_INPUT   ; If yes, wait for key first
+    /// L_DEFAULT:
+    ///     callback Run           ; Call C# dispatcher
+    ///     iret
+    /// L_BUFFERED_INPUT:
+    ///     mov ah, 01h            ; Check keyboard status
+    ///     int 16h                ; ZF=0 if key available
+    ///     jnz L_KEY_READY        ; Key available, restore AH and handle
+    ///     jmp short L_BUFFERED_INPUT  ; No key, keep polling
+    /// L_KEY_READY:
+    ///     mov ah, 0Ah            ; Restore AH to 0Ah
+    ///     callback Run           ; Call C# handler
+    ///     iret
+    /// ]]></remarks>
+    public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
+        SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
+
+        // CMP AH, 0Ah
+        memoryAsmWriter.WriteUInt8(0x80);
+        memoryAsmWriter.WriteUInt8(0xFC);
+        memoryAsmWriter.WriteUInt8(0x0A);
+        
+        // JZ L_BUFFERED_INPUT (+5 to skip callback + iret)
+        memoryAsmWriter.WriteJz(5);
+
+        // L_DEFAULT: callback Run then IRET
+        memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
+        memoryAsmWriter.WriteIret();
+
+        // L_BUFFERED_INPUT:
+        // MOV AH, 01h
+        memoryAsmWriter.WriteUInt8(0xB4);
+        memoryAsmWriter.WriteUInt8(0x01);
+        
+        // INT 16h (check keyboard status - ZF=0 when key present)
+        memoryAsmWriter.WriteInt(0x16);
+        
+        // JNZ L_KEY_READY (+2 to skip the jmp short)
+        memoryAsmWriter.WriteJnz(2);
+        
+        // JMP short L_BUFFERED_INPUT (-6: back to MOV AH, 01h)
+        memoryAsmWriter.WriteJumpShort(-6);
+
+        // L_KEY_READY:
+        // MOV AH, 0Ah - restore AH
+        memoryAsmWriter.WriteUInt8(0xB4);
+        memoryAsmWriter.WriteUInt8(0x0A);
+        
+        // Callback to C# handler (uses auto-allocated callback number)
+        memoryAsmWriter.RegisterAndWriteCallback(Run);
+        memoryAsmWriter.WriteIret();
+
+        return handlerAddress;
+    }
 
     /// <summary>
     /// Function 35H returns the address stored in the interrupt vector table for the handler associated with the specified interrupt. <br/>

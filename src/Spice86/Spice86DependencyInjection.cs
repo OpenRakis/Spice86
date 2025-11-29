@@ -379,13 +379,12 @@ public class Spice86DependencyInjection : IDisposable {
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
         ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
 
-        EmulationLoop emulationLoop = new(functionHandler,
-            cpuForEmulationLoop, state, executionStateSlice, dualPic,
-            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator state serializer created...");
-        }
+        // Create performance measurer first so it can be shared with PerformanceViewModel
+        PerformanceMeasurer cpuPerformanceMeasurer = new(new PerformanceMeasureOptions {
+            CheckInterval = 512,
+            MinValueDelta = 3000,
+            MaxIntervalMilliseconds = 10
+        });
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
@@ -404,7 +403,7 @@ public class Spice86DependencyInjection : IDisposable {
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer, dumpContext);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
             
-            performanceViewModel = new PerformanceViewModel(state, pauseHandler, uiDispatcher, emulationLoop.CpuPerformanceMeasurer);
+            performanceViewModel = new PerformanceViewModel(state, pauseHandler, uiDispatcher, cpuPerformanceMeasurer);
             
             exceptionHandler = new MainWindowExceptionHandler(pauseHandler);
 
@@ -421,6 +420,12 @@ public class Spice86DependencyInjection : IDisposable {
             _gui = new HeadlessGui();
             inputEventQueue = new InputEventQueue(_gui, _gui);
         }
+
+        // Create EmulationLoop after InputEventQueue is available
+        EmulationLoop emulationLoop = new(functionHandler,
+            cpuForEmulationLoop, state, executionStateSlice, dualPic,
+            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter,
+            inputEventQueue, cpuPerformanceMeasurer);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
