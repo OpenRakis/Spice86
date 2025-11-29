@@ -53,7 +53,7 @@ public class DosProgramSegmentPrefixTracker {
         _initialProgramEntryPointSegment = configuration.ProgramEntryPointSegment;
         _memory = memory;
         _dosSwappableDataArea = dosSwappableDataArea;
-        _dosSwappableDataArea.CurrentProgramSegmentPrefix = _initialProgramEntryPointSegment;
+        _dosSwappableDataArea.CurrentProgramSegmentPrefix = InitialPspSegment;
         _loggerService = loggerService;
         _loadedPsps = new();
 
