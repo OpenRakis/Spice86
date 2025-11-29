@@ -111,6 +111,8 @@ public class DosInt21Handler : InterruptHandler {
         // FCB file operations (CP/M compatible)
         AddAction(0x0F, FcbOpenFile);
         AddAction(0x10, FcbCloseFile);
+        AddAction(0x11, FcbFindFirst);
+        AddAction(0x12, FcbFindNext);
         AddAction(0x14, FcbSequentialRead);
         AddAction(0x15, FcbSequentialWrite);
         AddAction(0x16, FcbCreateFile);
@@ -2005,6 +2007,47 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         State.AL = _dosFcbManager.CloseFile(GetFcbAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=11h - Find First Matching File Using FCB.
+    /// Finds the first file matching the FCB file specification.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to an unopened FCB (filespec may contain '?'s)</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if a matching filename found (and DTA is filled)</para>
+    /// <para>AL = FFh if no match was found</para>
+    /// <para>The DTA is filled with the directory entry of the matching file.</para>
+    /// </remarks>
+    private void FcbFindFirst() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB FIND FIRST at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.FindFirst(GetFcbAddress(), GetDtaAddress());
+    }
+
+    /// <summary>
+    /// INT 21h, AH=12h - Find Next Matching File Using FCB.
+    /// Finds the next file matching the FCB file specification from a previous Find First call.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Expects:</b></para>
+    /// <para>DS:DX = pointer to the same FCB used in Find First</para>
+    /// <para><b>Returns:</b></para>
+    /// <para>AL = 00h if a matching filename found (and DTA is filled)</para>
+    /// <para>AL = FFh if no more files match</para>
+    /// <para>The reserved area of the FCB carries information used in continuing the search,</para>
+    /// <para>so don't open or alter the FCB between calls to Fns 11h and 12h.</para>
+    /// </remarks>
+    private void FcbFindNext() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("FCB FIND NEXT at {Address}",
+                ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
+        }
+        State.AL = _dosFcbManager.FindNext(GetFcbAddress(), GetDtaAddress());
     }
 
     /// <summary>

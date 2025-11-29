@@ -659,4 +659,408 @@ public class DosFcbManager {
         int hours = time.Hour;
         return (ushort)((seconds & 0x1F) | ((minutes & 0x3F) << 5) | ((hours & 0x1F) << 11));
     }
+
+    /// <summary>
+    /// Offset of the reserved area in the FCB structure, used for storing search state.
+    /// </summary>
+    private const uint FcbReservedAreaOffset = 0x18;
+
+    /// <summary>
+    /// Counter for generating unique search IDs for FCB file searches.
+    /// </summary>
+    private uint _fcbSearchIdCounter;
+
+    /// <summary>
+    /// Tracks active FCB file searches. Key is the search ID stored in the FCB reserved area.
+    /// </summary>
+    private readonly Dictionary<uint, FcbSearchData> _fcbActiveSearches = new();
+
+    /// <summary>
+    /// Stores search state for FCB Find First/Next operations.
+    /// </summary>
+    /// <remarks>
+    /// The matching files list is cached during FindFirst to ensure consistent
+    /// results across FindNext calls, per DOS semantics.
+    /// </remarks>
+    private class FcbSearchData {
+        public FcbSearchData(string[] matchingFiles, int index, byte searchAttribute, byte driveNumber, bool isExtended) {
+            MatchingFiles = matchingFiles;
+            Index = index;
+            SearchAttribute = searchAttribute;
+            DriveNumber = driveNumber;
+            IsExtended = isExtended;
+        }
+
+        public string[] MatchingFiles { get; init; }
+        public int Index { get; set; }
+        public byte SearchAttribute { get; init; }
+        public byte DriveNumber { get; init; }
+        public bool IsExtended { get; init; }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=11h - Find First Matching File Using FCB.
+    /// </summary>
+    /// <param name="fcbAddress">The address of the FCB.</param>
+    /// <param name="dtaAddress">The address of the Disk Transfer Area.</param>
+    /// <returns>0x00 if a matching file was found (DTA is filled), 0xFF if no match was found.</returns>
+    public byte FindFirst(uint fcbAddress, uint dtaAddress) {
+        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte searchAttribute);
+        bool isExtended = _memory.UInt8[fcbAddress] == DosExtendedFileControlBlock.ExtendedFcbFlag;
+
+        string dosPath = FcbToPath(fcb);
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("FCB Find First: {Path}, Attribute: {Attribute}, Extended: {Extended}",
+                dosPath, searchAttribute, isExtended);
+        }
+
+        // Get drive number
+        byte driveNumber = fcb.DriveNumber;
+        if (driveNumber == 0) {
+            driveNumber = (byte)(_dosDriveManager.CurrentDriveIndex + 1);
+        }
+
+        // Get the search folder and pattern from the FCB path
+        string searchPattern = GetSearchPattern(fcb);
+        string? searchFolder = GetSearchFolder(dosPath);
+
+        if (searchFolder == null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("FCB Find First: Search folder not found for path {Path}", dosPath);
+            }
+            return FcbError;
+        }
+
+        try {
+            // Find matching files and cache them for subsequent FindNext calls
+            EnumerationOptions options = GetEnumerationOptions(searchAttribute);
+            string[] matchingFiles = FindFilesUsingWildCmp(searchFolder, searchPattern, options);
+
+            if (matchingFiles.Length == 0) {
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("FCB Find First: No matching files found in {Folder} for pattern {Pattern}",
+                        searchFolder, searchPattern);
+                }
+                return FcbError;
+            }
+
+            // Fill the DTA with the first match
+            if (!FillDtaWithMatch(dtaAddress, matchingFiles[0], searchFolder, driveNumber, isExtended)) {
+                return FcbError;
+            }
+
+            // Store search state in FCB reserved area (per DOS semantics)
+            uint searchId = GenerateSearchId();
+            StoreFcbSearchState(fcbAddress, searchId, isExtended);
+            _fcbActiveSearches[searchId] = new FcbSearchData(matchingFiles, 1, searchAttribute, driveNumber, isExtended);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("FCB Find First: Found {File}, SearchId: {Id}", matchingFiles[0], searchId);
+            }
+
+            return FcbSuccess;
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Find First: IO error searching {Folder}", searchFolder);
+            }
+            return FcbError;
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Find First: Access denied searching {Folder}", searchFolder);
+            }
+            return FcbError;
+        }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=12h - Find Next Matching File Using FCB.
+    /// </summary>
+    /// <param name="fcbAddress">The address of the FCB (same FCB used for Find First).</param>
+    /// <param name="dtaAddress">The address of the Disk Transfer Area.</param>
+    /// <returns>0x00 if a matching file was found (DTA is filled), 0xFF if no more files match.</returns>
+    public byte FindNext(uint fcbAddress, uint dtaAddress) {
+        bool isExtended = _memory.UInt8[fcbAddress] == DosExtendedFileControlBlock.ExtendedFcbFlag;
+
+        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+            _loggerService.Verbose("FCB Find Next, Extended: {Extended}", isExtended);
+        }
+
+        // Get search ID from FCB reserved area (per DOS semantics)
+        uint searchId = GetFcbSearchState(fcbAddress, isExtended);
+
+        if (!_fcbActiveSearches.TryGetValue(searchId, out FcbSearchData? searchData)) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("FCB Find Next: No active search found for ID {Id}", searchId);
+            }
+            return FcbError;
+        }
+
+        // Use cached file list from FindFirst
+        if (searchData.Index >= searchData.MatchingFiles.Length) {
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("FCB Find Next: No more matching files (index {Index}, total {Total})",
+                    searchData.Index, searchData.MatchingFiles.Length);
+            }
+            // Clean up exhausted search to prevent memory leak
+            _fcbActiveSearches.Remove(searchId);
+            return FcbError;
+        }
+
+        try {
+            // Fill the DTA with the next match from cached list
+            string matchingFile = searchData.MatchingFiles[searchData.Index];
+            string? searchFolder = Path.GetDirectoryName(matchingFile);
+            if (searchFolder == null || !FillDtaWithMatch(dtaAddress, matchingFile, searchFolder, searchData.DriveNumber, searchData.IsExtended)) {
+                return FcbError;
+            }
+
+            // Update search state in FCB
+            searchData.Index++;
+            StoreFcbSearchState(fcbAddress, searchId, isExtended);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("FCB Find Next: Found {File}", matchingFile);
+            }
+
+            return FcbSuccess;
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Find Next: IO error");
+            }
+            return FcbError;
+        } catch (UnauthorizedAccessException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB Find Next: Access denied");
+            }
+            return FcbError;
+        }
+    }
+
+    /// <summary>
+    /// Gets the search pattern from the FCB (filename with possible wildcards).
+    /// </summary>
+    private static string GetSearchPattern(DosFileControlBlock fcb) {
+        string name = fcb.FileName.TrimEnd();
+        string ext = fcb.FileExtension.TrimEnd();
+
+        // Convert FCB wildcards (?) to search pattern
+        if (string.IsNullOrEmpty(ext)) {
+            return name;
+        }
+        return $"{name}.{ext}";
+    }
+
+    /// <summary>
+    /// Gets the search folder from a DOS path.
+    /// </summary>
+    private string? GetSearchFolder(string dosPath) {
+        // Extract directory portion from path
+        int lastSep = dosPath.LastIndexOfAny(new[] { '\\', '/' });
+        string directory;
+        if (lastSep >= 0) {
+            directory = dosPath[..(lastSep + 1)];
+        } else {
+            // Just a filename, search in current directory
+            int colonPos = dosPath.IndexOf(':');
+            if (colonPos >= 0) {
+                directory = dosPath[..(colonPos + 1)];
+            } else {
+                directory = ".";
+            }
+        }
+
+        return _dosPathResolver.GetFullHostPathFromDosOrDefault(directory);
+    }
+
+    /// <summary>
+    /// Gets enumeration options based on search attributes.
+    /// </summary>
+    /// <remarks>
+    /// When attributes is 0 (normal files only), Hidden, System, and Directory files are excluded.
+    /// When specific attribute flags are set, those file types are included in addition to normal files.
+    /// </remarks>
+    private static EnumerationOptions GetEnumerationOptions(byte attributes) {
+        EnumerationOptions options = new() {
+            IgnoreInaccessible = true,
+            RecurseSubdirectories = false,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            MatchType = MatchType.Win32
+        };
+
+        DosFileAttributes dosAttribs = (DosFileAttributes)attributes;
+        
+        // By default, skip special files (hidden, system, directory)
+        // Only include them if the corresponding attribute flag is explicitly set
+        FileAttributes skip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.Directory;
+
+        // Include directories if the Directory attribute is set
+        if (dosAttribs.HasFlag(DosFileAttributes.Directory)) {
+            skip &= ~FileAttributes.Directory;
+        }
+        // Include hidden files if the Hidden attribute is set
+        if (dosAttribs.HasFlag(DosFileAttributes.Hidden)) {
+            skip &= ~FileAttributes.Hidden;
+        }
+        // Include system files if the System attribute is set
+        if (dosAttribs.HasFlag(DosFileAttributes.System)) {
+            skip &= ~FileAttributes.System;
+        }
+
+        options.AttributesToSkip = skip;
+        return options;
+    }
+
+    /// <summary>
+    /// Finds files matching a wildcard pattern.
+    /// </summary>
+    private string[] FindFilesUsingWildCmp(string searchFolder, string searchPattern, EnumerationOptions options) {
+        List<string> results = new();
+        foreach (string path in Directory.EnumerateFileSystemEntries(searchFolder, "*", options)) {
+            if (DosPathResolver.WildFileCmp(Path.GetFileName(path), searchPattern)) {
+                results.Add(path);
+            }
+        }
+        return results.ToArray();
+    }
+
+    /// <summary>
+    /// Fills the DTA with a matching file entry in FCB format.
+    /// </summary>
+    /// <remarks>
+    /// <para>The DTA for FCB operations is structured as follows:</para>
+    /// <para>For regular FCB (37 bytes):</para>
+    /// <list type="bullet">
+    ///   <item>Offset 0x00 (1 byte): Drive number</item>
+    ///   <item>Offset 0x01 (8 bytes): File name (space-padded)</item>
+    ///   <item>Offset 0x09 (3 bytes): File extension (space-padded)</item>
+    ///   <item>Offset 0x0C (2 bytes): Current block (0)</item>
+    ///   <item>Offset 0x0E (2 bytes): Record size (128)</item>
+    ///   <item>Offset 0x10 (4 bytes): File size</item>
+    ///   <item>Offset 0x14 (2 bytes): Date</item>
+    ///   <item>Offset 0x16 (2 bytes): Time</item>
+    ///   <item>Offset 0x18 (8 bytes): Reserved/system use</item>
+    ///   <item>Offset 0x20 (1 byte): Current record (0)</item>
+    ///   <item>Offset 0x21 (4 bytes): Random record (0)</item>
+    /// </list>
+    /// <para>For extended FCB (44 bytes = 7 byte header + 37 byte FCB):</para>
+    /// <list type="bullet">
+    ///   <item>Offset 0x00 (1 byte): 0xFF flag</item>
+    ///   <item>Offset 0x01 (5 bytes): Reserved</item>
+    ///   <item>Offset 0x06 (1 byte): File attributes</item>
+    ///   <item>Offset 0x07 (37 bytes): Regular FCB structure</item>
+    /// </list>
+    /// </remarks>
+    private bool FillDtaWithMatch(uint dtaAddress, string matchingFile, string searchFolder, byte driveNumber, bool isExtended) {
+        try {
+            FileSystemInfo entryInfo = Directory.Exists(matchingFile)
+                ? new DirectoryInfo(matchingFile)
+                : new FileInfo(matchingFile);
+
+            string fileName = Path.GetFileName(matchingFile);
+            string shortName = DosPathResolver.GetShortFileName(fileName, searchFolder);
+
+            // Parse the short name into FCB format (8.3)
+            string name;
+            string ext;
+            int dotPos = shortName.LastIndexOf('.');
+            if (dotPos >= 0) {
+                name = shortName[..dotPos].PadRight(DosFileControlBlock.FileNameSize);
+                ext = shortName[(dotPos + 1)..].PadRight(DosFileControlBlock.FileExtensionSize);
+            } else {
+                name = shortName.PadRight(DosFileControlBlock.FileNameSize);
+                ext = "   ";
+            }
+
+            // Truncate if too long
+            if (name.Length > DosFileControlBlock.FileNameSize) {
+                name = name[..DosFileControlBlock.FileNameSize];
+            }
+            if (ext.Length > DosFileControlBlock.FileExtensionSize) {
+                ext = ext[..DosFileControlBlock.FileExtensionSize];
+            }
+
+            uint fcbOffset = 0;
+
+            // For extended FCB, write the extended header first using the structure class
+            if (isExtended) {
+                DosExtendedFileControlBlock xfcb = new(_memory, dtaAddress);
+                xfcb.Flag = DosExtendedFileControlBlock.ExtendedFcbFlag;
+                xfcb.Attribute = (byte)ConvertToDosFileAttributes(entryInfo.Attributes);
+                fcbOffset = DosExtendedFileControlBlock.HeaderSize;
+            }
+
+            // Use DosFileControlBlock structure to write the DTA entry
+            DosFileControlBlock dtaFcb = new(_memory, dtaAddress + fcbOffset);
+            dtaFcb.DriveNumber = driveNumber;
+            dtaFcb.FileName = name.ToUpperInvariant();
+            dtaFcb.FileExtension = ext.ToUpperInvariant();
+            dtaFcb.CurrentBlock = 0;
+            dtaFcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
+            dtaFcb.FileSize = entryInfo is FileInfo fi ? (uint)fi.Length : 0;
+            dtaFcb.Date = ToDosDate(entryInfo.LastWriteTime);
+            dtaFcb.Time = ToDosTime(entryInfo.LastWriteTime);
+            dtaFcb.CurrentRecord = 0;
+            dtaFcb.RandomRecord = 0;
+
+            return true;
+        } catch (IOException ex) {
+            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                _loggerService.Warning(ex, "FCB FillDtaWithMatch: Error getting file info for {File}", matchingFile);
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Generates a new search ID for tracking FCB searches.
+    /// </summary>
+    private uint GenerateSearchId() {
+        return ++_fcbSearchIdCounter;
+    }
+
+    /// <summary>
+    /// Stores the search ID in the FCB reserved area.
+    /// </summary>
+    private void StoreFcbSearchState(uint fcbAddress, uint searchId, bool isExtended) {
+        // Store the search ID in the first 4 bytes of the FCB reserved area
+        // For extended FCB, skip the 7-byte header
+        uint reservedOffset = isExtended ? (uint)DosExtendedFileControlBlock.HeaderSize + FcbReservedAreaOffset : FcbReservedAreaOffset;
+        _memory.UInt32[fcbAddress + reservedOffset] = searchId;
+    }
+
+    /// <summary>
+    /// Gets the search ID from the FCB reserved area.
+    /// </summary>
+    private uint GetFcbSearchState(uint fcbAddress, bool isExtended) {
+        uint reservedOffset = isExtended ? (uint)DosExtendedFileControlBlock.HeaderSize + FcbReservedAreaOffset : FcbReservedAreaOffset;
+        return _memory.UInt32[fcbAddress + reservedOffset];
+    }
+
+    /// <summary>
+    /// Converts .NET FileAttributes to DOS file attributes.
+    /// </summary>
+    /// <remarks>
+    /// This explicit conversion is safer than direct casting as it doesn't rely on
+    /// the underlying enum values matching between FileAttributes and DosFileAttributes.
+    /// </remarks>
+    private static DosFileAttributes ConvertToDosFileAttributes(FileAttributes attributes) {
+        DosFileAttributes result = DosFileAttributes.Normal;
+        if (attributes.HasFlag(FileAttributes.ReadOnly)) {
+            result |= DosFileAttributes.ReadOnly;
+        }
+        if (attributes.HasFlag(FileAttributes.Hidden)) {
+            result |= DosFileAttributes.Hidden;
+        }
+        if (attributes.HasFlag(FileAttributes.System)) {
+            result |= DosFileAttributes.System;
+        }
+        if (attributes.HasFlag(FileAttributes.Directory)) {
+            result |= DosFileAttributes.Directory;
+        }
+        if (attributes.HasFlag(FileAttributes.Archive)) {
+            result |= DosFileAttributes.Archive;
+        }
+        return result;
+    }
 }
