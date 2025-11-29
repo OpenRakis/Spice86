@@ -105,9 +105,13 @@ public class DosProgramSegmentPrefixTracker {
     }
 
     /// <summary>
-    /// Sets the current Program Segment Prefix (PSP) segment value for the DOS swappable data area.
+    /// Sets the current Program Segment Prefix (PSP) segment value in the DOS swappable data area.
     /// </summary>
-    /// <param name="segment">The segment value to assign as the current Program Segment Prefix. Must be a valid <see cref="DosProgramSegmentPrefix"/> structure.</param>
+    /// <remarks>
+    /// This method allows setting any segment value as the current PSP, which is valid DOS behavior
+    /// where programs can set the PSP to any segment address.
+    /// </remarks>
+    /// <param name="segment">The segment value to assign as the current Program Segment Prefix.</param>
     public void SetCurrentPspSegment(ushort segment) {
         _dosSwappableDataArea.CurrentProgramSegmentPrefix = segment;
     }
