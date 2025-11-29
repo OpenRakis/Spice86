@@ -38,6 +38,7 @@ public partial class DisassemblyView : UserControl {
 
         // Subscribe to the new view model
         _viewModel = DataContext as IDisassemblyViewModel;
+        
         if (_viewModel != null) {
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }

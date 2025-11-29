@@ -4,22 +4,19 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using Xunit;
 
 using Configuration = Spice86.Core.CLI.Configuration;
-using State = Spice86.Core.Emulator.CPU.State;
-using EmulatorBreakpointsManager = Spice86.Core.Emulator.VM.Breakpoint.EmulatorBreakpointsManager;
-using PauseHandler = Spice86.Core.Emulator.VM.PauseHandler;
 
 /// <summary>
 /// Verifies that MCBs are allocated, released, modified, and freed correctly by DOS.
@@ -45,11 +42,9 @@ public class DosMemoryManagerTests {
         // dependencies, unfortunately. Create those now so that we have our nice, shiny chunk of
         // memory to use for these tests.
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        PauseHandler pauseHandler = new(_loggerService);
-        State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        _memory = new Memory(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        _memory = new Memory(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
 
         // Create the PSP tracker that reads the configuration and informs the memory manager what

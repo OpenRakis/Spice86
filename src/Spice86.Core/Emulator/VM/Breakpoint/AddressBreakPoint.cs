@@ -12,6 +12,11 @@ public class AddressBreakPoint : BreakPoint {
     public long Address { get; private set; }
 
     private Func<long, bool>? _additionalTriggerCondition;
+    
+    /// <summary>
+    /// The condition expression string for conditional breakpoints.
+    /// </summary>
+    public string? ConditionExpression { get; private set; }
 
     /// <summary>
     /// Creates a new address breakpoint instance.
@@ -21,11 +26,14 @@ public class AddressBreakPoint : BreakPoint {
     /// <param name="onReached">The action to execute when the breakpoint is triggered.</param>
     /// <param name="isRemovedOnTrigger">A value indicating whether the breakpoint is removed when triggered.</param>
     /// <param name="additionalTriggerCondition">Additional condition for triggering. Not used if null.</param>
+    /// <param name="conditionExpression">The condition expression string for serialization purposes.</param>
     public AddressBreakPoint(BreakPointType breakPointType, long address,
-        Action<BreakPoint> onReached, bool isRemovedOnTrigger, Func<long, bool>? additionalTriggerCondition = null)
+        Action<BreakPoint> onReached, bool isRemovedOnTrigger, Func<long, bool>? additionalTriggerCondition = null,
+        string? conditionExpression = null)
         : base(breakPointType, onReached, isRemovedOnTrigger) {
         Address = address;
         _additionalTriggerCondition = additionalTriggerCondition;
+        ConditionExpression = conditionExpression;
     }
 
     /// <summary>
