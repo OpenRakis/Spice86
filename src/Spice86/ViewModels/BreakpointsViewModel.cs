@@ -541,8 +541,6 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             _uiDispatcher.Post(() => ShowError(e));
             return false;
         }
-        
-        return false;
     }
     
     /// <summary>
