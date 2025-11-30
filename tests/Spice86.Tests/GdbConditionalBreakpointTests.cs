@@ -124,9 +124,9 @@ public class GdbConditionalBreakpointTests {
         // Create a conditional memory write breakpoint
         // Note: Avoid memory access in conditions for now as it triggers recursive breakpoints
         string command = "2,300,1;X:ax==0x42";
-        var breakpoint = gdbBreakpointHandler.ParseBreakPoint(command) as AddressBreakPoint;
-        
-        breakpoint.Should().NotBeNull();
+        if (gdbBreakpointHandler.ParseBreakPoint(command) is not AddressBreakPoint breakpoint) {
+            Xunit.Assert.True(false, "Failed to parse address breakpoint.");
+        }
         
         // Compile the condition using BreakpointConditionCompiler
         var compiler = new BreakpointConditionCompiler(state, memory);
@@ -135,7 +135,7 @@ public class GdbConditionalBreakpointTests {
         // Create a new breakpoint with a tracking action
         int triggerCount = 0;
         var testBreakpoint = new AddressBreakPoint(
-            breakpoint!.BreakPointType,
+            breakpoint.BreakPointType,
             breakpoint.Address,
             _ => triggerCount++,
             false,
