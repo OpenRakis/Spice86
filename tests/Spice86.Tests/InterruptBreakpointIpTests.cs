@@ -17,7 +17,7 @@ using Xunit;
 /// </summary>
 public class InterruptBreakpointIpTests {
     [Fact]
-    public void TestInterruptBreakpointCallsPauseHandler() {
+    public void TestInterruptBreakpointIpPointsToIntInstruction() {
         // Test with CfgCpu only (regular CPU will be removed)
         using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt",
             enableCfgCpu: true,
