@@ -40,8 +40,9 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Core.Emulator.VM.CycleBudget;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
@@ -51,8 +52,6 @@ using Spice86.Shared.Utils;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
-
-using System.Diagnostics;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -167,9 +166,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS data area created...");
         }
 
-        ExecutionStateSlice executionStateSlice = new(state);
+        IEmulatedClock emulatedClock = configuration.InstructionsPerSecond != null ? new CyclesClock(state, configuration.InstructionsPerSecond.Value) : new EmulatedClock();
+        EmulationLoopScheduler emulationLoopScheduler = new(emulatedClock, loggerService);
 
-        var dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
+        var dualPic = new DualPic(ioPortHandlerRegistry, loggerService);
 
         if (configuration.InitializeDOS is false) {
             loggerService.Information("Masking all PIC IRQs...");
@@ -230,7 +230,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Cpu cpu = new(interruptVectorTable, stack,
             functionHandler, functionHandlerInExternalInterrupt, memory, state,
-            dualPic, executionStateSlice, ioPortDispatcher, callbackHandler,
+            dualPic, ioPortDispatcher, callbackHandler,
             emulatorBreakpointsManager, loggerService, executionFlowRecorder);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -238,7 +238,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue,
+            dualPic, emulatorBreakpointsManager, functionCatalogue,
             configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -331,15 +331,15 @@ public class Spice86DependencyInjection : IDisposable {
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
-            pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
+            pauseHandler, loggerService, emulationLoopScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, emulationLoopScheduler, emulatedClock, loggerService);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaSystem, dualPic,
+            softwareMixer, state, dmaSystem, dualPic, emulationLoopScheduler, emulatedClock,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
@@ -364,7 +364,6 @@ public class Spice86DependencyInjection : IDisposable {
         IInstructionExecutor cpuForEmulationLoop = configuration.CfgCpu ? cfgCpu : cpu;
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
-        ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");
@@ -412,9 +411,8 @@ public class Spice86DependencyInjection : IDisposable {
         
         EmulationLoop emulationLoop = new(
             functionHandler, cpuForEmulationLoop,
-            state, executionStateSlice, dualPic, emulatorBreakpointsManager,
-            cpuPerformanceMeasurer, pauseHandler, cyclesLimiter,
-            inputEventHub, cyclesBudgeter, loggerService);
+            state, emulationLoopScheduler, emulatorBreakpointsManager,
+            pauseHandler, inputEventHub, cyclesLimiter, loggerService);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
         vgaCard.SubscribeToEvents();
@@ -424,8 +422,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         Intel8042Controller intel8042Controller = new(
-            state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventHub);
+            state, ioPortDispatcher, a20Gate, dualPic, emulationLoopScheduler,
+            configuration.FailOnUnhandledPort, loggerService, inputEventHub);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
@@ -611,13 +609,6 @@ public class Spice86DependencyInjection : IDisposable {
                 debugWindowViewModel;
             mainWindow.DataContext = mainWindowViewModel;
         }
-    }
-
-    private static ICyclesBudgeter CreateDefaultCyclesBudgeter(ICyclesLimiter cyclesLimiter) {
-        long sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
-        double sliceDurationMilliseconds = sliceDurationTicks * 1000.0 / Stopwatch.Frequency;
-        ICyclesBudgeter cyclesBudgeter = new AdaptiveCyclesBudgeter(cyclesLimiter, sliceDurationMilliseconds);
-        return cyclesBudgeter;
     }
 
     private readonly byte[] _defaultIrqs = [3, 4, 5, 7, 10, 11];

@@ -33,10 +33,7 @@ public class PicTests {
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
-        var cpuState = new ExecutionStateSlice(state) {
-            InterruptFlag = true
-        };
-        _pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
+        _pic = new DualPic(_ioPortHandlerRegistry, logger);
     }
 
     [Fact]

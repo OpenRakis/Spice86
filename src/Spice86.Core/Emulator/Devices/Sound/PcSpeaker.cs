@@ -3,10 +3,11 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Libs.Sound.Filters.IirFilters.Filters.RBJ;
 using Spice86.Shared.Interfaces;
 
@@ -38,7 +39,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private static readonly int MinimumCounter = Math.Max(1, 2 * PitTimer.PitTickRate / SampleRateHz);
     private readonly float[] _audioBuffer = new float[FramesPerBuffer * Channels];
     private readonly DeviceThread _deviceThread;
-    private readonly DualPic _dualPic;
+    private readonly EmulationLoopScheduler _scheduler;
+    private readonly IEmulatedClock _clock;
     private readonly float[] _frameBuffer = new float[FramesPerBuffer];
     private readonly HighPass _highPassFilter = new();
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
@@ -50,7 +52,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     private readonly PitState _pit = new();
 
     private readonly SoundChannel _soundChannel;
-    private readonly TimerTickHandler _tickHandler;
+    private readonly EventHandler _tickHandler;
     private readonly float[] _waveform = new float[WaveformSize];
     private float _accumulator;
     private bool _disposed;
@@ -70,7 +72,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     /// <param name="ioPortDispatcher">Dispatcher used to register the speaker port.</param>
     /// <param name="pauseHandler">Handler used to honor emulator pause requests.</param>
     /// <param name="loggerService">Logger used for diagnostics.</param>
-    /// <param name="dualPic">Programmable interrupt controllers used for timing callbacks.</param>
+    /// <param name="scheduler">The event scheduler.</param>
+    /// <param name="clock">The emulated clock.</param>
     /// <param name="failOnUnhandledPort">Indicates whether unhandled port accesses should throw.</param>
     /// <param name="pitControl">Optional PIT control used to synchronize channel 2 output.</param>
     public PcSpeaker(
@@ -79,12 +82,14 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         IOPortDispatcher ioPortDispatcher,
         IPauseHandler pauseHandler,
         ILoggerService loggerService,
-        DualPic dualPic,
+        EmulationLoopScheduler scheduler,
+        IEmulatedClock clock,
         bool failOnUnhandledPort,
         IPitControl? pitControl = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
-        _dualPic = dualPic;
+        _scheduler = scheduler;
+        _clock = clock;
         _pitControl = pitControl;
 
         _soundChannel = softwareMixer.CreateChannel(nameof(PcSpeaker), SampleRateHz);
@@ -99,8 +104,8 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
 
         ioPortDispatcher.AddIOPortHandler(PcSpeakerPortNumber, this);
 
-        _tickHandler = OnPicTick;
-        _dualPic.AddTickHandler(_tickHandler);
+        _tickHandler = OnSchedulerTick;
+        _scheduler.AddEvent(_tickHandler, 1.0);
 
         _deviceThread = new DeviceThread(nameof(PcSpeaker), PlaybackLoop, pauseHandler, loggerService);
     }
@@ -287,23 +292,24 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
         }
 
         if (disposing) {
-            _dualPic.RemoveTickHandler(_tickHandler);
+            _scheduler.RemoveEvents(_tickHandler);
             _deviceThread.Dispose();
         }
 
         _disposed = true;
     }
 
-    private void OnPicTick() {
+    private void OnSchedulerTick(uint _ = 0) {
         _frameCounter += SampleRatePerMillisecond;
         int requestedFrames = (int)Math.Floor(_frameCounter);
         _frameCounter -= requestedFrames;
 
-        if (requestedFrames <= 0) {
-            return;
+        if (requestedFrames > 0) {
+            PicCallback(requestedFrames);
         }
-
-        PicCallback(requestedFrames);
+        
+        // Reschedule for the next tick
+        _scheduler.AddEvent(_tickHandler, 1,0);
     }
 
     private void PicCallback(int requestedFrames) {
@@ -616,7 +622,7 @@ public sealed class PcSpeaker : DefaultIOPortHandler, IDisposable, IPitSpeaker {
     }
 
     private float GetPicTickIndex() {
-        double full = _dualPic.GetFractionalTickIndex();
+        double full = _clock.CurrentTimeMs;
         return (float)(full - Math.Floor(full));
     }
 

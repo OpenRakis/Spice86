@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Interfaces;
 
@@ -18,10 +18,10 @@ public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
     private readonly ILoggerService _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
-    private readonly DualPic _dualPic;
+    private readonly EmulationLoopScheduler _scheduler;
     private readonly IGuiKeyboardEvents? _gui;
-    private readonly EmulatedTimeEventHandler _typematicTickHandler;
-    private readonly EmulatedTimeEventHandler _ledsAllOnExpireHandler;
+    private readonly EventHandler _typematicTickHandler;
+    private readonly EventHandler _ledsAllOnExpireHandler;
 
     /// <summary>
     /// Internal keyboard scancode buffer
@@ -60,22 +60,22 @@ public partial class PS2Keyboard {
     /// Initializes a new instance of the <see cref="PS2Keyboard"/> class.
     /// </summary>
     /// <param name="controller">The keyboard controller.</param>
-    /// <param name="dualPic">The PIC event queue for scheduling keyboard events.</param>
+    /// <param name="scheduler">The event scheduler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">Optional GUI interface for keyboard events.</param>
     public PS2Keyboard(Intel8042Controller controller,
-        DualPic dualPic, ILoggerService loggerService,
+        EmulationLoopScheduler scheduler, ILoggerService loggerService,
         IGuiKeyboardEvents? gui = null) {
         _controller = controller;
         _loggerService = loggerService;
-        _dualPic = dualPic;
+        _scheduler = scheduler;
 
         // Initialize handler references
         _typematicTickHandler = TypematicTickHandler;
         _ledsAllOnExpireHandler = LedsAllOnExpireHandler;
 
         // Schedule first 1ms periodic service (typematic + LED timeout)
-        _dualPic.AddEvent(_typematicTickHandler, 0.001);
+        _scheduler.AddEvent(_typematicTickHandler, 0.001);
 
         KeyboardReset(isStartup: true);
         SetCodeSet(1);
@@ -262,12 +262,12 @@ public partial class PS2Keyboard {
         _isScanning = true;
 
         // Flash all the LEDs
-        _dualPic.RemoveEvents(_ledsAllOnExpireHandler);
+        _scheduler.RemoveEvents(_ledsAllOnExpireHandler);
         _ledState = 0;
         _ledsAllOn = !isStartup;
         if (_ledsAllOn) {
             const double ExpireTimeMs = 666.0;
-            _dualPic.AddEvent(_ledsAllOnExpireHandler, ExpireTimeMs);
+            _scheduler.AddEvent(_ledsAllOnExpireHandler, ExpireTimeMs);
         }
         MaybeNotifyLedState();
     }
