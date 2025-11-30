@@ -60,7 +60,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
-        IScreenPresenter? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
+        IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;

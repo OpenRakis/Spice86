@@ -16,7 +16,7 @@ using System.Diagnostics;
 /// </summary>
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
-    private readonly IGui? _gui;
+    private readonly IGuiMouseEvents? _gui;
     private readonly ILoggerService _logger;
     private long _lastUpdateTimestamp;
     private bool _previousIsLeftButtonDown;
@@ -35,13 +35,14 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="state">The CPU state.</param>
     /// <param name="sharedMouseData">The mouse data shared with the UI for display.</param>
     /// <param name="dualPic">The two Programmable Interrupt Controllers.</param>
-    /// <param name="gui">The graphical user interface. Is null in headless mode.</param>
     /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
+    /// <param name="gui">The GUI mouse events interface, or null if not using a GUI.</param>
     public Mouse(State state, SharedMouseData sharedMouseData,
-        DualPic dualPic, IGui? gui, MouseType mouseType,
-        ILoggerService loggerService, bool failOnUnhandledPort)
+        DualPic dualPic, MouseType mouseType,
+        ILoggerService loggerService, bool failOnUnhandledPort,
+        IGuiMouseEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
         _sharedMouseData = sharedMouseData;
