@@ -33,7 +33,6 @@ public class ConditionalBreakpointTests {
         _memory = new Memory(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
         
         // Create breakpoints manager
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
         IPauseHandler pauseHandler = Substitute.For<IPauseHandler>();
         _emulatorBreakpointsManager = new EmulatorBreakpointsManager(pauseHandler, _state, _memory, memoryBreakpoints, ioBreakpoints);
     }
