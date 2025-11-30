@@ -4,6 +4,8 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.EmulationLoopScheduler;
 using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
@@ -12,10 +14,6 @@ using System.Diagnostics;
 ///     Simulates the three-channel programmable interval timer, wiring channel 0 to the PIC scheduler and channel 2 to
 ///     the PC speaker shim while maintaining deterministic behavior.
 /// </summary>
-/// <remarks>
-///     Arithmetic operates in <see cref="double" /> precision for timing calculations and stays within deterministic
-///     control flow by relying on the scheduler provided by <see cref="DualPic" />.
-/// </remarks>
 public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <summary>Underlying clock rate in hertz used by the PIT.</summary>
     public const int PitTickRate = 1193182;
@@ -39,6 +37,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     private readonly ILoggerService _logger;
     private readonly IPitSpeaker _pcSpeaker;
     private readonly DualPic _pic;
+    private readonly EmulationLoopScheduler _scheduler;
+    private readonly IEmulatedClock _clock;
 
     // Three PIT channels are supported. Each uses the same state machine while addressing distinct peripherals.
     private readonly PitChannel[] _pitChannels = new PitChannel[3];
@@ -64,11 +64,15 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     /// <param name="pic">Programmable interrupt controller that receives channel 0 callbacks.</param>
     /// <param name="pcSpeaker">Speaker shim that mirrors channel 2 reloads and control words.</param>
     /// <param name="logger">Optional logger for trace output. A null value installs a no-op logger.</param>
-    public PitTimer(IOPortHandlerRegistry ioPortHandlerRegistry, DualPic pic, IPitSpeaker pcSpeaker, ILoggerService logger) {
+    /// <param name="scheduler">The event scheduler.</param>
+    /// <param name="clock">The emulated clock.</param>
+    public PitTimer(IOPortHandlerRegistry ioPortHandlerRegistry, DualPic pic, IPitSpeaker pcSpeaker, EmulationLoopScheduler scheduler, IEmulatedClock clock, ILoggerService logger) {
         _ioPortHandlerRegistry = ioPortHandlerRegistry;
         _pic = pic;
         _pcSpeaker = pcSpeaker;
         _logger = logger;
+        _scheduler = scheduler;
+        _clock = clock;
         _wallClock = new WallClock();
         SystemStartTime = _wallClock.UtcNow;
 
@@ -103,7 +107,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // can read the output level through bit 5 of the same port.
     private ref PitChannel Channel2 => ref _pitChannels[2];
 
-    private double PicFullIndex => _pic.GetFractionalTickIndex();
+    private double PicFullIndex => _clock.CurrentTimeMs;
 
     /// <summary>
     ///     Uninstalls all registered I/O handlers and clears the scheduled channel 0 event.
@@ -117,7 +121,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             handle.Uninstall();
         }
 
-        _pic.RemoveEvents(PitChannel0Event);
+        _scheduler.RemoveEvents(PitChannel0Event);
     }
 
     /// <summary>
@@ -277,8 +281,8 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
 
     private static void SaveReadLatch(ref PitChannel channel, double latchTime) {
         // Latch is a 16-bit counter, wrap it to ensure it doesn't overflow
-        int wrapped = NumericConverters.RoundToNearestInt(latchTime) % ushort.MaxValue;
-        channel.ReadLatch = NumericConverters.CheckCast<ushort, int>(wrapped);
+        int wrapped = (int)Math.Round(latchTime) % ushort.MaxValue;
+        channel.ReadLatch = (ushort)wrapped;
     }
 
     // Handles the scheduled channel 0 callback:
@@ -301,7 +305,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             Channel0.UpdateCount = false;
         }
 
-        _pic.AddEvent(PitChannel0Event, Channel0.Delay);
+        _scheduler.AddEvent(PitChannel0Event, Channel0.Delay);
     }
 
     private bool IsChannelOutputHigh(in PitChannel channel) {
@@ -499,7 +503,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // loaded, it refreshes the running counter, reschedules IRQ0 events, and notifies the PC speaker.
     private void WriteLatch(ushort port, uint value) {
         // write_latch is 16-bits
-        byte val = NumericConverters.CheckCast<byte, uint>(value);
+        byte val = (byte)value;
         byte channelNum = (byte)(port - PitChannel0Port);
 
         ref PitChannel channel = ref _pitChannels[channelNum];
@@ -559,10 +563,10 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             case 0:
                 if (channel.ModeChanged || channel.Mode == PitMode.InterruptOnTerminalCount) {
                     if (channel.Mode == PitMode.InterruptOnTerminalCount) {
-                        _pic.RemoveEvents(PitChannel0Event);
+                        _scheduler.RemoveEvents(PitChannel0Event);
                     }
 
-                    _pic.AddEvent(PitChannel0Event, channel.Delay);
+                    _scheduler.AddEvent(PitChannel0Event, channel.Delay);
                 } else if (_logger.IsEnabled(LogEventLevel.Information)) {
                     _logger.Information("PIT 0 Timer set without new control word");
                 }
@@ -691,7 +695,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
             // so the interrupt is cleared immediately, while modes 2 and 3 start high. The prior output level guards the
             // edge detection, so only low-to-high transitions trigger the activation path.
             case 0: {
-                _pic.RemoveEvents(PitChannel0Event);
+                _scheduler.RemoveEvents(PitChannel0Event);
                 if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
                     _pic.ActivateIrq(0);
                 } else {
@@ -752,7 +756,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     // Decodes writes to the PIT control port. The command byte selects either a specific channel (handled by
     // `LatchSingleChannel`) or the aggregate read-back path (`LatchAllChannels`).
     private void HandleControlPortWrite(ushort port, uint value) {
-        byte val = NumericConverters.CheckCast<byte, uint>(value);
+        byte val = (byte)value;
         byte channelNum = (byte)((val >> 6) & 0x03);
 
         if (channelNum < 3) {
@@ -763,7 +767,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
     }
 
     private void InitializeChannels() {
-        _pic.RemoveEvents(PitChannel0Event);
+        _scheduler.RemoveEvents(PitChannel0Event);
 
         Channel0.Bcd = false;
         Channel0.Count = GetMaxCount(Channel0);
@@ -800,7 +804,7 @@ public sealed class PitTimer : IDisposable, IPitControl, ITimeMultiplier {
 
         _latchedTimerStatusLocked = false;
         _isChannel2GateHigh = false;
-        _pic.AddEvent(PitChannel0Event, Channel0.Delay);
+        _scheduler.AddEvent(PitChannel0Event, Channel0.Delay);
     }
 
     /// <summary>

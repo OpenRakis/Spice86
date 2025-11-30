@@ -408,16 +408,13 @@ internal abstract class Intel8259Pic(ILoggerService logger) {
 ///     Concrete controller that signals the CPU when the primary PIC has pending work.
 /// </summary>
 /// <param name="logger">Logging facility for diagnostic output.</param>
-/// <param name="cpuState">CPU state used to adjust cycle counts when IRQs trigger.</param>
 /// <param name="setIrqCheck">Delegate that updates the global IRQ pending flag.</param>
-internal sealed class PrimaryPic(ILoggerService logger, ExecutionStateSlice cpuState, Action<bool> setIrqCheck)
+internal sealed class PrimaryPic(ILoggerService logger, Action<bool> setIrqCheck)
     : Intel8259Pic(logger) {
     /// <inheritdoc />
     protected override void Activate() {
         setIrqCheck(true);
         // Cycles 0: take care of the port I/O adjustments added in the raise_irq base caller.
-        cpuState.CyclesLeft += cpuState.CyclesUntilReevaluation;
-        cpuState.CyclesUntilReevaluation = 0;
         // Maybe when coming from an EOI, give a tiny delay for the CPU to pick it up (see ActivateIrq).
     }
 
