@@ -530,11 +530,14 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             return true;
         } catch (ExpressionParseException e) {
             validatedExpression = null;
+        } catch (ExpressionParseException e) {
+            validatedExpression = null;
             _uiDispatcher.Post(() => ShowError(e));
         } catch (ArgumentException e) {
             validatedExpression = null;
             _uiDispatcher.Post(() => ShowError(e));
         } catch (InvalidOperationException e) {
+            validatedExpression = null;
             validatedExpression = null;
             _uiDispatcher.Post(() => ShowError(e));
         }
