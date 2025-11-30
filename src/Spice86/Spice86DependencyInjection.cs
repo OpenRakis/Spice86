@@ -163,6 +163,9 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         ExecutionStateSlice executionStateSlice = new(state);
+        
+        IEmulatedClock emulatedClock = new EmulatedClock();
+        DeviceScheduler deviceScheduler = new(emulatedClock, loggerService);
 
         var dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
 
@@ -326,15 +329,15 @@ public class Spice86DependencyInjection : IDisposable {
             ioPortDispatcher, pauseHandler, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher,
-            pauseHandler, loggerService, dualPic, configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
+            pauseHandler, loggerService, deviceScheduler, emulatedClock, configuration.FailOnUnhandledPort);
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, deviceScheduler, emulatedClock, loggerService);
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(7, 1, 5, SbType.SbPro2);
         loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
         var soundBlaster = new SoundBlaster(ioPortDispatcher,
-            softwareMixer, state, dmaSystem, dualPic,
+            softwareMixer, state, dmaSystem, dualPic, deviceScheduler, emulatedClock,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
         var gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
@@ -363,8 +366,7 @@ public class Spice86DependencyInjection : IDisposable {
         ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
 
         EmulationLoop emulationLoop = new(functionHandler,
-            cpuForEmulationLoop, state, executionStateSlice, dualPic,
-            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
+            cpuForEmulationLoop, state, executionStateSlice, deviceScheduler, emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Emulator state serializer created...");

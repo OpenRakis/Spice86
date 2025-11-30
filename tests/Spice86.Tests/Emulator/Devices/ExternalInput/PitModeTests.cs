@@ -19,6 +19,7 @@ public class PitModeTests {
     private const ushort PitControlPort = 0x43;
     private readonly IOPortHandlerRegistry _ioPortHandlerRegistry;
     private readonly DualPic _pic;
+    private readonly IEmulatedClock _clock;
 
     private readonly PitTimer _pit;
     private readonly IPitSpeaker _speaker;
@@ -29,11 +30,13 @@ public class PitModeTests {
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
-        var cpuState = new ExecutionStateSlice(state) {
+        var executionStateSlice = new ExecutionStateSlice(state) {
             InterruptFlag = true
         };
-        _pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
-        _pit = new PitTimer(_ioPortHandlerRegistry, _pic, _speaker, logger);
+        _clock = new EmulatedClock();
+        var deviceScheduler = new DeviceScheduler(_clock, logger);
+        _pic = new DualPic(_ioPortHandlerRegistry, executionStateSlice, logger);
+        _pit = new PitTimer(_ioPortHandlerRegistry, _pic, _speaker, deviceScheduler, _clock, logger);
     }
 
     [Fact]
@@ -41,7 +44,7 @@ public class PitModeTests {
         ConfigureChannel2(PitMode.InterruptOnTerminalCount);
         WriteReloadValue(2, 3);
 
-        double gateIndex = _pic.GetFractionalTickIndex();
+        double gateIndex = _clock.CurrentTime;
         _pit.SetGate2(true);
 
         PitChannelSnapshot snapshot = _pit.GetChannelSnapshot(2);

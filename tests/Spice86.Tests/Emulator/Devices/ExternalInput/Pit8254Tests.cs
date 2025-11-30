@@ -30,11 +30,13 @@ public class Pit8254Tests {
         State state = new(CpuModel.INTEL_80286);
         var dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _ioPortHandlerRegistry = new IOPortHandlerRegistry(dispatcher, state, logger, false);
-        var cpuState = new ExecutionStateSlice(state) {
+        var executionStateSlice = new ExecutionStateSlice(state) {
             InterruptFlag = true
         };
-        var pic = new DualPic(_ioPortHandlerRegistry, cpuState, logger);
-        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, logger);
+        var pic = new DualPic(_ioPortHandlerRegistry, executionStateSlice, logger);
+        var emulatedClock = new EmulatedClock();
+        var deviceScheduler = new DeviceScheduler(emulatedClock, logger);
+        _pit = new PitTimer(_ioPortHandlerRegistry, pic, _speaker, deviceScheduler, emulatedClock, logger);
     }
 
     [Theory]

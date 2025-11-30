@@ -109,6 +109,8 @@ public class DosFileManagerTests {
             CyclesAllocatedForSlice = 1,
             CyclesLeft = 1
         };
+        IEmulatedClock emulatedClock = new EmulatedClock();
+        DeviceScheduler deviceScheduler = new(emulatedClock, loggerService);
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
         IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
@@ -134,16 +136,17 @@ public class DosFileManagerTests {
         IFunctionHandlerProvider functionHandlerProvider =  cpu;
 
         SoftwareMixer softwareMixer = new(loggerService, configuration.AudioEngine);
-        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, dualPic,
+        PcSpeaker pcSpeaker = new(softwareMixer, state, ioPortDispatcher, pauseHandler, loggerService, deviceScheduler, emulatedClock,
             configuration.FailOnUnhandledPort);
-        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, loggerService);
+        PitTimer pitTimer = new(ioPortHandlerRegistry, dualPic, pcSpeaker, deviceScheduler, emulatedClock, loggerService);
+
         pcSpeaker.AttachPitControl(pitTimer);
 
         DmaSystem dmaSystem =
             new(memory, state, ioPortDispatcher, configuration.FailOnUnhandledPort, loggerService);
 
         var soundBlasterHardwareConfig = new SoundBlasterHardwareConfig(5, 1, 5, SbType.Sb16);
-        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic,
+        SoundBlaster soundBlaster = new SoundBlaster(ioPortDispatcher, softwareMixer, state, dmaSystem, dualPic, deviceScheduler, emulatedClock,
             configuration.FailOnUnhandledPort,
             loggerService, soundBlasterHardwareConfig, pauseHandler);
 

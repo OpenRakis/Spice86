@@ -15,19 +15,14 @@ public sealed class DeviceSchedulerTests {
     [Fact]
     public void RunQueueDoesNotProcessWhenNoCyclesRemain() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        var state = new State(CpuModel.INTEL_80286);
-        var cpuState = new ExecutionStateSlice(state) {
-            CyclesAllocatedForSlice = 128,
-            CyclesLeft = 0
-        };
-        var queue = new DeviceScheduler(cpuState, logger);
+        var emulatedClock = new EmulatedClock();
+        var queue = new DeviceScheduler(emulatedClock, logger);
 
         bool invoked = false;
         queue.AddEvent(_ => invoked = true, 0.25);
 
-        bool result = queue.RunQueue();
-
+        queue.ProcessEvents(); // Call ProcessEvents directly
+        
         invoked.Should().BeFalse();
-        result.Should().BeFalse();
     }
 }

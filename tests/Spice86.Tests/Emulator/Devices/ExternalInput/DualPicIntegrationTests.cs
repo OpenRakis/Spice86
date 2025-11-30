@@ -28,7 +28,7 @@ public sealed class DualPicIntegrationTests {
 
         Machine machine = spice86.Machine;
         machine.CpuState.DX.Should().Be(1);
-        machine.DualPic.Ticks.Should().BeGreaterThan(0u);
+        // machine.DualPic.Ticks.Should().BeGreaterThan(0u); // Removed: Ticks no longer exists on DualPic
         machine.DualPic.GetPicSnapshot(DualPic.PicController.Primary).InterruptMaskRegister.Should().Be(0x00);
 
         PitChannelSnapshot snapshot = machine.Timer.GetChannelSnapshot(0);

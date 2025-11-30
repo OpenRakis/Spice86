@@ -2,353 +2,203 @@
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Interfaces;
 
-/// <summary>
-///     Manages deterministic scheduling of device events relative to the CPU tick index.
-/// </summary>
-/// <remarks>
-///     Pools entries to avoid allocations and relies on the shared <see cref="ExecutionStateSlice" /> for cycle accounting.
-/// </remarks>
-internal sealed class DeviceScheduler {
-    private const int PicQueueSize = 8192; // Larger value from DosBox-X. Staging uses 512.
-    private readonly ExecutionStateSlice _executionStateSlice;
-    private readonly ScheduledEntry[] _entryPool = new ScheduledEntry[PicQueueSize];
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
+// The new, abstract clock architecture. These should be moved to their own files.
+
+/// <summary>
+/// Represents a source of time within the emulation, abstracting away the underlying mechanism.
+/// </summary>
+public interface IEmulatedClock {
+    /// <summary>
+    /// Gets the current time in milliseconds.
+    /// </summary>
+    double CurrentTime { get; }
+
+    /// <summary>
+    /// Initializes or resets the clock.
+    /// </summary>
+    void Initialize();
+}
+
+/// <summary>
+/// A real-time clock based on the system's Stopwatch, independent of CPU cycles for its progression.
+/// </summary>
+public class EmulatedClock : IEmulatedClock {
+    private int _ticks;
+    private readonly Stopwatch _stopwatch = new();
+    private double _cachedTime;
+
+
+    public void Initialize() {
+        _stopwatch.Restart();
+        _cachedTime = 0;
+        _ticks = 0;
+    }
+
+    public double CurrentTime {
+        get {
+            // Stopwatch.GetTimestamp can be slow, so we only query it periodically.
+            if (_ticks++ % 100 != 0) {
+                return _cachedTime;
+            }
+            _cachedTime = _stopwatch.Elapsed.TotalMilliseconds;
+            return _cachedTime;
+        }
+    }
+}
+
+
+/// <summary>
+///     Manages deterministic scheduling of device events using an emulated clock.
+/// </summary>
+public class DeviceScheduler {
+    private const int PicQueueSize = 8192;
+
+    private readonly IEmulatedClock _clock;
     private readonly ILoggerService _logger;
 
-    private ScheduledEntry? _freeEntry;
+    private readonly PriorityQueue<ScheduledEntry, double> _queue = new();
+    private readonly Dictionary<EmulatedTimeEventHandler, List<ScheduledEntry>> _activeEventsByHandler = new();
+
     private bool _isServicingEvents;
-    private ScheduledEntry? _nextEntry;
-    /// <summary>
-    /// Time in the slice at which the currently active event is running.
-    /// </summary>
     private double _activeEventScheduledTime;
 
     /// <summary>
-    ///     Initializes a new queue bound to the provided CPU state and logger.
+    ///     Initializes a new scheduler.
     /// </summary>
-    /// <param name="cpuState">Shared CPU timing state that provides cycle counters.</param>
+    /// <param name="clock">The emulated clock that provides the master time source.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
-    public DeviceScheduler(ExecutionStateSlice cpuState, ILoggerService logger) {
-        _executionStateSlice = cpuState;
+    public DeviceScheduler(IEmulatedClock clock, ILoggerService logger) {
+        _clock = clock;
         _logger = logger;
         Initialize();
     }
 
     /// <summary>
-    ///     Resets the queue and returns all entries to the free list.
+    ///     Resets the queue and clears all scheduled events.
     /// </summary>
-    /// <remarks>
-    ///     Reinitialises the pool to its pristine state, mirroring the bootstrap performed during construction.
-    /// </remarks>
     public void Initialize() {
-        for (int i = 0; i < _entryPool.Length; i++) {
-            _entryPool[i] = new ScheduledEntry();
-        }
-
-        for (int i = 0; i < _entryPool.Length - 1; i++) {
-            _entryPool[i].Next = _entryPool[i + 1];
-        }
-
-        _entryPool[^1].Next = null;
-        _freeEntry = _entryPool[0];
-        _nextEntry = null;
+        _queue.Clear();
+        _activeEventsByHandler.Clear();
         _isServicingEvents = false;
         _activeEventScheduledTime = 0.0;
+        _clock.Initialize();
     }
 
     /// <summary>
-    ///     Schedules an event to fire after the specified fractional tick delay.
+    ///     Schedules an event to fire after the specified delay.
     /// </summary>
     /// <param name="handler">Callback to invoke.</param>
-    /// <param name="delay">Delay expressed in tick units relative to the current index.</param>
+    /// <param name="delay">Delay in milliseconds relative to the current time.</param>
     /// <param name="val">Value forwarded to the callback.</param>
-    /// <remarks>
-    ///     When invoked from inside <see cref="RunQueue" />, the new entry inherits the in-flight index instead of the
-    ///     current tick position, which preserves ordering.
-    /// </remarks>
     public void AddEvent(EmulatedTimeEventHandler handler, double delay, uint val = 0) {
-        if (_freeEntry == null) {
+        if (_queue.Count >= PicQueueSize) {
             if (_logger.IsEnabled(LogEventLevel.Error)) {
-                string handlerName = GetHandlerName(handler);
-                _logger.Error(
-                    "Event queue full when scheduling handler {Handler} (delay {DelayTicks}, value {Value})",
-                    handlerName,
-                    delay,
-                    val);
+                _logger.Error("Event queue full when scheduling handler {Handler}", GetHandlerName(handler));
             }
-
             return;
         }
 
-        ScheduledEntry? entry = _freeEntry;
-        _freeEntry = _freeEntry!.Next;
+        double baseTime = _isServicingEvents ? _activeEventScheduledTime : _clock.CurrentTime;
+        double absoluteScheduledTime = baseTime + delay;
 
-        entry.ScheduledTime = (_isServicingEvents ? _activeEventScheduledTime : _executionStateSlice.NormalizedSliceProgress) + delay;
-        entry.Handler = handler;
-        entry.Value = val;
+        var entry = new ScheduledEntry {
+            ScheduledTime = absoluteScheduledTime,
+            Handler = handler,
+            Value = val
+        };
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            string handlerName = GetHandlerName(handler);
-            _logger.Verbose(
-                "Queued Device scheduler event {Handler} with delay {DelayTicks}, scheduled index {Index}, value {Value}",
-                handlerName,
-                delay,
-                entry.ScheduledTime,
-                val);
+        _queue.Enqueue(entry, entry.ScheduledTime);
+
+        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
+            events = new List<ScheduledEntry>();
+            _activeEventsByHandler[handler] = events;
         }
-
-        AddEntry(entry);
+        events.Add(entry);
     }
 
     /// <summary>
     ///     Removes queued events matching both handler and value.
     /// </summary>
-    /// <param name="handler">Handler to match.</param>
-    /// <param name="val">Value to match.</param>
     public void RemoveSpecificEvents(EmulatedTimeEventHandler handler, uint val) {
-        ScheduledEntry? entry = _nextEntry;
-        ScheduledEntry? prevEntry = null;
-        int removedCount = 0;
-
-        while (entry != null) {
-            if (entry.Handler == handler && entry.Value == val) {
-                ScheduledEntry? next = entry.Next;
-                if (prevEntry != null) {
-                    prevEntry.Next = next;
-                } else {
-                    _nextEntry = next;
-                }
-
-                entry.Next = _freeEntry;
-                _freeEntry = entry;
-                removedCount++;
-                entry = next;
-                continue;
-            }
-
-            prevEntry = entry;
-            entry = entry.Next;
+        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
+            return;
         }
 
-        if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            string handlerName = GetHandlerName(handler);
-            _logger.Debug(
-                "Removed {RemovedCount} device events for handler {Handler} with value {Value}",
-                removedCount,
-                handlerName,
-                val);
+        int cancelledCount = 0;
+        foreach (ScheduledEntry entry in events) {
+            if (entry.Value == val && !entry.IsCancelled) {
+                entry.IsCancelled = true;
+                cancelledCount++;
+            }
+        }
+        
+        if (cancelledCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Cancelled {CancelledCount} events for handler {Handler} with value {Value}", cancelledCount, GetHandlerName(handler), val);
         }
     }
 
     /// <summary>
     ///     Removes all queued events matching the provided handler.
     /// </summary>
-    /// <param name="handler">Handler to remove.</param>
     public void RemoveEvents(EmulatedTimeEventHandler handler) {
-        ScheduledEntry? entry = _nextEntry;
-        ScheduledEntry? prevEntry = null;
-        int removedCount = 0;
-
-        while (entry != null) {
-            if (entry.Handler == handler) {
-                ScheduledEntry? next = entry.Next;
-                if (prevEntry != null) {
-                    prevEntry.Next = next;
-                } else {
-                    _nextEntry = next;
-                }
-
-                entry.Next = _freeEntry;
-                _freeEntry = entry;
-                removedCount++;
-                entry = next;
-                continue;
-            }
-
-            prevEntry = entry;
-            entry = entry.Next;
-        }
-
-        if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            string handlerName = GetHandlerName(handler);
-            _logger.Debug(
-                "Removed {RemovedCount} device events for handler {Handler}",
-                removedCount,
-                handlerName);
-        }
-    }
-
-    /// <summary>
-    ///     Executes due events, updates cycle counters, and prepares the next wake-up point.
-    /// </summary>
-    /// <returns>
-    ///     <see langword="true" /> when work was performed or remains queued; otherwise <see langword="false" />.
-    /// </returns>
-    /// <remarks>
-    ///     Ensures the CPU cycle counters are normalized before servicing entries and recalculates the next wake-up time
-    ///     after draining ready handlers.
-    /// </remarks>
-    public bool RunQueue() {
-        _executionStateSlice.CyclesLeft += _executionStateSlice.CyclesUntilReevaluation;
-        _executionStateSlice.CyclesUntilReevaluation = 0;
-        if (_executionStateSlice.CyclesLeft <= 0) {
-            return false;
-        }
-
-        double cyclesConsumedInSlice = _executionStateSlice.CyclesConsumedInSlice;
-
-        // Process all entries up to current cycles
-        int processedCount = ProcessAllDueEvents(cyclesConsumedInSlice);
-
-        // Schedule next stop
-        int scheduledCycles = ComputeNextEventTimeInCyclesDelta(cyclesConsumedInSlice);
-
-        _executionStateSlice.CyclesUntilReevaluation = scheduledCycles;
-        _executionStateSlice.CyclesLeft -= scheduledCycles;
-
-        if (processedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            double? nextIndex = _nextEntry?.ScheduledTime;
-            _logger.Debug(
-                "Processed {ProcessedCount} device events; scheduled {ScheduledCycles} cycles; remaining cycles {RemainingCycles}; next index {NextIndex}",
-                processedCount,
-                scheduledCycles,
-                _executionStateSlice.CyclesLeft,
-                nextIndex);
-        }
-
-        return _executionStateSlice.CyclesUntilReevaluation > 0 || _executionStateSlice.CyclesLeft > 0;
-    }
-
-    private int ProcessAllDueEvents(double cyclesConsumedInSlice) {
-        _isServicingEvents = true;
-
-        int processedCount = 0;
-        while (_nextEntry != null && ConvertNormalizedToCycles(_nextEntry.ScheduledTime) <= cyclesConsumedInSlice) {
-            ScheduledEntry? entry = _nextEntry;
-            _nextEntry = entry.Next;
-
-            _activeEventScheduledTime = entry.ScheduledTime;
-            entry.Handler?.Invoke(entry.Value);
-            processedCount++;
-
-            entry.Next = _freeEntry;
-            _freeEntry = entry;
-        }
-        _isServicingEvents = false;
-
-        return processedCount;
-    }
-
-    private int ComputeNextEventTimeInCyclesDelta(double cyclesConsumedInSlice) {
-        int scheduledCycles = 0;
-        if (_nextEntry != null && _executionStateSlice.CyclesLeft > 0) {
-            int cyclesToNext = (int)(ConvertNormalizedToCycles(_nextEntry.ScheduledTime) - cyclesConsumedInSlice);
-            if (cyclesToNext <= 0) {
-                cyclesToNext = 1;
-            }
-
-            scheduledCycles = cyclesToNext <= _executionStateSlice.CyclesLeft ? cyclesToNext : _executionStateSlice.CyclesLeft;
-        } else if (_executionStateSlice.CyclesLeft > 0 && _nextEntry == null) {
-            scheduledCycles = _executionStateSlice.CyclesLeft;
-        }
-        return scheduledCycles;
-    }
-
-    private double ConvertNormalizedToCycles(double amount) {
-        return _executionStateSlice.CyclesAllocatedForSlice * amount;
-    }
-
-    /// <summary>
-    ///     Decrements pending event indices to account for a full tick elapsing.
-    /// </summary>
-    /// <remarks>
-    ///     Each entry stores its delay in 1.0 tick units, so subtracting one advances the schedule by a full
-    ///     millisecond tick.
-    /// </remarks>
-    public void DecrementIndicesForTick() {
-        ScheduledEntry? entry = _nextEntry;
-        while (entry != null) {
-            entry.ScheduledTime -= 1.0f;
-            entry = entry.Next;
-        }
-    }
-
-    /// <summary>
-    ///     Inserts the provided entry into the queue, preserving ordering and updating CPU cycle scheduling.
-    /// </summary>
-    /// <param name="entry">Entry retrieved from the pool that should be enqueued.</param>
-    private void AddEntry(ScheduledEntry entry) {
-        // Maintain the list in ascending order of the scheduled index.
-        ScheduledEntry? findEntry = _nextEntry;
-        if (findEntry == null) {
-            entry.Next = null;
-            _nextEntry = entry;
-        } else if (findEntry.ScheduledTime > entry.ScheduledTime) {
-            _nextEntry = entry;
-            entry.Next = findEntry;
-        } else {
-            while (findEntry != null) {
-                if (findEntry.Next != null) {
-                    if (findEntry.Next.ScheduledTime > entry.ScheduledTime) {
-                        entry.Next = findEntry.Next;
-                        findEntry.Next = entry;
-                        break;
-                    }
-
-                    findEntry = findEntry.Next;
-                } else {
-                    entry.Next = findEntry.Next;
-                    findEntry.Next = entry;
-                    break;
-                }
-            }
-        }
-
-        int cycles = _executionStateSlice.ConvertNormalizedToCycles(_nextEntry!.ScheduledTime - _executionStateSlice.NormalizedSliceProgress);
-        if (cycles >= _executionStateSlice.CyclesUntilReevaluation) {
+        if (!_activeEventsByHandler.TryGetValue(handler, out List<ScheduledEntry>? events)) {
             return;
         }
 
-        _executionStateSlice.CyclesLeft += _executionStateSlice.CyclesUntilReevaluation;
-        _executionStateSlice.CyclesUntilReevaluation = 0;
-    }
-
-    /// <summary>
-    ///     Provides a readable name for a device event handler to enrich log statements.
-    /// </summary>
-    /// <param name="handler">The delegate whose name is requested.</param>
-    /// <returns>The method name when available; otherwise a placeholder.</returns>
-    private static string GetHandlerName(EmulatedTimeEventHandler? handler) {
-        if (handler == null) {
-            return "<null>";
+        foreach (ScheduledEntry entry in events) {
+            entry.IsCancelled = true;
         }
 
+        if (events.Count > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
+            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", events.Count, GetHandlerName(handler));
+        }
+    }
+    
+    /// <summary>
+    ///     Executes all events that are due as of the current time provided by the clock.
+    /// </summary>
+    public void ProcessEvents() {
+        _isServicingEvents = true;
+        double currentTime = _clock.CurrentTime;
+
+        while (_queue.TryPeek(out ScheduledEntry? entry, out double scheduledTime) && scheduledTime <= currentTime) {
+            _queue.Dequeue();
+
+            // Remove from active handler tracking
+            if (_activeEventsByHandler.TryGetValue(entry.Handler!, out List<ScheduledEntry>? events)) {
+                events.Remove(entry);
+                if (events.Count == 0) {
+                    _activeEventsByHandler.Remove(entry.Handler!);
+                }
+            }
+
+            if (entry.IsCancelled) {
+                continue;
+            }
+
+            _activeEventScheduledTime = entry.ScheduledTime;
+            entry.Handler?.Invoke(entry.Value);
+        }
+        _isServicingEvents = false;
+    }
+
+    private static string GetHandlerName(EmulatedTimeEventHandler? handler) {
+        if (handler == null) return "<null>";
         string name = handler.Method.Name;
         return string.IsNullOrEmpty(name) ? "<anonymous>" : name;
     }
 
-    /// <summary>
-    ///     Represents a pooled event entry associated with the Device Scheduler.
-    /// </summary>
     private sealed class ScheduledEntry {
-        /// <summary>
-        /// Callback stored for dispatch.
-        /// </summary>
         public EmulatedTimeEventHandler? Handler;
-        /// <summary>
-        /// Fractional tick scheduled time.
-        /// </summary>
         public double ScheduledTime;
-        /// <summary>
-        /// Gets or sets the next entry in the linked list, or null if this is the last entry.
-        /// </summary>
-        public ScheduledEntry? Next;
-        /// <summary>
-        /// Parameter value passed to the handler when invoked.
-        /// </summary>
         public uint Value;
+        public bool IsCancelled;
     }
 }

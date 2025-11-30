@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Shared.Diagnostics;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -35,7 +34,7 @@ public class EmulationLoop : ICyclesLimiter {
     });
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly ICyclesLimiter _cyclesLimiter;
-    private readonly DualPic _dualPic;
+    private readonly DeviceScheduler _deviceScheduler;
     private readonly ExecutionStateSlice _executionStateSlice;
     private readonly Stopwatch _sliceStopwatch = new();
     private long _nextSliceTick;
@@ -71,19 +70,18 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="executionStateSlice">Shared cycle budgeting state consumed by the Device Scheduler or PIT scheduler.</param>
-    /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
+    /// <param name="deviceScheduler">The event scheduler.</param>
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
-        ExecutionStateSlice executionStateSlice, DualPic dualPic,
-        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        ExecutionStateSlice executionStateSlice, DeviceScheduler deviceScheduler, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
         _executionStateSlice = executionStateSlice;
-        _dualPic = dualPic;
+        _deviceScheduler = deviceScheduler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _cyclesLimiter = cyclesLimiter;
@@ -161,27 +159,27 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
-        InitializeSliceTimer();
+        //InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
         int targetCycles = _cyclesBudgeter.GetNextSliceBudget();
 
         _executionStateSlice.CyclesAllocatedForSlice = targetCycles;
-        _dualPic.AddTick();
 
-        while (_cpuState.IsRunning) {
+        
+        //while (_cpuState.IsRunning) {
             _emulatorBreakpointsManager.CheckExecutionBreakPoints();
             _pauseHandler.WaitIfPaused();
-            _dualPic.RunQueue();
-            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
+            _deviceScheduler.ProcessEvents();
+            /*if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
                 break;
-            }
+            }*/
             _cpu.ExecuteNext();
-        }
+        //}
 
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
-        return HandleSliceTiming();
+        return true;//HandleSliceTiming();
     }
 
     /// <summary>
