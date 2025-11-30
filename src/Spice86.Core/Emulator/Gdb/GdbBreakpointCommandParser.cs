@@ -41,8 +41,8 @@ public class GdbBreakpointCommandParser {
             int colonIndex = conditionPart.IndexOf(':');
             if (colonIndex >= 0) {
                 string condType = conditionPart.Substring(0, colonIndex);
-                if (condType.Equals("X", StringComparison.OrdinalIgnoreCase) || 
-                    condType.Equals("cond", StringComparison.OrdinalIgnoreCase)) {
+                if (condType.Equals("X", StringComparison.Ordinal) || 
+                    condType.Equals("cond", StringComparison.Ordinal)) {
                     conditionExpression = conditionPart.Substring(colonIndex + 1);
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("Parsed GDB condition expression: {Condition}", conditionExpression);
