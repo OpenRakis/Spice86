@@ -1,31 +1,21 @@
-namespace Spice86.Tests.UI;
-
-using Avalonia.Controls;
-using Avalonia.Headless;
-using Avalonia.Headless.XUnit;
-using Avalonia.Input;
+namespace Spice86.Tests.Emulator.CPU.CfgCpu.Ast;
 
 using FluentAssertions;
-
-using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
-using Spice86.Views;
 
 using Xunit;
 
 /// <summary>
-/// Comprehensive UI tests for the AST-based conditional breakpoint feature.
+/// Comprehensive tests for the BreakpointConditionCompiler and AstExpressionParser.
 /// These tests verify that conditional breakpoint expressions can be parsed,
-/// compiled, and used in breakpoint creation through the UI components.
+/// compiled, and executed correctly.
 /// </summary>
-public class AstBreakpointUiTests {
+public class BreakpointConditionCompilerTests {
     /// <summary>
     /// Creates a test State with initial register values for testing.
     /// </summary>
@@ -64,7 +54,7 @@ public class AstBreakpointUiTests {
 
     #region Register Expression Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWithAx_WhenAxMatches_ReturnsTrue() {
         // Arrange
         State state = CreateTestState();
@@ -81,7 +71,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWithAx_WhenAxDoesNotMatch_ReturnsFalse() {
         // Arrange
         State state = CreateTestState();
@@ -98,7 +88,7 @@ public class AstBreakpointUiTests {
         result.Should().BeFalse();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWith8BitRegisters_Al() {
         // Arrange
         State state = CreateTestState();
@@ -115,7 +105,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWith8BitRegisters_Ah() {
         // Arrange
         State state = CreateTestState();
@@ -132,7 +122,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWith32BitRegisters_Eax() {
         // Arrange
         State state = CreateTestState();
@@ -149,7 +139,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestConditionWithSegmentRegisters() {
         // Arrange
         State state = CreateTestState();
@@ -170,7 +160,7 @@ public class AstBreakpointUiTests {
 
     #region Comparison Operator Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestNotEqualOperator() {
         // Arrange
         State state = CreateTestState();
@@ -187,7 +177,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLessThanOperator() {
         // Arrange
         State state = CreateTestState();
@@ -204,7 +194,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestGreaterThanOperator() {
         // Arrange
         State state = CreateTestState();
@@ -221,7 +211,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLessThanOrEqualOperator() {
         // Arrange
         State state = CreateTestState();
@@ -238,7 +228,7 @@ public class AstBreakpointUiTests {
         resultEqual.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestGreaterThanOrEqualOperator() {
         // Arrange
         State state = CreateTestState();
@@ -259,7 +249,7 @@ public class AstBreakpointUiTests {
 
     #region Logical Operator Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLogicalAndOperator_BothTrue() {
         // Arrange
         State state = CreateTestState();
@@ -277,7 +267,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLogicalAndOperator_OneFalse() {
         // Arrange
         State state = CreateTestState();
@@ -295,7 +285,7 @@ public class AstBreakpointUiTests {
         result.Should().BeFalse();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLogicalOrOperator_OneTrue() {
         // Arrange
         State state = CreateTestState();
@@ -313,7 +303,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLogicalOrOperator_BothFalse() {
         // Arrange
         State state = CreateTestState();
@@ -331,7 +321,7 @@ public class AstBreakpointUiTests {
         result.Should().BeFalse();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestLogicalNotOperator() {
         // Arrange
         State state = CreateTestState();
@@ -352,7 +342,7 @@ public class AstBreakpointUiTests {
 
     #region Bitwise Operator Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestBitwiseAndOperator() {
         // Arrange
         State state = CreateTestState();
@@ -369,7 +359,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestBitwiseOrOperator() {
         // Arrange
         State state = CreateTestState();
@@ -386,7 +376,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestBitwiseXorOperator() {
         // Arrange
         State state = CreateTestState();
@@ -403,7 +393,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestBitwiseNotOperator() {
         // Arrange
         State state = CreateTestState();
@@ -424,7 +414,7 @@ public class AstBreakpointUiTests {
 
     #region Arithmetic Operator Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestAdditionOperator() {
         // Arrange
         State state = CreateTestState();
@@ -441,7 +431,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestSubtractionOperator() {
         // Arrange
         State state = CreateTestState();
@@ -458,7 +448,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestMultiplicationOperator() {
         // Arrange
         State state = CreateTestState();
@@ -475,7 +465,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestDivisionOperator() {
         // Arrange
         State state = CreateTestState();
@@ -492,7 +482,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestModuloOperator() {
         // Arrange
         State state = CreateTestState();
@@ -517,7 +507,7 @@ public class AstBreakpointUiTests {
     // These tests document the expected behavior when shift operators are implemented.
     // Uncomment when shift operator support is added to ToExpression() in AstExpressionBuilder.cs
 
-    // [AvaloniaFact]
+    // [Fact]
     // public void TestLeftShiftOperator() {
     //     // Arrange
     //     State state = CreateTestState();
@@ -534,7 +524,7 @@ public class AstBreakpointUiTests {
     //     result.Should().BeTrue();
     // }
 
-    // [AvaloniaFact]
+    // [Fact]
     // public void TestRightShiftOperator() {
     //     // Arrange
     //     State state = CreateTestState();
@@ -555,7 +545,7 @@ public class AstBreakpointUiTests {
 
     #region Complex Expression Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestComplexNestedExpression() {
         // Arrange
         State state = CreateTestState();
@@ -574,7 +564,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestExpressionWithMultipleRegisters() {
         // Arrange
         State state = CreateTestState();
@@ -593,7 +583,7 @@ public class AstBreakpointUiTests {
         result.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestExpressionWithDecimalNumbers() {
         // Arrange
         State state = CreateTestState();
@@ -614,7 +604,7 @@ public class AstBreakpointUiTests {
 
     #region Error Handling Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestInvalidExpressionThrowsException() {
         // Arrange
         State state = CreateTestState();
@@ -627,7 +617,7 @@ public class AstBreakpointUiTests {
         act.Should().Throw<ExpressionParseException>();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestUnknownRegisterThrowsException() {
         // Arrange
         State state = CreateTestState();
@@ -640,7 +630,7 @@ public class AstBreakpointUiTests {
         act.Should().Throw<ExpressionParseException>();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestEmptyExpressionThrowsException() {
         // Arrange
         State state = CreateTestState();
@@ -653,7 +643,7 @@ public class AstBreakpointUiTests {
         act.Should().Throw<ExpressionParseException>();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestUnmatchedParenthesisThrowsException() {
         // Arrange
         State state = CreateTestState();
@@ -668,37 +658,9 @@ public class AstBreakpointUiTests {
 
     #endregion
 
-    #region UI Component Tests
-
-    /// <summary>
-    /// Verifies that the DisassemblyView contains the breakpoint dialog elements.
-    /// </summary>
-    [AvaloniaFact]
-    public void TestDisassemblyViewContainsBreakpointDialogElements() {
-        // Arrange & Act
-        DisassemblyView disassemblyView = new();
-
-        // Assert - The view should be created successfully
-        disassemblyView.Should().NotBeNull();
-    }
-
-    /// <summary>
-    /// Verifies that the BreakpointsView can be created with all required elements.
-    /// </summary>
-    [AvaloniaFact]
-    public void TestBreakpointsViewContainsConditionalExpressionInput() {
-        // Arrange & Act
-        BreakpointsView breakpointsView = new();
-
-        // Assert - The view should be created successfully
-        breakpointsView.Should().NotBeNull();
-    }
-
-    #endregion
-
     #region Parser Round-trip Tests
 
-    [AvaloniaFact]
+    [Fact]
     public void TestParserRoundTrip_SimpleExpression() {
         // Arrange
         AstExpressionParser parser = new();
@@ -711,7 +673,7 @@ public class AstBreakpointUiTests {
         ast.Should().NotBeNull();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestParserRoundTrip_ComplexExpression() {
         // Arrange
         AstExpressionParser parser = new();
@@ -724,7 +686,7 @@ public class AstBreakpointUiTests {
         ast.Should().NotBeNull();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void TestParserRoundTrip_MemoryAccessExpression() {
         // Arrange
         AstExpressionParser parser = new();
