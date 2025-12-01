@@ -2,15 +2,12 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
-using NSubstitute;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Gdb;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
+using Spice86.Tests.Fixtures;
 
 using Xunit;
 
@@ -18,39 +15,27 @@ using Xunit;
 /// Tests for GDB conditional breakpoints.
 /// </summary>
 public class GdbConditionalBreakpointTests {
-    private readonly State _state;
-    private readonly Memory _memory;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly IPauseHandler _pauseHandler;
-    private readonly ILoggerService _loggerService;
-    private readonly AddressReadWriteBreakpoints _memoryBreakpoints;
-    private readonly AddressReadWriteBreakpoints _ioBreakpoints;
+    private readonly BreakpointTestFixture _fixture;
+    private State State => _fixture.State;
+    private Memory Memory => _fixture.Memory;
+    private EmulatorBreakpointsManager BreakpointsManager => _fixture.BreakpointsManager;
     
     public GdbConditionalBreakpointTests() {
-        // Create State directly
-        _state = new State(CpuModel.INTEL_80286);
-        
-        // Create Memory with required dependencies
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        _memoryBreakpoints = new AddressReadWriteBreakpoints();
-        _ioBreakpoints = new AddressReadWriteBreakpoints();
-        A20Gate a20Gate = new(enabled: false);
-        _memory = new Memory(_memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-        
-        // Create mocked dependencies
-        _pauseHandler = Substitute.For<IPauseHandler>();
-        _loggerService = Substitute.For<ILoggerService>();
-        
-        // Create breakpoints manager
-        _emulatorBreakpointsManager = new EmulatorBreakpointsManager(_pauseHandler, _state, _memory, _memoryBreakpoints, _ioBreakpoints);
+        _fixture = new BreakpointTestFixture();
+    }
+    
+    /// <summary>
+    /// Creates a GDB command breakpoint handler for testing.
+    /// </summary>
+    private GdbCommandBreakpointHandler CreateGdbHandler(GdbIo gdbIo) {
+        return new GdbCommandBreakpointHandler(
+            BreakpointsManager, _fixture.PauseHandler, gdbIo, _fixture.LoggerService, State, Memory);
     }
     
     [Fact]
     public void TestGdbConditionalBreakpointParsing() {
-        using GdbIo gdbIo = new GdbIo(10000, _loggerService);
-        
-        GdbCommandBreakpointHandler gdbBreakpointHandler = new GdbCommandBreakpointHandler(
-            _emulatorBreakpointsManager, _pauseHandler, gdbIo, _loggerService, _state, _memory);
+        using GdbIo gdbIo = new GdbIo(10000, _fixture.LoggerService);
+        GdbCommandBreakpointHandler gdbBreakpointHandler = CreateGdbHandler(gdbIo);
         
         // Test parsing a conditional breakpoint command
         // Format: type,address,kind;X:condition
@@ -70,13 +55,11 @@ public class GdbConditionalBreakpointTests {
     
     [Fact]
     public void TestGdbConditionalBreakpointExecution() {
-        using GdbIo gdbIo = new GdbIo(10001, _loggerService);
-        
-        GdbCommandBreakpointHandler gdbBreakpointHandler = new GdbCommandBreakpointHandler(
-            _emulatorBreakpointsManager, _pauseHandler, gdbIo, _loggerService, _state, _memory);
+        using GdbIo gdbIo = new GdbIo(10001, _fixture.LoggerService);
+        GdbCommandBreakpointHandler gdbBreakpointHandler = CreateGdbHandler(gdbIo);
         
         // Set AX to 0x100
-        _state.AX = 0x100;
+        State.AX = 0x100;
         
         // Create a conditional memory read breakpoint at 0x200 that only triggers when ax == 0x100
         string command = "3,200,1;X:ax==0x100";
@@ -84,92 +67,75 @@ public class GdbConditionalBreakpointTests {
         
         breakpoint.Should().NotBeNull();
         
-        // Create a new breakpoint with a tracking action
-        // Compile the condition using BreakpointConditionCompiler
-        BreakpointConditionCompiler compiler = new BreakpointConditionCompiler(_state, _memory);
-        Func<long, bool> condition = compiler.Compile("ax==0x100");
-        
+        // Create a new breakpoint with a tracking action using the fixture helper
         int triggerCount = 0;
-        AddressBreakPoint testBreakpoint = new AddressBreakPoint(
-            breakpoint!.BreakPointType, 
-            breakpoint.Address, 
-            _ => triggerCount++, 
-            false,
-            condition,
+        AddressBreakPoint testBreakpoint = _fixture.CreateConditionalBreakpoint(
+            breakpoint!.BreakPointType,
+            breakpoint.Address,
+            _ => triggerCount++,
             "ax==0x100");
         
-        _emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, true);
+        BreakpointsManager.ToggleBreakPoint(testBreakpoint, true);
         
         // This should trigger the breakpoint
-        _ = _memory.UInt8[0x200];
+        _ = Memory.UInt8[0x200];
         triggerCount.Should().Be(1);
         
         // Change AX so condition fails
-        _state.AX = 0x200;
+        State.AX = 0x200;
         
         // This should not trigger the breakpoint
-        _ = _memory.UInt8[0x200];
+        _ = Memory.UInt8[0x200];
         triggerCount.Should().Be(1);
         
-        _emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
+        BreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
     }
     
     [Fact]
     public void TestGdbConditionalBreakpointWithMemoryAccess() {
-        using GdbIo gdbIo = new GdbIo(10002, _loggerService);
-        
-        GdbCommandBreakpointHandler gdbBreakpointHandler = new GdbCommandBreakpointHandler(
-            _emulatorBreakpointsManager, _pauseHandler, gdbIo, _loggerService, _state, _memory);
+        using GdbIo gdbIo = new GdbIo(10002, _fixture.LoggerService);
+        GdbCommandBreakpointHandler gdbBreakpointHandler = CreateGdbHandler(gdbIo);
         
         // Set up test data
-        _memory.UInt8[0x300] = 0x42;
+        Memory.UInt8[0x300] = 0x42;
         
         // Create a conditional memory write breakpoint
-        // Note: Avoid memory access in conditions for now as it triggers recursive breakpoints
         string command = "2,300,1;X:ax==0x42";
         AddressBreakPoint? breakpoint = gdbBreakpointHandler.ParseBreakPoint(command) as AddressBreakPoint;
         
         breakpoint.Should().NotBeNull();
         
-        // Compile the condition using BreakpointConditionCompiler
-        BreakpointConditionCompiler compiler = new BreakpointConditionCompiler(_state, _memory);
-        Func<long, bool> condition = compiler.Compile("ax==0x42");
-        
-        // Create a new breakpoint with a tracking action
+        // Create a new breakpoint with a tracking action using the fixture helper
         int triggerCount = 0;
-        AddressBreakPoint testBreakpoint = new AddressBreakPoint(
+        AddressBreakPoint testBreakpoint = _fixture.CreateConditionalBreakpoint(
             breakpoint!.BreakPointType,
             breakpoint.Address,
             _ => triggerCount++,
-            false,
-            condition,
             "ax==0x42");
         
-        _emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, true);
+        BreakpointsManager.ToggleBreakPoint(testBreakpoint, true);
         
         // Set ax to trigger condition
-        _state.AX = 0x42;
+        State.AX = 0x42;
         
         // This should trigger (ax == 0x42)
-        _memory.UInt8[0x300] = 0x50;
+        Memory.UInt8[0x300] = 0x50;
         triggerCount.Should().Be(1);
         
         // Change ax so condition fails
-        _state.AX = 0x43;
+        State.AX = 0x43;
         
         // This should not trigger (condition no longer met)
-        _memory.UInt8[0x300] = 0x50;
+        Memory.UInt8[0x300] = 0x50;
         triggerCount.Should().Be(1);
         
-        _emulatorBreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
+        BreakpointsManager.ToggleBreakPoint(testBreakpoint, false);
     }
     
     [Fact]
     public void TestGdbBreakpointWithoutCondition() {
-        using GdbIo gdbIo = new GdbIo(10003, _loggerService);
-        
-        GdbCommandBreakpointHandler gdbBreakpointHandler = new GdbCommandBreakpointHandler(
-            _emulatorBreakpointsManager, _pauseHandler, gdbIo, _loggerService, _state, _memory);
+        using GdbIo gdbIo = new GdbIo(10003, _fixture.LoggerService);
+        GdbCommandBreakpointHandler gdbBreakpointHandler = CreateGdbHandler(gdbIo);
         
         // Test unconditional breakpoint (existing functionality)
         string command = "0,1000,1";
@@ -186,10 +152,8 @@ public class GdbConditionalBreakpointTests {
     
     [Fact]
     public void TestGdbConditionalBreakpointWithInvalidExpression() {
-        using GdbIo gdbIo = new GdbIo(10004, _loggerService);
-        
-        GdbCommandBreakpointHandler gdbBreakpointHandler = new GdbCommandBreakpointHandler(
-            _emulatorBreakpointsManager, _pauseHandler, gdbIo, _loggerService, _state, _memory);
+        using GdbIo gdbIo = new GdbIo(10004, _fixture.LoggerService);
+        GdbCommandBreakpointHandler gdbBreakpointHandler = CreateGdbHandler(gdbIo);
         
         // Test with invalid expression - should create unconditional breakpoint
         string command = "0,1000,1;X:invalid_expression((";
