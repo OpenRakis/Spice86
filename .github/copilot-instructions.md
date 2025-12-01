@@ -17,8 +17,10 @@ Spice86 is a .NET 8 cross-platform emulator for reverse engineering real-mode DO
 The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines):
 - Constructor creates the full object graph with explicit dependencies (no IoC container)
 - Order matters: components are constructed in dependency order
-- Machine parts are wired together with event handlers and shared state
+- Components are wired together with event handlers and shared state
 - Entry point is `Program.cs` which instantiates `Spice86DependencyInjection`
+- **`Spice86DependencyInjection` is the central composition root** - understand its structure when working with dependencies
+- The `Machine` class is less important - focus on `Spice86DependencyInjection` for understanding component relationships
 
 ### CPU Execution Models
 Two CPU implementations coexist via `IInstructionExecutor`:
@@ -121,7 +123,10 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   // Correct
   int count = 10;
   ```
-- **No generic catch clauses**: Catch specific exceptions
+- **One top-level type per file**: Do not place multiple classes/structs/enums in the same file
+  - Exception: private nested/inner types declared inside a class are allowed
+  - Group related types via namespaces, not by co-locating multiple top-level types
+- **No generic catch clauses**: Catch specific exceptions only
   ```csharp
   // Wrong
   try {
@@ -135,12 +140,29 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
       // code
   } catch (IOException ex) {
       // handling
+  } catch (ArgumentException ex) {
+      // handling
   }
   ```
-- **No bad practices with null, bangs (!), or ignored errors**:
-  - Avoid null-forgiving operator (!) unless absolutely necessary
-  - Don't ignore nullable warnings
-  - Properly handle null cases with null checks or null-coalescing operators
+  - **NEVER use generic `catch (Exception)` or empty `catch`**
+  - Each exception type must be caught explicitly
+  
+- **No null-forgiving operator (!)**: The null-forgiving operator is **BANNED**
+  ```csharp
+  // Wrong - NEVER use !
+  string value = nullable!.ToString();
+  
+  // Correct
+  if (nullable != null) {
+      string value = nullable.ToString();
+  }
+  // Or
+  string value = nullable?.ToString() ?? "default";
+  ```
+  - Properly handle null cases with null checks, null-coalescing, or null-conditional operators
+  - Don't ignore nullable warnings - fix the underlying issue
+- **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
+- **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only
@@ -158,6 +180,9 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   ```
 - **Nullable**: Enabled project-wide with `<WarningsAsErrors>nullable</WarningsAsErrors>`
 - **Documentation**: XML comments required (`<GenerateDocumentationFile>true</GenerateDocumentationFile>`)
+- **No stub implementations**: Create proper real implementations
+  - Stubs that return hardcoded values or do nothing are not allowed
+  - Magic values are not allowed, define enums or consts with clear names
 
 ### Testing Patterns
 - **Prefer ASM-based tests over unit tests** for testing the emulator
