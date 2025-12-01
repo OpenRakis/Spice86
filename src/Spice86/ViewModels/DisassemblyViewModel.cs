@@ -465,7 +465,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         }
         
         try {
-            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(State, _memory);
+            BreakpointConditionCompiler compiler = new(State, _memory);
             return compiler.Compile(conditionExpression);
         } catch (ExpressionParseException ex) {
             LogConditionCompilationWarning(ex, conditionExpression);

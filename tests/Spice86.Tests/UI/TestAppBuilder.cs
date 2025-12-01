@@ -17,7 +17,7 @@ public class TestApp : Application {
     
     /// <inheritdoc/>
     public override void Initialize() {
-        // Load Semi.Avalonia theme and styles
+        // Load SemiAvalonia theme and styles
         AvaloniaXamlLoader.Load(this);
     }
     
