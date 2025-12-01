@@ -182,7 +182,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Documentation**: XML comments required (`<GenerateDocumentationFile>true</GenerateDocumentationFile>`)
 - **No stub implementations**: Create proper real implementations
   - Stubs that return hardcoded values or do nothing are not allowed
-  - magic values are not allowed, define enums or consts with clear names
+  - Magic values are not allowed, define enums or consts with clear names
 
 ### Testing Patterns
 - **Prefer ASM-based tests over unit tests** for testing the emulator
