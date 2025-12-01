@@ -10,12 +10,14 @@ using Xunit;
 /// Tests to verify that AstExpressionParser and AstInstructionRenderer work together correctly.
 /// These tests ensure that expressions can be parsed into AST and rendered back to strings.
 /// 
-/// Note: The round-trip is NOT exact due to the following transformations:
-/// 1. Registers are rendered in uppercase (ax → AX)
-/// 2. Hex constants are zero-padded based on data type (0x100 → 0x00000100 for 32-bit)
-/// 3. Type conversions are added for type safety ((uint)AX when comparing 16-bit AX to 32-bit constant)
-/// 4. Redundant parentheses are removed (the AST represents semantic meaning, not exact syntax)
-/// 5. The renderer doesn't always add parentheses back when needed for precedence (known limitation)
+/// The round-trip applies the following normalizations (by design):
+/// 1. <b>Case normalization</b>: Registers are rendered in uppercase (ax → AX)
+/// 2. <b>Zero-padding</b>: Hex constants are zero-padded based on data type (0x100 → 0x00000100 for 32-bit)
+/// 3. <b>Type safety</b>: Type conversions are added when comparing different-width operands ((uint)AX when comparing 16-bit AX to 32-bit constant)
+/// 4. <b>Semantic representation</b>: Redundant parentheses are removed as the AST represents semantic meaning
+/// 5. <b>Precedence preservation</b>: Parentheses are added back only when needed for operator precedence
+/// 
+/// These normalizations ensure semantic equivalence while producing consistent, unambiguous output.
 /// </summary>
 public class AstExpressionParserRoundTripTest {
     private readonly AstExpressionParser _parser = new();
