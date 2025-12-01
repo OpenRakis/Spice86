@@ -109,6 +109,22 @@ public abstract class BreakpointUiTestBase {
     }
 
     /// <summary>
+    /// Selects a breakpoint type tab by name and processes UI events.
+    /// </summary>
+    /// <param name="viewModel">The BreakpointsViewModel containing the tabs.</param>
+    /// <param name="tabName">The name of the tab to select (e.g., "Execution", "Memory", "Cycles").</param>
+    /// <returns>True if the tab was found and selected, false otherwise.</returns>
+    protected static bool SelectBreakpointTab(BreakpointsViewModel viewModel, string tabName) {
+        BreakpointTypeTabItemViewModel? tab = viewModel.BreakpointTabs.FirstOrDefault(t => t.Header == tabName);
+        if (tab is null) {
+            return false;
+        }
+        viewModel.SelectedBreakpointTypeTab = tab;
+        ProcessUiEvents();
+        return true;
+    }
+
+    /// <summary>
     /// Creates a BreakpointsView with a properly configured ViewModel.
     /// </summary>
     protected static (BreakpointsView view, BreakpointsViewModel viewModel) CreateBreakpointsViewWithViewModel() {
