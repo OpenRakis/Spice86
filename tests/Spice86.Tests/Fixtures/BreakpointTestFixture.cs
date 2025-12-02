@@ -10,10 +10,11 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Shared fixture for breakpoint tests that creates State, Memory, and EmulatorBreakpointsManager
-/// with mocked dependencies. This fixture avoids referencing the Machine class.
+/// Shared fixture for breakpoint tests that creates State, Memory, and EmulatorBreakpointsManager.
+/// Only ILoggerService is mocked; all other components use real implementations.
+/// This fixture avoids referencing the Machine class.
 /// </summary>
-public class BreakpointTestFixture {
+public class BreakpointTestFixture : IDisposable {
     /// <summary>
     /// The CPU state for testing.
     /// </summary>
@@ -30,12 +31,12 @@ public class BreakpointTestFixture {
     public EmulatorBreakpointsManager BreakpointsManager { get; }
     
     /// <summary>
-    /// The mocked pause handler.
+    /// The real pause handler (not mocked).
     /// </summary>
-    public IPauseHandler PauseHandler { get; }
+    public PauseHandler PauseHandler { get; }
     
     /// <summary>
-    /// The mocked logger service.
+    /// The mocked logger service (only ILoggerService is mocked).
     /// </summary>
     public ILoggerService LoggerService { get; }
     
@@ -51,6 +52,7 @@ public class BreakpointTestFixture {
     
     /// <summary>
     /// Creates a new test fixture with all required components.
+    /// Only ILoggerService is mocked; all other components are real implementations.
     /// </summary>
     public BreakpointTestFixture() {
         // Create State directly
@@ -63,12 +65,22 @@ public class BreakpointTestFixture {
         A20Gate a20Gate = new(enabled: false);
         Memory = new Memory(MemoryBreakpoints, ram, a20Gate, initializeResetVector: true);
         
-        // Create mocked dependencies
-        PauseHandler = Substitute.For<IPauseHandler>();
+        // Only ILoggerService is mocked
         LoggerService = Substitute.For<ILoggerService>();
         
-        // Create breakpoints manager
+        // Use real PauseHandler
+        PauseHandler = new PauseHandler(LoggerService);
+        
+        // Create breakpoints manager with real components
         BreakpointsManager = new EmulatorBreakpointsManager(PauseHandler, State, Memory, MemoryBreakpoints, IoBreakpoints);
+    }
+    
+    /// <summary>
+    /// Disposes of the fixture resources.
+    /// </summary>
+    public void Dispose() {
+        PauseHandler.Dispose();
+        GC.SuppressFinalize(this);
     }
     
     /// <summary>

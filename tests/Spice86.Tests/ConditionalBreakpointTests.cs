@@ -13,7 +13,7 @@ using Xunit;
 /// <summary>
 /// Tests for conditional breakpoints with AST-based expressions.
 /// </summary>
-public class ConditionalBreakpointTests {
+public class ConditionalBreakpointTests : IDisposable {
     private readonly BreakpointTestFixture _fixture;
     private State State => _fixture.State;
     private Memory Memory => _fixture.Memory;
@@ -21,6 +21,11 @@ public class ConditionalBreakpointTests {
     
     public ConditionalBreakpointTests() {
         _fixture = new BreakpointTestFixture();
+    }
+    
+    public void Dispose() {
+        _fixture.Dispose();
+        GC.SuppressFinalize(this);
     }
     
     [Fact]

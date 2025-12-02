@@ -14,7 +14,7 @@ using Xunit;
 /// <summary>
 /// Tests for GDB conditional breakpoints.
 /// </summary>
-public class GdbConditionalBreakpointTests {
+public class GdbConditionalBreakpointTests : IDisposable {
     private readonly BreakpointTestFixture _fixture;
     private State State => _fixture.State;
     private Memory Memory => _fixture.Memory;
@@ -22,6 +22,11 @@ public class GdbConditionalBreakpointTests {
     
     public GdbConditionalBreakpointTests() {
         _fixture = new BreakpointTestFixture();
+    }
+    
+    public void Dispose() {
+        _fixture.Dispose();
+        GC.SuppressFinalize(this);
     }
     
     /// <summary>
