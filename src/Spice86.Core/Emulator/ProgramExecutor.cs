@@ -52,7 +52,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionDumpFactory">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="vgaRenderer">The VGA renderer to enable when emulation starts.</param>
+    /// <param name="vgaRenderer">The VGA renderer whose IsInitialized flag is set when emulation starts to prevent race conditions.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
