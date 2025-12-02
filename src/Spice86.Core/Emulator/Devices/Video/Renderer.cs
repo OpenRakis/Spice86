@@ -14,7 +14,7 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private volatile int _isInitialized;
+    private int _canRenderingStart;
 
     /// <summary>
     ///     Create a new VGA renderer.
@@ -48,15 +48,15 @@ public class Renderer : IVgaRenderer {
     public TimeSpan LastFrameRenderTime { get; private set; }
 
     /// <inheritdoc />
-    public bool IsInitialized {
-        get => Interlocked.CompareExchange(ref _isInitialized, 0, 0) == 1;
-        set => Interlocked.Exchange(ref _isInitialized, value ? 1 : 0);
+    public bool CanRenderingStart {
+        get => Interlocked.CompareExchange(ref _canRenderingStart, 0, 0) == 1;
+        set => Interlocked.Exchange(ref _canRenderingStart, value ? 1 : 0);
     }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (!IsInitialized) {
-            // Renderer not yet initialized, skip this frame to avoid race conditions.
+        if (!CanRenderingStart) {
+            // Emulator hasn't started yet, skip this frame to avoid race conditions.
             return;
         }
         if (!Monitor.TryEnter(RenderLock)) {

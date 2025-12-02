@@ -104,7 +104,7 @@ public sealed class ProgramExecutor : IDisposable {
             // Enable rendering now that the emulator is about to start.
             // This prevents race conditions where the UI tries to render
             // before VGA state is properly initialized.
-            _vgaRenderer.IsInitialized = true;
+            _vgaRenderer.CanRenderingStart = true;
 
             if (_configuration.Debug) {
                 ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START,
