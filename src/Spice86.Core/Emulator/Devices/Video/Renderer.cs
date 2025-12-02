@@ -55,6 +55,16 @@ public class Renderer : IVgaRenderer {
             // Renderer not yet initialized, skip this frame to avoid race conditions.
             return;
         }
+        // Check if essential rendering state is initialized to prevent NullReferenceException
+        if (_state.DacRegisters?.ArgbPalette is null 
+            || _state.AttributeControllerRegisters?.InternalPalette is null
+            || _state.CrtControllerRegisters is null
+            || _state.SequencerRegisters is null
+            || _state.GraphicsControllerRegisters is null
+            || _state.GeneralRegisters is null) {
+            // Essential VGA state not yet initialized, skip this frame.
+            return;
+        }
         if (!Monitor.TryEnter(RenderLock)) {
             // We're already rendering. Get out of here.
             return;
