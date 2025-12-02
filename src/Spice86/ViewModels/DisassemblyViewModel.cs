@@ -30,6 +30,7 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
+    private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
@@ -114,6 +115,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
+        _conditionService = new BreakpointConditionService(state, memory);
         _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
@@ -458,8 +460,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
     /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
     private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
-        BreakpointConditionService conditionService = new(State, _memory);
-        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(conditionExpression);
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(conditionExpression);
         
         validatedExpression = result.ValidatedExpression;
         

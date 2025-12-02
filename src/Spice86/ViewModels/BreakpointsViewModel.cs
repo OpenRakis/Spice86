@@ -22,6 +22,7 @@ using System.Collections.ObjectModel;
 public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
+    private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -36,6 +37,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
+        _conditionService = new BreakpointConditionService(state, memory);
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
     }
@@ -517,8 +519,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
     /// <returns>True if compilation succeeded or expression was empty, false if an error occurred.</returns>
     private bool TryCompileConditionWithErrorHandling(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
-        BreakpointConditionService conditionService = new(_state, _memory);
-        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(expression);
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
         
         condition = result.Condition;
         validatedExpression = result.ValidatedExpression;
@@ -536,8 +537,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// Used for restore operations where we want to continue even if one condition fails.
     /// </summary>
     private void TryCompileConditionWithErrorDisplay(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
-        BreakpointConditionService conditionService = new(_state, _memory);
-        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(expression);
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
         
         condition = result.Condition;
         validatedExpression = result.ValidatedExpression;
