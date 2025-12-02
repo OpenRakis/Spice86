@@ -47,7 +47,14 @@ public class Renderer : IVgaRenderer {
     public TimeSpan LastFrameRenderTime { get; private set; }
 
     /// <inheritdoc />
+    public bool IsInitialized { get; set; }
+
+    /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
+        if (!IsInitialized) {
+            // Renderer not yet initialized, skip this frame to avoid race conditions.
+            return;
+        }
         if (!Monitor.TryEnter(RenderLock)) {
             // We're already rendering. Get out of here.
             return;
