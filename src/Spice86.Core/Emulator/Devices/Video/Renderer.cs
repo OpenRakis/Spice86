@@ -265,9 +265,12 @@ public class Renderer : IVgaRenderer {
         }
         // The 8 pixels to render this line come from the font which is stored in plane 2.
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
-        for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
+        int dotsPerClock = _state.SequencerRegisters?.ClockingModeRegister?.DotsPerClock ?? 8;
+        for (int x = 0; x < dotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            frameBuffer[destinationAddress++] = pixel;
+            if (destinationAddress < frameBuffer.Length) {
+                frameBuffer[destinationAddress++] = pixel;
+            }
         }
     }
 
