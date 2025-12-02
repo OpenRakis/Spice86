@@ -689,11 +689,15 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 ProgramExecutor.Dispose();
-                DisposeMachineAfterRun();
 
+                // Dispose HeadlessGui BEFORE Machine to stop the rendering timer
+                // before the Renderer is disposed. This prevents a race condition
+                // where the timer callback tries to render with a disposed Renderer.
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
                 }
+
+                DisposeMachineAfterRun();
             }
             _disposed = true;
         }
