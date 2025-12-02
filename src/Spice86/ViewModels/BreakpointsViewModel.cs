@@ -517,30 +517,18 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
     /// <returns>True if compilation succeeded or expression was empty, false if an error occurred.</returns>
     private bool TryCompileConditionWithErrorHandling(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
-        condition = null;
-        validatedExpression = expression;
+        BreakpointConditionService conditionService = new(_state, _memory);
+        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(expression);
         
-        if (string.IsNullOrWhiteSpace(expression)) {
-            return true;
+        condition = result.Condition;
+        validatedExpression = result.ValidatedExpression;
+        
+        if (!result.Success && result.Error is not null) {
+            _uiDispatcher.Post(() => ShowError(result.Error));
+            return false;
         }
         
-        try {
-            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
-            condition = compiler.Compile(expression);
-            return true;
-        } catch (ExpressionParseException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
-            return false;
-        } catch (ArgumentException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
-            return false;
-        } catch (InvalidOperationException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
-            return false;
-        }
+        return true;
     }
     
     /// <summary>
@@ -548,25 +536,14 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// Used for restore operations where we want to continue even if one condition fails.
     /// </summary>
     private void TryCompileConditionWithErrorDisplay(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
-        condition = null;
-        validatedExpression = expression;
+        BreakpointConditionService conditionService = new(_state, _memory);
+        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(expression);
         
-        if (string.IsNullOrWhiteSpace(expression)) {
-            return;
-        }
+        condition = result.Condition;
+        validatedExpression = result.ValidatedExpression;
         
-        try {
-            Core.Emulator.VM.Breakpoint.BreakpointConditionCompiler compiler = new(_state, _memory);
-            condition = compiler.Compile(expression);
-        } catch (ExpressionParseException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
-        } catch (ArgumentException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
-        } catch (InvalidOperationException e) {
-            validatedExpression = null;
-            _uiDispatcher.Post(() => ShowError(e));
+        if (!result.Success && result.Error is not null) {
+            _uiDispatcher.Post(() => ShowError(result.Error));
         }
     }
 }

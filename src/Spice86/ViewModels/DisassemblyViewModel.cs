@@ -458,27 +458,16 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
     /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
     private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
-        validatedExpression = conditionExpression;
+        BreakpointConditionService conditionService = new(State, _memory);
+        BreakpointConditionService.ConditionCompilationResult result = conditionService.TryCompile(conditionExpression);
         
-        if (string.IsNullOrWhiteSpace(conditionExpression)) {
-            return null;
+        validatedExpression = result.ValidatedExpression;
+        
+        if (!result.Success && result.Error is not null) {
+            LogConditionCompilationWarning(result.Error, conditionExpression);
         }
         
-        try {
-            BreakpointConditionCompiler compiler = new(State, _memory);
-            return compiler.Compile(conditionExpression);
-        } catch (ExpressionParseException ex) {
-            LogConditionCompilationWarning(ex, conditionExpression);
-            validatedExpression = null;
-        } catch (ArgumentException ex) {
-            LogConditionCompilationWarning(ex, conditionExpression);
-            validatedExpression = null;
-        } catch (InvalidOperationException ex) {
-            LogConditionCompilationWarning(ex, conditionExpression);
-            validatedExpression = null;
-        }
-        
-        return null;
+        return result.Condition;
     }
     
     private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
