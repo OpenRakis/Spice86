@@ -38,7 +38,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         };
     }
 
-    private Expression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
+    private BinaryExpression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
         // For comparison, logical, and bitwise operations, convert operands to a common type if needed
         if (left.Type != right.Type && binaryOperation != BinaryOperation.ASSIGN) {
             // Convert to the larger type
@@ -48,6 +48,13 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             }
             if (right.Type != targetType) {
                 right = Expression.Convert(right, targetType);
+            }
+        }
+        
+        // Shift operations require the right-hand operand to be an Int32 (shift count)
+        if (binaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            if (right.Type != typeof(int)) {
+                right = Expression.Convert(right, typeof(int));
             }
         }
         
@@ -103,7 +110,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return 4; // Default to 32-bit
     }
     
-    private Expression ToExpression(UnaryOperation unaryOperation, Expression value) {
+    private UnaryExpression ToExpression(UnaryOperation unaryOperation, Expression value) {
         return unaryOperation switch {
             UnaryOperation.NOT => Expression.Not(value),
             UnaryOperation.NEGATE => Expression.Negate(value),
@@ -175,7 +182,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression);
     }
     
-    private Expression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
+    private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
         string name = isSegmentRegister ? _registerRenderer.ToStringSegmentRegister(registerIndex) : _registerRenderer.ToStringRegister(dataType.BitWidth, registerIndex);
         PropertyInfo stateRegisterProperty = EnsureNonNull(typeof(State).GetProperty(name));
         return Expression.Property(_stateParameter, stateRegisterProperty);

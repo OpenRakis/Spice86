@@ -185,8 +185,6 @@ public class GdbBreakpointCommandParser {
         }
     }
 
-    #region Logging Methods
-
     private void LogDebugConditionParsed(string expression) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("Parsed GDB condition expression: {Condition}", expression);
@@ -236,6 +234,4 @@ public class GdbBreakpointCommandParser {
                 ex.Position, expression);
         }
     }
-
-    #endregion
 }

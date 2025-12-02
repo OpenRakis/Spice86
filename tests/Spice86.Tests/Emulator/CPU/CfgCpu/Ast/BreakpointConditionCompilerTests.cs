@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
 
@@ -51,8 +50,6 @@ public class BreakpointConditionCompilerTests {
 
         return memory;
     }
-
-    #region Register Expression Tests
 
     [Fact]
     public void TestConditionWithAx_WhenAxMatches_ReturnsTrue() {
@@ -156,10 +153,6 @@ public class BreakpointConditionCompilerTests {
         result.Should().BeTrue();
     }
 
-    #endregion
-
-    #region Comparison Operator Tests
-
     [Fact]
     public void TestNotEqualOperator() {
         // Arrange
@@ -244,10 +237,6 @@ public class BreakpointConditionCompilerTests {
         // Assert
         resultEqual.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Logical Operator Tests
 
     [Fact]
     public void TestLogicalAndOperator_BothTrue() {
@@ -338,10 +327,6 @@ public class BreakpointConditionCompilerTests {
         result.Should().BeTrue();
     }
 
-    #endregion
-
-    #region Bitwise Operator Tests
-
     [Fact]
     public void TestBitwiseAndOperator() {
         // Arrange
@@ -409,10 +394,6 @@ public class BreakpointConditionCompilerTests {
         // Assert
         result.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Arithmetic Operator Tests
 
     [Fact]
     public void TestAdditionOperator() {
@@ -499,51 +480,39 @@ public class BreakpointConditionCompilerTests {
         result.Should().BeTrue();
     }
 
-    #endregion
+    [Fact]
+    public void TestLeftShiftOperator() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.AX = 0x1;
 
-    #region Shift Operator Tests
+        BreakpointConditionCompiler compiler = new(state, memory);
 
-    // Note: Shift operators are parsed but not yet implemented in AstExpressionBuilder.
-    // These tests document the expected behavior when shift operators are implemented.
-    // Uncomment when shift operator support is added to ToExpression() in AstExpressionBuilder.cs
+        // Act
+        Func<long, bool> condition = compiler.Compile("(ax << 4) == 0x10");
+        bool result = condition(0);
 
-    // [Fact]
-    // public void TestLeftShiftOperator() {
-    //     // Arrange
-    //     State state = CreateTestState();
-    //     Memory memory = CreateTestMemory();
-    //     state.AX = 0x1;
-    //
-    //     BreakpointConditionCompiler compiler = new(state, memory);
-    //
-    //     // Act
-    //     Func<long, bool> condition = compiler.Compile("(ax << 4) == 0x10");
-    //     bool result = condition(0);
-    //
-    //     // Assert
-    //     result.Should().BeTrue();
-    // }
+        // Assert
+        result.Should().BeTrue();
+    }
 
-    // [Fact]
-    // public void TestRightShiftOperator() {
-    //     // Arrange
-    //     State state = CreateTestState();
-    //     Memory memory = CreateTestMemory();
-    //     state.AX = 0x100;
-    //
-    //     BreakpointConditionCompiler compiler = new(state, memory);
-    //
-    //     // Act
-    //     Func<long, bool> condition = compiler.Compile("(ax >> 4) == 0x10");
-    //     bool result = condition(0);
-    //
-    //     // Assert
-    //     result.Should().BeTrue();
-    // }
+    [Fact]
+    public void TestRightShiftOperator() {
+        // Arrange
+        State state = CreateTestState();
+        Memory memory = CreateTestMemory();
+        state.AX = 0x100;
 
-    #endregion
+        BreakpointConditionCompiler compiler = new(state, memory);
 
-    #region Complex Expression Tests
+        // Act
+        Func<long, bool> condition = compiler.Compile("(ax >> 4) == 0x10");
+        bool result = condition(0);
+
+        // Assert
+        result.Should().BeTrue();
+    }
 
     [Fact]
     public void TestComplexNestedExpression() {
@@ -600,10 +569,6 @@ public class BreakpointConditionCompilerTests {
         result.Should().BeTrue();
     }
 
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public void TestInvalidExpressionThrowsException() {
         // Arrange
@@ -656,10 +621,6 @@ public class BreakpointConditionCompilerTests {
         act.Should().Throw<ExpressionParseException>();
     }
 
-    #endregion
-
-    #region Parser Round-trip Tests
-
     [Fact]
     public void TestParserRoundTrip_SimpleExpression() {
         // Arrange
@@ -698,6 +659,4 @@ public class BreakpointConditionCompilerTests {
         // Assert
         ast.Should().NotBeNull();
     }
-
-    #endregion
 }
