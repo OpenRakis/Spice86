@@ -938,6 +938,88 @@ public class DosProcessManager : DosFileLoader {
     }
 
     /// <summary>
+    /// Creates a new PSP by copying the current PSP to a specified segment.
+    /// Implements INT 21h, AH=26h - Create New PSP.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on FreeDOS kernel implementation (kernel/task.c new_psp function):
+    /// <list type="bullet">
+    /// <item>Copies the entire current PSP (256 bytes) to the new segment</item>
+    /// <item>Updates terminate address (INT 22h vector) in the new PSP</item>
+    /// <item>Updates break address (INT 23h vector) in the new PSP</item>
+    /// <item>Updates critical error address (INT 24h vector) in the new PSP</item>
+    /// <item>Sets DOS version to return on INT 21h AH=30h</item>
+    /// <item>Does NOT change parent PSP (contrary to RBIL - this breaks some programs)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This is a simpler version of CreateChildPsp (function 55h). It doesn't set up
+    /// parent-child relationships, file handles, or FCBs - it just copies the PSP and
+    /// updates the interrupt vectors. Used by programs that want to create a PSP copy
+    /// for their own purposes.
+    /// </para>
+    /// <para>
+    /// <strong>Note:</strong> RBIL (Ralf Brown's Interrupt List) documents that parent PSP
+    /// should be set to 0, but FreeDOS found that some programs (like Alpha Waves) break
+    /// when parent PSP is zeroed. FreeDOS leaves it as-is and we follow that behavior.
+    /// See: https://github.com/stsp/fdpp/issues/112
+    /// </para>
+    /// </remarks>
+    /// <param name="newPspSegment">The segment address where the new PSP will be created.</param>
+    /// <param name="interruptVectorTable">The interrupt vector table for getting current vectors.</param>
+    public void CreateNewPsp(ushort newPspSegment, InterruptVectorTable interruptVectorTable) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information(
+                "CreateNewPsp: Copying current PSP to segment {NewPspSegment:X4}",
+                newPspSegment);
+        }
+
+        // Get the current PSP segment
+        ushort currentPspSegment = _pspTracker.GetCurrentPspSegment();
+        
+        // Get addresses for source and destination PSPs
+        uint currentPspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
+        
+        // Copy the entire PSP (256 bytes) from current PSP to new PSP
+        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
+            _memory.UInt8[newPspAddress + (uint)i] = _memory.UInt8[currentPspAddress + (uint)i];
+        }
+        
+        // Create a PSP wrapper for the new PSP to update fields
+        DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
+        
+        // Update interrupt vectors in the new PSP from the interrupt vector table
+        // INT 22h - Terminate address
+        SegmentedAddress int22 = interruptVectorTable[0x22];
+        newPsp.TerminateAddress = MakeFarPointer(int22.Segment, int22.Offset);
+        
+        // INT 23h - Break address (Ctrl-C handler)
+        SegmentedAddress int23 = interruptVectorTable[0x23];
+        newPsp.BreakAddress = MakeFarPointer(int23.Segment, int23.Offset);
+        
+        // INT 24h - Critical error address
+        SegmentedAddress int24 = interruptVectorTable[0x24];
+        newPsp.CriticalErrorAddress = MakeFarPointer(int24.Segment, int24.Offset);
+        
+        // Set DOS version to return on INT 21h AH=30h
+        // Use the default DOS version (5.0)
+        newPsp.DosVersionMajor = DefaultDosVersionMajor;
+        newPsp.DosVersionMinor = DefaultDosVersionMinor;
+        
+        // Note: We do NOT zero out the parent PSP segment (ps_parent) because
+        // this breaks some programs. FreeDOS leaves it as-is (from the copy).
+        // This is contrary to what RBIL documents.
+        
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "CreateNewPsp: Created PSP at {NewPspSegment:X4} from {CurrentPspSegment:X4}, Parent={Parent:X4}",
+                newPspSegment, currentPspSegment, newPsp.ParentProgramSegmentPrefix);
+        }
+    }
+
+    /// <summary>
     /// Creates a child PSP (Program Segment Prefix) at the specified segment.
     /// Implements INT 21h, AH=55h - Create Child PSP.
     /// </summary>

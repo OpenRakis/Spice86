@@ -130,6 +130,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x23, FcbGetFileSize);
         AddAction(0x24, FcbSetRandomRecordNumber);
         AddAction(0x25, SetInterruptVector);
+        AddAction(0x26, CreateNewPsp);
         AddAction(0x27, FcbRandomBlockRead);
         AddAction(0x28, FcbRandomBlockWrite);
         AddAction(0x29, FcbParseFilename);
@@ -1253,6 +1254,53 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("GET PSP ADDRESS {PspSegment}",
                 ConvertUtils.ToHex16(pspSegment));
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=26h - Create New PSP.
+    /// <para>
+    /// Copies the program segment prefix (PSP) of the currently executing
+    /// program to a specified segment address in free memory and then
+    /// updates the new PSP to make it usable by another program.
+    /// </para>
+    /// <b>Expects:</b><br/>
+    /// DX = Segment of new program segment prefix
+    /// <b>Returns:</b><br/>
+    /// None
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Based on FreeDOS kernel implementation (kernel/task.c new_psp function):
+    /// <list type="bullet">
+    /// <item>Copies the entire current PSP (256 bytes) to the new segment</item>
+    /// <item>Updates terminate address (INT 22h vector)</item>
+    /// <item>Updates break address (INT 23h vector)</item>
+    /// <item>Updates critical error address (INT 24h vector)</item>
+    /// <item>Sets DOS version</item>
+    /// <item>Does NOT change parent PSP (contrary to RBIL)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This is a simpler version of CreateChildPsp (function 55h). It doesn't
+    /// set up file handles, FCBs, or parent-child relationships. Used by programs
+    /// that want a PSP copy for their own purposes.
+    /// </para>
+    /// <para>
+    /// <strong>Note:</strong> RBIL documents that parent PSP should be set to 0,
+    /// but FreeDOS found this breaks some programs and leaves it unchanged.
+    /// See: https://github.com/stsp/fdpp/issues/112
+    /// </para>
+    /// </remarks>
+    public void CreateNewPsp() {
+        ushort newPspSegment = State.DX;
+        
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("CREATE NEW PSP at segment {Segment:X4}",
+                newPspSegment);
+        }
+        
+        // Create the new PSP by copying the current one
+        _dosProcessManager.CreateNewPsp(newPspSegment, _interruptVectorTable);
     }
 
     /// <summary>
