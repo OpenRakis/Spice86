@@ -24,7 +24,11 @@ public class BenchmarkTest {
 internal class Program {
     public static void Main() {
 #if RELEASE
-        BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BenchmarkTest>();
+        // Run the breakpoint check benchmark to demonstrate the performance improvement
+        BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BreakpointCheckBenchmark>();
+        
+        // Uncomment to run the original example benchmark
+        // BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BenchmarkTest>();
 #endif
 #if DEBUG
         Assert.Fail("Please run in Release mode to get accurate results");
