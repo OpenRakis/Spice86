@@ -42,6 +42,7 @@ public class EmulationLoop : ICyclesLimiter {
     private bool _sliceInitialized;
     private readonly long _sliceDurationTicks;
     private readonly ICyclesBudgeter _cyclesBudgeter;
+    private readonly InputEventHub _inputEventQueue;
 
     /// <summary>
     ///     Gets a reader exposing CPU performance metrics.
@@ -49,7 +50,7 @@ public class EmulationLoop : ICyclesLimiter {
     public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
     /// <summary>
-    /// Whether the emulation is paused.
+    /// Gets or sets whether the emulation is paused.
     /// </summary>
     public bool IsPaused { get; set; }
 
@@ -61,12 +62,9 @@ public class EmulationLoop : ICyclesLimiter {
         set => _cyclesLimiter.TargetCpuCyclesPerMs = value;
     }
 
-    private readonly InputEventQueue? _inputEventQueue;
-
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="functionHandler">The class that handles function calls in the machine code.</param>
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
@@ -76,13 +74,14 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
     /// <param name="cyclesLimiter">Limits the number of executed instructions per slice</param>
     /// <param name="cyclesBudgeter">Budgets how many cycles are available per slice</param>
-    /// <param name="inputEventQueue">Optional queue for processing keyboard and mouse events from the UI thread.</param>
-    /// <param name="cpuPerformanceMeasurer">Optional performance measurer shared with PerformanceViewModel.</param>
+    /// <param name="inputEventQueue">Used to ensure that Mouse/Keyboard events are processed in the emulation thread.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         ExecutionStateSlice executionStateSlice, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, ILoggerService loggerService, ICyclesLimiter cyclesLimiter, ICyclesBudgeter cyclesBudgeter,
-        InputEventQueue? inputEventQueue = null, PerformanceMeasurer? cpuPerformanceMeasurer = null) {
+        IPauseHandler pauseHandler, ICyclesLimiter cyclesLimiter,
+        InputEventHub inputEventQueue, ICyclesBudgeter cyclesBudgeter,
+        ILoggerService loggerService) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
@@ -94,15 +93,10 @@ public class EmulationLoop : ICyclesLimiter {
         _cyclesLimiter = cyclesLimiter;
         _sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
         _cyclesBudgeter = cyclesBudgeter;
-        _inputEventQueue = inputEventQueue;
-        _performanceMeasurer = cpuPerformanceMeasurer ?? new PerformanceMeasurer(new PerformanceMeasureOptions {
-            CheckInterval = 512,
-            MinValueDelta = 3000,
-            MaxIntervalMilliseconds = 10
-        });
         _pauseHandler.Paused += OnPauseStateChanged;
         _pauseHandler.Resumed += OnPauseStateChanged;
         _sliceStopwatch.Start();
+        _inputEventQueue = inputEventQueue;
     }
 
     /// <summary>
@@ -172,8 +166,6 @@ public class EmulationLoop : ICyclesLimiter {
     /// </summary>
     /// <returns>True when the next slice should begin immediately, otherwise false.</returns>
     private bool RunSlice() {
-        _pauseHandler.WaitIfPaused();
-
         InitializeSliceTimer();
         long sliceStartTicks = _sliceStopwatch.ElapsedTicks;
         long sliceStartCycles = _cpuState.Cycles;
@@ -183,28 +175,18 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
-            if (!_dualPic.RunQueue()) {
+            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            _pauseHandler.WaitIfPaused();
+            _dualPic.RunQueue();
+            if(_executionStateSlice.CyclesUntilReevaluation <= 0) {
                 break;
             }
-
-            while (_cpuState.IsRunning && _executionStateSlice.CyclesUntilReevaluation > 0) {
-                if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
-                    _emulatorBreakpointsManager.TriggerBreakpoints();
-                }
-                _pauseHandler.WaitIfPaused();
-                _cpu.ExecuteNext();
-
-                // Process pending input events from the UI thread after each CPU instruction
-                // Only process if there are events to avoid unnecessary overhead
-                if (_inputEventQueue?.HasPendingEvents is true) {
-                    _inputEventQueue.ProcessAllPendingInputEvents();
-                }
-            }
+            _cpu.ExecuteNext();
         }
 
-        _dualPic.RunQueue();
         _performanceMeasurer.UpdateValue(_cpuState.Cycles);
         UpdateAdaptiveCycleBudget(sliceStartTicks, sliceStartCycles);
+        _inputEventQueue.ProcessAllPendingInputEvents();
         return HandleSliceTiming();
     }
 
@@ -218,23 +200,6 @@ public class EmulationLoop : ICyclesLimiter {
             _loggerService.Warning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
-        }
-    }
-
-    /// <summary>
-    ///     Runs emulation from <paramref name="startAddress" /> until <paramref name="endAddress" /> is reached
-    ///     or execution stops for another reason.
-    /// </summary>
-    /// <param name="startAddress">Address at which execution should begin.</param>
-    /// <param name="endAddress">Address at which execution should stop.</param>
-    internal void RunFromUntil(SegmentedAddress startAddress, SegmentedAddress endAddress) {
-        _cpuState.IpSegmentedAddress = startAddress;
-        ResetSliceTimer();
-        while (_cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress) {
-            bool runImmediately;
-            do {
-                runImmediately = RunSlice();
-            } while (runImmediately && _cpuState.IsRunning && _cpuState.IpSegmentedAddress != endAddress);
         }
     }
 

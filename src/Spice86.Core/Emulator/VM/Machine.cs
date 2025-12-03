@@ -91,7 +91,7 @@ public sealed class Machine : IDisposable {
     public Joystick Joystick { get; }
 
     /// <summary>
-    /// An IBM PC Keyboard (PS/2 Controller)
+    /// Gets the controller used to manage keyboard input via the Intel 8042 interface.
     /// </summary>
     public Intel8042Controller KeyboardController { get; }
 

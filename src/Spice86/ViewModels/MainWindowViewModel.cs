@@ -22,13 +22,12 @@ using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
 
-using IMouseDevice = Core.Emulator.InterruptHandlers.Input.Mouse.IMouseDevice;
 using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 using Timer = System.Timers.Timer;
 
-/// <inheritdoc cref="Spice86.Shared.Interfaces.IGui" />
-public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui,
-    IScreenPresenter, IDisposable {
+/// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
+public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
+    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
     private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
@@ -76,7 +75,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     private readonly Timer _drawTimer = new(1000.0 / ScreenRefreshHz);
     private readonly SemaphoreSlim? _drawingSemaphoreSlim = new(1, 1);
-    private readonly InputEventQueue _inputEventQueue;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -85,11 +83,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
     internal event EventHandler? CloseMainWindow;
-
-    /// <summary>
-    /// Gets the InputEventQueue that processes keyboard and mouse events for the emulator.
-    /// </summary>
-    public InputEventQueue InputEventQueue => _inputEventQueue;
 
     public MainWindowViewModel(SharedMouseData sharedMouseData,
         ITimeMultiplier pit, IUIDispatcher uiDispatcher,
@@ -104,9 +97,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         _exceptionHandler = exceptionHandler;
         Configuration = configuration;
         _loggerService = loggerService;
-
-        // Create InputEventQueue with this MainWindowViewModel as the event source
-        _inputEventQueue = new InputEventQueue(this, this);
         _hostStorageProvider = hostStorageProvider;
         _cyclesLimiter = cyclesLimiter;
         TargetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
@@ -151,6 +141,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
+
     internal void OnKeyUp(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
             return;
@@ -159,7 +150,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         // Use PhysicalKey from Avalonia which represents the physical keyboard location
         KeyUp?.Invoke(this, new KeyboardEventArgs((Shared.Emulator.Keyboard.PhysicalKey)e.PhysicalKey, IsPressed: false));
     }
-
     [RelayCommand]
     private async Task SaveBitmap() {
         if (Bitmap is not null) {
@@ -231,7 +221,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public double MouseX { get; set; }
 
     public double MouseY { get; set; }
-
+    
     public void OnMouseButtonDown(PointerPressedEventArgs @event, Image image) {
         if (_pauseHandler.IsPaused) {
             return;
@@ -241,7 +231,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     public void OnMouseButtonUp(PointerReleasedEventArgs @event, Image image) {
-        if (_pauseHandler.IsPaused) {
+        if(_pauseHandler.IsPaused) {
             return;
         }
         Avalonia.Input.MouseButton mouseButton = @event.GetCurrentPoint(image).Properties.PointerUpdateKind.GetMouseButton();
@@ -366,8 +356,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         }
         StatusMessage = "Emulator starting...";
         AsmOverrideStatus = Configuration switch {
-            { UseCodeOverrideOption: true, OverrideSupplier: not null } => "ASM code overrides: enabled.",
-            { UseCodeOverride: false, OverrideSupplier: not null } =>
+            {UseCodeOverrideOption: true, OverrideSupplier: not null} => "ASM code overrides: enabled.",
+            {UseCodeOverride: false, OverrideSupplier: not null} =>
                 "ASM code overrides: only functions names will be referenced.",
             _ => "ASM code overrides: none."
         };
@@ -383,7 +373,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     }
 
     internal event Action? Disposing;
-
+    
     private void Dispose(bool disposing) {
         if (!_disposed) {
             _disposed = true;
@@ -395,8 +385,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 _drawTimer.Stop();
                 _drawTimer.Dispose();
-
-                _inputEventQueue.Dispose();
 
                 // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {
@@ -423,7 +411,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [ObservableProperty]
     private string _currentLogLevel = "";
-
+    
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;

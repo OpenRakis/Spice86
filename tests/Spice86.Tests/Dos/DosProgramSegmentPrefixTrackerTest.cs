@@ -7,8 +7,8 @@ using NSubstitute;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -34,18 +34,17 @@ public class DosProgramSegmentPrefixTrackerTests {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
 
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        PauseHandler pauseHandler = new(loggerService);
-        State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: true);
 
         var configuration = new Configuration {
             ProgramEntryPointSegment = (ushort)0x1000
         };
-        _pspTracker = new(configuration, memory,
-            new DosSwappableDataArea(memory, MemoryUtils.ToPhysicalAddress(0xb2, 0)),
+        _pspTracker = new(configuration, memory, 
+            new DosSwappableDataArea(memory,
+            MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0)),
             loggerService);
     }
 

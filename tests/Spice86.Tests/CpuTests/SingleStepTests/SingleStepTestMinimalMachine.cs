@@ -22,9 +22,11 @@ public class SingleStepTestMinimalMachine {
         State = state;
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         PauseHandler pauseHandler = new PauseHandler(loggerService);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, new Ram(/*0x10FFEF*/1024 * 1024), new A20Gate(false));
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        Memory memory = new(memoryBreakpoints, new Ram(/*0x10FFEF*/1024 * 1024), new A20Gate(false));
         Memory = memory;
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         for (uint address = 0; address < memory.Length; address++) {
             // monitor what is written in ram so that we can restore it to 0 after
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, address,

@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -24,14 +25,14 @@ using System.Runtime.CompilerServices;
 
 public class InstructionExecutionHelper {
     private readonly ILoggerService _loggerService;
-    private readonly BreakPointHolder _interruptBreakPoints;
+    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExecutionContextManager _executionContextManager;
 
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
         CallbackHandler callbackHandler,
-        BreakPointHolder interruptBreakPoints,
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
         ExecutionContextManager executionContextManager,
         ILoggerService loggerService) {
         _loggerService = loggerService;
@@ -44,7 +45,7 @@ public class InstructionExecutionHelper {
         Alu32 = new(state);
         IoPortDispatcher = ioPortDispatcher;
         CallbackHandler = callbackHandler;
-        _interruptBreakPoints = interruptBreakPoints;
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _executionContextManager = executionContextManager;
         InstructionFieldValueRetriever = new(memory);
         ModRm = new(state, memory, InstructionFieldValueRetriever);
@@ -153,8 +154,14 @@ public class InstructionExecutionHelper {
     /// <param name="instruction"></param>
     /// <param name="vectorNumber"></param>
     public void HandleInterruptInstruction(CfgInstruction instruction, byte vectorNumber) {
+        // Trigger breakpoint before modifying State.IP
+        // The UI's breakpoint action calls WaitIfPaused() to block until user resumes
+        // This ensures the debugger sees State.IP pointing to the INT instruction
+        _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
-        HandleInterruptCall(instruction, vectorNumber);
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
+        CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber, false);
+        SetNextNodeToSuccessorAtCsIp(instruction);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,7 +172,11 @@ public class InstructionExecutionHelper {
     }
 
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
-        _interruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
+        return DoInterruptWithoutBreakpoint(vectorNumber);
+    }
+
+    private (SegmentedAddress, SegmentedAddress) DoInterruptWithoutBreakpoint(byte vectorNumber) {
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
         if (target.Segment == 0 && target.Offset == 0) {
             throw new UnhandledOperationException(State,

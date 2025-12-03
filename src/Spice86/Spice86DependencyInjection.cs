@@ -5,6 +5,8 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using ModelContextProtocol.Server;
+
 using Serilog.Events;
 
 using Spice86.Core.CLI;
@@ -56,6 +58,9 @@ using Spice86.Views;
 
 using System.Diagnostics;
 
+using IMcpServer = Core.Emulator.Mcp.IMcpServer;
+using McpServer = Core.Emulator.Mcp.McpServer;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -63,6 +68,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
+    private readonly IGuiVideoPresentation? _gui;
 
     /// <summary>
     /// Gets the MCP (Model Context Protocol) server for in-process emulator state inspection.
@@ -70,7 +76,6 @@ public class Spice86DependencyInjection : IDisposable {
     public IMcpServer McpServer { get; }
 
     private readonly McpStdioTransport? _mcpStdioTransport;
-    private readonly IGui _gui;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -125,14 +130,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("State created...");
         }
 
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator breakpoints manager created...");
-        }
+        // Create breakpoint holders before EmulatorBreakpointsManager to avoid circular dependency
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
+        AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
         IOPortDispatcher ioPortDispatcher = new(
-            emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
+            ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -155,13 +158,19 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("A20 gate created...");
         }
 
-        Memory memory = new(emulatorBreakpointsManager.
-            MemoryReadWriteBreakpoints,
+        Memory memory = new(memoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory bus created...");
+        }
+
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory,
+            memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator breakpoints manager created...");
         }
 
         var biosDataArea =
@@ -186,6 +195,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Dual PIC created...");
         }
+
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
             pauseHandler, configuration.FailOnUnhandledPort, loggerService);
@@ -250,8 +260,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue, configuration.UseCodeOverrideOption,
-            loggerService);
+            dualPic, executionStateSlice, emulatorBreakpointsManager, functionCatalogue,
+            configuration.UseCodeOverrideOption, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -366,7 +376,6 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Memory data exporter created...");
         }
 
-
         EmulatorStateSerializer emulatorStateSerializer = new(dumpContext,
             memoryDataExporter, state, executionDumpFactory, functionCatalogue,
             emulatorBreakpointsManager, loggerService);
@@ -379,83 +388,79 @@ public class Spice86DependencyInjection : IDisposable {
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(configuration);
         ICyclesBudgeter cyclesBudgeter = configuration.CyclesBudgeter ?? CreateDefaultCyclesBudgeter(cyclesLimiter);
 
-        // Create performance measurer first so it can be shared with PerformanceViewModel
-        PerformanceMeasurer cpuPerformanceMeasurer = new(new PerformanceMeasureOptions {
-            CheckInterval = 512,
-            MinValueDelta = 3000,
-            MaxIntervalMilliseconds = 10
-        });
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator state serializer created...");
+        }
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
-
-        // Declare variables needed for both GUI and headless modes
-        InputEventQueue? inputEventQueue = null;
-        IExceptionHandler exceptionHandler;
-        PerformanceViewModel? performanceViewModel = null;
+        PerformanceMeasurer cpuPerformanceMeasurer = new(new PerformanceMeasureOptions {
+            CheckInterval = 512,
+            MinValueDelta = 3000,
+            MaxIntervalMilliseconds = 10
+        });
+        InputEventHub inputEventQueue;
 
         if (mainWindow != null) {
             uiDispatcher = new UIDispatcher(Dispatcher.UIThread);
-            // GUI mode: create actual UI components
             hostStorageProvider = new HostStorageProvider(
                 mainWindow.StorageProvider, configuration, emulatorStateSerializer, dumpContext);
             textClipboard = new TextClipboard(mainWindow.Clipboard);
-            
-            performanceViewModel = new PerformanceViewModel(state, pauseHandler, uiDispatcher, cpuPerformanceMeasurer);
-            
-            exceptionHandler = new MainWindowExceptionHandler(pauseHandler);
+
+            PerformanceViewModel performanceViewModel = new(
+                state, pauseHandler, uiDispatcher, cpuPerformanceMeasurer);
+
+            mainWindow.PerformanceViewModel = performanceViewModel;
+
+            IExceptionHandler exceptionHandler = configuration.HeadlessMode switch {
+                null => new MainWindowExceptionHandler(pauseHandler),
+                _ => new HeadlessModeExceptionHandler(uiDispatcher)
+            };
 
             mainWindowViewModel = new MainWindowViewModel(sharedMouseData,
                 pitTimer, uiDispatcher, hostStorageProvider, textClipboard, configuration,
                 loggerService, pauseHandler, performanceViewModel, exceptionHandler, cyclesLimiter);
 
-            inputEventQueue = mainWindowViewModel.InputEventQueue;
-            
-            mainWindow.PerformanceViewModel = performanceViewModel;
+            inputEventQueue = new(mainWindowViewModel, mainWindowViewModel);
+
+
             _gui = mainWindowViewModel;
         } else {
-            // Headless mode
-            _gui = new HeadlessGui();
-            inputEventQueue = new InputEventQueue(_gui, _gui);
+            HeadlessGui headlessGui = new HeadlessGui();
+            inputEventQueue = new(headlessGui, headlessGui);
+            _gui = headlessGui;
         }
-
-        // Create EmulationLoop after InputEventQueue is available
-        EmulationLoop emulationLoop = new(functionHandler,
-            cpuForEmulationLoop, state, executionStateSlice, dualPic,
-            emulatorBreakpointsManager, pauseHandler, loggerService, cyclesLimiter, cyclesBudgeter,
-            inputEventQueue, cpuPerformanceMeasurer);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator state serializer created...");
-        }
-
-        Intel8042Controller keyboardController = new(
-            state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
+        vgaCard.SubscribeToEvents();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("VGA card created...");
         }
 
-        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
-        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, stack,
-            state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
-            keyboardController, biosKeyboardBuffer, loggerService);
+        Intel8042Controller intel8042Controller = new(
+            state, ioPortDispatcher, a20Gate, dualPic,
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventQueue);
 
-        Mouse mouse = new(state, sharedMouseData, dualPic, _gui,
-                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort);
-        MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse, _gui,
-            vgaFunctionality, loggerService);
+        BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
+        BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
+            stack, state, functionHandlerProvider, dualPic, systemBiosInt15Handler,
+            intel8042Controller, biosKeyboardBuffer, loggerService);
+        Mouse mouse = new(state, sharedMouseData, dualPic,
+                    configuration.Mouse, loggerService, configuration.FailOnUnhandledPort,
+                     _gui as IGuiMouseEvents);
+        MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
+            vgaFunctionality, loggerService,
+             _gui as IGuiMouseEvents);
 
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, biosDataArea, functionHandlerProvider, stack, state, loggerService,
-            biosKeyboardBuffer);
+            biosKeyboardInt9Handler.BiosKeyboardBuffer);
+
         Joystick joystick = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+    configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Input devices created...");
@@ -496,7 +501,6 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, loggerService,
             ioPortDispatcher, dosTables, xms);
-
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(dos.DosInt20Handler);
@@ -526,7 +530,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardInt9Handler,
             callbackHandler, cpu,
             cfgCpu, state, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, keyboardController, keyboardInt16Handler,
+            joystick, intel8042Controller, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler,
@@ -548,6 +552,10 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function overrides added...");
         }
 
+        EmulationLoop emulationLoop = new(functionHandler, cpuForEmulationLoop,
+            state, executionStateSlice, dualPic, emulatorBreakpointsManager,
+            pauseHandler, cyclesLimiter, inputEventQueue, cyclesBudgeter, loggerService);
+
         ProgramExecutor programExecutor = new(configuration, emulationLoop,
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
             functionHandlerProvider, memoryDataExporter, state, dos,
@@ -558,15 +566,17 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
-        CfgCpu? cfgCpuForMcp = configuration.CfgCpu ? cfgCpu : null;
-        McpServer mcpServer = new(memory, state, functionCatalogue, cfgCpuForMcp, pauseHandler, loggerService);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("BIOS and DOS interrupt handlers created...");
+        }
+        // Initialize stdio transport if MCP server is enabled
+        McpStdioTransport? mcpStdioTransport = null;
+        McpServer mcpServer = new(memory, state, functionCatalogue, cpuForEmulationLoop as CfgCpu, pauseHandler, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("MCP server created...");
         }
 
-        // Initialize stdio transport if MCP server is enabled
-        McpStdioTransport? mcpStdioTransport = null;
         if (configuration.McpServer) {
             mcpStdioTransport = new McpStdioTransport(mcpServer, loggerService);
             mcpStdioTransport.Start();
@@ -591,8 +601,8 @@ public class Spice86DependencyInjection : IDisposable {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, memory);
-            
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
+
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyViewModel disassemblyViewModel = new(
@@ -644,6 +654,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindow.DataContext = mainWindowViewModel;
         }
     }
+
 
     private static ICyclesBudgeter CreateDefaultCyclesBudgeter(ICyclesLimiter cyclesLimiter) {
         long sliceDurationTicks = Math.Max(1, Stopwatch.Frequency / 1000);
@@ -727,11 +738,15 @@ public class Spice86DependencyInjection : IDisposable {
                 _mcpStdioTransport?.Dispose();
 
                 ProgramExecutor.Dispose();
-                DisposeMachineAfterRun();
 
+                // Dispose HeadlessGui BEFORE Machine to stop the rendering timer
+                // before the Renderer is disposed. This prevents a race condition
+                // where the timer callback tries to render with a disposed Renderer.
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
                 }
+
+                DisposeMachineAfterRun();
             }
             _disposed = true;
         }

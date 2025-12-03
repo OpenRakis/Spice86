@@ -10,15 +10,21 @@ using System;
 using System.Collections.Concurrent;
 
 /// <summary>
-/// Implements a thread-safe queue for handling and processing keyboard and mouse events. <br/>
-/// Used by the emulation thread to avoid the UI thread modifying keyboard state via events,
-/// while the emulator thread is reading the <see cref="Intel8042Controller"/> at the same time. <br/>
-/// Same deal for the Mouse events. If Joystick support is implemented, joystick UI events will also pass through here.
+/// Represents a queue for handling and processing keyboard and mouse events. <br/>
+/// Used by the emulation loop thread to avoid the UI thread modifying keyboard state via events,
+/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
+/// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
 /// </summary>
-public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents, IDisposable {
+/// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 
+/// around implementations of <see cref="IGuiKeyboardEvents"/> and <see cref="IGuiMouseEvents"/> to capture  and queue
+/// their events. The queued events can then be processed one at a time using the  <see cref="ProcessAllPendingInputEvents"/> method.
+/// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
+/// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
+public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
+    // a thread-safe queue, accessed by both UI thread and emulation thread.
     private readonly ConcurrentQueue<Action> _eventQueue = new();
-    private readonly IGuiMouseEvents _mouseEvents;
-    private readonly IGuiKeyboardEvents _keyboardEvents;
+    private readonly IGuiMouseEvents? _mouseEvents;
+    private readonly IGuiKeyboardEvents? _keyboardEvents;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -26,17 +32,19 @@ public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents, IDisposable 
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
-    public InputEventQueue(
-        IGuiKeyboardEvents keyboardEvents,
-        IGuiMouseEvents mouseEvents) {
-        _keyboardEvents = keyboardEvents;
-        _mouseEvents = mouseEvents;
-
-        _keyboardEvents.KeyDown += OnKeyDown;
-        _keyboardEvents.KeyUp += OnKeyUp;
-        _mouseEvents.MouseMoved += OnMouseMoved;
-        _mouseEvents.MouseButtonDown += OnMouseButtonDown;
-        _mouseEvents.MouseButtonUp += OnMouseButtonUp;
+    public InputEventHub(IGuiKeyboardEvents? keyboardEvents = null,
+        IGuiMouseEvents? mouseEvents = null) {
+        if (keyboardEvents is not null) {
+            _keyboardEvents = keyboardEvents;
+            _keyboardEvents.KeyDown += OnKeyDown;
+            _keyboardEvents.KeyUp += OnKeyUp;
+        }
+        if (mouseEvents is not null) {
+            _mouseEvents = mouseEvents;
+            _mouseEvents.MouseMoved += OnMouseMoved;
+            _mouseEvents.MouseButtonDown += OnMouseButtonDown;
+            _mouseEvents.MouseButtonUp += OnMouseButtonUp;
+        }
     }
 
     private void OnMouseMoved(object? sender, MouseMoveEventArgs e) =>
@@ -55,41 +63,23 @@ public class InputEventQueue : IGuiKeyboardEvents, IGuiMouseEvents, IDisposable 
         _eventQueue.Enqueue(() => KeyDown?.Invoke(sender, e));
 
     /// <summary>
-    /// Gets whether there are any pending input events in the queue.
-    /// </summary>
-    public bool HasPendingEvents => !_eventQueue.IsEmpty;
-
-    /// <summary>
     /// Processes all pending input events in the event queue.
     /// </summary>
-    public void ProcessAllPendingInputEvents() {
+    internal void ProcessAllPendingInputEvents() {
         while (_eventQueue.TryDequeue(out Action? top)) {
             top.Invoke();
         }
     }
 
-    /// <summary>
-    /// Unsubscribes from event sources to prevent memory leaks.
-    /// </summary>
-    public void Dispose() {
-        _keyboardEvents.KeyDown -= OnKeyDown;
-        _keyboardEvents.KeyUp -= OnKeyUp;
-        _mouseEvents.MouseMoved -= OnMouseMoved;
-        _mouseEvents.MouseButtonDown -= OnMouseButtonDown;
-        _mouseEvents.MouseButtonUp -= OnMouseButtonUp;
-    }
-
     public double MouseX {
-        get => _mouseEvents.MouseX;
-        set => _mouseEvents.MouseX = value;
-    }
+        get => _mouseEvents?.MouseX ?? 0;
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseX = value; } } }
 
     public double MouseY {
-        get => _mouseEvents.MouseY;
-        set => _mouseEvents.MouseY = value;
-    }
+        get => _mouseEvents?.MouseY ?? 0;
+        set { if (_mouseEvents is not null) { _mouseEvents.MouseY = value; } } }
 
-    public void HideMouseCursor() => _mouseEvents.HideMouseCursor();
+    public void HideMouseCursor() => _mouseEvents?.HideMouseCursor();
 
-    public void ShowMouseCursor() => _mouseEvents.ShowMouseCursor();
+    public void ShowMouseCursor() => _mouseEvents?.ShowMouseCursor();
 }

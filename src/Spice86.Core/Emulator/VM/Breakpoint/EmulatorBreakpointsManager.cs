@@ -1,10 +1,12 @@
 ﻿namespace Spice86.Core.Emulator.VM.Breakpoint;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
+using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
@@ -15,6 +17,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     private readonly BreakPointHolder _executionBreakPoints;
     private readonly State _state;
     private readonly IPauseHandler _pauseHandler;
+    private readonly Memory.IMemory _memory;
     private BreakPoint? _machineStartBreakPoint;
     private BreakPoint? _machineStopBreakPoint;
 
@@ -23,10 +26,15 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     /// </summary>
     /// <param name="pauseHandler">The object responsible for pausing and resuming the emulation.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    public EmulatorBreakpointsManager(IPauseHandler pauseHandler, State state) {
+    /// <param name="memory">The memory interface for expression evaluation in conditional breakpoints.</param>
+    /// <param name="memoryReadWriteBreakpoints">The breakpoint holder for memory read/write breakpoints.</param>
+    /// <param name="ioReadWriteBreakpoints">The breakpoint holder for I/O read/write breakpoints.</param>
+    public EmulatorBreakpointsManager(IPauseHandler pauseHandler, State state, Memory.IMemory memory,
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints, AddressReadWriteBreakpoints ioReadWriteBreakpoints) {
         _state = state;
-        MemoryReadWriteBreakpoints = new();
-        IoReadWriteBreakpoints = new();
+        _memory = memory;
+        MemoryReadWriteBreakpoints = memoryReadWriteBreakpoints;
+        IoReadWriteBreakpoints = ioReadWriteBreakpoints;
         InterruptBreakPoints = new();
         _cycleBreakPoints = new();
         _executionBreakPoints = new();
@@ -104,14 +112,11 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-    public bool HasActiveBreakpoints =>
-        _executionBreakPoints.HasActiveBreakpoints || _cycleBreakPoints.HasActiveBreakpoints;
-
     /// <summary>
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
-    public void TriggerBreakpoints() {
-        if (_executionBreakPoints.HasActiveBreakpoints) {
+    public void CheckExecutionBreakPoints() {
+        if (!_executionBreakPoints.IsEmpty) {
             uint address;
             // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
             bool triggered;
@@ -121,7 +126,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             } while (triggered && address != _state.IpPhysicalAddress);
         }
 
-        if (_cycleBreakPoints.HasActiveBreakpoints) {
+        if (!_cycleBreakPoints.IsEmpty) {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }
@@ -174,7 +179,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
                 Trigger = start,
                 EndTrigger = end,
                 Type = type,
-                IsEnabled = sorted[i].IsEnabled
+                IsEnabled = sorted[i].IsEnabled,
+                ConditionExpression = sorted[i].ConditionExpression
             };
             result.Add(item);
         }
@@ -196,7 +202,8 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         return new SerializableUserBreakpoint {
             Trigger = breakpoint.Address,
             Type = breakpoint.BreakPointType,
-            IsEnabled = breakpoint.IsEnabled
+            IsEnabled = breakpoint.IsEnabled,
+            ConditionExpression = breakpoint.ConditionExpression
         };
     }
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
@@ -223,16 +230,37 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         }
     }
 
-    private static AddressBreakPoint FromSerializable(
+    private AddressBreakPoint FromSerializable(
         SerializableUserBreakpoint serializableBreakpoint,
         Action<BreakPoint> onReached, bool removeOnTrigger) {
+        Func<long, bool>? condition = null;
+        string? conditionExpression = serializableBreakpoint.ConditionExpression;
+        
+        // Compile the condition expression if present
+        if (!string.IsNullOrWhiteSpace(conditionExpression)) {
+            try {
+                BreakpointConditionCompiler compiler = new(_state, _memory);
+                condition = compiler.Compile(conditionExpression);
+            } catch (ExpressionParseException) {
+                // If parsing/compilation fails, treat as unconditional
+                conditionExpression = null;
+            } catch (ArgumentException) {
+                // If parsing/compilation fails, treat as unconditional
+                conditionExpression = null;
+            } catch (InvalidOperationException) {
+                // If parsing/compilation fails, treat as unconditional
+                conditionExpression = null;
+            }
+        }
+        
         return serializableBreakpoint.Type switch {
             BreakPointType.CPU_EXECUTION_ADDRESS or BreakPointType.CPU_INTERRUPT or BreakPointType.CPU_CYCLES or
             BreakPointType.MEMORY_ACCESS or BreakPointType.MEMORY_READ or BreakPointType.MEMORY_WRITE or
             BreakPointType.IO_ACCESS or BreakPointType.IO_READ or BreakPointType.IO_WRITE
                 => new AddressBreakPoint(serializableBreakpoint.Type,
-                    serializableBreakpoint.Trigger, onReached, removeOnTrigger) {
+                    serializableBreakpoint.Trigger, onReached, removeOnTrigger, condition, conditionExpression) {
                     IsEnabled = serializableBreakpoint.IsEnabled,
+                    IsUserBreakpoint = true
                 },
             BreakPointType.MACHINE_START => throw new NotSupportedException("Emulator start/stop breakpoints don't need to be serialized"),
             BreakPointType.MACHINE_STOP => throw new NotSupportedException("Machine breakpoint are not serialized"),

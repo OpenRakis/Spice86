@@ -4,7 +4,6 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 
@@ -27,7 +26,7 @@ public class KeyboardIntegrationTests {
 
     /// <summary>
     /// Tests that INT16H function 00h (read character) properly receives keys from keyboard buffer.
-    /// Verifies the entire chain: KbdKey -> scancode -> INT9H -> buffer -> INT16H
+    /// Verifies the entire chain: PcKeyboardKey -> scancode -> INT9H -> buffer -> INT16H
     /// </summary>
     [Fact]
     public void Int16H_ReadChar_ShouldReceiveKeyFromBuffer() {
@@ -55,8 +54,8 @@ public class KeyboardIntegrationTests {
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
             // Simulate pressing and releasing the 'A' key
-            ps2kbd.AddKey(KbdKey.A, isPressed: true);
-            ps2kbd.AddKey(KbdKey.A, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: false);
         });
 
         // The scan code for 'A' is 0x1E (from KeyboardScancodeConverter)
@@ -71,12 +70,12 @@ public class KeyboardIntegrationTests {
     /// Tests that various letter keys produce correct scan codes
     /// </summary>
     [Theory]
-    [InlineData(KbdKey.A, 0x1E, 0x61)] // A key -> scan 0x1E, ASCII 'a'
-    [InlineData(KbdKey.B, 0x30, 0x62)] // B key -> scan 0x30, ASCII 'b'
-    [InlineData(KbdKey.Q, 0x10, 0x71)] // Q key -> scan 0x10, ASCII 'q'
-    [InlineData(KbdKey.Z, 0x2C, 0x7A)] // Z key -> scan 0x2C, ASCII 'z'
+    [InlineData(PcKeyboardKey.A, 0x1E, 0x61)] // A key -> scan 0x1E, ASCII 'a'
+    [InlineData(PcKeyboardKey.B, 0x30, 0x62)] // B key -> scan 0x30, ASCII 'b'
+    [InlineData(PcKeyboardKey.Q, 0x10, 0x71)] // Q key -> scan 0x10, ASCII 'q'
+    [InlineData(PcKeyboardKey.Z, 0x2C, 0x7A)] // Z key -> scan 0x2C, ASCII 'z'
     public void Int16H_ReadChar_ShouldProduceCorrectScancodeForLetters(
-        KbdKey key, byte expectedScanCode, byte expectedAscii) {
+        PcKeyboardKey key, byte expectedScanCode, byte expectedAscii) {
         byte[] program = new byte[]
         {
             0xB4, 0x00,             // mov ah, 00h - Read character
@@ -92,8 +91,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(key, isPressed: true);
-            ps2kbd.AddKey(key, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: false);
         });
 
         testHandler.Details.Should().Contain(expectedScanCode,
@@ -106,12 +105,12 @@ public class KeyboardIntegrationTests {
     /// Tests that number keys produce correct scan codes and ASCII codes
     /// </summary>
     [Theory]
-    [InlineData(KbdKey.D1, 0x02, 0x31)] // 1 key -> scan 0x02, ASCII '1'
-    [InlineData(KbdKey.D2, 0x03, 0x32)] // 2 key -> scan 0x03, ASCII '2'
-    [InlineData(KbdKey.D5, 0x06, 0x35)] // 5 key -> scan 0x06, ASCII '5'
-    [InlineData(KbdKey.D0, 0x0B, 0x30)] // 0 key -> scan 0x0B, ASCII '0'
+    [InlineData(PcKeyboardKey.D1, 0x02, 0x31)] // 1 key -> scan 0x02, ASCII '1'
+    [InlineData(PcKeyboardKey.D2, 0x03, 0x32)] // 2 key -> scan 0x03, ASCII '2'
+    [InlineData(PcKeyboardKey.D5, 0x06, 0x35)] // 5 key -> scan 0x06, ASCII '5'
+    [InlineData(PcKeyboardKey.D0, 0x0B, 0x30)] // 0 key -> scan 0x0B, ASCII '0'
     public void Int16H_ReadChar_ShouldProduceCorrectScancodeForNumbers(
-        KbdKey key, byte expectedScanCode, byte expectedAscii) {
+        PcKeyboardKey key, byte expectedScanCode, byte expectedAscii) {
         byte[] program = new byte[]
         {
             0xB4, 0x00,             // mov ah, 00h
@@ -127,8 +126,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(key, isPressed: true);
-            ps2kbd.AddKey(key, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: false);
         });
 
         testHandler.Details.Should().Contain(expectedScanCode);
@@ -139,11 +138,11 @@ public class KeyboardIntegrationTests {
     /// Tests that function keys produce correct scan codes
     /// </summary>
     [Theory]
-    [InlineData(KbdKey.F1, 0x3B, 0x00)]  // F1 -> scan 0x3B, ASCII 0x00
-    [InlineData(KbdKey.F2, 0x3C, 0x00)]  // F2 -> scan 0x3C, ASCII 0x00
-    [InlineData(KbdKey.F10, 0x44, 0x00)] // F10 -> scan 0x44, ASCII 0x00
+    [InlineData(PcKeyboardKey.F1, 0x3B, 0x00)]  // F1 -> scan 0x3B, ASCII 0x00
+    [InlineData(PcKeyboardKey.F2, 0x3C, 0x00)]  // F2 -> scan 0x3C, ASCII 0x00
+    [InlineData(PcKeyboardKey.F10, 0x44, 0x00)] // F10 -> scan 0x44, ASCII 0x00
     public void Int16H_ReadChar_ShouldProduceCorrectScancodeForFunctionKeys(
-        KbdKey key, byte expectedScanCode, byte expectedAscii) {
+        PcKeyboardKey key, byte expectedScanCode, byte expectedAscii) {
         byte[] program = new byte[]
         {
             0xB4, 0x00,             // mov ah, 00h
@@ -159,8 +158,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(key, isPressed: true);
-            ps2kbd.AddKey(key, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: false);
         });
 
         testHandler.Details.Should().Contain(expectedScanCode);
@@ -189,8 +188,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(KbdKey.A, isPressed: true);
-            ps2kbd.AddKey(KbdKey.A, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: false);
         });
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
@@ -217,8 +216,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(KbdKey.Escape, isPressed: true);
-            ps2kbd.AddKey(KbdKey.Escape, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.Escape, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.Escape, isPressed: false);
         });
 
         // Escape key: scan code 0x01, ASCII 0x1B (ESC character)
@@ -247,8 +246,8 @@ public class KeyboardIntegrationTests {
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
             // Simulate pressing and releasing the 'A' key
-            ps2kbd.AddKey(KbdKey.A, isPressed: true);
-            ps2kbd.AddKey(KbdKey.A, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(PcKeyboardKey.A, isPressed: false);
         });
 
         // The ASCII code for lowercase 'a' is 0x61
@@ -260,10 +259,10 @@ public class KeyboardIntegrationTests {
     /// Tests that INT 21h, AH=01h properly handles various letter keys.
     /// </summary>
     [Theory]
-    [InlineData(KbdKey.A, 0x61)] // A key -> ASCII 'a'
-    [InlineData(KbdKey.Z, 0x7A)] // Z key -> ASCII 'z'
-    [InlineData(KbdKey.D1, 0x31)] // 1 key -> ASCII '1'
-    public void Int21H_CharacterInputWithEcho_ShouldProduceCorrectAscii(KbdKey key, byte expectedAscii) {
+    [InlineData(PcKeyboardKey.A, 0x61)] // A key -> ASCII 'a'
+    [InlineData(PcKeyboardKey.Z, 0x7A)] // Z key -> ASCII 'z'
+    [InlineData(PcKeyboardKey.D1, 0x31)] // 1 key -> ASCII '1'
+    public void Int21H_CharacterInputWithEcho_ShouldProduceCorrectAscii(PcKeyboardKey key, byte expectedAscii) {
         byte[] program = new byte[]
         {
             0xB4, 0x01,             // mov ah, 01h - Character input with echo
@@ -274,8 +273,8 @@ public class KeyboardIntegrationTests {
         };
 
         KeyboardTestHandler testHandler = RunKeyboardTest(program, setupKeys: (ps2kbd) => {
-            ps2kbd.AddKey(key, isPressed: true);
-            ps2kbd.AddKey(key, isPressed: false);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: true);
+            ps2kbd.EnqueueKeyEvent(key, isPressed: false);
         });
 
         testHandler.Results.Should().Contain(expectedAscii,

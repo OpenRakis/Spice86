@@ -11,7 +11,7 @@ using System.Diagnostics;
 ///     Thin interface between renderer and gui.
 /// </summary>
 public class VgaCard {
-    private readonly IGui? _gui;
+    private readonly IGuiVideoPresentation? _gui;
     private readonly ILoggerService _logger;
     private readonly IVgaRenderer _renderer;
 
@@ -21,14 +21,22 @@ public class VgaCard {
     /// <param name="gui">The GUI to render to.</param>
     /// <param name="renderer">The VGA renderer to use.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaCard(IGui? gui, IVgaRenderer renderer, ILoggerService loggerService) {
+    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, ILoggerService loggerService) {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;
+    }
+
+    /// <summary>
+    /// Completes the initialization of the VGA card by subscribing it to external events.
+    /// This method should not be called from the constructor to prevent race conditions
+    /// where an event handler (like Render) could be invoked on a partially constructed object.
+    /// </summary>
+    public void SubscribeToEvents() {
         if (_gui is not null) {
-            _gui.RenderScreen += (_, e) => Render(e);
             // Init bitmaps, needed for GUI to start calling Render function
             _gui.SetResolution(_renderer.Width, _renderer.Height);
+            _gui.RenderScreen += (_, e) => Render(e);
         }
     }
 

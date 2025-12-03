@@ -18,6 +18,9 @@ public class GdbCommandBreakpointHandler {
     private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
+    private readonly CPU.State _state;
+    private readonly IMemory _memory;
+    private readonly GdbBreakpointCommandParser _commandParser;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GdbCommandBreakpointHandler"/> class.
@@ -26,14 +29,24 @@ public class GdbCommandBreakpointHandler {
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    /// <param name="state">The CPU state for expression evaluation.</param>
+    /// <param name="memory">The memory interface for expression evaluation.</param>
     public GdbCommandBreakpointHandler(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService) {
+        IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService,
+        CPU.State state, IMemory memory) {
         _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPauseFromEmulator;
         _gdbIo = gdbIo;
+        _state = state;
+        _memory = memory;
+        
+        // Create condition compiler
+        BreakpointConditionCompiler? conditionCompiler = new BreakpointConditionCompiler(state, memory);
+        
+        _commandParser = new GdbBreakpointCommandParser(loggerService, conditionCompiler);
     }
 
     /// <summary>
@@ -116,38 +129,20 @@ public class GdbCommandBreakpointHandler {
     /// </summary>
     /// <param name="command">The breakpoint command string to parse.</param>
     /// <returns>A <see cref="BreakPoint"/> object if parsing succeeds, otherwise null.</returns>
+    /// <remarks>
+    /// Supports GDB remote protocol format: type,address,kind[;X:condition_expression]
+    /// where X is a condition type (we support 'cond' or 'X' for condition expressions).
+    /// Example: "0,1000,1;X:ax==0x100" sets an execution breakpoint at 0x1000 with condition "ax==0x100"
+    /// </remarks>
     public BreakPoint? ParseBreakPoint(string command) {
-        try {
-            string[] commandSplit = command.Split(",");
-            int type = int.Parse(commandSplit[0]);
-            BreakPointType? breakPointType = type switch {
-                0 => BreakPointType.CPU_EXECUTION_ADDRESS,
-                1 => BreakPointType.CPU_EXECUTION_ADDRESS,
-                2 => BreakPointType.MEMORY_WRITE,
-                3 => BreakPointType.MEMORY_READ,
-                4 => BreakPointType.MEMORY_ACCESS,
-                _ => null
-            };
-            if (breakPointType == null) {
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Cannot parse breakpoint type {Type} for command {Command}", type, command);
-                }
-                return null;
-            }
-            long address = ConvertUtils.ParseHex32(commandSplit[1]);
-            if (address > A20Gate.EndOfHighMemoryArea) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("Cannot install breakpoint at address {Address} because it is higher than ram size {RamSize}", address, A20Gate.EndOfHighMemoryArea);
-                }
-                return null;
-            }
-            return new AddressBreakPoint((BreakPointType)breakPointType, address, OnBreakPointReached, false);
-        } catch (FormatException nfe) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Cannot parse breakpoint {Command}", command);
-            }
+        // Parse command string into structured data
+        GdbBreakpointCommand? parsedCommand = _commandParser.Parse(command);
+        if (parsedCommand == null) {
             return null;
         }
+        
+        // Convert to Spice86 breakpoint
+        return _commandParser.CreateBreakPoint(parsedCommand, OnBreakPointReached);
     }
 
     /// <summary>

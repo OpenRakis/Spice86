@@ -1,12 +1,10 @@
 ﻿namespace Spice86.Shared.Interfaces;
-
 using Spice86.Shared.Emulator.Mouse;
 
 using System;
 
 /// <summary>
-/// Events fired by the UI layer to communicate mouse actions to the emulator. <br/>
-/// Also defines methods and properties for the emulator to interact with the UI layer's mouse.
+/// Defines events and methods for the emulator to interact with the UI layer's mouse.
 /// </summary>
 public interface IGuiMouseEvents {
     /// <summary>

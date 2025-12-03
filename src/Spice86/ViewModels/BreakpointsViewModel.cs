@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -18,24 +19,25 @@ using Spice86.ViewModels.Services;
 
 using System.Collections.ObjectModel;
 
-public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
+public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
+    private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
-    private readonly IUIDispatcher _uiDispatcher;
 
     public BreakpointsViewModel(State state,
         IPauseHandler pauseHandler,
         IMessenger messenger,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IUIDispatcher uiDispatcher,
-        IMemory memory) : base(state, memory) {
+        ITextClipboard textClipboard,
+        IMemory memory) : base(uiDispatcher, textClipboard, state, memory) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _messenger = messenger;
-        _uiDispatcher = uiDispatcher;
+        _conditionService = new BreakpointConditionService(state, memory);
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
     }
@@ -55,6 +57,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 case BreakPointType.CPU_EXECUTION_ADDRESS:
                     ExecutionAddressValue = ConvertUtils.ToHex32((uint)
                         SelectedBreakpoint.Address);
+                    ExecutionConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
                     break;
                 case BreakPointType.CPU_CYCLES:
@@ -139,6 +142,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
         CreatingBreakpoint = true;
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = State.IpSegmentedAddress.ToString();
+        ExecutionConditionExpression = null;
         MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
         MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
@@ -165,6 +169,9 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
+
+    [ObservableProperty]
+    private string? _executionConditionExpression;
 
     private string? _ioPortNumber = "0x0";
 
@@ -194,6 +201,12 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             if (!AddressAndValueParser.TryParseAddressString(ExecutionAddressValue, _state, out uint? executionAddress)) {
                 return;
             }
+            
+            // Compile condition expression if present
+            if (!TryCompileConditionWithErrorHandling(ExecutionConditionExpression, out Func<long, bool>? condition, out string? conditionExpression)) {
+                return;
+            }
+            
             BreakpointViewModel executionVm = AddAddressBreakpoint(
                 executionAddress.Value,
                 BreakPointType.CPU_EXECUTION_ADDRESS,
@@ -201,7 +214,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 () => {
                     PauseAndReportAddress(
                     ExecutionAddressValue);
-                }, null, ExecutionBreakpoint);
+                }, condition, ExecutionBreakpoint, conditionExpression);
             BreakpointCreated?.Invoke(executionVm);
         } else if (IsMemoryBreakpointSelected) {
             TryCreateMemoryBreakpointFromForm(CreateMemoryBreakpointAtAddress);
@@ -216,7 +229,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 false,
                 () => {
                     PauseAndReportCycles(CyclesValue.Value);
-                }, null, "Cycles breakpoint");
+                }, null, "Cycles breakpoint", null);
             BreakpointCreated?.Invoke(cyclesVm);
         } else if (IsInterruptBreakpointSelected) {
             if (!AddressAndValueParser.TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
@@ -228,7 +241,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 false,
                 () => {
                     PauseAndReportInterrupt(interruptNumber.Value);
-                }, null, "Interrupt breakpoint");
+                }, null, "Interrupt breakpoint", null);
             BreakpointCreated?.Invoke(interruptVm);
         } else if (IsIoPortBreakpointSelected) {
             if (!AddressAndValueParser.TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
@@ -240,7 +253,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 false,
                 () => {
                     PauseAndReportIoPort((ushort)ioPortNumber.Value);
-                }, null, "I/O Port breakpoint");
+                }, null, "I/O Port breakpoint", null);
             BreakpointCreated?.Invoke(ioPortVm);
         }
         CreatingBreakpoint = false;
@@ -254,7 +267,7 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             false,
             () => {
                 PauseAndReportAddressRange(MemoryBreakpointStartAddress, MemoryBreakpointEndAddress);
-            }, additionalTriggerCondition, MemoryRangeBreakpoint);
+            }, additionalTriggerCondition, MemoryRangeBreakpoint, null);
         BreakpointCreated?.Invoke(breakpointVm);
     }
 
@@ -303,6 +316,9 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
+        // Wait here to block the emulation thread until user resumes
+        // This ensures State.IP remains at the breakpoint location (e.g., INT instruction)
+        _pauseHandler.WaitIfPaused();
     }
 
     [RelayCommand]
@@ -359,10 +375,11 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             BreakPointType type,
             bool isRemovedOnTrigger,
             Action onReached,
-            Func<long, bool>? additionalTriggerCondition = null,
-            string comment = "") {
+            Func<long, bool>? additionalTriggerCondition,
+            string comment,
+            string? conditionExpression) {
         return AddAddressRangeBreakpoint(trigger, trigger, type, isRemovedOnTrigger, onReached,
-            additionalTriggerCondition, comment);
+            additionalTriggerCondition, comment, conditionExpression);
     }
 
     public BreakpointViewModel AddAddressRangeBreakpoint(
@@ -372,12 +389,13 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
             bool isRemovedOnTrigger,
             Action onReached,
             Func<long, bool>? additionalTriggerCondition,
-            string comment = "") {
+            string comment,
+            string? conditionExpression) {
         RemoveFirstIfEdited();
         var breakpointViewModel = new BreakpointViewModel(
                     this,
                     _emulatorBreakpointsManager,
-                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment);
+                    trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment, conditionExpression);
         AddBreakpointInternal(breakpointViewModel);
         return breakpointViewModel;
     }
@@ -475,16 +493,58 @@ public partial class BreakpointsViewModel : ViewModelWithMemoryBreakpoints {
                 break;
         }
 
+        // Compile condition expression if present (ignore errors for restore, just treat as unconditional)
+        string? conditionExpression = breakpointData.ConditionExpression;
+        TryCompileConditionWithErrorDisplay(conditionExpression, out Func<long, bool>? condition, out conditionExpression);
+
         BreakpointViewModel breakpointVm = AddAddressBreakpoint(
             breakpointData.Trigger,
             breakpointData.Type,
             false,
             onReached,
-            null,
-            ExecutionBreakpoint);
+            condition,
+            ExecutionBreakpoint,
+            conditionExpression);
 
         if (!breakpointData.IsEnabled) {
             breakpointVm.Disable();
+        }
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression and shows error if compilation fails.
+    /// Returns false if compilation fails, which can be used to abort the operation.
+    /// </summary>
+    /// <param name="expression">The condition expression to compile.</param>
+    /// <param name="condition">The compiled condition function, or null.</param>
+    /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
+    /// <returns>True if compilation succeeded or expression was empty, false if an error occurred.</returns>
+    private bool TryCompileConditionWithErrorHandling(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
+        
+        condition = result.Condition;
+        validatedExpression = result.ValidatedExpression;
+        
+        if (!result.Success && result.Error is not null) {
+            _uiDispatcher.Post(() => ShowError(result.Error));
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression and displays error but doesn't abort.
+    /// Used for restore operations where we want to continue even if one condition fails.
+    /// </summary>
+    private void TryCompileConditionWithErrorDisplay(string? expression, out Func<long, bool>? condition, out string? validatedExpression) {
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(expression);
+        
+        condition = result.Condition;
+        validatedExpression = result.ValidatedExpression;
+        
+        if (!result.Success && result.Error is not null) {
+            _uiDispatcher.Post(() => ShowError(result.Error));
         }
     }
 }

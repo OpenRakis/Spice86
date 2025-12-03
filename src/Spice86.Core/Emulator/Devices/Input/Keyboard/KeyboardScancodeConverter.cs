@@ -6,87 +6,97 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 
 /// <summary>
-/// Converts between KbdKey enum and keyboard scancodes for different code sets.
+/// Converts UI PhysicalKey to internal PcKeyboardKey and ultimately returns the corresponding
+/// scancode sequences for IBM Code Set 1.
 /// </summary>
 public class KeyboardScancodeConverter {
-    private static readonly FrozenDictionary<PhysicalKey, KbdKey> _keyToKbdKey = new Dictionary<PhysicalKey, KbdKey>() {
+    private static readonly FrozenDictionary<PhysicalKey, PcKeyboardKey> _keyToKbdKey = new Dictionary<PhysicalKey, PcKeyboardKey>() {
         // Number row
-        { PhysicalKey.Digit1, KbdKey.D1 }, { PhysicalKey.Digit2, KbdKey.D2 }, { PhysicalKey.Digit3, KbdKey.D3 },
-        { PhysicalKey.Digit4, KbdKey.D4 }, { PhysicalKey.Digit5, KbdKey.D5 }, { PhysicalKey.Digit6, KbdKey.D6 },
-        { PhysicalKey.Digit7, KbdKey.D7 }, { PhysicalKey.Digit8, KbdKey.D8 }, { PhysicalKey.Digit9, KbdKey.D9 },
-        { PhysicalKey.Digit0, KbdKey.D0 },
+        { PhysicalKey.Digit1, PcKeyboardKey.D1 }, { PhysicalKey.Digit2, PcKeyboardKey.D2 }, { PhysicalKey.Digit3, PcKeyboardKey.D3 },
+        { PhysicalKey.Digit4, PcKeyboardKey.D4 }, { PhysicalKey.Digit5, PcKeyboardKey.D5 }, { PhysicalKey.Digit6, PcKeyboardKey.D6 },
+        { PhysicalKey.Digit7, PcKeyboardKey.D7 }, { PhysicalKey.Digit8, PcKeyboardKey.D8 }, { PhysicalKey.Digit9, PcKeyboardKey.D9 },
+        { PhysicalKey.Digit0, PcKeyboardKey.D0 },
         
         // Letters
-        { PhysicalKey.Q, KbdKey.Q }, { PhysicalKey.W, KbdKey.W }, { PhysicalKey.E, KbdKey.E }, { PhysicalKey.R, KbdKey.R },
-        { PhysicalKey.T, KbdKey.T }, { PhysicalKey.Y, KbdKey.Y }, { PhysicalKey.U, KbdKey.U }, { PhysicalKey.I, KbdKey.I },
-        { PhysicalKey.O, KbdKey.O }, { PhysicalKey.P, KbdKey.P }, { PhysicalKey.A, KbdKey.A }, { PhysicalKey.S, KbdKey.S },
-        { PhysicalKey.D, KbdKey.D }, { PhysicalKey.F, KbdKey.F }, { PhysicalKey.G, KbdKey.G }, { PhysicalKey.H, KbdKey.H },
-        { PhysicalKey.J, KbdKey.J }, { PhysicalKey.K, KbdKey.K }, { PhysicalKey.L, KbdKey.L }, { PhysicalKey.Z, KbdKey.Z },
-        { PhysicalKey.X, KbdKey.X }, { PhysicalKey.C, KbdKey.C }, { PhysicalKey.V, KbdKey.V }, { PhysicalKey.B, KbdKey.B },
-        { PhysicalKey.N, KbdKey.N }, { PhysicalKey.M, KbdKey.M },
+        { PhysicalKey.Q, PcKeyboardKey.Q }, { PhysicalKey.W, PcKeyboardKey.W }, { PhysicalKey.E, PcKeyboardKey.E }, { PhysicalKey.R, PcKeyboardKey.R },
+        { PhysicalKey.T, PcKeyboardKey.T }, { PhysicalKey.Y, PcKeyboardKey.Y }, { PhysicalKey.U, PcKeyboardKey.U }, { PhysicalKey.I, PcKeyboardKey.I },
+        { PhysicalKey.O, PcKeyboardKey.O }, { PhysicalKey.P, PcKeyboardKey.P }, { PhysicalKey.A, PcKeyboardKey.A }, { PhysicalKey.S, PcKeyboardKey.S },
+        { PhysicalKey.D, PcKeyboardKey.D }, { PhysicalKey.F, PcKeyboardKey.F }, { PhysicalKey.G, PcKeyboardKey.G }, { PhysicalKey.H, PcKeyboardKey.H },
+        { PhysicalKey.J, PcKeyboardKey.J }, { PhysicalKey.K, PcKeyboardKey.K }, { PhysicalKey.L, PcKeyboardKey.L }, { PhysicalKey.Z, PcKeyboardKey.Z },
+        { PhysicalKey.X, PcKeyboardKey.X }, { PhysicalKey.C, PcKeyboardKey.C }, { PhysicalKey.V, PcKeyboardKey.V }, { PhysicalKey.B, PcKeyboardKey.B },
+        { PhysicalKey.N, PcKeyboardKey.N }, { PhysicalKey.M, PcKeyboardKey.M },
         
         // Function keys
-        { PhysicalKey.F1, KbdKey.F1 }, { PhysicalKey.F2, KbdKey.F2 }, { PhysicalKey.F3, KbdKey.F3 },
-        { PhysicalKey.F4, KbdKey.F4 }, { PhysicalKey.F5, KbdKey.F5 }, { PhysicalKey.F6, KbdKey.F6 },
-        { PhysicalKey.F7, KbdKey.F7 }, { PhysicalKey.F8, KbdKey.F8 }, { PhysicalKey.F9, KbdKey.F9 },
-        { PhysicalKey.F10, KbdKey.F10 }, { PhysicalKey.F11, KbdKey.F11 }, { PhysicalKey.F12, KbdKey.F12 },
+        { PhysicalKey.F1, PcKeyboardKey.F1 }, { PhysicalKey.F2, PcKeyboardKey.F2 }, { PhysicalKey.F3, PcKeyboardKey.F3 },
+        { PhysicalKey.F4, PcKeyboardKey.F4 }, { PhysicalKey.F5, PcKeyboardKey.F5 }, { PhysicalKey.F6, PcKeyboardKey.F6 },
+        { PhysicalKey.F7, PcKeyboardKey.F7 }, { PhysicalKey.F8, PcKeyboardKey.F8 }, { PhysicalKey.F9, PcKeyboardKey.F9 },
+        { PhysicalKey.F10, PcKeyboardKey.F10 }, { PhysicalKey.F11, PcKeyboardKey.F11 }, { PhysicalKey.F12, PcKeyboardKey.F12 },
         
         // Special keys
-        { PhysicalKey.Escape, KbdKey.Escape }, { PhysicalKey.Tab, KbdKey.Tab },
-        { PhysicalKey.Backspace, KbdKey.Backspace }, { PhysicalKey.Enter, KbdKey.Enter },
-        { PhysicalKey.Space, KbdKey.Space },
+        { PhysicalKey.Escape, PcKeyboardKey.Escape }, { PhysicalKey.Tab, PcKeyboardKey.Tab },
+        { PhysicalKey.Backspace, PcKeyboardKey.Backspace }, { PhysicalKey.Enter, PcKeyboardKey.Enter },
+        { PhysicalKey.Space, PcKeyboardKey.Space },
         
         // Modifier keys
-        { PhysicalKey.AltLeft, KbdKey.LeftAlt }, { PhysicalKey.AltRight, KbdKey.RightAlt },
-        { PhysicalKey.ControlLeft, KbdKey.LeftCtrl }, { PhysicalKey.ControlRight, KbdKey.RightCtrl },
-        { PhysicalKey.ShiftLeft, KbdKey.LeftShift }, { PhysicalKey.ShiftRight, KbdKey.RightShift },
-        { PhysicalKey.MetaLeft, KbdKey.LeftGui }, { PhysicalKey.MetaRight, KbdKey.RightGui },
+        { PhysicalKey.AltLeft, PcKeyboardKey.LeftAlt }, { PhysicalKey.AltRight, PcKeyboardKey.RightAlt },
+        { PhysicalKey.ControlLeft, PcKeyboardKey.LeftCtrl }, { PhysicalKey.ControlRight, PcKeyboardKey.RightCtrl },
+        { PhysicalKey.ShiftLeft, PcKeyboardKey.LeftShift }, { PhysicalKey.ShiftRight, PcKeyboardKey.RightShift },
+        { PhysicalKey.MetaLeft, PcKeyboardKey.LeftGui }, { PhysicalKey.MetaRight, PcKeyboardKey.RightGui },
         
         // Lock keys
-        { PhysicalKey.CapsLock, KbdKey.CapsLock }, { PhysicalKey.ScrollLock, KbdKey.ScrollLock },
-        { PhysicalKey.NumLock, KbdKey.NumLock },
+        { PhysicalKey.CapsLock, PcKeyboardKey.CapsLock }, { PhysicalKey.ScrollLock, PcKeyboardKey.ScrollLock },
+        { PhysicalKey.NumLock, PcKeyboardKey.NumLock },
         
         // Punctuation
-        { PhysicalKey.Backquote, KbdKey.Grave }, { PhysicalKey.Minus, KbdKey.Minus },
-        { PhysicalKey.Equal, KbdKey.Equals }, { PhysicalKey.Backslash, KbdKey.Backslash },
-        { PhysicalKey.BracketLeft, KbdKey.LeftBracket },
-        { PhysicalKey.BracketRight, KbdKey.RightBracket },
-        { PhysicalKey.Semicolon, KbdKey.Semicolon }, { PhysicalKey.Quote, KbdKey.Quote },
-        { PhysicalKey.IntlBackslash, KbdKey.Oem102 }, { PhysicalKey.Period, KbdKey.Period },
-        { PhysicalKey.Comma, KbdKey.Comma }, { PhysicalKey.Slash, KbdKey.Slash },
+        { PhysicalKey.Backquote, PcKeyboardKey.Grave }, { PhysicalKey.Minus, PcKeyboardKey.Minus },
+        { PhysicalKey.Equal, PcKeyboardKey.Equals }, { PhysicalKey.Backslash, PcKeyboardKey.Backslash },
+        { PhysicalKey.BracketLeft, PcKeyboardKey.LeftBracket },
+        { PhysicalKey.BracketRight, PcKeyboardKey.RightBracket },
+        { PhysicalKey.Semicolon, PcKeyboardKey.Semicolon }, { PhysicalKey.Quote, PcKeyboardKey.Quote },
+        { PhysicalKey.IntlBackslash, PcKeyboardKey.Oem102 }, { PhysicalKey.Period, PcKeyboardKey.Period },
+        { PhysicalKey.Comma, PcKeyboardKey.Comma }, { PhysicalKey.Slash, PcKeyboardKey.Slash },
         
         // Navigation keys
-        { PhysicalKey.PrintScreen, KbdKey.PrintScreen }, { PhysicalKey.Pause, KbdKey.Pause },
-        { PhysicalKey.Insert, KbdKey.Insert }, { PhysicalKey.Home, KbdKey.Home },
-        { PhysicalKey.PageUp, KbdKey.PageUp }, { PhysicalKey.Delete, KbdKey.Delete },
-        { PhysicalKey.End, KbdKey.End }, { PhysicalKey.PageDown, KbdKey.PageDown },
-        { PhysicalKey.ArrowLeft, KbdKey.Left }, { PhysicalKey.ArrowUp, KbdKey.Up },
-        { PhysicalKey.ArrowDown, KbdKey.Down }, { PhysicalKey.ArrowRight, KbdKey.Right },
+        { PhysicalKey.PrintScreen, PcKeyboardKey.PrintScreen }, { PhysicalKey.Pause, PcKeyboardKey.Pause },
+        { PhysicalKey.Insert, PcKeyboardKey.Insert }, { PhysicalKey.Home, PcKeyboardKey.Home },
+        { PhysicalKey.PageUp, PcKeyboardKey.PageUp }, { PhysicalKey.Delete, PcKeyboardKey.Delete },
+        { PhysicalKey.End, PcKeyboardKey.End }, { PhysicalKey.PageDown, PcKeyboardKey.PageDown },
+        { PhysicalKey.ArrowLeft, PcKeyboardKey.Left }, { PhysicalKey.ArrowUp, PcKeyboardKey.Up },
+        { PhysicalKey.ArrowDown, PcKeyboardKey.Down }, { PhysicalKey.ArrowRight, PcKeyboardKey.Right },
         
         // Keypad
-        { PhysicalKey.NumPad0, KbdKey.Kp0 }, { PhysicalKey.NumPad1, KbdKey.Kp1 },
-        { PhysicalKey.NumPad2, KbdKey.Kp2 }, { PhysicalKey.NumPad3, KbdKey.Kp3 },
-        { PhysicalKey.NumPad4, KbdKey.Kp4 }, { PhysicalKey.NumPad5, KbdKey.Kp5 },
-        { PhysicalKey.NumPad6, KbdKey.Kp6 }, { PhysicalKey.NumPad7, KbdKey.Kp7 },
-        { PhysicalKey.NumPad8, KbdKey.Kp8 }, { PhysicalKey.NumPad9, KbdKey.Kp9 },
-        { PhysicalKey.NumPadDivide, KbdKey.KpDivide }, { PhysicalKey.NumPadMultiply, KbdKey.KpMultiply },
-        { PhysicalKey.NumPadSubtract, KbdKey.KpMinus }, { PhysicalKey.NumPadAdd, KbdKey.KpPlus },
-        { PhysicalKey.NumPadEnter, KbdKey.KpEnter }, { PhysicalKey.NumPadDecimal, KbdKey.KpPeriod }
+        { PhysicalKey.NumPad0, PcKeyboardKey.Kp0 }, { PhysicalKey.NumPad1, PcKeyboardKey.Kp1 },
+        { PhysicalKey.NumPad2, PcKeyboardKey.Kp2 }, { PhysicalKey.NumPad3, PcKeyboardKey.Kp3 },
+        { PhysicalKey.NumPad4, PcKeyboardKey.Kp4 }, { PhysicalKey.NumPad5, PcKeyboardKey.Kp5 },
+        { PhysicalKey.NumPad6, PcKeyboardKey.Kp6 }, { PhysicalKey.NumPad7, PcKeyboardKey.Kp7 },
+        { PhysicalKey.NumPad8, PcKeyboardKey.Kp8 }, { PhysicalKey.NumPad9, PcKeyboardKey.Kp9 },
+        { PhysicalKey.NumPadDivide, PcKeyboardKey.KpDivide }, { PhysicalKey.NumPadMultiply, PcKeyboardKey.KpMultiply },
+        { PhysicalKey.NumPadSubtract, PcKeyboardKey.KpMinus }, { PhysicalKey.NumPadAdd, PcKeyboardKey.KpPlus },
+        { PhysicalKey.NumPadEnter, PcKeyboardKey.KpEnter }, { PhysicalKey.NumPadDecimal, PcKeyboardKey.KpPeriod }
     }.ToFrozenDictionary();
 
     /// <summary>
-    /// Gets the KbdKey equivalent for an Avalonia Key
+    /// Converts a specified physical key to its corresponding PC keyboard key value.
     /// </summary>
-    public KbdKey ConvertToKbdKey(PhysicalKey key) {
-        return _keyToKbdKey.TryGetValue(key, out KbdKey kbdKey) ? kbdKey : KbdKey.None;
+    /// <param name="key">The physical key to convert to a PC keyboard key.</param>
+    /// <returns>The corresponding <see cref="PcKeyboardKey"/> value if the mapping exists; otherwise, <see
+    /// cref="PcKeyboardKey.None"/>.</returns>
+    public PcKeyboardKey ConvertToKbdKey(PhysicalKey key) {
+        return _keyToKbdKey.TryGetValue(key, out PcKeyboardKey kbdKey) ? kbdKey : PcKeyboardKey.None;
     }
 
     /// <summary>
-    /// Gets all scancodes for a key based on the specified code set
-    /// Equivalent to DOSBox KEYBOARD_GetScanCode1/2/3 functions
+    /// Gets the sequence of scancodes corresponding to the specified PC keyboard key, key state, and scancode set.
     /// </summary>
-    public List<byte> GetScancodes(KbdKey keyType, bool isPressed, byte codeSet) {
-        if (keyType == KbdKey.None) {
+    /// <param name="keyType">The keyboard key for which to retrieve scancodes. Must not be PcKeyboardKey.None.</param>
+    /// <param name="isPressed">A value indicating whether the key is being pressed (<see langword="true"/>) or released (<see
+    /// langword="false"/>).</param>
+    /// <param name="codeSet">The scancode set to use. Valid values are 1, 2, or 3. If an unsupported value is specified, set 1 is used by
+    /// default.</param>
+    /// <returns>A list of bytes representing the scancode sequence for the specified key and state. Returns an empty list if
+    /// <paramref name="keyType"/> is PcKeyboardKey.None.</returns>
+    public List<byte> GetScancodes(PcKeyboardKey keyType, bool isPressed, byte codeSet) {
+        if (keyType == PcKeyboardKey.None) {
             return [];
         }
 
@@ -98,132 +108,131 @@ public class KeyboardScancodeConverter {
         };
     }
 
-    public List<byte> GetScanCode1(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode1(PcKeyboardKey keyType, bool isPressed) {
         bool extend = false;
 
         byte code;
-        // This table directly matches the DOSBox scancode table in keyboard_scancodes.cpp
         switch (keyType) {
-            case KbdKey.Escape: code = 0x01; break;
-            case KbdKey.D1: code = 0x02; break;
-            case KbdKey.D2: code = 0x03; break;
-            case KbdKey.D3: code = 0x04; break;
-            case KbdKey.D4: code = 0x05; break;
-            case KbdKey.D5: code = 0x06; break;
-            case KbdKey.D6: code = 0x07; break;
-            case KbdKey.D7: code = 0x08; break;
-            case KbdKey.D8: code = 0x09; break;
-            case KbdKey.D9: code = 0x0A; break;
-            case KbdKey.D0: code = 0x0B; break;
+            case PcKeyboardKey.Escape: code = (byte)ScanCode1.Escape; break;
+            case PcKeyboardKey.D1: code = (byte)ScanCode1.D1; break;
+            case PcKeyboardKey.D2: code = (byte)ScanCode1.D2; break;
+            case PcKeyboardKey.D3: code = (byte)ScanCode1.D3; break;
+            case PcKeyboardKey.D4: code = (byte)ScanCode1.D4; break;
+            case PcKeyboardKey.D5: code = (byte)ScanCode1.D5; break;
+            case PcKeyboardKey.D6: code = (byte)ScanCode1.D6; break;
+            case PcKeyboardKey.D7: code = (byte)ScanCode1.D7; break;
+            case PcKeyboardKey.D8: code = (byte)ScanCode1.D8; break;
+            case PcKeyboardKey.D9: code = (byte)ScanCode1.D9; break;
+            case PcKeyboardKey.D0: code = (byte)ScanCode1.D0; break;
 
-            case KbdKey.Minus: code = 0x0C; break;
-            case KbdKey.Equals: code = 0x0D; break;
-            case KbdKey.Backspace: code = 0x0E; break;
-            case KbdKey.Tab: code = 0x0F; break;
+            case PcKeyboardKey.Minus: code = (byte)ScanCode1.Minus; break;
+            case PcKeyboardKey.Equals: code = (byte)ScanCode1.Equals; break;
+            case PcKeyboardKey.Backspace: code = (byte)ScanCode1.Backspace; break;
+            case PcKeyboardKey.Tab: code = (byte)ScanCode1.Tab; break;
 
-            case KbdKey.Q: code = 0x10; break;
-            case KbdKey.W: code = 0x11; break;
-            case KbdKey.E: code = 0x12; break;
-            case KbdKey.R: code = 0x13; break;
-            case KbdKey.T: code = 0x14; break;
-            case KbdKey.Y: code = 0x15; break;
-            case KbdKey.U: code = 0x16; break;
-            case KbdKey.I: code = 0x17; break;
-            case KbdKey.O: code = 0x18; break;
-            case KbdKey.P: code = 0x19; break;
+            case PcKeyboardKey.Q: code = (byte)ScanCode1.Q; break;
+            case PcKeyboardKey.W: code = (byte)ScanCode1.W; break;
+            case PcKeyboardKey.E: code = (byte)ScanCode1.E; break;
+            case PcKeyboardKey.R: code = (byte)ScanCode1.R; break;
+            case PcKeyboardKey.T: code = (byte)ScanCode1.T; break;
+            case PcKeyboardKey.Y: code = (byte)ScanCode1.Y; break;
+            case PcKeyboardKey.U: code = (byte)ScanCode1.U; break;
+            case PcKeyboardKey.I: code = (byte)ScanCode1.I; break;
+            case PcKeyboardKey.O: code = (byte)ScanCode1.O; break;
+            case PcKeyboardKey.P: code = (byte)ScanCode1.P; break;
 
-            case KbdKey.LeftBracket: code = 0x1A; break;
-            case KbdKey.RightBracket: code = 0x1B; break;
-            case KbdKey.Enter: code = 0x1C; break;
-            case KbdKey.LeftCtrl: code = 0x1D; break;
+            case PcKeyboardKey.LeftBracket: code = (byte)ScanCode1.LeftBracket; break;
+            case PcKeyboardKey.RightBracket: code = (byte)ScanCode1.RightBracket; break;
+            case PcKeyboardKey.Enter: code = (byte)ScanCode1.Enter; break;
+            case PcKeyboardKey.LeftCtrl: code = (byte)ScanCode1.LeftCtrl; break;
 
-            case KbdKey.A: code = 0x1E; break;
-            case KbdKey.S: code = 0x1F; break;
-            case KbdKey.D: code = 0x20; break;
-            case KbdKey.F: code = 0x21; break;
-            case KbdKey.G: code = 0x22; break;
-            case KbdKey.H: code = 0x23; break;
-            case KbdKey.J: code = 0x24; break;
-            case KbdKey.K: code = 0x25; break;
-            case KbdKey.L: code = 0x26; break;
+            case PcKeyboardKey.A: code = (byte)ScanCode1.A; break;
+            case PcKeyboardKey.S: code = (byte)ScanCode1.S; break;
+            case PcKeyboardKey.D: code = (byte)ScanCode1.D; break;
+            case PcKeyboardKey.F: code = (byte)ScanCode1.F; break;
+            case PcKeyboardKey.G: code = (byte)ScanCode1.G; break;
+            case PcKeyboardKey.H: code = (byte)ScanCode1.H; break;
+            case PcKeyboardKey.J: code = (byte)ScanCode1.J; break;
+            case PcKeyboardKey.K: code = (byte)ScanCode1.K; break;
+            case PcKeyboardKey.L: code = (byte)ScanCode1.L; break;
 
-            case KbdKey.Semicolon: code = 0x27; break;
-            case KbdKey.Quote: code = 0x28; break;
-            case KbdKey.Grave: code = 0x29; break;
-            case KbdKey.LeftShift: code = 0x2A; break;
-            case KbdKey.Backslash: code = 0x2B; break;
+            case PcKeyboardKey.Semicolon: code = (byte)ScanCode1.Semicolon; break;
+            case PcKeyboardKey.Quote: code = (byte)ScanCode1.Quote; break;
+            case PcKeyboardKey.Grave: code = (byte)ScanCode1.Grave; break;
+            case PcKeyboardKey.LeftShift: code = (byte)ScanCode1.LeftShift; break;
+            case PcKeyboardKey.Backslash: code = (byte)ScanCode1.Backslash; break;
 
-            case KbdKey.Z: code = 0x2C; break;
-            case KbdKey.X: code = 0x2D; break;
-            case KbdKey.C: code = 0x2E; break;
-            case KbdKey.V: code = 0x2F; break;
-            case KbdKey.B: code = 0x30; break;
-            case KbdKey.N: code = 0x31; break;
-            case KbdKey.M: code = 0x32; break;
+            case PcKeyboardKey.Z: code = (byte)ScanCode1.Z; break;
+            case PcKeyboardKey.X: code = (byte)ScanCode1.X; break;
+            case PcKeyboardKey.C: code = (byte)ScanCode1.C; break;
+            case PcKeyboardKey.V: code = (byte)ScanCode1.V; break;
+            case PcKeyboardKey.B: code = (byte)ScanCode1.B; break;
+            case PcKeyboardKey.N: code = (byte)ScanCode1.N; break;
+            case PcKeyboardKey.M: code = (byte)ScanCode1.M; break;
 
-            case KbdKey.Comma: code = 0x33; break;
-            case KbdKey.Period: code = 0x34; break;
-            case KbdKey.Slash: code = 0x35; break;
-            case KbdKey.RightShift: code = 0x36; break;
-            case KbdKey.KpMultiply: code = 0x37; break;
-            case KbdKey.LeftAlt: code = 0x38; break;
-            case KbdKey.Space: code = 0x39; break;
-            case KbdKey.CapsLock: code = 0x3A; break;
+            case PcKeyboardKey.Comma: code = (byte)ScanCode1.Comma; break;
+            case PcKeyboardKey.Period: code = (byte)ScanCode1.Period; break;
+            case PcKeyboardKey.Slash: code = (byte)ScanCode1.Slash; break;
+            case PcKeyboardKey.RightShift: code = (byte)ScanCode1.RightShift; break;
+            case PcKeyboardKey.KpMultiply: code = (byte)ScanCode1.KpMultiply; break;
+            case PcKeyboardKey.LeftAlt: code = (byte)ScanCode1.LeftAlt; break;
+            case PcKeyboardKey.Space: code = (byte)ScanCode1.Space; break;
+            case PcKeyboardKey.CapsLock: code = (byte)ScanCode1.CapsLock; break;
 
-            case KbdKey.F1: code = 0x3B; break;
-            case KbdKey.F2: code = 0x3C; break;
-            case KbdKey.F3: code = 0x3D; break;
-            case KbdKey.F4: code = 0x3E; break;
-            case KbdKey.F5: code = 0x3F; break;
-            case KbdKey.F6: code = 0x40; break;
-            case KbdKey.F7: code = 0x41; break;
-            case KbdKey.F8: code = 0x42; break;
-            case KbdKey.F9: code = 0x43; break;
-            case KbdKey.F10: code = 0x44; break;
+            case PcKeyboardKey.F1: code = (byte)ScanCode1.F1; break;
+            case PcKeyboardKey.F2: code = (byte)ScanCode1.F2; break;
+            case PcKeyboardKey.F3: code = (byte)ScanCode1.F3; break;
+            case PcKeyboardKey.F4: code = (byte)ScanCode1.F4; break;
+            case PcKeyboardKey.F5: code = (byte)ScanCode1.F5; break;
+            case PcKeyboardKey.F6: code = (byte)ScanCode1.F6; break;
+            case PcKeyboardKey.F7: code = (byte)ScanCode1.F7; break;
+            case PcKeyboardKey.F8: code = (byte)ScanCode1.F8; break;
+            case PcKeyboardKey.F9: code = (byte)ScanCode1.F9; break;
+            case PcKeyboardKey.F10: code = (byte)ScanCode1.F10; break;
 
-            case KbdKey.NumLock: code = 0x45; break;
-            case KbdKey.ScrollLock: code = 0x46; break;
+            case PcKeyboardKey.NumLock: code = (byte)ScanCode1.NumLock; break;
+            case PcKeyboardKey.ScrollLock: code = (byte)ScanCode1.ScrollLock; break;
 
-            case KbdKey.Kp7: code = 0x47; break;
-            case KbdKey.Kp8: code = 0x48; break;
-            case KbdKey.Kp9: code = 0x49; break;
-            case KbdKey.KpMinus: code = 0x4A; break;
-            case KbdKey.Kp4: code = 0x4B; break;
-            case KbdKey.Kp5: code = 0x4C; break;
-            case KbdKey.Kp6: code = 0x4D; break;
-            case KbdKey.KpPlus: code = 0x4E; break;
-            case KbdKey.Kp1: code = 0x4F; break;
-            case KbdKey.Kp2: code = 0x50; break;
-            case KbdKey.Kp3: code = 0x51; break;
-            case KbdKey.Kp0: code = 0x52; break;
-            case KbdKey.KpPeriod: code = 0x53; break;
+            case PcKeyboardKey.Kp7: code = (byte)ScanCode1.Kp7; break;
+            case PcKeyboardKey.Kp8: code = (byte)ScanCode1.Kp8; break;
+            case PcKeyboardKey.Kp9: code = (byte)ScanCode1.Kp9; break;
+            case PcKeyboardKey.KpMinus: code = (byte)ScanCode1.KpMinus; break;
+            case PcKeyboardKey.Kp4: code = (byte)ScanCode1.Kp4; break;
+            case PcKeyboardKey.Kp5: code = (byte)ScanCode1.Kp5; break;
+            case PcKeyboardKey.Kp6: code = (byte)ScanCode1.Kp6; break;
+            case PcKeyboardKey.KpPlus: code = (byte)ScanCode1.KpPlus; break;
+            case PcKeyboardKey.Kp1: code = (byte)ScanCode1.Kp1; break;
+            case PcKeyboardKey.Kp2: code = (byte)ScanCode1.Kp2; break;
+            case PcKeyboardKey.Kp3: code = (byte)ScanCode1.Kp3; break;
+            case PcKeyboardKey.Kp0: code = (byte)ScanCode1.Kp0; break;
+            case PcKeyboardKey.KpPeriod: code = (byte)ScanCode1.KpPeriod; break;
 
-            case KbdKey.Oem102: code = 0x56; break;
-            case KbdKey.F11: code = 0x57; break;
-            case KbdKey.F12: code = 0x58; break;
+            case PcKeyboardKey.Oem102: code = (byte)ScanCode1.Oem102; break;
+            case PcKeyboardKey.F11: code = (byte)ScanCode1.F11; break;
+            case PcKeyboardKey.F12: code = (byte)ScanCode1.F12; break;
 
-            case KbdKey.Abnt1: code = 0x73; break;
+            case PcKeyboardKey.Abnt1: code = (byte)ScanCode1.Abnt1; break;
 
             // Extended keys
-            case KbdKey.KpEnter: extend = true; code = 0x1C; break;
-            case KbdKey.RightCtrl: extend = true; code = 0x1D; break;
-            case KbdKey.KpDivide: extend = true; code = 0x35; break;
-            case KbdKey.RightAlt: extend = true; code = 0x38; break;
-            case KbdKey.Home: extend = true; code = 0x47; break;
-            case KbdKey.Up: extend = true; code = 0x48; break;
-            case KbdKey.PageUp: extend = true; code = 0x49; break;
-            case KbdKey.Left: extend = true; code = 0x4B; break;
-            case KbdKey.Right: extend = true; code = 0x4D; break;
-            case KbdKey.End: extend = true; code = 0x4F; break;
-            case KbdKey.Down: extend = true; code = 0x50; break;
-            case KbdKey.PageDown: extend = true; code = 0x51; break;
-            case KbdKey.Insert: extend = true; code = 0x52; break;
-            case KbdKey.Delete: extend = true; code = 0x53; break;
-            case KbdKey.LeftGui: extend = true; code = 0x5B; break;
-            case KbdKey.RightGui: extend = true; code = 0x5C; break;
+            case PcKeyboardKey.KpEnter: extend = true; code = (byte)ScanCode1.Enter; break;
+            case PcKeyboardKey.RightCtrl: extend = true; code = (byte)ScanCode1.LeftCtrl; break;
+            case PcKeyboardKey.KpDivide: extend = true; code = (byte)ScanCode1.Slash; break;
+            case PcKeyboardKey.RightAlt: extend = true; code = (byte)ScanCode1.LeftAlt; break;
+            case PcKeyboardKey.Home: extend = true; code = (byte)ScanCode1.Kp7; break;
+            case PcKeyboardKey.Up: extend = true; code = (byte)ScanCode1.Kp8; break;
+            case PcKeyboardKey.PageUp: extend = true; code = (byte)ScanCode1.Kp9; break;
+            case PcKeyboardKey.Left: extend = true; code = (byte)ScanCode1.Kp4; break;
+            case PcKeyboardKey.Right: extend = true; code = (byte)ScanCode1.Kp6; break;
+            case PcKeyboardKey.End: extend = true; code = (byte)ScanCode1.Kp1; break;
+            case PcKeyboardKey.Down: extend = true; code = (byte)ScanCode1.Kp2; break;
+            case PcKeyboardKey.PageDown: extend = true; code = (byte)ScanCode1.Kp3; break;
+            case PcKeyboardKey.Insert: extend = true; code = (byte)ScanCode1.Kp0; break;
+            case PcKeyboardKey.Delete: extend = true; code = (byte)ScanCode1.KpPeriod; break;
+            case PcKeyboardKey.LeftGui: extend = true; code = (byte)ScanCode1.LeftGui; break;
+            case PcKeyboardKey.RightGui: extend = true; code = (byte)ScanCode1.RightGui; break;
 
             // Special cases
-            case KbdKey.Pause:
+            case PcKeyboardKey.Pause:
                 if (isPressed) {
                     // Pause key gets released as soon as it is pressed
                     return [
@@ -233,7 +242,7 @@ public class KeyboardScancodeConverter {
                 }
                 return [];
 
-            case KbdKey.PrintScreen:
+            case PcKeyboardKey.PrintScreen:
                 return [
                     0xE0,
                     (byte)(0x2A | (isPressed ? 0 : 0x80)),
@@ -266,7 +275,7 @@ public class KeyboardScancodeConverter {
     /// which never gained widespread adoption. Most DOS programs use scan code set 1 (XT/AT compatible).
     /// This method falls back to scan code set 1 for compatibility.
     /// </remarks>
-    public List<byte> GetScanCode2(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode2(PcKeyboardKey keyType, bool isPressed) {
         return GetScanCode1(keyType, isPressed); // Fallback to set 1
     }
 
@@ -281,7 +290,7 @@ public class KeyboardScancodeConverter {
     /// and never became common in personal computers. Most DOS programs use scan code set 1 (XT/AT compatible).
     /// This method falls back to scan code set 1 for compatibility.
     /// </remarks>
-    public List<byte> GetScanCode3(KbdKey keyType, bool isPressed) {
+    public List<byte> GetScanCode3(PcKeyboardKey keyType, bool isPressed) {
         return GetScanCode1(keyType, isPressed); // Fallback to set 1
     }
 }

@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -29,6 +30,7 @@ using System.Diagnostics.CodeAnalysis;
 /// </summary>
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
+    private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
@@ -90,6 +92,12 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     [ObservableProperty]
     private State _state;
+    
+    [ObservableProperty]
+    private bool _isCreatingBreakpoint;
+    
+    [ObservableProperty]
+    private string? _breakpointCondition;
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
@@ -107,6 +115,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _memory = memory;
         _state = state;
         _pauseHandler = pauseHandler;
+        _conditionService = new BreakpointConditionService(state, memory);
         _instructionsDecoder = new InstructionsDecoder(memory, functionsInformation, breakpointsViewModel);
         IsPaused = pauseHandler.IsPaused;
         _canCloseTab = canCloseTab;
@@ -414,6 +423,58 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _uiDispatcher.Post(() => {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
+    }
+
+    /// <summary>
+    /// Creates an execution breakpoint at the specified address with an optional condition.
+    /// </summary>
+    /// <param name="debuggerLine">The debugger line where the breakpoint should be created.</param>
+    /// <param name="conditionExpression">Optional condition expression for the breakpoint.</param>
+    public void CreateExecutionBreakpointWithCondition(DebuggerLineViewModel debuggerLine, string? conditionExpression) {
+        if (debuggerLine.Breakpoint != null) {
+            return;
+        }
+
+        string message = $"Execution breakpoint was reached at address {debuggerLine.SegmentedAddress}.";
+        
+        // Compile condition expression if present
+        Func<long, bool>? condition = TryCompileCondition(conditionExpression, out string? validatedExpression);
+        conditionExpression = validatedExpression;
+
+        _breakpointsViewModel.AddAddressBreakpoint(
+            debuggerLine.Address, 
+            Shared.Emulator.VM.Breakpoint.BreakPointType.CPU_EXECUTION_ADDRESS, 
+            false, 
+            () => {
+                Pause(message);
+            }, 
+            condition, 
+            message, 
+            conditionExpression);
+    }
+    
+    /// <summary>
+    /// Attempts to compile a condition expression for breakpoint evaluation.
+    /// </summary>
+    /// <param name="conditionExpression">The condition expression to compile.</param>
+    /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
+    /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
+    private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
+        BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(conditionExpression);
+        
+        validatedExpression = result.ValidatedExpression;
+        
+        if (!result.Success && result.Error is not null) {
+            LogConditionCompilationWarning(result.Error, conditionExpression);
+        }
+        
+        return result.Condition;
+    }
+    
+    private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+            _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+        }
     }
 
     /// <summary>

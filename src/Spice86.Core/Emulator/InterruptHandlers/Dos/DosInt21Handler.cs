@@ -649,6 +649,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <remarks>
     /// TODO: Add check for Ctrl-C and Ctrl-Break in STDIN, and call INT23H if it happens.
     /// </remarks>
+    /// TODO: bugged! inline ASM maybe..does not WAIT for the keyboard...
     public void BufferedInput() {
         uint address = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
@@ -902,6 +903,23 @@ public class DosInt21Handler : InterruptHandler {
             // INVALID MEMORY BLOCK ADDRESS
             State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
         }
+    }
+
+    /// <summary>
+    /// Sets the current Program Segment Prefix (PSP) segment. Function 50H. <br/>
+    /// </summary>
+    /// <remarks>
+    /// Input: BX = new PSP segment value. <br/>
+    /// Used by (for example) Day of the Tentacle.
+    /// </remarks>
+    /// <returns>
+    /// None.
+    /// </returns>
+    public void SetCurrentPsp() {
+        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+            LoggerService.Verbose("SET CURRENT PSP: {PspSegment}", ConvertUtils.ToHex16(State.BX));
+        }
+        _dosPspTracker.SetCurrentPspSegment(State.BX);
     }
 
     /// <summary>
@@ -1220,14 +1238,6 @@ public class DosInt21Handler : InterruptHandler {
         }
         State.ES = segment;
         State.BX = offset;
-    }
-
-    /// <summary>
-    /// Sets the current Program Segment Prefix (PSP) segment in the <see cref="DosSwappableDataArea"/>.
-    /// </summary>
-    /// <remarks>Used by (for example) Day of the Tentacle.</remarks>
-    public void SetCurrentPsp() {
-        _dosPspTracker.SetCurrentPspSegment(State.BX);
     }
 
     /// <summary>

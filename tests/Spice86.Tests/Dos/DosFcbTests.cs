@@ -27,9 +27,11 @@ public class DosFcbTests {
         
         // Create backing memory
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
+        AddressReadWriteBreakpoints addressReadWriteBreakpoints = new AddressReadWriteBreakpoints();
+        Memory memory = new(addressReadWriteBreakpoints, ram, new(), initializeResetVector: true);
         Core.Emulator.VM.PauseHandler pauseHandler = new(_loggerService);
         State cpuState = new(CpuModel.INTEL_80286);
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState);
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, cpuState, memory, new(), new());
         A20Gate a20Gate = new(enabled: false);
         _memory = new Memory(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
             initializeResetVector: true);

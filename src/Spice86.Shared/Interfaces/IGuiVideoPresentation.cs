@@ -1,5 +1,4 @@
 ﻿namespace Spice86.Shared.Interfaces;
-
 using Spice86.Shared.Emulator.Video;
 
 /// <summary>
