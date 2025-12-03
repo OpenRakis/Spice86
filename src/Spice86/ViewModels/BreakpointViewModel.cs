@@ -88,6 +88,11 @@ public partial class BreakpointViewModel : ViewModelBase {
 
     [ObservableProperty]
     private string? _comment;
+    
+    /// <summary>
+    /// Gets the condition expression for this breakpoint, if any.
+    /// </summary>
+    public string? ConditionExpression => _conditionExpression;
 
     private BreakPoint GetOrCreateBreakpoint(Func<long, bool>? additionalTriggerCondition) {
         AddressBreakPoint breakPoint = CreateBreakpointWithAddressAndCondition(Address, additionalTriggerCondition);

@@ -57,6 +57,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 case BreakPointType.CPU_EXECUTION_ADDRESS:
                     ExecutionAddressValue = ConvertUtils.ToHex32((uint)
                         SelectedBreakpoint.Address);
+                    ExecutionConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Execution");
                     break;
                 case BreakPointType.CPU_CYCLES:

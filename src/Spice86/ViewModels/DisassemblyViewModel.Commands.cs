@@ -173,6 +173,11 @@ public partial class DisassemblyViewModel {
             return;
         }
         
+        // If editing an existing breakpoint, remove it first
+        if (_pendingBreakpointDebuggerLine.Breakpoint != null) {
+            _breakpointsViewModel.RemoveBreakpointInternal(_pendingBreakpointDebuggerLine.Breakpoint);
+        }
+        
         CreateExecutionBreakpointWithCondition(_pendingBreakpointDebuggerLine, BreakpointCondition);
         _pendingBreakpointDebuggerLine = null;
         IsCreatingBreakpoint = false;
@@ -184,6 +189,16 @@ public partial class DisassemblyViewModel {
         IsCreatingBreakpoint = false;
     }
 
+    [RelayCommand]
+    private void EditExecutionBreakpoint(DebuggerLineViewModel debuggerLine) {
+        if (debuggerLine.Breakpoint != null) {
+            _pendingBreakpointDebuggerLine = debuggerLine;
+            BreakpointAddress = debuggerLine.SegmentedAddress.ToString();
+            BreakpointCondition = debuggerLine.Breakpoint.ConditionExpression;
+            IsCreatingBreakpoint = true;
+        }
+    }
+    
     [RelayCommand]
     private void RemoveExecutionBreakpointHere(DebuggerLineViewModel debuggerLine) {
         if (debuggerLine.Breakpoint != null) {

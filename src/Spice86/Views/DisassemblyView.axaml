@@ -133,6 +133,10 @@
                                   Command="{Binding CreateExecutionBreakpointWithDialogCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine}"
                                   IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNull}}" />
+                        <MenuItem Header="Edit breakpoint"
+                                  Command="{Binding EditExecutionBreakpointCommand}"
+                                  CommandParameter="{Binding SelectedDebuggerLine}"
+                                  IsVisible="{Binding SelectedDebuggerLine.Breakpoint, FallbackValue=null, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <MenuItem Header="Remove breakpoint"
                                   Command="{Binding RemoveExecutionBreakpointHereCommand}"
                                   CommandParameter="{Binding SelectedDebuggerLine}"
@@ -185,6 +189,15 @@
                                         Background="Transparent"
                                         Tapped="OnBreakpointClicked"
                                         Cursor="Hand">
+                                    <ToolTip.Tip>
+                                        <StackPanel IsVisible="{Binding Breakpoint, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <TextBlock Text="Breakpoint" FontWeight="Bold" />
+                                            <TextBlock Text="{Binding Breakpoint.ConditionExpression, StringFormat='Condition: {0}'}" 
+                                                       IsVisible="{Binding Breakpoint.ConditionExpression, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            <TextBlock Text="No condition" 
+                                                       IsVisible="{Binding Breakpoint.ConditionExpression, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                        </StackPanel>
+                                    </ToolTip.Tip>
                                     <Ellipse
                                         MinWidth="12"
                                         MinHeight="12"
