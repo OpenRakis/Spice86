@@ -10,6 +10,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -21,6 +23,120 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
+
+    /// <summary>
+    /// VBE (VESA BIOS Extension) function codes (AL register values when AH=4Fh).
+    /// </summary>
+    private enum VbeFunction : byte {
+        GetControllerInfo = 0x00,
+        GetModeInfo = 0x01,
+        SetMode = 0x02
+    }
+
+    /// <summary>
+    /// VBE status codes returned in AX register.
+    /// </summary>
+    private enum VbeStatus : ushort {
+        Success = 0x004F,
+        Failed = 0x014F
+    }
+
+    /// <summary>
+    /// INT 10h AH=12h (Video Subsystem Configuration) subfunctions (BL register values).
+    /// </summary>
+    private enum VideoSubsystemFunction : byte {
+        EgaVgaInformation = 0x10,
+        SelectScanLines = 0x30,
+        DefaultPaletteLoading = 0x31,
+        VideoEnableDisable = 0x32,
+        SummingToGrayScales = 0x33,
+        CursorEmulation = 0x34,
+        DisplaySwitch = 0x35,
+        VideoScreenOnOff = 0x36
+    }
+
+    /// <summary>
+    /// VBE mode flags (used in BX register for VBE Set Mode function).
+    /// </summary>
+    [Flags]
+    private enum VbeModeFlags : ushort {
+        None = 0x0000,
+        UseLinearFrameBuffer = 0x4000,
+        DontClearMemory = 0x8000,
+        ModeNumberMask = 0x01FF
+    }
+
+    /// <summary>
+    /// VBE-related constants.
+    /// </summary>
+    private static class VbeConstants {
+        public const ushort Version10 = 0x0100;
+        public const uint DacSwitchableCapability = 0x00000001;
+        public const ushort TotalMemory1MB = 16; // in 64KB blocks
+        public const string OemString = "Spice86 VBE";
+        public const uint OemStringOffset = 256;
+        public const uint ModeListOffset = 280;
+        public const ushort ModeListTerminator = 0xFFFF;
+        public const ushort VesaMode800x600x16 = 0x102;
+        public const int InternalMode800x600x16 = 0x6A;
+    }
+
+    /// <summary>
+    /// VBE Mode Info Block constants.
+    /// </summary>
+    private static class VbeModeInfoConstants {
+        public const ushort ModeAttributesSupported = 0x001B;
+        public const byte WindowAttributesReadWriteSupported = 0x07;
+        public const byte WindowAttributesNotSupported = 0x00;
+        public const ushort WindowGranularity64KB = 64;
+        public const ushort WindowSize64KB = 64;
+        public const ushort WindowASegmentAddress = 0xA000;
+        public const ushort WindowBSegmentAddress = 0x0000;
+        public const byte CharWidth = 8;
+        public const byte CharHeight = 16;
+        public const byte SingleBank = 1;
+        public const byte BankSize64KB = 64;
+        public const byte NoImagePages = 0;
+        public const byte Reserved = 1;
+        public const byte MemoryModelPlanar = 3;
+        public const byte MemoryModelPackedPixel = 4;
+        public const byte MemoryModelDirectColor = 6;
+        public const byte RedGreenBlueMaskSize = 5;
+        public const byte RedGreenBlueMaskSize8 = 8;
+        public const byte GreenMaskSize6Bit = 6;
+    }
+
+    /// <summary>
+    /// Common VGA/BIOS constants.
+    /// </summary>
+    private static class BiosConstants {
+        public const byte MaxVideoPage = 7;
+        public const byte MaxPaletteRegister = 0x0F;
+        public const byte FunctionSupported = 0x1A;
+        public const byte SubfunctionSuccess = 0x12;
+        public const byte NoSecondaryDisplay = 0x00;
+        public const byte DefaultDisplayCombinationCode = 0x08;
+        public const byte Memory256KB = 0x03;
+        public const ushort VideoControl80x25Color = 0x20;
+        public const byte DefaultModeSetControl = 0x51;
+        public const byte ModeAbove7Return = 0x20;
+        public const byte Mode6Return = 0x3F;
+        public const byte ModeBelow7Return = 0x30;
+        public const byte VideoModeMask = 0x7F;
+        public const byte DontClearMemoryFlag = 0x80;
+        public const byte IncludeAttributesFlag = 0x02;
+        public const byte UpdateCursorPositionFlag = 0x01;
+        public const byte ColorModeMemory = 0x01;
+        public const byte VideoControlBitMask = 0x80;
+        public const ushort EquipmentListFlagsMask = 0x30;
+        public const int ScanLines200 = 200;
+        public const int ScanLines350 = 350;
+        public const int ScanLines400 = 400;
+        public const byte CursorTypeMask = 0x3F;
+        public const byte CursorEndMask = 0x1F;
+        public const uint StaticFunctionalityAllModes = 0x000FFFFF;
+        public const byte StaticFunctionalityAllScanLines = 0x07;
+    }
 
     /// <summary>
     ///     VGA BIOS constructor.
@@ -47,6 +163,417 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     /// <summary>
+    /// Represents the VBE Info Block structure (VBE 1.0/1.2).
+    /// Returned by VBE Function 00h - Return VBE Controller Information.
+    /// Minimum size is 256 bytes, but callers should provide ~512 bytes for OEM string and mode list.
+    /// </summary>
+    public class VbeInfoBlock : MemoryBasedDataStructure {
+        private const int SignatureLength = 4;
+        private const int OemStringMaxLength = 256;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VbeInfoBlock"/> class.
+        /// </summary>
+        /// <param name="byteReaderWriter">The memory bus.</param>
+        /// <param name="baseAddress">The base address of the structure in memory.</param>
+        public VbeInfoBlock(IByteReaderWriter byteReaderWriter, uint baseAddress)
+            : base(byteReaderWriter, baseAddress) {
+        }
+
+        /// <summary>
+        /// Gets or sets the VBE signature (4 bytes: "VESA" for VBE 1.x, "VBE2" for VBE 2.0+).
+        /// </summary>
+        public string Signature {
+            get => GetZeroTerminatedString(0x00, SignatureLength);
+            set {
+                string truncated = value.Length >= SignatureLength
+                    ? value[..SignatureLength]
+                    : value;
+                for (int i = 0; i < SignatureLength; i++) {
+                    UInt8[0x00 + i] = i < truncated.Length ? (byte)truncated[i] : (byte)0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the VBE version (BCD format: 0x0100 = 1.0, 0x0102 = 1.2, 0x0200 = 2.0).
+        /// </summary>
+        public ushort Version {
+            get => UInt16[0x04];
+            set => UInt16[0x04] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to OEM string (segment:offset).
+        /// Offset part.
+        /// </summary>
+        public ushort OemStringOffset {
+            get => UInt16[0x06];
+            set => UInt16[0x06] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to OEM string (segment:offset).
+        /// Segment part.
+        /// </summary>
+        public ushort OemStringSegment {
+            get => UInt16[0x08];
+            set => UInt16[0x08] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the capabilities flags (4 bytes).
+        /// Bit 0: DAC is switchable (0=fixed 6-bit, 1=switchable 6/8-bit).
+        /// Bit 1: Controller is not VGA compatible.
+        /// Bit 2: RAMDAC programming requires blank bit during programming.
+        /// </summary>
+        public uint Capabilities {
+            get => UInt32[0x0A];
+            set => UInt32[0x0A] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to video mode list (segment:offset).
+        /// Offset part. Points to array of ushort mode numbers, terminated by 0xFFFF.
+        /// </summary>
+        public ushort VideoModeListOffset {
+            get => UInt16[0x0E];
+            set => UInt16[0x0E] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to video mode list (segment:offset).
+        /// Segment part.
+        /// </summary>
+        public ushort VideoModeListSegment {
+            get => UInt16[0x10];
+            set => UInt16[0x10] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the total memory in 64KB blocks.
+        /// </summary>
+        public ushort TotalMemory {
+            get => UInt16[0x12];
+            set => UInt16[0x12] = value;
+        }
+
+        /// <summary>
+        /// Writes the OEM string at the specified address (typically beyond the main structure).
+        /// </summary>
+        /// <param name="oemString">The OEM string to write.</param>
+        /// <param name="offsetFromBase">Offset from base address where to write the string.</param>
+        public void WriteOemString(string oemString, uint offsetFromBase) {
+            string truncated = oemString.Length >= OemStringMaxLength
+                ? oemString[..(OemStringMaxLength - 1)]
+                : oemString;
+            SetZeroTerminatedString(offsetFromBase, truncated, OemStringMaxLength);
+        }
+
+        /// <summary>
+        /// Writes the video mode list at the specified address.
+        /// </summary>
+        /// <param name="modes">Array of mode numbers (will be terminated with 0xFFFF).</param>
+        /// <param name="offsetFromBase">Offset from base address where to write the mode list.</param>
+        public void WriteModeList(ushort[] modes, uint offsetFromBase) {
+            for (int i = 0; i < modes.Length; i++) {
+                UInt16[offsetFromBase + (uint)(i * 2)] = modes[i];
+            }
+            UInt16[offsetFromBase + (uint)(modes.Length * 2)] = 0xFFFF;
+        }
+    }
+
+    /// <summary>
+    /// Represents the VBE Mode Info Block structure (VBE 1.0/1.2).
+    /// Returned by VBE Function 01h - Return VBE Mode Information.
+    /// Size is 256 bytes.
+    /// </summary>
+    public class VbeModeInfoBlock : MemoryBasedDataStructure {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VbeModeInfoBlock"/> class.
+        /// </summary>
+        /// <param name="byteReaderWriter">The memory bus.</param>
+        /// <param name="baseAddress">The base address of the structure in memory.</param>
+        public VbeModeInfoBlock(IByteReaderWriter byteReaderWriter, uint baseAddress)
+            : base(byteReaderWriter, baseAddress) {
+        }
+
+        /// <summary>
+        /// Gets or sets the mode attributes.
+        /// Bit 0: Mode supported by hardware.
+        /// Bit 1: Extended information available.
+        /// Bit 2: TTY output functions supported by BIOS.
+        /// Bit 3: Color mode.
+        /// Bit 4: Graphics mode (not text).
+        /// Bit 5: Mode is not VGA compatible.
+        /// Bit 6: Bank-switched mode not supported (VBE 2.0+).
+        /// Bit 7: Linear frame buffer mode available (VBE 2.0+).
+        /// </summary>
+        public ushort ModeAttributes {
+            get => UInt16[0x00];
+            set => UInt16[0x00] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window A attributes.
+        /// Bit 0: Window exists.
+        /// Bit 1: Window is readable.
+        /// Bit 2: Window is writable.
+        /// </summary>
+        public byte WindowAAttributes {
+            get => UInt8[0x02];
+            set => UInt8[0x02] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window B attributes (same bits as WindowA).
+        /// </summary>
+        public byte WindowBAttributes {
+            get => UInt8[0x03];
+            set => UInt8[0x03] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window granularity in KB.
+        /// </summary>
+        public ushort WindowGranularity {
+            get => UInt16[0x04];
+            set => UInt16[0x04] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window size in KB.
+        /// </summary>
+        public ushort WindowSize {
+            get => UInt16[0x06];
+            set => UInt16[0x06] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window A start segment.
+        /// </summary>
+        public ushort WindowASegment {
+            get => UInt16[0x08];
+            set => UInt16[0x08] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the window B start segment.
+        /// </summary>
+        public ushort WindowBSegment {
+            get => UInt16[0x0A];
+            set => UInt16[0x0A] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to window positioning function (segment:offset).
+        /// Offset part.
+        /// </summary>
+        public ushort WindowFunctionOffset {
+            get => UInt16[0x0C];
+            set => UInt16[0x0C] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the pointer to window positioning function (segment:offset).
+        /// Segment part.
+        /// </summary>
+        public ushort WindowFunctionSegment {
+            get => UInt16[0x0E];
+            set => UInt16[0x0E] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the bytes per scan line.
+        /// For planar modes (4-bit), this is bytes per plane.
+        /// For packed pixel modes, this is total bytes per line.
+        /// </summary>
+        public ushort BytesPerScanLine {
+            get => UInt16[0x10];
+            set => UInt16[0x10] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the horizontal resolution in pixels.
+        /// </summary>
+        public ushort XResolution {
+            get => UInt16[0x12];
+            set => UInt16[0x12] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the vertical resolution in pixels.
+        /// </summary>
+        public ushort YResolution {
+            get => UInt16[0x14];
+            set => UInt16[0x14] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the character cell width in pixels.
+        /// </summary>
+        public byte XCharSize {
+            get => UInt8[0x16];
+            set => UInt8[0x16] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the character cell height in pixels.
+        /// </summary>
+        public byte YCharSize {
+            get => UInt8[0x17];
+            set => UInt8[0x17] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the number of memory planes.
+        /// </summary>
+        public byte NumberOfPlanes {
+            get => UInt8[0x18];
+            set => UInt8[0x18] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the bits per pixel.
+        /// </summary>
+        public byte BitsPerPixel {
+            get => UInt8[0x19];
+            set => UInt8[0x19] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the number of banks.
+        /// </summary>
+        public byte NumberOfBanks {
+            get => UInt8[0x1A];
+            set => UInt8[0x1A] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the memory model.
+        /// 0 = Text mode.
+        /// 1 = CGA graphics.
+        /// 2 = Hercules graphics.
+        /// 3 = EGA/VGA planar.
+        /// 4 = Packed pixel.
+        /// 5 = Non-chain 4, 256 color.
+        /// 6 = Direct color.
+        /// 7 = YUV.
+        /// </summary>
+        public byte MemoryModel {
+            get => UInt8[0x1B];
+            set => UInt8[0x1B] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the bank size in KB.
+        /// </summary>
+        public byte BankSize {
+            get => UInt8[0x1C];
+            set => UInt8[0x1C] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the number of image pages.
+        /// </summary>
+        public byte NumberOfImagePages {
+            get => UInt8[0x1D];
+            set => UInt8[0x1D] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the reserved byte (should be 1).
+        /// </summary>
+        public byte Reserved1 {
+            get => UInt8[0x1E];
+            set => UInt8[0x1E] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the red mask size (number of bits).
+        /// </summary>
+        public byte RedMaskSize {
+            get => UInt8[0x1F];
+            set => UInt8[0x1F] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the red field position (bit offset).
+        /// </summary>
+        public byte RedFieldPosition {
+            get => UInt8[0x20];
+            set => UInt8[0x20] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the green mask size (number of bits).
+        /// </summary>
+        public byte GreenMaskSize {
+            get => UInt8[0x21];
+            set => UInt8[0x21] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the green field position (bit offset).
+        /// </summary>
+        public byte GreenFieldPosition {
+            get => UInt8[0x22];
+            set => UInt8[0x22] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the blue mask size (number of bits).
+        /// </summary>
+        public byte BlueMaskSize {
+            get => UInt8[0x23];
+            set => UInt8[0x23] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the blue field position (bit offset).
+        /// </summary>
+        public byte BlueFieldPosition {
+            get => UInt8[0x24];
+            set => UInt8[0x24] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the reserved mask size (number of bits).
+        /// </summary>
+        public byte ReservedMaskSize {
+            get => UInt8[0x25];
+            set => UInt8[0x25] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the reserved field position (bit offset).
+        /// </summary>
+        public byte ReservedFieldPosition {
+            get => UInt8[0x26];
+            set => UInt8[0x26] = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the direct color mode attributes.
+        /// Bit 0: Color ramp is programmable.
+        /// Bit 1: Bytes in reserved field may be used by application.
+        /// </summary>
+        public byte DirectColorModeInfo {
+            get => UInt8[0x27];
+            set => UInt8[0x27] = value;
+        }
+
+        /// <summary>
+        /// Clears the entire 256-byte mode info block.
+        /// </summary>
+        public void Clear() {
+            for (uint i = 0; i < 256; i++) {
+                UInt8[i] = 0;
+            }
+        }
+    }
+
+    /// <summary>
     ///     The interrupt vector this class handles.
     /// </summary>
     public override byte VectorNumber => 0x10;
@@ -58,8 +585,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         ushort segment = State.ES;
         ushort offset = State.BP;
         byte attribute = State.BL;
-        bool includeAttributes = (State.AL & 0x02) != 0;
-        bool updateCursorPosition = (State.AL & 0x01) != 0;
+        bool includeAttributes = (State.AL & BiosConstants.IncludeAttributesFlag) != 0;
+        bool updateCursorPosition = (State.AL & BiosConstants.UpdateCursorPositionFlag) != 0;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
             string str = Memory.GetZeroTerminatedString(address, State.CX);
@@ -73,9 +600,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     public void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
-                    State.AL = 0x1A; // Function supported
-                    State.BL = _biosDataArea.DisplayCombinationCode; // Primary display
-                    State.BH = 0x00; // No secondary display
+                    State.AL = BiosConstants.FunctionSupported;
+                    State.BL = _biosDataArea.DisplayCombinationCode;
+                    State.BH = BiosConstants.NoSecondaryDisplay;
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
                         _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
                             nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
@@ -83,7 +610,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                     break;
                 }
             case 0x01: {
-                    State.AL = 0x1A; // Function supported
+                    State.AL = BiosConstants.FunctionSupported;
                     _biosDataArea.DisplayCombinationCode = State.BL;
                     if (_logger.IsEnabled(LogEventLevel.Debug)) {
                         _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
@@ -103,29 +630,29 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Verbose("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), State.BL);
         }
-        switch (State.BL) {
-            case 0x10:
+        switch ((VideoSubsystemFunction)State.BL) {
+            case VideoSubsystemFunction.EgaVgaInformation:
                 EgaVgaInformation();
                 break;
-            case 0x30:
+            case VideoSubsystemFunction.SelectScanLines:
                 SelectScanLines();
                 break;
-            case 0x31:
+            case VideoSubsystemFunction.DefaultPaletteLoading:
                 DefaultPaletteLoading();
                 break;
-            case 0x32:
+            case VideoSubsystemFunction.VideoEnableDisable:
                 VideoEnableDisable();
                 break;
-            case 0x33:
+            case VideoSubsystemFunction.SummingToGrayScales:
                 SummingToGrayScales();
                 break;
-            case 0x34:
+            case VideoSubsystemFunction.CursorEmulation:
                 CursorEmulation();
                 break;
-            case 0x35:
+            case VideoSubsystemFunction.DisplaySwitch:
                 DisplaySwitch();
                 break;
-            case 0x36:
+            case VideoSubsystemFunction.VideoScreenOnOff:
                 VideoScreenOnOff();
                 break;
             default:
@@ -220,10 +747,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 _vgaFunctions.SetAllPaletteRegisters(State.ES, State.DX);
                 break;
             case 0x03:
-                _vgaFunctions.ToggleIntensity((State.BL & 1) != 0);
+                _vgaFunctions.ToggleIntensity((State.BL & BiosConstants.UpdateCursorPositionFlag) != 0);
                 break;
             case 0x07:
-                if (State.BL > 0xF) {
+                if (State.BL > BiosConstants.MaxPaletteRegister) {
                     return;
                 }
                 State.BH = _vgaFunctions.ReadPaletteRegister(State.BL);
@@ -250,7 +777,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                         nameof(VgaBios), nameof(SetPaletteRegisters), State.BL == 0 ? "set Mode Control register bit 7" : "set color select register", State.BH);
                 }
                 if (State.BL == 0) {
-                    _vgaFunctions.SetP5P4Select((State.BH & 1) != 0);
+                    _vgaFunctions.SetP5P4Select((State.BH & BiosConstants.UpdateCursorPositionFlag) != 0);
                 } else {
                     _vgaFunctions.SetColorSelectRegister(State.BH);
                 }
@@ -284,7 +811,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// <inheritdoc />
     public void GetVideoState() {
         State.BH = _biosDataArea.CurrentVideoPage;
-        State.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & 0x80);
+        State.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
         State.AH = (byte)_biosDataArea.ScreenColumns;
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 0F {MethodName} - Page {Page}, mode {Mode}, columns {Columns}",
@@ -445,19 +972,19 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <inheritdoc />
     public void SetVideoMode() {
-        int modeId = State.AL & 0x7F;
+        int modeId = State.AL & BiosConstants.VideoModeMask;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_biosDataArea.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
-        if ((State.AL & 0x80) != 0) {
+        if ((State.AL & BiosConstants.DontClearMemoryFlag) != 0) {
             flags |= ModeFlags.NoClearMem;
         }
 
         // Set AL
         if (modeId > 7) {
-            State.AL = 0x20;
+            State.AL = BiosConstants.ModeAbove7Return;
         } else if (modeId == 6) {
-            State.AL = 0x3F;
+            State.AL = BiosConstants.Mode6Return;
         } else {
-            State.AL = 0x30;
+            State.AL = BiosConstants.ModeBelow7Return;
         }
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
@@ -495,11 +1022,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private void InitializeBiosArea() {
         // init detected hardware BIOS Area
         // set 80x25 color (not clear from RBIL but usual)
-        _biosDataArea.EquipmentListFlags = (ushort)(_biosDataArea.EquipmentListFlags & ~0x30 | 0x20);
+        _biosDataArea.EquipmentListFlags = (ushort)(_biosDataArea.EquipmentListFlags & ~BiosConstants.EquipmentListFlagsMask | BiosConstants.VideoControl80x25Color);
 
         // Set the basic modeset options
-        _biosDataArea.ModesetCtl = 0x51;
-        _biosDataArea.DisplayCombinationCode = 0x08;
+        _biosDataArea.ModesetCtl = BiosConstants.DefaultModeSetControl;
+        _biosDataArea.DisplayCombinationCode = BiosConstants.DefaultDisplayCombinationCode;
     }
 
     private void VideoScreenOnOff() {
@@ -507,7 +1034,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 12 36 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(VideoScreenOnOff));
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void DisplaySwitch() {
@@ -515,52 +1042,52 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 12 35 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(DisplaySwitch));
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void CursorEmulation() {
-        bool enabled = (State.AL & 0x01) == 0;
+        bool enabled = (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0;
         _vgaFunctions.CursorEmulation(enabled);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 34 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(CursorEmulation), enabled ? "Enabled" : "Disabled");
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void SummingToGrayScales() {
-        bool enabled = (State.AL & 0x01) == 0;
+        bool enabled = (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0;
         _vgaFunctions.SummingToGrayScales(enabled);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 33 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(SummingToGrayScales), enabled ? "Enabled" : "Disabled");
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void VideoEnableDisable() {
-        _vgaFunctions.EnableVideoAddressing((State.AL & 1) == 0);
+        _vgaFunctions.EnableVideoAddressing((State.AL & BiosConstants.UpdateCursorPositionFlag) == 0);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 32 {MethodName} - {Result}",
-                nameof(VgaBios), nameof(VideoEnableDisable), (State.AL & 0x01) == 0 ? "Enabled" : "Disabled");
+                nameof(VgaBios), nameof(VideoEnableDisable), (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0 ? "Enabled" : "Disabled");
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void DefaultPaletteLoading() {
-        _vgaFunctions.DefaultPaletteLoading((State.AL & 1) != 0);
+        _vgaFunctions.DefaultPaletteLoading((State.AL & BiosConstants.UpdateCursorPositionFlag) != 0);
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 31 {MethodName} - 0x{Al:X2}",
                 nameof(VgaBios), nameof(DefaultPaletteLoading), State.AL);
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void SelectScanLines() {
         int lines = State.AL switch {
-            0x00 => 200,
-            0x01 => 350,
-            0x02 => 400,
+            0x00 => BiosConstants.ScanLines200,
+            0x01 => BiosConstants.ScanLines350,
+            0x02 => BiosConstants.ScanLines400,
             _ => throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 12 30")
         };
         _vgaFunctions.SelectScanLines(lines);
@@ -568,12 +1095,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             _logger.Debug("{ClassName} INT 10 12 30 {MethodName} - {Lines} lines",
                 nameof(VgaBios), nameof(SelectScanLines), lines);
         }
-        State.AL = 0x12;
+        State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void EgaVgaInformation() {
-        State.BH = (byte)(_vgaFunctions.GetColorMode() ? 0x01 : 0x00);
-        State.BL = 0x03;
+        State.BH = (byte)(_vgaFunctions.GetColorMode() ? BiosConstants.ColorModeMemory : 0x00);
+        State.BL = BiosConstants.Memory256KB;
         State.CX = _vgaFunctions.GetFeatureSwitches();
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 12 10 {MethodName} - ColorMode 0x{ColorMode:X2}, Memory: 0x{Memory:X2}, FeatureSwitches: 0x{FeatureSwitches:X2}",
@@ -617,14 +1144,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// </summary>
     public void VesaFunctions() {
         byte subfunction = State.AL;
-        switch (subfunction) {
-            case 0x00:
+        switch ((VbeFunction)subfunction) {
+            case VbeFunction.GetControllerInfo:
                 VbeGetControllerInfo();
                 break;
-            case 0x01:
+            case VbeFunction.GetModeInfo:
                 VbeGetModeInfo();
                 break;
-            case 0x02:
+            case VbeFunction.SetMode:
                 VbeSetMode();
                 break;
             default:
@@ -632,8 +1159,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                     _logger.Warning("{ClassName} INT 10 4F{Subfunction:X2} - Unsupported VBE function",
                         nameof(VgaBios), subfunction);
                 }
-                // Return failure: AH=01h (function call failed), AL=4Fh (function is supported)
-                State.AX = 0x014F;
+                State.AX = (ushort)VbeStatus.Failed;
                 break;
         }
     }
@@ -649,61 +1175,39 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
-        // Check if buffer has "VBE2" signature (VBE 2.0+ request)
-        // For VBE 1.0, we just fill the basic info
+        var vbeInfo = new VbeInfoBlock(Memory, address);
 
-        // Write VBE Info Block (VBE 1.0 structure - 256 bytes minimum)
-        // Signature: "VESA"
-        Memory.UInt8[address + 0] = (byte)'V';
-        Memory.UInt8[address + 1] = (byte)'E';
-        Memory.UInt8[address + 2] = (byte)'S';
-        Memory.UInt8[address + 3] = (byte)'A';
+        // Fill VBE Info Block (VBE 1.0)
+        vbeInfo.Signature = "VESA";
+        vbeInfo.Version = VbeConstants.Version10;
 
-        // VBE Version: 1.0 (0x0100)
-        Memory.UInt16[address + 4] = 0x0100;
+        // OEM String pointer - point to a location beyond the main structure
+        vbeInfo.OemStringOffset = (ushort)(offset + VbeConstants.OemStringOffset);
+        vbeInfo.OemStringSegment = segment;
 
-        // OEM String pointer (segment:offset) - point to a location in VGA ROM
-        // We'll use a dummy OEM string at ES:DI+256
-        Memory.UInt16[address + 6] = (ushort)(offset + 256);  // Offset
-        Memory.UInt16[address + 8] = segment;                  // Segment
+        // Capabilities: DAC is switchable, controller is VGA compatible
+        vbeInfo.Capabilities = VbeConstants.DacSwitchableCapability;
 
-        // Capabilities (4 bytes) - DAC is switchable, controller is VGA compatible
-        Memory.UInt32[address + 10] = 0x00000001;
-
-        // Video Mode List pointer (segment:offset) - point after OEM string
-        Memory.UInt16[address + 14] = (ushort)(offset + 280);  // Offset
-        Memory.UInt16[address + 16] = segment;                  // Segment
+        // Video Mode List pointer - point after OEM string
+        vbeInfo.VideoModeListOffset = (ushort)(offset + VbeConstants.ModeListOffset);
+        vbeInfo.VideoModeListSegment = segment;
 
         // Total Memory in 64KB blocks (1MB = 16 blocks)
-        const ushort videoMemoryIn64KbBlocks = 16;
-        Memory.UInt16[address + 18] = videoMemoryIn64KbBlocks;
+        vbeInfo.TotalMemory = VbeConstants.TotalMemory1MB;
 
         // Write OEM String at offset+256
-        string oemString = "Spice86 VBE";
-        for (int i = 0; i < oemString.Length; i++) {
-            Memory.UInt8[address + 256 + i] = (byte)oemString[i];
-        }
-        Memory.UInt8[address + 256 + oemString.Length] = 0; // Null terminator
+        vbeInfo.WriteOemString(VbeConstants.OemString, VbeConstants.OemStringOffset);
 
         // Write Video Mode List at offset+280
-        // Only list modes that have corresponding internal VGA modes
-        // Per VBE 1.2 spec, modes without hardware support should not be listed
-        ushort[] vesaModes = {
-            0x102, // 800x600x16 (4-bit planar) -> internal mode 0x6A
-            0xFFFF // End of list
-        };
-
-        for (int i = 0; i < vesaModes.Length; i++) {
-            Memory.UInt16[address + 280 + (i * 2)] = vesaModes[i];
-        }
+        ushort[] vesaModes = { VbeConstants.VesaMode800x600x16 };
+        vbeInfo.WriteModeList(vesaModes, VbeConstants.ModeListOffset);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
             _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.0 info at {Segment:X4}:{Offset:X4}",
                 nameof(VgaBios), segment, offset);
         }
 
-        // Return success: AH=00h (function successful), AL=4Fh (function is supported)
-        State.AX = 0x004F;
+        State.AX = (ushort)VbeStatus.Success;
     }
 
     /// <summary>
@@ -726,129 +1230,83 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 _logger.Warning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
                     nameof(VgaBios), modeNumber);
             }
-            // Return failure
-            State.AX = 0x014F;
+            State.AX = (ushort)VbeStatus.Failed;
             return;
         }
 
-        // Clear the mode info block (256 bytes)
-        for (int i = 0; i < 256; i++) {
-            Memory.UInt8[address + i] = 0;
-        }
+        var modeInfo = new VbeModeInfoBlock(Memory, address);
+        modeInfo.Clear();
 
-        // Mode Attributes (offset 0, 2 bytes)
-        // Bit 0: Mode supported by hardware
-        // Bit 1: Extended information available
-        // Bit 2: TTY output functions supported
-        // Bit 3: Color mode
-        // Bit 4: Graphics mode (not text)
-        ushort modeAttributes = 0x001B; // Supported, extended info, TTY, color, graphics
-        Memory.UInt16[address + 0] = modeAttributes;
+        // Mode Attributes
+        modeInfo.ModeAttributes = VbeModeInfoConstants.ModeAttributesSupported;
 
-        // Window A attributes (offset 2)
-        Memory.UInt8[address + 2] = 0x07; // Readable, writable, supported
+        // Window attributes
+        modeInfo.WindowAAttributes = VbeModeInfoConstants.WindowAttributesReadWriteSupported;
+        modeInfo.WindowBAttributes = VbeModeInfoConstants.WindowAttributesNotSupported;
+        modeInfo.WindowGranularity = VbeModeInfoConstants.WindowGranularity64KB;
+        modeInfo.WindowSize = VbeModeInfoConstants.WindowSize64KB;
+        modeInfo.WindowASegment = VbeModeInfoConstants.WindowASegmentAddress;
+        modeInfo.WindowBSegment = VbeModeInfoConstants.WindowBSegmentAddress;
+        modeInfo.WindowFunctionOffset = 0;
+        modeInfo.WindowFunctionSegment = 0;
 
-        // Window B attributes (offset 3)
-        Memory.UInt8[address + 3] = 0x00; // Not supported
-
-        // Window granularity in KB (offset 4)
-        Memory.UInt16[address + 4] = 64;
-
-        // Window size in KB (offset 6)
-        Memory.UInt16[address + 6] = 64;
-
-        // Window A start segment (offset 8)
-        Memory.UInt16[address + 8] = 0xA000;
-
-        // Window B start segment (offset 10)
-        Memory.UInt16[address + 10] = 0x0000;
-
-        // Window function pointer (offset 12, 4 bytes) - not used in VBE 1.0
-        Memory.UInt32[address + 12] = 0;
-
-        // Bytes per scan line (offset 16)
-        // Per VBE 1.2 spec, this is the number of bytes between consecutive scanlines
-        // For planar modes (4-bit), this is bytes per plane (width/8 since 1 bit per pixel per plane)
+        // Calculate bytes per scan line
         ushort bytesPerLine;
         if (bpp == 4) {
-            // 4-bit planar: 4 planes, each with 1 bit per pixel
-            bytesPerLine = (ushort)(width / 8);
+            bytesPerLine = (ushort)(width / 8); // 4-bit planar
         } else if (bpp == 1) {
             bytesPerLine = (ushort)(width / 8);
         } else if (bpp == 15 || bpp == 16) {
-            // 15-bit and 16-bit modes use 2 bytes per pixel
             bytesPerLine = (ushort)(width * 2);
         } else if (bpp == 24) {
             bytesPerLine = (ushort)(width * 3);
         } else if (bpp == 32) {
             bytesPerLine = (ushort)(width * 4);
         } else {
-            // 8-bit packed pixel (bpp == 8)
-            bytesPerLine = width;
+            bytesPerLine = width; // 8-bit packed pixel
         }
-        Memory.UInt16[address + 16] = bytesPerLine;
+        modeInfo.BytesPerScanLine = bytesPerLine;
 
-        // X resolution (offset 18)
-        Memory.UInt16[address + 18] = width;
+        // Resolution and character info
+        modeInfo.XResolution = width;
+        modeInfo.YResolution = height;
+        modeInfo.XCharSize = VbeModeInfoConstants.CharWidth;
+        modeInfo.YCharSize = VbeModeInfoConstants.CharHeight;
+        modeInfo.NumberOfPlanes = (byte)(bpp == 4 ? 4 : 1);
+        modeInfo.BitsPerPixel = bpp;
+        modeInfo.NumberOfBanks = VbeModeInfoConstants.SingleBank;
 
-        // Y resolution (offset 20)
-        Memory.UInt16[address + 20] = height;
-
-        // X char size (offset 22)
-        Memory.UInt8[address + 22] = 8;
-
-        // Y char size (offset 23)
-        Memory.UInt8[address + 23] = 16;
-
-        // Number of planes (offset 24)
-        Memory.UInt8[address + 24] = (byte)(bpp == 4 ? 4 : 1);
-
-        // Bits per pixel (offset 25)
-        Memory.UInt8[address + 25] = bpp;
-
-        // Number of banks (offset 26)
-        Memory.UInt8[address + 26] = 1;
-
-        // Memory model (offset 27)
-        // 0 = Text, 3 = EGA, 4 = Packed pixel, 5 = Non-chain 4 256 color, 6 = Direct color
+        // Memory model
         byte memoryModel = bpp switch {
-            4 => 3,  // EGA/VGA planar
-            8 => 4,  // Packed pixel
-            15 => 6, // Direct color
-            16 => 6, // Direct color
-            24 => 6, // Direct color
-            32 => 6, // Direct color
-            _ => 4
+            4 => VbeModeInfoConstants.MemoryModelPlanar,
+            8 => VbeModeInfoConstants.MemoryModelPackedPixel,
+            15 => VbeModeInfoConstants.MemoryModelDirectColor,
+            16 => VbeModeInfoConstants.MemoryModelDirectColor,
+            24 => VbeModeInfoConstants.MemoryModelDirectColor,
+            32 => VbeModeInfoConstants.MemoryModelDirectColor,
+            _ => VbeModeInfoConstants.MemoryModelPackedPixel
         };
-        Memory.UInt8[address + 27] = memoryModel;
+        modeInfo.MemoryModel = memoryModel;
+        modeInfo.BankSize = VbeModeInfoConstants.BankSize64KB;
+        modeInfo.NumberOfImagePages = VbeModeInfoConstants.NoImagePages;
+        modeInfo.Reserved1 = VbeModeInfoConstants.Reserved;
 
-        // Bank size in KB (offset 28)
-        Memory.UInt8[address + 28] = 64;
-
-        // Number of image pages (offset 29)
-        Memory.UInt8[address + 29] = 0;
-
-        // Reserved (offset 30)
-        Memory.UInt8[address + 30] = 1;
-
-        // Direct color fields (for 15/16/24/32 bpp modes)
+        // Direct color fields for high-color/true-color modes
         if (bpp >= 15) {
             if (bpp == 15 || bpp == 16) {
-                // 15-bit: 5:5:5 format (R=5 bits at position 10, G=5 bits at position 5, B=5 bits at position 0)
-                // 16-bit: 5:6:5 format (R=5 bits at position 11, G=6 bits at position 5, B=5 bits at position 0)
-                Memory.UInt8[address + 31] = 5;  // Red mask size
-                Memory.UInt8[address + 32] = (byte)(bpp == 16 ? 11 : 10); // Red field position
-                Memory.UInt8[address + 33] = (byte)(bpp == 16 ? 6 : 5);   // Green mask size
-                Memory.UInt8[address + 34] = 5;  // Green field position
-                Memory.UInt8[address + 35] = 5;  // Blue mask size
-                Memory.UInt8[address + 36] = 0;  // Blue field position
+                modeInfo.RedMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize;
+                modeInfo.RedFieldPosition = (byte)(bpp == 16 ? 11 : 10);
+                modeInfo.GreenMaskSize = (byte)(bpp == 16 ? VbeModeInfoConstants.GreenMaskSize6Bit : VbeModeInfoConstants.RedGreenBlueMaskSize);
+                modeInfo.GreenFieldPosition = 5;
+                modeInfo.BlueMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize;
+                modeInfo.BlueFieldPosition = 0;
             } else if (bpp == 24 || bpp == 32) {
-                Memory.UInt8[address + 31] = 8;  // Red mask size
-                Memory.UInt8[address + 32] = 16; // Red field position
-                Memory.UInt8[address + 33] = 8;  // Green mask size
-                Memory.UInt8[address + 34] = 8;  // Green field position
-                Memory.UInt8[address + 35] = 8;  // Blue mask size
-                Memory.UInt8[address + 36] = 0;  // Blue field position
+                modeInfo.RedMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
+                modeInfo.RedFieldPosition = 16;
+                modeInfo.GreenMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
+                modeInfo.GreenFieldPosition = 8;
+                modeInfo.BlueMaskSize = VbeModeInfoConstants.RedGreenBlueMaskSize8;
+                modeInfo.BlueFieldPosition = 0;
             }
         }
 
@@ -872,8 +1330,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     private void VbeSetMode() {
         ushort modeNumber = State.BX;
         // VBE 1.0/1.2 does not support LFB; bit 14 is ignored (banked mode is always used)
-        bool dontClearDisplay = (modeNumber & 0x8000) != 0;
-        ushort mode = (ushort)(modeNumber & 0x01FF);
+        bool dontClearDisplay = (modeNumber & (ushort)VbeModeFlags.DontClearMemory) != 0;
+        ushort mode = (ushort)(modeNumber & (ushort)VbeModeFlags.ModeNumberMask);
 
         // Map VESA mode to internal mode
         int? internalMode = MapVesaModeToInternal(mode);
@@ -883,8 +1341,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
                 _logger.Warning("{ClassName} INT 10 4F02 VbeSetMode - Unsupported mode 0x{Mode:X4}",
                     nameof(VgaBios), mode);
             }
-            // Return failure
-            State.AX = 0x014F;
+            State.AX = (ushort)VbeStatus.Failed;
             return;
         }
 
@@ -900,8 +1357,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
         _vgaFunctions.VgaSetMode(internalMode.Value, flags);
 
-        // Return success
-        State.AX = 0x004F;
+        State.AX = (ushort)VbeStatus.Success;
     }
 
     /// <summary>
@@ -954,7 +1410,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         // High-color/true-color modes and higher resolutions require SVGA hardware
         // that is not emulated, so they return null (unsupported)
         return vesaMode switch {
-            0x102 => 0x6A,  // 800x600x16 (planar) -> internal mode 0x6A
+            VbeConstants.VesaMode800x600x16 => VbeConstants.InternalMode800x600x16,
             // All other VESA modes are not supported by the current VGA emulation
             _ => null
         };
@@ -967,7 +1423,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
         switch (State.BX) {
             case 0x0:
-                State.AL = 0x1B;
+                State.AL = BiosConstants.FunctionSupported;
                 break;
             default:
                 if (_logger.IsEnabled(LogEventLevel.Warning)) {
@@ -999,14 +1455,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             ScreenRows = _biosDataArea.ScreenRows,
             CharacterMatrixHeight = _biosDataArea.CharacterHeight,
             ActiveDisplayCombinationCode = _biosDataArea.DisplayCombinationCode,
-            AlternateDisplayCombinationCode = 0x00,
+            AlternateDisplayCombinationCode = BiosConstants.NoSecondaryDisplay,
             NumberOfColorsSupported = CalculateColorCount(currentMode),
             NumberOfPages = CalculatePageCount(currentMode),
             NumberOfActiveScanLines = CalculateScanLineCode(currentMode),
             TextCharacterTableUsed = primaryCharacterTable,
             TextCharacterTableUsed2 = secondaryCharacterTable,
             OtherStateInformation = GetOtherStateInformation(currentMode),
-            VideoRamAvailable = 3,
+            VideoRamAvailable = BiosConstants.Memory256KB,
             SaveAreaStatus = 0
         };
 
@@ -1026,16 +1482,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// Writes values to the static functionality table in emulated memory.
     /// </summary>
     private void InitializeStaticFunctionalityTable() {
-        Memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = 0x000FFFFF; // supports all video modes
-        Memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = 0x07; // supports all scanLines
+        Memory.UInt32[MemoryMap.StaticFunctionalityTableSegment, 0] = BiosConstants.StaticFunctionalityAllModes;
+        Memory.UInt8[MemoryMap.StaticFunctionalityTableSegment, 0x07] = BiosConstants.StaticFunctionalityAllScanLines;
     }
 
     private static byte ExtractCursorStartLine(ushort cursorType) {
-        return (byte)((cursorType >> 8) & 0x3F);
+        return (byte)((cursorType >> 8) & BiosConstants.CursorTypeMask);
     }
 
     private static byte ExtractCursorEndLine(ushort cursorType) {
-        return (byte)(cursorType & 0x1F);
+        return (byte)(cursorType & BiosConstants.CursorEndMask);
     }
 
     private static (byte Primary, byte Secondary) DecodeCharacterMapSelections(byte registerValue) {
