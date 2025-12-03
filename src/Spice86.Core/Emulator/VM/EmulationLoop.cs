@@ -175,7 +175,9 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
-            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            }
             _pauseHandler.WaitIfPaused();
             _dualPic.RunQueue();
             if(_executionStateSlice.CyclesUntilReevaluation <= 0) {

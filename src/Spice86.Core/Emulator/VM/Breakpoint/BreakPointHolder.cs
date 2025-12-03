@@ -7,13 +7,19 @@ using System.Linq;
 /// </summary>
 public class BreakPointHolder {
     private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new(1000);
-
     private readonly List<BreakPoint> _unconditionalBreakPoints = new(1000);
+    private readonly HashSet<BreakPoint> _registeredBreakPoints = [];
+    private int _activeBreakpoints;
 
     /// <summary>
     /// Gets a value indicating whether this BreakPointHolder is empty.
     /// </summary>
     public bool IsEmpty => _addressBreakPoints.Count == 0 && _unconditionalBreakPoints.Count == 0;
+
+    /// <summary>
+    /// Gets a value indicating whether at least one breakpoint is currently enabled.
+    /// </summary>
+    public bool HasActiveBreakpoints => _activeBreakpoints > 0;
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
         return _addressBreakPoints.Values
@@ -44,23 +50,36 @@ public class BreakPointHolder {
         _addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList);
         if (on) {
             if (breakPointList == null) {
-                _addressBreakPoints.Add(address, new List<BreakPoint>() { breakPoint });
-            } else {
-                breakPointList.Add(breakPoint);
+                _addressBreakPoints.Add(address, [breakPoint]);
+                RegisterBreakPoint(breakPoint);
+                return;
             }
-        } else if (breakPointList != null) {
-            breakPointList.Remove(breakPoint);
+
+            if (breakPointList.Contains(breakPoint)) {
+                return;
+            }
+
+            breakPointList.Add(breakPoint);
+            RegisterBreakPoint(breakPoint);
+        } else if (breakPointList != null && breakPointList.Remove(breakPoint)) {
             if (breakPointList.Count == 0) {
                 _addressBreakPoints.Remove(address);
             }
+
+            UnregisterBreakPoint(breakPoint);
         }
     }
 
     private void ToggleUnconditionalBreakPoint(BreakPoint breakPoint, bool on) {
         if (on) {
+            if (_unconditionalBreakPoints.Contains(breakPoint)) {
+                return;
+            }
+
             _unconditionalBreakPoints.Add(breakPoint);
-        } else {
-            _unconditionalBreakPoints.Remove(breakPoint);
+            RegisterBreakPoint(breakPoint);
+        } else if (_unconditionalBreakPoints.Remove(breakPoint)) {
+            UnregisterBreakPoint(breakPoint);
         }
     }
 
@@ -87,20 +106,54 @@ public class BreakPointHolder {
         return triggered;
     }
 
-    private static bool TriggerBreakPointsFromList(List<BreakPoint> breakPointList, long address) {
+    private bool TriggerBreakPointsFromList(List<BreakPoint> breakPointList, long address) {
         bool triggered = false;
         for (int i = 0; i < breakPointList.Count; i++) {
             BreakPoint breakPoint = breakPointList[i];
-            if (breakPoint.Matches(address)) {
-                breakPoint.Trigger();
-                if (breakPoint.IsRemovedOnTrigger) {
-                    breakPointList.Remove(breakPoint);
-                }
+            if (!breakPoint.Matches(address)) {
+                continue;
+            }
 
-                triggered = true;
+            breakPoint.Trigger();
+            triggered = true;
+
+            if (breakPoint.IsRemovedOnTrigger) {
+                breakPointList.RemoveAt(i);
+                UnregisterBreakPoint(breakPoint);
+                i--;
             }
         }
 
         return triggered;
+    }
+
+    private void RegisterBreakPoint(BreakPoint breakPoint) {
+        if (!_registeredBreakPoints.Add(breakPoint)) {
+            return;
+        }
+
+        breakPoint.IsEnabledChanged += OnBreakPointIsEnabledChanged;
+        if (breakPoint.IsEnabled) {
+            _activeBreakpoints++;
+        }
+    }
+
+    private void UnregisterBreakPoint(BreakPoint breakPoint) {
+        if (!_registeredBreakPoints.Remove(breakPoint)) {
+            return;
+        }
+
+        breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
+        if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
+            _activeBreakpoints--;
+        }
+    }
+
+    private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
+        if (isEnabled) {
+            _activeBreakpoints++;
+        } else if (_activeBreakpoints > 0) {
+            _activeBreakpoints--;
+        }
     }
 }

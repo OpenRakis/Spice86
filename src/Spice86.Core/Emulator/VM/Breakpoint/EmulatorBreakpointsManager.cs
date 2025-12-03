@@ -113,6 +113,12 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     }
 
     /// <summary>
+    /// Gets a value indicating whether at least one breakpoint is currently enabled.
+    /// </summary>
+    public bool HasActiveBreakpoints =>
+        _executionBreakPoints.HasActiveBreakpoints || _cycleBreakPoints.HasActiveBreakpoints;
+
+    /// <summary>
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
     public void CheckExecutionBreakPoints() {
