@@ -19,25 +19,50 @@ using Spice86.Shared.Utils;
 /// <summary>
 ///     A VGA BIOS implementation.
 /// </summary>
-public class VgaBios : InterruptHandler, IVideoInt10Handler {
+public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension {
     private readonly BiosDataArea _biosDataArea;
     private readonly ILoggerService _logger;
     private readonly IVgaFunctionality _vgaFunctions;
 
     /// <summary>
+    /// "Several new BIOS calls have been defined to support Super VGA modes. For
+    /// maximum compatibility with the standard VGA BIOS, these calls are grouped under
+    /// one function number."
     /// VBE (VESA BIOS Extension) function codes (AL register values when AH=4Fh).
+    /// "The designated Super VGA extended function number is 4Fh."
     /// </summary>
     private enum VbeFunction : byte {
+        /// <summary>
+        /// "Function 00h - Return Super VGA Information"
+        /// </summary>
         GetControllerInfo = 0x00,
+        /// <summary>
+        /// "Function 01h - Return Super VGA mode information"
+        /// </summary>
         GetModeInfo = 0x01,
+        /// <summary>
+        /// "Function 02h - Set Super VGA video mode"
+        /// </summary>
         SetMode = 0x02
     }
 
     /// <summary>
+    /// "Every function returns status information in the AX register. The format of the
+    /// status word is as follows:
+    /// AL == 4Fh: Function is supported
+    /// AL != 4Fh: Function is not supported
+    /// AH == 00h: Function call successful
+    /// AH == 01h: Function call failed"
     /// VBE status codes returned in AX register.
     /// </summary>
     private enum VbeStatus : ushort {
+        /// <summary>
+        /// "AL == 4Fh: Function is supported, AH == 00h: Function call successful"
+        /// </summary>
         Success = 0x004F,
+        /// <summary>
+        /// "AL == 4Fh: Function is supported, AH == 01h: Function call failed"
+        /// </summary>
         Failed = 0x014F
     }
 
@@ -56,28 +81,92 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     }
 
     /// <summary>
+    /// "The format of VESA mode numbers is as follows:
+    /// D0-D8 = Mode number (If D8 == 0, not VESA defined; If D8 == 1, VESA defined)
+    /// D9-D14 = Reserved by VESA for future expansion (= 0)
+    /// D15 = Reserved (= 0)"
+    /// 
     /// VBE mode flags (used in BX register for VBE Set Mode function).
+    /// "Input: BX = Video mode
+    /// D0-D14 = Video mode
+    /// D15 = Clear memory flag (0 = Clear video memory, 1 = Don't clear video memory)"
+    /// 
+    /// Note: Bit 14 (UseLinearFrameBuffer) is VBE 2.0+ only, ignored in VBE 1.0/1.2.
     /// </summary>
     [Flags]
     private enum VbeModeFlags : ushort {
         None = 0x0000,
+        /// <summary>
+        /// Use linear frame buffer (VBE 2.0+ only, ignored in VBE 1.0/1.2).
+        /// </summary>
         UseLinearFrameBuffer = 0x4000,
+        /// <summary>
+        /// "D15 = Clear memory flag (1 = Don't clear video memory)"
+        /// </summary>
         DontClearMemory = 0x8000,
+        /// <summary>
+        /// "D0-D8 = Mode number" (bits 0-8, mask for extracting mode number)
+        /// </summary>
         ModeNumberMask = 0x01FF
     }
 
     /// <summary>
-    /// VBE-related constants.
+    /// VBE-related constants from VESA Super VGA BIOS Extension Standard #VS911022, VBE Version 1.2.
     /// </summary>
     private static class VbeConstants {
+        /// <summary>
+        /// "The current VESA version number is 1.2."
+        /// VBE 1.0 version number in BCD format (major.minor = 0x0100 = 1.0).
+        /// </summary>
         public const ushort Version10 = 0x0100;
+
+        /// <summary>
+        /// "D0 = DAC is switchable (0 = DAC is fixed width, with 6-bits per primary color,
+        /// 1 = DAC width is switchable)"
+        /// Capability bit indicating DAC width is switchable.
+        /// </summary>
         public const uint DacSwitchableCapability = 0x00000001;
-        public const ushort TotalMemory1MB = 16; // in 64KB blocks
+
+        /// <summary>
+        /// "The TotalMemory field indicates the amount of memory installed on the VGA
+        /// board. Its value represents the number of 64kb blocks of memory currently
+        /// installed."
+        /// Total memory: 1MB = 16 blocks of 64KB each.
+        /// </summary>
+        public const ushort TotalMemory1MB = 16;
+
+        /// <summary>
+        /// OEM identification string for Spice86 VBE implementation.
+        /// </summary>
         public const string OemString = "Spice86 VBE";
+
+        /// <summary>
+        /// Offset from VbeInfoBlock base where OEM string is written (beyond 256-byte structure).
+        /// </summary>
         public const uint OemStringOffset = 256;
+
+        /// <summary>
+        /// Offset from VbeInfoBlock base where mode list is written (after OEM string).
+        /// </summary>
         public const uint ModeListOffset = 280;
+
+        /// <summary>
+        /// "The list of mode numbers is terminated by a -1 (0FFFFh)."
+        /// Mode list terminator value.
+        /// </summary>
         public const ushort ModeListTerminator = 0xFFFF;
+
+        /// <summary>
+        /// "To date, VESA has defined a 7-bit video mode number, 6Ah, for the 800x600,
+        /// 16-color, 4-plane graphics mode. The corresponding 15-bit mode number for this
+        /// mode is 102h."
+        /// VESA mode 102h: 800x600, 16 colors (4-plane planar).
+        /// </summary>
         public const ushort VesaMode800x600x16 = 0x102;
+
+        /// <summary>
+        /// Internal VGA mode 6Ah corresponding to VESA mode 102h (800x600x16).
+        /// </summary>
         public const int InternalMode800x600x16 = 0x6A;
     }
 
@@ -85,24 +174,69 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
     /// VBE Mode Info Block constants.
     /// </summary>
     private static class VbeModeInfoConstants {
+        /// <summary>
+        /// Mode attributes: D0=1 (supported), D1=1 (extended info), D2=0, D3=1 (color), D4=1 (graphics) = 0x001B
+        /// </summary>
         public const ushort ModeAttributesSupported = 0x001B;
+        /// <summary>
+        /// "D0 = Window supported, D1 = Window readable, D2 = Window writeable" = 0x07
+        /// </summary>
         public const byte WindowAttributesReadWriteSupported = 0x07;
         public const byte WindowAttributesNotSupported = 0x00;
+        /// <summary>
+        /// "WinGranularity specifies the smallest boundary, in KB" = 64KB
+        /// </summary>
         public const ushort WindowGranularity64KB = 64;
+        /// <summary>
+        /// "WinSize specifies the size of the window in KB" = 64KB
+        /// </summary>
         public const ushort WindowSize64KB = 64;
+        /// <summary>
+        /// "WinASegment address...in CPU address space" = 0xA000
+        /// </summary>
         public const ushort WindowASegmentAddress = 0xA000;
         public const ushort WindowBSegmentAddress = 0x0000;
+        /// <summary>
+        /// "The XCharCellSize...size of the character cell in pixels" = 8
+        /// </summary>
         public const byte CharWidth = 8;
+        /// <summary>
+        /// "The YCharSellSize...size of the character cell in pixels" = 16
+        /// </summary>
         public const byte CharHeight = 16;
+        /// <summary>
+        /// "For modes that don't have scanline banks...this field should be set to 1"
+        /// </summary>
         public const byte SingleBank = 1;
         public const byte BankSize64KB = 64;
+        /// <summary>
+        /// "The NumberOfImagePages field specifies the number of additional...images"
+        /// </summary>
         public const byte NoImagePages = 0;
+        /// <summary>
+        /// "The Reserved field...will always be set to one in this version"
+        /// </summary>
         public const byte Reserved = 1;
+        /// <summary>
+        /// "03h = 4-plane planar"
+        /// </summary>
         public const byte MemoryModelPlanar = 3;
+        /// <summary>
+        /// "04h = Packed pixel"
+        /// </summary>
         public const byte MemoryModelPackedPixel = 4;
+        /// <summary>
+        /// "06h = Direct Color"
+        /// </summary>
         public const byte MemoryModelDirectColor = 6;
+        /// <summary>
+        /// "the MaskSize values for a Direct Color 5:6:5 mode would be 5, 6, 5"
+        /// </summary>
         public const byte RedGreenBlueMaskSize = 5;
         public const byte RedGreenBlueMaskSize8 = 8;
+        /// <summary>
+        /// "the MaskSize values for a Direct Color 5:6:5 mode would be 5, 6, 5" - green=6
+        /// </summary>
         public const byte GreenMaskSize6Bit = 6;
     }
 
@@ -164,6 +298,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <summary>
     /// Represents the VBE Info Block structure (VBE 1.0/1.2).
+    /// "The purpose of this function is to provide information to the calling program
+    /// about the general capabilities of the Super VGA environment. The function fills
+    /// an information block structure at the address specified by the caller.
+    /// The information block size is 256 bytes."
     /// Returned by VBE Function 00h - Return VBE Controller Information.
     /// Minimum size is 256 bytes, but callers should provide ~512 bytes for OEM string and mode list.
     /// </summary>
@@ -181,7 +319,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "The VESASignature field contains the characters 'VESA' if this is a valid block."
         /// Gets or sets the VBE signature (4 bytes: "VESA" for VBE 1.x, "VBE2" for VBE 2.0+).
+        /// Offset: 0x00, Size: 4 bytes.
         /// </summary>
         public string Signature {
             get => GetZeroTerminatedString(0x00, SignatureLength);
@@ -196,7 +336,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "The VESAVersion is a binary field which specifies what level of the VESA
+        /// standard the Super VGA BIOS conforms to. The higher byte specifies the major
+        /// version number. The lower byte specifies the minor version number. The current
+        /// VESA version number is 1.2."
         /// Gets or sets the VBE version (BCD format: 0x0100 = 1.0, 0x0102 = 1.2, 0x0200 = 2.0).
+        /// Offset: 0x04, Size: 2 bytes (word).
         /// </summary>
         public ushort Version {
             get => UInt16[0x04];
@@ -204,8 +349,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to OEM string (segment:offset).
-        /// Offset part.
+        /// "The OEMStringPtr is a far pointer to a null terminated OEM-defined string."
+        /// Gets or sets the pointer to OEM string (far pointer stored as offset:segment).
+        /// Offset part at 0x06, Size: 2 bytes (word).
         /// </summary>
         public ushort OemStringOffset {
             get => UInt16[0x06];
@@ -213,8 +359,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to OEM string (segment:offset).
-        /// Segment part.
+        /// "The OEMStringPtr is a far pointer to a null terminated OEM-defined string."
+        /// Gets or sets the pointer to OEM string (far pointer stored as offset:segment).
+        /// Segment part at 0x08, Size: 2 bytes (word).
         /// </summary>
         public ushort OemStringSegment {
             get => UInt16[0x08];
@@ -222,10 +369,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "The Capabilities field describes what general features are supported in the
+        /// video environment. The bits are defined as follows:
+        /// D0 = DAC is switchable (0 = DAC is fixed width, with 6-bits per primary color,
+        /// 1 = DAC width is switchable)
+        /// D1-31 = Reserved"
         /// Gets or sets the capabilities flags (4 bytes).
-        /// Bit 0: DAC is switchable (0=fixed 6-bit, 1=switchable 6/8-bit).
-        /// Bit 1: Controller is not VGA compatible.
-        /// Bit 2: RAMDAC programming requires blank bit during programming.
+        /// Offset: 0x0A, Size: 4 bytes (dword).
         /// </summary>
         public uint Capabilities {
             get => UInt32[0x0A];
@@ -233,8 +383,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to video mode list (segment:offset).
-        /// Offset part. Points to array of ushort mode numbers, terminated by 0xFFFF.
+        /// "The VideoModePtr points to a list of supported Super VGA (VESA-defined as well
+        /// as OEM-specific) mode numbers. Each mode number occupies one word (16 bits).
+        /// The list of mode numbers is terminated by a -1 (0FFFFh)."
+        /// Gets or sets the pointer to video mode list (far pointer stored as offset:segment).
+        /// Offset part at 0x0E, Size: 2 bytes (word).
+        /// Points to array of ushort mode numbers, terminated by 0xFFFF.
         /// </summary>
         public ushort VideoModeListOffset {
             get => UInt16[0x0E];
@@ -242,8 +396,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to video mode list (segment:offset).
-        /// Segment part.
+        /// "The VideoModePtr points to a list of supported Super VGA (VESA-defined as well
+        /// as OEM-specific) mode numbers."
+        /// Gets or sets the pointer to video mode list (far pointer stored as offset:segment).
+        /// Segment part at 0x10, Size: 2 bytes (word).
         /// </summary>
         public ushort VideoModeListSegment {
             get => UInt16[0x10];
@@ -251,7 +407,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "The TotalMemory field indicates the amount of memory installed on the VGA
+        /// board. Its value represents the number of 64kb blocks of memory currently
+        /// installed."
         /// Gets or sets the total memory in 64KB blocks.
+        /// Offset: 0x12, Size: 2 bytes (word).
         /// </summary>
         public ushort TotalMemory {
             get => UInt16[0x12];
@@ -271,6 +431,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "The list of mode numbers is terminated by a -1 (0FFFFh)."
         /// Writes the video mode list at the specified address.
         /// </summary>
         /// <param name="modes">Array of mode numbers (will be terminated with 0xFFFF).</param>
@@ -285,6 +446,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
     /// <summary>
     /// Represents the VBE Mode Info Block structure (VBE 1.0/1.2).
+    /// "This function returns information about a specific Super VGA video mode that was
+    /// returned by Function 0. The function fills a mode information block structure
+    /// at the address specified by the caller. The mode information block size is
+    /// maximum 256 bytes."
     /// Returned by VBE Function 01h - Return VBE Mode Information.
     /// Size is 256 bytes.
     /// </summary>
@@ -299,15 +464,17 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the mode attributes.
-        /// Bit 0: Mode supported by hardware.
-        /// Bit 1: Extended information available.
-        /// Bit 2: TTY output functions supported by BIOS.
-        /// Bit 3: Color mode.
-        /// Bit 4: Graphics mode (not text).
-        /// Bit 5: Mode is not VGA compatible.
-        /// Bit 6: Bank-switched mode not supported (VBE 2.0+).
-        /// Bit 7: Linear frame buffer mode available (VBE 2.0+).
+        /// "The ModeAttributes field describes certain important characteristics of the
+        /// video mode. Bit D0 specifies whether this mode can be initialized in the
+        /// present video configuration."
+        /// Offset: 0x00, Size: 2 bytes (word).
+        /// Bit definitions:
+        /// "D0 = Mode supported in hardware (0 = Mode not supported, 1 = Mode supported)
+        /// D1 = 1 (Reserved)
+        /// D2 = Output functions supported by BIOS (0 = not supported, 1 = supported)
+        /// D3 = Monochrome/color mode (0 = Monochrome, 1 = Color)
+        /// D4 = Mode type (0 = Text mode, 1 = Graphics mode)
+        /// D5-D15 = Reserved"
         /// </summary>
         public ushort ModeAttributes {
             get => UInt16[0x00];
@@ -315,10 +482,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window A attributes.
-        /// Bit 0: Window exists.
-        /// Bit 1: Window is readable.
-        /// Bit 2: Window is writable.
+        /// "The WinAAttributes and WinBAttributes describe the characteristics of the CPU
+        /// windowing scheme such as whether the windows exist and are read/writeable."
+        /// Window A attributes. Offset: 0x02, Size: 1 byte.
+        /// "D0 = Window supported (0 = not supported, 1 = supported)
+        /// D1 = Window readable (0 = not readable, 1 = readable)
+        /// D2 = Window writeable (0 = not writeable, 1 = writeable)
+        /// D3-D7 = Reserved"
         /// </summary>
         public byte WindowAAttributes {
             get => UInt8[0x02];
@@ -326,7 +496,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window B attributes (same bits as WindowA).
+        /// "The WinAAttributes and WinBAttributes describe the characteristics of the CPU
+        /// windowing scheme such as whether the windows exist and are read/writeable."
+        /// Window B attributes (same bits as WindowA). Offset: 0x03, Size: 1 byte.
         /// </summary>
         public byte WindowBAttributes {
             get => UInt8[0x03];
@@ -334,7 +506,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window granularity in KB.
+        /// "WinGranularity specifies the smallest boundary, in KB, on which the window can
+        /// be placed in the video memory. The value of this field is undefined if Bit D0
+        /// of the appropriate WinAttributes field is not set."
+        /// Offset: 0x04, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowGranularity {
             get => UInt16[0x04];
@@ -342,7 +517,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window size in KB.
+        /// "WinSize specifies the size of the window in KB."
+        /// Offset: 0x06, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowSize {
             get => UInt16[0x06];
@@ -350,7 +526,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window A start segment.
+        /// "WinASegment and WinBSegment address specify the segment addresses where the
+        /// windows are located in CPU address space."
+        /// Window A start segment. Offset: 0x08, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowASegment {
             get => UInt16[0x08];
@@ -358,7 +536,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the window B start segment.
+        /// "WinASegment and WinBSegment address specify the segment addresses where the
+        /// windows are located in CPU address space."
+        /// Window B start segment. Offset: 0x0A, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowBSegment {
             get => UInt16[0x0A];
@@ -366,8 +546,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to window positioning function (segment:offset).
-        /// Offset part.
+        /// "WinFuncAddr specifies the address of the CPU video memory windowing function.
+        /// The windowing function can be invoked either through VESA BIOS function 05h, or
+        /// by calling the function directly."
+        /// Pointer to window positioning function (far pointer stored as offset:segment).
+        /// Offset part at 0x0C, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowFunctionOffset {
             get => UInt16[0x0C];
@@ -375,8 +558,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the pointer to window positioning function (segment:offset).
-        /// Segment part.
+        /// "WinFuncAddr specifies the address of the CPU video memory windowing function."
+        /// Pointer to window positioning function (far pointer stored as offset:segment).
+        /// Segment part at 0x0E, Size: 2 bytes (word).
         /// </summary>
         public ushort WindowFunctionSegment {
             get => UInt16[0x0E];
@@ -384,7 +568,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the bytes per scan line.
+        /// "The BytesPerScanline field specifies how many bytes each logical scanline
+        /// consists of. The logical scanline could be equal to or larger then the
+        /// displayed scanline."
+        /// Offset: 0x10, Size: 2 bytes (word).
         /// For planar modes (4-bit), this is bytes per plane.
         /// For packed pixel modes, this is total bytes per line.
         /// </summary>
@@ -394,7 +581,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the horizontal resolution in pixels.
+        /// "The XResolution and YResolution specify the width and height of the video mode.
+        /// In graphics modes, this resolution is in units of pixels."
+        /// Horizontal resolution in pixels. Offset: 0x12, Size: 2 bytes (word).
         /// </summary>
         public ushort XResolution {
             get => UInt16[0x12];
@@ -402,7 +591,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the vertical resolution in pixels.
+        /// "The XResolution and YResolution specify the width and height of the video mode.
+        /// In graphics modes, this resolution is in units of pixels."
+        /// Vertical resolution in pixels. Offset: 0x14, Size: 2 bytes (word).
         /// </summary>
         public ushort YResolution {
             get => UInt16[0x14];
@@ -410,7 +601,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the character cell width in pixels.
+        /// "The XCharCellSize and YCharSellSize specify the size of the character cell in
+        /// pixels."
+        /// Character cell width in pixels. Offset: 0x16, Size: 1 byte.
         /// </summary>
         public byte XCharSize {
             get => UInt8[0x16];
@@ -418,7 +611,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the character cell height in pixels.
+        /// "The XCharCellSize and YCharSellSize specify the size of the character cell in
+        /// pixels."
+        /// Character cell height in pixels. Offset: 0x17, Size: 1 byte.
         /// </summary>
         public byte YCharSize {
             get => UInt8[0x17];
@@ -426,7 +621,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the number of memory planes.
+        /// "The NumberOfPlanes field specifies the number of memory planes available to
+        /// software in that mode. For standard 16-color VGA graphics, this would be set to
+        /// 4. For standard packed pixel modes, the field would be set to 1."
+        /// Offset: 0x18, Size: 1 byte.
         /// </summary>
         public byte NumberOfPlanes {
             get => UInt8[0x18];
@@ -434,7 +632,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the bits per pixel.
+        /// "The BitsPerPixel field specifies the total number of bits that define the color
+        /// of one pixel. For example, a standard VGA 4 Plane 16-color graphics mode would
+        /// have a 4 in this field and a packed pixel 256-color graphics mode would specify
+        /// 8 in this field."
+        /// Offset: 0x19, Size: 1 byte.
         /// </summary>
         public byte BitsPerPixel {
             get => UInt8[0x19];
@@ -442,7 +644,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the number of banks.
+        /// "The NumberOfBanks field specifies the number of banks in which the scan lines
+        /// are grouped. The remainder from dividing the scan line number by the number of
+        /// banks is the bank that contains the scan line and the quotient is the scan line
+        /// number within the bank."
+        /// Offset: 0x1A, Size: 1 byte.
         /// </summary>
         public byte NumberOfBanks {
             get => UInt8[0x1A];
@@ -450,15 +656,19 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the memory model.
-        /// 0 = Text mode.
-        /// 1 = CGA graphics.
-        /// 2 = Hercules graphics.
-        /// 3 = EGA/VGA planar.
-        /// 4 = Packed pixel.
-        /// 5 = Non-chain 4, 256 color.
-        /// 6 = Direct color.
-        /// 7 = YUV.
+        /// "The MemoryModel field specifies the general type of memory organization used in
+        /// this mode."
+        /// Offset: 0x1B, Size: 1 byte.
+        /// "00h = Text mode
+        /// 01h = CGA graphics
+        /// 02h = Hercules graphics
+        /// 03h = 4-plane planar
+        /// 04h = Packed pixel
+        /// 05h = Non-chain 4, 256 color
+        /// 06h = Direct Color
+        /// 07h = YUV.
+        /// 08h-0Fh = Reserved, to be defined by VESA
+        /// 10h-FFh = To be defined by OEM"
         /// </summary>
         public byte MemoryModel {
             get => UInt8[0x1B];
@@ -466,7 +676,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the bank size in KB.
+        /// "The BankSize field specifies the size of a bank (group of scan lines) in units
+        /// of 1KB. For CGA and Hercules graphics modes this is 8, as each bank is 8192
+        /// bytes in length."
+        /// Offset: 0x1C, Size: 1 byte.
         /// </summary>
         public byte BankSize {
             get => UInt8[0x1C];
@@ -474,7 +687,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the number of image pages.
+        /// "The NumberOfImagePages field specifies the number of additional complete display
+        /// images that will fit into the VGA's memory, at one time, in this mode."
+        /// Offset: 0x1D, Size: 1 byte.
         /// </summary>
         public byte NumberOfImagePages {
             get => UInt8[0x1D];
@@ -482,7 +697,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the reserved byte (should be 1).
+        /// "The Reserved field has been defined to support a future VESA BIOS extension
+        /// feature and will always be set to one in this version."
+        /// Offset: 0x1E, Size: 1 byte.
         /// </summary>
         public byte Reserved1 {
             get => UInt8[0x1E];
@@ -490,7 +707,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the red mask size (number of bits).
+        /// "The RedMaskSize, GreenMaskSize, BlueMaskSize, and RsvdMaskSize fields define the
+        /// size, in bits, of the red, green, and blue components of a direct color pixel."
+        /// Red mask size (number of bits). Offset: 0x1F, Size: 1 byte.
         /// </summary>
         public byte RedMaskSize {
             get => UInt8[0x1F];
@@ -498,7 +717,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the red field position (bit offset).
+        /// "The RedFieldPosition, GreenFieldPosition, BlueFieldPosition, and
+        /// RsvdFieldPosition fields define the bit position within the direct color pixel
+        /// or YUV pixel of the least significant bit of the respective color component."
+        /// Red field position (bit offset). Offset: 0x20, Size: 1 byte.
         /// </summary>
         public byte RedFieldPosition {
             get => UInt8[0x20];
@@ -506,7 +728,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the green mask size (number of bits).
+        /// "The RedMaskSize, GreenMaskSize, BlueMaskSize, and RsvdMaskSize fields define the
+        /// size, in bits, of the red, green, and blue components of a direct color pixel."
+        /// Green mask size (number of bits). Offset: 0x21, Size: 1 byte.
         /// </summary>
         public byte GreenMaskSize {
             get => UInt8[0x21];
@@ -514,7 +738,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the green field position (bit offset).
+        /// "The RedFieldPosition, GreenFieldPosition, BlueFieldPosition, and
+        /// RsvdFieldPosition fields define the bit position within the direct color pixel
+        /// or YUV pixel of the least significant bit of the respective color component."
+        /// Green field position (bit offset). Offset: 0x22, Size: 1 byte.
         /// </summary>
         public byte GreenFieldPosition {
             get => UInt8[0x22];
@@ -522,7 +749,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the blue mask size (number of bits).
+        /// "The RedMaskSize, GreenMaskSize, BlueMaskSize, and RsvdMaskSize fields define the
+        /// size, in bits, of the red, green, and blue components of a direct color pixel."
+        /// Blue mask size (number of bits). Offset: 0x23, Size: 1 byte.
         /// </summary>
         public byte BlueMaskSize {
             get => UInt8[0x23];
@@ -530,7 +759,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the blue field position (bit offset).
+        /// "The RedFieldPosition, GreenFieldPosition, BlueFieldPosition, and
+        /// RsvdFieldPosition fields define the bit position within the direct color pixel
+        /// or YUV pixel of the least significant bit of the respective color component."
+        /// Blue field position (bit offset). Offset: 0x24, Size: 1 byte.
         /// </summary>
         public byte BlueFieldPosition {
             get => UInt8[0x24];
@@ -538,7 +770,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the reserved mask size (number of bits).
+        /// "The RedMaskSize, GreenMaskSize, BlueMaskSize, and RsvdMaskSize fields define the
+        /// size, in bits, of the red, green, and blue components of a direct color pixel."
+        /// Reserved mask size (number of bits). Offset: 0x25, Size: 1 byte.
         /// </summary>
         public byte ReservedMaskSize {
             get => UInt8[0x25];
@@ -546,7 +780,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the reserved field position (bit offset).
+        /// "The RedFieldPosition, GreenFieldPosition, BlueFieldPosition, and
+        /// RsvdFieldPosition fields define the bit position within the direct color pixel
+        /// or YUV pixel of the least significant bit of the respective color component."
+        /// Reserved field position (bit offset). Offset: 0x26, Size: 1 byte.
         /// </summary>
         public byte ReservedFieldPosition {
             get => UInt8[0x26];
@@ -554,9 +791,12 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
-        /// Gets or sets the direct color mode attributes.
-        /// Bit 0: Color ramp is programmable.
-        /// Bit 1: Bytes in reserved field may be used by application.
+        /// "The DirectColorModeInfo field describes important characteristics of direct
+        /// color modes. Bit D0 specifies whether the color ramp of the DAC is fixed or
+        /// programmable."
+        /// Offset: 0x27, Size: 1 byte.
+        /// "D0 = Color ramp is fixed/programmable (0 = fixed, 1 = programmable)
+        /// D1 = Bits in Rsvd field are usable/reserved (0 = reserved, 1 = usable)"
         /// </summary>
         public byte DirectColorModeInfo {
             get => UInt8[0x27];
@@ -564,6 +804,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
 
         /// <summary>
+        /// "Version 1.1 and later VESA BIOS extensions will zero out all unused fields in
+        /// the Mode Information Block, always returning exactly 256 bytes."
         /// Clears the entire 256-byte mode info block.
         /// </summary>
         public void Clear() {
@@ -572,6 +814,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
             }
         }
     }
+
 
     /// <summary>
     ///     The interrupt vector this class handles.
@@ -1164,13 +1407,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         }
     }
 
-    /// <summary>
-    /// VBE Function 00h - Return VBE Controller Information.
-    /// ES:DI = Pointer to VbeInfoBlock structure (256 bytes minimum, but caller should provide ~512 bytes
-    /// to accommodate the OEM string and mode list stored beyond the structure).
-    /// Returns: AX = VBE Return Status (004Fh = success).
-    /// </summary>
-    private void VbeGetControllerInfo() {
+    /// <inheritdoc cref="IVesaBiosExtension.VbeGetControllerInfo"/>
+    public void VbeGetControllerInfo() {
         ushort segment = State.ES;
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -1210,13 +1448,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         State.AX = (ushort)VbeStatus.Success;
     }
 
-    /// <summary>
-    /// VBE Function 01h - Return VBE Mode Information.
-    /// CX = Mode number.
-    /// ES:DI = Pointer to ModeInfoBlock structure (256 bytes).
-    /// Returns: AX = VBE Return Status (004Fh = success).
-    /// </summary>
-    private void VbeGetModeInfo() {
+
+    /// <inheritdoc cref="IVesaBiosExtension.VbeGetModeInfo"/>
+    public void VbeGetModeInfo() {
         ushort modeNumber = State.CX;
         ushort segment = State.ES;
         ushort offset = State.DI;
@@ -1319,15 +1553,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
         State.AX = 0x004F;
     }
 
-    /// <summary>
-    /// VBE Function 02h - Set VBE Mode.
-    /// BX = Mode number (bit 14 = use linear frame buffer if set, bit 15 = don't clear display).
-    /// Note: VBE 1.0/1.2 does not support linear frame buffer (LFB) - that was introduced in VBE 2.0.
-    /// If bit 14 is set, this implementation ignores it and uses banked mode; programs expecting
-    /// LFB access will not work correctly but the mode set will succeed.
-    /// Returns: AX = VBE Return Status (004Fh = success).
-    /// </summary>
-    private void VbeSetMode() {
+    /// <inheritdoc cref="IVesaBiosExtension.VbeSetMode"/>
+    public void VbeSetMode() {
         ushort modeNumber = State.BX;
         // VBE 1.0/1.2 does not support LFB; bit 14 is ignored (banked mode is always used)
         bool dontClearDisplay = (modeNumber & (ushort)VbeModeFlags.DontClearMemory) != 0;
