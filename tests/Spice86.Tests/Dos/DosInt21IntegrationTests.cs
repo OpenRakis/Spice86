@@ -581,6 +581,12 @@ public class DosInt21IntegrationTests {
     /// this doesn't set up file handles or change the current PSP.
     /// </para>
     /// <para>
+    /// <strong>Test Memory Layout:</strong> Segment 0x2000 (128KB) is well above the
+    /// test program's PSP (typically ~0x0100) and environment blocks (~0x0070-0x0100),
+    /// ensuring no conflicts with allocated memory. The test program is small (~100 bytes)
+    /// and runs at 0x0100:0x0100, so 0x2000 provides safe separation.
+    /// </para>
+    /// <para>
     /// PSP offsets used:
     /// <list type="bullet">
     /// <item>0x00-0x01: INT 20h instruction (0xCD, 0x20)</item>
@@ -592,7 +598,7 @@ public class DosInt21IntegrationTests {
     /// </remarks>
     [Fact]
     public void CreateNewPsp_CreatesValidPspCopy() {
-        // This test creates a new PSP at segment 0x2000 and verifies:
+        // This test creates a new PSP at segment 0x2000 (128KB physical address) and verifies:
         // 1. INT 20h instruction at start of PSP
         // 2. Parent PSP in new PSP matches original PSP
         // 3. Environment segment is copied
@@ -613,6 +619,7 @@ public class DosInt21IntegrationTests {
             0x26, 0x8B, 0x3E, 0x2C, 0x00,  // mov di, es:[002Ch] - DI = env segment
             
             // Create new PSP at segment 0x2000 using INT 21h AH=26h
+            // Note: 0x2000 (128KB) is safely above the test program's memory at 0x0100
             0xBA, 0x00, 0x20,       // mov dx, 2000h - new PSP segment
             0xB4, 0x26,             // mov ah, 26h - Create New PSP
             0xCD, 0x21,             // int 21h

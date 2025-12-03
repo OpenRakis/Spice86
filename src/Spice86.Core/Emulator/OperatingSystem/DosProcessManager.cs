@@ -983,9 +983,9 @@ public class DosProcessManager : DosFileLoader {
         uint newPspAddress = MemoryUtils.ToPhysicalAddress(newPspSegment, 0);
         
         // Copy the entire PSP (256 bytes) from current PSP to new PSP
-        for (int i = 0; i < DosProgramSegmentPrefix.MaxLength; i++) {
-            _memory.UInt8[newPspAddress + (uint)i] = _memory.UInt8[currentPspAddress + (uint)i];
-        }
+        // Use ReadRam/LoadData for efficient bulk copy
+        byte[] pspData = _memory.ReadRam(DosProgramSegmentPrefix.MaxLength, currentPspAddress);
+        _memory.LoadData(newPspAddress, pspData);
         
         // Create a PSP wrapper for the new PSP to update fields
         DosProgramSegmentPrefix newPsp = new(_memory, newPspAddress);
