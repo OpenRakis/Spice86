@@ -25,10 +25,18 @@ public class VgaCard {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;
+    }
+
+    /// <summary>
+    /// Completes the initialization of the VGA card by subscribing it to external events.
+    /// This method should not be called from the constructor to prevent race conditions
+    /// where an event handler (like Render) could be invoked on a partially constructed object.
+    /// </summary>
+    public void SubscribeToEvents() {
         if (_gui is not null) {
-            _gui.RenderScreen += (_, e) => Render(e);
             // Init bitmaps, needed for GUI to start calling Render function
             _gui.SetResolution(_renderer.Width, _renderer.Height);
+            _gui.RenderScreen += (_, e) => Render(e);
         }
     }
 

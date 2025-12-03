@@ -408,6 +408,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
+        vgaCard.SubscribeToEvents();
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("VGA card created...");
