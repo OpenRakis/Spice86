@@ -538,7 +538,7 @@ public class Spice86DependencyInjection : IDisposable {
             emulatorBreakpointsManager, emulatorStateSerializer, memory,
             functionHandlerProvider, memoryDataExporter, state, dos,
             functionCatalogue, executionDumpFactory, pauseHandler,
-            mainWindowViewModel, vgaRenderer, dumpContext, loggerService);
+            mainWindowViewModel, dumpContext, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");

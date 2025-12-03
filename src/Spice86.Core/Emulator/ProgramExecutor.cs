@@ -3,7 +3,6 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Function.Dump;
 using Spice86.Core.Emulator.Gdb;
@@ -33,7 +32,6 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly DumpFolderMetadata _dumpContext;
-    private readonly IVgaRenderer _vgaRenderer;
     public event EventHandler? EmulationStopped;
 
     /// <summary>
@@ -52,7 +50,6 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="executionDumpFactory">To dump execution flow.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
     /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
-    /// <param name="vgaRenderer">The VGA renderer whose IsInitialized flag is set when emulation starts to prevent race conditions.</param>
     /// <param name="dumpContext">The context containing program hash and dump directory information.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(Configuration configuration,
@@ -63,8 +60,7 @@ public sealed class ProgramExecutor : IDisposable {
         MemoryDataExporter memoryDataExporter, State state, Dos dos,
         FunctionCatalogue functionCatalogue,
         IExecutionDumpFactory executionDumpFactory, IPauseHandler pauseHandler,
-        IGuiVideoPresentation? screenPresenter, IVgaRenderer vgaRenderer,
-        DumpFolderMetadata dumpContext, ILoggerService loggerService) {
+        IGuiVideoPresentation? screenPresenter, DumpFolderMetadata dumpContext, ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
         _loggerService = loggerService;
@@ -72,7 +68,6 @@ public sealed class ProgramExecutor : IDisposable {
         _pauseHandler = pauseHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _dumpContext = dumpContext;
-        _vgaRenderer = vgaRenderer;
         _gdbServer = CreateGdbServer(configuration, memory, memoryDataExporter, functionHandlerProvider,
             state, functionCatalogue,
             executionDumpFactory,
@@ -100,11 +95,6 @@ public sealed class ProgramExecutor : IDisposable {
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                 _loggerService.Information("Starting the emulation loop");
             }
-
-            // Enable rendering now that the emulator is about to start.
-            // This prevents race conditions where the UI tries to render
-            // before VGA state is properly initialized.
-            _vgaRenderer.IsInitialized = true;
 
             if (_configuration.Debug) {
                 ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START,

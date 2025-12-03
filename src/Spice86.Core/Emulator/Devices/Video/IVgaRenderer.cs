@@ -25,13 +25,6 @@ public interface IVgaRenderer {
     TimeSpan LastFrameRenderTime { get; }
 
     /// <summary>
-    /// Gets or sets whether the renderer is initialized and ready to render.
-    /// This should be set to true when the emulator starts running to prevent
-    /// race conditions between the UI rendering thread and the emulator thread.
-    /// </summary>
-    bool IsInitialized { get; set; }
-
-    /// <summary>
     ///     Render the current video memory to a buffer.
     /// </summary>
     /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>

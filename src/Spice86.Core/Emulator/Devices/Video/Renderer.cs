@@ -14,7 +14,6 @@ public class Renderer : IVgaRenderer {
     private static readonly object RenderLock = new();
     private readonly VideoMemory _memory;
     private readonly IVideoState _state;
-    private volatile int _isInitialized;
 
     /// <summary>
     ///     Create a new VGA renderer.
@@ -48,17 +47,7 @@ public class Renderer : IVgaRenderer {
     public TimeSpan LastFrameRenderTime { get; private set; }
 
     /// <inheritdoc />
-    public bool IsInitialized {
-        get => Interlocked.CompareExchange(ref _isInitialized, 0, 0) == 1;
-        set => Interlocked.Exchange(ref _isInitialized, value ? 1 : 0);
-    }
-
-    /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
-        if (!IsInitialized) {
-            // Renderer not yet initialized, skip this frame to avoid race conditions.
-            return;
-        }
         if (!Monitor.TryEnter(RenderLock)) {
             // We're already rendering. Get out of here.
             return;
@@ -269,12 +258,9 @@ public class Renderer : IVgaRenderer {
         }
         // The 8 pixels to render this line come from the font which is stored in plane 2.
         byte fontByte = _memory.Planes[2, fontAddress + scanline];
-        int dotsPerClock = _state.SequencerRegisters?.ClockingModeRegister?.DotsPerClock ?? 8;
-        for (int x = 0; x < dotsPerClock; x++) {
+        for (int x = 0; x < _state.SequencerRegisters.ClockingModeRegister.DotsPerClock; x++) {
             uint pixel = (fontByte & 0x80 >> x) != 0 ? foreGroundColor : backGroundColor;
-            if (destinationAddress < frameBuffer.Length) {
-                frameBuffer[destinationAddress++] = pixel;
-            }
+            frameBuffer[destinationAddress++] = pixel;
         }
     }
 
