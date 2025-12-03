@@ -76,20 +76,78 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     }
 
     public string VisitBinaryOperationNode(BinaryOperationNode node) {
-        string left = node.Left.Accept(this);
+        string left = RenderOperand(node.Left, node.BinaryOperation, isLeftOperand: true);
         if (IsZero(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left;
         }
-        string right = node.Right.Accept(this);
+        string right = RenderOperand(node.Right, node.BinaryOperation, isLeftOperand: false);
         if (IsNegative(node.Right) && node.BinaryOperation == BinaryOperation.PLUS) {
             return left + right;
         }
         return left + OperationToString(node.BinaryOperation) + right;
     }
     
+    private string RenderOperand(ValueNode operand, BinaryOperation parentOperation, bool isLeftOperand) {
+        string rendered = operand.Accept(this);
+        
+        // Check if we need to wrap in parentheses for precedence
+        if (operand is BinaryOperationNode childBinaryOp) {
+            int parentPrecedence = GetPrecedence(parentOperation);
+            int childPrecedence = GetPrecedence(childBinaryOp.BinaryOperation);
+            
+            // Wrap if child has lower precedence, or same precedence on right side (for left-associativity)
+            if (childPrecedence < parentPrecedence || 
+                (!isLeftOperand && childPrecedence == parentPrecedence)) {
+                rendered = "(" + rendered + ")";
+            }
+        }
+        
+        return rendered;
+    }
+    
+    private int GetPrecedence(BinaryOperation operation) {
+        return operation switch {
+            BinaryOperation.ASSIGN => 1,
+            BinaryOperation.LOGICAL_OR => 2,
+            BinaryOperation.LOGICAL_AND => 3,
+            BinaryOperation.BITWISE_OR => 4,
+            BinaryOperation.BITWISE_XOR => 5,
+            BinaryOperation.BITWISE_AND => 6,
+            BinaryOperation.EQUAL => 7,
+            BinaryOperation.NOT_EQUAL => 7,
+            BinaryOperation.LESS_THAN => 8,
+            BinaryOperation.GREATER_THAN => 8,
+            BinaryOperation.LESS_THAN_OR_EQUAL => 8,
+            BinaryOperation.GREATER_THAN_OR_EQUAL => 8,
+            BinaryOperation.LEFT_SHIFT => 9,
+            BinaryOperation.RIGHT_SHIFT => 9,
+            BinaryOperation.PLUS => 10,
+            BinaryOperation.MINUS => 10,
+            BinaryOperation.MULTIPLY => 11,
+            BinaryOperation.DIVIDE => 11,
+            BinaryOperation.MODULO => 11,
+            _ => 0
+        };
+    }
+    
     public string VisitUnaryOperationNode(UnaryOperationNode node) {
         string value = node.Value.Accept(this);
+        // Wrap binary operations in parentheses to preserve precedence
+        if (node.Value is BinaryOperationNode) {
+            value = "(" + value + ")";
+        }
         return OperationToString(node.UnaryOperation) + value;
+    }
+    
+    public string VisitTypeConversionNode(TypeConversionNode node) {
+        string typeStr = node.DataType.BitWidth switch {
+            BitWidth.BYTE_8 => node.DataType.Signed ? "(sbyte)" : "(byte)",
+            BitWidth.WORD_16 => node.DataType.Signed ? "(short)" : "(ushort)",
+            BitWidth.DWORD_32 => node.DataType.Signed ? "(int)" : "(uint)",
+            _ => throw new InvalidOperationException($"Unsupported bit width {node.DataType.BitWidth}")
+        };
+        string value = node.Value.Accept(this);
+        return typeStr + value;
     }
 
     private bool IsZero(ValueNode valueNode) {
@@ -117,9 +175,23 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     private string OperationToString(BinaryOperation binaryOperation) {
         return binaryOperation switch {
             BinaryOperation.PLUS => "+",
+            BinaryOperation.MINUS => "-",
             BinaryOperation.MULTIPLY => "*",
+            BinaryOperation.DIVIDE => "/",
+            BinaryOperation.MODULO => "%",
             BinaryOperation.EQUAL => "==",
             BinaryOperation.NOT_EQUAL => "!=",
+            BinaryOperation.LESS_THAN => "<",
+            BinaryOperation.GREATER_THAN => ">",
+            BinaryOperation.LESS_THAN_OR_EQUAL => "<=",
+            BinaryOperation.GREATER_THAN_OR_EQUAL => ">=",
+            BinaryOperation.LOGICAL_AND => "&&",
+            BinaryOperation.LOGICAL_OR => "||",
+            BinaryOperation.BITWISE_AND => "&",
+            BinaryOperation.BITWISE_OR => "|",
+            BinaryOperation.BITWISE_XOR => "^",
+            BinaryOperation.LEFT_SHIFT => "<<",
+            BinaryOperation.RIGHT_SHIFT => ">>",
             BinaryOperation.ASSIGN => "=",
             _ => throw new InvalidOperationException($"Unsupported AST operation {binaryOperation}")
         };
@@ -128,6 +200,8 @@ public class AstInstructionRenderer : IAstVisitor<string> {
     private string OperationToString(UnaryOperation unaryOperation) {
         return unaryOperation switch {
             UnaryOperation.NOT => "!",
+            UnaryOperation.NEGATE => "-",
+            UnaryOperation.BITWISE_NOT => "~",
             _ => throw new InvalidOperationException($"Unsupported AST operation {unaryOperation}")
         };
     }

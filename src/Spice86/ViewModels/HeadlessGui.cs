@@ -139,7 +139,18 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             return;
         }
 
+        // Stop the timer first to prevent any new callbacks
         _drawTimer?.Dispose();
+
+        // Wait for any ongoing draw operation to complete
+        // This prevents a race condition where the timer callback
+        // is in the middle of rendering when we dispose resources
+        try {
+            _drawingSemaphoreSlim?.Wait(TimeSpan.FromMilliseconds(100));
+            _drawingSemaphoreSlim?.Release();
+        } catch (ObjectDisposedException) {
+            // Semaphore was already disposed, which is fine
+        }
 
         _pixelBuffer = null;
         _drawingSemaphoreSlim?.Dispose();

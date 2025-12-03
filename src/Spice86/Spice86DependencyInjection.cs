@@ -116,14 +116,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("State created...");
         }
 
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator breakpoints manager created...");
-        }
+        // Create breakpoint holders before EmulatorBreakpointsManager to avoid circular dependency
+        AddressReadWriteBreakpoints memoryReadWriteBreakpoints = new();
+        AddressReadWriteBreakpoints ioReadWriteBreakpoints = new();
 
         IOPortDispatcher ioPortDispatcher = new(
-            emulatorBreakpointsManager.IoReadWriteBreakpoints, state,
+            ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -146,13 +144,19 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("A20 gate created...");
         }
 
-        Memory memory = new(emulatorBreakpointsManager.
-            MemoryReadWriteBreakpoints,
+        Memory memory = new(memoryReadWriteBreakpoints,
             ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory bus created...");
+        }
+
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, 
+            memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Emulator breakpoints manager created...");
         }
 
         var biosDataArea =
@@ -554,7 +558,7 @@ public class Spice86DependencyInjection : IDisposable {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsViewModel breakpointsViewModel = new(
-                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, memory);
+                state, pauseHandler, messenger, emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
             
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
@@ -686,11 +690,15 @@ public class Spice86DependencyInjection : IDisposable {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 ProgramExecutor.Dispose();
-                DisposeMachineAfterRun();
 
+                // Dispose HeadlessGui BEFORE Machine to stop the rendering timer
+                // before the Renderer is disposed. This prevents a race condition
+                // where the timer callback tries to render with a disposed Renderer.
                 if (_gui is HeadlessGui headlessGui) {
                     headlessGui.Dispose();
                 }
+
+                DisposeMachineAfterRun();
             }
             _disposed = true;
         }

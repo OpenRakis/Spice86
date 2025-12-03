@@ -47,7 +47,7 @@ public class GdbCommandHandler {
         _pauseHandler = pauseHandler;
         _gdbCommandRegisterHandler = new GdbCommandRegisterHandler(_state, gdbIo, _loggerService);
         _gdbCommandMemoryHandler = new GdbCommandMemoryHandler(memory, gdbIo, _loggerService);
-        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService);
+        _gdbCommandBreakpointHandler = new GdbCommandBreakpointHandler(emulatorBreakpointsManager, pauseHandler, gdbIo, _loggerService, state, memory);
         _gdbCustomCommandsHandler = new GdbCustomCommandsHandler(
             memory, state, functionHandlerProvider, functionCatalogue, memoryDataExporter, executionDumpFactory, emulatorBreakpointsManager, gdbIo,
             _loggerService,

@@ -39,19 +39,82 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     private BinaryExpression ToExpression(BinaryOperation binaryOperation, Expression left, Expression right) {
+        // For comparison, logical, and bitwise operations, convert operands to a common type if needed
+        if (left.Type != right.Type && binaryOperation != BinaryOperation.ASSIGN) {
+            // Convert to the larger type
+            Type targetType = GetLargerType(left.Type, right.Type);
+            if (left.Type != targetType) {
+                left = Expression.Convert(left, targetType);
+            }
+            if (right.Type != targetType) {
+                right = Expression.Convert(right, targetType);
+            }
+        }
+        
+        // Shift operations require the right-hand operand to be an Int32 (shift count)
+        if (binaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            if (right.Type != typeof(int)) {
+                right = Expression.Convert(right, typeof(int));
+            }
+        }
+        
         return binaryOperation switch {
             BinaryOperation.PLUS => Expression.Add(left, right),
+            BinaryOperation.MINUS => Expression.Subtract(left, right),
             BinaryOperation.MULTIPLY => Expression.Multiply(left, right),
+            BinaryOperation.DIVIDE => Expression.Divide(left, right),
+            BinaryOperation.MODULO => Expression.Modulo(left, right),
             BinaryOperation.EQUAL => Expression.Equal(left, right),
             BinaryOperation.NOT_EQUAL => Expression.NotEqual(left, right),
+            BinaryOperation.LESS_THAN => Expression.LessThan(left, right),
+            BinaryOperation.GREATER_THAN => Expression.GreaterThan(left, right),
+            BinaryOperation.LESS_THAN_OR_EQUAL => Expression.LessThanOrEqual(left, right),
+            BinaryOperation.GREATER_THAN_OR_EQUAL => Expression.GreaterThanOrEqual(left, right),
+            BinaryOperation.LOGICAL_AND => Expression.AndAlso(left, right),
+            BinaryOperation.LOGICAL_OR => Expression.OrElse(left, right),
+            BinaryOperation.BITWISE_AND => Expression.And(left, right),
+            BinaryOperation.BITWISE_OR => Expression.Or(left, right),
+            BinaryOperation.BITWISE_XOR => Expression.ExclusiveOr(left, right),
+            BinaryOperation.LEFT_SHIFT => Expression.LeftShift(left, right),
+            BinaryOperation.RIGHT_SHIFT => Expression.RightShift(left, right),
             BinaryOperation.ASSIGN => Expression.Assign(left, right),
             _ => throw new InvalidOperationException($"Unhandled Operation: {binaryOperation}")
         };
     }
     
+    private Type GetLargerType(Type type1, Type type2) {
+        // For boolean types, keep them as-is
+        if (type1 == typeof(bool) || type2 == typeof(bool)) {
+            return typeof(bool);
+        }
+        
+        // Order types by size: byte < ushort < uint < ulong
+        int size1 = GetTypeSize(type1);
+        int size2 = GetTypeSize(type2);
+        return size1 >= size2 ? type1 : type2;
+    }
+    
+    private int GetTypeSize(Type type) {
+        if (type == typeof(byte) || type == typeof(sbyte)) {
+            return 1;
+        }
+        if (type == typeof(ushort) || type == typeof(short)) {
+            return 2;
+        }
+        if (type == typeof(uint) || type == typeof(int)) {
+            return 4;
+        }
+        if (type == typeof(ulong) || type == typeof(long)) {
+            return 8;
+        }
+        return 4; // Default to 32-bit
+    }
+    
     private UnaryExpression ToExpression(UnaryOperation unaryOperation, Expression value) {
         return unaryOperation switch {
             UnaryOperation.NOT => Expression.Not(value),
+            UnaryOperation.NEGATE => Expression.Negate(value),
+            UnaryOperation.BITWISE_NOT => Expression.OnesComplement(value),
             _ => throw new InvalidOperationException($"Unhandled Operation: {unaryOperation}")
         };
     }
@@ -119,7 +182,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression);
     }
     
-    private Expression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
+    private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
         string name = isSegmentRegister ? _registerRenderer.ToStringSegmentRegister(registerIndex) : _registerRenderer.ToStringRegister(dataType.BitWidth, registerIndex);
         PropertyInfo stateRegisterProperty = EnsureNonNull(typeof(State).GetProperty(name));
         return Expression.Property(_stateParameter, stateRegisterProperty);
@@ -157,6 +220,12 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitUnaryOperationNode(UnaryOperationNode node) {
         Expression value = node.Value.Accept(this);
         return ToExpression(node.UnaryOperation, value);
+    }
+    
+    public Expression VisitTypeConversionNode(TypeConversionNode node) {
+        Expression value = node.Value.Accept(this);
+        Type targetType = FromDataType(node.DataType);
+        return Expression.Convert(value, targetType);
     }
     
     public Expression VisitInstructionNode(InstructionNode node) {

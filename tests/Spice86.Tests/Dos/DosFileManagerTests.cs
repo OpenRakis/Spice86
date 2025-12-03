@@ -111,15 +111,17 @@ public class DosFileManagerTests {
             CyclesAllocatedForSlice = 1,
             CyclesLeft = 1
         };
-        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state);
-        IOPortDispatcher ioPortDispatcher = new(emulatorBreakpointsManager.IoReadWriteBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
-        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        AddressReadWriteBreakpoints memoryBreakpoints = new();
+        AddressReadWriteBreakpoints ioBreakpoints = new();
+        IOPortDispatcher ioPortDispatcher = new(ioBreakpoints, state, loggerService, configuration.FailOnUnhandledPort);
         A20Gate a20Gate = new(configuration.A20Gate);
-        Memory memory = new(emulatorBreakpointsManager.MemoryReadWriteBreakpoints, ram, a20Gate,
+        Memory memory = new(memoryBreakpoints, ram, a20Gate,
             initializeResetVector: configuration.InitializeDOS is true);
-        var biosDataArea =
+        EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+        BiosDataArea biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb: (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
-        var dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
+        IOPortHandlerRegistry ioPortHandlerRegistry = new(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
+        DualPic dualPic = new DualPic(ioPortHandlerRegistry, executionStateSlice, loggerService);
 
         CallbackHandler callbackHandler = new(state, loggerService);
         InterruptVectorTable interruptVectorTable = new(memory);
