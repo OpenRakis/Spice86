@@ -560,6 +560,111 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests INT 21h, AH=26h - Create New PSP.
+    /// Verifies that a new PSP is created by copying the current PSP.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This test verifies the basic functionality of INT 21h AH=26h:
+    /// <list type="number">
+    /// <item>Gets the current PSP segment</item>
+    /// <item>Creates a new PSP at segment 0x2000 using INT 21h, AH=26h</item>
+    /// <item>Verifies the INT 20h instruction is at the start of the new PSP</item>
+    /// <item>Verifies the parent PSP segment matches the original PSP</item>
+    /// <item>Verifies the environment segment was copied</item>
+    /// <item>Verifies the terminate address (INT 22h) was updated</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Based on FreeDOS kernel behavior: the function copies the entire current PSP
+    /// to the new segment and updates the interrupt vectors. Unlike CreateChildPsp (55h),
+    /// this doesn't set up file handles or change the current PSP.
+    /// </para>
+    /// <para>
+    /// PSP offsets used:
+    /// <list type="bullet">
+    /// <item>0x00-0x01: INT 20h instruction (0xCD, 0x20)</item>
+    /// <item>0x0A-0x0D: Terminate address (INT 22h vector)</item>
+    /// <item>0x16: Parent PSP segment</item>
+    /// <item>0x2C: Environment segment</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void CreateNewPsp_CreatesValidPspCopy() {
+        // This test creates a new PSP at segment 0x2000 and verifies:
+        // 1. INT 20h instruction at start of PSP
+        // 2. Parent PSP in new PSP matches original PSP
+        // 3. Environment segment is copied
+        // 4. Terminate address is non-zero (updated from INT vector table)
+        // 
+        // Register usage:
+        // - BP = original PSP segment (saved)
+        // - DI = original environment segment (saved)
+        // - DX = new PSP segment (0x2000)
+        byte[] program = new byte[] {
+            // Get current PSP address (save for comparison)
+            0xB4, 0x62,             // mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // int 21h - BX = current PSP segment
+            0x89, 0xDD,             // mov bp, bx - save original PSP in BP
+            
+            // Save the environment segment from the original PSP
+            0x8E, 0xC3,             // mov es, bx - ES = current PSP segment
+            0x26, 0x8B, 0x3E, 0x2C, 0x00,  // mov di, es:[002Ch] - DI = env segment
+            
+            // Create new PSP at segment 0x2000 using INT 21h AH=26h
+            0xBA, 0x00, 0x20,       // mov dx, 2000h - new PSP segment
+            0xB4, 0x26,             // mov ah, 26h - Create New PSP
+            0xCD, 0x21,             // int 21h
+            
+            // Load new PSP segment to verify its contents
+            0xB8, 0x00, 0x20,       // mov ax, 2000h
+            0x8E, 0xC0,             // mov es, ax - ES = new PSP (0x2000)
+            
+            // Check INT 20h instruction at offset 0 (0xCD, 0x20)
+            0x26, 0x8A, 0x06, 0x00, 0x00,  // mov al, es:[0000h]
+            0x3C, 0xCD,             // cmp al, 0CDh
+            0x0F, 0x85, 0x2C, 0x00, // jne failed (near jump)
+            
+            0x26, 0x8A, 0x06, 0x01, 0x00,  // mov al, es:[0001h]
+            0x3C, 0x20,             // cmp al, 20h
+            0x0F, 0x85, 0x21, 0x00, // jne failed (near jump)
+            
+            // Check parent PSP segment at offset 0x16 matches original PSP (in BP)
+            0x26, 0x8B, 0x1E, 0x16, 0x00,  // mov bx, es:[0016h] - parent PSP
+            0x39, 0xEB,             // cmp bx, bp - compare with original PSP
+            0x0F, 0x85, 0x13, 0x00, // jne failed (near jump)
+            
+            // Check environment segment at offset 0x2C matches original (in DI)
+            0x26, 0x8B, 0x1E, 0x2C, 0x00,  // mov bx, es:[002Ch] - env segment
+            0x39, 0xFB,             // cmp bx, di - compare with original env
+            0x0F, 0x85, 0x08, 0x00, // jne failed (near jump)
+            
+            // Check terminate address (INT 22h vector) at offset 0x0A is non-zero
+            0x26, 0x8B, 0x06, 0x0A, 0x00,  // mov ax, es:[000Ah] - terminate offset
+            0x85, 0xC0,             // test ax, ax - check if non-zero
+            0x74, 0x02,             // je failed (short jump if zero)
+            
+            // Success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Tests INT 21h, AH=55h - Create Child PSP.
     /// Verifies that a child PSP is created at the specified segment with proper initialization.
     /// </summary>
