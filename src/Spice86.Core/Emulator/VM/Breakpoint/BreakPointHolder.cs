@@ -9,7 +9,6 @@ public class BreakPointHolder {
     private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new(1000);
     private readonly List<BreakPoint> _unconditionalBreakPoints = new(1000);
     private readonly HashSet<BreakPoint> _registeredBreakPoints = [];
-    private int _activeBreakpoints;
 
     /// <summary>
     /// Gets a value indicating whether this BreakPointHolder is empty.
@@ -18,8 +17,29 @@ public class BreakPointHolder {
 
     /// <summary>
     /// Gets a value indicating whether at least one breakpoint is currently enabled.
+    /// This iterates through all breakpoints to check their enabled state.
     /// </summary>
-    public bool HasActiveBreakpoints => _activeBreakpoints > 0;
+    public bool HasActiveBreakpoints {
+        get {
+            // Check address breakpoints
+            foreach (List<BreakPoint> breakPointList in _addressBreakPoints.Values) {
+                for (int i = 0; i < breakPointList.Count; i++) {
+                    if (breakPointList[i].IsEnabled) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Check unconditional breakpoints
+            for (int i = 0; i < _unconditionalBreakPoints.Count; i++) {
+                if (_unconditionalBreakPoints[i].IsEnabled) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+    }
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
         return _addressBreakPoints.Values
@@ -51,7 +71,7 @@ public class BreakPointHolder {
         if (on) {
             if (breakPointList == null) {
                 _addressBreakPoints.Add(address, [breakPoint]);
-                RegisterBreakPoint(breakPoint);
+                _registeredBreakPoints.Add(breakPoint);
                 return;
             }
 
@@ -60,13 +80,13 @@ public class BreakPointHolder {
             }
 
             breakPointList.Add(breakPoint);
-            RegisterBreakPoint(breakPoint);
+            _registeredBreakPoints.Add(breakPoint);
         } else if (breakPointList != null && breakPointList.Remove(breakPoint)) {
             if (breakPointList.Count == 0) {
                 _addressBreakPoints.Remove(address);
             }
 
-            UnregisterBreakPoint(breakPoint);
+            _registeredBreakPoints.Remove(breakPoint);
         }
     }
 
@@ -77,9 +97,9 @@ public class BreakPointHolder {
             }
 
             _unconditionalBreakPoints.Add(breakPoint);
-            RegisterBreakPoint(breakPoint);
+            _registeredBreakPoints.Add(breakPoint);
         } else if (_unconditionalBreakPoints.Remove(breakPoint)) {
-            UnregisterBreakPoint(breakPoint);
+            _registeredBreakPoints.Remove(breakPoint);
         }
     }
 
@@ -119,41 +139,11 @@ public class BreakPointHolder {
 
             if (breakPoint.IsRemovedOnTrigger) {
                 breakPointList.RemoveAt(i);
-                UnregisterBreakPoint(breakPoint);
+                _registeredBreakPoints.Remove(breakPoint);
                 i--;
             }
         }
 
         return triggered;
-    }
-
-    private void RegisterBreakPoint(BreakPoint breakPoint) {
-        if (!_registeredBreakPoints.Add(breakPoint)) {
-            return;
-        }
-
-        breakPoint.IsEnabledChanged += OnBreakPointIsEnabledChanged;
-        if (breakPoint.IsEnabled) {
-            _activeBreakpoints++;
-        }
-    }
-
-    private void UnregisterBreakPoint(BreakPoint breakPoint) {
-        if (!_registeredBreakPoints.Remove(breakPoint)) {
-            return;
-        }
-
-        breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
-        if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
-            _activeBreakpoints--;
-        }
-    }
-
-    private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
-        if (isEnabled) {
-            _activeBreakpoints++;
-        } else if (_activeBreakpoints > 0) {
-            _activeBreakpoints--;
-        }
     }
 }
