@@ -17,26 +17,15 @@ public class BreakPointHolder {
 
     /// <summary>
     /// Gets a value indicating whether at least one breakpoint is currently enabled.
-    /// This iterates through all breakpoints to check their enabled state.
+    /// This iterates through all registered breakpoints to check their enabled state.
     /// </summary>
     public bool HasActiveBreakpoints {
         get {
-            // Check address breakpoints
-            foreach (List<BreakPoint> breakPointList in _addressBreakPoints.Values) {
-                for (int i = 0; i < breakPointList.Count; i++) {
-                    if (breakPointList[i].IsEnabled) {
-                        return true;
-                    }
-                }
-            }
-            
-            // Check unconditional breakpoints
-            for (int i = 0; i < _unconditionalBreakPoints.Count; i++) {
-                if (_unconditionalBreakPoints[i].IsEnabled) {
+            foreach (BreakPoint breakPoint in _registeredBreakPoints) {
+                if (breakPoint.IsEnabled) {
                     return true;
                 }
             }
-            
             return false;
         }
     }
@@ -75,7 +64,7 @@ public class BreakPointHolder {
                 return;
             }
 
-            if (breakPointList.Contains(breakPoint)) {
+            if (_registeredBreakPoints.Contains(breakPoint)) {
                 return;
             }
 
@@ -92,7 +81,7 @@ public class BreakPointHolder {
 
     private void ToggleUnconditionalBreakPoint(BreakPoint breakPoint, bool on) {
         if (on) {
-            if (_unconditionalBreakPoints.Contains(breakPoint)) {
+            if (_registeredBreakPoints.Contains(breakPoint)) {
                 return;
             }
 

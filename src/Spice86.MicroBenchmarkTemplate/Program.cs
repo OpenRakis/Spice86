@@ -24,10 +24,10 @@ public class BenchmarkTest {
 internal class Program {
     public static void Main() {
 #if RELEASE
-        // Run the breakpoint check benchmark to demonstrate the performance improvement
+        // To benchmark breakpoint checking performance:
         BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BreakpointCheckBenchmark>();
         
-        // Uncomment to run the original example benchmark
+        // To run the template example benchmark, uncomment the following line:
         // BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BenchmarkTest>();
 #endif
 #if DEBUG
