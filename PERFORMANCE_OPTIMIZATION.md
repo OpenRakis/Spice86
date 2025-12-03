@@ -70,9 +70,9 @@ while (_cpuState.IsRunning) {
 ### Unit Tests
 
 Added 4 new tests in `BreakPointHolderTests.cs`:
-1. `HasActiveBreakpointsTracksEnabledState`: Verifies counter tracks enable/disable correctly
-2. `RemovalOnTriggerUpdatesActiveBreakpoints`: Verifies removal on trigger updates counter
-3. `DoubleToggleUnconditionalBreakPointDoesNotLeakActiveCount`: Prevents counter leaks
+1. `HasActiveBreakpointsTracksEnabledState`: Verifies that HasActiveBreakpoints correctly reflects enable/disable state
+2. `RemovalOnTriggerUpdatesActiveBreakpoints`: Verifies removal on trigger updates HasActiveBreakpoints state
+3. `DoubleToggleUnconditionalBreakPointDoesNotLeakActiveCount`: Prevents duplicate registrations in the HashSet which would cause incorrect HasActiveBreakpoints behavior
 4. `AddressBreakPointIsOnlyRegisteredOnce`: Prevents duplicate registrations
 
 Added performance demonstration test in `BreakpointPerformanceBenchmark.cs`:
@@ -142,10 +142,10 @@ The implementation includes safeguards to prevent the bugs that PR #1547 fixed:
    - Only unregister if remove was successful
    - Use `Contains()` checks before operations
 
-3. **Counter leak prevention**:
-   - Only increment/decrement when HashSet operation succeeds
-   - Track enabled state when registering
-   - Check `_activeBreakpoints > 0` before decrementing
+3. **Duplicate registration prevention**:
+   - Use HashSet to track registered breakpoints
+   - Check if breakpoint exists before adding
+   - Prevent multiple additions of the same breakpoint
 
 ### Code Style
 
