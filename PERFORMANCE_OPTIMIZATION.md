@@ -139,11 +139,6 @@ The implementation includes safeguards to prevent the bugs that PR #1547 fixed:
    - Only unregister if remove was successful
    - Use `Contains()` checks before operations
 
-3. **Duplicate registration prevention**:
-   - Use HashSet to track registered breakpoints
-   - Check if breakpoint exists before adding
-   - Prevent multiple additions of the same breakpoint
-
 ### Code Style
 
 The implementation follows project conventions:
