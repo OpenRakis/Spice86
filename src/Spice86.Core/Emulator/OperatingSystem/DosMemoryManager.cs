@@ -59,14 +59,8 @@ public class DosMemoryManager {
         _start.Size = (ushort)(size - 1);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
-                "DOS memory manager init: pspSegment={PspSegment:X4} startSegment={StartSegment:X4} LastFreeSegment={LastFree:X4} size={Size:X4}",
-                pspSegment, startSegment, LastFreeSegment, size);
-            _loggerService.Information(
                 "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
                 _start.AllocationSizeInBytes, _start.Size);
-            _loggerService.Information(
-                "Initial MCB at segment {McbSegment:X4} physical {Physical:X8}",
-                MemoryUtils.ToSegment(_start.BaseAddress), _start.BaseAddress);
         }
         _start.SetFree();
         _start.SetLast();
@@ -626,20 +620,12 @@ public class DosMemoryManager {
         DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
         while (true) {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("FindCandidates: checking MCB at segment {Segment:X4} size={Size:X4} free={IsFree} valid={IsValid}",
-                    MemoryUtils.ToSegment(current?.BaseAddress ?? 0), current?.Size ?? 0, current?.IsFree ?? false, current?.IsValid ?? false);
-            }
             if (!CheckValidOrLogError(current)) {
                 return new List<DosMemoryControlBlock>();
             }
             JoinBlocks(current, true);
             if (current?.IsFree == true && current.Size >= requestedSize) {
                 candidates.Add(current);
-                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("FindCandidates: CANDIDATE found at segment {Segment:X4} size={Size:X4}",
-                        MemoryUtils.ToSegment(current.BaseAddress), current.Size);
-                }
             }
             if (current?.IsLast == true) {
                 return candidates;
@@ -724,21 +710,11 @@ public class DosMemoryManager {
             return false;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SplitBlock: splitting MCB at segment {Segment:X4} size={Size:X4} into size={NewSize:X4}",
-                MemoryUtils.ToSegment(block.BaseAddress), blockSize, size);
-        }
-
         block.Size = size;
         DosMemoryControlBlock? next = block.GetNextOrDefault();
 
         if (next is null) {
             return false;
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SplitBlock: creating new MCB at segment {Segment:X4} physical {Physical:X8} size={Size:X4}",
-                MemoryUtils.ToSegment(next.BaseAddress), next.BaseAddress, nextBlockSize);
         }
 
         // if it was last propagate it
@@ -750,12 +726,6 @@ public class DosMemoryManager {
         // next is free
         next.SetFree();
         next.Size = (ushort)nextBlockSize;
-        
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("SplitBlock: new MCB initialized with TypeField={Type:X2} Size={Size:X4} PSP={Psp:X4}",
-                next.TypeField, next.Size, next.PspSegment);
-        }
-        
         return true;
     }
 
