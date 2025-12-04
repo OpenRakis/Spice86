@@ -842,8 +842,8 @@ public class DosMemoryManager {
             current = current.GetNextOrDefault();
         }
 
-        // Note: We don't join blocks here to match FreeDOS behavior.
-        // Block joining is deferred to allocation operations.
+        // Note: We don't join blocks here to match FreeDOS FreeProcessMem() behavior.
+        // Block joining is deferred to allocation operations (joinMCBs called from DosMemAlloc).
 
         return true;
     }

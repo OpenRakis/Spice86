@@ -48,7 +48,9 @@ public class Spice86Creator {
             Xms = enableXms,
             Ems = enableEms,
             CyclesBudgeter = new StaticCyclesBudgeter(staticCycleBudget),
-            // Use provided segment or default (0x0070 for DOS tests to avoid wraparound at 1MB)
+            // Use provided segment or default 0x0070 for DOS tests.
+            // 0x0070 avoids MCB wraparound at 1MB boundary (which would occur with higher segments like 0xFFF0)
+            // and provides sufficient conventional memory for typical DOS programs (PSP at 0x0060).
             ProgramEntryPointSegment = programEntryPointSegment ?? 0x0070
         };
 
