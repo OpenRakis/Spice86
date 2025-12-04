@@ -222,28 +222,83 @@ public class DosMemoryManagerProductionConfigurationTest {
     }
 
     /// <summary>
-    /// Tests memory MCB chain structure matches FreeDOS/DOSBox pattern.
-    /// Verifies device MCB at 0x016F, then environment/locked blocks before user memory.
+    /// Reproduces Day of the Tentacle regression: allocate multiple small blocks after program resize.
+    /// DOTT pattern: resize own memory, then allocate many small blocks (3200 bytes each).
+    /// This test should PASS on reference branch but FAIL if memory layout breaks allocation.
     /// </summary>
     [Fact]
-    public void MemoryChainStructure_MatchesFreeDosPattern() {
-        // Read MCB at 0x016F (device block), verify PSP=0x0008, size=1
+    public void DottMemoryPattern_MultipleSmallAllocations_ShouldSucceed() {
+        // DOTT does:
+        // 1. Resize own memory to minimum
+        // 2. Allocate multiple small blocks (3200 bytes = 200 paragraphs each)
         byte[] program = new byte[] {
-            // Read device MCB at 0x016F
-            0xB8, 0x6F, 0x01,       // mov ax, 016Fh - Device MCB segment
+            // Resize current program to small size (256 paragraphs = 4KB)
+            0x8C, 0xC3,             // mov bx, es - Get PSP segment
+            0x8E, 0xC3,             // mov es, bx - ES = PSP segment
+            0xB8, 0x00, 0x4A,       // mov ax, 4A00h - Resize memory
+            0xBB, 0x00, 0x01,       // mov bx, 0100h - New size: 256 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x1E,             // jc failed - Jump if resize failed
+            
+            // Allocate first 3200-byte block (200 paragraphs)
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xC8, 0x00,       // mov bx, 00C8h - 200 paragraphs (3200 bytes)
+            0xCD, 0x21,             // int 21h
+            0x72, 0x14,             // jc failed
+            
+            // Allocate second 3200-byte block
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xC8, 0x00,       // mov bx, 00C8h - 200 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x0C,             // jc failed
+            
+            // Allocate third 3200-byte block (this is where DOTT fails)
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xC8, 0x00,       // mov bx, 00C8h - 200 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x04,             // jc failed
+            
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success, 
+            "DOTT memory pattern should succeed: resize program, then allocate multiple 3200-byte blocks");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests memory MCB chain structure matches reference/improvements_dos_bios pattern.
+    /// Verifies COMMAND.COM MCB at 0x005F, then free memory MCB at 0x006F.
+    /// </summary>
+    [Fact]
+    public void MemoryChainStructure_MatchesReferencePattern() {
+        // Read MCB at 0x005F (COMMAND.COM block), verify PSP=0x0060, size=16
+        byte[] program = new byte[] {
+            // Read COMMAND.COM MCB at 0x005F
+            0xB8, 0x5F, 0x00,       // mov ax, 005Fh - COMMAND.COM MCB segment
             0x8E, 0xD8,             // mov ds, ax - DS = MCB segment
             0x31, 0xC0,             // xor ax, ax - Clear AX
             0x8A, 0x06, 0x00, 0x00, // mov al, [0000h] - Read MCB type (should be 'M' = 0x4D)
             0x3C, 0x4D,             // cmp al, 4Dh - Check if 'M' (middle block)
             0x75, 0x1A,             // jne failed
             0x8B, 0x06, 0x01, 0x00, // mov ax, [0001h] - Read PSP segment
-            0x3D, 0x08, 0x00,       // cmp ax, 0008h - Check if MCB_DOS (0x0008)
+            0x3D, 0x60, 0x00,       // cmp ax, 0060h - Check if COMMAND.COM segment
             0x75, 0x12,             // jne failed
             0x8B, 0x06, 0x03, 0x00, // mov ax, [0003h] - Read size
-            0x3D, 0x01, 0x00,       // cmp ax, 0001h - Check if size=1
+            0x3D, 0x10, 0x00,       // cmp ax, 0010h - Check if size=16 (COMMAND.COM size)
             0x75, 0x0A,             // jne failed
-            // Write device MCB PSP to data port
-            0xB8, 0x08, 0x00,       // mov ax, 0008h
+            // Write COMMAND.COM MCB PSP to data port
+            0xB8, 0x60, 0x00,       // mov ax, 0060h
             0xBA, 0x9A, 0x09,       // mov dx, DataPort
             0xEF,                   // out dx, ax
             // success:
@@ -261,7 +316,7 @@ public class DosMemoryManagerProductionConfigurationTest {
 
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        testHandler.Data.Should().Contain(0x08); // Should have written MCB_DOS value
+        testHandler.Data.Should().Contain(0x60); // Should have written COMMAND.COM segment
         testHandler.Data.Should().Contain(0x00);
     }
 
