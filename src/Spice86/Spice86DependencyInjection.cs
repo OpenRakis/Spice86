@@ -413,11 +413,12 @@ public class Spice86DependencyInjection : IDisposable {
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
+            inputEventHub = new InputEventHub(headlessGui, headlessGui);
             emulationLoop = new(
                 functionHandler, cpuForEmulationLoop,
                 state, executionStateSlice, dualPic, emulatorBreakpointsManager,
                 cpuPerformanceMeasurer, pauseHandler, cyclesLimiter,
-                new(headlessGui, headlessGui), cyclesBudgeter, loggerService);
+                inputEventHub, cyclesBudgeter, loggerService);
         }
 
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
