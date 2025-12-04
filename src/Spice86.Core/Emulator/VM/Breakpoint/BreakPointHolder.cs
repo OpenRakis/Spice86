@@ -108,7 +108,7 @@ public class BreakPointHolder {
 
     private bool TriggerBreakPointsFromList(List<BreakPoint> breakPointList, long address) {
         bool triggered = false;
-        for (int i = 0; i < breakPointList.Count; i++) {
+        for (int i = breakPointList.Count - 1; i >= 0; i--) {
             BreakPoint breakPoint = breakPointList[i];
             if (!breakPoint.Matches(address)) {
                 continue;
@@ -120,7 +120,6 @@ public class BreakPointHolder {
             if (breakPoint.IsRemovedOnTrigger) {
                 breakPointList.RemoveAt(i);
                 UnregisterBreakPoint(breakPoint);
-                i--;
             }
         }
 
