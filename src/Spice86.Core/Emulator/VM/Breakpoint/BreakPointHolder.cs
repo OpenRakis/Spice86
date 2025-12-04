@@ -9,6 +9,7 @@ public class BreakPointHolder {
     private readonly Dictionary<long, List<BreakPoint>> _addressBreakPoints = new(1000);
     private readonly List<BreakPoint> _unconditionalBreakPoints = new(1000);
     private readonly HashSet<BreakPoint> _registeredBreakPoints = [];
+    private int _activeBreakpoints;
 
     /// <summary>
     /// Gets a value indicating whether this BreakPointHolder is empty.
@@ -17,18 +18,8 @@ public class BreakPointHolder {
 
     /// <summary>
     /// Gets a value indicating whether at least one breakpoint is currently enabled.
-    /// This iterates through all registered breakpoints to check their enabled state.
     /// </summary>
-    public bool HasActiveBreakpoints {
-        get {
-            foreach (BreakPoint breakPoint in _registeredBreakPoints) {
-                if (breakPoint.IsEnabled) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
+    public bool HasActiveBreakpoints => _activeBreakpoints > 0;
 
     private IEnumerable<BreakPoint> GetAllBreakpoints() {
         return _addressBreakPoints.Values
@@ -60,7 +51,7 @@ public class BreakPointHolder {
         if (on) {
             if (breakPointList == null) {
                 _addressBreakPoints.Add(address, [breakPoint]);
-                _registeredBreakPoints.Add(breakPoint);
+                RegisterBreakPoint(breakPoint);
                 return;
             }
 
@@ -69,13 +60,13 @@ public class BreakPointHolder {
             }
 
             breakPointList.Add(breakPoint);
-            _registeredBreakPoints.Add(breakPoint);
+            RegisterBreakPoint(breakPoint);
         } else if (breakPointList != null && breakPointList.Remove(breakPoint)) {
             if (breakPointList.Count == 0) {
                 _addressBreakPoints.Remove(address);
             }
 
-            _registeredBreakPoints.Remove(breakPoint);
+            UnregisterBreakPoint(breakPoint);
         }
     }
 
@@ -86,9 +77,9 @@ public class BreakPointHolder {
             }
 
             _unconditionalBreakPoints.Add(breakPoint);
-            _registeredBreakPoints.Add(breakPoint);
+            RegisterBreakPoint(breakPoint);
         } else if (_unconditionalBreakPoints.Remove(breakPoint)) {
-            _registeredBreakPoints.Remove(breakPoint);
+            UnregisterBreakPoint(breakPoint);
         }
     }
 
@@ -128,11 +119,41 @@ public class BreakPointHolder {
 
             if (breakPoint.IsRemovedOnTrigger) {
                 breakPointList.RemoveAt(i);
-                _registeredBreakPoints.Remove(breakPoint);
+                UnregisterBreakPoint(breakPoint);
                 i--;
             }
         }
 
         return triggered;
+    }
+
+    private void RegisterBreakPoint(BreakPoint breakPoint) {
+        if (!_registeredBreakPoints.Add(breakPoint)) {
+            return;
+        }
+
+        breakPoint.IsEnabledChanged += OnBreakPointIsEnabledChanged;
+        if (breakPoint.IsEnabled) {
+            _activeBreakpoints++;
+        }
+    }
+
+    private void UnregisterBreakPoint(BreakPoint breakPoint) {
+        if (!_registeredBreakPoints.Remove(breakPoint)) {
+            return;
+        }
+
+        breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
+        if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
+            _activeBreakpoints--;
+        }
+    }
+
+    private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
+        if (isEnabled) {
+            _activeBreakpoints++;
+        } else if (_activeBreakpoints > 0) {
+            _activeBreakpoints--;
+        }
     }
 }
