@@ -282,23 +282,23 @@ public class DosMemoryManagerProductionConfigurationTest {
     /// </summary>
     [Fact]
     public void MemoryChainStructure_MatchesReferencePattern() {
-        // Read MCB at 0x005F (COMMAND.COM block), verify PSP=0x0060, size=16
+        // Read MCB at 0x004F (COMMAND.COM block), verify PSP=0x0050, size=16
         byte[] program = new byte[] {
-            // Read COMMAND.COM MCB at 0x005F
-            0xB8, 0x5F, 0x00,       // mov ax, 005Fh - COMMAND.COM MCB segment
+            // Read COMMAND.COM MCB at 0x004F
+            0xB8, 0x4F, 0x00,       // mov ax, 004Fh - COMMAND.COM MCB segment
             0x8E, 0xD8,             // mov ds, ax - DS = MCB segment
             0x31, 0xC0,             // xor ax, ax - Clear AX
             0x8A, 0x06, 0x00, 0x00, // mov al, [0000h] - Read MCB type (should be 'M' = 0x4D)
             0x3C, 0x4D,             // cmp al, 4Dh - Check if 'M' (middle block)
             0x75, 0x1A,             // jne failed
             0x8B, 0x06, 0x01, 0x00, // mov ax, [0001h] - Read PSP segment
-            0x3D, 0x60, 0x00,       // cmp ax, 0060h - Check if COMMAND.COM segment
+            0x3D, 0x50, 0x00,       // cmp ax, 0050h - Check if COMMAND.COM segment
             0x75, 0x12,             // jne failed
             0x8B, 0x06, 0x03, 0x00, // mov ax, [0003h] - Read size
             0x3D, 0x10, 0x00,       // cmp ax, 0010h - Check if size=16 (COMMAND.COM size)
             0x75, 0x0A,             // jne failed
             // Write COMMAND.COM MCB PSP to data port
-            0xB8, 0x60, 0x00,       // mov ax, 0060h
+            0xB8, 0x50, 0x00,       // mov ax, 0050h
             0xBA, 0x9A, 0x09,       // mov dx, DataPort
             0xEF,                   // out dx, ax
             // success:
@@ -316,7 +316,7 @@ public class DosMemoryManagerProductionConfigurationTest {
 
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        testHandler.Data.Should().Contain(0x60); // Should have written COMMAND.COM segment
+        testHandler.Data.Should().Contain(0x50); // Should have written COMMAND.COM segment
         testHandler.Data.Should().Contain(0x00);
     }
 
@@ -329,6 +329,7 @@ public class DosMemoryManagerProductionConfigurationTest {
         File.WriteAllBytes(filePath, program);
 
         // Setup emulator with DOS interrupt vectors installed
+        // ProgramEntryPointSegment = 0x0071 so InitialPspSegment = 0x0061 (first free data after COMMAND.COM's MCB at 0x60)
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enableCfgCpu: true,
@@ -338,7 +339,8 @@ public class DosMemoryManagerProductionConfigurationTest {
             installInterruptVectors: true,
             enableA20Gate: false,
             enableXms: false,
-            enableEms: false
+            enableEms: false,
+            programEntryPointSegment: 0x0071
         ).Create();
 
         DosTestHandler testHandler = new(

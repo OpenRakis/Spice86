@@ -410,27 +410,39 @@ public class DosProcessManager : DosFileLoader {
         }
 
         // Allocate memory for the program using MCB-based allocation
-        // Following FreeDOS/DOSBox: all programs are allocated from the MCB chain, not at hardcoded segments
+        // For the first program, we use InitialPspSegment; for child processes, we use MCB allocation
         ushort pspSegment;
         DosMemoryControlBlock? memBlock;
         
-        // Always allocate from MCB chain (pass 0 to let memory manager find best block)
-        // This matches FreeDOS/DOSBox behavior where programs are allocated dynamically
-        if (isExe && exeFile is not null) {
-            memBlock = _memoryManager.ReserveSpaceForExe(exeFile, 0);
+        if (_pspTracker.PspCount == 0) {
+            // First program - use the configured initial PSP segment
+            if (isExe && exeFile is not null) {
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, _pspTracker.InitialPspSegment);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            pspSegment = _pspTracker.InitialPspSegment;
         } else {
-            memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            // Child process - use MCB allocation to find free memory
+            if (isExe && exeFile is not null) {
+                // Pass 0 to let memory manager find the best available block
+                memBlock = _memoryManager.ReserveSpaceForExe(exeFile, 0);
+            } else {
+                memBlock = _memoryManager.AllocateMemoryBlock(ComFileMemoryParagraphs);
+            }
+            
+            if (memBlock is null) {
+                return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
+            }
+            pspSegment = memBlock.DataBlockSegment;
         }
-        
+
         if (memBlock is null) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Failed to allocate memory for program");
+                _loggerService.Error("Failed to allocate memory for program at segment {Segment:X4}", pspSegment);
             }
             return DosExecResult.Failed(DosErrorCode.InsufficientMemory);
         }
-        
-        // PSP segment is the data block segment of the allocated MCB
-        pspSegment = memBlock.DataBlockSegment;
 
         // Create and register the PSP
         DosProgramSegmentPrefix psp = _pspTracker.PushPspSegment(pspSegment);
