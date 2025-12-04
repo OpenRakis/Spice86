@@ -741,9 +741,11 @@ public class EmsUnitTests {
         ushort altRegisterSets = _memory.UInt16[bufferAddress + 2];
         altRegisterSets.Should().Be(0x0000, "No alternate register sets");
 
-        // Context save area size
+        // Context save area size (following FreeDOS formula: (physicalPages + 1) * 4)
+        // For 4 physical pages: (4 + 1) * 4 = 20 bytes
         ushort saveAreaSize = _memory.UInt16[bufferAddress + 4];
-        saveAreaSize.Should().BeGreaterThanOrEqualTo(0, "Save area size should be non-negative");
+        ushort expectedSaveAreaSize = (ExpandedMemoryManager.EmmMaxPhysicalPages + 1) * 4;
+        saveAreaSize.Should().Be(expectedSaveAreaSize, $"Save area size should be {expectedSaveAreaSize} bytes for {ExpandedMemoryManager.EmmMaxPhysicalPages} physical pages");
 
         ushort dmaChannels = _memory.UInt16[bufferAddress + 6];
         dmaChannels.Should().Be(0x0000, "No DMA channels");

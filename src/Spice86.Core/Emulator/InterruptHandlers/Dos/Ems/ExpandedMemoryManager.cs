@@ -874,8 +874,9 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 // No alternate register sets
                 Memory.UInt16[data] = 0x0000;
                 data += 2;
-                // Context save area size
-                Memory.UInt16[data] = (ushort)EmmHandles.SelectMany(static x => x.Value.LogicalPages).Count();
+                // Context save area size in bytes (following FreeDOS formula: (physicalPages + 1) * 4)
+                // This represents the bytes needed to save the mapping context for all physical pages
+                Memory.UInt16[data] = (ushort)((EmmMaxPhysicalPages + 1) * 4);
                 data += 2;
                 // No DMA channels
                 Memory.UInt16[data] = 0x0000;
