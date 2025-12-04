@@ -17,15 +17,16 @@ start:
     ; Initialize timing
     call init_timer
     
-    ; Initialize zoom/pan
-    mov word [zoom_level], 256      ; Start zoom (8.8 fixed point)
-    mov word [center_x], -128       ; Center X (-0.5 in 8.8)
-    mov word [center_y], 0          ; Center Y (0.0 in 8.8)
-    mov byte [max_iterations], 64   ; Start with 64 iterations
+    ; Initialize parameters
+    mov byte [max_iterations], 32   ; Start with 32 iterations
+    mov word [frame_number], 0
     
 main_loop:
     ; Render one frame
     call render_frame
+    
+    ; Increment frame number
+    inc word [frame_number]
     
     ; Update FPS counter
     call update_fps
@@ -33,22 +34,18 @@ main_loop:
     ; Display stats overlay
     call display_stats
     
-    ; Progressive refinement: increase detail each frame
+    ; Progressive refinement: increase detail every few frames
+    mov ax, [frame_number]
+    and ax, 0x0007          ; Every 8 frames
+    jnz skip_iteration_increase
+    
     mov al, [max_iterations]
-    cmp al, 255
+    cmp al, 128
     jge skip_iteration_increase
-    add al, 2
+    add al, 8
     mov [max_iterations], al
     
 skip_iteration_increase:
-    ; Slowly zoom in
-    mov ax, [zoom_level]
-    cmp ax, 32              ; Stop zooming at 0.125 (32/256)
-    jle skip_zoom
-    sub ax, 1
-    mov [zoom_level], ax
-    
-skip_zoom:
     ; Check for keypress to exit
     mov ah, 0x01
     int 0x16
@@ -73,15 +70,52 @@ setup_palette:
     push bx
     push cx
     push dx
+    push di
+    push es
     
-    mov ax, 0x1012          ; Set block of DAC registers
-    xor bx, bx              ; Start at color 0
-    mov cx, 256             ; All 256 colors
+    ; Build palette in memory first
     push ds
     pop es
-    mov dx, palette_data
+    mov di, palette_buffer
+    xor cx, cx              ; Color index 0-255
+    
+palette_loop:
+    ; Create smooth color gradient
+    mov ax, cx
+    
+    ; Blue component (0-63 range for VGA DAC)
+    mov bx, ax
+    and bx, 0x003F
+    mov [di+2], bl          ; Blue
+    
+    ; Green component
+    mov bx, ax
+    shr bx, 2
+    and bx, 0x003F
+    mov [di+1], bl          ; Green
+    
+    ; Red component
+    mov bx, ax
+    shr bx, 3
+    and bx, 0x003F
+    mov [di], bl            ; Red
+    
+    add di, 3
+    inc cx
+    cmp cx, 256
+    jl palette_loop
+    
+    ; Set palette using INT 10h
+    mov ax, 0x1012
+    xor bx, bx
+    mov cx, 256
+    push ds
+    pop es
+    mov dx, palette_buffer
     int 0x10
     
+    pop es
+    pop di
     pop dx
     pop cx
     pop bx
@@ -177,28 +211,28 @@ render_done:
     ret
 
 ; Calculate Mandelbrot for current pixel
+; Uses fixed-point: 16-bit signed, 8.8 format (256 = 1.0)
 calc_mandelbrot:
     push bp
     mov bp, sp
     sub sp, 10
     
     ; Map screen coordinates to complex plane
-    ; x0 = ((x - 160) * scale / zoom) + center_x
+    ; Range: approximately -2.0 to 1.0 (x), -1.5 to 1.5 (y)
+    
+    ; x0 = ((x - 160) * 4) - 128  (roughly -2.5 to 1.5)
     mov ax, [current_x]
     sub ax, 160
-    mov bx, [zoom_level]
-    cwd
-    idiv bx
-    add ax, [center_x]
+    shl ax, 2               ; * 4 for scale
+    sub ax, 128             ; Offset to center on interesting region
     mov [bp-2], ax          ; x0
     
-    ; y0 = ((y - 100) * scale / zoom) + center_y
+    ; y0 = (y - 100) * 3  (roughly -1.5 to 1.5)
     mov ax, [current_y]
     sub ax, 100
-    mov bx, [zoom_level]
-    cwd
-    idiv bx
-    add ax, [center_y]
+    mov bx, ax
+    shl ax, 1
+    add ax, bx              ; * 3
     mov [bp-4], ax          ; y0
     
     ; Initialize iteration
@@ -208,18 +242,30 @@ calc_mandelbrot:
     mov byte [bp-10], 0     ; iteration counter
     
 iter_loop:
-    ; Calculate x*x and y*y
+    ; Calculate x*x in fixed point
     mov ax, [bp-6]
-    imul ax                 ; x*x
-    sar ax, 8               ; Scale down from 16.16 to 8.8
-    mov bx, ax
+    imul ax
+    mov bx, dx              ; Save high word
+    mov cx, ax              ; Save low word
+    ; Result is in DX:AX, need to shift right 8 to get back to 8.8
+    mov ax, cx
+    mov al, ah
+    mov ah, bl
+    mov [bp-6+2], ax        ; Store x*x scaled
     
+    ; Calculate y*y in fixed point
     mov ax, [bp-8]
-    imul ax                 ; y*y
-    sar ax, 8
+    imul ax
+    mov bx, dx
+    mov cx, ax
+    mov ax, cx
+    mov al, ah
+    mov ah, bl
+    mov [bp-8+2], ax        ; Store y*y scaled
     
-    ; Check if x*x + y*y > 4 (1024 in 8.8)
-    add ax, bx
+    ; Check if x*x + y*y > 4.0 (1024 in 8.8 format)
+    mov ax, [bp-6+2]
+    add ax, [bp-8+2]
     cmp ax, 1024
     jg iter_escape
     
@@ -228,28 +274,23 @@ iter_loop:
     cmp al, [max_iterations]
     jge iter_escape
     
-    ; Calculate new values
-    ; temp = x*x - y*y + x0
-    mov ax, [bp-6]
-    imul ax
-    sar ax, 8
-    mov bx, ax
+    ; Calculate new x: x*x - y*y + x0
+    mov ax, [bp-6+2]
+    sub ax, [bp-8+2]
+    add ax, [bp-2]
+    mov bx, ax              ; Store temp x
     
-    mov ax, [bp-8]
-    imul ax
-    sar ax, 8
-    sub bx, ax
-    add bx, [bp-2]
-    
-    ; y = 2*x*y + y0
+    ; Calculate new y: 2*x*y + y0
     mov ax, [bp-6]
     imul word [bp-8]
-    sar ax, 7               ; Scale and *2
+    ; Result in DX:AX, shift right 7 (for 8.8 and *2)
+    shl ax, 1
+    rcl dx, 1
+    mov ax, dx
     add ax, [bp-4]
-    mov [bp-8], ax
+    mov [bp-8], ax          ; y = new y
     
-    ; x = temp
-    mov [bp-6], bx
+    mov [bp-6], bx          ; x = temp x
     
     inc byte [bp-10]
     jmp iter_loop
@@ -296,7 +337,7 @@ display_stats:
     push bx
     push dx
     
-    ; Display FPS at top-left
+    ; Display FPS at top-left (using text mode INT 10h over graphics)
     mov ah, 0x02
     mov bh, 0
     mov dh, 0
@@ -378,47 +419,15 @@ pd_print:
 
 section .data
 fps_msg db 'FPS: ', 0
-iter_msg db 'Iterations: ', 0
-
-; Color palette - 256 colors with smooth gradient
-palette_data:
-    ; Generate RGB values for smooth color gradient
-    ; Colors 0-63: Black to Blue
-    %assign i 0
-    %rep 64
-        db (i*0)/63, (i*0)/63, (i*4)/63
-        %assign i i+1
-    %endrep
-    
-    ; Colors 64-127: Blue to Cyan
-    %assign i 0
-    %rep 64
-        db (i*0)/63, (i*4)/63, 63
-        %assign i i+1
-    %endrep
-    
-    ; Colors 128-191: Cyan to Yellow
-    %assign i 0
-    %rep 64
-        db (i*4)/63, 63, ((63-i)*4)/63
-        %assign i i+1
-    %endrep
-    
-    ; Colors 192-255: Yellow to White
-    %assign i 0
-    %rep 64
-        db 63, 63, (i*4)/63
-        %assign i i+1
-    %endrep
+iter_msg db 'Iter: ', 0
 
 section .bss
+palette_buffer resb 768     ; 256 colors * 3 bytes (RGB)
 current_x resw 1
 current_y resw 1
 color resb 1
-zoom_level resw 1
-center_x resw 1
-center_y resw 1
 max_iterations resb 1
 frame_count resw 1
+frame_number resw 1
 last_tick resw 1
 fps resw 1
