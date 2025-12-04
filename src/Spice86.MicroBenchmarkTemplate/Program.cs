@@ -22,7 +22,13 @@ public class BenchmarkTest {
     public SegmentedAddress Cached() => _instance.CachedSegmentedAddress;
 }
 internal class Program {
-    public static void Main() {
+    public static void Main(string[] args) {
+        // Check for Mandelbrot benchmark flag
+        if (args.Length > 0 && args[0] == "--mandelbrot-benchmark") {
+            MandelbrotPerformanceBenchmark.RunBenchmark(args);
+            return;
+        }
+        
 #if RELEASE
         // To micro-benchmark HasActiveBreakpoints property access (comparing iteration vs counter):
         BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<HasActiveBreakpointsBenchmark>();
