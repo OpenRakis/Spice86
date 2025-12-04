@@ -126,7 +126,7 @@ public class BreakPointHolderTests {
         holder.ToggleBreakPoint(disabledBreakpoint1, true);
         holder.ToggleBreakPoint(disabledBreakpoint2, true);
         
-        // Mix of enabled and disabled - should return true (early return on first enabled)
+        // Mix of enabled and disabled - should return true (counter reflects at least one enabled)
         Assert.True(holder.HasActiveBreakpoints);
         
         // Disable all enabled breakpoints

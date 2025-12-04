@@ -404,16 +404,18 @@ public class Spice86DependencyInjection : IDisposable {
 
             inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
 
-            emulationLoop = new(functionHandler, cpuForEmulationLoop,
-        state, executionStateSlice, dualPic, emulatorBreakpointsManager,
+            emulationLoop = new(
+                functionHandler, cpuForEmulationLoop,
+                state, executionStateSlice, dualPic, emulatorBreakpointsManager,
                 cpuPerformanceMeasurer, pauseHandler, cyclesLimiter, inputEventHub, cyclesBudgeter, loggerService);
 
             _gui = mainWindowViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
-            emulationLoop = new(functionHandler, cpuForEmulationLoop,
-        state, executionStateSlice, dualPic, emulatorBreakpointsManager,
+            emulationLoop = new(
+                functionHandler, cpuForEmulationLoop,
+                state, executionStateSlice, dualPic, emulatorBreakpointsManager,
                 cpuPerformanceMeasurer, pauseHandler, cyclesLimiter,
                 new(headlessGui, headlessGui), cyclesBudgeter, loggerService);
         }
