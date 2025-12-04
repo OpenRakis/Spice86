@@ -1,17 +1,20 @@
-# Performance Test Binaries
+# Performance Test Binaries and Source Code
 
-This directory contains DOS binaries used for automated performance regression testing.
+This directory contains DOS binaries and source code used for automated performance regression testing and manual interactive testing.
 
 ## Files
 
-### mandelbrot_bench.com (577 bytes)
+### Automated Performance Benchmark (ASM Integration Test)
+
+**mandelbrot_bench.com (577 bytes)** and **mandelbrot_bench.asm**
+
 Automated performance benchmark that runs headless for 30 seconds and outputs metrics via I/O port 0x99.
 
 **Usage in tests:**
 - Runs automatically as part of the test suite via `PerformanceRegressionTests.MandelbrotBenchmark_ShouldNotRegress()`
 - Captures performance data through I/O ports
 - Compares against baseline stored in `Resources/PerformanceBaselines/Mandelbrot.json`
-- Fails test if performance degrades more than 10%
+- Fails test if performance degrades more than 8%
 
 **I/O Port Protocol (port 0x99):**
 - `0xFF` - Start marker (sent at beginning)
@@ -25,52 +28,68 @@ Automated performance benchmark that runs headless for 30 seconds and outputs me
 ./Spice86 -e tests/Spice86.Tests/Resources/PerformanceTests/mandelbrot_bench.com
 ```
 
-## Manual Testing Binaries
+### Interactive Manual Testing Binary
 
-For interactive visual testing, use the VGA versions located in `src/Spice86.MicroBenchmarkTemplate/Resources/`:
+**mandelbrot_vga.com (577 bytes)** and **mandelbrot_vga.asm**
 
-### mandelbrot.com (504 bytes)
-- Text mode (80x25)
-- Frame counter display
-- Runs until key press
-- Good for quick testing
-
-### mandelbrot_vga.com (577 bytes)  
+VGA graphics version for visual performance validation:
 - VGA Mode 13h (320x200, 256 colors)
-- Color gradient palette
-- Real-time FPS counter
-- Progressive refinement
-- Full visual Mandelbrot rendering
+- Color gradient palette (black→blue→cyan→yellow→white)
+- Real-time FPS counter displayed on screen
+- Progressive refinement (32→128 iterations)
+- Full visual Mandelbrot fractal rendering
+- Runs until key press
 
 **Usage:**
 ```bash
-# Text mode version
-./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot.com
-
-# VGA graphics version (recommended)
-./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_vga.com
+# VGA graphics version (recommended for manual testing)
+./Spice86 -e tests/Spice86.Tests/Resources/PerformanceTests/mandelbrot_vga.com
 ```
 
-## Source Files
+## Building from Source
 
-The source assembly files are located in `src/Spice86.MicroBenchmarkTemplate/Resources/`:
-- `mandelbrot.asm` - Text mode version
-- `mandelbrot_vga.asm` - VGA graphics version  
-- `mandelbrot_bench.asm` - Automated test version (headless, port output)
+All source assembly files (.asm) are in this directory alongside their compiled binaries (.com).
 
-**Building:**
+**Building with NASM:**
 ```bash
-cd src/Spice86.MicroBenchmarkTemplate/Resources
+cd tests/Spice86.Tests/Resources/PerformanceTests
 nasm -f bin mandelbrot_bench.asm -o mandelbrot_bench.com
+nasm -f bin mandelbrot_vga.asm -o mandelbrot_vga.com
+```
+
+**Building with YASM:**
+```bash
+cd tests/Spice86.Tests/Resources/PerformanceTests
+yasm -f bin mandelbrot_bench.asm -o mandelbrot_bench.com
+yasm -f bin mandelbrot_vga.asm -o mandelbrot_vga.com
 ```
 
 ## Integration with CI/CD
 
 The automated test:
-1. Runs `mandelbrot_bench.com` in headless mode
-2. Captures performance data via I/O port monitoring
+1. Runs `mandelbrot_bench.com` in headless mode for 30 seconds
+2. Captures performance data via I/O port 0x99 monitoring
 3. Compares current run against committed baseline
 4. Creates baseline on first run if none exists
-5. Fails build if performance degrades >10%
+5. Fails build if performance degrades >8%
 
 This ensures the HasActiveBreakpoints optimization and other performance improvements don't regress over time.
+
+## Technical Details
+
+### Fixed-Point Arithmetic
+- Uses 8.8 fixed-point format (8 bits integer, 8 bits fractional)
+- Pure integer operations (no FPU)
+- 8086-compatible assembly only
+
+### Mandelbrot Algorithm
+- Escape-time algorithm with maximum iteration limits
+- Coordinate mapping from screen space to complex plane
+- Color/ASCII mapping based on iteration count before escape
+
+### Performance Characteristics
+- CPU-intensive nested loops
+- Minimal BIOS/DOS calls
+- Direct VGA memory writes (VGA version)
+- Continuous rendering for sustained load
+- Real performance metrics (FPS, frame count)
