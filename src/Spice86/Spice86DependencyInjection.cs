@@ -430,7 +430,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         Intel8042Controller intel8042Controller = new(
             state, ioPortDispatcher, a20Gate, dualPic,
-            configuration.FailOnUnhandledPort, pauseHandler, loggerService, _gui as IGuiKeyboardEvents);
+            configuration.FailOnUnhandledPort, pauseHandler, loggerService, inputEventHub);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
