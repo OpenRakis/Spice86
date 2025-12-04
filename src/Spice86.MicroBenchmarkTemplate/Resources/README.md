@@ -18,9 +18,16 @@ These benchmarks are designed to test emulator performance improvements, specifi
 - `mandelbrot.asm` - Source code for 80x25 text mode version
 - `mandelbrot.com` - Assembled DOS COM executable (504 bytes)
 
-### VGA Graphics Version (Advanced)
+### VGA Graphics Version (Interactive)
 - `mandelbrot_vga.asm` - Source code for 320x200 256-color VGA version
-- `mandelbrot_vga.com` - Assembled DOS COM executable (1.3 KB)
+- `mandelbrot_vga.com` - Assembled DOS COM executable (577 bytes)
+
+### Automated Performance Benchmark Version
+- `mandelbrot_bench.asm` - Source code for automated performance testing
+- `mandelbrot_bench.com` - Assembled DOS COM executable (577 bytes)
+- Runs for fixed duration (30 seconds)
+- Outputs FPS data to I/O port 0x99 for headless testing
+- Used by `MandelbrotPerformanceTest` for regression testing
 
 ## Building
 
@@ -48,7 +55,7 @@ yasm -f bin -o mandelbrot.com mandelbrot.asm
 - Frame counter at top
 - Lower resource usage
 
-### VGA Graphics Version (Recommended)
+### VGA Graphics Version (Recommended for Interactive Testing)
 
 ```bash
 ./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_vga.com
@@ -58,22 +65,40 @@ yasm -f bin -o mandelbrot.com mandelbrot.asm
 - Real-time FPS counter
 - Progressive refinement (increases detail each frame)
 - Smooth color gradient palette (256 colors)
-- Slow zoom animation
+- Runs until keypress
+
+### Automated Performance Benchmark (For Regression Testing)
+
+```bash
+./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_bench.com
+```
+
+- Headless operation (can run without display)
+- Fixed 30-second test duration
+- Outputs FPS data to I/O port 0x99
+- Generates performance profile for regression detection
+- Used by `MandelbrotPerformanceTest` in test suite
 
 ### Performance Testing
 
-To measure the performance impact of the HasActiveBreakpoints optimization:
+**Interactive Testing:**
+```bash
+./Spice86 -e mandelbrot_vga.com
+# Let it run for 30 seconds and observe FPS counter
+```
 
-1. **With optimization (this PR)**:
-   ```bash
-   ./Spice86 -e mandelbrot_vga.com
-   # Let it run for 30 seconds, note the FPS
-   ```
+**Automated Regression Testing:**
+```bash
+dotnet test --filter MandelbrotBenchmark_ShouldMeetPerformanceBaseline
+```
 
-2. **Without optimization** (compare with master branch):
-   - The FPS counter shows real-time performance
-   - Higher FPS = better performance
-   - Progressive refinement shows sustained performance
+The automated test:
+- Runs `mandelbrot_bench.com` for 30 seconds headless
+- Captures FPS data via I/O port 0x99
+- Compares against baseline performance profile
+- Fails if performance degrades more than 10%
+- Generates `MandelbrotPerformanceProfile.json` on first run
+- Commits performance profile to track performance over time
 
 ## How It Works
 
