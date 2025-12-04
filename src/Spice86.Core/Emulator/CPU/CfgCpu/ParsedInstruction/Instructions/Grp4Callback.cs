@@ -20,10 +20,6 @@ public class Grp4Callback : InstructionWithModRm {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
 
-        // Save the current CS:IP before running the callback.
-        // This is the address of the callback instruction itself.
-        SegmentedAddress beforeCallback = helper.State.IpSegmentedAddress;
-
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
 
         // Check if the callback changed CS:IP to a different address.
@@ -31,9 +27,8 @@ public class Grp4Callback : InstructionWithModRm {
         // and we need to advance past it. But if CS:IP was changed (e.g., EXEC loading
         // a child program, or QuitWithExitCode returning to parent), we should NOT
         // add the instruction length - the callback has set up the correct target.
-        SegmentedAddress afterCallback = helper.State.IpSegmentedAddress;
-        if (afterCallback.Segment != beforeCallback.Segment ||
-            afterCallback.Offset != beforeCallback.Offset) {
+        SegmentedAddress currentIp = helper.State.IpSegmentedAddress;
+        if (currentIp.Segment != Address.Segment || currentIp.Offset != Address.Offset) {
             // Callback changed CS:IP - it wants to jump somewhere else (e.g., EXEC or terminate)
             // Just set next node based on current CS:IP without adjustment
             helper.SetNextNodeToSuccessorAtCsIp(this);
