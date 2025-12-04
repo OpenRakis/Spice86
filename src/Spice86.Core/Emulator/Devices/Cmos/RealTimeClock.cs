@@ -283,13 +283,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler {
             case CmosRegisterAddresses.ShutdownStatus: // 0x0F - Shutdown status
 
             // CMOS configuration registers
-            case 0x14:  // Equipment byte
-            case 0x15:  // Base memory low byte
-            case 0x16:  // Base memory high byte
-            case 0x17:  // Extended memory low byte
-            case 0x18:  // Extended memory high byte
-            case 0x30:  // Extended memory low byte (alternate)
-            case 0x31:  // Extended memory high byte (alternate)
+            case CmosRegisterAddresses.EquipmentByte:  // Equipment byte
+            case CmosRegisterAddresses.BaseMemoryLow:  // Base memory low byte
+            case CmosRegisterAddresses.BaseMemoryHigh:  // Base memory high byte
+            case CmosRegisterAddresses.ExtendedMemoryLow:  // Extended memory low byte
+            case CmosRegisterAddresses.ExtendedMemoryHigh:  // Extended memory high byte
+            case CmosRegisterAddresses.ExtendedMemoryLowAlt:  // Extended memory low byte (alternate)
+            case CmosRegisterAddresses.ExtendedMemoryHighAlt:  // Extended memory high byte (alternate)
                 return _cmosRegisters[reg];
 
             default:
