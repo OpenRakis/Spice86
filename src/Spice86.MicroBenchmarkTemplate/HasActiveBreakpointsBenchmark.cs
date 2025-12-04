@@ -12,12 +12,12 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 [MemoryDiagnoser]
 [ShortRunJob]
 public class HasActiveBreakpointsBenchmark {
-    private BreakPointHolder? _emptyHolder;
-    private BreakPointHolder? _holderWithOneDisabledBreakpoint;
-    private BreakPointHolder? _holderWithFiveDisabledBreakpoints;
-    private BreakPointHolder? _holderWithTenDisabledBreakpoints;
-    private BreakPointHolder? _holderWithOneEnabledBreakpoint;
-    private BreakPointHolder? _holderWithMixedBreakpoints;
+    private BreakPointHolder _emptyHolder = null!;
+    private BreakPointHolder _holderWithOneDisabledBreakpoint = null!;
+    private BreakPointHolder _holderWithFiveDisabledBreakpoints = null!;
+    private BreakPointHolder _holderWithTenDisabledBreakpoints = null!;
+    private BreakPointHolder _holderWithOneEnabledBreakpoint = null!;
+    private BreakPointHolder _holderWithMixedBreakpoints = null!;
 
     [GlobalSetup]
     public void Setup() {
@@ -60,31 +60,31 @@ public class HasActiveBreakpointsBenchmark {
 
     [Benchmark(Baseline = true)]
     public bool EmptyHolder() {
-        return _emptyHolder!.HasActiveBreakpoints;
+        return _emptyHolder.HasActiveBreakpoints;
     }
 
     [Benchmark]
     public bool OneDisabledBreakpoint() {
-        return _holderWithOneDisabledBreakpoint!.HasActiveBreakpoints;
+        return _holderWithOneDisabledBreakpoint.HasActiveBreakpoints;
     }
 
     [Benchmark]
     public bool FiveDisabledBreakpoints() {
-        return _holderWithFiveDisabledBreakpoints!.HasActiveBreakpoints;
+        return _holderWithFiveDisabledBreakpoints.HasActiveBreakpoints;
     }
 
     [Benchmark]
     public bool TenDisabledBreakpoints() {
-        return _holderWithTenDisabledBreakpoints!.HasActiveBreakpoints;
+        return _holderWithTenDisabledBreakpoints.HasActiveBreakpoints;
     }
 
     [Benchmark]
     public bool OneEnabledBreakpoint() {
-        return _holderWithOneEnabledBreakpoint!.HasActiveBreakpoints;
+        return _holderWithOneEnabledBreakpoint.HasActiveBreakpoints;
     }
 
     [Benchmark]
     public bool MixedBreakpointsEnabledLast() {
-        return _holderWithMixedBreakpoints!.HasActiveBreakpoints;
+        return _holderWithMixedBreakpoints.HasActiveBreakpoints;
     }
 }
