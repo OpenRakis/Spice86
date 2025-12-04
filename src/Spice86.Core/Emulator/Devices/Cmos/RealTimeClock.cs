@@ -185,9 +185,9 @@ public sealed class RealTimeClock : DefaultIOPortHandler {
                 return;
 
             // Alarm registers - store but don't implement alarm functionality
-            case 0x01:  // Seconds alarm
-            case 0x03:  // Minutes alarm
-            case 0x05:  // Hours alarm
+            case CmosRegisterAddresses.SecondsAlarm:  // 0x01
+            case CmosRegisterAddresses.MinutesAlarm:  // 0x03
+            case CmosRegisterAddresses.HoursAlarm:    // 0x05
                 _cmosRegisters[reg] = value;
                 if (_loggerService.IsEnabled(LogEventLevel.Information)) {
                     _loggerService.Information("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
