@@ -3,8 +3,8 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Instructions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
-using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 public class Grp4Callback : InstructionWithModRm {
@@ -20,25 +20,12 @@ public class Grp4Callback : InstructionWithModRm {
     public override void Execute(InstructionExecutionHelper helper) {
         helper.ModRm.RefreshWithNewModRmContext(ModRmContext);
 
-        // Save the current CS:IP before running the callback.
-        // This is the address of the callback instruction itself.
-        SegmentedAddress beforeCallback = helper.State.IpSegmentedAddress;
-
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
 
-        // Check if the callback changed CS:IP to a different address.
-        // If CS:IP is still at the callback instruction, the callback returned normally
-        // and we need to advance past it. But if CS:IP was changed (e.g., EXEC loading
-        // a child program, or QuitWithExitCode returning to parent), we should NOT
-        // add the instruction length - the callback has set up the correct target.
-        SegmentedAddress afterCallback = helper.State.IpSegmentedAddress;
-        if (afterCallback.Segment != beforeCallback.Segment ||
-            afterCallback.Offset != beforeCallback.Offset) {
-            // Callback changed CS:IP - it wants to jump somewhere else (e.g., EXEC or terminate)
-            // Just set next node based on current CS:IP without adjustment
+        // Check if IP changed during callback execution, if so it means callback code did a jump.
+        if (helper.State.IpSegmentedAddress != Address) {
             helper.SetNextNodeToSuccessorAtCsIp(this);
         } else {
-            // Normal case - callback returned, advance IP past this instruction
             helper.MoveIpAndSetNextNode(this);
         }
     }
