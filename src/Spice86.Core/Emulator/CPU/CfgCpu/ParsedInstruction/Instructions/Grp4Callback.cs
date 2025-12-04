@@ -22,17 +22,10 @@ public class Grp4Callback : InstructionWithModRm {
 
         helper.CallbackHandler.Run(helper.InstructionFieldValueRetriever.GetFieldValue(CallbackNumber));
 
-        // Check if the callback changed CS:IP to a different address.
-        // If CS:IP is still at the callback instruction, the callback returned normally
-        // and we need to advance past it. But if CS:IP was changed (e.g., EXEC loading
-        // a child program, or QuitWithExitCode returning to parent), we should NOT
-        // add the instruction length - the callback has set up the correct target.
+        // Check if IP changed during callback execution, if so it means callback code did a jump.
         if (helper.State.IpSegmentedAddress != Address) {
-            // Callback changed CS:IP - it wants to jump somewhere else (e.g., EXEC or terminate)
-            // Just set next node based on current CS:IP without adjustment
             helper.SetNextNodeToSuccessorAtCsIp(this);
         } else {
-            // Normal case - callback returned, advance IP past this instruction
             helper.MoveIpAndSetNextNode(this);
         }
     }
