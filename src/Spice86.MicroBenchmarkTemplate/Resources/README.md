@@ -1,33 +1,25 @@
 # DOS Mandelbrot Benchmark
 
-This directory contains CPU-intensive DOS benchmark programs that render Mandelbrot fractals using pure 8086 assembly without FPU support.
+This directory previously contained CPU-intensive DOS benchmark programs. The Mandelbrot benchmarks have been moved to:
 
-## Purpose
+**`tests/Spice86.Tests/Resources/PerformanceTests/`**
 
-These benchmarks are designed to test emulator performance improvements, specifically the HasActiveBreakpoints optimization. They provide real-world workloads that:
+This consolidation keeps all performance testing binaries and source code together with the ASM integration tests.
 
-- Perform intensive integer mathematics
-- Use only 8086 instructions (no FPU)
-- Make minimal DOS/BIOS calls (only for display)
-- Run in infinite loops, continuously rendering
-- Display performance metrics (FPS, frame count, iterations)
+## Available Benchmarks
 
-## Files
+All files are now in `tests/Spice86.Tests/Resources/PerformanceTests/`:
 
-### Text Mode Version (Simple)
-- `mandelbrot.asm` - Source code for 80x25 text mode version
-- `mandelbrot.com` - Assembled DOS COM executable (504 bytes)
-
-### VGA Graphics Version (Interactive)
+### VGA Graphics Version (Interactive Manual Testing)
 - `mandelbrot_vga.asm` - Source code for 320x200 256-color VGA version
 - `mandelbrot_vga.com` - Assembled DOS COM executable (577 bytes)
 
-### Automated Performance Benchmark Version
+### Automated Performance Benchmark Version (ASM Integration Test)
 - `mandelbrot_bench.asm` - Source code for automated performance testing
 - `mandelbrot_bench.com` - Assembled DOS COM executable (577 bytes)
 - Runs for fixed duration (30 seconds)
 - Outputs FPS data to I/O port 0x99 for headless testing
-- Used by `MandelbrotPerformanceTest` for regression testing
+- Used by `PerformanceRegressionTests` for automated regression testing
 
 ## Building
 
@@ -45,20 +37,10 @@ yasm -f bin -o mandelbrot.com mandelbrot.asm
 
 ## Running
 
-### Text Mode Version
+### VGA Graphics Version (Recommended for Interactive Manual Testing)
 
 ```bash
-./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot.com
-```
-
-- Simple ASCII fractal display
-- Frame counter at top
-- Lower resource usage
-
-### VGA Graphics Version (Recommended for Interactive Testing)
-
-```bash
-./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_vga.com
+./Spice86 -e tests/Spice86.Tests/Resources/PerformanceTests/mandelbrot_vga.com
 ```
 
 - Full-color 320x200 VGA graphics
@@ -67,23 +49,23 @@ yasm -f bin -o mandelbrot.com mandelbrot.asm
 - Smooth color gradient palette (256 colors)
 - Runs until keypress
 
-### Automated Performance Benchmark (For Regression Testing)
+### Automated Performance Benchmark (ASM Integration Test)
 
 ```bash
-./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_bench.com
+./Spice86 -e tests/Spice86.Tests/Resources/PerformanceTests/mandelbrot_bench.com
 ```
 
 - Headless operation (can run without display)
 - Fixed 30-second test duration
 - Outputs FPS data to I/O port 0x99
 - Generates performance profile for regression detection
-- Used by `MandelbrotPerformanceTest` in test suite
+- Used by `PerformanceRegressionTests` in test suite
 
 ### Performance Testing
 
 **Interactive Testing:**
 ```bash
-./Spice86 -e mandelbrot_vga.com
+./Spice86 -e tests/Spice86.Tests/Resources/PerformanceTests/mandelbrot_vga.com
 # Let it run for 30 seconds and observe FPS counter
 ```
 
@@ -96,20 +78,11 @@ The automated test:
 - Runs `mandelbrot_bench.com` for 30 seconds headless
 - Captures FPS data via I/O port 0x99
 - Compares against baseline performance profile
-- Fails if performance degrades more than 10%
-- Generates `MandelbrotPerformanceProfile.json` on first run
+- Fails if performance degrades more than 8%
+- Generates baseline in `Resources/PerformanceBaselines/Mandelbrot.json` on first run
 - Commits performance profile to track performance over time
 
 ## How It Works
-
-### Text Mode Version
-
-1. Sets 80x25 text mode using INT 10h
-2. Calculates Mandelbrot set using fixed-point arithmetic (8.8 format)
-3. Maps iteration counts to ASCII characters (@, #, %, +, =, -, :, ., space)
-4. Displays the fractal using INT 10h BIOS calls
-5. Shows frame counter at top of screen
-6. Loops indefinitely until a key is pressed
 
 ### VGA Graphics Version
 
@@ -134,17 +107,6 @@ The automated test:
 This makes it ideal for measuring the overhead of breakpoint checking in the emulation loop.
 
 ## Expected Output
-
-### Text Mode Version
-
-```
-Mandelbrot Benchmark - Frames: 0x00000042
-Press any key to exit
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@####%%%%++++====--------::::........      
-[...continues with ASCII fractal pattern...]
-```
 
 ### VGA Graphics Version
 
