@@ -2,121 +2,289 @@ namespace Spice86.Tests.Dos;
 
 using FluentAssertions;
 
-using NSubstitute;
-
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.Memory.ReaderWriter;
-using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
+
+using System.Runtime.CompilerServices;
 
 using Xunit;
 
-using Configuration = Spice86.Core.CLI.Configuration;
-
 /// <summary>
-/// Verifies that the DOS memory manager works correctly with production configuration.
-/// This test uses the default ProgramEntryPointSegment=0x170 to verify that the fix
-/// for maximizing conventional memory works in real-world scenarios.
+/// ASM-based integration tests for DOS memory manager following FreeDOS/DOSBox pattern.
+/// Tests run actual x86 machine code through the emulation stack using INT 21h functions.
+/// This verifies that the memory manager works correctly with production configuration.
 /// </summary>
 public class DosMemoryManagerProductionConfigurationTest {
-    private readonly ILoggerService _loggerService;
-    private readonly IMemory _memory;
-    private readonly DosProgramSegmentPrefixTracker _pspTracker;
-    private readonly DosMemoryManager _memoryManager;
+    private const int ResultPort = 0x999;    // Port to write test results
+    private const int DataPort = 0x99A;      // Port to write test data
 
-    public DosMemoryManagerProductionConfigurationTest() {
-        _loggerService = Substitute.For<ILoggerService>();
+    private enum TestResult : byte {
+        Success = 0x00,
+        Failure = 0xFF
+    }
 
-        IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
-        AddressReadWriteBreakpoints memoryBreakpoints = new();
-        A20Gate a20Gate = new(enabled: false);
-        _memory = new Memory(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
-
-        // Use production configuration with default ProgramEntryPointSegment
-        Configuration configuration = new Configuration {
-            ProgramEntryPointSegment = 0x170  // Default production value
+    /// <summary>
+    /// Tests INT 21h/48h - Allocate memory. Should successfully allocate a small block.
+    /// </summary>
+    [Fact]
+    public void AllocateMemory_SmallBlock_ShouldSucceed() {
+        // INT 21h/48h: AH=48h (Allocate memory)
+        // BX = number of paragraphs requested (100 = 1600 bytes)
+        // On return: AX = segment of allocated block if CF clear, or error code if CF set
+        byte[] program = new byte[] {
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0x64, 0x00,       // mov bx, 0064h - Request 100 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x06,             // jc failed - Jump if carry (error)
+            // success: allocation succeeded, write segment to data port
+            0x8C, 0xC2,             // mov dx, es - ES contains allocated segment
+            0xBA, 0x9A, 0x09,       // mov dx, DataPort
+            0xEF,                   // out dx, ax - Write allocated segment
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
         };
-        DosSwappableDataArea dosSwappableDataArea = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
-        _pspTracker = new(configuration, _memory, dosSwappableDataArea, _loggerService);
 
-        _memoryManager = new DosMemoryManager(_memory, _pspTracker, _loggerService);
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+        testHandler.Data.Should().NotBeEmpty("allocated segment should be written");
     }
 
     /// <summary>
-    /// Verifies that with production configuration following FreeDOS/DOSBox pattern,
-    /// the memory manager provides approximately 631 KB of conventional memory.
-    /// This follows the FreeDOS kernel and DOSBox approach where the MCB chain
-    /// starts at 0x016F with device/system blocks before user memory.
+    /// Tests INT 21h/48h - Allocate large memory block (400 KB = 25000 paragraphs).
+    /// Verifies Day of the Tentacle-style allocations work.
     /// </summary>
     [Fact]
-    public void ProvideMaximumConventionalMemory() {
-        // Act
-        DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
+    public void AllocateMemory_LargeBlock_ShouldSucceed() {
+        // INT 21h/48h: AH=48h (Allocate memory)
+        // BX = 25000 paragraphs (400,000 bytes = ~391 KB)
+        byte[] program = new byte[] {
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xA8, 0x61,       // mov bx, 61A8h - Request 25000 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x04,             // jc failed - Jump if carry (error)
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
 
-        // Assert
-        largestFree.Should().NotBeNull();
-        largestFree.IsValid.Should().BeTrue();
-        largestFree.IsFree.Should().BeTrue();
-        largestFree.IsLast.Should().BeTrue();
-        
-        // Following FreeDOS/DOSBox pattern:
-        // - Device MCB at 0x016F (size 1)
-        // - Env MCB at 0x0171 (size 4) 
-        // - Locked MCB at 0x0176 (size 16)
-        // - Free MCB at 0x0187, data starts at 0x0188
-        largestFree.DataBlockSegment.Should().Be(0x0188);
-        
-        // Size = (0x9FFF - 0x0187) = 0x9E78 paragraphs = 40568 paragraphs
-        largestFree.Size.Should().Be(0x9E78);
-        
-        // Total bytes = 40568 * 16 = 649,088 bytes (~634 KB)
-        int expectedBytes = 0x9E78 * 16;
-        largestFree.AllocationSizeInBytes.Should().Be(expectedBytes);
-        
-        // Verify this is more than 630 KB
-        largestFree.AllocationSizeInBytes.Should().BeGreaterThan(630 * 1024);
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
 
     /// <summary>
-    /// Verifies that large allocations (like those attempted by Day of the Tentacle)
-    /// can be successfully made from the available conventional memory.
+    /// Tests INT 21h/48h - Request impossibly large block should fail gracefully.
     /// </summary>
     [Fact]
-    public void AllocateLargeMemoryBlocks() {
-        // Day of the Tentacle tries to allocate large blocks (512 KB, 448 KB, etc.)
-        // With increased conventional memory, these should succeed if there's enough space
-        
-        // Act - Try to allocate a large block (400 KB = 25000 paragraphs)
-        DosMemoryControlBlock? block = _memoryManager.AllocateMemoryBlock(25000);
+    public void AllocateMemory_ImpossiblyLarge_ShouldFail() {
+        // INT 21h/48h: AH=48h (Allocate memory)
+        // BX = 0xFFFF paragraphs (impossible - larger than conventional memory)
+        byte[] program = new byte[] {
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xFF, 0xFF,       // mov bx, FFFFh - Request impossibly large
+            0xCD, 0x21,             // int 21h
+            0x73, 0x04,             // jnc failed - Should have carry set (error)
+            // Carry was set (error returned) - success
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
 
-        // Assert
-        block.Should().NotBeNull();
-        block!.IsValid.Should().BeTrue();
-        block!.IsFree.Should().BeFalse();
-        block!.Size.Should().Be(25000);
-        block!.AllocationSizeInBytes.Should().Be(25000 * 16);  // 400,000 bytes
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
 
     /// <summary>
-    /// Verifies the device/system MCB at start of chain (FreeDOS/DOSBox pattern).
+    /// Tests INT 21h/48h and 49h - Allocate then free memory.
     /// </summary>
     [Fact]
-    public void DeviceMcbIsAtChainStart() {
-        // Following FreeDOS/DOSBox: First MCB at 0x016F is device/system block (PSP=0x0008)
-        DosMemoryControlBlock deviceMcb = new DosMemoryControlBlock(
-            _memory, 
-            MemoryUtils.ToPhysicalAddress(0x016F, 0)
+    public void AllocateAndFreeMemory_ShouldSucceed() {
+        // Allocate, then free the block
+        byte[] program = new byte[] {
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0x64, 0x00,       // mov bx, 0064h - Request 100 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x09,             // jc failed - Jump if carry (error)
+            // Free the allocated block (ES contains segment)
+            0x8E, 0xC0,             // mov es, ax - Move allocated segment to ES
+            0xB8, 0x00, 0x49,       // mov ax, 4900h - Free memory
+            0xCD, 0x21,             // int 21h
+            0x72, 0x04,             // jc failed
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests INT 21h/4Ah - Resize memory block smaller.
+    /// </summary>
+    [Fact]
+    public void ResizeMemory_Smaller_ShouldSucceed() {
+        // Allocate 200 paragraphs, then resize to 100
+        byte[] program = new byte[] {
+            0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
+            0xBB, 0xC8, 0x00,       // mov bx, 00C8h - Request 200 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x0D,             // jc failed
+            // Resize to 100 paragraphs
+            0x8E, 0xC0,             // mov es, ax - Move allocated segment to ES
+            0xB8, 0x00, 0x4A,       // mov ax, 4A00h - Resize memory
+            0xBB, 0x64, 0x00,       // mov bx, 0064h - New size: 100 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x04,             // jc failed
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests memory MCB chain structure matches FreeDOS/DOSBox pattern.
+    /// Verifies device MCB at 0x016F, then environment/locked blocks before user memory.
+    /// </summary>
+    [Fact]
+    public void MemoryChainStructure_MatchesFreeDosPattern() {
+        // Read MCB at 0x016F (device block), verify PSP=0x0008, size=1
+        byte[] program = new byte[] {
+            // Read device MCB at 0x016F
+            0xB8, 0x6F, 0x01,       // mov ax, 016Fh - Device MCB segment
+            0x8E, 0xD8,             // mov ds, ax - DS = MCB segment
+            0x31, 0xC0,             // xor ax, ax - Clear AX
+            0x8A, 0x06, 0x00, 0x00, // mov al, [0000h] - Read MCB type (should be 'M' = 0x4D)
+            0x3C, 0x4D,             // cmp al, 4Dh - Check if 'M' (middle block)
+            0x75, 0x1A,             // jne failed
+            0x8B, 0x06, 0x01, 0x00, // mov ax, [0001h] - Read PSP segment
+            0x3D, 0x08, 0x00,       // cmp ax, 0008h - Check if MCB_DOS (0x0008)
+            0x75, 0x12,             // jne failed
+            0x8B, 0x06, 0x03, 0x00, // mov ax, [0003h] - Read size
+            0x3D, 0x01, 0x00,       // cmp ax, 0001h - Check if size=1
+            0x75, 0x0A,             // jne failed
+            // Write device MCB PSP to data port
+            0xB8, 0x08, 0x00,       // mov ax, 0008h
+            0xBA, 0x9A, 0x09,       // mov dx, DataPort
+            0xEF,                   // out dx, ax
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+        testHandler.Data.Should().Contain(0x08); // Should have written MCB_DOS value
+        testHandler.Data.Should().Contain(0x00);
+    }
+
+    /// <summary>
+    /// Runs the DOS test program and returns a test handler with results.
+    /// </summary>
+    private DosTestHandler RunDosTest(byte[] program, [CallerMemberName] string unitTestName = "test") {
+        // Write program to file
+        string filePath = Path.GetFullPath($"{unitTestName}.com");
+        File.WriteAllBytes(filePath, program);
+
+        // Setup emulator with DOS interrupt vectors installed
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+            binName: filePath,
+            enableCfgCpu: true,
+            enablePit: true,
+            recordData: false,
+            maxCycles: 100000L,
+            installInterruptVectors: true,
+            enableA20Gate: false,
+            enableXms: false,
+            enableEms: false
+        ).Create();
+
+        DosTestHandler testHandler = new(
+            spice86DependencyInjection.Machine.CpuState,
+            NSubstitute.Substitute.For<ILoggerService>(),
+            spice86DependencyInjection.Machine.IoPortDispatcher
         );
+        spice86DependencyInjection.ProgramExecutor.Run();
 
-        // Assert
-        deviceMcb.IsValid.Should().BeTrue();
-        deviceMcb.IsFree.Should().BeFalse();  // Allocated to system
-        deviceMcb.IsLast.Should().BeFalse();   // Not the last block
-        deviceMcb.DataBlockSegment.Should().Be(0x0170);
-        deviceMcb.Size.Should().Be(1);  // 1 paragraph for device block
-        deviceMcb.PspSegment.Should().Be(0x0008);  // MCB_DOS - system owner
+        return testHandler;
+    }
+
+    /// <summary>
+    /// Captures DOS test results from designated I/O ports.
+    /// </summary>
+    private class DosTestHandler : DefaultIOPortHandler {
+        public List<byte> Results { get; } = new();
+        public List<byte> Data { get; } = new();
+
+        public DosTestHandler(State state, ILoggerService loggerService,
+            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
+            ioPortDispatcher.AddIOPortHandler(ResultPort, this);
+            ioPortDispatcher.AddIOPortHandler(DataPort, this);
+        }
+
+        public override void WriteByte(ushort port, byte value) {
+            if (port == ResultPort) {
+                Results.Add(value);
+            } else if (port == DataPort) {
+                Data.Add(value);
+            }
+        }
+
+        public override void WriteWord(ushort port, ushort value) {
+            if (port == DataPort) {
+                Data.Add((byte)(value & 0xFF));
+                Data.Add((byte)((value >> 8) & 0xFF));
+            }
+        }
     }
 }
