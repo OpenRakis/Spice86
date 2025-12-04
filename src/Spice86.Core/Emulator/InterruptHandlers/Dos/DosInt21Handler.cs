@@ -559,7 +559,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void AllocateMemoryBlock(bool calledFromVm) {
         ushort requestedSizeInParagraphs = State.BX;
-        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSizeInParagraphs);
+        LoggerService.Information("ALLOCATE MEMORY BLOCK requested={RequestedSize}", requestedSizeInParagraphs);
         SetCarryFlag(false, calledFromVm);
         DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSizeInParagraphs);
         if (res == null) {
@@ -570,8 +570,10 @@ public class DosInt21Handler : InterruptHandler {
             // INSUFFICIENT MEMORY
             State.AX = (byte)DosErrorCode.InsufficientMemory;
             State.BX = largest.Size;
+            LoggerService.Information("ALLOCATE MEMORY BLOCK FAILED requested={RequestedSize}", requestedSizeInParagraphs);
             return;
         }
+        LoggerService.Information("ALLOCATE MEMORY BLOCK SUCCESS requested={RequestedSize} allocated_segment={Segment:X4}", requestedSizeInParagraphs, res.DataBlockSegment);
         State.AX = res.DataBlockSegment;
     }
 
@@ -893,16 +895,17 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FREE ALLOCATED MEMORY {BlockSegment}",
-                ConvertUtils.ToHex16(blockSegment));
-        }
+        LoggerService.Information("FREE ALLOCATED MEMORY data_segment={BlockSegment:X4} mcb_segment={McbSegment:X4}",
+            blockSegment, (ushort)(blockSegment - 1));
         SetCarryFlag(false, calledFromVm);
         if (!_dosMemoryManager.FreeMemoryBlock((ushort)(blockSegment - 1))) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
             // INVALID MEMORY BLOCK ADDRESS
             State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
+            LoggerService.Information("FREE ALLOCATED MEMORY FAILED data_segment={BlockSegment:X4}", blockSegment);
+        } else {
+            LoggerService.Information("FREE ALLOCATED MEMORY SUCCESS data_segment={BlockSegment:X4}", blockSegment);
         }
     }
 
