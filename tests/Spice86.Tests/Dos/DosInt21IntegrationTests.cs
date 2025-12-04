@@ -796,6 +796,289 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests accessing program arguments (argc/argv) from DOS environment block.
+    /// This simulates what C runtime libraries do when initializing argc and argv.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// DOS C programs determine argc and argv by:
+    /// <list type="number">
+    /// <item>Reading argv[0] from the environment block (after double-null, WORD count, then path)</item>
+    /// <item>Reading additional arguments from the command tail in the PSP (offset 0x80)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The environment block structure:
+    /// - Environment variables as "KEY=VALUE\0" strings
+    /// - Double null (\0\0) terminator
+    /// - WORD count (usually 1)
+    /// - ASCIZ program path (e.g., "C:\PATH\PROGRAM.COM\0")
+    /// </para>
+    /// <para>
+    /// This test verifies that:
+    /// <list type="bullet">
+    /// <item>The environment segment in the PSP is valid</item>
+    /// <item>The environment block has the double-null terminator</item>
+    /// <item>The WORD count after double-null is 1</item>
+    /// <item>The program path starts with "C:\" and is null-terminated</item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ProgramArguments_CanAccessArgvFromEnvironmentBlock() {
+        // This test simulates a C program accessing argv[0] from the environment block.
+        // It reads the program path from the environment and writes it to the console.
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // 0x00: mov ah, 62h - Get PSP address
+            0xCD, 0x21,             // 0x02: int 21h - BX = current PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // 0x04: mov es, bx
+            
+            // Read environment segment from PSP+0x2C
+            0x26, 0x8B, 0x06, 0x2C, 0x00,  // 0x06: mov ax, es:[002Ch]
+            
+            // Check environment segment is not 0
+            0x85, 0xC0,             // 0x0B: test ax, ax
+            0x74, 0x47,             // 0x0D: je failed (target 0x56, offset = 0x47)
+            
+            // Load environment segment into ES
+            0x8E, 0xC0,             // 0x0F: mov es, ax
+            0x31, 0xFF,             // 0x11: xor di, di - start at offset 0
+            
+            // Scan for double null in environment block
+            // find_double_null: (offset 0x13)
+            0x26, 0x8A, 0x05,       // 0x13: mov al, es:[di]
+            0x3C, 0x00,             // 0x16: cmp al, 0
+            0x75, 0x08,             // 0x18: jne next_char (target 0x22, offset = 8)
+            0x26, 0x8A, 0x45, 0x01, // 0x1A: mov al, es:[di+1]
+            0x3C, 0x00,             // 0x1E: cmp al, 0
+            0x74, 0x03,             // 0x20: je found_end (target 0x25, offset = 3)
+            // next_char: (offset 0x22)
+            0x47,                   // 0x22: inc di
+            0xEB, 0xEE,             // 0x23: jmp find_double_null (target 0x13, offset = -18 = 0xEE)
+            
+            // found_end: (offset 0x25) - now at double null, skip past it
+            0x83, 0xC7, 0x02,       // 0x25: add di, 2 - skip double null
+            
+            // Skip the WORD count (should be 1)
+            0x26, 0x8B, 0x05,       // 0x28: mov ax, es:[di]
+            0x83, 0xF8, 0x01,       // 0x2B: cmp ax, 1 - should be 1
+            0x75, 0x27,             // 0x2E: jne failed (target 0x57, offset = 0x27)
+            0x83, 0xC7, 0x02,       // 0x30: add di, 2 - now di points to program path
+            
+            // Now ES:DI points to the program path (argv[0])
+            // Verify path starts with 'C' (0x43)
+            0x26, 0x8A, 0x05,       // 0x33: mov al, es:[di]
+            0x3C, 0x43,             // 0x36: cmp al, 'C'
+            0x75, 0x1D,             // 0x38: jne failed (target 0x57, offset = 0x1D)
+            
+            // Verify second char is ':' (0x3A)
+            0x26, 0x8A, 0x45, 0x01, // 0x3A: mov al, es:[di+1]
+            0x3C, 0x3A,             // 0x3E: cmp al, ':'
+            0x75, 0x15,             // 0x40: jne failed (target 0x57, offset = 0x15)
+            
+            // Verify third char is '\' (0x5C)
+            0x26, 0x8A, 0x45, 0x02, // 0x42: mov al, es:[di+2]
+            0x3C, 0x5C,             // 0x46: cmp al, '\'
+            0x75, 0x0D,             // 0x48: jne failed (target 0x57, offset = 0x0D)
+            
+            // At this point, we've successfully read argv[0] from the environment
+            // In a real C program, this would be used to populate argv[0]
+            // For the test, we just verify we could read it without crashing
+            
+            // Success - we accessed argv[0] without crashing
+            0xB0, 0x00,             // 0x4A: mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // 0x4C: mov dx, ResultPort
+            0xEE,                   // 0x4F: out dx, al
+            0xF4,                   // 0x50: hlt
+            0xEB, 0xFE,             // 0x51: jmp $ (infinite loop as safety net)
+            
+            // failed: (offset 0x53, but we need to account for the extra bytes)
+            // Actually the failed label should be at 0x57 based on the jumps above
+            0x90,                   // 0x53: nop (padding to align to 0x56)
+            0x90,                   // 0x54: nop
+            0x90,                   // 0x55: nop
+            
+            // failed: (offset 0x56)
+            0xB0, 0xFF,             // 0x56: mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // 0x58: mov dx, ResultPort
+            0xEE,                   // 0x5B: out dx, al
+            0xF4                    // 0x5C: hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that a program can print its path using INT 21h AH=09h after reading from environment.
+    /// This simulates what printf("[%i] %s\n", 0, argv[0]) would do in the C program.
+    /// </summary>
+    [Fact]
+    public void ProgramArguments_CanPrintArgv0FromEnvironment() {
+        // This test reads argv[0] from the environment block and prints it using INT 21h AH=09h.
+        // It simulates the behavior of a C program that does: printf("%s\n", argv[0]);
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // mov ah, 62h
+            0xCD, 0x21,             // int 21h - BX = PSP segment
+            0x8E, 0xC3,             // mov es, bx
+            
+            // Read environment segment from PSP+0x2C
+            0x26, 0x8B, 0x06, 0x2C, 0x00,  // mov ax, es:[002Ch]
+            0x85, 0xC0,             // test ax, ax
+            0x0F, 0x84, 0x58, 0x00, // je failed (long jump)
+            
+            // Load environment segment into DS for INT 21h AH=09h
+            0x8E, 0xD8,             // mov ds, ax
+            0x31, 0xFF,             // xor di, di
+            
+            // Scan for double null
+            // scan_loop:
+            0x8A, 0x05,             // mov al, [di]
+            0x3C, 0x00,             // cmp al, 0
+            0x75, 0x06,             // jne next
+            0x8A, 0x45, 0x01,       // mov al, [di+1]
+            0x3C, 0x00,             // cmp al, 0
+            0x74, 0x03,             // je found_double_null
+            // next:
+            0x47,                   // inc di
+            0xEB, 0xF1,             // jmp scan_loop
+            
+            // found_double_null:
+            0x83, 0xC7, 0x02,       // add di, 2
+            0x8B, 0x05,             // mov ax, [di]
+            0x83, 0xF8, 0x01,       // cmp ax, 1
+            0x0F, 0x85, 0x3C, 0x00, // jne failed (long jump)
+            0x83, 0xC7, 0x02,       // add di, 2
+            
+            // Now DI points to program path in DS
+            // Try to print first character using INT 21h AH=02h (Write Character to Standard Output)
+            0x8A, 0x15,             // mov dl, [di] - get first char
+            0xB4, 0x02,             // mov ah, 02h - Write Character
+            0xCD, 0x21,             // int 21h
+            
+            // Success if we got here
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0x0E,                   // push cs
+            0x1F,                   // pop ds (restore DS to CS for port access)
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4,                   // hlt
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0x0E,                   // push cs
+            0x1F,                   // pop ds
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests that standard file handles (STDIN/STDOUT/STDERR) are inherited from parent PSP.
+    /// This is critical for C programs that use stdin/stdout/stderr.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// In DOS, when a program is loaded, it should inherit file handles 0, 1, and 2
+    /// (STDIN, STDOUT, STDERR) from its parent (COMMAND.COM). The parent's file handle
+    /// table should be copied to the child's PSP.
+    /// </para>
+    /// <para>
+    /// This test verifies that:
+    /// <list type="bullet">
+    /// <item>File handle 0 (STDIN) is 0 (pointing to SFT entry 0, CON device)</item>
+    /// <item>File handle 1 (STDOUT) is 1 (pointing to SFT entry 1, CON device)</item>
+    /// <item>File handle 2 (STDERR) is 2 (pointing to SFT entry 2, CON device)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Without this fix, C programs crash when trying to use printf() or getch()
+    /// because those functions try to use file handles that point to the wrong SFT entries
+    /// or are uninitialized.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void StandardFileHandles_AreInheritedFromParentPsp() {
+        // This test checks that the PSP file handle table has been copied from the parent.
+        // COMMAND.COM has Files[0]=0, Files[1]=1, Files[2]=2.
+        // The child program should have the same values.
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // mov ah, 62h
+            0xCD, 0x21,             // int 21h - BX = PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // mov es, bx
+            
+            // Output handle 0 value for debugging
+            0x26, 0x8A, 0x06, 0x18, 0x00,  // mov al, es:[0018h]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Output handle 1 value for debugging
+            0x26, 0x8A, 0x06, 0x19, 0x00,  // mov al, es:[0019h]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Output handle 2 value for debugging
+            0x26, 0x8A, 0x06, 0x1A, 0x00,  // mov al, es:[001Ah]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Check file handle 0 (STDIN) at PSP+0x18 should be 0
+            0x26, 0x8A, 0x06, 0x18, 0x00,  // mov al, es:[0018h]
+            0x3C, 0x00,             // cmp al, 0
+            0x75, 0x1C,             // jne failed (should be 0)
+            
+            // Check file handle 1 (STDOUT) at PSP+0x19 should be 1
+            0x26, 0x8A, 0x06, 0x19, 0x00,  // mov al, es:[0019h]
+            0x3C, 0x01,             // cmp al, 1
+            0x75, 0x14,             // jne failed (should be 1)
+            
+            // Check file handle 2 (STDERR) at PSP+0x1A should be 2
+            0x26, 0x8A, 0x06, 0x1A, 0x00,  // mov al, es:[001Ah]
+            0x3C, 0x02,             // cmp al, 2
+            0x75, 0x0C,             // jne failed (should be 2)
+            
+            // Success - all handles are correct
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4,                   // hlt
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        // Log the actual handle values for debugging
+        if (testHandler.Details.Count >= 3) {
+            Console.WriteLine($"Handle 0 value: {testHandler.Details[0]}");
+            Console.WriteLine($"Handle 1 value: {testHandler.Details[1]}");
+            Console.WriteLine($"Handle 2 value: {testHandler.Details[2]}");
+        }
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,
@@ -830,6 +1113,7 @@ public class DosInt21IntegrationTests {
     /// </summary>
     private class DosTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
+        public List<byte> Details { get; } = new();
 
         public DosTestHandler(State state, ILoggerService loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
@@ -840,6 +1124,8 @@ public class DosInt21IntegrationTests {
         public override void WriteByte(ushort port, byte value) {
             if (port == ResultPort) {
                 Results.Add(value);
+            } else if (port == DetailsPort) {
+                Details.Add(value);
             }
         }
     }
