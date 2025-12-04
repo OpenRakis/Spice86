@@ -161,8 +161,9 @@ public class DosMemoryManagerTests {
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
         block.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        // Size = (0x9FFF - 0x60) = 0x9F9F = 40863 paragraphs
+        block.Size.Should().Be(0x9F9F);
+        block.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
