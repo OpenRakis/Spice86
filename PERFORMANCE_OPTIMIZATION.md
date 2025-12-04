@@ -27,23 +27,20 @@ Reintroduce the `HasActiveBreakpoints` property while maintaining the bug fixes 
 
 #### 1. BreakPointHolder.cs
 
-Added the following field and property:
+Added the following fields and property:
 ```csharp
 private readonly HashSet<BreakPoint> _registeredBreakPoints = [];
+private int _activeBreakpoints;
 
-public bool HasActiveBreakpoints {
-    get {
-        // Iterates through all breakpoints to check their enabled state
-        // Returns true if at least one enabled breakpoint is found
-    }
-}
+public bool HasActiveBreakpoints => _activeBreakpoints > 0;
 ```
 
 Implementation approach:
-- `HasActiveBreakpoints` dynamically checks the `IsEnabled` property of all breakpoints
-- No event subscriptions - avoids complexity and potential memory leaks
-- Still more efficient than `CheckExecutionBreakPoints()` because it only checks enabled state, not addresses or triggering logic
+- `HasActiveBreakpoints` returns a simple integer comparison (O(1) constant time)
+- Subscribes to `IsEnabledChanged` event to track when breakpoints are enabled/disabled
+- Maintains `_activeBreakpoints` counter that increments/decrements with state changes
 - Uses `HashSet` to track registered breakpoints for duplicate prevention
+- Event-based tracking provides optimal performance compared to dynamic iteration
 
 #### 2. EmulatorBreakpointsManager.cs
 
@@ -103,23 +100,23 @@ Created `BreakpointCheckBenchmark.cs` for detailed performance analysis:
 - Dictionary lookups, address matching, and triggering logic on every cycle
 
 ### With Optimization (This PR)
-- `HasActiveBreakpoints` iterates through breakpoints checking only `IsEnabled` property
-- Early return on first enabled breakpoint found
-- No dictionary lookups for address matching when no enabled breakpoints exist
+- `HasActiveBreakpoints` is a simple integer comparison (`_activeBreakpoints > 0`) - O(1)
+- No iteration or property checks needed
+- Event-based counter maintained automatically when breakpoints are enabled/disabled
+- No dictionary lookups when no enabled breakpoints exist
 - No triggering logic when no enabled breakpoints exist
-- Disabled breakpoints are skipped quickly without expensive operations
 
 ### Typical Scenarios
 
 1. **No breakpoints** (common during normal emulation):
    - Before: Called `CheckExecutionBreakPoints()` → checked `IsEmpty` → returned false
-   - After: Checked `HasActiveBreakpoints` (iterates breakpoints checking IsEnabled) → returned false
-   - **Benefit**: Avoided dictionary lookups, address matching, and triggering logic
+   - After: Checked `HasActiveBreakpoints` (integer comparison `_activeBreakpoints > 0`) → returned false
+   - **Benefit**: O(1) integer comparison avoids all collection operations
 
 2. **Breakpoints exist but are disabled** (common during debugging sessions):
    - Before: Called `CheckExecutionBreakPoints()` → checked dictionaries, matched addresses, evaluated conditions
-   - After: Checked `HasActiveBreakpoints` (iterates breakpoints checking IsEnabled) → returned false
-   - **Benefit**: Avoided expensive address matching and condition evaluation
+   - After: Checked `HasActiveBreakpoints` (integer comparison `_activeBreakpoints > 0`) → returned false
+   - **Benefit**: O(1) integer comparison avoids all iteration and checking
 
 3. **Active breakpoints** (less common):
    - Before: Called `CheckExecutionBreakPoints()` → performed checks
@@ -159,11 +156,11 @@ The implementation follows project conventions:
 
 This optimization restores the performance lost in PR #1547 while maintaining all bug fixes. The implementation is thoroughly tested and follows project code quality standards.
 
-The key insight is that `HasActiveBreakpoints` (checking enabled state) is more efficient than calling `CheckExecutionBreakPoints()` directly because:
-1. It only checks the `IsEnabled` property of breakpoints, not addresses or conditions
-2. It returns early on the first enabled breakpoint found
-3. It avoids dictionary lookups for address matching
-4. It avoids expensive condition evaluation and triggering logic
-5. No events or counters needed - simple iteration with early return
+The key insight is that `HasActiveBreakpoints` (event-based counter) is more efficient than calling `CheckExecutionBreakPoints()` directly because:
+1. O(1) constant time integer comparison vs expensive operations
+2. No iteration through collections needed
+3. No property checks or method calls
+4. Counter maintained automatically through event subscriptions
+5. Minimal memory overhead (single integer field)
 
-This approach is simpler than event-based tracking while still providing significant performance benefits in the EmulationLoop hot path.
+The event-based approach is optimal for the EmulationLoop hot path as it provides the fastest possible check (simple integer comparison) with automatic state tracking.
