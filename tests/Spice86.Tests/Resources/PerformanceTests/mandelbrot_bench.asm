@@ -161,6 +161,7 @@ output_final_stats:
     mov cx, TEST_DURATION
     xor dx, dx
     div cx
+    mov dx, PERF_PORT
     out dx, al
     
     pop dx
