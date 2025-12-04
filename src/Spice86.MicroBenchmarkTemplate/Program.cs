@@ -24,8 +24,11 @@ public class BenchmarkTest {
 internal class Program {
     public static void Main() {
 #if RELEASE
-        // To benchmark breakpoint checking performance:
-        BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BreakpointCheckBenchmark>();
+        // To micro-benchmark HasActiveBreakpoints property access (comparing iteration vs counter):
+        BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<HasActiveBreakpointsBenchmark>();
+        
+        // To benchmark full breakpoint checking performance:
+        // BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BreakpointCheckBenchmark>();
         
         // To run the template example benchmark, uncomment the following line:
         // BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BenchmarkTest>();
