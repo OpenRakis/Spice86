@@ -215,25 +215,26 @@ render_done:
 calc_mandelbrot:
     push bp
     mov bp, sp
-    sub sp, 10
+    sub sp, 14
     
     ; Map screen coordinates to complex plane
-    ; Range: approximately -2.0 to 1.0 (x), -1.5 to 1.5 (y)
+    ; Range: approximately -2.5 to 1.0 (x), -1.25 to 1.25 (y)
     
-    ; x0 = ((x - 160) * 4) - 128  (roughly -2.5 to 1.5)
+    ; x0 = (x - 200) * 3 (roughly -2.34 to 1.41 for x=0..320)
     mov ax, [current_x]
-    sub ax, 160
-    shl ax, 2               ; * 4 for scale
-    sub ax, 128             ; Offset to center on interesting region
-    mov [bp-2], ax          ; x0
-    
-    ; y0 = (y - 100) * 3  (roughly -1.5 to 1.5)
-    mov ax, [current_y]
-    sub ax, 100
+    sub ax, 200
     mov bx, ax
     shl ax, 1
     add ax, bx              ; * 3
-    mov [bp-4], ax          ; y0
+    mov [bp-2], ax          ; x0 in fixed point
+    
+    ; y0 = (y - 100) * 2.5 = (y - 100) * 5 / 2
+    mov ax, [current_y]
+    sub ax, 100
+    mov bx, 5
+    imul bx
+    sar ax, 1               ; Divide by 2
+    mov [bp-4], ax          ; y0 in fixed point
     
     ; Initialize iteration
     xor ax, ax
@@ -242,30 +243,25 @@ calc_mandelbrot:
     mov byte [bp-10], 0     ; iteration counter
     
 iter_loop:
-    ; Calculate x*x in fixed point
+    ; Calculate x*x in fixed point (result in bp-12)
     mov ax, [bp-6]
     imul ax
-    mov bx, dx              ; Save high word
-    mov cx, ax              ; Save low word
-    ; Result is in DX:AX, need to shift right 8 to get back to 8.8
-    mov ax, cx
-    mov al, ah
-    mov ah, bl
-    mov [bp-6+2], ax        ; Store x*x scaled
+    ; Result is in DX:AX (16.16), shift right 8 to get 8.8
+    mov cl, 8
+    call shift_right_dx_ax
+    mov [bp-12], ax         ; Store x*x
     
-    ; Calculate y*y in fixed point
+    ; Calculate y*y in fixed point (result in bp-14)
     mov ax, [bp-8]
     imul ax
-    mov bx, dx
-    mov cx, ax
-    mov ax, cx
-    mov al, ah
-    mov ah, bl
-    mov [bp-8+2], ax        ; Store y*y scaled
+    ; Result is in DX:AX (16.16), shift right 8 to get 8.8
+    mov cl, 8
+    call shift_right_dx_ax
+    mov [bp-14], ax         ; Store y*y
     
     ; Check if x*x + y*y > 4.0 (1024 in 8.8 format)
-    mov ax, [bp-6+2]
-    add ax, [bp-8+2]
+    mov ax, [bp-12]
+    add ax, [bp-14]
     cmp ax, 1024
     jg iter_escape
     
@@ -275,22 +271,22 @@ iter_loop:
     jge iter_escape
     
     ; Calculate new x: x*x - y*y + x0
-    mov ax, [bp-6+2]
-    sub ax, [bp-8+2]
-    add ax, [bp-2]
-    mov bx, ax              ; Store temp x
+    mov ax, [bp-12]         ; x*x
+    sub ax, [bp-14]         ; - y*y
+    add ax, [bp-2]          ; + x0
+    push ax                 ; Save new_x temporarily
     
     ; Calculate new y: 2*x*y + y0
-    mov ax, [bp-6]
-    imul word [bp-8]
-    ; Result in DX:AX, shift right 7 (for 8.8 and *2)
-    shl ax, 1
-    rcl dx, 1
-    mov ax, dx
-    add ax, [bp-4]
-    mov [bp-8], ax          ; y = new y
+    mov ax, [bp-6]          ; x
+    imul word [bp-8]        ; * y
+    ; Result in DX:AX (16.16), shift right 7 (for 8.8 and *2 effect)
+    mov cl, 7
+    call shift_right_dx_ax
+    add ax, [bp-4]          ; + y0
+    mov [bp-8], ax          ; y = new_y
     
-    mov [bp-6], bx          ; x = temp x
+    pop ax                  ; Retrieve new_x
+    mov [bp-6], ax          ; x = new_x
     
     inc byte [bp-10]
     jmp iter_loop
@@ -301,6 +297,20 @@ iter_escape:
     
     mov sp, bp
     pop bp
+    ret
+
+; Helper: Shift DX:AX right by CL bits
+shift_right_dx_ax:
+    push cx
+.loop:
+    test cl, cl
+    jz .done
+    shr dx, 1
+    rcr ax, 1
+    dec cl
+    jmp .loop
+.done:
+    pop cx
     ret
 
 ; Plot pixel at current_x, current_y with color
