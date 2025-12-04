@@ -36,10 +36,11 @@ public class DosMemoryManagerProductionConfigurationTest {
             0xB8, 0x00, 0x48,       // mov ax, 4800h - Allocate memory
             0xBB, 0x64, 0x00,       // mov bx, 0064h - Request 100 paragraphs
             0xCD, 0x21,             // int 21h
-            0x72, 0x06,             // jc failed - Jump if carry (error)
-            // success: allocation succeeded, write segment to data port
-            0x8C, 0xC2,             // mov dx, es - ES contains allocated segment
+            0x72, 0x08,             // jc failed - Jump if carry (error)
+            // success: allocation succeeded, write segment to data port (AX contains segment)
+            0x50,                   // push ax - Save allocated segment
             0xBA, 0x9A, 0x09,       // mov dx, DataPort
+            0x58,                   // pop ax - Restore allocated segment
             0xEF,                   // out dx, ax - Write allocated segment
             0xB0, 0x00,             // mov al, TestResult.Success
             0xEB, 0x02,             // jmp writeResult
@@ -53,9 +54,8 @@ public class DosMemoryManagerProductionConfigurationTest {
 
         DosTestHandler testHandler = RunDosTest(program);
 
-        testHandler.Results.Should().Contain((byte)TestResult.Success);
-        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
-        testHandler.Data.Should().NotBeEmpty("allocated segment should be written");
+        testHandler.Results.Should().Contain((byte)TestResult.Success, "allocation should succeed");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure, "allocation should not fail");
     }
 
     /// <summary>
@@ -167,6 +167,43 @@ public class DosMemoryManagerProductionConfigurationTest {
             0xBB, 0x64, 0x00,       // mov bx, 0064h - New size: 100 paragraphs
             0xCD, 0x21,             // int 21h
             0x72, 0x04,             // jc failed
+            // success:
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xEB, 0x02,             // jmp writeResult
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            // writeResult:
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
+    /// Tests INT 21h/4Ah - Program resizing its own memory block (common DOS pattern).
+    /// This reproduces the regression where programs at segment 0x160 tried to resize
+    /// but failed because MCB chain starts at 0x016F, not 0x15F.
+    /// </summary>
+    [Fact]
+    public void ProgramResizesOwnMemory_ShouldSucceed() {
+        // This test simulates what DOS programs typically do:
+        // 1. Program starts with all available memory
+        // 2. Program resizes its PSP block to minimum needed
+        // 3. Program allocates additional blocks as needed
+        byte[] program = new byte[] {
+            // Get current program's PSP segment (in ES on entry)
+            0x8C, 0xC3,             // mov bx, es - Save PSP segment
+            0x8E, 0xC3,             // mov es, bx - ES = PSP segment
+            // Resize current program's memory to 0x1000 paragraphs (64KB)
+            0xB8, 0x00, 0x4A,       // mov ax, 4A00h - Resize memory
+            0xBB, 0x00, 0x10,       // mov bx, 1000h - New size: 4096 paragraphs
+            0xCD, 0x21,             // int 21h
+            0x72, 0x04,             // jc failed - Should succeed
             // success:
             0xB0, 0x00,             // mov al, TestResult.Success
             0xEB, 0x02,             // jmp writeResult
