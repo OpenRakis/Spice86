@@ -39,8 +39,8 @@ public class PerformanceRegressionTests {
         // Load or create baseline
         PerformanceProfile baseline = LoadOrCreateBaseline("Mandelbrot", profile);
         
-        // Compare against baseline (allow 10% degradation tolerance)
-        double tolerance = 0.10;
+        // Compare against baseline (allow 8% degradation tolerance)
+        double tolerance = 0.08;
         profile.AverageFps.Should().BeGreaterThanOrEqualTo(
             baseline.AverageFps * (1.0 - tolerance),
             $"Performance should not degrade by more than {tolerance * 100}%");
