@@ -202,8 +202,8 @@ public class DosMemoryManagerTests {
         block!.IsLast.Should().BeTrue();
         block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block!.Size.Should().Be(36880);
-        block!.AllocationSizeInBytes.Should().Be(590080);
+        block!.Size.Should().Be(0x9F9F);
+        block!.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -311,7 +311,7 @@ public class DosMemoryManagerTests {
     public void ReduceSizeOfFreeBlock() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16300, out block);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 16300, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.NoError);
@@ -340,7 +340,7 @@ public class DosMemoryManagerTests {
     public void ExtendSizeOfFreeBlock() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 36881, out block);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 36881, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
@@ -349,8 +349,8 @@ public class DosMemoryManagerTests {
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
         block.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        block.Size.Should().Be(0x9F9F);
+        block.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -387,7 +387,7 @@ public class DosMemoryManagerTests {
     public void ExtendToAllocateFullConventionalMemory() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 36880, out block);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 36880, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.NoError);
@@ -396,8 +396,8 @@ public class DosMemoryManagerTests {
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
         block.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        block.Size.Should().Be(0x9F9F);
+        block.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -458,8 +458,8 @@ public class DosMemoryManagerTests {
         block.IsLast.Should().BeTrue();
         block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
         block.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block.Size.Should().Be(36880);
-        block.AllocationSizeInBytes.Should().Be(590080);
+        block.Size.Should().Be(0x9F9F);
+        block.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -470,7 +470,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(16300);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 20, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 20, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -493,7 +493,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(9572);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 9815, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 9815, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -522,7 +522,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(16300);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16300, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 16300, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -553,12 +553,12 @@ public class DosMemoryManagerTests {
     public void ExtendSizeOfPreviouslyModifiedBlock() {
         // Act
         DosMemoryControlBlock originalBlock;
-        DosErrorCode originalErrorCode = _memoryManager.TryModifyBlock(0xFF0, 9572, out originalBlock);
+        DosErrorCode originalErrorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 9572, out originalBlock);
         if (originalErrorCode == DosErrorCode.NoError) {
             FillMemoryBlock(originalBlock);
         }
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode modifiedErrorCode = _memoryManager.TryModifyBlock(0xFF0, 9815, out modifiedBlock);
+        DosErrorCode modifiedErrorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 9815, out modifiedBlock);
         if (modifiedErrorCode == DosErrorCode.NoError) {
             FillMemoryBlock(modifiedBlock);
         }
@@ -587,7 +587,7 @@ public class DosMemoryManagerTests {
         DosMemoryControlBlock? secondBlock = _memoryManager.AllocateMemoryBlock(300);
         FillMemoryBlock(secondBlock);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16400, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 16400, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -620,7 +620,7 @@ public class DosMemoryManagerTests {
             isSecondBlockFreed = _memoryManager.FreeMemoryBlock(secondBlock);
         }
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16500, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.TryModifyBlock(FirstFreeDataSegment, 16500, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -643,7 +643,7 @@ public class DosMemoryManagerTests {
     public void ReleaseAllocatedMemoryBlock() {
         // Act
         DosMemoryControlBlock? block = _memoryManager.AllocateMemoryBlock(16300);
-        bool isBlockFreed = _memoryManager.FreeMemoryBlock(0xFEF);
+        bool isBlockFreed = _memoryManager.FreeMemoryBlock(FirstFreeMcbSegment);
 
         // Assert
         block.Should().NotBeNull();
@@ -673,7 +673,7 @@ public class DosMemoryManagerTests {
     [Fact]
     public void ReleaseFreeMemoryBlock() {
         // Act
-        bool isBlockFreed = _memoryManager.FreeMemoryBlock(0xFEF);
+        bool isBlockFreed = _memoryManager.FreeMemoryBlock(FirstFreeMcbSegment);
 
         // Assert
         isBlockFreed.Should().BeTrue();
@@ -701,14 +701,15 @@ public class DosMemoryManagerTests {
         DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 65);
 
         // Act
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         block.Should().NotBeNull();
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        // For ReserveSpaceForExe, PspSegment is set to DataBlockSegment
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
@@ -730,7 +731,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
         block!.Size.Should().Be(16301);
         block!.AllocationSizeInBytes.Should().Be(260816);
@@ -754,7 +755,7 @@ public class DosMemoryManagerTests {
         if (otherBlock1 is not null) {
             isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
         }
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         isOtherBlock1Freed.Should().BeTrue();
@@ -763,7 +764,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
@@ -797,8 +798,8 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(0x3FF5);
-        block!.DataBlockSegment.Should().Be(0x3FF5);
+        block!.PspSegment.Should().Be(0x3066);
+        block!.DataBlockSegment.Should().Be(0x3066);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
     }
@@ -813,17 +814,17 @@ public class DosMemoryManagerTests {
         DosExeFile exeFile = CreateMockExe(pages: 507, minAlloc: 0, maxAlloc: 0);
 
         // Act
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         block.Should().NotBeNull();
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block!.Size.Should().Be(36880);
-        block!.AllocationSizeInBytes.Should().Be(590080);
+        block!.Size.Should().Be(0x9F9F);
+        block!.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -843,10 +844,10 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
-        block!.Size.Should().Be(36880);
-        block!.AllocationSizeInBytes.Should().Be(590080);
+        block!.Size.Should().Be(0x9F9F);
+        block!.AllocationSizeInBytes.Should().Be(0x9F9F * 16);
     }
 
     /// <summary>
@@ -866,7 +867,7 @@ public class DosMemoryManagerTests {
         if (otherBlock1 is not null) {
             isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
         }
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         isOtherBlock1Freed.Should().BeTrue();
@@ -875,7 +876,7 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeFalse();
-        block!.PspSegment.Should().Be(_pspTracker.GetCurrentPspSegment());
+        block!.PspSegment.Should().Be(block.DataBlockSegment);
         block!.DataBlockSegment.Should().Be(FirstFreeDataSegment);
         block!.Size.Should().Be(12292);
         block!.AllocationSizeInBytes.Should().Be(196672);
@@ -907,8 +908,8 @@ public class DosMemoryManagerTests {
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeFalse();
         block!.IsLast.Should().BeTrue();
-        block!.PspSegment.Should().Be(0x57F8);
-        block!.DataBlockSegment.Should().Be(0x57F8);
+        block!.PspSegment.Should().Be(0x4869);
+        block!.DataBlockSegment.Should().Be(0x4869);
         block!.Size.Should().Be(18440);
         block!.AllocationSizeInBytes.Should().Be(295040);
     }
@@ -970,7 +971,7 @@ public class DosMemoryManagerTests {
         if (otherBlock1 is not null) {
             isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
         }
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         isOtherBlock1Freed.Should().BeTrue();
@@ -1013,7 +1014,7 @@ public class DosMemoryManagerTests {
         if (otherBlock1 is not null) {
             isOtherBlock1Freed = _memoryManager.FreeMemoryBlock(otherBlock1);
         }
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         isOtherBlock1Freed.Should().BeTrue();
@@ -1059,7 +1060,7 @@ public class DosMemoryManagerTests {
 
         // Act
         DosMemoryControlBlock? existingBlock = _memoryManager.AllocateMemoryBlock(18700);
-        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, 0xFF0);
+        DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile, FirstFreeDataSegment);
 
         // Assert
         existingBlock.Should().NotBeNull();
