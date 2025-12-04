@@ -158,9 +158,9 @@ output_final_stats:
     ; Output average FPS (calculated from total)
     ; Average FPS = total_frames / TEST_DURATION
     mov ax, [total_frames]
-    mov cl, TEST_DURATION
-    xor ah, ah
-    div cl
+    mov cx, TEST_DURATION
+    xor dx, dx
+    div cx
     out dx, al
     
     pop dx
