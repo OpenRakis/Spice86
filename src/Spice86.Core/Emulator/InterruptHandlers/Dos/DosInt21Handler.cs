@@ -177,6 +177,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x58, () => GetSetMemoryAllocationStrategy(true));
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
+        AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
     }
 
     /// <summary>
@@ -345,6 +346,23 @@ public class DosInt21Handler : InterruptHandler {
         } else {
             // Invalid subfunction - return error without modifying carry flag (per DOSBox)
             State.AL = 0xFF;
+        }
+    }
+
+    /// <summary>
+    /// Obtains or selects the current code page.
+    /// </summary>
+    /// <remarks>Setting the global loaded code page table is not supported and has no effect.</remarks>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void GetSetGlobalLoadedCodePageTable(bool calledFromVm) {
+        if(State.AL == 1) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("Getting the global loaded code page is not supported - returned 0 which passes test programs...");
+            }
+            State.BX = State.DX = 0;
+            SetCarryFlag(false, calledFromVm);
+        }else if(LoggerService.IsEnabled(LogEventLevel.Warning)) {
+            LoggerService.Warning("Setting the global loaded code page is not supported.");
         }
     }
 
