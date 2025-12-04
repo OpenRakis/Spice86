@@ -110,9 +110,9 @@ public class PerformanceRegressionTests {
         // Extract total frames (16-bit value after end marker)
         ushort totalFrames = (ushort)(data[endMarkerIndex + 1] | (data[endMarkerIndex + 2] << 8));
         
-        // Estimate average FPS based on total frames
-        // Assuming the benchmark runs for approximately 1000 frames at target speed
-        double averageFps = totalFrames / 10.0; // Simplified calculation
+        // Calculate average FPS: total frames divided by test duration
+        const double TestDurationSeconds = 30.0;
+        double averageFps = totalFrames / TestDurationSeconds;
 
         return new PerformanceProfile {
             TotalFrames = totalFrames,
