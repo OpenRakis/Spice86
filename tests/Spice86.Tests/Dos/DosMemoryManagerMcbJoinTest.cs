@@ -20,6 +20,9 @@ using Configuration = Spice86.Core.CLI.Configuration;
 /// Tests for MCB joining behavior that matches FreeDOS kernel implementation.
 /// These tests validate the critical behavior of joining adjacent free MCBs,
 /// which is essential for DOS memory management compatibility.
+/// This includes the FreeDOS-compatible fix for marking unlinked MCBs as "fake"
+/// (size = 0xFFFF), which was causing crashes in programs like Doom 8088 that
+/// may manually walk the MCB chain or perform double-free operations.
 /// </summary>
 public class DosMemoryManagerMcbJoinTests {
     private readonly ILoggerService _loggerService;

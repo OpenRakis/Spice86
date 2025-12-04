@@ -671,8 +671,8 @@ public class DosMemoryManager {
         // Mark the now-unlinked MCB as "fake" by setting its size to 0xFFFF.
         // This matches FreeDOS kernel behavior (memmgr.c joinMCBs function) and prevents
         // issues with programs that might manually walk the MCB chain or perform double-free
-        // operations (like QB4/QBasic). The 0xFFFF size makes mcbValid() return false for
-        // this block, effectively marking it as invalid/unlinked.
+        // operations (like QB4/QBasic, Doom 8088). The 0xFFFF size makes the IsValid property
+        // return false for this block, effectively marking it as invalid/unlinked.
         next.Size = 0xFFFF;
     }
 
