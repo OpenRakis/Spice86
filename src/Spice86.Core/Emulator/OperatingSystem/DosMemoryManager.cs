@@ -306,13 +306,20 @@ public class DosMemoryManager {
     /// </summary>
     /// <param name="block">The MCB to free.</param>
     /// <returns>Whether the operation was successful.</returns>
+    /// <remarks>
+    /// This function matches FreeDOS kernel behavior (DosMemFree in memmgr.c):
+    /// It only marks the block as free without joining adjacent free blocks.
+    /// Block joining is deferred to allocation (FindCandidatesForAllocation) and
+    /// resizing (TryModifyBlock) operations, which matches FreeDOS's DosMemAlloc
+    /// and DosMemChange functions.
+    /// </remarks>
     public bool FreeMemoryBlock(DosMemoryControlBlock block) {
         if (!CheckValidOrLogError(block)) {
             return false;
         }
 
         block.SetFree();
-        return JoinBlocks(block, true);
+        return true;
     }
 
     /// <summary>
@@ -835,8 +842,8 @@ public class DosMemoryManager {
             current = current.GetNextOrDefault();
         }
 
-        // Now coalesce adjacent free blocks
-        JoinBlocks(_start, true);
+        // Note: We don't join blocks here to match FreeDOS FreeProcessMem() behavior.
+        // Block joining is deferred to allocation operations (joinMCBs called from DosMemAlloc).
 
         return true;
     }

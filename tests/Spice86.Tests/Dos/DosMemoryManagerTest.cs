@@ -631,11 +631,13 @@ public class DosMemoryManagerTests {
         isBlockFreed.Should().BeTrue();
         block!.IsValid.Should().BeTrue();
         block!.IsFree.Should().BeTrue();
-        block!.IsLast.Should().BeTrue();
+        // Note: Block joining is deferred to allocation (matching FreeDOS DosMemFree in kernel/memmgr.c),
+        // so the block remains at its allocated size after freeing, not joined with neighbors.
+        // IsLast might be false if there are more blocks in the chain.
         block!.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
         block!.DataBlockSegment.Should().Be(0xFF0);
-        block!.Size.Should().Be(36880);
-        block!.AllocationSizeInBytes.Should().Be(590080);
+        block!.Size.Should().Be(16300);
+        block!.AllocationSizeInBytes.Should().Be(260800);
     }
 
     /// <summary>
