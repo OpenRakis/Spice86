@@ -22,11 +22,15 @@ using Configuration = Spice86.Core.CLI.Configuration;
 /// Verifies that MCBs are allocated, released, modified, and freed correctly by DOS.
 /// </summary>
 public class DosMemoryManagerTests {
-    // The MCB chain now starts right after COMMAND.COM (at segment 0x50 + 0x10 = 0x60)
-    // regardless of ProgramEntryPointSegment configuration. This matches real DOS behavior
-    // where COMMAND.COM is allocated in the MCB chain and free memory follows it.
-    private const ushort FirstFreeMcbSegment = 0x60; // MCB for free memory
-    private const ushort FirstFreeDataSegment = 0x61; // First allocatable data segment
+    // Following FreeDOS/DOSBox pattern:
+    // - MCB chain starts at 0x016F (DOS_MEM_START)
+    // - Device MCB at 0x016F (size 1, PSP=0x0008)
+    // - Small free MCB at 0x0171 (size 4, for environment growth)
+    // - Locked MCB at 0x0176 (size 16, PSP=0x0040, for loadfix)
+    // - Main free MCB at 0x0187 (this is where user allocations start)
+    private const ushort DosMemStart = 0x016F;
+    private const ushort FirstFreeMcbSegment = 0x0187; // Main free MCB
+    private const ushort FirstFreeDataSegment = 0x0188; // First allocatable data segment
     
     // The old expected value when MCB started at ProgramEntryPointSegment - 1
     // (0x1000 - 0x10 = 0xFF0) is no longer used, but kept for reference

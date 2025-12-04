@@ -46,9 +46,10 @@ public class DosMemoryManagerProductionConfigurationTest {
     }
 
     /// <summary>
-    /// Verifies that with production configuration, the memory manager provides
-    /// approximately 639 KB of conventional memory, which is the maximum possible
-    /// after accounting for COMMAND.COM and DOS structures.
+    /// Verifies that with production configuration following FreeDOS/DOSBox pattern,
+    /// the memory manager provides approximately 631 KB of conventional memory.
+    /// This follows the FreeDOS kernel and DOSBox approach where the MCB chain
+    /// starts at 0x016F with device/system blocks before user memory.
     /// </summary>
     [Fact]
     public void ProvideMaximumConventionalMemory() {
@@ -61,19 +62,22 @@ public class DosMemoryManagerProductionConfigurationTest {
         largestFree.IsFree.Should().BeTrue();
         largestFree.IsLast.Should().BeTrue();
         
-        // The free memory should start at 0x61 (after COMMAND.COM and its MCB)
-        // COMMAND.COM is at 0x50, its MCB at 0x4F, free MCB at 0x60, data at 0x61
-        largestFree.DataBlockSegment.Should().Be(0x61);
+        // Following FreeDOS/DOSBox pattern:
+        // - Device MCB at 0x016F (size 1)
+        // - Env MCB at 0x0171 (size 4) 
+        // - Locked MCB at 0x0176 (size 16)
+        // - Free MCB at 0x0187, data starts at 0x0188
+        largestFree.DataBlockSegment.Should().Be(0x0188);
         
-        // Size should be approximately (0x9FFF - 0x60) = 0x9F9F paragraphs = 40863 paragraphs
-        largestFree.Size.Should().Be(0x9F9F);
+        // Size = (0x9FFF - 0x0187) = 0x9E78 paragraphs = 40568 paragraphs
+        largestFree.Size.Should().Be(0x9E78);
         
-        // Total bytes should be approximately 654,008 bytes (~639 KB)
-        int expectedBytes = 0x9F9F * 16;
+        // Total bytes = 40568 * 16 = 649,088 bytes (~634 KB)
+        int expectedBytes = 0x9E78 * 16;
         largestFree.AllocationSizeInBytes.Should().Be(expectedBytes);
         
-        // Verify this is more than 638 KB (better than the old ~634 KB)
-        largestFree.AllocationSizeInBytes.Should().BeGreaterThan(638 * 1024);
+        // Verify this is more than 630 KB
+        largestFree.AllocationSizeInBytes.Should().BeGreaterThan(630 * 1024);
     }
 
     /// <summary>
@@ -97,22 +101,22 @@ public class DosMemoryManagerProductionConfigurationTest {
     }
 
     /// <summary>
-    /// Verifies that COMMAND.COM is properly integrated into the MCB chain.
+    /// Verifies the device/system MCB at start of chain (FreeDOS/DOSBox pattern).
     /// </summary>
     [Fact]
-    public void CommandComIsInMcbChain() {
-        // COMMAND.COM should be at segment 0x50 with its MCB at 0x4F
-        DosMemoryControlBlock commandComMcb = new DosMemoryControlBlock(
+    public void DeviceMcbIsAtChainStart() {
+        // Following FreeDOS/DOSBox: First MCB at 0x016F is device/system block (PSP=0x0008)
+        DosMemoryControlBlock deviceMcb = new DosMemoryControlBlock(
             _memory, 
-            MemoryUtils.ToPhysicalAddress(CommandCom.CommandComSegment - 1, 0)
+            MemoryUtils.ToPhysicalAddress(0x016F, 0)
         );
 
         // Assert
-        commandComMcb.IsValid.Should().BeTrue();
-        commandComMcb.IsFree.Should().BeFalse();  // Should be allocated
-        commandComMcb.IsLast.Should().BeFalse();   // Not the last block
-        commandComMcb.DataBlockSegment.Should().Be(CommandCom.CommandComSegment);
-        commandComMcb.Size.Should().Be(0x10);  // 16 paragraphs for PSP
-        commandComMcb.PspSegment.Should().Be(CommandCom.CommandComSegment);  // Owned by itself
+        deviceMcb.IsValid.Should().BeTrue();
+        deviceMcb.IsFree.Should().BeFalse();  // Allocated to system
+        deviceMcb.IsLast.Should().BeFalse();   // Not the last block
+        deviceMcb.DataBlockSegment.Should().Be(0x0170);
+        deviceMcb.Size.Should().Be(1);  // 1 paragraph for device block
+        deviceMcb.PspSegment.Should().Be(0x0008);  // MCB_DOS - system owner
     }
 }

@@ -35,12 +35,16 @@ public class CommandCom : DosProgramSegmentPrefix {
     /// The segment where COMMAND.COM's PSP is located.
     /// </summary>
     /// <remarks>
-    /// COMMAND.COM occupies a small memory area. Its PSP starts at the beginning of free memory
-    /// (segment 0x50, after DOS internal structures and BIOS data area) and takes minimal space
-    /// since we don't load actual COMMAND.COM code - just simulate its PSP for the chain.
-    /// Starting at 0x50 instead of 0x60 maximizes available conventional memory for user programs.
+    /// Following FreeDOS standard (DOS_PSP = 0x0060 in mcb.h).
+    /// COMMAND.COM's PSP is located at segment 0x60, which is:
+    /// - After interrupt vectors (0x0000-0x003F)  
+    /// - After BIOS data area (0x0040-0x004F)
+    /// - After DOS internal structures (0x0050-0x005F)
+    /// 
+    /// The MCB chain starts much later (at 0x016F) following FreeDOS/DOSBox pattern,
+    /// so COMMAND.COM is NOT directly managed by an MCB - it's in the DOS/system area.
     /// </remarks>
-    public const ushort CommandComSegment = 0x50;
+    public const ushort CommandComSegment = 0x60;
 
     /// <summary>
     /// Offset of the Job File Table (JFT) within the PSP structure.
