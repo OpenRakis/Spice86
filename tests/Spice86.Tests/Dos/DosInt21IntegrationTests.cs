@@ -986,6 +986,99 @@ public class DosInt21IntegrationTests {
     }
 
     /// <summary>
+    /// Tests that standard file handles (STDIN/STDOUT/STDERR) are inherited from parent PSP.
+    /// This is critical for C programs that use stdin/stdout/stderr.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// In DOS, when a program is loaded, it should inherit file handles 0, 1, and 2
+    /// (STDIN, STDOUT, STDERR) from its parent (COMMAND.COM). The parent's file handle
+    /// table should be copied to the child's PSP.
+    /// </para>
+    /// <para>
+    /// This test verifies that:
+    /// <list type="bullet">
+    /// <item>File handle 0 (STDIN) is 0 (pointing to SFT entry 0, CON device)</item>
+    /// <item>File handle 1 (STDOUT) is 1 (pointing to SFT entry 1, CON device)</item>
+    /// <item>File handle 2 (STDERR) is 2 (pointing to SFT entry 2, CON device)</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// Without this fix, C programs crash when trying to use printf() or getch()
+    /// because those functions try to use file handles that point to the wrong SFT entries
+    /// or are uninitialized.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void StandardFileHandles_AreInheritedFromParentPsp() {
+        // This test checks that the PSP file handle table has been copied from the parent.
+        // COMMAND.COM has Files[0]=0, Files[1]=1, Files[2]=2.
+        // The child program should have the same values.
+        byte[] program = new byte[] {
+            // Get current PSP address
+            0xB4, 0x62,             // mov ah, 62h
+            0xCD, 0x21,             // int 21h - BX = PSP segment
+            
+            // Load PSP segment into ES
+            0x8E, 0xC3,             // mov es, bx
+            
+            // Output handle 0 value for debugging
+            0x26, 0x8A, 0x06, 0x18, 0x00,  // mov al, es:[0018h]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Output handle 1 value for debugging
+            0x26, 0x8A, 0x06, 0x19, 0x00,  // mov al, es:[0019h]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Output handle 2 value for debugging
+            0x26, 0x8A, 0x06, 0x1A, 0x00,  // mov al, es:[001Ah]
+            0xBA, 0x98, 0x09,       // mov dx, DetailsPort
+            0xEE,                   // out dx, al
+            
+            // Check file handle 0 (STDIN) at PSP+0x18 should be 0
+            0x26, 0x8A, 0x06, 0x18, 0x00,  // mov al, es:[0018h]
+            0x3C, 0x00,             // cmp al, 0
+            0x75, 0x1C,             // jne failed (should be 0)
+            
+            // Check file handle 1 (STDOUT) at PSP+0x19 should be 1
+            0x26, 0x8A, 0x06, 0x19, 0x00,  // mov al, es:[0019h]
+            0x3C, 0x01,             // cmp al, 1
+            0x75, 0x14,             // jne failed (should be 1)
+            
+            // Check file handle 2 (STDERR) at PSP+0x1A should be 2
+            0x26, 0x8A, 0x06, 0x1A, 0x00,  // mov al, es:[001Ah]
+            0x3C, 0x02,             // cmp al, 2
+            0x75, 0x0C,             // jne failed (should be 2)
+            
+            // Success - all handles are correct
+            0xB0, 0x00,             // mov al, TestResult.Success
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4,                   // hlt
+            
+            // failed:
+            0xB0, 0xFF,             // mov al, TestResult.Failure
+            0xBA, 0x99, 0x09,       // mov dx, ResultPort
+            0xEE,                   // out dx, al
+            0xF4                    // hlt
+        };
+
+        DosTestHandler testHandler = RunDosTest(program);
+
+        // Log the actual handle values for debugging
+        if (testHandler.Details.Count >= 3) {
+            Console.WriteLine($"Handle 0 value: {testHandler.Details[0]}");
+            Console.WriteLine($"Handle 1 value: {testHandler.Details[1]}");
+            Console.WriteLine($"Handle 2 value: {testHandler.Details[2]}");
+        }
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    /// <summary>
     /// Runs the DOS test program and returns a test handler with results
     /// </summary>
     private DosTestHandler RunDosTest(byte[] program,
@@ -1020,6 +1113,7 @@ public class DosInt21IntegrationTests {
     /// </summary>
     private class DosTestHandler : DefaultIOPortHandler {
         public List<byte> Results { get; } = new();
+        public List<byte> Details { get; } = new();
 
         public DosTestHandler(State state, ILoggerService loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
@@ -1030,6 +1124,8 @@ public class DosInt21IntegrationTests {
         public override void WriteByte(ushort port, byte value) {
             if (port == ResultPort) {
                 Results.Add(value);
+            } else if (port == DetailsPort) {
+                Details.Add(value);
             }
         }
     }
