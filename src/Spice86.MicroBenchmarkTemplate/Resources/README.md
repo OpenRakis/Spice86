@@ -1,21 +1,26 @@
 # DOS Mandelbrot Benchmark
 
-This directory contains a CPU-intensive DOS benchmark program that renders Mandelbrot fractals using pure 8086 assembly without FPU support.
+This directory contains CPU-intensive DOS benchmark programs that render Mandelbrot fractals using pure 8086 assembly without FPU support.
 
 ## Purpose
 
-This benchmark is designed to test emulator performance improvements, specifically the HasActiveBreakpoints optimization. It provides a real-world workload that:
+These benchmarks are designed to test emulator performance improvements, specifically the HasActiveBreakpoints optimization. They provide real-world workloads that:
 
-- Performs intensive integer mathematics
-- Uses only 8086 instructions (no FPU)
-- Makes minimal DOS/BIOS calls (only for display)
-- Runs in an infinite loop, continuously rendering
-- Displays performance metrics (frame count)
+- Perform intensive integer mathematics
+- Use only 8086 instructions (no FPU)
+- Make minimal DOS/BIOS calls (only for display)
+- Run in infinite loops, continuously rendering
+- Display performance metrics (FPS, frame count, iterations)
 
 ## Files
 
-- `mandelbrot.asm` - Source code in NASM-compatible assembly
-- `mandelbrot.com` - Assembled DOS COM executable (if present)
+### Text Mode Version (Simple)
+- `mandelbrot.asm` - Source code for 80x25 text mode version
+- `mandelbrot.com` - Assembled DOS COM executable (504 bytes)
+
+### VGA Graphics Version (Advanced)
+- `mandelbrot_vga.asm` - Source code for 320x200 256-color VGA version
+- `mandelbrot_vga.com` - Assembled DOS COM executable (1.3 KB)
 
 ## Building
 
@@ -33,18 +38,27 @@ yasm -f bin -o mandelbrot.com mandelbrot.asm
 
 ## Running
 
-### In Spice86
+### Text Mode Version
 
 ```bash
-cd path/to/Spice86/bin
-./Spice86 -e path/to/mandelbrot.com
+./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot.com
 ```
 
-Or with specific options:
+- Simple ASCII fractal display
+- Frame counter at top
+- Lower resource usage
+
+### VGA Graphics Version (Recommended)
 
 ```bash
-./Spice86 -e path/to/mandelbrot.com --TimeMultiplier 1
+./Spice86 -e src/Spice86.MicroBenchmarkTemplate/Resources/mandelbrot_vga.com
 ```
+
+- Full-color 320x200 VGA graphics
+- Real-time FPS counter
+- Progressive refinement (increases detail each frame)
+- Smooth color gradient palette (256 colors)
+- Slow zoom animation
 
 ### Performance Testing
 
@@ -52,17 +66,18 @@ To measure the performance impact of the HasActiveBreakpoints optimization:
 
 1. **With optimization (this PR)**:
    ```bash
-   ./Spice86 -e mandelbrot.com
-   # Let it run for 30 seconds, note the frame count
+   ./Spice86 -e mandelbrot_vga.com
+   # Let it run for 30 seconds, note the FPS
    ```
 
-2. **Without optimization** (compare with master branch or measure cycles):
-   - The frame counter displayed shows work completed
-   - Higher frame count = better performance
+2. **Without optimization** (compare with master branch):
+   - The FPS counter shows real-time performance
+   - Higher FPS = better performance
+   - Progressive refinement shows sustained performance
 
 ## How It Works
 
-The benchmark:
+### Text Mode Version
 
 1. Sets 80x25 text mode using INT 10h
 2. Calculates Mandelbrot set using fixed-point arithmetic (8.8 format)
@@ -71,33 +86,55 @@ The benchmark:
 5. Shows frame counter at top of screen
 6. Loops indefinitely until a key is pressed
 
+### VGA Graphics Version
+
+1. Sets VGA Mode 13h (320x200 256-color) using INT 10h
+2. Configures 256-color palette with smooth gradient (black→blue→cyan→yellow→white)
+3. Calculates Mandelbrot set using fixed-point arithmetic (8.8 format)
+4. Progressive refinement: starts at 64 iterations, increases to 255
+5. Slow zoom animation toward interesting fractal region
+6. Measures and displays FPS using BIOS timer (INT 1Ah)
+7. Direct VGA memory writes (0xA000 segment) for pixel plotting
+8. Loops indefinitely until a key is pressed
+
 ### Performance Characteristics
 
 - **CPU Intensive**: Nested loops with multiply and divide operations
-- **Minimal I/O**: Only screen updates via INT 10h
+- **Minimal I/O**: Direct VGA memory writes, minimal BIOS calls
 - **No FPU**: Uses integer math only
-- **Deterministic**: Same calculations every frame
+- **Progressive**: Increasing detail shows sustained performance
 - **No breakpoints**: By default, runs without any breakpoints active
+- **Real metrics**: FPS counter provides quantifiable performance data
 
 This makes it ideal for measuring the overhead of breakpoint checking in the emulation loop.
 
 ## Expected Output
+
+### Text Mode Version
 
 ```
 Mandelbrot Benchmark - Frames: 0x00000042
 Press any key to exit
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@####%%%%++++====--------::::........      
-@@@@@@@@@@@@@@@@@@@@@@@###%%%%%+++++====-------:::::........           
-@@@@@@@@@@@@@@@@@@@@###%%%%+++++=====------:::::........                
-@@@@@@@@@@@@@@@@@###%%%+++++====------:::::........                     
-@@@@@@@@@@@@@@###%%%+++====-------::::........                          
-[...continues with fractal pattern...]
+[...continues with ASCII fractal pattern...]
 ```
 
-The frame counter increments with each complete render, providing a direct performance metric.
+### VGA Graphics Version
+
+```
+FPS: 24
+Iterations: 128
+
+[Full-screen 320x200 colorful Mandelbrot fractal with smooth gradient]
+- Black regions (set members)
+- Blue→Cyan→Yellow→White gradient (escape iterations)
+- Progressive detail increase visible each frame
+- Slow zoom animation toward fractal details
+```
+
+The FPS counter provides real-time performance feedback, updating every second.
 
 ## Technical Details
 
