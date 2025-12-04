@@ -143,9 +143,10 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     public bool IsNonLast => TypeField == McbNonLastEntry;
 
     /// <summary>
-    /// Returns if the MCB is valid (must be Last or NonLast).
+    /// Returns if the MCB is valid (must be Last or NonLast, and size must not be 0xFFFF).
+    /// The size check matches FreeDOS kernel behavior where 0xFFFF marks unlinked/fake MCBs.
     /// </summary>
-    public bool IsValid => IsLast || IsNonLast;
+    public bool IsValid => (IsLast || IsNonLast) && Size != 0xFFFF;
 
     /// <summary>
     /// Returns the next MCB in the MCB in chain, or null if not found.
