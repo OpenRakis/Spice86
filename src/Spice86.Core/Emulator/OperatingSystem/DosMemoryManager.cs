@@ -40,30 +40,53 @@ public class DosMemoryManager {
         _pspTracker = pspTracker;
         _memory = memory;
 
-        ushort pspSegment = _pspTracker.InitialPspSegment;
-        // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
-        // we're the memory manager, we're the one who needs to read the MCB, so we need to start
-        // with its address by subtracting 1 paragraph from the PSP.
-        ushort startSegment = (ushort)(pspSegment - 1);
-        _start = GetDosMemoryControlBlockFromSegment(startSegment);
-        // LastFreeSegment and startSegment are both valid segments that may be allocated, so we
+        // In real DOS, the MCB chain starts early in memory and includes COMMAND.COM as an
+        // allocated block. We replicate this behavior by creating the MCB chain starting just
+        // before COMMAND.COM's PSP segment. This ensures all conventional memory is properly
+        // managed through the MCB chain.
+        //
+        // Memory layout:
+        // - Segments 0x0000-0x005F: Interrupt vectors, BIOS data area, DOS internal structures
+        // - Segment 0x005F: First MCB (for COMMAND.COM)
+        // - Segment 0x0060: COMMAND.COM PSP (16 paragraphs)
+        // - Segment 0x006F: Second MCB (free memory for user programs)
+        // - Segment 0x0070: Start of allocatable memory for user programs
+        // - Segment 0x9FFF: End of conventional memory (before video memory at 0xA000)
+        
+        const ushort commandComMcbSegment = CommandCom.CommandComSegment - 1;
+        const ushort commandComSizeInParagraphs = 0x10; // COMMAND.COM PSP size
+        
+        // Create first MCB for COMMAND.COM (allocated)
+        DosMemoryControlBlock commandComMcb = GetDosMemoryControlBlockFromSegment(commandComMcbSegment);
+        commandComMcb.Size = commandComSizeInParagraphs;
+        commandComMcb.PspSegment = CommandCom.CommandComSegment; // Mark as allocated to COMMAND.COM
+        commandComMcb.SetNonLast(); // Not the last block in the chain
+        
+        // Create second MCB for free memory (starts after COMMAND.COM)
+        ushort freeMcbSegment = (ushort)(CommandCom.CommandComSegment + commandComSizeInParagraphs);
+        _start = GetDosMemoryControlBlockFromSegment(freeMcbSegment);
+        
+        // Calculate size of free memory block
+        // LastFreeSegment and freeMcbSegment are both valid segments that may be allocated, so we
         // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
         // LastFreeSegment from being allocated. Some games do their own math to calculate the
         // maximum free conventional memory from the last block that was allocated rather than
         // asking the memory manager, and if we were off by one, allocation would fail.
-        ushort size = (ushort)((LastFreeSegment - startSegment) + 1);
+        ushort size = (ushort)((LastFreeSegment - freeMcbSegment) + 1);
+        
         // We adjusted the start address above so that it starts with the MCB, but the MCB itself
         // isn't actually useable space. We need it here in the DOS memory manager for accounting.
         // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
         // size to get the useable space that we can allocate.
         _start.Size = (ushort)(size - 1);
+        _start.SetFree();
+        _start.SetLast(); // This is the last block in the chain
+        
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information(
                 "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
                 _start.AllocationSizeInBytes, _start.Size);
         }
-        _start.SetFree();
-        _start.SetLast();
     }
 
     /// <summary>

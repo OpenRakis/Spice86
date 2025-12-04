@@ -35,11 +35,12 @@ public class CommandCom : DosProgramSegmentPrefix {
     /// The segment where COMMAND.COM's PSP is located.
     /// </summary>
     /// <remarks>
-    /// COMMAND.COM occupies a small memory area. Its PSP starts at segment 0x60
-    /// (after DOS internal structures) and takes minimal space since we don't
-    /// load actual COMMAND.COM code - just simulate its PSP for the chain.
+    /// COMMAND.COM occupies a small memory area. Its PSP starts at the beginning of free memory
+    /// (segment 0x50, after DOS internal structures and BIOS data area) and takes minimal space
+    /// since we don't load actual COMMAND.COM code - just simulate its PSP for the chain.
+    /// Starting at 0x50 instead of 0x60 maximizes available conventional memory for user programs.
     /// </remarks>
-    public const ushort CommandComSegment = 0x60;
+    public const ushort CommandComSegment = 0x50;
 
     /// <summary>
     /// Offset of the Job File Table (JFT) within the PSP structure.
