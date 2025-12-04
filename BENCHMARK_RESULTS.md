@@ -4,13 +4,13 @@
 
 We're comparing two implementations of `HasActiveBreakpoints`:
 
-### Current Implementation (Dynamic Iteration)
+### Previous Implementation (Dynamic Iteration - Before Event-Based)
 - Iterates through `_registeredBreakPoints` HashSet
 - Checks `IsEnabled` property on each breakpoint
 - Returns true on first enabled breakpoint (early return)
 - **Complexity**: O(n) where n is the number of breakpoints
 
-### Proposed Implementation (Event-Based Counter)
+### Current Implementation (Event-Based Counter)
 - Maintains an `_activeBreakpoints` integer counter
 - Subscribes to `IsEnabledChanged` event on each breakpoint
 - Increments/decrements counter when breakpoints are enabled/disabled
