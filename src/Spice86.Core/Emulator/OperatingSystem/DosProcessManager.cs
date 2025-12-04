@@ -657,6 +657,12 @@ public class DosProcessManager : DosFileLoader {
         psp.NextSegment = DosMemoryManager.LastFreeSegment;
         psp.EnvironmentTableSegment = envSegment;
 
+        // Copy file handle table from parent PSP
+        // This is critical for programs that use stdin/stdout/stderr (handles 0, 1, 2)
+        uint parentPspAddress = MemoryUtils.ToPhysicalAddress(parentPspSegment, 0);
+        DosProgramSegmentPrefix parentPsp = new(_memory, parentPspAddress);
+        CopyFileTableFromParent(psp, parentPsp);
+
         // Load command-line arguments
         byte[] commandLineBytes = ArgumentsToDosBytes(arguments);
         byte length = commandLineBytes[0];
