@@ -34,6 +34,7 @@ public class DosInt21HandlerTests {
         dosFileManager.OpenFiles[fileHandle] = recordingFile;
         var clock = new Clock(logger);
 
+        DosTables dosTables = new();
         var handler = new DosInt21Handler(
             memory,
             null!,
@@ -46,7 +47,9 @@ public class DosInt21HandlerTests {
             null!,
             dosFileManager,
             driveManager,
-            clock,
+            null!,
+            null!,
+            dosTables,
             logger);
 
         state.AL = (byte)SeekOrigin.Current;
