@@ -59,15 +59,11 @@ public class DosCommandTail : MemoryBasedDataStructure {
     public string Command {
         get {
             int length = UInt8[0x0];
-
-            StringBuilder res = new();
+            byte[] buffer = new byte[length];
             for (int i = 0; i < length; i++) {
-                byte characterByte = UInt8[(uint)(1 + i)];
-                char character = Convert.ToChar(characterByte);
-                res.Append(character);
+                buffer[i] = UInt8[(uint)(1 + i)];
             }
-
-            return res.ToString();
+            return Encoding.ASCII.GetString(buffer);
         }
         set {
             CheckParameterString(value);
