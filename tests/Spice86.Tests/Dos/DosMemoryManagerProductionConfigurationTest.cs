@@ -329,7 +329,8 @@ public class DosMemoryManagerProductionConfigurationTest {
         File.WriteAllBytes(filePath, program);
 
         // Setup emulator with DOS interrupt vectors installed
-        // ProgramEntryPointSegment = 0x0071 so InitialPspSegment = 0x0061 (first free data after COMMAND.COM's MCB at 0x60)
+        // Programs are now allocated dynamically from the MCB chain (not at hardcoded InitialPspSegment)
+        // This matches FreeDOS/DOSBox behavior and prevents MCB corruption
         Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
             binName: filePath,
             enableCfgCpu: true,
@@ -339,8 +340,8 @@ public class DosMemoryManagerProductionConfigurationTest {
             installInterruptVectors: true,
             enableA20Gate: false,
             enableXms: false,
-            enableEms: false,
-            programEntryPointSegment: 0x0071
+            enableEms: false
+            // programEntryPointSegment not specified - uses default, but doesn't affect first program allocation
         ).Create();
 
         DosTestHandler testHandler = new(
