@@ -122,7 +122,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     /// Checks the current breakpoints and triggers them if necessary.
     /// </summary>
     public void CheckExecutionBreakPoints() {
-        if (!_executionBreakPoints.IsEmpty) {
+        if (_executionBreakPoints.HasActiveBreakpoints) {
             uint address;
             // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
             bool triggered;
@@ -132,7 +132,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             } while (triggered && address != _state.IpPhysicalAddress);
         }
 
-        if (!_cycleBreakPoints.IsEmpty) {
+        if (_cycleBreakPoints.HasActiveBreakpoints) {
             long cycles = _state.Cycles;
             _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
         }

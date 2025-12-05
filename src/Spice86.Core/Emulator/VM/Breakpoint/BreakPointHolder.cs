@@ -113,14 +113,14 @@ public class BreakPointHolder {
             if (!breakPoint.Matches(address)) {
                 continue;
             }
-
-            breakPoint.Trigger();
-            triggered = true;
-
             if (breakPoint.IsRemovedOnTrigger) {
                 breakPointList.RemoveAt(i);
                 UnregisterBreakPoint(breakPoint);
             }
+            // trigger it later because action might try to delete it
+            breakPoint.Trigger();
+            triggered = true;
+
         }
 
         return triggered;
@@ -143,16 +143,24 @@ public class BreakPointHolder {
         }
 
         breakPoint.IsEnabledChanged -= OnBreakPointIsEnabledChanged;
-        if (breakPoint.IsEnabled && _activeBreakpoints > 0) {
-            _activeBreakpoints--;
+        if (breakPoint.IsEnabled) {
+            DecrementActiveBreakpoints();
         }
     }
 
     private void OnBreakPointIsEnabledChanged(BreakPoint breakPoint, bool isEnabled) {
         if (isEnabled) {
             _activeBreakpoints++;
-        } else if (_activeBreakpoints > 0) {
-            _activeBreakpoints--;
+        } else {
+            DecrementActiveBreakpoints();
+        }
+    }
+
+    private void DecrementActiveBreakpoints() {
+        _activeBreakpoints--;
+        // This should never happen, but as a safeguard, throw if the count becomes negative.
+        if (_activeBreakpoints < 0) {
+            throw new InvalidOperationException("Active breakpoints count cannot be negative.");
         }
     }
 }

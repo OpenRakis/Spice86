@@ -42,11 +42,14 @@ public class AddressBreakPoint : BreakPoint {
     /// <param name="address">The memory address to match against the breakpoint.</param>
     /// <returns>True if the breakpoint matches the address, otherwise false.</returns>
     public override bool Matches(long address) {
+        if (!base.Matches(address)) {
+            return false;
+        }
         if (_additionalTriggerCondition != null) {
             if (!_additionalTriggerCondition.Invoke(address)) {
                 return false;
             }
         }
-        return Address == address && IsEnabled;
+        return Address == address;
     }
 }

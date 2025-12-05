@@ -27,11 +27,8 @@ public class PerformanceRegressionTests {
     /// </summary>
     [Fact]
     public void MandelbrotBenchmark_ShouldNotRegress() {
-        // Load the precompiled Mandelbrot benchmark from PerformanceTests directory
-        string programPath = Path.Combine("Resources", "PerformanceTests", "mandelbrot_bench.com");
-        byte[] program = File.ReadAllBytes(programPath);
-
-        PerformanceTestHandler testHandler = RunPerformanceTest(program);
+        // Load and run the precompiled Mandelbrot benchmark from PerformanceTests directory
+        PerformanceTestHandler testHandler = RunPerformanceTest(Path.Combine("Resources", "PerformanceTests", "mandelbrot_bench.com"));
         
         // Extract performance data
         PerformanceProfile profile = ExtractPerformanceProfile(testHandler.PerformanceData);
@@ -56,41 +53,32 @@ public class PerformanceRegressionTests {
     /// <summary>
     /// Runs the performance test program and returns a handler with performance data.
     /// </summary>
-    private PerformanceTestHandler RunPerformanceTest(byte[] program,
-        [CallerMemberName] string unitTestName = "test") {
-        // Write program to temp file
-        string filePath = Path.Combine(Path.GetTempPath(), $"{unitTestName}_{Guid.NewGuid()}.com");
-        File.WriteAllBytes(filePath, program);
+    private PerformanceTestHandler RunPerformanceTest(string programPath) {
+        // Ensure the program path is absolute for the emulator
+        string absoluteProgramPath = Path.GetFullPath(programPath);
 
-        try {
-            // Setup emulator (disable CfgCpu for now as it has issues with the program)
-            Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-                binName: filePath,
-                enableCfgCpu: false,  // Use traditional CPU for stability
-                enablePit: true,
-                recordData: false,
-                maxCycles: 100000000L,  // Allow enough cycles for 30-second benchmark
-                installInterruptVectors: true,
-                enableA20Gate: false,
-                enableXms: false,
-                enableEms: false
-            ).Create();
+        // Setup emulator (disable CfgCpu for now as it has issues with the program)
+        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+            binName: absoluteProgramPath,
+            enableCfgCpu: false,  // Use traditional CPU for stability
+            enablePit: true,
+            recordData: false,
+            maxCycles: 100000000L,  // Allow enough cycles for 30-second benchmark
+            installInterruptVectors: true,
+            enableA20Gate: false,
+            enableXms: false,
+            enableEms: false
+        ).Create();
 
-            PerformanceTestHandler testHandler = new(
-                spice86DependencyInjection.Machine.CpuState,
-                NSubstitute.Substitute.For<ILoggerService>(),
-                spice86DependencyInjection.Machine.IoPortDispatcher
-            );
-            
-            spice86DependencyInjection.ProgramExecutor.Run();
+        PerformanceTestHandler testHandler = new(
+            spice86DependencyInjection.Machine.CpuState,
+            NSubstitute.Substitute.For<ILoggerService>(),
+            spice86DependencyInjection.Machine.IoPortDispatcher
+        );
+        
+        spice86DependencyInjection.ProgramExecutor.Run();
 
-            return testHandler;
-        } finally {
-            // Clean up temp file
-            if (File.Exists(filePath)) {
-                File.Delete(filePath);
-            }
-        }
+        return testHandler;
     }
 
     /// <summary>
