@@ -10,7 +10,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.CycleBudget;
 using Spice86.Shared.Diagnostics;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -21,18 +20,13 @@ using System.Diagnostics;
 /// triggers hardware timers, and keeps DMA transfers moving forward.
 /// </summary>
 public class EmulationLoop : ICyclesLimiter {
+    private readonly PerformanceMeasurer _performanceMeasurer;
     private readonly ILoggerService _loggerService;
     private readonly IInstructionExecutor _cpu;
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
-
-    private readonly PerformanceMeasurer _performanceMeasurer = new(new PerformanceMeasureOptions {
-        CheckInterval = 512,
-        MinValueDelta = 3000,
-        MaxIntervalMilliseconds = 10
-    });
     private readonly Stopwatch _performanceStopwatch = new();
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly DualPic _dualPic;
@@ -43,11 +37,6 @@ public class EmulationLoop : ICyclesLimiter {
     private readonly long _sliceDurationTicks;
     private readonly ICyclesBudgeter _cyclesBudgeter;
     private readonly InputEventHub _inputEventQueue;
-
-    /// <summary>
-    ///     Gets a reader exposing CPU performance metrics.
-    /// </summary>
-    public IPerformanceMeasureReader CpuPerformanceMeasurer => _performanceMeasurer;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -69,6 +58,7 @@ public class EmulationLoop : ICyclesLimiter {
     /// <param name="cpu">The emulated CPU, so the emulation loop can call ExecuteNextInstruction().</param>
     /// <param name="cpuState">The emulated CPU State, so that we know when to stop.</param>
     /// <param name="emulatorBreakpointsManager">The class that stores emulation breakpoints.</param>
+    /// <param name="performanceMeasure">The shared performance measurer instance, to measure CPU performance.</param>
     /// <param name="pauseHandler">The emulation pause handler.</param>
     /// <param name="executionStateSlice">Shared cycle budgeting state consumed by the Device Scheduler or PIT scheduler.</param>
     /// <param name="dualPic">Programmable interrupt controller driving hardware IRQ delivery.</param>
@@ -79,10 +69,12 @@ public class EmulationLoop : ICyclesLimiter {
     public EmulationLoop(FunctionHandler functionHandler, IInstructionExecutor cpu, State cpuState,
         ExecutionStateSlice executionStateSlice, DualPic dualPic,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
+        PerformanceMeasurer performanceMeasure,
         IPauseHandler pauseHandler, ICyclesLimiter cyclesLimiter,
         InputEventHub inputEventQueue, ICyclesBudgeter cyclesBudgeter,
         ILoggerService loggerService) {
         _loggerService = loggerService;
+        _performanceMeasurer = performanceMeasure;
         _cpu = cpu;
         _functionHandler = functionHandler;
         _cpuState = cpuState;
@@ -175,7 +167,9 @@ public class EmulationLoop : ICyclesLimiter {
         _dualPic.AddTick();
 
         while (_cpuState.IsRunning) {
-            _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            if (_emulatorBreakpointsManager.HasActiveBreakpoints) {
+                _emulatorBreakpointsManager.CheckExecutionBreakPoints();
+            }
             _pauseHandler.WaitIfPaused();
             _dualPic.RunQueue();
             if(_executionStateSlice.CyclesUntilReevaluation <= 0) {

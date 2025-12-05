@@ -18,13 +18,4 @@ public class UnconditionalBreakPoint : BreakPoint {
         Action<BreakPoint> onReached, bool removeOnTrigger)
         : base(breakPointType, onReached, removeOnTrigger) {
     }
-
-    /// <summary>
-    /// Determines whether the breakpoint matches the specified address.
-    /// </summary>
-    /// <param name="address">The address to check against the breakpoint.</param>
-    /// <returns>Always returns <c>true</c>.</returns>
-    public override bool Matches(long address) {
-        return true;
-    }
 }

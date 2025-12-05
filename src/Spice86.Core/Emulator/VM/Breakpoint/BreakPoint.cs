@@ -66,7 +66,9 @@ public abstract class BreakPoint {
     /// </summary>
     /// <param name="address">The address to check.</param>
     /// <returns>True if the breakpoint matches the address, false otherwise.</returns>
-    public abstract bool Matches(long address);
+    public virtual bool Matches(long address) {
+        return IsEnabled;
+    }
 
     /// <summary>
     /// Triggers the breakpoint, calling the OnReached action.
