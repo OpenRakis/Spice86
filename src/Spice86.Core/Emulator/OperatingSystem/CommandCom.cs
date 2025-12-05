@@ -157,8 +157,5 @@ public class CommandCom : DosProgramSegmentPrefix {
         Service[0] = 0xCD;
         Service[1] = 0x21;
         Service[2] = 0xCB;
-
-        // Offset 0x80: Command tail length (empty for COMMAND.COM itself)
-        DosCommandTail.Length = 0;
     }
 }
